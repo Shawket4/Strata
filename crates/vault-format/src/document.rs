@@ -100,6 +100,12 @@ impl Document {
         self.bom
     }
 
+    /// Adds or removes the UTF-8 byte order mark written before the file. Nothing else
+    /// changes; [`Document::body_offset`] keeps describing the parsed file.
+    pub fn set_bom(&mut self, bom: bool) {
+        self.bom = bom;
+    }
+
     /// Links, tags, headings and blocks of the body.
     pub fn analyze_body(&self) -> BodyAnalysis {
         body::analyze(&self.body)
@@ -204,6 +210,25 @@ mod tests {
         assert_eq!(d.body(), "body\r\n");
         assert_eq!(d.body_offset(), t.len() - 6);
         assert_eq!(d.render(), t);
+    }
+
+    #[test]
+    fn bom_is_added_and_removed() {
+        let mut d = Document::parse("---\r\nid: x\r\n---\r\nنص\r\n");
+        assert!(!d.has_bom());
+        d.set_bom(true);
+        assert!(d.has_bom());
+        assert_eq!(d.render(), "\u{feff}---\r\nid: x\r\n---\r\nنص\r\n");
+        assert_eq!(d.render_canonical(), "\u{feff}---\r\nid: x\r\n---\r\nنص\r\n");
+        let mut d = Document::parse("\u{feff}body only");
+        d.set_bom(false);
+        assert_eq!(d.render(), "body only");
+        d.set_bom(false);
+        assert_eq!(d.render(), "body only");
+        let mut d = Document::parse("");
+        d.set_bom(true);
+        assert_eq!(d.render(), "\u{feff}");
+        assert!(Document::parse(&d.render()).has_bom());
     }
 
     #[test]

@@ -23,7 +23,7 @@ use crate::net::{NetError, SyncApi};
 use crate::store::index::Reindex;
 use crate::store::{outbox, sync_state};
 use crate::sync::apply;
-use crate::sync::merge::NoteMerger;
+use crate::sync::model::SyncCursor;
 use crate::view::Topics;
 use crate::view::model::{Connectivity, SyncPhase};
 
@@ -115,7 +115,6 @@ pub fn backoff_delay(failures: u32) -> Duration {
 #[derive(Debug, Clone)]
 pub struct SyncEngine {
     api: Arc<dyn SyncApi>,
-    merger: Arc<dyn NoteMerger>,
     /// Ops per push request.
     pub batch_size: usize,
     /// Changes per page.
@@ -131,10 +130,9 @@ enum Flow<T> {
 
 impl SyncEngine {
     /// An engine over `api`.
-    pub fn new(api: Arc<dyn SyncApi>, merger: Arc<dyn NoteMerger>) -> Self {
+    pub fn new(api: Arc<dyn SyncApi>) -> Self {
         Self {
             api,
-            merger,
             batch_size: 100,
             page_limit: 500,
             crash_after: None,
@@ -216,11 +214,11 @@ impl SyncEngine {
             host.set_phase(SyncPhase::Pushing {
                 ops: u32::try_from(batch.len()).unwrap_or(u32::MAX),
             });
-            let results = match self
-                .api
-                .push(batch.iter().map(outbox::OutboxOp::to_push).collect())
-                .await
-            {
+            let request = batch
+                .iter()
+                .map(outbox::OutboxOp::to_push)
+                .collect::<CoreResult<Vec<_>>>()?;
+            let results = match self.api.push(request).await {
                 Ok(r) => r,
                 Err(e) => {
                     let msg = e.to_string();
@@ -235,13 +233,13 @@ impl SyncEngine {
             if let Flow::Stop(o) = self.crash(Step::Pushed, ()) {
                 return Ok(Flow::Stop(o));
             }
-            let merger = self.merger.clone();
             let recorded = host.db(|c, now| {
                 let mut re = Reindex::new();
                 let mut n = 0u32;
                 for outcome in &results {
-                    if let Some(op) = batch.iter().find(|o| o.op_id == outcome.op_id) {
-                        apply::record_result(c, op, &outcome.result, merger.as_ref(), now, &mut re)?;
+                    let id = outcome.op_id.to_string();
+                    if let Some(op) = batch.iter().find(|o| o.op_id == id) {
+                        apply::record_result(c, op, &outcome.result, now, &mut re)?;
                         n += 1;
                     }
                 }
@@ -294,13 +292,37 @@ impl SyncEngine {
             if let Flow::Stop(o) = self.crash(Step::ChangesFetched, ()) {
                 return Ok(Flow::Stop(o));
             }
+            let cursor = SyncCursor {
+                epoch,
+                seq: state.cursor_seq,
+            };
+            let next = match cursor.advance(&page) {
+                Ok(next) => next,
+                Err(sync_model::CursorError::EpochChanged { .. }) => {
+                    host.db(|c, _| {
+                        sync_state::update(c, |s| {
+                            s.bootstrap_complete = false;
+                            s.bootstrap_cursor = None;
+                            s.bootstrap_pages = 0;
+                        })?;
+                        Ok(((), Topics::SYNC))
+                    })?;
+                    continue;
+                }
+                Err(e) => {
+                    return Ok(Flow::Stop(Self::failed(
+                        host,
+                        NetError::Protocol(e.to_string()),
+                    )?));
+                }
+            };
             let n = u32::try_from(page.changes.len()).unwrap_or(u32::MAX);
             host.db(|c, now| {
                 let mut re = Reindex::new();
                 for ch in &page.changes {
-                    apply::apply_record(c, &ch.record, false, now, &mut re)?;
+                    apply::apply_change(c, ch, now, &mut re)?;
                 }
-                sync_state::update(c, |s| s.cursor_seq = page.next_seq)?;
+                sync_state::update(c, |s| s.cursor_seq = next.seq)?;
                 re.topics(Topics::SYNC);
                 Ok(((), re.apply(c)?))
             })?;
@@ -352,7 +374,7 @@ impl SyncEngine {
                     if last {
                         s.bootstrap_complete = true;
                         s.bootstrap_pages = 0;
-                        s.cursor_seq = page.start_seq;
+                        s.cursor_seq = SyncCursor::after_bootstrap(&page).seq;
                     }
                 })?;
                 re.topics(Topics::SYNC);
@@ -361,7 +383,7 @@ impl SyncEngine {
             report.pulled += n;
             host.set_phase(SyncPhase::Bootstrapping {
                 pages_done: state.bootstrap_pages + 1,
-                pages_total: page.total_pages,
+                pages_total: None,
             });
             if let Flow::Stop(o) = self.crash(Step::BootstrapApplied, ()) {
                 return Ok(Flow::Stop(o));

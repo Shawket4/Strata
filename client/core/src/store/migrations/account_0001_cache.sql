@@ -203,12 +203,33 @@ CREATE TABLE suggestions (
 
 CREATE TABLE clusters (
     note_id TEXT PRIMARY KEY,
-    cluster_id INTEGER NOT NULL
+    cluster_id TEXT NOT NULL
 );
 
 CREATE TABLE cluster_names (
-    cluster_id INTEGER PRIMARY KEY,
+    cluster_id TEXT PRIMARY KEY,
     name TEXT NOT NULL
+);
+
+-- Account-level settings synced from the server (thresholds, auto-file, …).
+CREATE TABLE user_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- "Keep both" duplicate decisions (§9.7): never flagged again by the local check.
+CREATE TABLE keep_both (
+    kind TEXT NOT NULL,
+    a_id TEXT NOT NULL,
+    b_id TEXT NOT NULL,
+    PRIMARY KEY (kind, a_id, b_id)
+);
+
+-- Cached global-map positions (graph-algo force layout, warm-started from these).
+CREATE TABLE graph_positions (
+    note_id TEXT PRIMARY KEY,
+    x REAL NOT NULL,
+    y REAL NOT NULL
 );
 
 -- Full-text index over text-normalize output (Arabic letter variants, tashkeel, case).
@@ -268,11 +289,12 @@ CREATE TABLE conflicts (
     local_payload BLOB NOT NULL,
     base_content TEXT,
     local_content TEXT,
-    server_version TEXT NOT NULL,
+    server_version TEXT,
     server_content TEXT,
     merged_preview TEXT,
     merge_clean INTEGER,
-    resolution TEXT,
+    merge_outcome BLOB,
+    resolution BLOB,
     created TEXT NOT NULL
 );
 

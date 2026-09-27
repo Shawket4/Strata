@@ -88,7 +88,7 @@ pub async fn write(tx: &mut ScopedTx, batch: &[Derived]) -> Result<()> {
             tasks::replace_reminders(tx, &t.id, reminders).await?;
         }
         for k in &d.dedupe {
-            dedupe::upsert_key(tx, &k.kind, &k.item_id, &k.exact, &k.trigram).await?;
+            vrepo::replace_item_keys(tx, &k.kind, &k.item_id, &k.rows).await?;
         }
         notes::set_note_search(
             tx,

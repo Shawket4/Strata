@@ -4,16 +4,20 @@
 //! Only rules that need no I/O live here. The caller resolves IDs to wikilink targets
 //! (it owns the path index) and supplies dates and citations.
 
-use chrono::NaiveDateTime;
+use chrono::{NaiveDate, NaiveDateTime};
 use ulid::Ulid;
 use vault_format::custody::{self, CustodyEvent, CustodyState};
 use vault_format::frontmatter::ValueShape;
 use vault_format::sections::sections;
-use vault_format::tasks::{self, DateKind, Reminder, TaskError, TaskLine};
-use vault_format::{Document, Frontmatter, FrontmatterError, KnownKey, RelationKey};
+use vault_format::blocks::is_valid_block_id;
+use vault_format::tasks::{self, DateKind, Priority, Reminder, TaskError, TaskLine, TaskSpec};
+use vault_format::{Document, Frontmatter, FrontmatterError, KnownKey, LineEnding, RelationKey};
 
 use crate::Version;
-use crate::ops::{DocumentCustody, EntityPatch, Op, TaskUpdate};
+use crate::ops::{DocumentCustody, EntityPatch, Op, TaskCreate, TaskUpdate};
+
+/// The note a `task.create` without `note_id` goes to (PLAN §6.11).
+pub use vault_format::tasks::DEFAULT_TASK_NOTE;
 
 /// Why an op cannot be applied.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -56,6 +60,13 @@ pub enum ApplyError {
     /// The op is not handled by this function.
     #[error("`{0}` is not a task op")]
     NotATaskOp(String),
+    /// `task.create` with a block ID the note already has.
+    #[error("task `{0}` already exists")]
+    TaskExists(String),
+    /// `task.create` whose fields would not read back from the written line (e.g. a
+    /// description containing a line break or a Tasks signifier).
+    #[error("task `{0}` cannot be written as a task line")]
+    InvalidTask(String),
 }
 
 // ---------------------------------------------------------------------------------------
@@ -308,8 +319,62 @@ fn update_line(task: &TaskLine, u: &TaskUpdate) -> TaskLine {
     t
 }
 
+/// The canonical line of a `task.create` (`TaskSpec::render`: description, reminders, Tasks
+/// fields in plugin order, `^<id>`). Fails when the ID is not a valid block ID or when the
+/// line would not read back as exactly the op's fields.
+pub fn task_create_line(op: &TaskCreate) -> Result<String, ApplyError> {
+    if !op.id.starts_with("t-") || !is_valid_block_id(&op.id) {
+        return Err(TaskError::InvalidBlockId(op.id.clone()).into());
+    }
+    let spec = TaskSpec {
+        description: op.text.clone(),
+        priority: op.priority.filter(|p| *p != Priority::Normal),
+        recurrence: op.recurrence.clone(),
+        start: op.start,
+        scheduled: op.scheduled,
+        due: op.due,
+        reminders: reminders(&op.reminders),
+        block_id: Some(op.id.clone()),
+        ..TaskSpec::default()
+    };
+    let line = spec.render();
+    match TaskLine::parse(&line) {
+        Some(t) if !line.contains(['\n', '\r']) && t.to_spec() == spec => Ok(line),
+        _ => Err(ApplyError::InvalidTask(op.id.clone())),
+    }
+}
+
+/// `task.create`: writes the new task line into its home note's body and returns the new
+/// body. Without `note_id` the home is [`DEFAULT_TASK_NOTE`] (pass `""` when it does not
+/// exist yet): the line goes under the `## <Month> <YYYY>` heading of `created` (the
+/// creation date in the user's time zone), which is added in chronological position when
+/// missing (`tasks::insert_under_month`). With `note_id` the line is appended at the end of
+/// that note's body. New lines use `eol` (the home note's line ending); every other byte is
+/// kept. A block ID the body already has is refused.
+pub fn apply_task_create(
+    body: &str,
+    op: &TaskCreate,
+    created: NaiveDate,
+    eol: LineEnding,
+) -> Result<String, ApplyError> {
+    let line = task_create_line(op)?;
+    if find_task(body, &op.id).is_some() {
+        return Err(ApplyError::TaskExists(op.id.clone()));
+    }
+    if op.note_id.is_none() {
+        return Ok(tasks::insert_under_month(body, created, &line, eol)?);
+    }
+    let eol = eol.as_str();
+    let sep = if body.is_empty() || body.ends_with('\n') {
+        ""
+    } else {
+        eol
+    };
+    Ok(format!("{body}{sep}{line}{eol}"))
+}
+
 /// Applies a task op (`task.update/complete/cancel/reopen/delete`) to a note body and
-/// returns the new body. Completing a recurring task writes the next occurrence (block ID
+/// returns the new body (`task.create` is [`apply_task_create`]). Completing a recurring task writes the next occurrence (block ID
 /// `next_id`) directly above the completed line, as the Tasks plugin does.
 pub fn apply_task_op(body: &str, op: &Op) -> Result<String, ApplyError> {
     let id = match op {

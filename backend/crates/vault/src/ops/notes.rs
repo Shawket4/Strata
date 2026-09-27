@@ -11,8 +11,8 @@ use vault_format::filename::unique_name;
 use vault_format::sidecar::{KeepBoth, NoteSidecar};
 use vault_format::{Document, PathIndex, rewrite::MoveSet};
 
-use crate::derive::{self, dedupe_kind, dedupe_text, kind_of};
-use crate::dup::{self, NewItem};
+use crate::derive;
+use crate::dup;
 use crate::error::{Candidate, Result, VaultError};
 use crate::git::{self, FileChange};
 use crate::model::{Captured, NoteView};
@@ -44,8 +44,12 @@ pub struct DuplicatePayload {
 /// One candidate in a [`DuplicatePayload`].
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct DuplicatePayloadItem {
-    /// Existing item ID.
+    /// Existing item ID (note ULID, or the ULID of a task).
     pub id: String,
+    /// Stored item ID (note ULID or task block ID).
+    pub item: String,
+    /// Snippet.
+    pub snippet: Option<String>,
     /// Kind.
     pub kind: String,
     /// Title.
@@ -56,6 +60,25 @@ pub struct DuplicatePayloadItem {
     pub score: f64,
 }
 
+impl DuplicatePayloadItem {
+    /// Back to a candidate.
+    pub fn candidate(&self) -> Option<Candidate> {
+        Some(Candidate {
+            item: self.item.clone(),
+            id: self.id.parse().ok()?,
+            kind: self.kind.clone(),
+            title: self.title.clone(),
+            snippet: self.snippet.clone(),
+            level: if self.match_level == "exact" {
+                crate::error::MatchLevel::Exact
+            } else {
+                crate::error::MatchLevel::Near
+            },
+            score: self.score,
+        })
+    }
+}
+
 impl DuplicatePayload {
     /// From candidates.
     pub fn from_candidates(c: &[Candidate]) -> Self {
@@ -64,6 +87,8 @@ impl DuplicatePayload {
                 .iter()
                 .map(|c| DuplicatePayloadItem {
                     id: c.id.to_string(),
+                    item: c.item.clone(),
+                    snippet: c.snippet.clone(),
                     kind: c.kind.clone(),
                     title: c.title.clone(),
                     match_level: match c.level {
@@ -179,41 +204,58 @@ impl Core {
         Ok(doc)
     }
 
-    /// Runs the duplicate check for a note about to be created at `path`.
+    /// Runs the duplicate check for a note about to be created at `path` with `id`.
     pub(crate) async fn check_duplicates(
         &self,
         tx: &mut ScopedTx,
         path: &str,
         doc: &Document,
-        id: Option<NoteId>,
+        id: NoteId,
     ) -> Result<Vec<Candidate>> {
-        let kind = kind_of(doc);
-        let title = derive::title_of(path, doc);
-        let text = dedupe_text(path, kind, &title, doc);
-        let aliases = doc
-            .frontmatter()
-            .map(vault_format::Frontmatter::aliases)
-            .unwrap_or_default();
-        dup::find(
-            tx,
-            &NewItem {
-                kind: dedupe_kind(path, kind),
-                id: id.map(|i| i.to_string()),
-                text: &text,
-                exact: None,
-                aliases: &aliases,
-            },
-            &self.inner.config.near_thresholds,
-        )
-        .await
+        let item = dup::note_item(path, Some(id), doc);
+        dup::find(tx, &item, &self.inner.config.near_thresholds).await
     }
 
-    /// Keep-both entries for `candidates` added to `sidecar`.
-    pub(crate) fn keep_both(&self, sidecar: &mut NoteSidecar, candidates: &[Candidate]) {
+    /// Records keep-both for `item` (of the note `sidecar` belongs to) and `candidates`:
+    /// note–note pairs in `keep_both`, any other pair in the `keep_both_items` extension.
+    pub(crate) fn keep_both(
+        &self,
+        sidecar: &mut NoteSidecar,
+        item: &dedupe::Item,
+        candidates: &[Candidate],
+    ) {
         let at = self.now().fixed_offset();
-        for c in candidates {
-            if !sidecar.keep_both.iter().any(|k| k.other_id == c.id) && c.id != sidecar.id {
-                sidecar.keep_both.push(KeepBoth { other_id: c.id, at });
+        let own_is_note = item.id.as_deref() == Some(sidecar.id.to_string().as_str());
+        for pair in dup::forced_pairs(item, candidates) {
+            let other = if Some(pair.a_id.as_str()) == item.id.as_deref() {
+                pair.b_id.clone()
+            } else {
+                pair.a_id.clone()
+            };
+            let other_note = other.parse::<NoteId>().ok();
+            match other_note {
+                Some(o) if own_is_note => {
+                    if !sidecar.keep_both.iter().any(|k| k.other_id == o.as_ulid()) {
+                        sidecar.keep_both.push(KeepBoth {
+                            other_id: o.as_ulid(),
+                            at,
+                        });
+                    }
+                }
+                _ => {
+                    let entry = sidecar
+                        .extra
+                        .entry(derive::KEEP_BOTH_ITEMS_KEY.to_owned())
+                        .or_insert_with(|| serde_json::Value::Array(Vec::new()));
+                    if let serde_json::Value::Array(items) = entry {
+                        items.push(serde_json::json!({
+                            "kind": pair.kind.as_str(),
+                            "a": pair.a_id,
+                            "b": pair.b_id,
+                            "at": vault_format::frontmatter::format_timestamp(&at),
+                        }));
+                    }
+                }
             }
         }
     }
@@ -246,9 +288,7 @@ impl Core {
             .or(given)
             .unwrap_or_else(|| NoteId::generate(self.ids()));
         let doc = self.prepare(&mut tx, &req.content, id, None, true).await?;
-        let candidates = self
-            .check_duplicates(&mut tx, &req.path, &doc, req.id)
-            .await?;
+        let candidates = self.check_duplicates(&mut tx, &req.path, &doc, id).await?;
         let mut changes = Vec::new();
         if !candidates.is_empty() {
             if !req.force {
@@ -258,7 +298,7 @@ impl Core {
                 .sidecar(id)
                 .await?
                 .unwrap_or_else(|| NoteSidecar::new(id.as_ulid()));
-            self.keep_both(&mut sc, &candidates);
+            self.keep_both(&mut sc, &dup::note_item(&req.path, Some(id), &doc), &candidates);
             changes.push(Core::sidecar_change(&sc)?);
         }
         let text = doc.render();
@@ -618,7 +658,7 @@ impl Core {
         let content = doc.render();
         // The capture hits disk (and git) first; the duplicate check runs afterwards.
         let candidates = self
-            .check_duplicates(&mut tx, &path, &Document::parse(&content), None)
+            .check_duplicates(&mut tx, &path, &Document::parse(&content), id)
             .await?;
         self.finish(
             tx,
@@ -672,11 +712,13 @@ impl Core {
         author: Author,
     ) -> Result<()> {
         let (path, _) = self.live(id)?;
+        let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
+        let item = dup::note_item(&path, Some(id), &Document::parse(&text));
         let mut sc = self
             .sidecar(id)
             .await?
             .unwrap_or_else(|| NoteSidecar::new(id.as_ulid()));
-        self.keep_both(&mut sc, others);
+        self.keep_both(&mut sc, &item, others);
         let tx = self.begin(&scope).await?;
         self.finish(
             tx,

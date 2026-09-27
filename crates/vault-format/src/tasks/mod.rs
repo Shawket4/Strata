@@ -1,8 +1,9 @@
 //! Tasks as Obsidian Tasks checklist lines (PLAN §6.11): parsing and editing lines, the
 //! recurrence grammar and RRULE compilation, next-occurrence computation in the user's time
-//! zone, and completion of recurring tasks.
+//! zone, completion of recurring tasks, and the month headings of `tasks/Tasks.md`.
 
 mod complete;
+mod home;
 mod line;
 mod recurrence;
 mod schedule;
@@ -10,6 +11,7 @@ mod schedule;
 use std::ops::Range;
 
 pub use complete::{TaskError, cancel, complete, complete_recurring, reopen};
+pub use home::{DEFAULT_TASK_NOTE, insert_under_month, month_heading, parse_month_heading};
 pub use line::{DateKind, Priority, Reminder, Spanned, TaskLine, TaskSpec, TaskStatus};
 pub use recurrence::{
     Frequency, MonthDay, NthWeekday, RecurrenceNotUnderstood, RecurrenceRule, parse_recurrence,

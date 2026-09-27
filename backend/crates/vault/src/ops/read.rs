@@ -8,7 +8,6 @@ use strata_common::NoteId;
 use strata_index::UserScope;
 use strata_index::repo::graph;
 use strata_index::repo::notes::{self, Note};
-use strata_index::repo::suggestions::{self, Suggestion};
 use strata_index::repo::vault::{self as vrepo, IntegrityWarning};
 use strata_index::types::{LinkKind, SuggestionStatus};
 use text_normalize::normalize_for_search;
@@ -358,7 +357,10 @@ impl VaultService {
     }
 
     /// Inbox notes (newest first) with their pending suggestions.
-    pub async fn inbox(&self, scope: &UserScope) -> Result<Vec<(NoteView, Vec<Suggestion>)>> {
+    pub async fn inbox(
+        &self,
+        scope: &UserScope,
+    ) -> Result<Vec<(NoteView, Vec<crate::ops::suggestions::SuggestionView>)>> {
         self.ready(scope).await?;
         let mut tx = self.inner.db.begin(scope).await?;
         let rows: Vec<Note> = notes::list_notes(&mut tx, false)
@@ -366,16 +368,16 @@ impl VaultService {
             .into_iter()
             .filter(|n| crate::derive::is_inbox(&n.path))
             .collect();
-        let pending = suggestions::list_suggestions(&mut tx, SuggestionStatus::Pending).await?;
         tx.commit().await?;
+        let pending = self.suggestions(scope, SuggestionStatus::Pending).await?;
         let mut out = Vec::new();
         for n in rows {
             let Some(text) = self.read_file(scope, &n.path).await? else {
                 continue;
             };
-            let s: Vec<Suggestion> = pending
+            let s: Vec<_> = pending
                 .iter()
-                .filter(|s| s.note_id == Some(n.id))
+                .filter(|s| s.suggestion.note_id == Some(n.id))
                 .cloned()
                 .collect();
             out.push((Self::view_of(&n, text), s));

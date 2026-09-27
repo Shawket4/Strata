@@ -1,6 +1,6 @@
 //! Local embeddings (L19, D9 = a, §9.1b).
 //!
-//! The model is IBM granite-embedding-97m-multilingual-r2 (ModernBERT, 384 dimensions). Per
+//! The model is IBM granite-embedding-97m-multilingual-r2 (`ModernBERT`, 384 dimensions). Per
 //! its model card and `1_Pooling/config.json` it uses **CLS pooling** (the hidden state of the
 //! first token) followed by L2 normalisation; mean pooling is supported for other models.
 //! Every [`Embedding`] carries the model ID that produced it, to be stored with the vector.

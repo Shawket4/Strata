@@ -119,7 +119,7 @@ impl Session {
             let provider: Tokens = tokens.clone();
             let api = (env.sync_api)(&server_url, provider);
             Session {
-                engine: SyncEngine::new(api, env.merger.clone()),
+                engine: SyncEngine::new(api),
                 env: env.clone(),
                 user_id,
                 inner: Mutex::new(Inner {

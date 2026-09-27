@@ -10,6 +10,8 @@
 //!   identical changes collapse, overlapping changes become conflict hunks carrying the
 //!   base, ours and theirs text. Line-ending conversions and a missing final newline are
 //!   merged as separate one-sided changes (see [`lines`]).
+//! - **Byte order mark**: taken from theirs when ours kept the base's, otherwise ours'
+//!   (the usual 3-way rule; it can never conflict).
 //! - **Task lines are atomic**: a line is never merged within itself, so a checkbox toggle
 //!   on one side and a text edit on the other is a conflict on that line. In addition, a
 //!   task (by block ID) that would appear more often in a clean result than on either side
@@ -54,6 +56,8 @@ pub enum Location {
     },
     /// The file's line endings.
     LineEndings,
+    /// The UTF-8 byte order mark at the start of the file.
+    ByteOrderMark,
 }
 
 /// How a change was merged automatically.
@@ -138,7 +142,7 @@ pub enum Choice {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResolutionTemplate {
     /// BOM and frontmatter block (ours' values for conflicting keys); `None` when the whole
-    /// file was merged as text.
+    /// file was merged as text (the merged BOM, if any, is then the first body piece).
     pub prefix: Option<String>,
     /// Body pieces in order.
     pub body: Vec<TemplatePiece>,
@@ -312,16 +316,21 @@ fn hunk_id(i: usize) -> u32 {
     u32::try_from(i).unwrap_or(u32::MAX)
 }
 
+const BOM: &str = "\u{feff}";
+
 fn build(
     prefix: Option<String>,
+    bom: bool,
     fm_conflicts: Vec<FmConflict>,
     mut auto: Vec<AutoResolved>,
     body: &TextMerge,
 ) -> MergeOutcome {
     auto.extend(body.auto.iter().cloned());
+    let bom = if bom { BOM } else { "" };
+    let head = format!("{bom}{}", prefix.as_deref().unwrap_or_default());
     if fm_conflicts.is_empty() && body.hunks.is_empty() {
         let text = body.clean_text().unwrap_or_default();
-        return MergeOutcome::Clean(prefix.unwrap_or_default() + &text);
+        return MergeOutcome::Clean(head + &text);
     }
     let offset = fm_conflicts.len();
     let mut hunks = Vec::new();
@@ -356,10 +365,12 @@ fn build(
         });
         values.push(None);
     }
-    let pieces = body
-        .segments
-        .iter()
-        .map(|s| match s {
+    let lead = (prefix.is_none() && !bom.is_empty()).then(|| TemplatePiece::Text {
+        text: bom.to_owned(),
+    });
+    let pieces = lead
+        .into_iter()
+        .chain(body.segments.iter().map(|s| match s {
             Segment::Text(text) => TemplatePiece::Text { text: text.clone() },
             Segment::Hunk(i) => {
                 let h = &body.hunks[*i];
@@ -370,16 +381,15 @@ fn build(
                     theirs: h.theirs_out.clone(),
                 }
             }
-        })
+        }))
         .collect();
-    let merged_with_markers =
-        (offset == 0).then(|| prefix.clone().unwrap_or_default() + &body.with_markers());
+    let merged_with_markers = (offset == 0).then(|| head + &body.with_markers());
     MergeOutcome::Conflicted(Conflicted {
         merged_with_markers,
         hunks,
         auto_resolved: auto,
         template: ResolutionTemplate {
-            prefix,
+            prefix: prefix.map(|p| format!("{bom}{p}")),
             body: pieces,
             strip_final_newline: body.strip_final_newline,
             values,
@@ -391,10 +401,36 @@ fn build(
 pub fn merge_text_only(base: &str, ours: &str, theirs: &str) -> MergeOutcome {
     build(
         None,
+        false,
         Vec::new(),
         Vec::new(),
         &merge_text(base, ours, theirs),
     )
+}
+
+/// Splits off a leading byte order mark.
+fn split_bom(text: &str) -> (bool, &str) {
+    match text.strip_prefix(BOM) {
+        Some(rest) => (true, rest),
+        None => (false, text),
+    }
+}
+
+/// The 3-way rule for the byte order mark: theirs' when ours kept the base's, else ours'.
+fn merge_bom(base: bool, ours: bool, theirs: bool) -> (bool, Option<AutoResolved>) {
+    let resolution = if ours == base {
+        (theirs != base).then_some(AutoResolution::TookTheirs)
+    } else if ours == theirs {
+        Some(AutoResolution::Identical)
+    } else {
+        Some(AutoResolution::TookOurs)
+    };
+    let merged = if ours == base { theirs } else { ours };
+    let auto = resolution.map(|resolution| AutoResolved {
+        location: Location::ByteOrderMark,
+        resolution,
+    });
+    (merged, auto)
 }
 
 /// 3-way merges a note file (see the module docs).
@@ -405,16 +441,21 @@ pub fn merge(base: &str, ours: &str, theirs: &str) -> MergeOutcome {
     if ours == base {
         return MergeOutcome::Clean(theirs.to_owned());
     }
+    let ((bb, base), (ob, ours), (tb, theirs)) =
+        (split_bom(base), split_bom(ours), split_bom(theirs));
+    let (bom, bom_auto) = merge_bom(bb, ob, tb);
+    let mut auto: Vec<AutoResolved> = bom_auto.into_iter().collect();
     let (bd, od, td) = (
         Document::parse(base),
         Document::parse(ours),
         Document::parse(theirs),
     );
     let Some(fm) = merge_frontmatter(&bd, &od, &td) else {
-        return merge_text_only(base, ours, theirs);
+        return build(None, bom, Vec::new(), auto, &merge_text(base, ours, theirs));
     };
     let body = merge_text(bd.body(), od.body(), td.body());
-    build(Some(fm.prefix), fm.conflicts, fm.auto, &body)
+    auto.extend(fm.auto);
+    build(Some(fm.prefix), bom, fm.conflicts, auto, &body)
 }
 
 /// What to do with a pushed `note.update` (server) or a pulled change over a local pending

@@ -229,11 +229,11 @@ impl FakeLlmProvider {
             || PathBuf::from(format!("<fixtures>/{}/v{}/{input_hash}.json", prompt.id, prompt.version)),
             |d| Self::fixture_path(d, prompt, input_hash),
         );
-        if self.dir.is_some() {
-            if let Ok(text) = std::fs::read_to_string(&path) {
-                return serde_json::from_str(&text)
-                    .map_err(|e| ProviderError::Protocol(format!("fixture {}: {e}", path.display())));
-            }
+        if self.dir.is_some()
+            && let Ok(text) = std::fs::read_to_string(&path)
+        {
+            return serde_json::from_str(&text)
+                .map_err(|e| ProviderError::Protocol(format!("fixture {}: {e}", path.display())));
         }
         Err(ProviderError::MissingFixture {
             prompt_id: prompt.id.clone(),
@@ -250,7 +250,7 @@ impl LlmProvider for FakeLlmProvider {
         self.name
     }
 
-    fn model(&self) -> &str {
+    fn model(&self) -> &'static str {
         "fake-model"
     }
 

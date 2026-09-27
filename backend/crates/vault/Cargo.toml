@@ -10,6 +10,8 @@ description = "Strata vault store: per-user single-writer actor, atomic writes, 
 vault-format = { workspace = true }
 text-normalize = { workspace = true }
 domain = { workspace = true }
+dedupe = { workspace = true }
+sync-model = { workspace = true }
 strata-common = { workspace = true, features = ["sqlx"] }
 strata-index = { workspace = true }
 sqlx = { workspace = true }

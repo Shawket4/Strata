@@ -32,6 +32,11 @@ impl LinkResolver {
         Ok(Self { index, ids })
     }
 
+    /// The shortest link text for the file at `path` (bare name when unique).
+    pub fn link_text_for(&self, path: &str) -> String {
+        self.index.link_text_for(path)
+    }
+
     /// The note a link in `source` points at (unique resolution only).
     pub fn resolve(&self, link: &str, source: &str) -> Option<String> {
         match self.index.resolve(link, Some(source)) {

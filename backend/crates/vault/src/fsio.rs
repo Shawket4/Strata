@@ -7,15 +7,15 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use sha2::{Digest, Sha256};
 
 use crate::paths::{GIT_DIR, TEMP_PREFIX};
 
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-/// `sha256:<hex>` of `bytes`: a note's version (PLAN §7.2).
+/// `sha256:<hex>` of `bytes`: a note's version (PLAN §7.2), the shared `sync-model`
+/// [`Version`](sync_model::Version) so devices compute the same string.
 pub fn version_of(bytes: &[u8]) -> String {
-    format!("sha256:{}", hex::encode(Sha256::digest(bytes)))
+    sync_model::Version::of(bytes).as_str().to_owned()
 }
 
 /// Creates `dir` and its parents with mode 0700.

@@ -4,6 +4,8 @@ use std::fmt::Write as _;
 
 use yaml_rust2::{Yaml, YamlLoader};
 
+use crate::line::LineEnding;
+
 /// A frontmatter property value, reduced to the shapes Obsidian properties use.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PropertyValue {
@@ -168,6 +170,112 @@ pub(crate) fn double_quote(s: &str) -> String {
     }
     out.push('"');
     out
+}
+
+/// Renders a whole entry (`key: value` or `key:` plus indented block lines) for any YAML
+/// value. `key` is already rendered. Errors name what cannot be written.
+pub(crate) fn render_entry_yaml(key: &str, value: &Yaml, eol: LineEnding) -> Result<String, String> {
+    let eol = eol.as_str();
+    let mut out = String::new();
+    match value {
+        Yaml::Null => {
+            let _ = write!(out, "{key}:{eol}");
+        }
+        v if is_block(v) => {
+            let _ = write!(out, "{key}:{eol}");
+            render_block(v, 2, false, eol, &mut out)?;
+        }
+        v => {
+            let _ = write!(out, "{key}: {}{eol}", inline(v)?);
+        }
+    }
+    Ok(out)
+}
+
+/// A non-empty mapping or sequence (written as block lines).
+fn is_block(v: &Yaml) -> bool {
+    match v {
+        Yaml::Hash(h) => !h.is_empty(),
+        Yaml::Array(a) => !a.is_empty(),
+        _ => false,
+    }
+}
+
+/// A scalar or empty collection on the current line.
+fn inline(v: &Yaml) -> Result<String, String> {
+    Ok(match v {
+        Yaml::Null => "null".to_owned(),
+        Yaml::String(s) => render_scalar(s, false),
+        Yaml::Real(s) => s.clone(),
+        Yaml::Integer(i) => i.to_string(),
+        Yaml::Boolean(b) => b.to_string(),
+        Yaml::Hash(_) => "{}".to_owned(),
+        Yaml::Array(_) => "[]".to_owned(),
+        Yaml::Alias(_) => return Err("aliases cannot be written".into()),
+        Yaml::BadValue => return Err("bad value".into()),
+    })
+}
+
+/// A mapping key.
+fn render_key(k: &Yaml) -> Result<String, String> {
+    match k {
+        Yaml::String(s) => Ok(render_scalar(s, false)),
+        Yaml::Integer(_) | Yaml::Real(_) | Yaml::Boolean(_) => inline(k),
+        _ => Err("mapping keys must be scalars".into()),
+    }
+}
+
+/// Writes a non-empty collection as block lines at `indent` spaces. With `compact`, the
+/// first line continues the current one (after `- `).
+fn render_block(
+    v: &Yaml,
+    indent: usize,
+    compact: bool,
+    eol: &str,
+    out: &mut String,
+) -> Result<(), String> {
+    let pad = " ".repeat(indent);
+    let mut first = true;
+    let mut start = |out: &mut String| {
+        if !(compact && first) {
+            out.push_str(&pad);
+        }
+        first = false;
+    };
+    match v {
+        Yaml::Hash(h) => {
+            for (k, item) in h {
+                start(out);
+                out.push_str(&render_key(k)?);
+                out.push(':');
+                if is_block(item) {
+                    out.push_str(eol);
+                    render_block(item, indent + 2, false, eol, out)?;
+                } else {
+                    out.push(' ');
+                    out.push_str(&inline(item)?);
+                    out.push_str(eol);
+                }
+            }
+        }
+        Yaml::Array(items) => {
+            for item in items {
+                start(out);
+                out.push_str("- ");
+                if is_block(item) {
+                    render_block(item, indent + 2, true, eol, out)?;
+                } else {
+                    out.push_str(&inline(item)?);
+                    out.push_str(eol);
+                }
+            }
+        }
+        other => {
+            out.push_str(&inline(other)?);
+            out.push_str(eol);
+        }
+    }
+    Ok(())
 }
 
 /// Renders a flow list `[a, "b, c"]`.

@@ -215,3 +215,55 @@ proptest! {
         prop_assert!(text.ends_with("---\nz\nx\ny\n"));
     }
 }
+
+fn with_bom(bom: bool, text: &str) -> String {
+    if bom {
+        format!("\u{feff}{text}")
+    } else {
+        text.to_owned()
+    }
+}
+
+/// Whether the merged file (conflicts resolved with ours) starts with a BOM, and the rest.
+fn split(outcome: &MergeOutcome) -> (bool, MergeOutcome) {
+    match outcome {
+        MergeOutcome::Clean(t) => match t.strip_prefix('\u{feff}') {
+            Some(rest) => (true, MergeOutcome::Clean(rest.to_owned())),
+            None => (false, outcome.clone()),
+        },
+        MergeOutcome::Conflicted(c) => {
+            let resolved = c.resolve(
+                &c.hunks.iter().map(|h| (h.id, sync_model::Choice::Ours)).collect::<Vec<_>>(),
+            );
+            let text = resolved.unwrap_or_default();
+            match text.strip_prefix('\u{feff}') {
+                Some(rest) => (true, MergeOutcome::Clean(rest.to_owned())),
+                None => (false, MergeOutcome::Clean(text)),
+            }
+        }
+    }
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig::with_cases(512))]
+
+    /// The BOM never affects the rest of the merge and follows the 3-way rule: theirs' when
+    /// ours kept the base's, else ours'.
+    #[test]
+    fn bom_follows_the_three_way_rule(
+        (b, x, y) in triple(),
+        bb in any::<bool>(),
+        xb in any::<bool>(),
+        yb in any::<bool>(),
+        fm in any::<bool>(),
+    ) {
+        let wrap = |s: &str| if fm { format!("---\ntags: [a]\n---\n{s}") } else { s.to_owned() };
+        let (b, x, y) = (wrap(&b), wrap(&x), wrap(&y));
+        let plain = merge(&b, &x, &y);
+        let with = merge(&with_bom(bb, &b), &with_bom(xb, &x), &with_bom(yb, &y));
+        let want_bom = if xb == bb { yb } else { xb };
+        let (got_bom, rest) = split(&with);
+        prop_assert_eq!(got_bom, want_bom);
+        prop_assert_eq!(rest, split(&plain).1);
+    }
+}

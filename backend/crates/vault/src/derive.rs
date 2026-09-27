@@ -20,14 +20,14 @@ use strata_index::repo::tasks::Task;
 use strata_index::types::{
     By, CustodyType, DocCopy, DocStatus, EntityKind, Lang, LinkKind, NoteKind, Priority, TaskStatus,
 };
-use text_normalize::{dedupe_key, normalize_for_search};
+use text_normalize::normalize_for_search;
 use ulid::Ulid;
 use vault_format::frontmatter::KnownKey;
 use vault_format::sidecar::NoteSidecar;
 use vault_format::tasks::{DateKind, extract_tasks};
 use vault_format::{Anchor, Document as VDocument, PathIndex, RelationKey, Resolution, WikiLink};
 
-use crate::paths::{INBOX_DIR, is_note};
+use crate::paths::INBOX_DIR;
 use crate::state::{VaultState, name_key};
 
 /// Default time of a date-only reminder `(@YYYY-MM-DD)`.
@@ -37,8 +37,9 @@ pub const DEFAULT_REMINDER_TIME: NaiveTime = match NaiveTime::from_hms_opt(9, 0,
 };
 
 /// Sidecar key (unknown to `NoteSidecar`, kept in its `extra`) holding keep-both decisions
-/// between tasks of this note and other tasks: `[{"task": "t-…", "other": "t-…", "at": …}]`.
-pub const TASK_KEEP_BOTH_KEY: &str = "task_keep_both";
+/// whose items are not both this note and another note (tasks of this note, or this note and
+/// a task): `[{"kind": "task", "a": "t-…", "b": "t-…", "at": …}]`, as `dedupe::KeepBoth`.
+pub const KEEP_BOTH_ITEMS_KEY: &str = "keep_both_items";
 
 /// Everything the index needs to know about the rest of the vault.
 #[derive(Debug, Clone, Copy)]
@@ -60,17 +61,15 @@ impl Context<'_> {
     }
 }
 
-/// A duplicate-key row.
+/// The stored duplicate keys of one item (`dedupe::Item::keys`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DedupeRow {
     /// Kind (`note`, `capture`, `task`, `person`, …).
     pub kind: String,
     /// Item ID (note ULID or task block ID).
     pub item_id: String,
-    /// Exact key.
-    pub exact: String,
-    /// Normalised text for trigram matching.
-    pub trigram: String,
+    /// One row per name.
+    pub rows: Vec<strata_index::repo::vault::DedupeKeyRow>,
 }
 
 /// A keep-both pair.
@@ -165,29 +164,6 @@ pub fn dedupe_kind(path: &str, kind: DNoteKind) -> &'static str {
     } else {
         kind.as_str()
     }
-}
-
-/// The text compared for duplicates: the title, or for captures the body text.
-pub fn dedupe_text(path: &str, kind: DNoteKind, title: &str, doc: &VDocument) -> String {
-    if dedupe_kind(path, kind) == "capture" {
-        doc.body().trim().to_owned()
-    } else {
-        title.to_owned()
-    }
-}
-
-/// Exact key of a task: text key, recurrence rule and linked entities (§9.7).
-pub fn task_exact_key(description: &str, rrule: Option<&str>) -> String {
-    let links: BTreeSet<String> = vault_format::wikilink::find_all(description)
-        .iter()
-        .map(|l| l.target().to_lowercase())
-        .collect();
-    format!(
-        "{}|{}|{}",
-        dedupe_key(&strip_links(description)),
-        rrule.unwrap_or_default(),
-        links.into_iter().collect::<Vec<_>>().join(",")
-    )
 }
 
 /// Task text with wikilinks replaced by their display text (for keys and search).
@@ -324,15 +300,16 @@ pub fn derive(
                 });
             }
         }
-        if let Some(serde_json::Value::Array(items)) = s.extra.get(TASK_KEEP_BOTH_KEY) {
+        if let Some(serde_json::Value::Array(items)) = s.extra.get(KEEP_BOTH_ITEMS_KEY) {
             for item in items {
                 let get = |k: &str| item.get(k).and_then(serde_json::Value::as_str);
-                if let (Some(a), Some(b), Some(at)) = (get("task"), get("other"), get("at"))
+                if let (Some(kind), Some(a), Some(b), Some(at)) =
+                    (get("kind"), get("a"), get("b"), get("at"))
                     && let Ok(at) = DateTime::parse_from_rfc3339(at)
                     && a != b
                 {
                     out.keep_both.push(KeepBothRow {
-                        kind: "task".into(),
+                        kind: kind.to_owned(),
                         a: a.to_owned(),
                         b: b.to_owned(),
                         at: to_utc(at),
@@ -548,12 +525,9 @@ pub fn derive(
             .collect();
         reminders.sort();
         reminders.dedup();
-        out.dedupe.push(DedupeRow {
-            kind: "task".into(),
-            item_id: tid.clone(),
-            exact: task_exact_key(&description, rrule.as_deref()),
-            trigram: normalize_for_search(&strip_links(&description)),
-        });
+        if task.status().is_open() {
+            out.dedupe.push(crate::dup::rows(&crate::dup::task_item(&tid, task)));
+        }
         out.tasks.push((
             Task {
                 id: tid,
@@ -579,15 +553,9 @@ pub fn derive(
         ));
     }
 
-    // Duplicate key of the note itself.
-    let text_for_key = dedupe_text(path, kind, &title, &doc);
-    out.dedupe.push(DedupeRow {
-        kind: dedupe_kind(path, kind).to_owned(),
-        item_id: id.to_string(),
-        exact: dedupe_key(&text_for_key),
-        trigram: normalize_for_search(&text_for_key),
-    });
-    let _ = is_note;
+    // Duplicate keys of the note itself.
+    out.dedupe
+        .push(crate::dup::rows(&crate::dup::note_item(path, Some(id), &doc)));
     Some(out)
 }
 

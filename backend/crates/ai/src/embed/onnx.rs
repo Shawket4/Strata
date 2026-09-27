@@ -41,6 +41,9 @@ pub struct OnnxEmbedderConfig {
     pub max_tokens: usize,
     /// Padded tokens per batch.
     pub max_batch_tokens: usize,
+    /// Whether texts of different lengths may share a padded batch (see
+    /// [`plan_batches`]: off for the quint8 export, whose output changes with padding).
+    pub pad_batches: bool,
     /// Nice value of the worker thread (0–19; 19 = lowest priority).
     pub nice: i32,
 }
@@ -60,6 +63,7 @@ impl OnnxEmbedderConfig {
             pooling: Pooling::Cls,
             max_tokens: 2048,
             max_batch_tokens: 8192,
+            pad_batches: false,
             nice: 19,
         }
     }
@@ -91,6 +95,8 @@ pub struct PipelineSettings {
     pub pooling: Pooling,
     /// Padded tokens per batch.
     pub max_batch_tokens: usize,
+    /// Whether differently long texts may share a padded batch.
+    pub pad_batches: bool,
     /// Worker nice value.
     pub nice: i32,
 }
@@ -122,6 +128,7 @@ impl OnnxEmbedder {
             dims: cfg.dims,
             pooling: cfg.pooling,
             max_batch_tokens: cfg.max_batch_tokens,
+            pad_batches: cfg.pad_batches,
             nice: cfg.nice,
         };
         let cfg = cfg.clone();
@@ -217,11 +224,12 @@ fn embed_texts(
         .map(|t| encoder.encode(t))
         .collect::<Result<_, _>>()?;
     let lengths: Vec<usize> = seqs.iter().map(Vec::len).collect();
-    let mut out = Vec::with_capacity(texts.len());
-    for range in plan_batches(&lengths, s.max_batch_tokens) {
-        let batch = pad(&seqs[range], encoder.pad_id());
+    let mut out: Vec<Option<Vec<f32>>> = vec![None; texts.len()];
+    for indices in plan_batches(&lengths, s.max_batch_tokens, s.pad_batches) {
+        let rows: Vec<Vec<u32>> = indices.iter().map(|&i| seqs[i].clone()).collect();
+        let batch = pad(&rows, encoder.pad_id());
         let (shape, values) = session.run(&batch)?;
-        let mut vectors = match shape.as_slice() {
+        let vectors = match shape.as_slice() {
             [b, seq, dim] if *b == batch.batch && *seq == batch.seq => {
                 pool(&values, &batch.attention_mask, *b, *seq, *dim, s.pooling)?
             }
@@ -235,15 +243,17 @@ fn embed_texts(
                 )));
             }
         };
-        for v in &mut vectors {
+        for (i, mut v) in indices.into_iter().zip(vectors) {
             if v.len() != s.dims {
                 return Err(EmbedError::Output(format!("{} dimensions, expected {}", v.len(), s.dims)));
             }
-            l2_normalize(v);
+            l2_normalize(&mut v);
+            out[i] = Some(v);
         }
-        out.extend(vectors);
     }
-    Ok(out)
+    out.into_iter()
+        .map(|v| v.ok_or_else(|| EmbedError::Output("a text was not embedded".into())))
+        .collect()
 }
 
 #[async_trait::async_trait]
@@ -454,6 +464,7 @@ mod tests {
                 dims: 3,
                 pooling,
                 max_batch_tokens,
+                pad_batches: true,
                 nice: 19,
             },
             gate.clone(),
@@ -503,6 +514,44 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn without_padding_only_equal_lengths_share_a_batch_and_order_is_kept() {
+        let shapes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let e = OnnxEmbedder::with_parts(
+            Box::new(WordLenEncoder),
+            Box::new(FakeSession { shapes: shapes.clone() }),
+            PipelineSettings { model_id: "m".into(), dims: 3, pooling: Pooling::Mean, max_batch_tokens: 100, pad_batches: false, nice: 19 },
+            CpuGate::new(),
+        )
+        .expect("spawn");
+        let texts: Vec<String> = ["a b", "c", "dd ee", "f"].map(str::to_owned).to_vec();
+        let out = e.embed(&texts).await.expect("embed");
+        // Lengths 4, 3, 4, 3 → batches [1, 3] (3 tokens) and [0, 2] (4 tokens), no padding.
+        assert_eq!(*shapes.lock().expect("lock"), vec![(2, 3), (2, 4)]);
+        let one = |t: &str| {
+            let mut ids = vec![1u32];
+            ids.extend(t.split_whitespace().map(|w| u32::try_from(w.len()).expect("len") + 10));
+            ids.push(2);
+            #[allow(clippy::cast_precision_loss)]
+            let n = ids.len() as f32;
+            let mut v = [0f32; 3];
+            for (pos, id) in ids.iter().enumerate() {
+                #[allow(clippy::cast_precision_loss)]
+                let (id, pos) = (*id as f32, pos as f32);
+                v[0] += id / n;
+                v[1] += id * pos / n;
+                v[2] += 1.0 / n;
+            }
+            let mut v = v.to_vec();
+            l2_normalize(&mut v);
+            v
+        };
+        for (got, text) in out.iter().zip(&texts) {
+            let want = one(text);
+            assert!(crate::embed::pooling::dot(&got.vector, &want) > 0.999_999, "{text}");
+        }
+    }
+
+    #[tokio::test]
     async fn embedding_waits_while_a_claude_call_holds_the_gate() {
         let (e, _, gate) = embedder(Pooling::Cls, 100);
         let llm = gate.llm().await;
@@ -525,7 +574,7 @@ mod tests {
         let e = OnnxEmbedder::with_parts(
             Box::new(WordLenEncoder),
             Box::new(FakeSession { shapes }),
-            PipelineSettings { model_id: "m".into(), dims: 384, pooling: Pooling::Cls, max_batch_tokens: 100, nice: 19 },
+            PipelineSettings { model_id: "m".into(), dims: 384, pooling: Pooling::Cls, max_batch_tokens: 100, pad_batches: true, nice: 19 },
             CpuGate::new(),
         )
         .expect("spawn");

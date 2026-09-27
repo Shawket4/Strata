@@ -15,3 +15,15 @@ CREATE TABLE integrity_warnings (
 );
 CREATE INDEX integrity_warnings_created ON integrity_warnings (user_id, created DESC, id DESC);
 SELECT strata_make_user_owned('integrity_warnings');
+
+-- Duplicate keys as the shared `dedupe` crate produces them (PLAN §9.7, L16): one row per
+-- name of an item (entities have several), each with its exact key, trigram text and
+-- transliteration key, and the item itself (MessagePack `dedupe::Item`) so candidates found by
+-- SQL are decided by `dedupe::check` exactly as the client core decides offline.
+ALTER TABLE dedupe_keys ADD COLUMN key_no smallint NOT NULL DEFAULT 0 CHECK (key_no >= 0);
+ALTER TABLE dedupe_keys ADD COLUMN phonetic_key text;
+ALTER TABLE dedupe_keys ADD COLUMN item bytea;
+ALTER TABLE dedupe_keys DROP CONSTRAINT dedupe_keys_pkey;
+ALTER TABLE dedupe_keys ADD PRIMARY KEY (user_id, kind, item_id, key_no);
+CREATE INDEX dedupe_keys_phonetic ON dedupe_keys (user_id, kind, phonetic_key)
+    WHERE phonetic_key IS NOT NULL;

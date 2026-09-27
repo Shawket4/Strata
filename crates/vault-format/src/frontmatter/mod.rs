@@ -5,6 +5,11 @@
 //! read by parsing the whole block with a YAML 1.2 parser. Rendering an untouched frontmatter
 //! returns the original bytes; rendering after a change re-emits only the changed entries in
 //! canonical form and orders entries canonically (PLAN §6.4).
+//!
+//! Flat values are written with [`Frontmatter::set`]; nested values (mappings, sequences of
+//! mappings, …) with [`Frontmatter::set_yaml`] (canonical block YAML) or
+//! [`Frontmatter::set_raw_entry`] (verbatim entry text, e.g. taken from another version of
+//! the note).
 
 mod keys;
 mod typed;
@@ -12,11 +17,13 @@ mod yaml;
 
 use std::collections::HashMap;
 
-use yaml_rust2::{Yaml, YamlLoader};
+use yaml_rust2::YamlLoader;
 
 pub use keys::{KnownKey, RelationKey, UnknownRelation, ValueShape};
 pub use typed::{Open, Vocabulary, format_timestamp};
 pub use yaml::PropertyValue;
+/// A parsed YAML node (`yaml-rust2`), used for nested frontmatter values.
+pub use yaml_rust2::Yaml;
 
 use crate::line::{self, LineEnding};
 
@@ -40,8 +47,9 @@ pub enum FrontmatterError {
         /// Why it is invalid.
         reason: String,
     },
-    /// Only flat values (null, scalar, list of scalars) can be written.
-    #[error("cannot write a nested value to `{0}`")]
+    /// [`Frontmatter::set`] writes only flat values (null, scalar, list of scalars); nested
+    /// values go through [`Frontmatter::set_yaml`] or [`Frontmatter::set_raw_entry`].
+    #[error("cannot write a nested value to `{0}` with `set`")]
     NestedValue(String),
 }
 
@@ -56,6 +64,9 @@ struct Entry {
     raw: String,
     /// Parsed value.
     value: PropertyValue,
+    /// The YAML node `raw` must read back as (`None` when unknown). Checked, in addition to
+    /// `value`, whenever the entry is written with its raw text.
+    node: Option<Yaml>,
     /// Original position (new entries get positions after all original ones).
     order: usize,
 }
@@ -65,6 +76,8 @@ struct Placed<'a> {
     entry: &'a Entry,
     raw: String,
     value: PropertyValue,
+    /// The node the raw text must read back as (only when the entry keeps its raw text).
+    node: Option<&'a Yaml>,
 }
 
 /// Frontmatter of one note. Construct with [`crate::Document::parse`] or [`Frontmatter::new`].
@@ -152,6 +165,7 @@ impl Frontmatter {
                 )));
             };
             entry.value = yaml::to_property(node, raw_scalar(&entry.raw));
+            entry.node = Some(node.clone());
         }
         Ok(())
     }
@@ -195,6 +209,16 @@ impl Frontmatter {
         self.entry(key).map(|e| &e.value)
     }
 
+    /// The parsed YAML value of `key`, whatever its shape (`None` when absent, when the
+    /// frontmatter is invalid, or for a value written by [`Frontmatter::set`] whose entry
+    /// could not be parsed on its own). Use it to read nested values.
+    pub fn yaml(&self, key: &str) -> Option<&Yaml> {
+        if self.error.is_some() {
+            return None;
+        }
+        self.entry(key).and_then(|e| e.node.as_ref())
+    }
+
     /// The raw YAML text of `key`'s entry (key line and continuation lines).
     pub fn raw_entry(&self, key: &str) -> Option<&str> {
         self.entry(key).map(|e| e.raw.as_str())
@@ -219,24 +243,104 @@ impl Frontmatter {
         if value == PropertyValue::Other {
             return Err(FrontmatterError::NestedValue(key.to_owned()));
         }
+        if self.entry(key).is_some_and(|e| e.value == value) {
+            return Ok(());
+        }
         let raw = render_entry(key, &value, self.eol);
+        let node = parse_entry(&raw).map(|(_, node)| node);
+        self.put(key, raw, value, node)
+    }
+
+    /// Sets `key` to any YAML value, including nested mappings and sequences, rendered as
+    /// canonical block YAML (§3.4 of `docs/VAULT_FORMAT.md`): two-space indentation,
+    /// sequences indented under their key, scalars plain when they read back unchanged and
+    /// double-quoted otherwise, `{}`/`[]` for empty collections and `null` for nested nulls.
+    /// Other entries keep their bytes. An equal value leaves the file untouched. Fails (and
+    /// changes nothing) if the value holds an alias or a bad value, has a key that is not a
+    /// scalar, or if the edited block would not read back as exactly the expected values.
+    pub fn set_yaml(&mut self, key: &str, value: &Yaml) -> Result<(), FrontmatterError> {
+        self.ensure_editable()?;
+        if self.entry(key).and_then(|e| e.node.as_ref()) == Some(value) {
+            return Ok(());
+        }
+        let invalid = |reason: String| FrontmatterError::InvalidValue {
+            key: key.to_owned(),
+            reason,
+        };
+        let raw = yaml::render_entry_yaml(&render_key(key), value, self.eol).map_err(invalid)?;
+        match parse_entry(&raw) {
+            Some((k, node)) if k == key && node == *value => {}
+            _ => return Err(invalid("the rendered value does not read back".into())),
+        }
+        let prop = yaml::to_property(value, raw_scalar(&raw));
+        self.put(key, raw, prop, Some(value.clone()))
+    }
+
+    /// Sets `key`'s entry to `raw`, verbatim: a key line for `key` plus its continuation
+    /// lines, as returned by [`Frontmatter::raw_entry`] (e.g. from another version of the
+    /// note). Line endings are converted to this frontmatter's, and a missing final
+    /// terminator is added. Other entries keep their bytes; an identical entry leaves the
+    /// file untouched. Fails (and changes nothing) if `raw` is not exactly one entry for
+    /// `key` (no comment or blank lines around it), is not valid YAML on its own, or if the
+    /// edited block would not read back as exactly the expected values.
+    pub fn set_raw_entry(&mut self, key: &str, raw: &str) -> Result<(), FrontmatterError> {
+        self.ensure_editable()?;
+        let invalid = |reason: &str| FrontmatterError::InvalidValue {
+            key: key.to_owned(),
+            reason: reason.to_owned(),
+        };
+        let mut raw = self.eol.apply(raw);
+        if !raw.ends_with('\n') {
+            raw.push_str(self.eol.as_str());
+        }
+        if has_bare_cr(&raw) {
+            return Err(invalid("bare carriage return"));
+        }
+        let (entries, trailing) = split_entries(&raw);
+        let single = matches!(
+            entries.as_slice(),
+            [e] if e.key.as_deref() == Some(key) && e.leading.is_empty()
+        );
+        if !single || !trailing.is_empty() {
+            return Err(invalid("not a single entry for this key"));
+        }
+        if self.entry(key).is_some_and(|e| e.raw == raw) {
+            return Ok(());
+        }
+        let Some((k, node)) = parse_entry(&raw) else {
+            return Err(invalid("not valid YAML on its own"));
+        };
+        if k != key {
+            return Err(invalid("not a single entry for this key"));
+        }
+        let value = yaml::to_property(&node, raw_scalar(&raw));
+        self.put(key, raw, value, Some(node))
+    }
+
+    /// Replaces (or appends) `key`'s entry and keeps the edit only if it reads back.
+    fn put(
+        &mut self,
+        key: &str,
+        raw: String,
+        value: PropertyValue,
+        node: Option<Yaml>,
+    ) -> Result<(), FrontmatterError> {
         let before = self.entries.clone();
         if let Some(entry) = self
             .entries
             .iter_mut()
             .find(|e| e.key.as_deref() == Some(key))
         {
-            if entry.value == value {
-                return Ok(());
-            }
             entry.raw = raw;
             entry.value = value;
+            entry.node = node;
         } else {
             self.entries.push(Entry {
                 key: Some(key.to_owned()),
                 leading: String::new(),
                 raw,
                 value,
+                node,
                 order: self.next_order,
             });
             self.next_order += 1;
@@ -318,11 +422,13 @@ impl Frontmatter {
                         entry: e,
                         raw: render_entry(k.as_str(), &v, self.eol),
                         value: v,
+                        node: None,
                     },
                     None => Placed {
                         entry: e,
                         raw: e.raw.clone(),
                         value: e.value.clone(),
+                        node: e.node.as_ref(),
                     },
                 }
             })
@@ -367,7 +473,10 @@ impl Frontmatter {
                     .key
                     .as_deref()
                     .and_then(|k| lookup(map, k))
-                    .is_some_and(|node| yaml::to_property(node, raw_scalar(&p.raw)) == p.value)
+                    .is_some_and(|node| {
+                        yaml::to_property(node, raw_scalar(&p.raw)) == p.value
+                            && p.node.is_none_or(|expected| expected == node)
+                    })
             })
     }
 }
@@ -403,12 +512,31 @@ fn canonical_value(key: KnownKey, value: &PropertyValue) -> Option<PropertyValue
     }
 }
 
-fn render_entry(key: &str, value: &PropertyValue, eol: LineEnding) -> String {
-    let key = if KnownKey::from_name(key).is_some() {
+/// A key as written on its key line: known keys as is, others plain or double-quoted.
+fn render_key(key: &str) -> String {
+    if KnownKey::from_name(key).is_some() {
         key.to_owned()
     } else {
         yaml::render_scalar(key, true)
+    }
+}
+
+/// Parses one entry on its own: its key text and value node.
+fn parse_entry(raw: &str) -> Option<(String, Yaml)> {
+    let docs = YamlLoader::load_from_str(raw).ok()?;
+    let [Yaml::Hash(map)] = docs.as_slice() else {
+        return None;
     };
+    let mut iter = map.iter();
+    let (k, v) = iter.next()?;
+    if iter.next().is_some() {
+        return None;
+    }
+    Some((yaml_key_text(k)?, v.clone()))
+}
+
+fn render_entry(key: &str, value: &PropertyValue, eol: LineEnding) -> String {
+    let key = render_key(key);
     let eol = eol.as_str();
     match value {
         PropertyValue::Null | PropertyValue::Other => format!("{key}:{eol}"),
@@ -523,6 +651,7 @@ fn split_entries(inner: &str) -> (Vec<Entry>, String) {
                 leading: std::mem::take(&mut pending),
                 raw: full.to_owned(),
                 value: PropertyValue::Null,
+                node: None,
                 order,
             });
         } else if let Some(last) = entries.last_mut() {

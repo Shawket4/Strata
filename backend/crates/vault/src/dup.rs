@@ -1,71 +1,32 @@
-//! Duplicate check on create (PLAN §9.7, exact + near levels; semantic is Phase 4).
+//! Duplicate check on create (PLAN §9.7: exact and near levels; semantic is Phase 4).
 //!
-//! Candidates come from SQL: equal exact keys and `pg_trgm` similarity over `dedupe_keys`,
-//! plus alias similarity over `entity_aliases` for named kinds (both scripts: every alias is
-//! stored normalised). Keys are computed by `text-normalize` exactly as the index stores
-//! them (see [`crate::derive`]), so the client core's offline check agrees.
+//! The decision is the shared `dedupe` crate's (L16), so the server's check and the client
+//! core's offline check always agree:
+//!
+//! 1. Every note and open task is stored as a `dedupe::Item` with its
+//!    [`keys`](dedupe::Item::keys) in `dedupe_keys` (one row per name) — see
+//!    [`note_item`], [`task_item`], [`rows`].
+//! 2. A new item's [`CandidateQuery`] selects candidates with SQL (exact and transliteration
+//!    keys, `pg_trgm` similarity above the query's floor).
+//! 3. [`dedupe::check`] decides, with keep-both pairs from `dedupe_keep_both`.
 
 use std::collections::BTreeMap;
 
-use domain::{DedupeKind, DedupeThresholds};
+use dedupe::{CandidateQuery, DedupeKind, DedupeThresholds, Existing, Item, KeepBoth, KeepBothSet};
+use domain::NoteKind;
 use strata_common::NoteId;
 use strata_index::ScopedTx;
-use strata_index::repo::{dedupe, notes, tasks, vault as vrepo};
-use strata_index::types::EntityKind;
-use text_normalize::{dedupe_key, normalize_for_search};
+use strata_index::repo::tasks;
+use strata_index::repo::vault::{self as vrepo, DedupeKeyRow};
+use vault_format::Document;
+use vault_format::tasks::TaskLine;
 
+use crate::derive::{DedupeRow, dedupe_kind, kind_of, title_of};
 use crate::error::{Candidate, MatchLevel, Result};
 use crate::prepare::task_ulid;
 
-/// The item being created.
-#[derive(Debug, Clone)]
-pub struct NewItem<'a> {
-    /// Dedupe kind (`note`, `capture`, `task`, `person`, …).
-    pub kind: &'a str,
-    /// Its ID, when known (client-supplied): keep-both pairs with it are skipped.
-    pub id: Option<String>,
-    /// Compared text (title, capture text, task description).
-    pub text: &'a str,
-    /// Exact key override (tasks: text + recurrence + entities).
-    pub exact: Option<String>,
-    /// Further names (entity aliases).
-    pub aliases: &'a [String],
-}
-
-fn compatible(kind: &str) -> &'static [&'static str] {
-    match kind {
-        "capture" => &["capture", "note"],
-        "note" => &["note"],
-        "task" => &["task"],
-        "person" => &["person"],
-        "company" => &["company"],
-        "document" => &["document"],
-        "place" => &["place"],
-        "concept" => &["concept"],
-        _ => &[],
-    }
-}
-
-fn entity_kind(kind: &str) -> Option<EntityKind> {
-    match kind {
-        "person" => Some(EntityKind::Person),
-        "company" => Some(EntityKind::Company),
-        "document" => Some(EntityKind::Document),
-        "place" => Some(EntityKind::Place),
-        _ => None,
-    }
-}
-
-/// The near threshold of a kind: configured override, else the `domain` default.
-pub fn near_threshold(kind: &str, overrides: &BTreeMap<String, f32>) -> f32 {
-    if let Some(t) = overrides.get(kind) {
-        return *t;
-    }
-    kind.parse::<DedupeKind>()
-        .map_or(0.6, |k| DedupeThresholds::default_for(k).near)
-}
-
-fn snippet_of(text: &str) -> Option<String> {
+/// The first non-empty line of `text`, at most 120 characters.
+pub fn snippet_of(text: &str) -> Option<String> {
     let line = text.lines().map(str::trim).find(|l| !l.is_empty())?;
     let mut s: String = line.chars().take(120).collect();
     if line.chars().count() > 120 {
@@ -74,116 +35,164 @@ fn snippet_of(text: &str) -> Option<String> {
     Some(s)
 }
 
-/// Existing items the new one resembles, exact matches first, then by score and ID.
-#[allow(clippy::too_many_lines)] // one linear pass; splitting would scatter the rules
+/// The dedupe item of the note at `path`: notes by title, captures by their text, concepts
+/// and entities by name and aliases.
+pub fn note_item(path: &str, id: Option<NoteId>, doc: &Document) -> Item {
+    let id_text = id.map(|i| i.to_string());
+    let id = id_text.as_deref();
+    let kind = kind_of(doc);
+    let title = title_of(path, doc);
+    let aliases: Vec<String> = doc
+        .frontmatter()
+        .map(vault_format::Frontmatter::aliases)
+        .unwrap_or_default();
+    let alias_refs: Vec<&str> = aliases.iter().map(String::as_str).collect();
+    match kind {
+        NoteKind::Note if dedupe_kind(path, kind) == "capture" => {
+            let text = doc.body().trim();
+            let item = Item::capture(id, text);
+            match snippet_of(text) {
+                Some(s) => item.with_snippet(&s),
+                None => item,
+            }
+        }
+        NoteKind::Note => Item::note(id, &title),
+        NoteKind::Concept => Item::concept(id, &title, &alias_refs),
+        NoteKind::Person => Item::entity(DedupeKind::Person, id, &title, &alias_refs),
+        NoteKind::Company => Item::entity(DedupeKind::Company, id, &title, &alias_refs),
+        NoteKind::Document => Item::entity(DedupeKind::Document, id, &title, &alias_refs),
+        NoteKind::Place => Item::entity(DedupeKind::Place, id, &title, &alias_refs),
+    }
+}
+
+/// The dedupe item of a task line: description, compiled recurrence and linked entities.
+pub fn task_item(id: &str, task: &TaskLine) -> Item {
+    let description = task.description();
+    let rrule = crate::ops::tasks::rrule_of(task);
+    let entities: Vec<String> = vault_format::wikilink::find_all(description)
+        .iter()
+        .map(|l| l.target().to_owned())
+        .collect();
+    let refs: Vec<&str> = entities.iter().map(String::as_str).collect();
+    let item = Item::task(Some(id), description, rrule.as_deref(), &refs);
+    match task.date(vault_format::tasks::DateKind::Due) {
+        Some(d) => item.with_snippet(&format!("due {}", d.format("%Y-%m-%d"))),
+        None => item,
+    }
+}
+
+/// The `dedupe_keys` rows of an item (it must have an ID).
+pub fn rows(item: &Item) -> DedupeRow {
+    let keys = item.keys();
+    let blob = rmp_serde::to_vec_named(item).unwrap_or_default();
+    let n = keys.exact_keys.len().max(keys.trigram_texts.len()).max(1);
+    let mut out = Vec::with_capacity(n);
+    for i in 0..n {
+        out.push(DedupeKeyRow {
+            key_no: i16::try_from(i).unwrap_or(i16::MAX),
+            exact_key: keys.exact_keys.get(i).cloned().unwrap_or_default(),
+            trigram_text: keys.trigram_texts.get(i).cloned().unwrap_or_default(),
+            phonetic_key: keys.phonetic_keys.get(i).cloned(),
+            item: blob.clone(),
+        });
+    }
+    DedupeRow {
+        kind: item.kind.as_str().to_owned(),
+        item_id: item.id.clone().unwrap_or_default(),
+        rows: out,
+    }
+}
+
+/// Per-kind thresholds: the `domain` defaults with configured near-threshold overrides.
+pub fn thresholds(overrides: &BTreeMap<String, f32>) -> dedupe::Thresholds {
+    let mut t = dedupe::Thresholds::new();
+    for (kind, near) in overrides {
+        if let Ok(k) = kind.parse::<DedupeKind>() {
+            let d = DedupeThresholds::default_for(k);
+            t = t.with(k, DedupeThresholds { near: *near, ..d });
+        }
+    }
+    t
+}
+
+/// The duplicate candidates of `item` (strongest first), keep-both pairs excluded.
 pub async fn find(
     tx: &mut ScopedTx,
-    item: &NewItem<'_>,
+    item: &Item,
     overrides: &BTreeMap<String, f32>,
 ) -> Result<Vec<Candidate>> {
-    let threshold = near_threshold(item.kind, overrides);
-    let exact = item.exact.clone().unwrap_or_else(|| dedupe_key(item.text));
-    let trigram = normalize_for_search(&crate::derive::strip_links(item.text));
-    // (kind, item id) -> (level, score)
-    let mut found: BTreeMap<(String, String), (MatchLevel, f64)> = BTreeMap::new();
-    for kind in compatible(item.kind) {
-        if !exact.trim_matches('|').is_empty() {
-            for id in dedupe::exact_matches(tx, kind, &exact).await? {
-                found.insert(((*kind).to_owned(), id), (MatchLevel::Exact, 1.0));
-            }
-        }
-        if !trigram.is_empty() {
-            for m in dedupe::near_matches(tx, kind, &trigram, threshold, 20).await? {
-                found
-                    .entry(((*kind).to_owned(), m.item_id))
-                    .or_insert((MatchLevel::Near, f64::from(m.score)));
-            }
-        }
-    }
-    if let Some(ek) = entity_kind(item.kind) {
-        let names = std::iter::once(item.text).chain(item.aliases.iter().map(String::as_str));
-        for name in names {
-            let q = normalize_for_search(name);
-            if q.is_empty() {
-                continue;
-            }
-            for hit in vrepo::search_entities(tx, Some(ek), Some(&q), None, threshold, 20).await? {
-                let score = f64::from(hit.score);
-                if score + 1e-6 < f64::from(threshold) {
-                    continue;
-                }
-                let level = if score >= 0.999 {
-                    MatchLevel::Exact
-                } else {
-                    MatchLevel::Near
-                };
-                let key = (item.kind.to_owned(), hit.note_id.to_string());
-                let entry = found.entry(key).or_insert((level, score));
-                if level == MatchLevel::Exact {
-                    *entry = (MatchLevel::Exact, 1.0);
-                } else if entry.0 == MatchLevel::Near && score > entry.1 {
-                    entry.1 = score;
-                }
+    let thresholds = thresholds(overrides);
+    let q = CandidateQuery::for_item(item, &thresholds);
+    let kinds: Vec<String> = q.kinds.iter().map(|k| k.as_str().to_owned()).collect();
+    let blobs = vrepo::dedupe_candidates(
+        tx,
+        &kinds,
+        &q.exact_keys,
+        &q.phonetic_keys,
+        &q.trigram_texts,
+        q.trigram_floor.clamp(0.0, 1.0),
+        200,
+    )
+    .await?;
+    let existing: Vec<Existing> = blobs
+        .iter()
+        .filter_map(|b| rmp_serde::from_slice::<Item>(b).ok())
+        .map(Existing::from)
+        .collect();
+    let mut keep = KeepBothSet::new();
+    if let Some(own) = &item.id {
+        for (kind, a, b) in vrepo::keep_both_pairs_of(tx, own).await? {
+            if let Ok(k) = kind.parse::<DedupeKind>() {
+                keep.insert(KeepBoth::new(k, &a, &b));
             }
         }
     }
-    let mut out = Vec::new();
-    for ((kind, id), (level, score)) in found {
-        if item.id.as_deref() == Some(id.as_str()) {
-            continue;
-        }
-        if let Some(own) = &item.id
-            && dedupe::is_keep_both(tx, &kind, own, &id).await?
-        {
-            continue;
-        }
-        let candidate = if kind == "task" {
-            let Some(t) = tasks::get_task(tx, &id).await? else {
-                continue;
-            };
-            Candidate {
-                item: t.id.clone(),
-                id: task_ulid(&t.id).unwrap_or_else(|| t.note_id.as_ulid()),
-                kind,
-                title: crate::derive::strip_links(&t.text),
-                snippet: t.due.map(|d| format!("due {}", d.format("%Y-%m-%d"))),
-                level,
-                score,
-            }
-        } else {
-            let Ok(note_id) = id.parse::<NoteId>() else {
-                continue;
-            };
-            let Some(n) = notes::get_note(tx, note_id).await? else {
-                continue;
-            };
-            if n.trashed {
-                continue;
-            }
-            Candidate {
-                item: id.clone(),
-                id: note_id.as_ulid(),
-                snippet: None,
-                kind,
-                title: n.title,
-                level,
-                score,
-            }
+    let outcome = dedupe::check(item, &existing, &thresholds, &keep);
+    let mut out = Vec::with_capacity(outcome.candidates.len());
+    for c in outcome.candidates {
+        let id = match c.id.parse::<NoteId>() {
+            Ok(n) => n.as_ulid(),
+            Err(_) => match task_ulid(&c.id) {
+                Some(u) => u,
+                None => match tasks::get_task(tx, &c.id).await? {
+                    Some(t) => t.note_id.as_ulid(),
+                    None => continue,
+                },
+            },
         };
-        out.push(candidate);
+        out.push(Candidate {
+            item: c.id,
+            id,
+            kind: c.kind.as_str().to_owned(),
+            title: c.title,
+            snippet: c.snippet,
+            level: match c.level {
+                dedupe::MatchLevel::Exact => MatchLevel::Exact,
+                dedupe::MatchLevel::Near | dedupe::MatchLevel::Semantic => MatchLevel::Near,
+            },
+            score: f64::from(c.score),
+        });
     }
-    out.sort_by(|a, b| {
-        let rank = |c: &Candidate| u8::from(c.level != MatchLevel::Exact);
-        rank(a)
-            .cmp(&rank(b))
-            .then(b.score.total_cmp(&a.score))
-            .then(a.id.cmp(&b.id))
-    });
-    let _ = snippet_of;
     Ok(out)
 }
 
-/// The capture snippet of a candidate text.
-pub fn capture_snippet(text: &str) -> Option<String> {
-    snippet_of(text)
+/// The keep-both pairs to record when `item` is created despite `candidates`.
+pub fn forced_pairs(item: &Item, candidates: &[Candidate]) -> Vec<KeepBoth> {
+    let own = item.id.clone().unwrap_or_default();
+    let dc: Vec<dedupe::DuplicateCandidate> = candidates
+        .iter()
+        .map(|c| dedupe::DuplicateCandidate {
+            id: c.item.clone(),
+            kind: c.kind.parse().unwrap_or(item.kind),
+            title: c.title.clone(),
+            snippet: c.snippet.clone(),
+            level: match c.level {
+                MatchLevel::Exact => dedupe::MatchLevel::Exact,
+                MatchLevel::Near => dedupe::MatchLevel::Near,
+            },
+            #[allow(clippy::cast_possible_truncation)]
+            score: c.score as f32,
+        })
+        .collect();
+    KeepBoth::for_forced_create(item.kind, &own, &dc)
 }

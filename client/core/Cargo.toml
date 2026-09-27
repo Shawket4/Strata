@@ -16,6 +16,9 @@ crate-type = ["lib", "cdylib", "staticlib"]
 vault-format = { workspace = true }
 text-normalize = { workspace = true }
 domain = { workspace = true }
+sync-model = { workspace = true }
+dedupe = { workspace = true }
+graph-algo = { workspace = true }
 strata-client = { workspace = true }
 rusqlite = { workspace = true }
 flutter_rust_bridge = { workspace = true }

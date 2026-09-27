@@ -6,7 +6,7 @@ use futures::future::BoxFuture;
 use strata_client::{Client, operations, types};
 
 use crate::net::{AccountApi, EventsApi, MeInfo, NetError, SessionTokens, SyncApi, Tokens, classify};
-use crate::sync::model::{BootstrapPage, ChangesPage, OpOutcome, PushOp};
+use crate::sync::model::{BootstrapPage, ChangesPage, OpOutcome, SyncOp};
 use crate::view::model::{AdminUserItem, Platform};
 
 fn client(server_url: &str, tokens: Option<Tokens>) -> Result<Client, NetError> {
@@ -227,7 +227,7 @@ impl SyncApi for ClientSyncApi {
         Box::pin(async { not_available("sync_changes") })
     }
 
-    fn push(&self, _ops: Vec<PushOp>) -> BoxFuture<'_, Result<Vec<OpOutcome>, NetError>> {
+    fn push(&self, _ops: Vec<SyncOp>) -> BoxFuture<'_, Result<Vec<OpOutcome>, NetError>> {
         Box::pin(async { not_available("sync_push") })
     }
 }
@@ -246,7 +246,7 @@ impl SyncApi for BrokenSyncApi {
         Box::pin(async { Err(self.0.clone()) })
     }
 
-    fn push(&self, _ops: Vec<PushOp>) -> BoxFuture<'_, Result<Vec<OpOutcome>, NetError>> {
+    fn push(&self, _ops: Vec<SyncOp>) -> BoxFuture<'_, Result<Vec<OpOutcome>, NetError>> {
         Box::pin(async { Err(self.0.clone()) })
     }
 }

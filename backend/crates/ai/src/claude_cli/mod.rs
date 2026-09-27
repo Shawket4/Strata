@@ -185,7 +185,7 @@ impl ClaudeCliProvider {
         match schema {
             Some(s) => {
                 a.push("--json-schema".into());
-                a.push(s.to_string());
+                a.push(cli_schema(s).to_string());
             }
             None => a.push("--include-partial-messages".into()),
         }
@@ -341,12 +341,13 @@ impl Running {
     /// Waits for exit (bounded by the deadline plus the grace period) and collects stderr.
     async fn finish(&mut self) -> (Option<i32>, Vec<u8>) {
         let wait_until = self.deadline + self.kill_grace;
-        let code = match tokio::time::timeout_at(wait_until, self.child.wait()).await {
-            Ok(Ok(status)) => status.code(),
-            _ => {
-                self.terminate().await;
-                None
-            }
+        let code = if let Ok(Ok(status)) =
+            tokio::time::timeout_at(wait_until, self.child.wait()).await
+        {
+            status.code()
+        } else {
+            self.terminate().await;
+            None
         };
         let stderr = match self.stderr_task.take() {
             Some(t) => tokio::time::timeout(self.kill_grace, t)
@@ -387,6 +388,17 @@ impl Running {
             default_pause,
         )
     }
+}
+
+/// The schema as `--json-schema` accepts it: the CLI validates schemas with its own default
+/// draft and rejects a `$schema` URI it does not know (observed with Claude Code 2.1.283 and
+/// draft 2020-12), so the meta-schema reference is dropped. Every other keyword is kept.
+pub fn cli_schema(schema: &Value) -> Value {
+    let mut s = schema.clone();
+    if let Value::Object(map) = &mut s {
+        map.remove("$schema");
+    }
+    s
 }
 
 /// The JSON value of a successful result: `structured_output`, else the `result` text parsed as

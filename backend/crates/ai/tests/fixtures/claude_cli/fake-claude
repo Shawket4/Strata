@@ -1,0 +1,24 @@
+#!/bin/bash
+# Fake `claude` executable for strata-ai tests. It records how it was started (argv, initial
+# environment, working directory, stdin, pid, call count) under $FAKE_CLAUDE_LOG and replays the
+# recorded output of scenario $FAKE_CLAUDE_SCENARIO: <scenario>.jsonl on stdout,
+# <scenario>.stderr on stderr, exit status from <scenario>.exit (default 0).
+set -u
+log="${FAKE_CLAUDE_LOG:?}"
+dir="$(dirname "$0")"
+n=$(( $(cat "$log/count" 2>/dev/null || echo 0) + 1 ))
+echo "$n" > "$log/count"
+printf '%s\0' "$@" > "$log/argv"
+cat "/proc/$$/environ" > "$log/env"
+pwd -P > "$log/cwd"
+echo "$$" > "$log/pid"
+cat > "$log/stdin"
+scenario="${FAKE_CLAUDE_SCENARIO:?}"
+case "$scenario" in
+  hang) exec sleep 30 ;;
+  hang_ignore_term) trap '' TERM; sleep 30 & wait; exit 0 ;;
+  slow) echo "start" >> "$log/order"; sleep 0.2; echo "end" >> "$log/order"; scenario=json_success ;;
+esac
+[ -f "$dir/$scenario.stderr" ] && cat "$dir/$scenario.stderr" >&2
+cat "$dir/$scenario.jsonl"
+exit "$(cat "$dir/$scenario.exit" 2>/dev/null || echo 0)"

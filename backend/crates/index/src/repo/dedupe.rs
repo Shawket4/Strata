@@ -27,7 +27,7 @@ pub async fn upsert_key(
     sqlx::query(
         "INSERT INTO dedupe_keys (user_id, kind, item_id, exact_key, trigram_text) \
          VALUES (strata_current_user(), $1, $2, $3, $4) \
-         ON CONFLICT (user_id, kind, item_id) DO UPDATE SET exact_key = EXCLUDED.exact_key, \
+         ON CONFLICT (user_id, kind, item_id, key_no) DO UPDATE SET exact_key = EXCLUDED.exact_key, \
            trigram_text = EXCLUDED.trigram_text",
     )
     .bind(kind)
@@ -39,20 +39,20 @@ pub async fn upsert_key(
     Ok(())
 }
 
-/// Removes an item's keys. False if absent.
+/// Removes an item's keys (every name). False if absent.
 pub async fn remove_key(tx: &mut ScopedTx, kind: &str, item_id: &str) -> Result<bool> {
     let done = sqlx::query("DELETE FROM dedupe_keys WHERE kind = $1 AND item_id = $2")
         .bind(kind)
         .bind(item_id)
         .execute(tx.conn())
         .await?;
-    Ok(done.rows_affected() == 1)
+    Ok(done.rows_affected() >= 1)
 }
 
 /// Items of `kind` whose exact key equals `exact_key`, sorted.
 pub async fn exact_matches(tx: &mut ScopedTx, kind: &str, exact_key: &str) -> Result<Vec<String>> {
     Ok(sqlx::query_scalar(
-        "SELECT item_id FROM dedupe_keys WHERE kind = $1 AND exact_key = $2 ORDER BY item_id",
+        "SELECT DISTINCT item_id FROM dedupe_keys WHERE kind = $1 AND exact_key = $2 ORDER BY item_id",
     )
     .bind(kind)
     .bind(exact_key)
@@ -70,8 +70,8 @@ pub async fn near_matches(
 ) -> Result<Vec<NearMatch>> {
     set_trigram_threshold(tx, threshold).await?;
     Ok(sqlx::query_as(
-        "SELECT item_id, similarity(trigram_text, $2) AS score FROM dedupe_keys \
-         WHERE kind = $1 AND trigram_text % $2 ORDER BY score DESC, item_id LIMIT $3",
+        "SELECT item_id, max(similarity(trigram_text, $2)) AS score FROM dedupe_keys \
+         WHERE kind = $1 AND trigram_text % $2 GROUP BY item_id ORDER BY score DESC, item_id LIMIT $3",
     )
     .bind(kind)
     .bind(trigram_text)

@@ -12,9 +12,10 @@
 //!   keeps ours' value until the conflict is resolved.
 //! - Unknown keys are preserved in their original order (the result is built on ours'
 //!   frontmatter, so untouched entries keep their exact bytes).
-//! - A value that is not a flat Obsidian property (nested YAML) can be kept as it is on
-//!   ours' side but not written from theirs (`vault-format` has no raw-entry setter yet), so
-//!   taking such a value from theirs is reported as a conflict instead of being dropped.
+//! - A value that is not a flat Obsidian property (nested YAML) is compared and written as
+//!   its raw entry text: taking it from theirs writes theirs' entry verbatim (in ours' line
+//!   endings, `Frontmatter::set_raw_entry`). Only an entry that cannot be written without
+//!   changing how other keys read is reported as a conflict.
 
 use chrono::DateTime;
 use serde::{Deserialize, Serialize};
@@ -35,7 +36,7 @@ pub enum FmValue {
     Text(String),
     /// A flat list.
     List(Vec<String>),
-    /// A nested YAML value, as its raw entry text (read-only).
+    /// A nested YAML value, as its raw entry text (key line and continuation lines).
     Raw(String),
 }
 
@@ -72,7 +73,7 @@ impl FmValue {
             Self::Null => fm.set(key, PropertyValue::Null),
             Self::Text(s) => fm.set(key, PropertyValue::Text(s.clone())),
             Self::List(v) => fm.set(key, PropertyValue::List(v.clone())),
-            Self::Raw(_) => return Err(()),
+            Self::Raw(raw) => fm.set_raw_entry(key, raw),
         };
         r.map_err(|_| ())
     }
@@ -94,7 +95,8 @@ pub(crate) struct FmConflict {
 /// Result of a frontmatter merge.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct FmMerge {
-    /// BOM + frontmatter block as it should be written (ours' values for conflicts).
+    /// Frontmatter block as it should be written (ours' values for conflicts); the BOM is
+    /// merged separately.
     pub prefix: String,
     pub conflicts: Vec<FmConflict>,
     pub auto: Vec<AutoResolved>,

@@ -14,7 +14,6 @@ use crate::net::client::{ClientAccountApi, ClientSyncApi};
 use crate::net::{AccountApi, NetError, SyncApi, Tokens};
 use crate::store::registry::{self, KnownAccount, Registry};
 use crate::store::{StorePaths, account, tokens};
-use crate::sync::merge::{NoteMerger, PendingMerge};
 use crate::view::model::{
     CoreConfig, KnownAccountItem, Platform, SessionState, SignInRequest, SignOutOutcome,
     SignUpOutcome, SignUpRequest,
@@ -38,8 +37,6 @@ pub struct CoreEnv {
     pub account_api: Arc<dyn AccountApi>,
     /// Sync endpoints per session.
     pub sync_api: SyncApiFactory,
-    /// Conflict merge previews.
-    pub merger: Arc<dyn NoteMerger>,
     /// Default device name for the login form.
     pub default_device_name: String,
     /// Default server URL for the login form.
@@ -71,7 +68,6 @@ impl CoreEnv {
                     Err(e) => Arc::new(crate::net::client::BrokenSyncApi(e)),
                 }
             }),
-            merger: Arc::new(PendingMerge),
             default_device_name: config.default_device_name.clone(),
             default_server_url: config.default_server_url.clone(),
         }

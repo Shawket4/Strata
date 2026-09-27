@@ -6,7 +6,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 use strata_common::NoteId;
 use strata_index::UserScope;
 use strata_index::repo::notes;
@@ -14,13 +14,14 @@ use strata_index::repo::tasks as trepo;
 use strata_index::repo::vault::{self as vrepo, TaskView};
 use vault_format::Document;
 use vault_format::sidecar::NoteSidecar;
+use sync_model::Op;
+use sync_model::apply::{ApplyError, apply_task_op, task_line_version};
 use vault_format::tasks::{
-    self as vtasks, DateKind, Priority, Reminder, TaskError, TaskLine, TaskSpec, extract_tasks,
+    DateKind, Priority, Reminder, TaskError, TaskLine, TaskSpec,
     parse_recurrence,
 };
 
-use crate::derive::task_exact_key;
-use crate::dup::{self, NewItem};
+use crate::dup;
 use crate::error::{Result, VaultError};
 use crate::model::TaskItem;
 use crate::paths::TASKS_NOTE;
@@ -40,8 +41,8 @@ pub struct NewTask {
     pub start: Option<NaiveDate>,
     /// 🔁 phrase (Tasks plugin language).
     pub recurrence: Option<String>,
-    /// `(@…)` reminders.
-    pub reminders: Vec<Reminder>,
+    /// `(@…)` reminders (wall-clock times in the user's time zone).
+    pub reminders: Vec<NaiveDateTime>,
     /// Priority.
     pub priority: Option<Priority>,
     /// Home note (default `tasks/Tasks.md`).
@@ -66,7 +67,7 @@ pub struct TaskPatch {
     /// 🔁
     pub recurrence: Option<Option<String>>,
     /// Replaces the reminders.
-    pub reminders: Option<Vec<Reminder>>,
+    pub reminders: Option<Vec<NaiveDateTime>>,
     /// Priority.
     pub priority: Option<Option<Priority>>,
 }
@@ -177,22 +178,17 @@ fn append_line(body: &str, line: &str) -> String {
 }
 
 /// Finds the line of task `id` in `body`: (line span, parsed line).
-fn find_task(body: &str, id: &str) -> Option<(std::ops::Range<usize>, TaskLine)> {
-    extract_tasks(body)
-        .into_iter()
-        .find(|t| t.task.block_id() == Some(id))
-        .map(|t| (t.line_span, t.task))
+pub fn find_task(body: &str, id: &str) -> Option<(std::ops::Range<usize>, TaskLine)> {
+    sync_model::apply::find_task(body, id)
 }
 
 impl Core {
-    async fn locate_task(&self, scope: &UserScope, id: &str) -> Result<(NoteId, String, String)> {
+    async fn locate_task(&self, scope: &UserScope, id: &str) -> Result<(NoteId, String)> {
         let mut tx = self.begin(scope).await?;
-        let row = trepo::get_task(&mut tx, id)
-            .await?
-            .ok_or(VaultError::NotFound)?;
+        let row = trepo::get_task(&mut tx, id).await?.ok_or(VaultError::NotFound)?;
         tx.commit().await?;
-        let (path, version) = self.live(row.note_id)?;
-        Ok((row.note_id, path, version))
+        let (path, _) = self.live(row.note_id)?;
+        Ok((row.note_id, path))
     }
 
     /// Creates a task line (duplicate check unless `force`). Returns the task ID.
@@ -217,27 +213,22 @@ impl Core {
             start: req.start,
             scheduled: req.scheduled,
             due: req.due,
-            reminders: req.reminders.clone(),
+            reminders: req
+                .reminders
+                .iter()
+                .map(|r| Reminder {
+                    date: r.date(),
+                    time: Some(r.time()),
+                })
+                .collect(),
             block_id: Some(id.clone()),
             ..TaskSpec::default()
         }
         .render();
         let parsed =
             TaskLine::parse(&line).ok_or(VaultError::invalid("the task line is invalid"))?;
-        let description = parsed.description().to_owned();
-        let exact = task_exact_key(&description, rrule_of(&parsed).as_deref());
-        let candidates = dup::find(
-            &mut tx,
-            &NewItem {
-                kind: "task",
-                id: req.id.clone(),
-                text: &description,
-                exact: Some(exact),
-                aliases: &[],
-            },
-            &self.inner.config.near_thresholds,
-        )
-        .await?;
+        let item = dup::task_item(&id, &parsed);
+        let candidates = dup::find(&mut tx, &item, &self.inner.config.near_thresholds).await?;
         if !candidates.is_empty() && !req.force {
             return Err(VaultError::Duplicate(candidates));
         }
@@ -271,26 +262,17 @@ impl Core {
             append_line(doc.body(), &line)
         };
         doc.set_body(body);
-        prepare::stamp(&mut doc, home_id, Some(&now), Some(&now))?;
+        // A new home note gets its id and timestamps; an existing one keeps `updated` (the
+        // device's optimistic apply of `task.create` writes the same bytes).
+        let is_new = !self.state()?.contains_id(home_id);
+        prepare::stamp(&mut doc, home_id, Some(&now), is_new.then_some(&now))?;
         let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
         if !candidates.is_empty() {
             let mut sc = self
                 .sidecar(home_id)
                 .await?
                 .unwrap_or_else(|| NoteSidecar::new(home_id.as_ulid()));
-            let entry = sc
-                .extra
-                .entry(crate::derive::TASK_KEEP_BOTH_KEY.to_owned())
-                .or_insert_with(|| serde_json::Value::Array(Vec::new()));
-            if let serde_json::Value::Array(items) = entry {
-                for c in &candidates {
-                    items.push(serde_json::json!({
-                        "task": id,
-                        "other": c.item,
-                        "at": vault_format::frontmatter::format_timestamp(&self.now().fixed_offset()),
-                    }));
-                }
-            }
+            self.keep_both(&mut sc, &item, &candidates);
             changes.push(Core::sidecar_change(&sc)?);
         }
         self.finish(tx, changes, Author::User.message("task create", &path))
@@ -298,8 +280,9 @@ impl Core {
         Ok(id)
     }
 
-    /// Edits a task line in place (span edits keep every other byte). `if_match` is the
-    /// version of the note that holds it.
+    /// Edits a task line in place with the shared `sync-model` rule (span edits keep every
+    /// other byte, so the device's optimistic apply writes the same line). `if_match` is the
+    /// task's version (the hash of its line).
     pub async fn patch_task(
         &mut self,
         scope: UserScope,
@@ -313,66 +296,60 @@ impl Core {
         if let Some(Some(r)) = &patch.recurrence {
             validate_recurrence(r)?;
         }
-        let (note, note_path, version) = self.locate_task(&scope, id).await?;
-        if let Some(m) = if_match
-            && m != version
-        {
-            return Err(VaultError::VersionConflict { current: version });
-        }
-        let text = self
-            .read_text(&note_path)
-            .await?
-            .ok_or(VaultError::NotFound)?;
+        let op = Op::TaskUpdate(sync_model::ops::TaskUpdate {
+            id: id.to_owned(),
+            text: patch.text.map(|t| t.trim().to_owned()),
+            due: patch.due,
+            scheduled: patch.scheduled,
+            start: patch.start,
+            recurrence: patch.recurrence,
+            reminders: patch.reminders,
+            priority: patch.priority,
+        });
+        self.apply_task(&scope, id, &op, if_match, "task update")
+            .await
+    }
+
+    /// Applies a task op to the note holding task `id` (one `user:` commit).
+    async fn apply_task(
+        &mut self,
+        scope: &UserScope,
+        id: &str,
+        op: &Op,
+        if_match: Option<&str>,
+        message: &str,
+    ) -> Result<()> {
+        let (_, path) = self.locate_task(scope, id).await?;
+        let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
         let mut doc = Document::parse(&text);
-        let (span, mut task) = find_task(doc.body(), id).ok_or(VaultError::NotFound)?;
-        if let Some(t) = &patch.text {
-            let mut spec = task.to_spec();
-            t.trim().clone_into(&mut spec.description);
-            task = TaskLine::parse(&spec.render())
-                .ok_or(VaultError::invalid("the task line is invalid"))?;
+        let (span, _) = find_task(doc.body(), id).ok_or(VaultError::NotFound)?;
+        let version = task_line_version(&doc.body()[span]);
+        if let Some(m) = if_match
+            && m != version.as_str()
+        {
+            return Err(VaultError::VersionConflict {
+                current: version.as_str().to_owned(),
+            });
         }
-        for (kind, value) in [
-            (DateKind::Due, patch.due),
-            (DateKind::Scheduled, patch.scheduled),
-            (DateKind::Start, patch.start),
-        ] {
-            if let Some(v) = value {
-                task = task.with_date(kind, v);
-            }
-        }
-        if let Some(r) = &patch.recurrence {
-            task = task.with_recurrence(r.as_deref());
-        }
-        if let Some(r) = &patch.reminders {
-            task = task.with_reminders(r);
-        }
-        if let Some(p) = patch.priority {
-            task = task.with_priority(p);
-        }
-        let body = doc.body();
-        let new_body = format!(
-            "{}{}{}",
-            &body[..span.start],
-            task.as_str(),
-            &body[span.end..]
-        );
-        doc.set_body(new_body);
-        let mut tx = self.begin(&scope).await?;
-        let tz = self.tz(&mut tx).await?;
-        let now = self.local_now(tz);
-        prepare::stamp(&mut doc, note, None, Some(&now))?;
+        let body = apply_task_op(doc.body(), op).map_err(|e| match e {
+            ApplyError::Task(t) => task_error(&t),
+            ApplyError::TaskNotFound(_) => VaultError::NotFound,
+            other => VaultError::Internal(format!("task op failed: {other}")),
+        })?;
+        doc.set_body(body);
+        let tx = self.begin(scope).await?;
         self.finish(
             tx,
-            vec![(note_path.clone(), Some(doc.render().into_bytes()))],
-            Author::User.message("task update", &note_path),
+            vec![(path.clone(), Some(doc.render().into_bytes()))],
+            Author::User.message(message, &path),
         )
         .await?;
         Ok(())
     }
 
-    /// Completes, cancels or reopens a task. Completing a recurring task writes exactly two
-    /// lines: the next occurrence (new block ID) above the completed line. Returns the new
-    /// occurrence's ID, if any.
+    /// Completes, cancels or reopens a task (shared `sync-model` rules). Completing a
+    /// recurring task writes exactly two lines: the next occurrence (new block ID) above the
+    /// completed line. Returns the new occurrence's ID, if any.
     pub async fn transition_task(
         &mut self,
         scope: UserScope,
@@ -380,58 +357,46 @@ impl Core {
         transition: Transition,
         if_match: Option<&str>,
     ) -> Result<Option<String>> {
-        let (note, path, version) = self.locate_task(&scope, id).await?;
-        if let Some(m) = if_match
-            && m != version
-        {
-            return Err(VaultError::VersionConflict { current: version });
-        }
+        let (_, path) = self.locate_task(&scope, id).await?;
         let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
-        let mut doc = Document::parse(&text);
-        let (span, task) = find_task(doc.body(), id).ok_or(VaultError::NotFound)?;
+        let (_, task) = find_task(Document::parse(&text).body(), id).ok_or(VaultError::NotFound)?;
         let mut tx = self.begin(&scope).await?;
         let tz = self.tz(&mut tx).await?;
-        let now = self.local_now(tz);
-        let today = now.date_naive();
-        let line = task.as_str();
+        tx.commit().await?;
+        let today = self.local_now(tz).date_naive();
         let mut next = None;
-        let replacement = match transition {
-            Transition::Complete if task.recurrence_text().is_some() => {
-                let new_id = new_task_id(self.ids());
-                let [new_line, done] =
-                    vtasks::complete_recurring(line, today, &new_id).map_err(|e| task_error(&e))?;
-                next = Some(new_id);
-                format!("{new_line}{}{done}", doc.line_ending().as_str())
+        let (op, message) = match transition {
+            Transition::Complete => {
+                if task.recurrence_text().is_some() {
+                    next = Some(new_task_id(self.ids()));
+                }
+                (
+                    Op::TaskComplete(sync_model::ops::TaskComplete {
+                        id: id.to_owned(),
+                        done: today,
+                        next_id: next.clone(),
+                    }),
+                    "task complete",
+                )
             }
-            Transition::Complete => vtasks::complete(line, today).map_err(|e| task_error(&e))?,
-            Transition::Cancel => vtasks::cancel(line, today).map_err(|e| task_error(&e))?,
+            Transition::Cancel => (
+                Op::TaskCancel(sync_model::ops::TaskCancel {
+                    id: id.to_owned(),
+                    date: today,
+                }),
+                "task cancel",
+            ),
             Transition::Reopen => {
                 if task.status().is_open() {
                     return Err(VaultError::TaskState("the task is already open".into()));
                 }
-                vtasks::reopen(line).map_err(|e| task_error(&e))?
+                (
+                    Op::TaskReopen(sync_model::ops::TaskRef { id: id.to_owned() }),
+                    "task reopen",
+                )
             }
         };
-        let body = doc.body();
-        let new_body = format!(
-            "{}{}{}",
-            &body[..span.start],
-            replacement,
-            &body[span.end..]
-        );
-        doc.set_body(new_body);
-        prepare::stamp(&mut doc, note, None, Some(&now))?;
-        let op = match transition {
-            Transition::Complete => "task complete",
-            Transition::Cancel => "task cancel",
-            Transition::Reopen => "task reopen",
-        };
-        self.finish(
-            tx,
-            vec![(path.clone(), Some(doc.render().into_bytes()))],
-            Author::User.message(op, &path),
-        )
-        .await?;
+        self.apply_task(&scope, id, &op, if_match, message).await?;
         Ok(next)
     }
 }

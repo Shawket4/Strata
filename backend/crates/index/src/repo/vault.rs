@@ -137,6 +137,95 @@ pub async fn delete_keep_both(tx: &mut ScopedTx, kind: &str, a: &str, b: &str) -
     Ok(())
 }
 
+/// One stored name of an item for duplicate lookup (see `dedupe::DedupeKeys`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DedupeKeyRow {
+    /// Name number (0 = the item's text, then aliases).
+    pub key_no: i16,
+    /// Exact key (may be empty when the item has fewer exact keys than names).
+    pub exact_key: String,
+    /// Trigram text.
+    pub trigram_text: String,
+    /// Transliteration key.
+    pub phonetic_key: Option<String>,
+    /// The whole item (MessagePack `dedupe::Item`).
+    pub item: Vec<u8>,
+}
+
+/// Replaces the stored names of an item.
+pub async fn replace_item_keys(
+    tx: &mut ScopedTx,
+    kind: &str,
+    item_id: &str,
+    rows: &[DedupeKeyRow],
+) -> Result<()> {
+    sqlx::query("DELETE FROM dedupe_keys WHERE kind = $1 AND item_id = $2")
+        .bind(kind)
+        .bind(item_id)
+        .execute(tx.conn())
+        .await?;
+    for r in rows {
+        sqlx::query(
+            "INSERT INTO dedupe_keys (user_id, kind, item_id, key_no, exact_key, trigram_text, phonetic_key, item) \
+             VALUES (strata_current_user(), $1, $2, $3, $4, $5, $6, $7)",
+        )
+        .bind(kind)
+        .bind(item_id)
+        .bind(r.key_no)
+        .bind(&r.exact_key)
+        .bind(&r.trigram_text)
+        .bind(&r.phonetic_key)
+        .bind(&r.item)
+        .execute(tx.conn())
+        .await?;
+    }
+    Ok(())
+}
+
+/// Stored items of `kinds` sharing an exact or phonetic key with the query, or whose trigram
+/// text has similarity ≥ `floor` with one of `trigram_texts` (one row per item, by kind and
+/// ID). Returns the MessagePack items.
+pub async fn dedupe_candidates(
+    tx: &mut ScopedTx,
+    kinds: &[String],
+    exact_keys: &[String],
+    phonetic_keys: &[String],
+    trigram_texts: &[String],
+    floor: f32,
+    limit: i64,
+) -> Result<Vec<Vec<u8>>> {
+    set_trigram_threshold(tx, floor).await?;
+    Ok(sqlx::query_scalar(
+        "SELECT DISTINCT ON (kind, item_id) item FROM dedupe_keys \
+         WHERE kind = ANY($1) AND item IS NOT NULL AND ( \
+           (exact_key <> '' AND exact_key = ANY($2)) \
+           OR phonetic_key = ANY($3) \
+           OR EXISTS (SELECT 1 FROM unnest($4::text[]) q(t) WHERE t <> '' AND trigram_text % t)) \
+         ORDER BY kind, item_id, key_no LIMIT $5",
+    )
+    .bind(kinds)
+    .bind(exact_keys)
+    .bind(phonetic_keys)
+    .bind(trigram_texts)
+    .bind(limit)
+    .fetch_all(tx.conn())
+    .await?)
+}
+
+/// Keep-both pairs involving `item`: (kind, a, b).
+pub async fn keep_both_pairs_of(
+    tx: &mut ScopedTx,
+    item: &str,
+) -> Result<Vec<(String, String, String)>> {
+    Ok(sqlx::query_as(
+        "SELECT kind, a_id, b_id FROM dedupe_keep_both WHERE a_id = $1 OR b_id = $1 \
+         ORDER BY kind, a_id, b_id",
+    )
+    .bind(item)
+    .fetch_all(tx.conn())
+    .await?)
+}
+
 /// Every derived table of the scoped user, in the order a rebuild clears them.
 pub const DERIVED_TABLES: &[&str] = &[
     "task_reminders",

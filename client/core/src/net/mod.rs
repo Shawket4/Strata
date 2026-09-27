@@ -17,7 +17,7 @@ use chrono::{DateTime, Utc};
 use futures::future::BoxFuture;
 
 use crate::error::CoreError;
-use crate::sync::model::{BootstrapPage, ChangesPage, OpOutcome, PushOp};
+use crate::sync::model::{BootstrapPage, ChangesPage, OpOutcome, SyncOp};
 use crate::view::model::{AdminUserItem, Platform};
 
 /// Why a network call failed, classified for the sync engine and the UI.
@@ -224,7 +224,7 @@ pub trait SyncApi: Send + Sync + fmt::Debug {
         limit: u32,
     ) -> BoxFuture<'_, Result<ChangesPage, NetError>>;
     /// `POST /sync/push`: per-op results, in order.
-    fn push(&self, ops: Vec<PushOp>) -> BoxFuture<'_, Result<Vec<OpOutcome>, NetError>>;
+    fn push(&self, ops: Vec<SyncOp>) -> BoxFuture<'_, Result<Vec<OpOutcome>, NetError>>;
 }
 
 /// The `/events` stream: each item only means "something changed, pull" (§12.4).

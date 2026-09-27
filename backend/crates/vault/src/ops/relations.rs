@@ -33,7 +33,9 @@ fn resolves_to(item: &str, dst_path: &str, index: &PathIndex, src_path: &str) ->
     })
 }
 
-/// Removes every link to `dst_path` from relation `rel`. Returns how many were removed.
+/// Removes every link to `dst_path` from relation `rel` (and the key once empty): first the
+/// shared `sync-model` rule on the link text a device would write, then any other spelling
+/// that resolves there. Returns how many were removed.
 fn remove_links(
     doc: &mut Document,
     rel: RelationKey,
@@ -42,26 +44,32 @@ fn remove_links(
     src_path: &str,
 ) -> Result<usize> {
     let fm = doc.frontmatter_mut();
+    if fm.error().is_some() {
+        return Err(VaultError::invalid("the frontmatter cannot be edited"));
+    }
+    let text = index.link_text_for(dst_path);
+    let before = fm.relation(rel).len();
+    sync_model::apply::relation_remove(fm, rel, &text)
+        .map_err(|_| VaultError::invalid("the frontmatter cannot be edited"))?;
     let items = fm.relation(rel);
     let kept: Vec<String> = items
         .iter()
         .filter(|i| !resolves_to(i, dst_path, index, src_path))
         .cloned()
         .collect();
-    let removed = items.len() - kept.len();
-    if removed > 0 {
-        if kept.is_empty() {
-            fm.remove_key(rel.key())
-                .map_err(|_| VaultError::invalid("the frontmatter cannot be edited"))?;
+    if kept.len() != items.len() {
+        let edit = if kept.is_empty() {
+            fm.remove_key(rel.key()).map(|_| ())
         } else {
-            fm.set_relation(rel, kept)
-                .map_err(|_| VaultError::invalid("the frontmatter cannot be edited"))?;
-        }
+            fm.set_relation(rel, kept.clone())
+        };
+        edit.map_err(|_| VaultError::invalid("the frontmatter cannot be edited"))?;
     }
-    Ok(removed)
+    Ok(before - kept.len())
 }
 
-/// Adds a link to `dst_path` to relation `rel` unless one already resolves there.
+/// Adds a link to `dst_path` to relation `rel` unless one already resolves there (the shared
+/// `sync-model` rule writes `[[<shortest link text>]]`).
 fn add_link(
     doc: &mut Document,
     rel: RelationKey,
@@ -73,17 +81,15 @@ fn add_link(
     if fm.error().is_some() {
         return Err(VaultError::invalid("the frontmatter cannot be edited"));
     }
-    let mut items = fm.relation(rel);
-    if items
+    if fm
+        .relation(rel)
         .iter()
         .any(|i| resolves_to(i, dst_path, index, src_path))
     {
         return Ok(false);
     }
-    items.push(format!("[[{}]]", index.link_text_for(dst_path)));
-    fm.set_relation(rel, items)
-        .map_err(|_| VaultError::invalid("the frontmatter cannot be edited"))?;
-    Ok(true)
+    sync_model::apply::relation_add(fm, rel, &index.link_text_for(dst_path))
+        .map_err(|_| VaultError::invalid("the frontmatter cannot be edited"))
 }
 
 impl Core {

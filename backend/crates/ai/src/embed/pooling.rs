@@ -1,30 +1,41 @@
 //! Model-independent embedding steps: batching under a token budget, padding, pooling, and L2
 //! normalisation. Pure functions, unit-tested without a model.
 
-use std::ops::Range;
-
 use super::{EmbedError, Pooling};
 
-/// Splits sequences (given their token lengths, in order) into consecutive batches whose padded
-/// size (`len(batch) × longest`) stays within `max_batch_tokens`. A sequence longer than the
-/// budget gets a batch of its own.
-pub fn plan_batches(lengths: &[usize], max_batch_tokens: usize) -> Vec<Range<usize>> {
-    let mut out = Vec::new();
-    let mut start = 0;
-    let mut longest = 0;
-    for (i, &len) in lengths.iter().enumerate() {
-        let new_longest = longest.max(len);
-        let count = i - start + 1;
-        if i > start && new_longest.saturating_mul(count) > max_batch_tokens {
-            out.push(start..i);
-            start = i;
-            longest = len;
-        } else {
-            longest = new_longest;
-        }
+/// Groups sequences (given their token lengths) into batches of indices.
+///
+/// With `allow_padding`, consecutive sequences share a batch while its padded size
+/// (`len(batch) × longest`) stays within `max_batch_tokens`. Without it, only sequences of the
+/// same length share a batch (no padding at all), still within the budget. A sequence longer
+/// than the budget gets a batch of its own. Every index appears exactly once.
+///
+/// Padding must stay off for exports whose output changes with padding: the published
+/// `model_quint8_avx2.onnx` of granite-embedding-97m-multilingual-r2 gives cosine 0.96–0.99
+/// between a text embedded alone and the same text padded in a batch (the fp32 export gives
+/// 1.0), measured with ONNX Runtime 1.30.
+pub fn plan_batches(lengths: &[usize], max_batch_tokens: usize, allow_padding: bool) -> Vec<Vec<usize>> {
+    let mut order: Vec<usize> = (0..lengths.len()).collect();
+    if !allow_padding {
+        order.sort_by_key(|&i| lengths[i]);
     }
-    if start < lengths.len() {
-        out.push(start..lengths.len());
+    let mut out: Vec<Vec<usize>> = Vec::new();
+    let mut current: Vec<usize> = Vec::new();
+    let mut longest = 0;
+    for i in order {
+        let len = lengths[i];
+        let new_longest = longest.max(len);
+        let fits = new_longest.saturating_mul(current.len() + 1) <= max_batch_tokens;
+        let same_len = allow_padding || current.first().is_none_or(|&f| lengths[f] == len);
+        if !(current.is_empty() || fits && same_len) {
+            out.push(std::mem::take(&mut current));
+            longest = 0;
+        }
+        longest = longest.max(len);
+        current.push(i);
+    }
+    if !current.is_empty() {
+        out.push(current);
     }
     out
 }
@@ -97,7 +108,9 @@ pub fn pool(
                     }
                 }
                 if n > 0.0 {
-                    acc.iter_mut().for_each(|a| *a /= n);
+                    for a in &mut acc {
+                        *a /= n;
+                    }
                 }
                 acc
             }
@@ -111,7 +124,9 @@ pub fn pool(
 pub fn l2_normalize(v: &mut [f32]) {
     let norm = v.iter().map(|x| x * x).sum::<f32>().sqrt();
     if norm > f32::EPSILON {
-        v.iter_mut().for_each(|x| *x /= norm);
+        for x in v.iter_mut() {
+            *x /= norm;
+        }
     }
 }
 
@@ -127,13 +142,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn batches_respect_the_padded_token_budget_and_keep_order() {
-        assert_eq!(plan_batches(&[], 10), Vec::<Range<usize>>::new());
-        assert_eq!(plan_batches(&[3, 3, 3, 3], 10), vec![0..3, 3..4]);
+    fn padded_batches_respect_the_token_budget_and_keep_order() {
+        assert_eq!(plan_batches(&[], 10, true), Vec::<Vec<usize>>::new());
+        assert_eq!(plan_batches(&[3, 3, 3, 3], 10, true), vec![vec![0, 1, 2], vec![3]]);
         // A long sequence raises the padded size of everything batched with it.
-        assert_eq!(plan_batches(&[2, 2, 8, 2], 10), vec![0..2, 2..3, 3..4]);
+        assert_eq!(plan_batches(&[2, 2, 8, 2], 10, true), vec![vec![0, 1], vec![2], vec![3]]);
         // Longer than the budget: alone.
-        assert_eq!(plan_batches(&[20, 1, 1], 10), vec![0..1, 1..3]);
+        assert_eq!(plan_batches(&[20, 1, 1], 10, true), vec![vec![0], vec![1, 2]]);
+    }
+
+    #[test]
+    fn unpadded_batches_only_group_equal_lengths() {
+        assert_eq!(
+            plan_batches(&[5, 3, 5, 3, 5, 9], 10, false),
+            vec![vec![1, 3], vec![0, 2], vec![4], vec![5]]
+        );
+        assert_eq!(plan_batches(&[4, 4, 4], 100, false), vec![vec![0, 1, 2]]);
     }
 
     #[test]

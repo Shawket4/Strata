@@ -10,11 +10,13 @@ use pretty_assertions::assert_eq;
 use sync_model::Op;
 use sync_model::apply::*;
 use sync_model::ops::{
-    DocumentCustody, EntityPatch, NoteRef, TaskCancel, TaskComplete, TaskRef, TaskUpdate,
+    DocumentCustody, EntityPatch, NoteRef, TaskCancel, TaskComplete, TaskCreate, TaskRef,
+    TaskUpdate,
 };
 use ulid::Ulid;
 use vault_format::custody::CustodyState;
-use vault_format::{Document, RelationKey};
+use vault_format::tasks::TaskError;
+use vault_format::{Document, LineEnding, RelationKey};
 
 fn d(s: &str) -> NaiveDate {
     NaiveDate::from_str(s).unwrap()
@@ -327,5 +329,137 @@ fn task_at_end_without_newline_and_crlf() {
     assert_eq!(
         apply_task_op(body, &Op::TaskDelete(TaskRef { id: "t-1".into() })),
         Ok("- [ ] b ^t-2".to_owned())
+    );
+}
+
+fn create(id: &str, text: &str) -> TaskCreate {
+    TaskCreate {
+        id: id.into(),
+        note_id: None,
+        text: text.into(),
+        due: None,
+        scheduled: None,
+        start: None,
+        recurrence: None,
+        reminders: Vec::new(),
+        priority: None,
+        force: false,
+    }
+}
+
+#[test]
+fn task_create_line_is_canonical() {
+    let op = TaskCreate {
+        due: Some(d("2026-10-01")),
+        scheduled: Some(d("2026-09-30")),
+        start: Some(d("2026-09-28")),
+        recurrence: Some("every month on the 1st".into()),
+        reminders: vec![d("2026-10-01").and_hms_opt(9, 0, 0).unwrap()],
+        priority: Some(Priority::High),
+        ..create("t-01j9a2", "Make Watanya's ETA invoice [[Watanya]]")
+    };
+    assert_eq!(
+        task_create_line(&op),
+        Ok("- [ ] Make Watanya's ETA invoice [[Watanya]] (@2026-10-01 09:00) ⏫ 🔁 every month on the 1st 🛫 2026-09-28 ⏳ 2026-09-30 📅 2026-10-01 ^t-01j9a2".into())
+    );
+    // `Normal` priority has no signifier.
+    let op = TaskCreate {
+        priority: Some(Priority::Normal),
+        ..create("t-1", "plain")
+    };
+    assert_eq!(task_create_line(&op), Ok("- [ ] plain ^t-1".into()));
+}
+
+#[test]
+fn task_create_refuses_what_would_not_read_back() {
+    assert_eq!(
+        task_create_line(&create("x-1", "a")),
+        Err(ApplyError::Task(TaskError::InvalidBlockId("x-1".into())))
+    );
+    assert_eq!(
+        task_create_line(&create("t-A", "a")),
+        Err(ApplyError::Task(TaskError::InvalidBlockId("t-A".into())))
+    );
+    for text in ["two\nlines", "sneaky 📅 2026-01-01", "cr\r"] {
+        assert_eq!(
+            task_create_line(&create("t-1", text)),
+            Err(ApplyError::InvalidTask("t-1".into())),
+            "{text:?}"
+        );
+    }
+}
+
+#[test]
+fn task_create_goes_under_the_month_heading_of_tasks_md() {
+    assert_eq!(DEFAULT_TASK_NOTE, "tasks/Tasks.md");
+    let op = TaskCreate {
+        due: Some(d("2026-09-30")),
+        ..create("t-01j9b1", "ادفع فاتورة الكهرباء")
+    };
+    // New file.
+    assert_eq!(
+        apply_task_create("", &op, d("2026-09-27"), LineEnding::Lf),
+        Ok("## September 2026\n- [ ] ادفع فاتورة الكهرباء 📅 2026-09-30 ^t-01j9b1\n".into())
+    );
+    // Existing months around it, CRLF.
+    let body = "# Tasks\r\n\r\n## August 2026\r\n- [ ] a ^t-a\r\n\r\n## October 2026\r\n- [ ] o ^t-o\r\n";
+    let out = apply_task_create(body, &op, d("2026-09-27"), LineEnding::CrLf).unwrap();
+    assert_eq!(
+        out,
+        "# Tasks\r\n\r\n## August 2026\r\n- [ ] a ^t-a\r\n\r\n## September 2026\r\n- [ ] ادفع فاتورة الكهرباء 📅 2026-09-30 ^t-01j9b1\r\n\r\n## October 2026\r\n- [ ] o ^t-o\r\n"
+    );
+    // Same month: appended after the month's last line.
+    let out = apply_task_create(&out, &create("t-01j9b2", "second"), d("2026-09-01"), LineEnding::CrLf)
+        .unwrap();
+    assert_eq!(
+        out,
+        "# Tasks\r\n\r\n## August 2026\r\n- [ ] a ^t-a\r\n\r\n## September 2026\r\n- [ ] ادفع فاتورة الكهرباء 📅 2026-09-30 ^t-01j9b1\r\n- [ ] second ^t-01j9b2\r\n\r\n## October 2026\r\n- [ ] o ^t-o\r\n"
+    );
+    // Replaying the op is refused rather than duplicating the task.
+    assert_eq!(
+        apply_task_create(&out, &op, d("2026-09-27"), LineEnding::CrLf),
+        Err(ApplyError::TaskExists("t-01j9b1".into()))
+    );
+    // The created line is found and edited by the other task ops.
+    let done = apply_task_op(
+        &out,
+        &Op::TaskComplete(TaskComplete {
+            id: "t-01j9b2".into(),
+            done: d("2026-09-28"),
+            next_id: None,
+        }),
+    )
+    .unwrap();
+    assert_eq!(
+        done,
+        out.replace("- [ ] second ^t-01j9b2", "- [x] second ✅ 2026-09-28 ^t-01j9b2")
+    );
+}
+
+#[test]
+fn task_create_in_a_home_note_appends_to_its_body() {
+    let op = TaskCreate {
+        note_id: Some(Ulid::from_string("01J8ZK3M4X7Q0000000000000A").unwrap()),
+        ..create("t-01j9c1", "Call [[Shady]]")
+    };
+    assert_eq!(
+        apply_task_create("## Notes\nنص", &op, d("2026-09-27"), LineEnding::Lf),
+        Ok("## Notes\nنص\n- [ ] Call [[Shady]] ^t-01j9c1\n".into())
+    );
+    assert_eq!(
+        apply_task_create("text\r\n", &op, d("2026-09-27"), LineEnding::CrLf),
+        Ok("text\r\n- [ ] Call [[Shady]] ^t-01j9c1\r\n".into())
+    );
+    assert_eq!(
+        apply_task_create("", &op, d("2026-09-27"), LineEnding::Lf),
+        Ok("- [ ] Call [[Shady]] ^t-01j9c1\n".into())
+    );
+}
+
+#[test]
+fn task_create_is_not_a_task_op() {
+    assert_eq!(
+        apply_task_op("", &Op::TaskCreate(create("t-1", "a"))),
+        Err(ApplyError::NotATaskOp("task.create".into()))
     );
 }

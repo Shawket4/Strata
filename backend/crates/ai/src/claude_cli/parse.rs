@@ -205,6 +205,9 @@ pub(crate) fn classify_failure(
     if matches!(status, Some(401 | 403)) || is_auth_failure(&lower) {
         return ProviderError::Auth;
     }
+    if lower.contains("is not a valid json schema") {
+        return ProviderError::Rejected("claude rejected the --json-schema".into());
+    }
     if let Some(r) = ctx.result {
         if r.subtype.starts_with("error_") {
             return ProviderError::Unavailable(format!("claude run failed ({})", r.subtype));
@@ -295,10 +298,10 @@ fn reset_clock_time(lower: &str, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
         let local_now = now.with_timezone(&tz);
         let mut day = local_now.date_naive();
         for _ in 0..3 {
-            if let Some(candidate) = tz.from_local_datetime(&day.and_time(time)).earliest() {
-                if candidate > local_now {
-                    return Some(candidate.with_timezone(&Utc));
-                }
+            if let Some(candidate) = tz.from_local_datetime(&day.and_time(time)).earliest()
+                && candidate > local_now
+            {
+                return Some(candidate.with_timezone(&Utc));
             }
             day = day.succ_opt()?;
         }
@@ -442,6 +445,10 @@ mod tests {
         assert_eq!(
             classify(Some(&result("", Some(500))), None, ""),
             ProviderError::Unavailable("claude API error status 500".into())
+        );
+        assert_eq!(
+            classify(None, None, "Error: --json-schema is not a valid JSON Schema: no schema with key or ref"),
+            ProviderError::Rejected("claude rejected the --json-schema".into())
         );
         assert_eq!(
             classify(None, None, "segfault"),

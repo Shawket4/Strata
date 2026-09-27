@@ -13,14 +13,14 @@ use strata_index::repo::vault::{self as vrepo, DocumentFilter, EntityHit};
 use strata_index::repo::{graph, notes};
 use strata_index::types::{DocStatus, EntityKind};
 use text_normalize::normalize_for_search;
-use vault_format::custody::{self, CustodyEventType, CustodyState, Role};
+use vault_format::custody::CustodyEventType;
 use vault_format::filename::{sanitize_file_name, unique_name};
 use vault_format::frontmatter::KnownKey;
-use vault_format::sections::{self, AiProfile, AiSection};
+use vault_format::sections::{self};
 use vault_format::sidecar::NoteSidecar;
 use vault_format::{Document, PropertyValue, Resolution, WikiLink};
 
-use crate::dup::{self, NewItem};
+use crate::dup;
 use crate::error::{Result, VaultError};
 use crate::model::{NoteView, PlaceTree};
 use crate::paths;
@@ -185,18 +185,16 @@ impl Core {
         }
         let aliases = clean_list(&req.aliases);
         let mut tx = self.begin(&scope).await?;
-        let candidates = dup::find(
-            &mut tx,
-            &NewItem {
-                kind: req.kind.as_str(),
-                id: req.id.map(|i| i.to_string()),
-                text: name,
-                exact: None,
-                aliases: &aliases,
-            },
-            &self.inner.config.near_thresholds,
-        )
-        .await?;
+        let id = req.id.unwrap_or_else(|| NoteId::generate(self.ids()));
+        let id_text = id.to_string();
+        let alias_refs: Vec<&str> = aliases.iter().map(String::as_str).collect();
+        let dkind: dedupe::DedupeKind = req
+            .kind
+            .as_str()
+            .parse()
+            .map_err(|_| VaultError::invalid("kind must be person, company, document or place"))?;
+        let item = dedupe::Item::entity(dkind, Some(&id_text), name, &alias_refs);
+        let candidates = dup::find(&mut tx, &item, &self.inner.config.near_thresholds).await?;
         if !candidates.is_empty() && !req.force {
             return Err(VaultError::Duplicate(candidates));
         }
@@ -210,7 +208,6 @@ impl Core {
             .filter_map(|p| paths::file_name(p).strip_suffix(".md"))
             .collect();
         let path = format!("{folder}/{}.md", unique_name(&stem, taken));
-        let id = req.id.unwrap_or_else(|| NoteId::generate(self.ids()));
         let mut doc = Document::parse("## Notes\n");
         {
             let fm = doc.frontmatter_mut();
@@ -246,7 +243,7 @@ impl Core {
         let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
         if !candidates.is_empty() {
             let mut sc = NoteSidecar::new(id.as_ulid());
-            self.keep_both(&mut sc, &candidates);
+            self.keep_both(&mut sc, &item, &candidates);
             changes.push(Core::sidecar_change(&sc)?);
         }
         self.finish(tx, changes, Author::User.message("create", &path))
@@ -298,63 +295,62 @@ impl Core {
         let mut doc = Document::parse(&text);
         let mut tx = self.begin(&scope).await?;
         let mut keep: Vec<crate::error::Candidate> = Vec::new();
+        let id_text = id.to_string();
         {
             let old_aliases = doc
                 .frontmatter()
                 .map(vault_format::Frontmatter::aliases)
                 .unwrap_or_default();
-            let fm = doc.frontmatter_mut();
-            if fm.error().is_some() {
+            if doc.frontmatter().is_some_and(|f| f.error().is_some()) {
                 return Err(VaultError::invalid("the frontmatter cannot be edited"));
             }
-            let err = |_| VaultError::invalid("the property could not be set");
+            let mut ep = sync_model::ops::EntityPatch {
+                id: id.as_ulid(),
+                set: BTreeMap::new(),
+                unset: Vec::new(),
+                add_aliases: Vec::new(),
+                remove_aliases: Vec::new(),
+            };
             if let Some(aliases) = &patch.aliases {
                 let aliases = clean_list(aliases);
-                let added: Vec<String> = aliases
+                ep.add_aliases = aliases
                     .iter()
                     .filter(|a| !old_aliases.contains(a))
                     .cloned()
                     .collect();
-                for a in &added {
-                    let found = dup::find(
-                        &mut tx,
-                        &NewItem {
-                            kind: kind.as_str(),
-                            id: Some(id.to_string()),
-                            text: a,
-                            exact: None,
-                            aliases: &[],
-                        },
-                        &self.inner.config.near_thresholds,
-                    )
-                    .await?;
-                    keep.extend(found);
+                ep.remove_aliases = old_aliases
+                    .iter()
+                    .filter(|a| !aliases.contains(a))
+                    .cloned()
+                    .collect();
+                for a in &ep.add_aliases {
+                    let alias = dedupe::Item::alias(Some(&id_text), a);
+                    keep.extend(dup::find(&mut tx, &alias, &self.inner.config.near_thresholds).await?);
                 }
-                keep.sort_by(|a, b| a.id.cmp(&b.id));
-                keep.dedup_by(|a, b| a.id == b.id);
+                keep.sort_by(|a, b| a.item.cmp(&b.item));
+                keep.dedup_by(|a, b| a.item == b.item);
                 if !keep.is_empty() && !patch.force {
                     return Err(VaultError::Duplicate(keep));
                 }
-                if aliases.is_empty() {
-                    fm.remove_key(KnownKey::Aliases).map_err(err)?;
-                } else {
-                    fm.set_list(KnownKey::Aliases, aliases).map_err(err)?;
+            }
+            for (k, v) in &patch.fields {
+                match v {
+                    Some(v) => {
+                        ep.set.insert(k.clone(), v.clone());
+                    }
+                    None => ep.unset.push(k.clone()),
                 }
             }
+            sync_model::apply::entity_patch(doc.frontmatter_mut(), &ep)
+                .map_err(|_| VaultError::invalid("the fields could not be set"))?;
             if let Some(tags) = &patch.tags {
+                let fm = doc.frontmatter_mut();
+                let err = |_| VaultError::invalid("the property could not be set");
                 let tags = clean_list(tags);
                 if tags.is_empty() {
                     fm.remove_key(KnownKey::Tags).map_err(err)?;
                 } else {
                     fm.set_list(KnownKey::Tags, tags).map_err(err)?;
-                }
-            }
-            for (k, v) in &patch.fields {
-                match v {
-                    Some(v) => fm.set_text(known(k)?, v.clone()).map_err(err)?,
-                    None => {
-                        fm.remove_key(known(k)?).map_err(err)?;
-                    }
                 }
             }
         }
@@ -373,9 +369,6 @@ impl Core {
                 }
             }
         }
-        let tz = self.tz(&mut tx).await?;
-        let now = self.local_now(tz);
-        prepare::stamp(&mut doc, id, None, Some(&now))?;
         let mut new_path = note_path.clone();
         if let Some(name) = &patch.name {
             let name = name.trim();
@@ -411,7 +404,13 @@ impl Core {
                 .sidecar(id)
                 .await?
                 .unwrap_or_else(|| NoteSidecar::new(id.as_ulid()));
-            self.keep_both(&mut sc, &keep);
+            let own = dedupe::Item::entity(
+                kind.as_str().parse().unwrap_or(dedupe::DedupeKind::Alias),
+                Some(&id_text),
+                "",
+                &[],
+            );
+            self.keep_both(&mut sc, &own, &keep);
             changes.push(Core::sidecar_change(&sc)?);
         }
         let subject = if new_path == note_path {
@@ -666,20 +665,11 @@ impl Core {
                 }
             }
         };
-        let place = check(ev.place, &[NoteKind::Place])?;
-        let person = check(ev.person, &[NoteKind::Person])?;
-        let counterparty = check(ev.counterparty, &[NoteKind::Person, NoteKind::Company])?;
-        let primary_ok = match custody::primary(ev.kind) {
-            Some(Role::Place) => place.is_some(),
-            Some(Role::Person) => person.is_some(),
-            Some(Role::Counterparty) => counterparty.is_some(),
-            None => true,
-        };
-        if !primary_ok {
-            return Err(VaultError::invalid(
-                "the event type's primary argument is missing",
-            ));
-        }
+        check(ev.place, &[NoteKind::Place])?;
+        check(ev.person, &[NoteKind::Person])?;
+        check(ev.counterparty, &[NoteKind::Person, NoteKind::Company])?;
+        // The shared line grammar needs at least one citation: the stating note, else the
+        // document itself (a user-recorded event, `by: user`).
         let citation = match ev.source {
             Some(s) => {
                 self.state()?.note(s).ok_or(VaultError::NotFound)?;
@@ -687,41 +677,29 @@ impl Core {
             }
             None => self.link_to(document)?,
         };
+        let op = sync_model::ops::DocumentCustody {
+            document_id: document.as_ulid(),
+            event: ev.kind,
+            at: ev.date,
+            place_id: ev.place.map(|i| i.as_ulid()),
+            person_id: ev.person.map(|i| i.as_ulid()),
+            counterparty_id: ev.counterparty.map(|i| i.as_ulid()),
+        };
+        let event = sync_model::apply::custody_event(
+            &op,
+            |u| self.link_to(NoteId::from_ulid(u)).ok(),
+            vec![citation],
+        )
+        .map_err(|_| VaultError::invalid("the event type's primary argument is missing"))?;
         let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
         let mut doc = Document::parse(&text);
-        let mut events = crate::derive::custody_events(doc.body());
-        let new = custody::CustodyEvent {
-            date: ev.date,
-            kind: ev.kind,
-            place,
-            person,
-            counterparty,
-            citations: vec![citation],
-        };
-        // Newest first; a new event on an existing date goes above the older ones.
-        let at = events
-            .iter()
-            .position(|e| e.date <= ev.date)
-            .unwrap_or(events.len());
-        events.insert(at, new);
-        let content = custody::render_section(&events);
-        let body = sections::replace_ai_sections(
-            doc.body(),
-            AiProfile::Document,
-            &[(AiSection::Custody, &content)],
-        )
-        .map_err(|_| VaultError::invalid("the custody section could not be written"))?;
-        doc.set_body(body);
-        let events = crate::derive::custody_events(doc.body());
-        let mut tx = self.begin(&scope).await?;
-        let tz = self.tz(&mut tx).await?;
-        let now = self.local_now(tz);
-        if let Some(state) = CustodyState::derive(&events) {
-            state
-                .write_to(doc.frontmatter_mut())
-                .map_err(|_| VaultError::invalid("the frontmatter cannot be edited"))?;
-        }
-        prepare::stamp(&mut doc, document, None, Some(&now))?;
+        sync_model::apply::record_custody(&mut doc, event).map_err(|e| match e {
+            sync_model::apply::ApplyError::MalformedCustody(_) => VaultError::invalid(
+                "the custody section has lines that are not events; fix them first",
+            ),
+            _ => VaultError::invalid("the custody event could not be recorded"),
+        })?;
+        let tx = self.begin(&scope).await?;
         self.finish(
             tx,
             vec![(path.clone(), Some(doc.render().into_bytes()))],

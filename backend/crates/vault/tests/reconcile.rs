@@ -22,7 +22,6 @@ use strata_vault::ops::tasks::{NewTask, Transition};
 use strata_vault::reconcile::Report;
 use vault_format::RelationKey;
 use vault_format::custody::CustodyEventType;
-use vault_format::tasks::Reminder;
 
 fn note(path: &str, content: &str) -> CreateNote {
     CreateNote {
@@ -371,10 +370,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
                 text: "Petrol Arrows invoice".into(),
                 recurrence: Some("every week on Sunday".into()),
                 due: NaiveDate::from_ymd_opt(2026, 9, 27),
-                reminders: vec![Reminder {
-                    date: NaiveDate::from_ymd_opt(2026, 9, 27).expect("d"),
-                    time: None,
-                }],
+                reminders: vec![NaiveDate::from_ymd_opt(2026, 9, 27).expect("d").and_hms_opt(9, 0, 0).expect("t")],
                 ..NewTask::default()
             },
         )

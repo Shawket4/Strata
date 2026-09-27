@@ -152,7 +152,7 @@ impl MemoryUsageStore {
     }
 }
 
-/// PostgreSQL store: `ai_usage` (scoped) and `ai_usage_global`, updated in one transaction.
+/// `PostgreSQL` store: `ai_usage` (scoped) and `ai_usage_global`, updated in one transaction.
 #[derive(Debug, Clone)]
 pub struct PgUsageStore {
     db: AppDb,

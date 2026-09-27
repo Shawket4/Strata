@@ -420,3 +420,260 @@ fn outcomes_round_trip_as_named_msgpack() {
     let back: MergeOutcome = rmp_serde::from_slice(&bytes).unwrap();
     assert_eq!(back, c);
 }
+
+// ---------------------------------------------------------------------------------------
+// Nested YAML values and the byte order mark
+
+const PLUGIN: &str = "plugin:\n  a: 1\n  b: [x]\n";
+
+#[test]
+fn nested_value_changed_by_theirs_is_applied() {
+    let base = note(&format!("{ID}title: Pricing\n{PLUGIN}custom: 1\n"), "body\n");
+    let ours = note(
+        &format!("{ID}title: Pricing tests\n{PLUGIN}custom: 1\n"),
+        "body (ours)\n",
+    );
+    let theirs_plugin = "plugin:\n  # theirs\n  a: 2\n  b:\n    - x\n    - y: [z]\n";
+    let theirs = note(
+        &format!("{ID}title: Pricing\n{theirs_plugin}custom: 1\n"),
+        "body\n",
+    );
+    let expected = note(
+        &format!("{ID}title: Pricing tests\n{theirs_plugin}custom: 1\n"),
+        "body (ours)\n",
+    );
+    assert_eq!(merge(&base, &ours, &theirs), MergeOutcome::Clean(expected.clone()));
+    // Symmetric: ours' title still wins its side when the roles swap.
+    assert_eq!(merge(&base, &theirs, &ours), MergeOutcome::Clean(expected));
+}
+
+#[test]
+fn nested_value_added_by_theirs_crlf_ours() {
+    let base = "---\r\nid: 01J\r\n---\r\nbody\r\n";
+    let ours = "---\r\nid: 01J\r\n---\r\nbody\r\nmore\r\n";
+    let theirs = "---\nid: 01J\nmeta:\n  - k: v\n    n: [1, 2]\n---\nbody\n";
+    // Theirs' entry is written verbatim in ours' frontmatter line ending (the body merge
+    // takes theirs' LF conversion separately).
+    assert_eq!(
+        merge(base, ours, theirs),
+        MergeOutcome::Clean(
+            "---\r\nid: 01J\r\nmeta:\r\n  - k: v\r\n    n: [1, 2]\r\n---\r\nbody\nmore\n".into()
+        )
+    );
+}
+
+#[test]
+fn nested_value_removed_by_theirs_is_removed() {
+    let base = note(&format!("{ID}{PLUGIN}"), "a\n");
+    let ours = note(&format!("{ID}{PLUGIN}"), "a\nb\n");
+    let theirs = note(ID, "a\n");
+    assert_eq!(
+        merge(&base, &ours, &theirs),
+        MergeOutcome::Clean(note(ID, "a\nb\n"))
+    );
+}
+
+#[test]
+fn nested_value_changed_on_both_sides_conflicts_and_resolves_to_theirs() {
+    let base = note(&format!("{ID}{PLUGIN}"), "b\n");
+    let ours = note(&format!("{ID}plugin:\n  a: 3\n"), "b\n");
+    let theirs = note(&format!("{ID}plugin:\n  a: 2\n"), "b\nt\n");
+    let c = conflicted(merge(&base, &ours, &theirs));
+    assert_eq!(
+        c.hunks,
+        [ConflictHunk {
+            id: 0,
+            location: fm_loc("plugin"),
+            kind: ConflictKind::BothModified,
+            base: PLUGIN.into(),
+            ours: "plugin:\n  a: 3\n".into(),
+            theirs: "plugin:\n  a: 2\n".into(),
+        }]
+    );
+    assert_eq!(
+        c.template.values,
+        [Some(HunkValues {
+            base: FmValue::Raw(PLUGIN.into()),
+            ours: FmValue::Raw("plugin:\n  a: 3\n".into()),
+            theirs: FmValue::Raw("plugin:\n  a: 2\n".into()),
+        })]
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Theirs)]),
+        Ok(note(&format!("{ID}plugin:\n  a: 2\n"), "b\nt\n"))
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Base)]),
+        Ok(note(&format!("{ID}{PLUGIN}"), "b\nt\n"))
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Value(FmValue::Raw("plugin: {}\n".into())))]),
+        Ok(note(&format!("{ID}plugin: {{}}\n"), "b\nt\n"))
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Value(FmValue::Raw("other: 1\n".into())))]),
+        Err(ResolveError::Unwritable(0))
+    );
+}
+
+#[test]
+fn nested_value_that_would_break_an_alias_conflicts() {
+    // Theirs expands the alias on `b` and changes `a`; ours still aliases `a` from `b`, so
+    // `a` cannot be taken before the user decides. `b` (same value, new text) is taken.
+    let base = note("a: &x\n  k: 1\nb: *x\n", "body\n");
+    let ours = note("a: &x\n  k: 1\nb: *x\n", "body\nours\n");
+    let theirs = note("a:\n  k: 2\nb:\n  k: 1\n", "body\n");
+    let c = conflicted(merge(&base, &ours, &theirs));
+    assert_eq!(
+        c.hunks,
+        [ConflictHunk {
+            id: 0,
+            location: fm_loc("a"),
+            kind: ConflictKind::BothModified,
+            base: "a: &x\n  k: 1\n".into(),
+            ours: "a: &x\n  k: 1\n".into(),
+            theirs: "a:\n  k: 2\n".into(),
+        }]
+    );
+    assert_eq!(
+        c.auto_resolved,
+        [
+            AutoResolved {
+                location: fm_loc("b"),
+                resolution: AutoResolution::TookTheirs
+            },
+            AutoResolved {
+                location: Location::Body {
+                    base_line: 1,
+                    ours_line: 1,
+                    theirs_line: 1
+                },
+                resolution: AutoResolution::TookOurs
+            }
+        ]
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Theirs)]),
+        Ok(note("a:\n  k: 2\nb:\n  k: 1\n", "body\nours\n"))
+    );
+}
+
+const BOM: &str = "\u{feff}";
+
+#[test]
+fn bom_follows_the_three_way_rule() {
+    let plain = note(ID, "a\n");
+    let edited = note(ID, "a\nb\n");
+    let with_bom = |s: &str| format!("{BOM}{s}");
+    // Theirs adds / removes it while ours edits: theirs' BOM.
+    assert_eq!(
+        merge(&plain, &edited, &with_bom(&plain)),
+        MergeOutcome::Clean(with_bom(&edited))
+    );
+    assert_eq!(
+        merge(&with_bom(&plain), &with_bom(&edited), &plain),
+        MergeOutcome::Clean(edited.clone())
+    );
+    // Ours changed it: ours' BOM.
+    assert_eq!(
+        merge(&with_bom(&plain), &plain, &with_bom(&edited)),
+        MergeOutcome::Clean(edited.clone())
+    );
+    assert_eq!(
+        merge(&plain, &with_bom(&plain), &edited),
+        MergeOutcome::Clean(with_bom(&edited))
+    );
+    // Both kept it.
+    assert_eq!(
+        merge(
+            &with_bom(&plain),
+            &with_bom(&note(ID, "o\na\n")),
+            &with_bom(&edited)
+        ),
+        MergeOutcome::Clean(with_bom(&note(ID, "o\na\nb\n")))
+    );
+    // No frontmatter at all.
+    assert_eq!(
+        merge("a\n", "a\nb\n", &format!("{BOM}a\n")),
+        MergeOutcome::Clean(format!("{BOM}a\nb\n"))
+    );
+}
+
+#[test]
+fn bom_change_is_reported_with_conflicts() {
+    let base = note(&format!("{ID}title: A\n"), "x\n");
+    let ours = note(&format!("{ID}title: B\n"), "x\n");
+    let theirs = format!("{BOM}{}", note(&format!("{ID}title: C\n"), "x\n"));
+    let c = conflicted(merge(&base, &ours, &theirs));
+    assert_eq!(
+        c.auto_resolved,
+        [AutoResolved {
+            location: Location::ByteOrderMark,
+            resolution: AutoResolution::TookTheirs
+        }]
+    );
+    assert_eq!(
+        c.template.prefix,
+        Some(format!("{BOM}---\n{ID}title: B\n---\n"))
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Theirs)]),
+        Ok(format!("{BOM}{}", note(&format!("{ID}title: C\n"), "x\n")))
+    );
+    // Both sides dropped it: identical.
+    let c = conflicted(merge(
+        &format!("{BOM}{base}"),
+        &ours,
+        &theirs[BOM.len()..],
+    ));
+    assert_eq!(
+        c.auto_resolved,
+        [AutoResolved {
+            location: Location::ByteOrderMark,
+            resolution: AutoResolution::Identical
+        }]
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Ours)]),
+        Ok(ours.clone())
+    );
+}
+
+#[test]
+fn bom_in_whole_file_merges_of_invalid_yaml() {
+    // Previously the BOM was part of the first line, so theirs removing it conflicted with
+    // ours editing that line.
+    let base = format!("{BOM}---\nbad: [\n---\nbody\n");
+    let ours = format!("{BOM}---\nbad: [ours\n---\nbody\n");
+    let theirs = "---\nbad: [\n---\nbody\ntheirs\n";
+    assert_eq!(
+        merge(&base, &ours, theirs),
+        MergeOutcome::Clean("---\nbad: [ours\n---\nbody\ntheirs\n".into())
+    );
+    // With a conflict, the BOM is the first body piece of the template.
+    let theirs = "---\nbad: [theirs\n---\nbody\n";
+    let ours_plain = "---\nbad: [ours\n---\nbody\n";
+    let c = conflicted(merge(&base, ours_plain, &format!("{BOM}{theirs}")));
+    assert_eq!(c.template.prefix, None);
+    assert_eq!(
+        c.auto_resolved,
+        [AutoResolved {
+            location: Location::ByteOrderMark,
+            resolution: AutoResolution::TookOurs
+        }]
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Theirs)]),
+        Ok(theirs.to_owned())
+    );
+    let c = conflicted(merge(&base, &ours, &format!("{BOM}{theirs}")));
+    assert_eq!(
+        c.template.body.first(),
+        Some(&sync_model::merge::TemplatePiece::Text { text: BOM.into() })
+    );
+    assert_eq!(
+        c.merged_with_markers.as_deref().map(|m| m.starts_with(&format!("{BOM}---\n<<<<<<<"))),
+        Some(true)
+    );
+    assert_eq!(c.resolve(&[(0, Choice::Theirs)]), Ok(format!("{BOM}{theirs}")));
+}
