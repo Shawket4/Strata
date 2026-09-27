@@ -252,6 +252,14 @@ CREATE TABLE sync_state (
 );
 INSERT INTO sync_state (singleton) VALUES (1);
 
+-- IDs seen by the bootstrap in progress (mark and sweep: after the last page, cached server
+-- rows that were not seen are removed, so a re-bootstrap never empties the screens first).
+CREATE TABLE bootstrap_seen (
+    kind TEXT NOT NULL,
+    id TEXT NOT NULL,
+    PRIMARY KEY (kind, id)
+);
+
 -- Push results of kind `conflict` (D19): the local edit, the server version and the local
 -- 3-way merge preview.
 CREATE TABLE conflicts (

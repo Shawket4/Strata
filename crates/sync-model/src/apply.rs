@@ -9,11 +9,11 @@ use ulid::Ulid;
 use vault_format::custody::{self, CustodyEvent, CustodyState};
 use vault_format::frontmatter::ValueShape;
 use vault_format::sections::sections;
-use vault_format::tasks::{self, DateKind, Reminder, TaskLine, TaskError};
+use vault_format::tasks::{self, DateKind, Reminder, TaskError, TaskLine};
 use vault_format::{Document, Frontmatter, FrontmatterError, KnownKey, RelationKey};
 
-use crate::ops::{DocumentCustody, EntityPatch, Op, TaskUpdate};
 use crate::Version;
+use crate::ops::{DocumentCustody, EntityPatch, Op, TaskUpdate};
 
 /// Why an op cannot be applied.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -63,14 +63,37 @@ pub enum ApplyError {
 
 /// `relation.add`: adds `[[target]]` to the relation list on the source note. Returns
 /// whether it was added (a link to the same target already there is kept once).
-pub fn relation_add(fm: &mut Frontmatter, relation: RelationKey, target: &str) -> Result<bool, ApplyError> {
+pub fn relation_add(
+    fm: &mut Frontmatter,
+    relation: RelationKey,
+    target: &str,
+) -> Result<bool, ApplyError> {
     Ok(fm.add_relation_link(relation, target)?)
 }
 
-/// `relation.remove`: removes every link to `target` from the list. Returns whether any was
-/// removed (removing a missing relation is a no-op, so replays are harmless).
-pub fn relation_remove(fm: &mut Frontmatter, relation: RelationKey, target: &str) -> Result<bool, ApplyError> {
-    Ok(fm.remove_relation_link(relation, target)? > 0)
+/// Removes every link to `target` from the list, and the key itself once it is empty
+/// ("empty keys may be omitted", §6.4). Returns how many links were removed.
+fn remove_link(
+    fm: &mut Frontmatter,
+    relation: RelationKey,
+    target: &str,
+) -> Result<usize, ApplyError> {
+    let removed = fm.remove_relation_link(relation, target)?;
+    if removed > 0 && fm.relation(relation).is_empty() {
+        fm.remove(relation.as_str())?;
+    }
+    Ok(removed)
+}
+
+/// `relation.remove`: removes every link to `target` from the list (and the key once it is
+/// empty). Returns whether any was removed (removing a missing relation is a no-op, so
+/// replays are harmless).
+pub fn relation_remove(
+    fm: &mut Frontmatter,
+    relation: RelationKey,
+    target: &str,
+) -> Result<bool, ApplyError> {
+    Ok(remove_link(fm, relation, target)? > 0)
 }
 
 /// `relation.retype`: moves the link to `target` from `from` to `to`.
@@ -83,7 +106,7 @@ pub fn relation_retype(
     if from == to {
         return Ok(());
     }
-    if fm.remove_relation_link(from, target)? == 0 {
+    if remove_link(fm, from, target)? == 0 {
         return Err(ApplyError::RelationMissing {
             relation: from,
             target: target.to_owned(),
@@ -99,9 +122,13 @@ pub fn relation_retype(
 fn check_patchable(key: &str) -> Result<(), ApplyError> {
     match KnownKey::from_name(key) {
         Some(KnownKey::Id | KnownKey::Kind) => Err(ApplyError::ImmutableKey(key.to_owned())),
-        Some(KnownKey::Location | KnownKey::Holder | KnownKey::LastHolder | KnownKey::Status | KnownKey::Aliases) => {
-            Err(ApplyError::NotPatchable(key.to_owned()))
-        }
+        Some(
+            KnownKey::Location
+            | KnownKey::Holder
+            | KnownKey::LastHolder
+            | KnownKey::Status
+            | KnownKey::Aliases,
+        ) => Err(ApplyError::NotPatchable(key.to_owned())),
         Some(k) if matches!(k.shape(), ValueShape::List | ValueShape::LinkList) => {
             Err(ApplyError::NotPatchable(key.to_owned()))
         }
@@ -153,7 +180,8 @@ pub fn custody_event(
     citations: Vec<String>,
 ) -> Result<CustodyEvent, ApplyError> {
     let resolve = |id: Option<Ulid>| -> Result<Option<String>, ApplyError> {
-        id.map(|id| link(id).ok_or(ApplyError::UnknownEntity(id))).transpose()
+        id.map(|id| link(id).ok_or(ApplyError::UnknownEntity(id)))
+            .transpose()
     };
     let event = CustodyEvent {
         date: op.at,
@@ -165,7 +193,8 @@ pub fn custody_event(
     };
     // Round-trip through the line format so an event that the section parser would reject
     // is refused now rather than written.
-    CustodyEvent::parse(&event.to_line()).map_err(|e| ApplyError::InvalidCustodyEvent(e.to_string()))
+    CustodyEvent::parse(&event.to_line())
+        .map_err(|e| ApplyError::InvalidCustodyEvent(e.to_string()))
 }
 
 const CUSTODY: &str = "Custody";
@@ -202,7 +231,9 @@ pub fn record_custody(doc: &mut Document, event: CustodyEvent) -> Result<Custody
             .find(|s| s.level == 2 && s.title == "Notes");
         match notes {
             Some(n) => {
-                let at = body[..n.heading_span.start].rfind('\n').map_or(0, |i| i + 1);
+                let at = body[..n.heading_span.start]
+                    .rfind('\n')
+                    .map_or(0, |i| i + 1);
                 format!("{}{block}\n{}", &body[..at], &body[at..])
             }
             None if body.is_empty() => block,
@@ -256,7 +287,11 @@ fn update_line(task: &TaskLine, u: &TaskUpdate) -> TaskLine {
         spec.description.clone_from(text);
         t = TaskLine::parse(&spec.render()).unwrap_or(t);
     }
-    for (kind, value) in [(DateKind::Due, u.due), (DateKind::Scheduled, u.scheduled), (DateKind::Start, u.start)] {
+    for (kind, value) in [
+        (DateKind::Due, u.due),
+        (DateKind::Scheduled, u.scheduled),
+        (DateKind::Start, u.start),
+    ] {
         if let Some(v) = value {
             t = t.with_date(kind, v);
         }
@@ -297,7 +332,10 @@ pub fn apply_task_op(body: &str, op: &Op) -> Result<String, ApplyError> {
     let replacement = match op {
         Op::TaskUpdate(u) => update_line(&task, u).as_str().to_owned(),
         Op::TaskComplete(c) if task.recurrence_text().is_some() => {
-            let next_id = c.next_id.as_deref().ok_or_else(|| ApplyError::MissingNextId(id.clone()))?;
+            let next_id = c
+                .next_id
+                .as_deref()
+                .ok_or_else(|| ApplyError::MissingNextId(id.clone()))?;
             let [next, done] = tasks::complete_recurring(line, c.done, next_id)?;
             format!("{next}{}{done}", if eol.is_empty() { "\n" } else { eol })
         }

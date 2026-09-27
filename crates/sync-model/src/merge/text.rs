@@ -79,11 +79,14 @@ impl TextMerge {
             let h = &self.hunks[i];
             let mut s = format!("<<<<<<< ours{eol}");
             push_block(&mut s, &h.ours_out, eol);
-            s.push_str(&format!("||||||| base{eol}"));
+            s.push_str("||||||| base");
+            s.push_str(eol);
             push_block(&mut s, &h.base_out, eol);
-            s.push_str(&format!("======={eol}"));
+            s.push_str("=======");
+            s.push_str(eol);
             push_block(&mut s, &h.theirs_out, eol);
-            s.push_str(&format!(">>>>>>> theirs{eol}"));
+            s.push_str(">>>>>>> theirs");
+            s.push_str(eol);
             s
         })
     }
@@ -116,7 +119,12 @@ fn count_task_ids<'a>(lines: impl IntoIterator<Item = &'a String>) -> HashMap<St
     counts
 }
 
-fn conflict_kind(p: &Prepared, base: &Range<usize>, ours: &Range<usize>, theirs: &Range<usize>) -> ConflictKind {
+fn conflict_kind(
+    p: &Prepared,
+    base: &Range<usize>,
+    ours: &Range<usize>,
+    theirs: &Range<usize>,
+) -> ConflictKind {
     let any_task = p.base.lines[base.clone()]
         .iter()
         .chain(&p.ours.lines[ours.clone()])
@@ -210,13 +218,19 @@ fn trim_insertion(
     theirs: &mut Range<usize>,
 ) -> (Vec<String>, Vec<String>) {
     let mut prefix = Vec::new();
-    while ours.start < ours.end && theirs.start < theirs.end && p.ours.lines[ours.start] == p.theirs.lines[theirs.start] {
+    while ours.start < ours.end
+        && theirs.start < theirs.end
+        && p.ours.lines[ours.start] == p.theirs.lines[theirs.start]
+    {
         prefix.push(p.ours.lines[ours.start].clone());
         ours.start += 1;
         theirs.start += 1;
     }
     let mut suffix = Vec::new();
-    while ours.start < ours.end && theirs.start < theirs.end && p.ours.lines[ours.end - 1] == p.theirs.lines[theirs.end - 1] {
+    while ours.start < ours.end
+        && theirs.start < theirs.end
+        && p.ours.lines[ours.end - 1] == p.theirs.lines[theirs.end - 1]
+    {
         suffix.push(p.ours.lines[ours.end - 1].clone());
         ours.end -= 1;
         theirs.end -= 1;
@@ -311,7 +325,12 @@ enum Taken {
     Identical,
 }
 
-fn region_kind(base: &Range<usize>, ours: &Range<usize>, theirs: &Range<usize>, p: &Prepared) -> Taken {
+fn region_kind(
+    base: &Range<usize>,
+    ours: &Range<usize>,
+    theirs: &Range<usize>,
+    p: &Prepared,
+) -> Taken {
     let o = &p.ours.lines[ours.clone()];
     let t = &p.theirs.lines[theirs.clone()];
     let b = &p.base.lines[base.clone()];

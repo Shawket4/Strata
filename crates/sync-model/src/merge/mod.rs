@@ -312,7 +312,12 @@ fn hunk_id(i: usize) -> u32 {
     u32::try_from(i).unwrap_or(u32::MAX)
 }
 
-fn build(prefix: Option<String>, fm_conflicts: Vec<FmConflict>, mut auto: Vec<AutoResolved>, body: &TextMerge) -> MergeOutcome {
+fn build(
+    prefix: Option<String>,
+    fm_conflicts: Vec<FmConflict>,
+    mut auto: Vec<AutoResolved>,
+    body: &TextMerge,
+) -> MergeOutcome {
     auto.extend(body.auto.iter().cloned());
     if fm_conflicts.is_empty() && body.hunks.is_empty() {
         let text = body.clean_text().unwrap_or_default();
@@ -367,7 +372,8 @@ fn build(prefix: Option<String>, fm_conflicts: Vec<FmConflict>, mut auto: Vec<Au
             }
         })
         .collect();
-    let merged_with_markers = (offset == 0).then(|| prefix.clone().unwrap_or_default() + &body.with_markers());
+    let merged_with_markers =
+        (offset == 0).then(|| prefix.clone().unwrap_or_default() + &body.with_markers());
     MergeOutcome::Conflicted(Conflicted {
         merged_with_markers,
         hunks,
@@ -383,7 +389,12 @@ fn build(prefix: Option<String>, fm_conflicts: Vec<FmConflict>, mut auto: Vec<Au
 
 /// Merges plain text line by line (no frontmatter handling).
 pub fn merge_text_only(base: &str, ours: &str, theirs: &str) -> MergeOutcome {
-    build(None, Vec::new(), Vec::new(), &merge_text(base, ours, theirs))
+    build(
+        None,
+        Vec::new(),
+        Vec::new(),
+        &merge_text(base, ours, theirs),
+    )
 }
 
 /// 3-way merges a note file (see the module docs).
@@ -394,7 +405,11 @@ pub fn merge(base: &str, ours: &str, theirs: &str) -> MergeOutcome {
     if ours == base {
         return MergeOutcome::Clean(theirs.to_owned());
     }
-    let (bd, od, td) = (Document::parse(base), Document::parse(ours), Document::parse(theirs));
+    let (bd, od, td) = (
+        Document::parse(base),
+        Document::parse(ours),
+        Document::parse(theirs),
+    );
     let Some(fm) = merge_frontmatter(&bd, &od, &td) else {
         return merge_text_only(base, ours, theirs);
     };
@@ -421,7 +436,12 @@ pub enum UpdateDecision {
 /// pulled server content on the device), `edit` the incoming content, `base` the content
 /// at `base_version` (from git; `None` if it is unavailable, which merges against an empty
 /// base).
-pub fn decide_update(base_version: &Version, base: Option<&str>, current: &str, edit: &str) -> UpdateDecision {
+pub fn decide_update(
+    base_version: &Version,
+    base: Option<&str>,
+    current: &str,
+    edit: &str,
+) -> UpdateDecision {
     if current == edit {
         return UpdateDecision::AlreadyApplied;
     }

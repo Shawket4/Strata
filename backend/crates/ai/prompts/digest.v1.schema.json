@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "digest.v1 output",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "lang": {
+      "type": "string",
+      "enum": [
+        "ar",
+        "en",
+        "mixed"
+      ]
+    },
+    "highlights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "note_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "block_id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "note_id",
+                "block_id"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "text",
+          "citations"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 10
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "note_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "block_id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "note_id",
+                "block_id"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "text",
+          "citations"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 10
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "note_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "block_id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "note_id",
+                "block_id"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          }
+        },
+        "required": [
+          "text",
+          "citations"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "title",
+    "lang",
+    "highlights",
+    "open_questions",
+    "contradictions"
+  ],
+  "additionalProperties": false
+}

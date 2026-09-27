@@ -145,7 +145,7 @@ pub struct SuggestionReplyRecord {
     pub at: DateTime<FixedOffset>,
 }
 
-/// A suggestion (payload kept as the stored MessagePack blob; its schema belongs to the
+/// A suggestion (payload kept as the stored `MessagePack` blob; its schema belongs to the
 /// suggestion kind).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SuggestionRecord {
@@ -157,7 +157,7 @@ pub struct SuggestionRecord {
     pub kind: String,
     /// Status.
     pub status: SuggestionStatus,
-    /// Kind-specific payload (MessagePack).
+    /// Kind-specific payload (`MessagePack`).
     #[serde(with = "serde_bytes")]
     pub payload: Vec<u8>,
     /// When it was created.

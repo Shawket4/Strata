@@ -12,8 +12,8 @@
 //! - [`apply`]: pure op application rules (relations, patches, custody, task edits).
 //! - [`Version`]: content-hash versions.
 //!
-//! These are internal models: the API layer maps them to its OpenAPI DTOs. They serialise
-//! as named-map MessagePack (`rmp_serde::to_vec_named`) and only change additively.
+//! These are internal models: the API layer maps them to its `OpenAPI` DTOs. They serialise
+//! as named-map `MessagePack` (`rmp_serde::to_vec_named`) and only change additively.
 //! Everything is pure: no I/O, no async, no clock.
 
 pub mod apply;

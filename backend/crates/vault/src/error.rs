@@ -7,6 +7,8 @@ use strata_common::{DomainError, ProblemType};
 /// A duplicate candidate returned with `409 duplicate_candidates` (PLAN §9.7).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Candidate {
+    /// The stored item ID (note ULID or task block ID), as in `dedupe_keys`.
+    pub item: String,
     /// ID of the existing item (note ULID; for tasks the ULID inside `t-<ulid>`, else the
     /// containing note's ID).
     pub id: ulid::Ulid,

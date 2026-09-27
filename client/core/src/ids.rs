@@ -14,10 +14,15 @@ pub trait IdGenerator: Send + Sync + fmt::Debug {
 }
 
 /// Monotonic ULIDs from a clock and the OS random source (production).
-#[derive(Debug)]
 pub struct UlidGenerator {
     inner: Mutex<ulid::Generator>,
     clock: std::sync::Arc<dyn Clock>,
+}
+
+impl fmt::Debug for UlidGenerator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UlidGenerator").finish_non_exhaustive()
+    }
 }
 
 impl UlidGenerator {

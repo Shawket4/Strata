@@ -16,7 +16,6 @@ pub mod migrations;
 pub mod notes;
 pub mod notifications;
 pub mod outbox;
-pub mod queries;
 pub mod registry;
 pub mod settings;
 pub mod sync_state;

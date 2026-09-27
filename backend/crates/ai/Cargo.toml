@@ -4,8 +4,47 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+build = "build.rs"
+
+[features]
+default = ["onnx"]
+# In-process ONNX embeddings (D9 = a): `OnnxEmbedder` over ort + tokenizers.
+onnx = ["dep:ort", "dep:tokenizers"]
+# `FakeLlmProvider` (fixture replay) and `FixtureRecorder` for tests (PLAN §9.1, §16.3).
+test-support = []
 
 [dependencies]
+strata-common = { workspace = true }
+strata-index = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+reqwest = { workspace = true, features = ["stream"] }
+bytes = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+jsonschema = { workspace = true }
+rustix = { workspace = true }
+ort = { workspace = true, optional = true }
+tokenizers = { workspace = true, optional = true }
+
+[build-dependencies]
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+[dev-dependencies]
+strata-testkit = { workspace = true }
+wiremock = { workspace = true }
+tempfile = { workspace = true }
+pretty_assertions = { workspace = true }
+proptest = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true

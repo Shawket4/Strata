@@ -1,0 +1,39 @@
+{
+  "title": "عقد وطنية — ETA invoice",
+  "tags": [
+    "watanya",
+    "invoices"
+  ],
+  "destination_folder": "notes/Clients",
+  "lang": "mixed",
+  "relations": [
+    {
+      "target_id": "01J8ZK9A000000000000000001",
+      "type": "follows-up",
+      "confidence": 0.82,
+      "reason": "Continues the Watanya invoicing discussion from the September call."
+    }
+  ],
+  "concepts": [
+    {
+      "name": "Invoicing",
+      "existing_id": "01J8ZKC0000000000000000001",
+      "confidence": 0.9
+    }
+  ],
+  "people": [
+    {
+      "name": "بابا",
+      "existing_id": null,
+      "is_nickname": true,
+      "confidence": 0.2
+    }
+  ],
+  "companies": [
+    {
+      "name": "Watanya",
+      "existing_id": "01J8ZKW0000000000000000001",
+      "confidence": 0.95
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "is_correction": true,
+  "fixes": [
+    {
+      "decision_id": "01J8ZKX0000000000000000001",
+      "action": "repoint",
+      "new_target_id": "01J8ZKA0000000000000000002",
+      "new_type": null,
+      "confidence": 0.86,
+      "reason": "The user says the Ahmed in yesterday's Acme call is Ahmed Fathy."
+    }
+  ],
+  "hints": [
+    {
+      "entity_id": "01J8ZKA0000000000000000002",
+      "text": "Ahmed in Acme calls = Ahmed Fathy"
+    }
+  ],
+  "ambiguous": false,
+  "clarification_question": null
+}

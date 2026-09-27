@@ -1,0 +1,36 @@
+{
+  "events": [
+    {
+      "type": "returned-by",
+      "document": "Watanya's contract",
+      "document_existing_id": "01J8ZKD0000000000000000001",
+      "place": null,
+      "place_existing_id": null,
+      "place_part_of": null,
+      "person": "Shady",
+      "person_existing_id": "01J8ZKS0000000000000000001",
+      "counterparty": null,
+      "date": "2026-09-27",
+      "date_source": "created",
+      "confidence": 0.88,
+      "evidence_block_id": "b1",
+      "quote": "last with Shady"
+    },
+    {
+      "type": "stored-at",
+      "document": "Watanya's contract",
+      "document_existing_id": "01J8ZKD0000000000000000001",
+      "place": "the safe",
+      "place_existing_id": "01J8ZKP0000000000000000002",
+      "place_part_of": "Nasr City office",
+      "person": null,
+      "person_existing_id": null,
+      "counterparty": null,
+      "date": "2026-09-27",
+      "date_source": "created",
+      "confidence": 0.9,
+      "evidence_block_id": "b1",
+      "quote": "at the Nasr City office in the safe"
+    }
+  ]
+}

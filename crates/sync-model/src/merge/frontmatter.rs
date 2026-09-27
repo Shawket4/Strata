@@ -49,7 +49,9 @@ impl FmValue {
             Some(PropertyValue::Null) => Self::Null,
             Some(PropertyValue::Text(s)) => Self::Text(s.clone()),
             Some(PropertyValue::List(v)) => Self::List(v.clone()),
-            Some(PropertyValue::Other) => Self::Raw(fm.raw_entry(key).unwrap_or_default().to_owned()),
+            Some(PropertyValue::Other) => {
+                Self::Raw(fm.raw_entry(key).unwrap_or_default().to_owned())
+            }
         }
     }
 
@@ -99,7 +101,8 @@ pub(crate) struct FmMerge {
 }
 
 fn is_list_key(key: &str) -> bool {
-    KnownKey::from_name(key).is_some_and(|k| matches!(k.shape(), ValueShape::List | ValueShape::LinkList))
+    KnownKey::from_name(key)
+        .is_some_and(|k| matches!(k.shape(), ValueShape::List | ValueShape::LinkList))
 }
 
 /// Set merge with deletions respected (see module docs).
@@ -122,8 +125,15 @@ fn later_timestamp(ours: &FmValue, theirs: &FmValue) -> Option<FmValue> {
     let (FmValue::Text(o), FmValue::Text(t)) = (ours, theirs) else {
         return None;
     };
-    let (od, td) = (DateTime::parse_from_rfc3339(o).ok()?, DateTime::parse_from_rfc3339(t).ok()?);
-    Some(if td > od { theirs.clone() } else { ours.clone() })
+    let (od, td) = (
+        DateTime::parse_from_rfc3339(o).ok()?,
+        DateTime::parse_from_rfc3339(t).ok()?,
+    );
+    Some(if td > od {
+        theirs.clone()
+    } else {
+        ours.clone()
+    })
 }
 
 enum KeyOutcome {
@@ -159,12 +169,18 @@ fn merge_key(key: &str, b: &FmValue, o: &FmValue, t: &FmValue) -> KeyOutcome {
 }
 
 fn raw(fm: Option<&Frontmatter>, key: &str) -> String {
-    fm.and_then(|f| f.raw_entry(key)).unwrap_or_default().to_owned()
+    fm.and_then(|f| f.raw_entry(key))
+        .unwrap_or_default()
+        .to_owned()
 }
 
 /// Merges the frontmatter of three parsed documents. Returns `None` when any frontmatter is
 /// invalid YAML (the caller then merges the whole file as text).
-pub(crate) fn merge_frontmatter(base: &Document, ours: &Document, theirs: &Document) -> Option<FmMerge> {
+pub(crate) fn merge_frontmatter(
+    base: &Document,
+    ours: &Document,
+    theirs: &Document,
+) -> Option<FmMerge> {
     if [base, ours, theirs]
         .iter()
         .any(|d| d.frontmatter().is_some_and(|f| f.error().is_some()))
@@ -185,7 +201,11 @@ pub(crate) fn merge_frontmatter(base: &Document, ours: &Document, theirs: &Docum
     let mut conflicts = Vec::new();
     let mut auto = Vec::new();
     for key in keys {
-        let (b, o, t) = (FmValue::read(bf, &key), FmValue::read(of, &key), FmValue::read(tf, &key));
+        let (b, o, t) = (
+            FmValue::read(bf, &key),
+            FmValue::read(of, &key),
+            FmValue::read(tf, &key),
+        );
         let conflict = |conflicts: &mut Vec<FmConflict>| {
             conflicts.push(FmConflict {
                 key: key.clone(),

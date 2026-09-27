@@ -185,11 +185,35 @@ impl VaultService {
         R: Send + 'static,
         F: for<'a> FnOnce(&'a mut Core, UserScope) -> BoxFuture<'a, Result<R>> + Send + 'static,
     {
+        self.run(scope, true, f).await
+    }
+
+    /// Like [`Self::exec`] but without loading the vault first (for reconciliation itself).
+    pub async fn exec_unloaded<R, F>(&self, scope: &UserScope, f: F) -> Result<R>
+    where
+        R: Send + 'static,
+        F: for<'a> FnOnce(&'a mut Core, UserScope) -> BoxFuture<'a, Result<R>> + Send + 'static,
+    {
+        self.run(scope, false, f).await
+    }
+
+    async fn run<R, F>(&self, scope: &UserScope, load: bool, f: F) -> Result<R>
+    where
+        R: Send + 'static,
+        F: for<'a> FnOnce(&'a mut Core, UserScope) -> BoxFuture<'a, Result<R>> + Send + 'static,
+    {
         let scope = *scope;
         let (done_tx, done_rx) = oneshot::channel();
         let job: Job = Box::new(move |core: &mut Core| {
             Box::pin(async move {
-                let result = match core.ensure_loaded(scope).await {
+                let loaded = if load {
+                    core.ensure_loaded(scope).await
+                } else if core.dir.join(".git").is_dir() {
+                    Ok(())
+                } else {
+                    Err(VaultError::NotFound)
+                };
+                let result = match loaded {
                     Ok(()) => f(core, scope).await,
                     Err(e) => Err(e),
                 };

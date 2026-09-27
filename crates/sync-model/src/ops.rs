@@ -163,12 +163,11 @@ macro_rules! ops {
                 match self { $(Self::$variant(_) => OpKind::$variant,)+ }
             }
 
-            /// The payload alone as named-map MessagePack (outbox `payload` column).
-            pub fn payload_bytes(&self) -> Vec<u8> {
-                let encoded = match self {
+            /// The payload alone as named-map `MessagePack` (outbox `payload` column).
+            pub fn payload_bytes(&self) -> Result<Vec<u8>, rmp_serde::encode::Error> {
+                match self {
                     $(Self::$variant(p) => rmp_serde::to_vec_named(p),)+
-                };
-                encoded.expect("op payloads are plain data and always encode")
+                }
             }
 
             /// Rebuilds an op from the outbox columns.
@@ -308,7 +307,6 @@ pub mod patch_field {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
     /// Serialises `Some(None)` as `nil` and `Some(Some(v))` as `v` (`None` is skipped).
-    #[expect(clippy::ref_option, reason = "serde `with` helpers receive `&Option<T>`")]
     pub fn serialize<T: Serialize, S: Serializer>(
         value: &Option<Option<T>>,
         serializer: S,

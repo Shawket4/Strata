@@ -43,8 +43,8 @@ fn name_error(e: &FileNameError) -> &'static str {
         FileNameError::EdgeWhitespaceOrDot => {
             "a path segment starts or ends with whitespace or ends with a dot"
         }
-        FileNameError::Reserved => "a path segment is a reserved device name",
-        FileNameError::TooLong => "a path segment is longer than 255 bytes",
+        FileNameError::Reserved(_) => "a path segment is a reserved device name",
+        FileNameError::TooLong(_) => "a path segment is longer than 255 bytes",
     }
 }
 

@@ -60,9 +60,10 @@ pub fn migrate_to(conn: &Connection, migrations: &[Migration], target: u32) -> C
             "database schema v{current} is newer than this app (v{latest})"
         )));
     }
+    let from = current;
     for m in migrations
         .iter()
-        .filter(|m| m.version > current && m.version <= target)
+        .filter(|m| m.version > from && m.version <= target)
     {
         let tx = conn.unchecked_transaction()?;
         tx.execute_batch(m.sql)

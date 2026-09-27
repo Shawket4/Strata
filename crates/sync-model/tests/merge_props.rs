@@ -1,4 +1,5 @@
 //! Merge properties (proptest).
+#![allow(clippy::unwrap_used, clippy::expect_used)] // test helpers outside #[test] fns
 
 use proptest::prelude::*;
 use sync_model::{MergeOutcome, merge, merge_text_only};
@@ -47,7 +48,10 @@ struct Style {
 }
 
 fn style() -> impl Strategy<Value = Style> {
-    (prop_oneof![6 => Just(0_u8), 3 => Just(1_u8), 1 => Just(2_u8)], prop::bool::weighted(0.8))
+    (
+        prop_oneof![6 => Just(0_u8), 3 => Just(1_u8), 1 => Just(2_u8)],
+        prop::bool::weighted(0.8),
+    )
         .prop_map(|(eol, final_newline)| Style { eol, final_newline })
 }
 
@@ -71,7 +75,16 @@ fn render(lines: &[String], s: Style) -> String {
 
 fn triple() -> impl Strategy<Value = (String, String, String)> {
     prop::collection::vec(line(), 0..8)
-        .prop_flat_map(|base| (Just(base.clone()), edited(base.clone()), edited(base), style(), style(), style()))
+        .prop_flat_map(|base| {
+            (
+                Just(base.clone()),
+                edited(base.clone()),
+                edited(base),
+                style(),
+                style(),
+                style(),
+            )
+        })
         .prop_map(|(b, x, y, sb, sx, sy)| (render(&b, sb), render(&x, sx), render(&y, sy)))
 }
 
@@ -166,5 +179,39 @@ proptest! {
             let ours: Vec<(u32, sync_model::Choice)> = c.hunks.iter().map(|h| (h.id, sync_model::Choice::Ours)).collect();
             prop_assert_eq!(c.resolve(&ours).map(|t| t.contains("zz-ours")), Ok(true));
         }
+    }
+}
+
+fn tag_set() -> impl Strategy<Value = Vec<String>> {
+    prop::sample::subsequence(vec!["a", "b", "c", "d", "e", "وسم"], 0..=6)
+        .prop_map(|v| v.into_iter().map(str::to_owned).collect())
+}
+
+fn tagged(tags: &[String], body: &str) -> String {
+    format!("---\ntags: [{}]\n---\n{body}", tags.join(", "))
+}
+
+proptest! {
+    /// List keys merge as sets: an entry is kept iff both sides kept it or either side
+    /// added it: `(o ∩ t) ∪ (o \ b) ∪ (t \ b)`.
+    #[test]
+    fn list_keys_merge_as_three_way_sets(b in tag_set(), o in tag_set(), t in tag_set()) {
+        let out = merge(&tagged(&b, "x\n"), &tagged(&o, "x\ny\n"), &tagged(&t, "z\nx\n"));
+        let MergeOutcome::Clean(text) = out else {
+            return Err(TestCaseError::fail(format!("conflict: {out:?}")));
+        };
+        let doc = vault_format::Document::parse(&text);
+        let mut got = doc.frontmatter().map(vault_format::Frontmatter::tags).unwrap_or_default();
+        got.sort();
+        let mut want: Vec<String> = o
+            .iter()
+            .filter(|x| t.contains(x) || !b.contains(x))
+            .chain(t.iter().filter(|x| !b.contains(x)))
+            .cloned()
+            .collect();
+        want.sort();
+        want.dedup();
+        prop_assert_eq!(got, want);
+        prop_assert!(text.ends_with("---\nz\nx\ny\n"));
     }
 }

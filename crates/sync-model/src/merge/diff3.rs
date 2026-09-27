@@ -83,10 +83,15 @@ fn changes(who: Who, base: &[u32], side: &[u32]) -> Vec<Change> {
                 old_len,
                 new_index,
                 new_len,
-            } => (old_index..old_index + old_len, new_index..new_index + new_len),
+            } => (
+                old_index..old_index + old_len,
+                new_index..new_index + new_len,
+            ),
         };
         match out.last_mut() {
-            Some(prev) if prev.base.end == base_range.start && prev.side.end == side_range.start => {
+            Some(prev)
+                if prev.base.end == base_range.start && prev.side.end == side_range.start =>
+            {
                 prev.base.end = base_range.end;
                 prev.side.end = side_range.end;
             }
@@ -105,7 +110,7 @@ fn intern<'a>(table: &mut HashMap<&'a str, u32>, lines: &'a [String]) -> Vec<u32
     lines
         .iter()
         .map(|l| {
-            let next = u32::try_from(table.len()).expect("fewer than 2^32 distinct lines");
+            let next = u32::try_from(table.len()).unwrap_or(u32::MAX);
             *table.entry(l.as_str()).or_insert(next)
         })
         .collect()
@@ -120,9 +125,7 @@ pub(crate) fn regions(base: &[String], ours: &[String], theirs: &[String]) -> Ve
 
     let mut all = changes(Who::Ours, &b, &o);
     all.extend(changes(Who::Theirs, &b, &t));
-    all.sort_by(|x, y| {
-        (x.base.start, x.base.end, x.who).cmp(&(y.base.start, y.base.end, y.who))
-    });
+    all.sort_by(|x, y| (x.base.start, x.base.end, x.who).cmp(&(y.base.start, y.base.end, y.who)));
 
     // Group overlapping changes (see the module docs for the overlap rule).
     let mut groups: Vec<Vec<Change>> = Vec::new();
@@ -147,17 +150,16 @@ pub(crate) fn regions(base: &[String], ours: &[String], theirs: &[String]) -> Ve
         } else {
             max_end = Some(max_end.map_or(c.base.end, |e| e.max(c.base.end)));
         }
-        groups
-            .last_mut()
-            .expect("a group was pushed above")
-            .push(c);
+        if let Some(group) = groups.last_mut() {
+            group.push(c);
+        }
     }
 
     let mut out = Vec::new();
     let mut pos = 0; // next base line
     // Offsets (side index - base index) after the last change of each side.
     let (mut off_o, mut off_t): (isize, isize) = (0, 0);
-    let shift = |i: usize, off: isize| i.checked_add_signed(off).expect("diff offsets stay in range");
+    let shift = |i: usize, off: isize| i.saturating_add_signed(off);
     for group in groups {
         let gs = group.iter().map(|c| c.base.start).min().unwrap_or(pos);
         let ge = group.iter().map(|c| c.base.end).max().unwrap_or(gs);
@@ -212,7 +214,7 @@ pub(crate) fn regions(base: &[String], ours: &[String], theirs: &[String]) -> Ve
 }
 
 fn signed(i: usize) -> isize {
-    isize::try_from(i).expect("line counts fit in isize")
+    isize::try_from(i).unwrap_or(isize::MAX)
 }
 
 #[cfg(test)]

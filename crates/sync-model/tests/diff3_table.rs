@@ -1,4 +1,5 @@
 //! diff3 table tests for the line merge (`merge_text_only`, no fast paths).
+#![allow(clippy::unwrap_used, clippy::expect_used)] // test helpers outside #[test] fns
 
 use pretty_assertions::assert_eq;
 use sync_model::{ConflictKind, MergeOutcome, merge_text_only};
@@ -89,7 +90,11 @@ fn actual(o: &MergeOutcome) -> Want {
         MergeOutcome::Conflicted(c) => {
             let kinds: Vec<ConflictKind> = c.hunks.iter().map(|h| h.kind).collect();
             Conflict(
-                leak(c.merged_with_markers.as_deref().expect("body-only conflicts have markers")),
+                leak(
+                    c.merged_with_markers
+                        .as_deref()
+                        .expect("body-only conflicts have markers"),
+                ),
                 Box::leak(kinds.into_boxed_slice()),
             )
         }
@@ -113,7 +118,11 @@ fn table() {
 fn clean_merges_are_symmetric_in_the_table() {
     for (name, base, ours, theirs, want) in CASES {
         if let Clean(text) = want {
-            assert_eq!(merge_text_only(base, theirs, ours), MergeOutcome::Clean((*text).to_owned()), "{name}");
+            assert_eq!(
+                merge_text_only(base, theirs, ours),
+                MergeOutcome::Clean((*text).to_owned()),
+                "{name}"
+            );
         }
     }
 }

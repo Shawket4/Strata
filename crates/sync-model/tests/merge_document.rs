@@ -1,4 +1,5 @@
 //! Document merge: frontmatter key by key, body diff3, conflict hunks and their resolution,
+#![allow(clippy::unwrap_used, clippy::expect_used)] // test helpers outside #[test] fns
 //! and the D19 update decision.
 
 use pretty_assertions::assert_eq;
@@ -28,21 +29,29 @@ const ID: &str = "id: 01J8ZK3M4X7Q0000000000000A\n";
 #[test]
 fn lists_union_scalars_and_body_merge_cleanly() {
     let base = note(
-        &format!("{ID}title: Pricing\ntags: [pricing]\nrelated: [\"[[A]]\", \"[[B]]\"]\ncustom: keep me\nupdated: 2026-09-27T10:00:00+03:00\n"),
+        &format!(
+            "{ID}title: Pricing\ntags: [pricing]\nrelated: [\"[[A]]\", \"[[B]]\"]\ncustom: keep me\nupdated: 2026-09-27T10:00:00+03:00\n"
+        ),
         "line one\nline two\n",
     );
     let ours = note(
-        &format!("{ID}title: Pricing\ntags: [pricing, pos]\nrelated: [\"[[B]]\"]\ncustom: keep me\nupdated: 2026-09-27T11:00:00+03:00\n"),
+        &format!(
+            "{ID}title: Pricing\ntags: [pricing, pos]\nrelated: [\"[[B]]\"]\ncustom: keep me\nupdated: 2026-09-27T11:00:00+03:00\n"
+        ),
         "line one (ours)\nline two\n",
     );
     let theirs = note(
-        &format!("{ID}title: Pricing\ntags: [pricing, ai]\nrelated: [\"[[A]]\", \"[[B]]\", \"[[C]]\"]\ncustom: keep me\nupdated: 2026-09-27T12:00:00+03:00\n"),
+        &format!(
+            "{ID}title: Pricing\ntags: [pricing, ai]\nrelated: [\"[[A]]\", \"[[B]]\", \"[[C]]\"]\ncustom: keep me\nupdated: 2026-09-27T12:00:00+03:00\n"
+        ),
         "line one\nline two (theirs)\n",
     );
     assert_eq!(
         merge(&base, &ours, &theirs),
         MergeOutcome::Clean(note(
-            &format!("{ID}title: Pricing\ntags: [pricing, pos, ai]\nupdated: 2026-09-27T12:00:00+03:00\nrelated: [\"[[B]]\", \"[[C]]\"]\ncustom: keep me\n"),
+            &format!(
+                "{ID}title: Pricing\ntags: [pricing, pos, ai]\nupdated: 2026-09-27T12:00:00+03:00\nrelated: [\"[[B]]\", \"[[C]]\"]\ncustom: keep me\n"
+            ),
             "line one (ours)\nline two (theirs)\n",
         ))
     );
@@ -50,7 +59,9 @@ fn lists_union_scalars_and_body_merge_cleanly() {
     assert_eq!(
         merge(&base, &theirs, &ours),
         MergeOutcome::Clean(note(
-            &format!("{ID}title: Pricing\ntags: [pricing, ai, pos]\nupdated: 2026-09-27T12:00:00+03:00\nrelated: [\"[[B]]\", \"[[C]]\"]\ncustom: keep me\n"),
+            &format!(
+                "{ID}title: Pricing\ntags: [pricing, ai, pos]\nupdated: 2026-09-27T12:00:00+03:00\nrelated: [\"[[B]]\", \"[[C]]\"]\ncustom: keep me\n"
+            ),
             "line one (ours)\nline two (theirs)\n",
         ))
     );
@@ -71,10 +82,16 @@ fn one_sided_key_changes_apply_and_unknown_keys_keep_order() {
 fn untouched_frontmatter_bytes_are_kept_when_only_one_side_edits_it() {
     let base = note(&format!("{ID}tags:   [ a,  b ]   # spaced\n"), "x\n");
     let ours = note(&format!("{ID}tags:   [ a,  b ]   # spaced\n"), "x\ny\n");
-    let theirs = note(&format!("{ID}tags:   [ a,  b ]   # spaced\nlang: en\n"), "x\n");
+    let theirs = note(
+        &format!("{ID}tags:   [ a,  b ]   # spaced\nlang: en\n"),
+        "x\n",
+    );
     assert_eq!(
         merge(&base, &ours, &theirs),
-        MergeOutcome::Clean(note(&format!("{ID}tags:   [ a,  b ]   # spaced\nlang: en\n"), "x\ny\n"))
+        MergeOutcome::Clean(note(
+            &format!("{ID}tags:   [ a,  b ]   # spaced\nlang: en\n"),
+            "x\ny\n"
+        ))
     );
 }
 
@@ -121,7 +138,10 @@ fn scalar_conflict_keeps_ours_and_resolves_to_any_side() {
     );
     assert_eq!(
         c.resolve(&[(0, Choice::Theirs)]),
-        Ok(note(&format!("{ID}title: Pricing experiments\n"), "same\nnew\n"))
+        Ok(note(
+            &format!("{ID}title: Pricing experiments\n"),
+            "same\nnew\n"
+        ))
     );
     assert_eq!(
         c.resolve(&[(0, Choice::Base)]),
@@ -132,8 +152,14 @@ fn scalar_conflict_keeps_ours_and_resolves_to_any_side() {
         Ok(note(ID, "same\nnew\n"))
     );
     assert_eq!(c.resolve(&[]), Err(ResolveError::Unresolved(0)));
-    assert_eq!(c.resolve(&[(0, Choice::OursThenTheirs)]), Err(ResolveError::WrongChoice(0)));
-    assert_eq!(c.resolve(&[(0, Choice::Ours), (1, Choice::Ours)]), Err(ResolveError::UnknownHunk(1)));
+    assert_eq!(
+        c.resolve(&[(0, Choice::OursThenTheirs)]),
+        Err(ResolveError::WrongChoice(0))
+    );
+    assert_eq!(
+        c.resolve(&[(0, Choice::Ours), (1, Choice::Ours)]),
+        Err(ResolveError::UnknownHunk(1))
+    );
 }
 
 #[test]
@@ -143,7 +169,10 @@ fn delete_versus_modify_of_a_key_conflicts() {
     let theirs = note(&format!("{ID}role: Operations manager\n"), "b\n");
     let c = conflicted(merge(&base, &ours, &theirs));
     assert_eq!(c.hunks.len(), 1);
-    assert_eq!((c.hunks[0].ours.as_str(), c.hunks[0].theirs.as_str()), ("", "role: Operations manager\n"));
+    assert_eq!(
+        (c.hunks[0].ours.as_str(), c.hunks[0].theirs.as_str()),
+        ("", "role: Operations manager\n")
+    );
     assert_eq!(
         c.resolve(&[(0, Choice::Theirs)]),
         Ok(note(&format!("{ID}role: Operations manager\n"), "b\n"))
@@ -155,24 +184,48 @@ fn key_deleted_on_one_side_stays_deleted() {
     let base = note(&format!("{ID}lang: en\nsource: \"[[x.m4a]]\"\n"), "b\n");
     let ours = note(&format!("{ID}lang: en\n"), "b\n");
     let theirs = note(&format!("{ID}lang: ar\nsource: \"[[x.m4a]]\"\n"), "b\n");
-    assert_eq!(merge(&base, &ours, &theirs), MergeOutcome::Clean(note(&format!("{ID}lang: ar\n"), "b\n")));
+    assert_eq!(
+        merge(&base, &ours, &theirs),
+        MergeOutcome::Clean(note(&format!("{ID}lang: ar\n"), "b\n"))
+    );
 }
 
 #[test]
 fn list_deletions_on_both_sides_and_arabic_aliases() {
-    let base = note(&format!("{ID}kind: person\naliases: [أحمد سمير, Ahmed S.]\n"), "## Notes\n");
-    let ours = note(&format!("{ID}kind: person\naliases: [أحمد سمير, A. Samir]\n"), "## Notes\n");
-    let theirs = note(&format!("{ID}kind: person\naliases: [Ahmed S., احمد سمير]\n"), "## Notes\n");
+    let base = note(
+        &format!("{ID}kind: person\naliases: [أحمد سمير, Ahmed S.]\n"),
+        "## Notes\n",
+    );
+    let ours = note(
+        &format!("{ID}kind: person\naliases: [أحمد سمير, A. Samir]\n"),
+        "## Notes\n",
+    );
+    let theirs = note(
+        &format!("{ID}kind: person\naliases: [Ahmed S., احمد سمير]\n"),
+        "## Notes\n",
+    );
     assert_eq!(
         merge(&base, &ours, &theirs),
-        MergeOutcome::Clean(note(&format!("{ID}kind: person\naliases: [A. Samir, احمد سمير]\n"), "## Notes\n"))
+        MergeOutcome::Clean(note(
+            &format!("{ID}kind: person\naliases: [A. Samir, احمد سمير]\n"),
+            "## Notes\n"
+        ))
     );
     // Removing every entry on both sides removes the key.
-    let ours = note(&format!("{ID}kind: person\naliases: [Ahmed S.]\n"), "## Notes\n");
-    let theirs = note(&format!("{ID}kind: person\naliases: [أحمد سمير]\n"), "## Notes\n");
+    let ours = note(
+        &format!("{ID}kind: person\naliases: [Ahmed S.]\n"),
+        "## Notes\n",
+    );
+    let theirs = note(
+        &format!("{ID}kind: person\naliases: [أحمد سمير]\n"),
+        "## Notes\n",
+    );
     assert_eq!(
         merge(&base, &ours, &theirs),
-        MergeOutcome::Clean(note(&format!("{ID}kind: person\naliases: []\n"), "## Notes\n"))
+        MergeOutcome::Clean(note(
+            &format!("{ID}kind: person\naliases: []\n"),
+            "## Notes\n"
+        ))
     );
 }
 
@@ -199,9 +252,18 @@ fn updated_takes_the_later_time_across_offsets() {
 
 #[test]
 fn body_conflict_with_clean_frontmatter_has_markers_and_resolves() {
-    let base = note(&format!("{ID}tags: [a]\n"), "intro\n- [ ] pay rent ^t-1\nend\n");
-    let ours = note(&format!("{ID}tags: [a, b]\n"), "intro\n- [x] pay rent ✅ 2026-09-27 ^t-1\nend\n");
-    let theirs = note(&format!("{ID}tags: [a]\n"), "intro\n- [ ] pay the rent ^t-1\nend\n");
+    let base = note(
+        &format!("{ID}tags: [a]\n"),
+        "intro\n- [ ] pay rent ^t-1\nend\n",
+    );
+    let ours = note(
+        &format!("{ID}tags: [a, b]\n"),
+        "intro\n- [x] pay rent ✅ 2026-09-27 ^t-1\nend\n",
+    );
+    let theirs = note(
+        &format!("{ID}tags: [a]\n"),
+        "intro\n- [ ] pay the rent ^t-1\nend\n",
+    );
     let c = conflicted(merge(&base, &ours, &theirs));
     assert_eq!(
         c.merged_with_markers.as_deref(),
@@ -229,8 +291,14 @@ fn body_conflict_with_clean_frontmatter_has_markers_and_resolves() {
         }]
     );
     assert_eq!(
-        c.resolve(&[(0, Choice::Text("- [x] pay the rent ✅ 2026-09-27 ^t-1\n".into()))]),
-        Ok(note(&format!("{ID}tags: [a, b]\n"), "intro\n- [x] pay the rent ✅ 2026-09-27 ^t-1\nend\n"))
+        c.resolve(&[(
+            0,
+            Choice::Text("- [x] pay the rent ✅ 2026-09-27 ^t-1\n".into())
+        )]),
+        Ok(note(
+            &format!("{ID}tags: [a, b]\n"),
+            "intro\n- [x] pay the rent ✅ 2026-09-27 ^t-1\nend\n"
+        ))
     );
     assert_eq!(
         c.resolve(&[(0, Choice::TheirsThenOurs)]),
@@ -239,7 +307,10 @@ fn body_conflict_with_clean_frontmatter_has_markers_and_resolves() {
             "intro\n- [ ] pay the rent ^t-1\n- [x] pay rent ✅ 2026-09-27 ^t-1\nend\n"
         ))
     );
-    assert_eq!(c.resolve(&[(0, Choice::Value(FmValue::Null))]), Err(ResolveError::WrongChoice(0)));
+    assert_eq!(
+        c.resolve(&[(0, Choice::Value(FmValue::Null))]),
+        Err(ResolveError::WrongChoice(0))
+    );
 }
 
 #[test]
@@ -274,12 +345,18 @@ fn invalid_yaml_falls_back_to_a_whole_file_merge() {
     let base = "---\ntitle: [unclosed\n---\na\nb\n";
     let ours = "---\ntitle: [unclosed\n---\nA\nb\n";
     let theirs = "---\ntitle: [unclosed\n---\na\nB\n";
-    assert_eq!(merge(base, ours, theirs), MergeOutcome::Clean("---\ntitle: [unclosed\n---\nA\nB\n".into()));
+    assert_eq!(
+        merge(base, ours, theirs),
+        MergeOutcome::Clean("---\ntitle: [unclosed\n---\nA\nB\n".into())
+    );
 }
 
 #[test]
 fn notes_without_frontmatter_merge_as_bodies() {
-    assert_eq!(merge("a\nb\n", "a\nb\nc\n", "z\na\nb\n"), MergeOutcome::Clean("z\na\nb\nc\n".into()));
+    assert_eq!(
+        merge("a\nb\n", "a\nb\nc\n", "z\na\nb\n"),
+        MergeOutcome::Clean("z\na\nb\nc\n".into())
+    );
     // One side adds frontmatter.
     assert_eq!(
         merge("a\n", &note("tags: [x]\n", "a\n"), "a\nb\n"),
@@ -292,7 +369,10 @@ fn crlf_documents_merge() {
     let base = "---\r\ntags: [a]\r\n---\r\none\r\ntwo\r\n";
     let ours = "---\r\ntags: [a, b]\r\n---\r\nONE\r\ntwo\r\n";
     let theirs = "---\r\ntags: [a]\r\n---\r\none\r\nTWO\r\n";
-    assert_eq!(merge(base, ours, theirs), MergeOutcome::Clean("---\r\ntags: [a, b]\r\n---\r\nONE\r\nTWO\r\n".into()));
+    assert_eq!(
+        merge(base, ours, theirs),
+        MergeOutcome::Clean("---\r\ntags: [a, b]\r\n---\r\nONE\r\nTWO\r\n".into())
+    );
 }
 
 #[test]
@@ -301,17 +381,27 @@ fn decide_update_policy() {
     let current = note(ID, "a\nb\nserver\n");
     let edit = note(ID, "client\na\nb\n");
     let v_base = Version::of_text(&base);
-    assert_eq!(decide_update(&Version::of_text(&current), Some(&current), &current, &edit), UpdateDecision::FastForward);
-    assert_eq!(decide_update(&v_base, Some(&base), &current, &current), UpdateDecision::AlreadyApplied);
+    assert_eq!(
+        decide_update(&Version::of_text(&current), Some(&current), &current, &edit),
+        UpdateDecision::FastForward
+    );
+    assert_eq!(
+        decide_update(&v_base, Some(&base), &current, &current),
+        UpdateDecision::AlreadyApplied
+    );
     assert_eq!(
         decide_update(&v_base, Some(&base), &current, &edit),
         UpdateDecision::Merged(note(ID, "client\na\nb\nserver\n"))
     );
     let conflicting = note(ID, "a\nb\nclient\n");
-    let UpdateDecision::Conflict(c) = decide_update(&v_base, Some(&base), &current, &conflicting) else {
+    let UpdateDecision::Conflict(c) = decide_update(&v_base, Some(&base), &current, &conflicting)
+    else {
         panic!("expected a conflict");
     };
-    assert_eq!((c.hunks[0].ours.as_str(), c.hunks[0].theirs.as_str()), ("server\n", "client\n"));
+    assert_eq!(
+        (c.hunks[0].ours.as_str(), c.hunks[0].theirs.as_str()),
+        ("server\n", "client\n")
+    );
     // Edit already contained in the current version.
     assert_eq!(
         decide_update(&v_base, Some(&base), &note(ID, "client\na\nb\n"), &edit),
@@ -321,7 +411,11 @@ fn decide_update_policy() {
 
 #[test]
 fn outcomes_round_trip_as_named_msgpack() {
-    let c = merge(&note(&format!("{ID}title: T\n"), "a\n"), &note(&format!("{ID}title: T1\n"), "b\n"), &note(&format!("{ID}title: T2\n"), "c\n"));
+    let c = merge(
+        &note(&format!("{ID}title: T\n"), "a\n"),
+        &note(&format!("{ID}title: T1\n"), "b\n"),
+        &note(&format!("{ID}title: T2\n"), "c\n"),
+    );
     let bytes = rmp_serde::to_vec_named(&c).unwrap();
     let back: MergeOutcome = rmp_serde::from_slice(&bytes).unwrap();
     assert_eq!(back, c);

@@ -4,8 +4,21 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Graph structure, neighbourhoods, Leiden clustering (D10) and force-directed/radial layouts shared by the backend and the client core."
 
 [dependencies]
+domain = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+pretty_assertions = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "graph"
+harness = false
 
 [lints]
 workspace = true

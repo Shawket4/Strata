@@ -144,6 +144,7 @@ pub async fn find(
                 continue;
             };
             Candidate {
+                item: t.id.clone(),
                 id: task_ulid(&t.id).unwrap_or_else(|| t.note_id.as_ulid()),
                 kind,
                 title: crate::derive::strip_links(&t.text),
@@ -162,6 +163,7 @@ pub async fn find(
                 continue;
             }
             Candidate {
+                item: id.clone(),
                 id: note_id.as_ulid(),
                 snippet: None,
                 kind,

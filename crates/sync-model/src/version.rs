@@ -95,7 +95,13 @@ mod tests {
     fn parses_only_canonical_strings() {
         let v = Version::of_text("hello");
         assert_eq!(v.as_str().parse::<Version>(), Ok(v.clone()));
-        for bad in ["", "sha256:", "md5:00", &v.as_str().to_uppercase(), &v.as_str()[..70]] {
+        for bad in [
+            "",
+            "sha256:",
+            "md5:00",
+            &v.as_str().to_uppercase(),
+            &v.as_str()[..70],
+        ] {
             assert_eq!(bad.parse::<Version>(), Err(InvalidVersion(bad.to_owned())));
         }
     }

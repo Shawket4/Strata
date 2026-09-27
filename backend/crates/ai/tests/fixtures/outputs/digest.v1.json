@@ -1,0 +1,41 @@
+{
+  "title": "Weekly digest 2026-W39",
+  "lang": "en",
+  "highlights": [
+    {
+      "text": "Watanya invoicing moved to a monthly ETA invoice",
+      "citations": [
+        {
+          "note_id": "01J8ZK3M4X7Q0000000000NOTE",
+          "block_id": "b3"
+        }
+      ]
+    }
+  ],
+  "open_questions": [
+    {
+      "text": "Shady still owes the signed contract copy",
+      "citations": [
+        {
+          "note_id": "01J8ZK9A000000000000000001",
+          "block_id": "a1b3"
+        }
+      ]
+    }
+  ],
+  "contradictions": [
+    {
+      "text": "One note allows a 10% discount while another caps discounts at 5%",
+      "citations": [
+        {
+          "note_id": "01J8ZK3M4X7Q0000000000NOTE",
+          "block_id": "b2"
+        },
+        {
+          "note_id": "01J8ZK9A000000000000000001",
+          "block_id": "a1b2"
+        }
+      ]
+    }
+  ]
+}
