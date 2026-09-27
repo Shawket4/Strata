@@ -132,7 +132,13 @@ async fn sign_out_checks_the_outbox_then_deletes_the_database_and_tokens() {
     );
     assert!(db_path(&h, USER_A).exists());
     assert_eq!(h.core.state().expect("state").kind, SessionKind::Active);
-    assert!(!h.accounts.calls.lock().unwrap().contains(&"logout".to_owned()));
+    assert!(
+        !h.accounts
+            .calls
+            .lock()
+            .unwrap()
+            .contains(&"logout".to_owned())
+    );
 
     // Confirmed: the session is revoked, the file and the registry entry are gone.
     assert_eq!(
@@ -143,7 +149,13 @@ async fn sign_out_checks_the_outbox_then_deletes_the_database_and_tokens() {
         }
     );
     assert!(!db_path(&h, USER_A).exists());
-    assert!(h.accounts.calls.lock().unwrap().contains(&"logout".to_owned()));
+    assert!(
+        h.accounts
+            .calls
+            .lock()
+            .unwrap()
+            .contains(&"logout".to_owned())
+    );
     assert_eq!(
         h.core.state().expect("state"),
         SessionState {
@@ -187,7 +199,10 @@ async fn sign_out_after_a_sync_needs_no_confirmation_and_keeps_other_accounts() 
     );
     // B's unsynced capture is still there.
     h.core.switch_account(USER_B).expect("switch");
-    assert_eq!(h.core.session().expect("b").unsynced().expect("unsynced"), 1);
+    assert_eq!(
+        h.core.session().expect("b").unsynced().expect("unsynced"),
+        1
+    );
 }
 
 #[tokio::test]
@@ -196,9 +211,7 @@ async fn a_disabled_account_warns_then_wipes_on_acknowledgement() {
     let a = h.sign_in_a().await;
     a.capture("never synced").expect("capture");
     let states = Recorder::new();
-    h.core
-        .watch_state(Box::new(states.clone()))
-        .expect("watch");
+    h.core.watch_state(Box::new(states.clone())).expect("watch");
 
     h.accounts
         .update_user("shawket", |me| "disabled".clone_into(&mut me.status));

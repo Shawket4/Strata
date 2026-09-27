@@ -29,7 +29,13 @@ fn utc(s: &str) -> DateTime<Utc> {
         .with_timezone(&Utc)
 }
 
-fn schedule(kind: NotificationOpKind, task: &str, remind_at: &str, at: &str, title: &str) -> NotificationOp {
+fn schedule(
+    kind: NotificationOpKind,
+    task: &str,
+    remind_at: &str,
+    at: &str,
+    title: &str,
+) -> NotificationOp {
     NotificationOp {
         kind,
         id: stable_id(task, remind_at),
@@ -49,8 +55,11 @@ const WATANYA: &str =
     "- [ ] Make Watanya's ETA invoice (@2026-10-01 09:00) 📅 2026-10-01 ^t-watanya";
 
 async fn setup(h: &Harness, body: &str) -> (std::sync::Arc<Session>, Recorder<NotificationOp>) {
-    h.server
-        .remote_upsert(TASKS, "tasks/Tasks.md", &format!("---\nid: {TASKS}\n---\n{body}"));
+    h.server.remote_upsert(
+        TASKS,
+        "tasks/Tasks.md",
+        &format!("---\nid: {TASKS}\n---\n{body}"),
+    );
     let s = h.sign_in_a().await;
     let rec = Recorder::new();
     s.attach_notifications(Box::new(rec.clone()));
@@ -68,8 +77,20 @@ async fn sync_edit_complete_cancel_delete_produce_exact_ops() {
     assert_eq!(
         rec.take(),
         vec![
-            schedule(NotificationOpKind::Schedule, "t-petrol", "2026-09-28 09:00", "2026-09-28T06:00:00Z", "Petrol Arrows invoice"),
-            schedule(NotificationOpKind::Schedule, "t-watanya", "2026-10-01 09:00", "2026-10-01T06:00:00Z", "Make Watanya's ETA invoice"),
+            schedule(
+                NotificationOpKind::Schedule,
+                "t-petrol",
+                "2026-09-28 09:00",
+                "2026-09-28T06:00:00Z",
+                "Petrol Arrows invoice"
+            ),
+            schedule(
+                NotificationOpKind::Schedule,
+                "t-watanya",
+                "2026-10-01 09:00",
+                "2026-10-01T06:00:00Z",
+                "Make Watanya's ETA invoice"
+            ),
         ]
     );
     // Recomputing changes nothing (stable IDs, same plan).
@@ -88,7 +109,13 @@ async fn sync_edit_complete_cancel_delete_produce_exact_ops() {
     .expect("edit");
     assert_eq!(
         rec.take(),
-        vec![schedule(NotificationOpKind::Update, "t-watanya", "2026-10-01 09:00", "2026-10-01T06:00:00Z", "Make Watanya's ETA invoice (October)")]
+        vec![schedule(
+            NotificationOpKind::Update,
+            "t-watanya",
+            "2026-10-01 09:00",
+            "2026-10-01T06:00:00Z",
+            "Make Watanya's ETA invoice (October)"
+        )]
     );
 
     // Move the reminder: the old one is cancelled, the new one scheduled.
@@ -107,7 +134,13 @@ async fn sync_edit_complete_cancel_delete_produce_exact_ops() {
         rec.take(),
         vec![
             cancel("t-watanya", "2026-10-01 09:00"),
-            schedule(NotificationOpKind::Schedule, "t-watanya", "2026-10-01 08:30", "2026-10-01T05:30:00Z", "Make Watanya's ETA invoice (October)"),
+            schedule(
+                NotificationOpKind::Schedule,
+                "t-watanya",
+                "2026-10-01 08:30",
+                "2026-10-01T05:30:00Z",
+                "Make Watanya's ETA invoice (October)"
+            ),
         ]
     );
 
@@ -129,7 +162,13 @@ async fn sync_edit_complete_cancel_delete_produce_exact_ops() {
     ops.sort_by_key(|o| (o.kind as u8, o.id));
     let mut expected = vec![
         cancel("t-petrol", "2026-09-28 09:00"),
-        schedule(NotificationOpKind::Schedule, &next, "2026-10-05 09:00", "2026-10-05T06:00:00Z", "Petrol Arrows invoice"),
+        schedule(
+            NotificationOpKind::Schedule,
+            &next,
+            "2026-10-05 09:00",
+            "2026-10-05T06:00:00Z",
+            "Petrol Arrows invoice",
+        ),
     ];
     expected.sort_by_key(|o| (o.kind as u8, o.id));
     assert_eq!(ops, expected);
@@ -199,11 +238,8 @@ async fn cairo_dst_gap_and_fold() {
 ";
     let (s, rec) = setup(&h, body).await;
     s.sync(Trigger::Start).await.expect("sync");
-    let got: Vec<(String, Option<DateTime<Utc>>)> = rec
-        .take()
-        .into_iter()
-        .map(|o| (o.task_id, o.at))
-        .collect();
+    let got: Vec<(String, Option<DateTime<Utc>>)> =
+        rec.take().into_iter().map(|o| (o.task_id, o.at)).collect();
     assert_eq!(
         got,
         vec![
@@ -272,7 +308,10 @@ async fn platform_results_and_retries() {
         .read(build::settings_view)
         .expect("settings")
         .expect("signed in");
-    assert_eq!(settings.reminders.permission, NotificationPermission::Denied);
+    assert_eq!(
+        settings.reminders.permission,
+        NotificationPermission::Denied
+    );
     // A refused schedule is retried on the next computation.
     s.recompute_notifications().expect("recompute");
     assert_eq!(rec.take(), vec![op.clone()]);
@@ -282,7 +321,10 @@ async fn platform_results_and_retries() {
         .read(build::settings_view)
         .expect("settings")
         .expect("signed in");
-    assert_eq!(settings.reminders.permission, NotificationPermission::Granted);
+    assert_eq!(
+        settings.reminders.permission,
+        NotificationPermission::Granted
+    );
     assert_eq!(settings.reminders.scheduled, 1);
     s.recompute_notifications().expect("recompute");
     assert_eq!(rec.take(), Vec::new());
@@ -323,7 +365,13 @@ async fn done_and_snooze_go_through_the_outbox() {
     );
     assert_eq!(
         rec.take(),
-        vec![schedule(NotificationOpKind::Schedule, "t-watanya", "2026-10-01 09:10", "2026-10-01T06:10:00Z", "Make Watanya's ETA invoice")]
+        vec![schedule(
+            NotificationOpKind::Schedule,
+            "t-watanya",
+            "2026-10-01 09:10",
+            "2026-10-01T06:10:00Z",
+            "Make Watanya's ETA invoice"
+        )]
     );
 
     let snoozed_id = stable_id("t-watanya", "2026-10-01 09:10");
