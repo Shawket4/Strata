@@ -4,16 +4,14 @@
 //! device ID indistinguishable from a missing one (`404`, principle 7).
 //!
 //! `reminders_enabled` (D27: whether this device schedules local reminder notifications) is
-//! kept in the user's `settings` table under `device.<id>.reminders_enabled` until the
-//! `devices` table carries it; it defaults to `true` and is removed with the device.
+//! the `devices.reminders_enabled` column (default `true`).
 
 use actix_web::{HttpResponse, web};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use strata_common::DeviceId;
-use strata_index::ScopedTx;
 use strata_index::accounts::Device as DeviceRow;
-use strata_index::repo::{devices, settings};
+use strata_index::repo::devices;
 use ulid::Ulid;
 use utoipa::ToSchema;
 
@@ -53,31 +51,16 @@ pub struct UpdateDevice {
     pub reminders_enabled: Option<bool>,
 }
 
-fn reminders_key(id: DeviceId) -> String {
-    format!("device.{id}.reminders_enabled")
-}
-
-async fn reminders_enabled(tx: &mut ScopedTx, id: DeviceId) -> Result<bool, AccountError> {
-    Ok(settings::get_setting(tx, &reminders_key(id))
-        .await?
-        .and_then(|b| rmp_serde::from_slice::<bool>(&b).ok())
-        .unwrap_or(true))
-}
-
-async fn view(
-    tx: &mut ScopedTx,
-    row: DeviceRow,
-    current: DeviceId,
-) -> Result<Device, AccountError> {
-    Ok(Device {
+fn view(row: DeviceRow, current: DeviceId) -> Device {
+    Device {
         id: row.id.as_ulid(),
-        reminders_enabled: reminders_enabled(tx, row.id).await?,
+        reminders_enabled: row.reminders_enabled,
         current: row.id == current,
         name: row.name,
         platform: row.platform.into(),
         created: row.created,
         last_seen: row.last_seen,
-    })
+    }
 }
 
 /// The caller's devices, most recently seen first.
@@ -94,12 +77,10 @@ pub async fn list_devices(
 ) -> Result<MsgPack<Vec<Device>>, AccountError> {
     let mut tx = state.app_db.begin(auth.scope()).await?;
     let rows = devices::list_devices(&mut tx).await?;
-    let mut out = Vec::with_capacity(rows.len());
-    for row in rows {
-        out.push(view(&mut tx, row, auth.device).await?);
-    }
     tx.commit().await?;
-    Ok(MsgPack(out))
+    Ok(MsgPack(
+        rows.into_iter().map(|row| view(row, auth.device)).collect(),
+    ))
 }
 
 /// Rename a device or switch its reminders.
@@ -129,23 +110,16 @@ pub async fn update_device(
         return Err(AccountError::NotFound);
     }
     if let Some(name) = name {
-        sqlx::query("UPDATE devices SET name = $2 WHERE id = $1")
-            .bind(id)
-            .bind(name)
-            .execute(tx.conn())
-            .await?;
+        devices::rename_device(&mut tx, id, &name).await?;
     }
     if let Some(enabled) = body.reminders_enabled {
-        let value =
-            rmp_serde::to_vec(&enabled).map_err(|e| AccountError::Internal(e.to_string()))?;
-        settings::put_setting(&mut tx, &reminders_key(id), &value, state.clock.now()).await?;
+        devices::set_reminders_enabled(&mut tx, id, enabled).await?;
     }
     let row = devices::get_device(&mut tx, id)
         .await?
         .ok_or(AccountError::NotFound)?;
-    let device = view(&mut tx, row, auth.device).await?;
     tx.commit().await?;
-    Ok(MsgPack(device))
+    Ok(MsgPack(view(row, auth.device)))
 }
 
 /// Remove a device: its sessions end immediately (removing the current device signs out).
@@ -175,10 +149,6 @@ pub async fn delete_device(
         .await?
         .ok_or(AccountError::NotFound)?;
     state.revocations.revoke_sessions(removed);
-    sqlx::query("DELETE FROM settings WHERE key = $1")
-        .bind(reminders_key(id))
-        .execute(tx.conn())
-        .await?;
     tx.commit().await?;
     Ok(HttpResponse::NoContent().finish())
 }

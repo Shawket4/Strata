@@ -31,7 +31,6 @@ use sqlx::PgPool;
 use strata_common::{Clock, SessionId, UserId};
 use strata_index::AccountsDb;
 
-use crate::auth::password::TEMPORARY_PREFIX;
 
 /// Account-level restrictions of one user.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -207,10 +206,9 @@ impl RevocationSet {
         let since = self.begin_reload();
         let sessions = accounts.live_revocations(self.clock.now()).await?;
         let rows: Vec<(UserId, String, bool)> = sqlx::query_as(
-            "SELECT id, status, starts_with(password_hash, $1) FROM users \
-             WHERE status IN ('disabled', 'deletion_pending') OR starts_with(password_hash, $1)",
+            "SELECT id, status, must_change_password FROM users \
+             WHERE status IN ('disabled', 'deletion_pending') OR must_change_password",
         )
-        .bind(TEMPORARY_PREFIX)
         .fetch_all(pool)
         .await?;
         let users: Vec<(UserId, UserFlags)> = rows

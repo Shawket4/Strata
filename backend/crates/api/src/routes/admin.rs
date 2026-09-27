@@ -15,7 +15,7 @@ use strata_index::types::{RevokeReason, UserRole, UserStatus};
 use ulid::Ulid;
 use utoipa::{IntoParams, ToSchema};
 
-use crate::auth::password::{StoredPassword, TEMPORARY_PREFIX, temporary_password};
+use crate::auth::password::temporary_password;
 use crate::auth::service::{self, NewAccount, audit, revoke_all_sessions};
 use crate::auth::{AccountError, AuthState, Authenticated};
 use crate::routes::me::{AccountStatus, Role};
@@ -63,7 +63,7 @@ impl From<User> for AdminUser {
     fn from(u: User) -> Self {
         Self {
             id: u.id.as_ulid(),
-            password_change_required: StoredPassword::parse(&u.password_hash).temporary,
+            password_change_required: u.must_change_password,
             username: u.username,
             display_name: u.display_name,
             role: u.role.into(),
@@ -450,13 +450,13 @@ async fn reset_password(
 ) -> Result<(User, String), AccountError> {
     let now = state.clock.now();
     let password = temporary_password()?;
-    let hash = format!("{TEMPORARY_PREFIX}{}", state.passwords.hash(&password)?);
+    let hash = state.passwords.hash(&password)?;
     state
         .revocations
         .update_user(user.id, |f| f.must_change_password = true);
     let updated = state
         .accounts
-        .set_password_hash(user.id, &hash, now)
+        .set_password_hash(user.id, &hash, true, now)
         .await?
         .ok_or(AccountError::NotFound)?;
     revoke_all_sessions(state, user.id, RevokeReason::Admin).await?;

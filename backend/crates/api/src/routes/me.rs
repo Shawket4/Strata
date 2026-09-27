@@ -19,7 +19,6 @@ use strata_index::types::{RevokeReason, UserRole, UserStatus};
 use ulid::Ulid;
 use utoipa::ToSchema;
 
-use crate::auth::password::StoredPassword;
 use crate::auth::service::{self, check_password};
 use crate::auth::{AccountError, AuthState, Authenticated, export, username};
 use crate::wire::{MsgPack, MsgPackConfig, Problem, ZIP};
@@ -231,7 +230,7 @@ async fn me_view(
         decode_setting(settings::get_setting(tx, SETTING_PREFERENCES).await?).unwrap_or_default();
     Ok(Me {
         id: user.id.as_ulid(),
-        password_change_required: StoredPassword::parse(&user.password_hash).temporary,
+        password_change_required: user.must_change_password,
         username: user.username,
         display_name: user.display_name,
         role: user.role.into(),
@@ -358,7 +357,7 @@ pub async fn update_me(
     if let Some(hash) = new_hash {
         let updated = state
             .accounts
-            .set_password_hash(user.id, &hash, now)
+            .set_password_hash(user.id, &hash, false, now)
             .await?
             .ok_or(AccountError::Unauthorized("account deleted"))?;
         let others: Vec<strata_common::SessionId> = sqlx::query_scalar(

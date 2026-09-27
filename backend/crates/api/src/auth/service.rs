@@ -7,12 +7,13 @@ use actix_web::HttpRequest;
 use chrono::{DateTime, Utc};
 use strata_common::{AuditId, DeviceId, IdGenerator, SessionId, UserId};
 use strata_index::AccountsDb;
+use strata_index::accounts::AccountsTx;
 use strata_index::accounts::{AuditEntry, NewUser, RefreshOutcome, RefreshToken, Session, User};
 use strata_index::types::{Platform, RevokeReason, UserRole, UserStatus};
 
 use crate::auth::AuthState;
 use crate::auth::error::AccountError;
-use crate::auth::password::{MAX_PASSWORD_BYTES, PasswordHasher, StoredPassword};
+use crate::auth::password::{MAX_PASSWORD_BYTES, PasswordHasher};
 use crate::auth::provision::VaultProvisioner;
 use crate::auth::rate_limit::Limited;
 use crate::auth::tokens::{
@@ -37,7 +38,7 @@ pub struct IssuedSession {
     pub refresh_expires_at: DateTime<Utc>,
     /// Export-only session (account `deletion_pending`).
     pub export_only: bool,
-    /// The account is on a temporary password.
+    /// The account must change its password (admin reset).
     pub must_change_password: bool,
 }
 
@@ -294,39 +295,23 @@ pub async fn login(
         UserStatus::Active => TokenStatus::Active,
         UserStatus::DeletionPending => TokenStatus::DeletionPending,
     };
-    let stored = StoredPassword::parse(&user.password_hash);
     let now = state.clock.now();
-    if !stored.temporary && state.passwords.needs_rehash(&user.password_hash) {
+    // One transaction: a failure anywhere leaves no device, session or token behind.
+    let mut tx = state.accounts.begin().await?;
+    if state.passwords.needs_rehash(&user.password_hash) {
         let rehashed = state.passwords.hash(input.password)?;
-        state
-            .accounts
-            .set_password_hash(user.id, &rehashed, now)
+        tx.set_password_hash(user.id, &rehashed, user.must_change_password, now)
             .await?;
     }
-    open_session(
-        state,
-        &user,
-        &device_name,
-        input.platform,
-        status,
-        stored.temporary,
-    )
-    .await
-}
-
-async fn open_session(
-    state: &AuthState,
-    user: &User,
-    device_name: &str,
-    platform: Platform,
-    status: TokenStatus,
-    must_change_password: bool,
-) -> Result<IssuedSession, AccountError> {
-    let now = state.clock.now();
     let ids = state.ids.as_ref();
-    let device = state
-        .accounts
-        .create_device(user.id, DeviceId::generate(ids), device_name, platform, now)
+    let device = tx
+        .create_device(
+            user.id,
+            DeviceId::generate(ids),
+            &device_name,
+            input.platform,
+            now,
+        )
         .await?;
     let session = Session {
         user_id: user.id,
@@ -338,29 +323,31 @@ async fn open_session(
         revoked_reason: None,
         export_only: status == TokenStatus::DeletionPending,
     };
-    state.accounts.create_session(&session).await?;
-    issue_tokens(state, user, &session, must_change_password).await
+    tx.create_session(&session).await?;
+    let issued = issue_tokens(state, &mut tx, &user, &session).await?;
+    tx.commit().await?;
+    Ok(issued)
 }
 
+/// Stores a new refresh token for `session` in `tx` and signs an access token. Nothing is
+/// visible until the caller commits `tx`.
 async fn issue_tokens(
     state: &AuthState,
+    tx: &mut AccountsTx,
     user: &User,
     session: &Session,
-    must_change_password: bool,
 ) -> Result<IssuedSession, AccountError> {
     let now = state.clock.now();
     let refresh_token = new_refresh_token()?;
-    state
-        .accounts
-        .insert_refresh_token(&RefreshToken {
-            user_id: user.id,
-            token_hash: hash_refresh_token(&refresh_token),
-            session_id: session.id,
-            issued: now,
-            expires: session.expires,
-            used_at: None,
-        })
-        .await?;
+    tx.insert_refresh_token(&RefreshToken {
+        user_id: user.id,
+        token_hash: hash_refresh_token(&refresh_token),
+        session_id: session.id,
+        issued: now,
+        expires: session.expires,
+        used_at: None,
+    })
+    .await?;
     let status = if session.export_only {
         TokenStatus::DeletionPending
     } else {
@@ -381,29 +368,29 @@ async fn issue_tokens(
         refresh_token,
         refresh_expires_at: session.expires,
         export_only: session.export_only,
-        must_change_password,
+        must_change_password: user.must_change_password,
     })
 }
 
 /// `POST /auth/refresh`: rotates a refresh token. A replayed token revokes its whole
 /// session (reuse detection); a session whose account can no longer hold it is revoked.
+/// Spending the old token, touching the device and storing the new token are one
+/// transaction: if any step fails, the old token stays valid and no new one exists.
 pub async fn refresh(
     state: &AuthState,
     refresh_token: &str,
 ) -> Result<IssuedSession, AccountError> {
+    const INVALID: AccountError = AccountError::Unauthorized("invalid or expired refresh token");
     let now = state.clock.now();
-    let spent = match state
-        .accounts
+    let mut tx = state.accounts.begin().await?;
+    let spent = match tx
         .use_refresh_token(&hash_refresh_token(refresh_token), now)
         .await?
     {
-        RefreshOutcome::Invalid => {
-            return Err(AccountError::Unauthorized(
-                "invalid or expired refresh token",
-            ));
-        }
+        RefreshOutcome::Invalid => return Err(INVALID),
         RefreshOutcome::Reused(token) => {
             state.revocations.revoke_sessions([token.session_id]);
+            tx.commit().await?;
             tracing::warn!(
                 user = %token.user_id,
                 session = %token.session_id,
@@ -415,21 +402,8 @@ pub async fn refresh(
         }
         RefreshOutcome::Fresh(token) => token,
     };
-    let session = state
-        .accounts
-        .session_by_id(spent.session_id)
-        .await?
-        .ok_or(AccountError::Unauthorized(
-            "invalid or expired refresh token",
-        ))?;
-    let user =
-        state
-            .accounts
-            .user_by_id(spent.user_id)
-            .await?
-            .ok_or(AccountError::Unauthorized(
-                "invalid or expired refresh token",
-            ))?;
+    let session = tx.session_by_id(spent.session_id).await?.ok_or(INVALID)?;
+    let user = tx.user_by_id(spent.user_id).await?.ok_or(INVALID)?;
     let allowed = match user.status {
         UserStatus::Active => !session.export_only,
         UserStatus::DeletionPending => session.export_only,
@@ -437,22 +411,15 @@ pub async fn refresh(
     };
     if !allowed {
         state.revocations.revoke_sessions([session.id]);
-        state
-            .accounts
-            .revoke_session(session.id, RevokeReason::Admin, now)
+        tx.revoke_session(session.id, RevokeReason::Admin, now)
             .await?;
+        tx.commit().await?;
         return Err(AccountError::Unauthorized("the session is no longer valid"));
     }
-    sqlx::query(
-        "UPDATE devices SET last_seen = GREATEST(last_seen, $3) WHERE user_id = $1 AND id = $2",
-    )
-    .bind(user.id)
-    .bind(session.device_id)
-    .bind(now)
-    .execute(&state.accounts_pool)
-    .await?;
-    let temporary = StoredPassword::parse(&user.password_hash).temporary;
-    issue_tokens(state, &user, &session, temporary).await
+    tx.touch_device(user.id, session.device_id, now).await?;
+    let issued = issue_tokens(state, &mut tx, &user, &session).await?;
+    tx.commit().await?;
+    Ok(issued)
 }
 
 /// `POST /auth/logout`: revokes the caller's session.

@@ -1,9 +1,9 @@
 //! Argon2id password hashing (PLAN §8) with parameters from `auth.argon2`.
 //!
 //! `users.password_hash` holds a PHC string (`$argon2id$v=19$m=…`). A password set by an admin
-//! reset is stored as [`TEMPORARY_PREFIX`] + PHC string: it still verifies, but the account is
-//! restricted until the user sets a new password (`PATCH /me`). Verification uses the
-//! parameters recorded in the PHC string, so raising the configured cost only affects new
+//! reset is flagged with `users.must_change_password`: it verifies like any other, but the
+//! account is restricted until the user sets a new password (`PATCH /me`). Verification uses
+//! the parameters recorded in the PHC string, so raising the configured cost only affects new
 //! hashes; [`PasswordHasher::needs_rehash`] tells login to upgrade an old hash.
 
 use std::fmt;
@@ -13,9 +13,6 @@ use argon2::password_hash::{PasswordHasher as _, PasswordVerifier as _};
 use argon2::{Algorithm, Argon2, Params, Version};
 use strata_common::config::Argon2Config;
 
-/// Prefix marking a temporary (admin-reset) password in `users.password_hash`.
-pub const TEMPORARY_PREFIX: &str = "temporary:";
-
 /// Longest accepted password in bytes (bounds hashing work per request).
 pub const MAX_PASSWORD_BYTES: usize = 1024;
 
@@ -23,39 +20,6 @@ pub const MAX_PASSWORD_BYTES: usize = 1024;
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("password hashing failed: {0}")]
 pub struct HashError(String);
-
-/// A parsed `users.password_hash` value.
-#[derive(Clone, PartialEq, Eq)]
-pub struct StoredPassword<'a> {
-    /// The PHC string.
-    pub phc: &'a str,
-    /// Set by an admin reset: the user must choose a new password.
-    pub temporary: bool,
-}
-
-impl fmt::Debug for StoredPassword<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("StoredPassword")
-            .field("temporary", &self.temporary)
-            .finish_non_exhaustive()
-    }
-}
-
-impl<'a> StoredPassword<'a> {
-    /// Splits a stored value into its PHC string and the temporary marker.
-    pub fn parse(stored: &'a str) -> Self {
-        match stored.strip_prefix(TEMPORARY_PREFIX) {
-            Some(phc) => Self {
-                phc,
-                temporary: true,
-            },
-            None => Self {
-                phc: stored,
-                temporary: false,
-            },
-        }
-    }
-}
 
 /// Hashes and verifies passwords with Argon2id.
 #[derive(Clone)]
@@ -108,14 +72,12 @@ impl PasswordHasher {
             .map_err(|e| HashError(e.to_string()))
     }
 
-    /// Whether `password` matches the stored value (temporary or not). Malformed stored
-    /// values never match.
+    /// Whether `password` matches the stored PHC string. Malformed stored values never match.
     pub fn verify(&self, password: &str, stored: &str) -> bool {
-        let stored = StoredPassword::parse(stored);
         if password.len() > MAX_PASSWORD_BYTES {
             return false;
         }
-        match PasswordHash::new(stored.phc) {
+        match PasswordHash::new(stored) {
             Ok(parsed) => Argon2::default()
                 .verify_password(password.as_bytes(), &parsed)
                 .is_ok(),
@@ -130,8 +92,7 @@ impl PasswordHasher {
 
     /// Whether a stored hash uses different parameters than configured (rehash on login).
     pub fn needs_rehash(&self, stored: &str) -> bool {
-        let stored = StoredPassword::parse(stored);
-        let Ok(parsed) = PasswordHash::new(stored.phc) else {
+        let Ok(parsed) = PasswordHash::new(stored) else {
             return true;
         };
         let Ok(params) = Params::try_from(&parsed) else {
@@ -188,22 +149,12 @@ mod tests {
     }
 
     #[test]
-    fn temporary_marker_still_verifies_and_is_reported() {
-        let hasher = PasswordHasher::new(&cheap()).expect("params");
-        let stored = format!(
-            "{TEMPORARY_PREFIX}{}",
-            hasher.hash("temp-pass-123").expect("hash")
-        );
-        assert!(hasher.verify("temp-pass-123", &stored));
-        assert!(StoredPassword::parse(&stored).temporary);
-        assert!(!StoredPassword::parse("$argon2id$x").temporary);
-    }
-
-    #[test]
     fn malformed_or_oversized_inputs_never_match() {
         let hasher = PasswordHasher::new(&cheap()).expect("params");
         assert!(!hasher.verify("x", "not a phc string"));
         assert!(!hasher.verify("x", ""));
+        // The retired `temporary:` prefix (migration 010 strips it) is not a PHC string.
+        assert!(!hasher.verify("x", &format!("temporary:{}", hasher.hash("x").expect("hash"))));
         let hash = hasher.hash("x").expect("hash");
         assert!(!hasher.verify(&"x".repeat(MAX_PASSWORD_BYTES + 1), &hash));
         hasher.verify_dummy("anything");
