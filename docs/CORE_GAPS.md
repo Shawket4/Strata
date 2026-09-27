@@ -164,3 +164,4 @@ View-model fields and intents the Flutter screens need from the Rust core (PLAN 
 - Directory: rename the `EntityScreen` widget (clashes with the `EntityScreen` view-model type) to `EntityPage`.
 - Content direction: provide per-paragraph direction hints from the core everywhere text is rendered (maps, directory, ask, documents), replacing ambient-direction fallbacks.
 - Share the duplicated `test/helpers` across feature packages via `strata_state/testing.dart`.
+- Inbox intent mappings are provisional workarounds (e.g. duplicate-flagged "Discard" → acceptSuggestion, custody "Undo" → rejectSuggestion, capture-level accept/reject fanned out per suggestion). Replace with explicit core intents (`resolve_capture_duplicate`, `undo_ai_change`, `accept_capture`, `reject_capture`, `edit_proposal`, `link_or_create_entity`) and update the inbox UI.
