@@ -104,7 +104,7 @@ Client:
 | D19 | Sync conflict resolution for note bodies | (a) 3-way merge against the base version (from git) when edits don't overlap, conflict copy otherwise. (b) Always keep server version and save the client edit as a conflict copy for manual resolution. | Phase 1 |
 | D20 | Final LLM transport (replaces provisional L18) | (a) Claude Code `claude -p` on the Strata VPS (current). (b) Direct Messages API from `stratad` with an API key (lightweight, pay per token). (c) Relay service on another server that runs `claude -p` and returns JSON. All sit behind the same `LlmProvider` trait. Measure `claude -p` RAM/CPU on the VPS (`/usr/bin/time -v`) before deciding. | Phase 4 |
 | D21 | Per-user storage isolation | (a) Per-user directory holding that user's vault + git + its own `index.db`; a separate `system.db` for users, sessions, devices. Physical separation; a query can't cross users. (b) Per-user vault directories + one shared SQLite with `user_id` on every table and enforced scoping in the data layer. Simpler ops; isolation relies on code. | Phase 1 |
-| D22 | Account creation | (a) Admin creates accounts / sends invite links only. (b) Open self-signup with admin approval. | Phase 1 |
+| D22 | Account creation | (a) Admin creates accounts / sends invite links only. (b) Open self-signup with admin approval. **Decided 2026-09-27: (b).** | Phase 1 |
 | D23 | AI for users other than the owner | The owner's `claude -p` subscription must serve only the owner. For other users: (a) direct API backend with the server's API key and a per-user budget; (b) each user supplies their own API key (stored encrypted, server-side only); (c) AI disabled for non-owner accounts. | Phase 4 |
 | D24 | Streaming transport for `/events` and `/ask` (MessagePack frames) | (a) WebSocket with one binary MessagePack frame per event/token batch. (b) Long-lived HTTP response streaming length-prefixed MessagePack frames. (c) Server-Sent Events carrying base64-encoded MessagePack (keeps SSE semantics and reconnection behaviour; ~33% size overhead from base64). | Phase 1 |
 
@@ -417,7 +417,7 @@ entity_aliases* (note_id, alias, alias_normalized)   -- normalized: Arabic norma
 mentions*     (entity_id, note_id, block_id, first_seen, last_seen)   -- from people:/companies: keys + AI mention spans
 clusters*     (note_id, cluster_id), cluster_names* (cluster_id, name)
 -- system.db (global, per D21)
-users         (id, username, password_hash, role[admin|member], status[active|disabled], created)
+users         (id, username, display_name, password_hash, role[admin|member], status[pending|active|disabled|rejected], created, approved_by, approved_at)
 invites       (id, token_hash, role, created_by, expires, used_at)
 audit_log     (id, actor_id, action, target, at)
 -- per-user app state (not derived)
@@ -439,14 +439,15 @@ Schema changes go through versioned, forward-only migrations, each with a test t
 ### 7.5 API (all under `/api/v1`, MessagePack, auth required except login/refresh)
 
 **Auth & devices**
-- `POST /auth/login` {username, password, device_name, platform} → session
+- `POST /auth/signup` {username, password, display_name} → account in `pending` state (D22 = b); no session until approved
+- `POST /auth/login` {username, password, device_name, platform} → session (`403 account_pending` / `account_disabled` problem types before approval or after disabling)
 - `POST /auth/refresh`, `POST /auth/logout`
 - `GET /devices`, `DELETE /devices/{id}`
 
 **Account & admin**
 - `GET /me` — current user, role, settings
 - `PATCH /me` — change password, UI language, preferences
-- `GET /admin/users`, `POST /admin/users` (create or invite per D22), `PATCH /admin/users/{id}` (disable/enable, role, reset password), `DELETE /admin/users/{id}` (after export offer) — admin only
+- `GET /admin/users?status=pending|active|disabled`, `POST /admin/users` (admin-created account), `POST /admin/users/{id}/approve`, `POST /admin/users/{id}/reject`, `PATCH /admin/users/{id}` (disable/enable, role, reset password), `DELETE /admin/users/{id}` (after export offer) — admin only
 - All other endpoints are implicitly scoped to the session's user (principle 7).
 
 **Notes**
@@ -533,7 +534,7 @@ Errors: RFC 7807 problem details encoded as MessagePack (`application/problem+ms
 
 ## 8. Auth & security
 
-- Multiple isolated users (L20). The first admin is created with `stratad create-user --admin`; further accounts per D22. Roles: `admin`, `member`. Admins manage accounts but **cannot read other users' vaults** through the API.
+- Multiple isolated users (L20). The first admin is created with `stratad create-user --admin`; further accounts self-register and wait in `pending` until an admin approves them (D22 = b). A pending or rejected account has no vault, no sessions, and no API access beyond login's error. The user directory is created on approval. Roles: `admin`, `member`. Admins manage accounts but **cannot read other users' vaults** through the API.
 - Disabling a user revokes all their sessions immediately.
 - Passwords hashed with Argon2id. Login rate-limited per IP and per username; capture/ask rate limits are per user.
 - Every login creates a **device** row; sessions belong to devices and are revocable individually.
@@ -651,7 +652,7 @@ Computed on request (not stored) from note-level embeddings: top-n neighbours ab
 - Light/dark themes; system text scaling respected up to 200% without clipped or overlapping UI.
 
 **Screens:**
-1. **Login** — server URL, username, password, device name.
+1. **Login & sign-up** — server URL, username, password, device name; sign-up form; "waiting for approval" and "not approved" states.
 2. **Home / Capture** — prominent capture box (works well with Wispr Flow dictation), recent notes, inbox count.
 3. **Inbox** — captures with AI filing suggestions: accept / edit / reject per item and bulk; entity link-or-create suggestions (nicknames, ambiguous mentions).
 4. **Note view/editor** — editor, frontmatter properties panel (relations shown as typed chips), backlinks panel grouped by relation type, history panel with diff and revert, local mini-graph.
@@ -664,7 +665,7 @@ Computed on request (not stored) from note-level embeddings: top-n neighbours ab
 11. **Suggestions** — duplicates, low-confidence proposals, new-entity and entity-merge proposals.
 12. **Sync status & Conflicts** — online/offline, pending outbox ops, last sync, conflict resolution per D19.
 13. **Settings** — account (password, language), AI thresholds, auto-file toggle, budget, digests schedule, devices (revoke), export/import, integrity warnings, AI status, sign out.
-14. **Admin → Users** (admins only) — list, create/invite, disable, reset password, delete with export.
+14. **Admin → Users** (admins only) — pending approvals queue (approve / reject), list, create, disable, reset password, delete with export.
 
 **Live updates:** the core subscribes to `/events` (D24) and pulls changes; view-model streams update the UI; graph node/edge additions animate.
 
@@ -777,7 +778,7 @@ Run as a design session (Claude Design) before any code. Output to `/design`:
 ## 15. Security checklist
 - No endpoint returns raw filesystem paths outside the vault; path traversal tests on every path parameter.
 - Import zip: reject symlinks, absolute paths, `..`, oversized entries.
-- Rate limits on login, capture, ask.
+- Rate limits on login, signup, capture, ask. Signup is additionally limited per IP and globally, with a cap on pending accounts; usernames are normalised (case, Unicode confusables) before uniqueness checks.
 - Content never included in logs or error messages by default.
 - Secrets file permission check at startup.
 - MessagePack decoding limits enforced and fuzzed (§7.7).
@@ -816,6 +817,7 @@ The bar is a polished product, not a demo. Tests are part of every feature, writ
 - **AI (FakeLlmProvider):** threshold application, rejected-edge suppression, removal of stale AI edges only, invalid JSON retry, budget pause (per user and global), fair scheduling across users.
 - **Entities:** alias matching across Arabic/Latin spellings; nickname/kinship mention → suggestion, never auto-created; accepting adds the alias and the next mention resolves automatically; relative dates in Timeline resolved against `created`; ambiguous match → suggestion; merge rewrites links and preserves user `## Notes`; AI sections regenerate without touching user sections; uncited insight bullets rejected; speculative insights from a one-line capture rejected; contact fields never written by AI.
 - **Search:** Arabic normalisation cases end to end (index + query).
+- **Accounts (D22):** signup creates `pending` with no vault or session; pending/rejected/disabled users cannot log in (exact problem types asserted); approval creates the user directory exactly once; only admins can approve; signup rate limits and pending cap enforced; confusable usernames rejected.
 - **Isolation:** two users with overlapping note titles/entity names; verify zero leakage across every endpoint, job, event stream, sync feed, and export; admins cannot read member vaults; a disabled user's sessions die immediately.
 - **Migrations:** each migration tested from the previous schema with fixture data.
 - **Security checklist items (§15)** each have a dedicated test.

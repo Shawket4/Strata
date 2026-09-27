@@ -4,6 +4,12 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### D22 — Account creation: (b) open self-signup with admin approval
+- New accounts register via `POST /auth/signup` and stay `pending` until an admin approves; the user directory is created on approval. Adds signup/approve/reject endpoints, `pending`/`rejected` statuses, signup rate limits and a pending cap, and sign-up + approval-queue screens (PLAN §7.5, §8, §11, §15, §16).
+
+### D21 — Per-user storage isolation: (b) shared database with `user_id` scoping, **plus row-level security** — engine pending
+- Owner picked (b) with RLS. SQLite has no row-level security, so the database engine for the server-side shared store is being confirmed with the owner before PLAN is updated.
+
 ### Owner direction: Flutter everywhere, no web client
 - **Changed L3:** the Angular PWA is dropped. The client is one Flutter app for Android, iOS, macOS, Windows, and Linux with **adaptive layouts** per size class (PLAN §11).
 - **Changed L4, L14, L15, L16:** "mobile" becomes "client"; the Rust client core and offline-first behaviour apply on every platform.
