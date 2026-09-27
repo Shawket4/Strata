@@ -31,6 +31,8 @@ Client:
 - AI automatically files, links, and relates notes; relations are visible as a graph.
 - **Multiple isolated user accounts**: each user has a private vault, index, AI jobs, settings, and devices. No user can see or reach another user's data.
 - **People and companies are first-class objects**: each has its own page aggregating every note that mentions it, AI-maintained insights, a timeline, and its relations to other people/companies.
+- **Tasks with recurrence and reminders**, written as Obsidian Tasks checklist lines inside notes, with reminders pushed to the user's devices.
+- **Duplicates are caught everywhere**: every create (note, capture, task, entity, concept, alias) is checked; the user can open the existing item or force-create.
 - Markdown is the single source of truth; all derived data is rebuildable.
 - Vault stays fully Obsidian-compatible in format.
 - Mixed Arabic/English content works correctly everywhere.
@@ -107,6 +109,9 @@ Client:
 | D22 | Account creation | (a) Admin creates accounts / sends invite links only. (b) Open self-signup with admin approval. **Decided 2026-09-27: (b).** | Phase 1 |
 | D23 | AI for users other than the owner | The owner's `claude -p` subscription must serve only the owner. For other users: (a) direct API backend with the server's API key and a per-user budget; (b) each user supplies their own API key (stored encrypted, server-side only); (c) AI disabled for non-owner accounts. | Phase 4 |
 | D25 | How a deleted user receives their export | (a) In-app pickup during a grace period (restricted export-only sign-in). (b) Emailed single-use link. (c) Either, with the export encrypted by a key derived from the user's password. **Decided 2026-09-27: (a).** | Phase 1 |
+| D26 | Task storage format | (a) One note per task in `tasks/`. (b) Obsidian Tasks checklist lines inside notes. (c) Both. **Decided 2026-09-27: (b)** (§6.11). | Phase 1 |
+| D27 | Reminder delivery | (a) Local notifications scheduled by each device. (b) Server push (FCM / APNs / WNS; event stream on Linux). (c) Both. **Decided 2026-09-27: (b), extending to (c) later** (§12.5b). | Phase 1 |
+| D28 | Tasks in navigation | (a) Replace Notes in the bottom bar. (b) "More" tab. (c) On Home only on compact. **Decided 2026-09-27: (c), plus a Tasks destination in the rail and sidebar.** | Phase 0 |
 | D24 | Streaming transport for `/events` and `/ask` (MessagePack frames) | (a) WebSocket with one binary MessagePack frame per event/token batch. (b) Long-lived HTTP response streaming length-prefixed MessagePack frames. (c) Server-Sent Events carrying base64-encoded MessagePack (keeps SSE semantics and reconnection behaviour; ~33% size overhead from base64). | Phase 1 |
 
 Withdrawn with the Angular PWA (2026-09-27): D5 (nginx `/api` proxy vs subdomain — no browser client, CORS no longer applies), D16 (TypeScript client generator), D17 (Angular toolchain), D18 (Angular data layer). The old D2–D4 (web editor and web graph libraries) are replaced by the Flutter versions above.
@@ -206,6 +211,7 @@ vault/
   people/                person entities (one note per person)
   companies/             company/organisation entities (one note per company)
   attachments/YYYY/MM/   raw files (deferred capture, uploads)
+  tasks/                 default home for tasks not attached to another note (`tasks/Tasks.md`); tasks may live in any note (§6.11)
   maps/                  saved mind-map layouts (.canvas, JSON Canvas)
   _ai/digests/           AI-written synthesis notes (weekly digests etc.)
   .meta/                 sidecar metadata (hidden; Obsidian ignores dot-folders)
@@ -372,6 +378,23 @@ website: ""
 
 ---
 
+### 6.11 Tasks (D26 = b: Obsidian Tasks checklist lines)
+
+Tasks are checklist lines inside any note, in the syntax of the Obsidian **Tasks** plugin, so they keep working in Obsidian after export. Tasks created without a home note (e.g. accepted from a capture) go to `tasks/Tasks.md`, under a heading per month of creation.
+
+```markdown
+- [ ] Make Watanya's ETA invoice 🔁 every month on the 1st 📅 2026-10-01 (@2026-10-01 09:00) [[Watanya]] ^t-01j9a2
+- [ ] Petrol Arrows invoice 🔁 every week on Sunday 📅 2026-09-27 (@2026-09-27 10:00) [[Petrol Arrows]] ^t-01j9a3
+- [x] Make Watanya's ETA invoice 🔁 every month on the 1st 📅 2026-09-01 ✅ 2026-09-01 ^t-01j8z7
+```
+- Recognised signifiers (Tasks plugin): `📅` due, `⏳` scheduled, `🛫` start, `🔁` recurrence (the plugin's "every …" language), `✅` done date, `❌` cancelled, `➕` created, priority `🔺⏫🔼🔽⏬`. Reminders use the Obsidian **Reminder** plugin form `(@YYYY-MM-DD HH:mm)`; several are allowed.
+- **Identity:** every task line carries a block ID `^t-<ulid>` (the backend may append block IDs, §6.3), so tasks survive edits, moves, and renames.
+- **Parsing** lives in `/crates/vault-format` (shared with the client core). The recurrence phrase is kept verbatim in the file and compiled to an RRULE (RFC 5545) for scheduling. A phrase outside the supported grammar is preserved untouched and the task is flagged "recurrence not understood" — never rewritten.
+- **Completing a recurring task** follows the Tasks plugin: the current line gets `[x]` and `✅ <date>`, and a new line for the next occurrence (new block ID, due date advanced by the rule, reminders shifted by the same offset) is inserted directly above it. Completed lines are the task's history. This is a user-initiated edit, one `user:` commit.
+- Overdue occurrences stay open until completed or cancelled; the next occurrence is only created on completion (Tasks plugin semantics), so nothing is silently skipped.
+- **AI** proposes tasks from captures ("remind me to make Watanya's invoice every 1st") as suggestions with title, due, recurrence, reminders, and entity links; the line is only written when the user accepts. Tasks can always be created and edited by hand without AI (principle 6).
+- The user's timezone (settings) anchors due dates, recurrence, and reminder times.
+
 ## 7. Backend (Rust / Actix)
 
 ### 7.1 Crate layout (Cargo workspace)
@@ -429,7 +452,7 @@ users         (id, username, display_name, password_hash, role[admin|member], st
 invites       (id, token_hash, role, created_by, expires, used_at)
 audit_log     (id, actor_id, action, target, at)
 -- per-user app state (not derived; user_id + RLS)
-devices       (id, user_id, name, platform, created, last_seen)
+devices       (id, user_id, name, platform, created, last_seen, push_provider[fcm|apns|wns|none], push_token)
 sessions      (id/token_hash, device_id, expires, revoked)
 jobs          (id, kind, note_id, payload, status, attempts, run_after, last_error, created, updated)
 suggestions   (id, note_id, kind, payload, status[pending|accepted|rejected], created)   -- payload stored as MessagePack blob
@@ -438,6 +461,11 @@ settings      (key, value)
 change_log    (seq INTEGER PK AUTOINCREMENT, epoch, entity_type, entity_id, op[upsert|delete], version, at)
               -- app state; every committed change appends a row. A full rebuild that can't preserve seq bumps `epoch`, forcing clients to re-bootstrap.
 idempotency   (op_id PK, device_id, result, created)   -- result stored as MessagePack; replayed pushes return it
+tasks*        (id = block id, note_id, text, status[open|done|cancelled], due, scheduled, start, recurrence_raw, rrule, priority, done_at, line_start, line_end)
+task_reminders* (task_id, remind_at)              -- derived from the (@…) markers
+notification_log (id, task_id, remind_at, device_id, provider, sent_at, result)   -- idempotent delivery: one send per (task, remind_at, device)
+dedupe_keys*  (kind, item_id, exact_key, trigram_text)   -- normalised keys for exact/near duplicate lookup (§9.7)
+dedupe_keep_both (kind, a_id, b_id, at)           -- user chose "create anyway"; that pair is never flagged again (also mirrored in .meta/ so it survives rebuilds)
 ```
 
 Arabic search: normalise alef/ya/ta-marbuta variants and strip tashkeel at index and query time.
@@ -511,8 +539,18 @@ Schema changes go through versioned, forward-only migrations, each with a test t
 **Sync (client offline-first)**
 - `GET /sync/bootstrap?cursor=` — paged full snapshot of notes (content), entities, relations, tags, links, inbox, suggestions, cluster assignments; returns `epoch` and a starting `seq`
 - `GET /sync/changes?since=<seq>&epoch=&limit=` — changed records with full payloads, tombstones for deletes, next `seq`; `410` if the epoch changed (client re-bootstraps)
-- `POST /sync/push` {ops[]} — each op: `{op_id (ULID, idempotency key), kind, entity_id, base_version, payload}`; kinds mirror the granular mutations (note.create/update/move/delete, capture, relation.add/remove/retype, suggestion.accept/reject, entity.create/patch/merge, relink.request). Per-op result: `applied{new_version}` | `conflict{server_version, resolution}` | `rejected{problem}`. Ops apply in order; results are stored under `op_id` so replays are safe.
+- `POST /sync/push` {ops[]} — each op: `{op_id (ULID, idempotency key), kind, entity_id, base_version, payload}`; kinds mirror the granular mutations (note.create/update/move/delete, capture, relation.add/remove/retype, suggestion.accept/reject, entity.create/patch/merge, relink.request). Per-op result: `applied{new_version}` | `conflict{server_version, resolution}` | `duplicate{candidates}` (create ops without `force`) | `rejected{problem}`. Task ops: task.create/update/complete/cancel/reopen/delete. Ops apply in order; results are stored under `op_id` so replays are safe.
 - Creates accept **client-generated ULIDs** so offline-created notes keep their IDs.
+
+**Tasks & reminders**
+- `GET /tasks?view=today|upcoming|overdue|recurring|done&entity=&note=` — task list (parsed from checklist lines)
+- `POST /tasks` {text, due?, recurrence?, reminders?, note_id? (default `tasks/Tasks.md`), force?} → task (duplicate check §9.7)
+- `PATCH /tasks/{id}` {text?, due?, recurrence?, reminders?, priority?} + `If-Match`
+- `POST /tasks/{id}/complete`, `POST /tasks/{id}/cancel`, `POST /tasks/{id}/reopen`
+- `PUT /devices/{id}/push` {provider, token} — register this device for reminders (D27)
+
+**Duplicates (all create endpoints)**
+- Every create (`POST /notes`, `/capture`, `/tasks`, `/entities`, entity alias edits, concept creation) runs the duplicate check (§9.7). A likely duplicate returns `409` with problem type `duplicate_candidates` and the candidates (id, kind, title, snippet, match level, score). Resending with `force: true` creates it anyway and records "keep both" for each listed candidate. `POST /capture` never refuses: the capture is saved and the duplicate flag rides on its inbox suggestion (principle 5).
 
 **Vault ops**
 - `GET /export`, `POST /import` (zip bodies, `application/zip`)
@@ -601,7 +639,8 @@ trait Embedder    { async fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f3
 | `entities` | inside `link` call | extract person/company mentions, resolve (§6.7), write `people:`/`companies:` and entity-to-entity relations |
 | `entity_insights` | debounced (≈5 min) after any note mentioning the entity changes; nightly sweep | regenerate Summary / Insights / Open items / Timeline from mentioning notes, with citations; skip if inputs unchanged |
 | `cluster` | nightly + manual | community detection, name clusters, write `.meta/clusters.json` |
-| `dedupe` | nightly | propose `duplicates` merges as suggestions (never auto-merge) |
+| `dedupe` | nightly | semantic sweep across all kinds (§9.7); propose `duplicates` merges as suggestions (never auto-merge), skipping keep-both pairs |
+| `reminders` | every minute | send due reminders via push (D27), idempotent per (task, time, device), in the user's timezone |
 | `digest` | weekly (configurable) | write `_ai/digests/YYYY-Www.md` summarising new notes, open questions, contradictions |
 
 - Idempotency: skip `link` if `content_hash == last_linked_hash`.
@@ -633,6 +672,22 @@ Computed on request (not stored) from note-level embeddings: top-n neighbours ab
 
 ---
 
+### 9.7 Duplicate detection (all kinds)
+
+One engine checks every kind of item: notes, captures, tasks, people, companies, concepts, and aliases.
+
+| Level | How | Needs AI |
+|---|---|---|
+| Exact | normalised key equal (`/crates/text-normalize`: Arabic letter variants, tashkeel, case, spacing, punctuation; for tasks also the recurrence rule and entity links) | no |
+| Near | trigram similarity on normalised text (`pg_trgm`) above a per-kind threshold | no |
+| Semantic | embedding cosine above a per-kind threshold; borderline scores confirmed by one LLM call | yes |
+
+- **Synchronous check on create** (exact + near, plus semantic if an embedding for the new text is cheap to compute) → `409 duplicate_candidates` unless `force`. With AI down, exact and near still run (principle 6).
+- **Captures are never blocked** (principle 5): saved first, then the duplicate flag ("Already exists: Make Watanya's ETA invoice · monthly · next Thu 1 Oct") appears on the inbox item with Open existing / Create anyway / Discard.
+- **Offline:** the client core runs exact + near checks against its local cache before queuing a create and shows the same prompt; the server re-checks on push and may return `duplicate{candidates}`, which the app surfaces without losing the item.
+- **Keep both** is remembered per pair (`dedupe_keep_both` + `.meta/`), so the same pair is never flagged again by the create check or the nightly sweep.
+- Thresholds are per-kind settings with tested defaults.
+
 ## 10. Graph model
 
 - **Node kinds:** `note`, `concept`, `person`, `company`, `attachment` (deferred), `tag` (optional toggle), `cluster` (virtual, for region labels).
@@ -652,9 +707,9 @@ Computed on request (not stored) from note-level embeddings: top-n neighbours ab
 
 | Class | Width | Navigation | Panes |
 |---|---|---|---|
-| Compact | < 600 | Bottom navigation bar (Home, Inbox, Notes, People, Ask); top app bar with search and sync pill | One pane; detail pushes full-screen; context (backlinks, relations, history) in sheets/tabs |
-| Medium | 600–1199 | Navigation rail with capture button, 6 destinations (adds Map), Settings at bottom | List + detail; context panel as an overlay drawer |
-| Expanded | ≥ 1200 | Sidebar (wordmark, New capture, nav with counts, pinned, folder tree, sync status) | List + main + context panel (backlinks / graph / history); keyboard shortcuts (⌘/Ctrl-K search, ⌘/Ctrl-N capture), hover states, context menus, multi-window-friendly |
+| Compact | < 600 | Bottom navigation bar (Home, Inbox, Notes, People, Ask — five is the platform limit for a bottom bar; Tasks live on Home, D28 = c); top app bar with search and sync pill | One pane; detail pushes full-screen; context (backlinks, relations, history) in sheets/tabs |
+| Medium | 600–1199 | Navigation rail with capture button, destinations Home, Inbox, Tasks, Notes, Map, People, Ask (scrolls if the window is short), Settings at bottom | List + detail; context panel as an overlay drawer |
+| Expanded | ≥ 1200 | Scrollable sidebar (wordmark, New capture, nav with counts incl. Tasks, pinned, folder tree, sync status) | List + main + context panel (backlinks / graph / history); keyboard shortcuts (⌘/Ctrl-K search, ⌘/Ctrl-N capture), hover states, context menus, multi-window-friendly |
 
 - Input adapts too: touch targets ≥ 48 dp on touch platforms; pointer/hover affordances, right-click menus and full keyboard navigation on desktop; focus traversal order defined per screen.
 - Global map is available at medium and expanded; compact shows local mind maps only.
@@ -672,7 +727,9 @@ Computed on request (not stored) from note-level embeddings: top-n neighbours ab
 9. **Search** — keyword/semantic/hybrid, results with snippets.
 10. **Ask** — chat-like Q&A over the vault with tappable citations; "save as note"; unavailable offline.
 11. **Suggestions** — duplicates, low-confidence proposals, new-entity and entity-merge proposals.
-12. **Sync status & Conflicts** — online/offline, pending outbox ops, last sync, conflict resolution per D19.
+12. **Tasks** — compact: on Home as Today / Upcoming / Recurring sections (no bottom-bar tab); medium and expanded: a **Tasks** destination in the rail and sidebar. Task detail and editor: text, due, recurrence (presets + custom), reminders, linked note and entities, history of completed occurrences.
+12a. **Duplicate prompt** — shared "Already exists" sheet/dialog used by every create flow: candidates with match reason, Open existing / Create anyway / Cancel.
+12b. **Sync status & Conflicts** — online/offline, pending outbox ops, last sync, conflict resolution per D19.
 13. **Settings** — account (password, language), AI thresholds, auto-file toggle, budget, digests schedule, devices (revoke), export/import, integrity warnings, AI status, sign out.
 14. **Admin → Users** (admins only) — pending approvals queue (approve / reject), list, create, disable, reset password, schedule deletion (with grace period, cancel, export-downloaded status).
 15. **Deletion pending** — restricted screen for an account scheduled for deletion: days remaining, download export, delete now.
@@ -738,6 +795,12 @@ Attachments (deferred capture) are cached lazily, not in the initial bootstrap.
 - Works offline: capture, browse, edit, search, backlinks, entity pages, local mind map, accept/reject suggestions, create/remove relations, request relink (queued).
 - Online only: Ask (shown as unavailable offline), history/revert, export/import.
 - A persistent sync indicator shows: online/offline, pending op count, last sync, conflicts.
+
+### 12.5b Reminders on the device (D27 = b)
+- Reminders are sent by the server (§9.2 `reminders` job): **FCM** for Android, **APNs** for iOS and macOS, **WNS** for Windows. Linux has no platform push service, so on Linux reminders arrive over the live event stream while the app is running and are shown as desktop notifications.
+- On sign-in the core registers the device's push token (`PUT /devices/{id}/push`); sign-out and account deletion remove it.
+- Tapping a reminder opens the task; "Done" and "Snooze" notification actions go through the outbox like any other mutation.
+- **Future (D27 → c):** devices will also schedule local notifications from the synced task list as an offline fallback, de-duplicated with pushes by (task, remind_at).
 
 ### 12.6 Offline availability by screen
 Works offline: capture, browse, edit, search, backlinks, entity pages, local mind map, global map (from cached data), accept/reject suggestions, create/remove relations, request relink (queued). Online only: Ask, history/revert, export/import, Admin → Users.
@@ -831,6 +894,9 @@ The bar is a polished product, not a demo. Tests are part of every feature, writ
 - **Entities:** alias matching across Arabic/Latin spellings; nickname/kinship mention → suggestion, never auto-created; accepting adds the alias and the next mention resolves automatically; relative dates in Timeline resolved against `created`; ambiguous match → suggestion; merge rewrites links and preserves user `## Notes`; AI sections regenerate without touching user sections; uncited insight bullets rejected; speculative insights from a one-line capture rejected; contact fields never written by AI.
 - **Search:** Arabic normalisation cases end to end (index + query).
 - **Account deletion (D25):** scheduling revokes all sessions; a new login yields an export-only session; every non-allowed endpoint returns `403 account_deletion_pending`; `GET /me/export` contains exactly the user's vault and nothing of any other user; admins have no route to the export; cancel restores `active`; the purge job (fake clock past the grace period, and early confirm) removes the directory and every row of that user across all tables and nothing else; audit entry written.
+- **Tasks (§6.11):** parse/serialise round-trip of every signifier, reminder markers, and block IDs (golden + proptest); recurrence grammar → RRULE table tests (monthly on the 1st, every Sunday, every 2 weeks, end of month, leap years, DST transitions in the user's timezone); completion of a recurring task writes exactly the expected two lines; unsupported recurrence preserved byte-for-byte and flagged; tasks survive note rename/move.
+- **Reminders:** fake clock + fake push providers; each reminder sent exactly once per device even with job retries and restarts; timezone and DST correctness; token removal on sign-out/deletion; Linux event-stream delivery.
+- **Duplicates (§9.7):** exact/near/semantic detection per kind, Arabic and English variants ("Watanya's ETA invoice" vs "ETA invoice for Watanya", "ووتانيا"/"وطنية" spelling variants as configured aliases); `409 duplicate_candidates` payload asserted exactly; `force` creates and records keep-both; keep-both pairs never re-flagged by create checks or the nightly sweep; captures never refused; offline local check and server `duplicate{}` push result; AI-off path still runs exact + near.
 - **Accounts (D22):** signup creates `pending` with no vault or session; pending/rejected/disabled users cannot log in (exact problem types asserted); approval creates the user directory exactly once; only admins can approve; signup rate limits and pending cap enforced; confusable usernames rejected.
 - **Isolation:** two users with overlapping note titles/entity names; verify zero leakage across every endpoint, job, event stream, sync feed, and export; admins cannot read member vaults; a disabled user's sessions die immediately.
 - **Migrations:** each migration tested from the previous schema with fixture data.
@@ -851,7 +917,7 @@ The bar is a polished product, not a demo. Tests are part of every feature, writ
 
 ### 16.6 End-to-end (full stack)
 - Spawned `stratad` on a temp data root + the real app on **Linux desktop (CI, headless display)** and an **Android emulator**; macOS/Windows/iOS runs on release branches.
-- Scenarios (each asserts UI state and server state): first login; capture → inbox → accept filing; edit a note, go offline, edit again, reconnect, resolve a conflict; entity page shows cited insights from fixture AI; nickname link-or-create → alias added → next mention auto-links; reject an AI edge and verify it never returns; ask with citations opens the cited block (fake LLM); admin creates a user, the user signs in on another device, isolation verified; sign-out with pending outbox; account disabled mid-session; account scheduled for deletion → export downloaded in the app → deletion completes.
+- Scenarios (each asserts UI state and server state): first login; capture → inbox → accept filing; edit a note, go offline, edit again, reconnect, resolve a conflict; entity page shows cited insights from fixture AI; nickname link-or-create → alias added → next mention auto-links; reject an AI edge and verify it never returns; ask with citations opens the cited block (fake LLM); admin creates a user, the user signs in on another device, isolation verified; sign-out with pending outbox; account disabled mid-session; account scheduled for deletion → export downloaded in the app → deletion completes; "remind me to make Watanya's invoice" when that recurring task exists → flagged → create anyway → both exist and the pair is never flagged again; recurring task completed → next occurrence appears and its reminder is delivered to the device.
 
 ### 16.7 Coverage and performance gates
 - Line coverage ≥ 90% and branch coverage tracked for backend, shared crates, and client core (`cargo-llvm-cov`); the threshold only goes up.
@@ -867,10 +933,10 @@ Every phase's acceptance includes: all tests required by §16 for its scope writ
 | Phase | Scope | Acceptance |
 |-------|-------|------------|
 | **0 Design** | §13 | Owner approves design; D2–D4 recorded |
-| **1 Foundation** | Monorepo, CI with all gates, `testkit`, shared crates (`vault-format`, `text-normalize`, `domain`), backend skeleton, config, **multi-user foundations (L20, L22, D21, D22: PostgreSQL schema with RLS and the three roles, per-user vault directories, `UserScope` transactions, signup/approval and admin endpoints)**, auth + devices (D6, D7), MessagePack wire layer (L21) and streaming transport (D24), vault store (parse/serialise/atomic write/git), notes CRUD, manual entity CRUD + merge, tree, move with link rewrite, soft delete, history/revert, export/import, reconciliation, change log + idempotency + sync endpoints (D19), utoipa OpenAPI + generated Rust client (D15), deploy scripts | Golden, property, fuzz-smoke, contract-conformance, and isolation suites pass; deployed to VPS behind nginx |
+| **1 Foundation** | Monorepo, CI with all gates, `testkit`, shared crates (`vault-format`, `text-normalize`, `domain`), backend skeleton, config, **multi-user foundations (L20, L22, D21, D22: PostgreSQL schema with RLS and the three roles, per-user vault directories, `UserScope` transactions, signup/approval and admin endpoints)**, auth + devices (D6, D7), MessagePack wire layer (L21) and streaming transport (D24), vault store (parse/serialise/atomic write/git), notes CRUD, manual entity CRUD + merge, tree, move with link rewrite, soft delete, history/revert, export/import, reconciliation, change log + idempotency + sync endpoints (D19), tasks (§6.11: parsing, recurrence, completion, API), duplicate detection exact + near (§9.7) with `force`, reminders job + push providers (D27), utoipa OpenAPI + generated Rust client (D15), deploy scripts | Golden, property, fuzz-smoke, contract-conformance, and isolation suites pass; deployed to VPS behind nginx |
 | **2 Client core** | Rust client core (§12.1–12.5, 12.7): local DB per account, outbox, sync engine, local search/graph, auth + token storage (D14), view-models, frb facade — tested headless | Sync convergence and conflict tests pass; full offline edit → reconnect → sync works in tests; 10k-note bootstrap within budget |
 | **3 App core** | Flutter app (§11, D11, D2): adaptive shell at all size classes, login, capture, inbox (manual), note view/editor, backlinks, People & Companies + entity pages (manual data), `@` mentions, search, history/revert, sync status & conflicts, settings, Admin → Users, RTL; CI Dart logic guard; builds for all five platforms | Owner uses the app on phone and desktop, fully offline and back; widget + golden tests at every size class pass; E2E suite green on Linux desktop and Android |
-| **4 AI linking** | Provider layer (`claude -p` per L18 for the owner, D23 for other users, local granite embeddings per L19, runtime D9), jobs, embeddings, summaries, auto-linking, concepts, entity extraction/resolution (D13, nickname rules), entity insights (no-speculation and timeline-date rules), inbox filing, suggestions UI, ask with citations, budget/status | New notes get typed relations and people/company links automatically; entity pages show cited insights, open items, timeline; rejected edges stay rejected; ask cites real blocks |
+| **4 AI linking** | Semantic duplicate detection and task suggestions from captures, provider layer (`claude -p` per L18 for the owner, D23 for other users, local granite embeddings per L19, runtime D9), jobs, embeddings, summaries, auto-linking, concepts, entity extraction/resolution (D13, nickname rules), entity insights (no-speculation and timeline-date rules), inbox filing, suggestions UI, ask with citations, budget/status | New notes get typed relations and people/company links automatically; entity pages show cited insights, open items, timeline; rejected edges stay rejected; ask cites real blocks |
 | **5 Graph** | Graph APIs, similarity, clustering (D10) + names, global map (D3), local mind map (D4), edge edit interactions, entity lens, saved `.canvas` layouts, live animations | Map reflects vault live; saved maps open in Obsidian after export; map performance budget met at 10k notes |
 | **6 Hardening** | Digests, dedupe suggestions, performance with 10k-note synthetic vault, security checklist, store/release pipelines | Checklist passes; signed releases for every platform |
 | **7 Deferred** | §18, when the owner starts it | Per §18 |

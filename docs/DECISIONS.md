@@ -4,6 +4,12 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### Scope: tasks, reminders, duplicate detection
+- **D26 = (b):** tasks are Obsidian Tasks checklist lines (`- [ ] … 🔁 every month on the 1st 📅 … (@… 09:00) ^t-<ulid>`); recurrence phrase kept verbatim and compiled to RRULE; completion follows Tasks-plugin semantics (done line + new next line); default home `tasks/Tasks.md` (PLAN §6.11).
+- **D27 = (b), (c) later:** reminders pushed by the server (FCM Android, APNs iOS/macOS, WNS Windows; live event stream on Linux); local-notification fallback to be added later (PLAN §12.5b).
+- **D28 = (c):** compact shows tasks on Home (Today / Upcoming / Recurring); rail and sidebar get a Tasks destination; rail and sidebar scroll.
+- **Duplicate detection for every kind** (exact / near without AI, semantic with AI), `409 duplicate_candidates` + `force`, captures never blocked, keep-both pairs remembered (PLAN §9.7).
+
 ### D25 — Export for a deleted user: (a) in-app pickup during a grace period
 - Admin deletion schedules the account as `deletion_pending` (default 14 days), revokes its sessions, and allows only an export-only sign-in (`GET /me/export`, `POST /me/confirm-deletion`). The purge runs when the period ends or the user confirms. Admins can cancel and can see whether the export was downloaded, never the export itself. No email infrastructure needed.
 
