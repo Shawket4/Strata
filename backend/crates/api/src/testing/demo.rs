@@ -11,6 +11,7 @@ use std::sync::Mutex;
 use actix_web::http::StatusCode;
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
+use futures_util::StreamExt;
 use chrono::{DateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -122,12 +123,18 @@ pub struct DemoTick {
     pub label: String,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum StreamScript {
+    CutAfter(usize),
+    HoldAfter(usize),
+}
+
 /// Server state. Deterministic: IDs and timestamps derive from a counter.
 #[derive(Debug)]
 pub struct DemoState {
     widgets: Mutex<(u64, BTreeMap<Ulid, Widget>)>,
     ticks: Mutex<ReplayBuffer<DemoTick>>,
-    cut_next_stream_after: Mutex<Option<usize>>,
+    next_stream: Mutex<Option<StreamScript>>,
     /// Stream connection settings.
     pub ws: WsConfig,
 }
@@ -145,15 +152,24 @@ impl DemoState {
         Self {
             widgets: Mutex::new((0, BTreeMap::new())),
             ticks: Mutex::new(buffer),
-            cut_next_stream_after: Mutex::new(None),
+            next_stream: Mutex::new(None),
             ws: WsConfig::default(),
         }
     }
 
-    /// Makes the next stream connection drop (without `end`) after `frames` frames.
+    /// Makes the next stream connection close (without `end`) after `frames` frames.
     pub fn cut_next_stream_after(&self, frames: usize) {
-        if let Ok(mut cut) = self.cut_next_stream_after.lock() {
-            *cut = Some(frames);
+        self.script_next_stream(StreamScript::CutAfter(frames));
+    }
+
+    /// Makes the next stream connection send `frames` frames, then stay open silently.
+    pub fn hold_next_stream_after(&self, frames: usize) {
+        self.script_next_stream(StreamScript::HoldAfter(frames));
+    }
+
+    fn script_next_stream(&self, script: StreamScript) {
+        if let Ok(mut next) = self.next_stream.lock() {
+            *next = Some(script);
         }
     }
 }
@@ -355,11 +371,24 @@ pub async fn ticks(
     if !matches!(frames.last(), Some(Frame::Reset { .. })) {
         frames.push(Frame::End { seq: last });
     }
-    let cut = state.cut_next_stream_after.lock().map_err(|_| internal())?.take();
-    if let Some(n) = cut {
-        frames.truncate(n);
+    let script = state.next_stream.lock().map_err(|_| internal())?.take();
+    let hold = match script {
+        Some(StreamScript::CutAfter(n)) => {
+            frames.truncate(n);
+            false
+        }
+        Some(StreamScript::HoldAfter(n)) => {
+            frames.truncate(n);
+            true
+        }
+        None => false,
+    };
+    let frames = futures_util::stream::iter(frames);
+    if hold {
+        ws::start(&req, body, state.ws, frames.chain(futures_util::stream::pending()))
+    } else {
+        ws::start(&req, body, state.ws, frames)
     }
-    ws::start(&req, body, state.ws, futures_util::stream::iter(frames))
 }
 
 /// Stream operations of the demo.

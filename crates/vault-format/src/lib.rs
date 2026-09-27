@@ -47,7 +47,9 @@ pub mod wikilink;
 
 pub use body::{BodyAnalysis, analyze};
 pub use document::Document;
-pub use frontmatter::{Frontmatter, FrontmatterError, KnownKey, NoteKind, PropertyValue, RelationKey};
+pub use frontmatter::{
+    Frontmatter, FrontmatterError, KnownKey, NoteKind, PropertyValue, RelationKey,
+};
 pub use line::LineEnding;
 pub use resolve::{PathIndex, Resolution};
 pub use wikilink::{Anchor, WikiLink};

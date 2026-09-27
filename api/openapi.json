@@ -1,0 +1,387 @@
+{
+  "components": {
+    "responses": {
+      "Internal": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`internal`: unexpected server error."
+      },
+      "InvalidBody": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`invalid_body`: the body failed decoding or validation."
+      },
+      "InvalidParameter": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`invalid_parameter`: a query or header parameter is invalid."
+      },
+      "NotAcceptable": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`not_acceptable`: `Accept` excludes application/msgpack."
+      },
+      "NotFound": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`not_found`: no such resource in the caller's scope."
+      },
+      "PayloadTooLarge": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`payload_too_large`: the body exceeds the route's limit."
+      },
+      "Unauthorized": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`unauthorized`: missing, invalid or expired access token."
+      },
+      "UnsupportedMediaType": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`unsupported_media_type`: the body is not application/msgpack."
+      }
+    },
+    "schemas": {
+      "Binary": {
+        "description": "Raw bytes, carried as MessagePack `bin`.",
+        "format": "binary",
+        "type": "string"
+      },
+      "ControlFrame": {
+        "description": "`reset`: refetch state, then continue after `seq`. `end`: the stream finished.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "reset",
+              "end"
+            ],
+            "type": "string"
+          },
+          "payload": {
+            "type": "null"
+          },
+          "seq": {
+            "description": "Sequence number; see docs/WIRE_FORMAT.md.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "v": {
+            "description": "Envelope version.",
+            "format": "int32",
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "v",
+          "kind",
+          "seq",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "DuplicateCandidate": {
+        "description": "An existing item a create request resembles (`409 duplicate_candidates`, §7.5).",
+        "properties": {
+          "id": {
+            "description": "ID of the existing item.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Item kind (`note`, `capture`, `task`, `entity`, `concept`, `alias`, ...).",
+            "type": "string"
+          },
+          "match_level": {
+            "$ref": "#/components/schemas/MatchLevel",
+            "description": "How it matched."
+          },
+          "score": {
+            "description": "Similarity in `[0, 1]`.",
+            "format": "double",
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          "snippet": {
+            "description": "Short excerpt around the match.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Display title.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "match_level",
+          "score"
+        ],
+        "type": "object"
+      },
+      "ErrorFrame": {
+        "description": "Terminal stream failure.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "error"
+            ],
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/Problem"
+          },
+          "seq": {
+            "description": "Sequence number; see docs/WIRE_FORMAT.md.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "v": {
+            "description": "Envelope version.",
+            "format": "int32",
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "v",
+          "kind",
+          "seq",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "Health": {
+        "description": "Liveness response.",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/HealthStatus",
+            "description": "Always `ok` when the server answers."
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "HealthStatus": {
+        "description": "Liveness state.",
+        "enum": [
+          "ok"
+        ],
+        "type": "string"
+      },
+      "MatchLevel": {
+        "description": "How a duplicate candidate matched (§9.7).",
+        "enum": [
+          "exact",
+          "near",
+          "semantic"
+        ],
+        "type": "string"
+      },
+      "Problem": {
+        "description": "RFC 7807 problem details, encoded as `application/problem+msgpack`. `type` is a problem slug (e.g. `not_found`, `duplicate_candidates`); clients treat unknown slugs by `status`.",
+        "properties": {
+          "candidates": {
+            "description": "`duplicate_candidates`: the existing items the create resembles.",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateCandidate"
+            },
+            "type": "array"
+          },
+          "current_version": {
+            "description": "`version_conflict`: the server's current version of the resource.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "detail": {
+            "description": "Occurrence-specific explanation. Never contains user content.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "errors": {
+            "description": "`invalid_body` / `invalid_parameter`: what is wrong, and where.",
+            "items": {
+              "$ref": "#/components/schemas/ProblemFieldError"
+            },
+            "type": "array"
+          },
+          "instance": {
+            "description": "URI reference identifying the occurrence.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "HTTP status code.",
+            "format": "int32",
+            "maximum": 599,
+            "minimum": 100,
+            "type": "integer"
+          },
+          "title": {
+            "description": "Fixed summary of the problem type.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Problem type slug.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "type": "object"
+      },
+      "ProblemFieldError": {
+        "description": "One validation or decoding failure inside a request.",
+        "properties": {
+          "code": {
+            "description": "Stable machine-readable code (e.g. `trailing_bytes`, `schema_mismatch`).",
+            "type": "string"
+          },
+          "message": {
+            "description": "Content-free explanation.",
+            "type": "string"
+          },
+          "pointer": {
+            "description": "JSON Pointer (RFC 6901) into the decoded body, or the parameter name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "StreamFrameKind": {
+        "description": "Envelope `kind`.",
+        "enum": [
+          "data",
+          "error",
+          "reset",
+          "end"
+        ],
+        "type": "string"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "description": "Short-lived access token (PLAN §8).",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "Strata HTTP API. Every body is MessagePack (application/msgpack); errors are RFC 7807 problem details (application/problem+msgpack). See docs/WIRE_FORMAT.md.",
+    "title": "Strata API",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "content": {
+              "application/msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "The server is alive."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Liveness probe.",
+        "tags": [
+          "system"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "Service status.",
+      "name": "system"
+    }
+  ]
+}

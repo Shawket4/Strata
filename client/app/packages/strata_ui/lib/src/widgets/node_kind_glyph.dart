@@ -11,8 +11,8 @@ import 'package:strata_ui/src/widgets/labels.dart';
 class NodeKindGlyph extends StatelessWidget {
   /// Creates the glyph.
   const new({
-    super.key,
     required this.kind,
+    super.key,
     this.size = 16,
     this.selected = false,
     this.decorative = false,

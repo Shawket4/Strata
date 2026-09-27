@@ -1,4 +1,4 @@
-//! RFC 7807 problem details (PLAN §7.5 "Errors"). Encoded as MessagePack on the wire
+//! RFC 7807 problem details (PLAN §7.5 "Errors"). Encoded as `MessagePack` on the wire
 //! (`application/problem+msgpack`); this type is serde-only and format-agnostic.
 //!
 //! Problem type URIs are URNs of the form `urn:strata:problem:<code>`: stable, not resolvable,

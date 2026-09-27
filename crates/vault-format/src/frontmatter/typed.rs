@@ -133,11 +133,17 @@ impl Frontmatter {
 
     /// A known key as a list (scalars become one-element lists).
     pub fn list(&self, key: KnownKey) -> Vec<String> {
-        self.get(key.as_str()).map(PropertyValue::to_list).unwrap_or_default()
+        self.get(key.as_str())
+            .map(PropertyValue::to_list)
+            .unwrap_or_default()
     }
 
     /// Sets a known key to a scalar.
-    pub fn set_text(&mut self, key: KnownKey, value: impl Into<String>) -> Result<(), FrontmatterError> {
+    pub fn set_text(
+        &mut self,
+        key: KnownKey,
+        value: impl Into<String>,
+    ) -> Result<(), FrontmatterError> {
         self.set(key.as_str(), PropertyValue::Text(value.into()))
     }
 
@@ -191,10 +197,9 @@ impl Frontmatter {
     /// `tags`, without leading `#`. A legacy comma/space separated string is split.
     pub fn tags(&self) -> Vec<String> {
         let raw = match self.get(KnownKey::Tags.as_str()) {
-            Some(PropertyValue::Text(s)) => s
-                .split([',', ' '])
-                .map(str::to_owned)
-                .collect::<Vec<_>>(),
+            Some(PropertyValue::Text(s)) => {
+                s.split([',', ' ']).map(str::to_owned).collect::<Vec<_>>()
+            }
             Some(v) => v.to_list(),
             None => Vec::new(),
         };
@@ -260,9 +265,11 @@ impl Frontmatter {
         self.text(KnownKey::Expires)
             .filter(|s| !s.is_empty())
             .map(|s| {
-                NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|e| FrontmatterError::InvalidValue {
-                    key: "expires".into(),
-                    reason: e.to_string(),
+                NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|e| {
+                    FrontmatterError::InvalidValue {
+                        key: "expires".into(),
+                        reason: e.to_string(),
+                    }
                 })
             })
             .transpose()
@@ -288,13 +295,21 @@ impl Frontmatter {
     }
 
     /// Replaces a relation list.
-    pub fn set_relation(&mut self, relation: RelationKey, items: Vec<String>) -> Result<(), FrontmatterError> {
+    pub fn set_relation(
+        &mut self,
+        relation: RelationKey,
+        items: Vec<String>,
+    ) -> Result<(), FrontmatterError> {
         self.set_list(relation.key(), items)
     }
 
     /// Adds `[[target]]` to a relation unless a link to the same target is already there.
     /// Returns whether it was added.
-    pub fn add_relation_link(&mut self, relation: RelationKey, target: &str) -> Result<bool, FrontmatterError> {
+    pub fn add_relation_link(
+        &mut self,
+        relation: RelationKey,
+        target: &str,
+    ) -> Result<bool, FrontmatterError> {
         let mut items = self.relation(relation);
         let exists = items
             .iter()
@@ -309,7 +324,11 @@ impl Frontmatter {
     }
 
     /// Removes every link to `target` from a relation. Returns how many were removed.
-    pub fn remove_relation_link(&mut self, relation: RelationKey, target: &str) -> Result<usize, FrontmatterError> {
+    pub fn remove_relation_link(
+        &mut self,
+        relation: RelationKey,
+        target: &str,
+    ) -> Result<usize, FrontmatterError> {
         let items = self.relation(relation);
         let kept: Vec<String> = items
             .iter()
@@ -349,7 +368,10 @@ mod tests {
             "people: [\"[[Ahmed Samir]]\", plain]\n",
         ));
         assert_eq!(f.error(), None);
-        assert_eq!(f.id().ok().flatten().map(|u| u.to_string()), Some("01J8ZK3M4X7Q9W2E5R6T8Y0V1H".into()));
+        assert_eq!(
+            f.id().ok().flatten().map(|u| u.to_string()),
+            Some("01J8ZK3M4X7Q9W2E5R6T8Y0V1H".into())
+        );
         assert_eq!(f.kind(), Some(NoteKind::Person));
         assert_eq!(f.tags(), vec!["a".to_owned(), "b".to_owned()]);
         assert_eq!(
@@ -361,18 +383,30 @@ mod tests {
         assert_eq!(f.status(), Some(DocumentStatus::CheckedOut));
         assert_eq!(f.copy_kind(), Some(CopyKind::CertifiedCopy));
         assert_eq!(f.doc_type(), Some(DocType::Other("passport".into())));
-        assert_eq!(f.link(KnownKey::Location).map(|l| l.path), Some("Safe — Nasr City office".into()));
+        assert_eq!(
+            f.link(KnownKey::Location).map(|l| l.path),
+            Some("Safe — Nasr City office".into())
+        );
         assert_eq!(f.link(KnownKey::Holder), None);
-        assert_eq!(f.relation(RelationKey::People), vec!["[[Ahmed Samir]]".to_owned(), "plain".to_owned()]);
+        assert_eq!(
+            f.relation(RelationKey::People),
+            vec!["[[Ahmed Samir]]".to_owned(), "plain".to_owned()]
+        );
         assert_eq!(f.relation_links(RelationKey::People).len(), 1);
     }
 
     #[test]
     fn invalid_typed_values() {
         let f = fm("id: nope\ncreated: yesterday\nexpires: 2027-02-30\n");
-        assert!(matches!(f.id(), Err(FrontmatterError::InvalidValue { ref key, .. }) if key == "id"));
-        assert!(matches!(f.created(), Err(FrontmatterError::InvalidValue { ref key, .. }) if key == "created"));
-        assert!(matches!(f.expires(), Err(FrontmatterError::InvalidValue { ref key, .. }) if key == "expires"));
+        assert!(
+            matches!(f.id(), Err(FrontmatterError::InvalidValue { ref key, .. }) if key == "id")
+        );
+        assert!(
+            matches!(f.created(), Err(FrontmatterError::InvalidValue { ref key, .. }) if key == "created")
+        );
+        assert!(
+            matches!(f.expires(), Err(FrontmatterError::InvalidValue { ref key, .. }) if key == "expires")
+        );
     }
 
     #[test]
@@ -388,9 +422,14 @@ mod tests {
 
     #[test]
     fn enums_round_trip() {
-        for s in ["concept", "person", "company", "document", "place", "meeting"] {
+        for s in [
+            "concept", "person", "company", "document", "place", "meeting",
+        ] {
             assert_eq!(NoteKind::parse(s).as_str(), s);
         }
-        assert_eq!(DocumentStatus::WithThirdParty.to_string(), "with-third-party");
+        assert_eq!(
+            DocumentStatus::WithThirdParty.to_string(),
+            "with-third-party"
+        );
     }
 }

@@ -38,7 +38,7 @@ pub enum IndexError {
 }
 
 impl IndexError {
-    /// The PostgreSQL SQLSTATE, if this is a database error.
+    /// The Postgres SQLSTATE, if this is a database error.
     pub fn sqlstate(&self) -> Option<Cow<'_, str>> {
         match self {
             Self::Db(sqlx::Error::Database(e)) => e.code(),

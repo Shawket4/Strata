@@ -52,16 +52,34 @@ impl WikiLink {
 
     /// Renders the link from its parts.
     pub fn to_markdown(&self) -> String {
-        render(self.embed, &self.path, self.anchor.as_ref(), self.alias.as_deref(), self.escaped_pipe)
+        render(
+            self.embed,
+            &self.path,
+            self.anchor.as_ref(),
+            self.alias.as_deref(),
+            self.escaped_pipe,
+        )
     }
 
     /// The same link pointing at `new_path`, keeping embed, anchor, alias and pipe style.
     pub fn with_path(&self, new_path: &str) -> String {
-        render(self.embed, new_path, self.anchor.as_ref(), self.alias.as_deref(), self.escaped_pipe)
+        render(
+            self.embed,
+            new_path,
+            self.anchor.as_ref(),
+            self.alias.as_deref(),
+            self.escaped_pipe,
+        )
     }
 }
 
-fn render(embed: bool, path: &str, anchor: Option<&Anchor>, alias: Option<&str>, escaped: bool) -> String {
+fn render(
+    embed: bool,
+    path: &str,
+    anchor: Option<&Anchor>,
+    alias: Option<&str>,
+    escaped: bool,
+) -> String {
     let mut out = String::with_capacity(path.len() + 8);
     if embed {
         out.push('!');
@@ -110,9 +128,11 @@ pub(crate) fn parse_at(text: &str, start: usize) -> Option<WikiLink> {
     // A `]` right after `]]` belongs to the link only if the alias contains `[`; Obsidian
     // closes at the first `]]`, so do we.
     let (target_end, alias_range, escaped_pipe) = match inner.find('|') {
-        Some(p) if p > 0 && inner.as_bytes()[p - 1] == b'\\' => {
-            (inner_start + p - 1, Some(inner_start + p + 1..inner_end), true)
-        }
+        Some(p) if p > 0 && inner.as_bytes()[p - 1] == b'\\' => (
+            inner_start + p - 1,
+            Some(inner_start + p + 1..inner_end),
+            true,
+        ),
         Some(p) => (inner_start + p, Some(inner_start + p + 1..inner_end), false),
         None => (inner_end, None, false),
     };
@@ -128,7 +148,11 @@ pub(crate) fn parse_at(text: &str, start: usize) -> Option<WikiLink> {
                 Some(block) => Anchor::Block(block.to_owned()),
                 None => Anchor::Heading(a_text.to_owned()),
             };
-            (inner_start..inner_start + h, Some(anchor), Some(a_start..target_end))
+            (
+                inner_start..inner_start + h,
+                Some(anchor),
+                Some(a_start..target_end),
+            )
         }
         None => (inner_start..target_end, None, None),
     };
@@ -157,7 +181,11 @@ pub(crate) fn scan(text: &str, excluded: &[Range<usize>]) -> Vec<WikiLink> {
     let mut ex = 0;
     while let Some(rel) = text[pos..].find("[[") {
         let open = pos + rel;
-        let start = if open > 0 && bytes[open - 1] == b'!' { open - 1 } else { open };
+        let start = if open > 0 && bytes[open - 1] == b'!' {
+            open - 1
+        } else {
+            open
+        };
         while ex < excluded.len() && excluded[ex].end <= open {
             ex += 1;
         }
@@ -238,12 +266,17 @@ mod tests {
         let l = one("راجع [[أحمد سمير|أحمد]] اليوم");
         assert_eq!(l.path, "أحمد سمير");
         assert_eq!(l.alias.as_deref(), Some("أحمد"));
-        assert_eq!(&"راجع [[أحمد سمير|أحمد]] اليوم"[l.span.clone()], "[[أحمد سمير|أحمد]]");
+        assert_eq!(
+            &"راجع [[أحمد سمير|أحمد]] اليوم"[l.span.clone()],
+            "[[أحمد سمير|أحمد]]"
+        );
     }
 
     #[test]
     fn not_links() {
-        for s in ["[[]]", "[[ ]]", "[[a\nb]]", "[[a", "\\[[x]]", "[[a[b]]", "[[|x]]", "[ [x]]"] {
+        for s in [
+            "[[]]", "[[ ]]", "[[a\nb]]", "[[a", "\\[[x]]", "[[a[b]]", "[[|x]]", "[ [x]]",
+        ] {
             assert_eq!(find_all(s), vec![], "{s:?}");
         }
     }
@@ -274,7 +307,8 @@ mod tests {
     #[test]
     fn excluded_ranges_skip_links() {
         let t = "`[[a]]` [[b]]";
-        let links = scan(t, &[0..7]);
+        let excluded = [Range { start: 0, end: 7 }];
+        let links = scan(t, excluded.as_slice());
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].path, "b");
     }

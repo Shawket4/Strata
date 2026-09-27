@@ -6,7 +6,7 @@ import 'package:strata_ui/src/theme/strata_theme.dart';
 /// Plex Mono. Keys always read left-to-right.
 class KeyboardHintChip extends StatelessWidget {
   /// Creates the hint.
-  const new({super.key, required this.keys, this.onAccent = false});
+  const new({required this.keys, super.key, this.onAccent = false});
 
   /// Key labels in press order, e.g. `['⌘', 'K']`.
   final List<String> keys;

@@ -1,5 +1,3 @@
-import 'dart:ui' show FontVariation;
-
 import 'package:flutter/material.dart';
 
 /// Bundled font families (OFL, see `assets/fonts/licenses`). Fonts are

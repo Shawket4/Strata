@@ -13,9 +13,9 @@ import 'package:strata_ui/src/tokens/metrics.dart';
 class StrataPanes extends StatelessWidget {
   /// Creates the pane layout.
   const new({
-    super.key,
     required this.list,
     required this.detail,
+    super.key,
     this.contextPanel,
     this.contextPanelOpen = false,
     this.onContextPanelClosed,

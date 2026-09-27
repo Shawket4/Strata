@@ -118,7 +118,11 @@ impl Frontmatter {
             [] | [Yaml::Null] => yaml_rust2::yaml::Hash::new(),
             [Yaml::Hash(map)] => map.clone(),
             [_] => return Err(FrontmatterError::NotAMapping),
-            _ => return Err(FrontmatterError::Unsupported("multiple YAML documents".into())),
+            _ => {
+                return Err(FrontmatterError::Unsupported(
+                    "multiple YAML documents".into(),
+                ));
+            }
         };
         if map.len() != self.entries.len() {
             return Err(FrontmatterError::Unsupported(format!(
@@ -137,7 +141,9 @@ impl Frontmatter {
                     .map(|(_, v)| v)
             });
             let Some(node) = node else {
-                return Err(FrontmatterError::Unsupported(format!("key `{key}` not found")));
+                return Err(FrontmatterError::Unsupported(format!(
+                    "key `{key}` not found"
+                )));
             };
             entry.value = yaml::to_property(node, raw_scalar(&entry.raw));
         }
@@ -207,7 +213,11 @@ impl Frontmatter {
             return Err(FrontmatterError::NestedValue(key.to_owned()));
         }
         let raw = render_entry(key, &value, self.eol);
-        if let Some(entry) = self.entries.iter_mut().find(|e| e.key.as_deref() == Some(key)) {
+        if let Some(entry) = self
+            .entries
+            .iter_mut()
+            .find(|e| e.key.as_deref() == Some(key))
+        {
             if entry.value == value {
                 return Ok(());
             }
@@ -266,12 +276,10 @@ impl Frontmatter {
             for e in ordered {
                 out.push_str(&e.leading);
                 match (canonical, e.key.as_deref().and_then(KnownKey::from_name)) {
-                    (true, Some(k)) if self.error.is_none() => {
-                        match canonical_value(k, &e.value) {
-                            Some(v) => out.push_str(&render_entry(k.as_str(), &v, self.eol)),
-                            None => out.push_str(&e.raw),
-                        }
-                    }
+                    (true, Some(k)) if self.error.is_none() => match canonical_value(k, &e.value) {
+                        Some(v) => out.push_str(&render_entry(k.as_str(), &v, self.eol)),
+                        None => out.push_str(&e.raw),
+                    },
                     _ => out.push_str(&e.raw),
                 }
             }
@@ -292,9 +300,9 @@ fn sort_rank(e: &Entry) -> usize {
 /// The canonical value of a known key, or `None` when it has no canonical form (nested).
 fn canonical_value(key: KnownKey, value: &PropertyValue) -> Option<PropertyValue> {
     match (key.shape(), value) {
-        (_, PropertyValue::Other) => None,
+        (_, PropertyValue::Other)
+        | (ValueShape::Text | ValueShape::Link, PropertyValue::List(_)) => None,
         (ValueShape::List | ValueShape::LinkList, v) => Some(PropertyValue::List(v.to_list())),
-        (ValueShape::Text | ValueShape::Link, PropertyValue::List(_)) => None,
         (ValueShape::Text | ValueShape::Link, v) => Some(v.clone()),
     }
 }
@@ -454,7 +462,10 @@ mod tests {
         assert_eq!(f.entries[0].leading, "# c\n");
         assert_eq!(f.entries[1].raw, "tags:\n  - a\n\n  - b\n");
         assert_eq!(f.trailing, "\n# end\n");
-        assert_eq!(f.get("tags"), Some(&PropertyValue::List(vec!["a".into(), "b".into()])));
+        assert_eq!(
+            f.get("tags"),
+            Some(&PropertyValue::List(vec!["a".into(), "b".into()]))
+        );
         assert_eq!(f.get("id"), Some(&PropertyValue::Text("1".into())));
         assert_eq!(f.get("x"), Some(&PropertyValue::Text("line\n".into())));
     }
@@ -506,7 +517,8 @@ mod tests {
     #[test]
     fn set_same_value_is_noop() {
         let mut f = fm("title:   'x'\n");
-        f.set("title", PropertyValue::Text("x".into())).unwrap_or_default();
+        f.set("title", PropertyValue::Text("x".into()))
+            .unwrap_or_default();
         assert!(!f.is_modified());
         assert_eq!(f.render(), "---\ntitle:   'x'\n---\n");
     }

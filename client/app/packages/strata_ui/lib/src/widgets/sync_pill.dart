@@ -56,8 +56,8 @@ final class SyncConflict extends SyncStatus {
 class SyncPill extends StatelessWidget {
   /// Creates the sync pill.
   const new({
-    super.key,
     required this.status,
+    super.key,
     this.onPressed,
     this.dense = false,
   });

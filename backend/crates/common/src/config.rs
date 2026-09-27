@@ -32,7 +32,7 @@ pub struct Config {
     pub bind: SocketAddr,
     /// IANA timezone used for users who have not set one (tasks, reminders, digests).
     pub default_timezone: String,
-    /// PostgreSQL connection settings, one URL per role (§5.2).
+    /// Postgres connection settings, one URL per role (§5.2).
     pub database: DatabaseConfig,
     /// AI provider settings (§9.1, D20, D23).
     pub ai: AiConfig,

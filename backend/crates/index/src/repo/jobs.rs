@@ -22,7 +22,7 @@ pub struct Job {
     pub kind: String,
     /// Note the job is about.
     pub note_id: Option<NoteId>,
-    /// MessagePack parameters.
+    /// `MessagePack` parameters.
     pub payload: Vec<u8>,
     /// Status.
     pub status: JobStatus,
@@ -53,7 +53,7 @@ pub struct NewJob {
     pub kind: String,
     /// Note.
     pub note_id: Option<NoteId>,
-    /// MessagePack parameters.
+    /// `MessagePack` parameters.
     pub payload: Vec<u8>,
     /// Earliest run time.
     pub run_after: DateTime<Utc>,

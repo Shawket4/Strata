@@ -57,7 +57,7 @@ pub struct IdempotencyRecord {
     pub op_id: OpId,
     /// Pushing device.
     pub device_id: DeviceId,
-    /// MessagePack result.
+    /// `MessagePack` result.
     pub result: Vec<u8>,
     /// Stored at.
     pub created: DateTime<Utc>,

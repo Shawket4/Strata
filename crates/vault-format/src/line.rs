@@ -97,16 +97,6 @@ pub(crate) fn line_start(text: &str, pos: usize) -> usize {
     text[..pos].rfind('\n').map_or(0, |i| i + 1)
 }
 
-/// End offset (before the terminator) of the line containing byte `pos`.
-pub(crate) fn line_end(text: &str, pos: usize) -> usize {
-    let end = text[pos..].find('\n').map_or(text.len(), |i| pos + i);
-    if end > pos && text.as_bytes()[end - 1] == b'\r' {
-        end - 1
-    } else {
-        end
-    }
-}
-
 /// Returns `range` with trailing ASCII whitespace (spaces, tabs, CR, LF) removed.
 pub(crate) fn trim_end_range(text: &str, range: Range<usize>) -> Range<usize> {
     let trimmed = text[range.clone()].trim_end_matches([' ', '\t', '\r', '\n']);
@@ -133,7 +123,9 @@ mod tests {
 
     #[test]
     fn iterates_lines_with_offsets() {
-        let got: Vec<_> = lines("ab\r\n\ncd").map(|l| (l.start, l.content, l.eol)).collect();
+        let got: Vec<_> = lines("ab\r\n\ncd")
+            .map(|l| (l.start, l.content, l.eol))
+            .collect();
         assert_eq!(got, vec![(0, "ab", "\r\n"), (4, "", "\n"), (5, "cd", "")]);
         assert_eq!(lines("x\n").count(), 1);
         assert_eq!(lines("").count(), 0);
@@ -143,9 +135,6 @@ mod tests {
     fn line_bounds() {
         let t = "ab\r\ncd\nef";
         assert_eq!(line_start(t, 5), 4);
-        assert_eq!(line_end(t, 4), 6);
-        assert_eq!(line_end(t, 0), 2);
-        assert_eq!(line_end(t, 8), 9);
         assert_eq!(trim_end_range("ab \r\n", 0..5), 0..2);
     }
 }

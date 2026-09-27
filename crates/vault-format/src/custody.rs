@@ -12,6 +12,7 @@
 //! (person) or `with`/`from` (counterparty).
 
 use std::fmt;
+use std::fmt::Write as _;
 
 use chrono::NaiveDate;
 
@@ -187,7 +188,7 @@ impl CustodyEvent {
                     (Role::Person, _) => "by",
                     (Role::Counterparty, _) => "with",
                 };
-                out.push_str(&format!(" {kw} {link}"));
+                let _ = write!(out, " {kw} {link}");
             }
         }
         out.push_str(" —");
@@ -206,7 +207,8 @@ impl CustodyEvent {
             .or_else(|| line.trim_end().strip_prefix("* "))
             .ok_or(CustodyParseError::NotABullet)?;
         let date_text = rest.get(..10).ok_or(CustodyParseError::BadDate)?;
-        let date = NaiveDate::parse_from_str(date_text, "%Y-%m-%d").map_err(|_| CustodyParseError::BadDate)?;
+        let date = NaiveDate::parse_from_str(date_text, "%Y-%m-%d")
+            .map_err(|_| CustodyParseError::BadDate)?;
         let after_date = &rest[10..];
         let sep = SEPARATORS
             .iter()
@@ -214,7 +216,8 @@ impl CustodyEvent {
             .ok_or(CustodyParseError::MissingSeparator)?;
         let body = &after_date[sep.len()..];
         let links = wikilink::find_all(body);
-        let split = last_separator_outside(body, &links).ok_or(CustodyParseError::MissingSeparator)?;
+        let split =
+            last_separator_outside(body, &links).ok_or(CustodyParseError::MissingSeparator)?;
         let (event, cites) = (&body[..split.0], &body[split.1..]);
         let citations = parse_citations(cites)?;
         let mut words = event.splitn(2, ' ');
@@ -251,7 +254,13 @@ impl CustodyEvent {
                 "with" | "from" => Some(Role::Counterparty),
                 _ => None,
             }
-            .ok_or_else(|| CustodyParseError::Unexpected(if between.is_empty() { args[link.span.clone()].to_owned() } else { between.to_owned() }))?;
+            .ok_or_else(|| {
+                CustodyParseError::Unexpected(if between.is_empty() {
+                    args[link.span.clone()].to_owned()
+                } else {
+                    between.to_owned()
+                })
+            })?;
             let slot = self.role_mut(role);
             if slot.is_some() {
                 return Err(CustodyParseError::DuplicateRole);
@@ -296,7 +305,9 @@ fn parse_citations(text: &str) -> Result<Vec<String>, CustodyParseError> {
     let mut out = Vec::new();
     for l in &links {
         if !text[pos..l.span.start].trim().is_empty() {
-            return Err(CustodyParseError::Unexpected(text[pos..l.span.start].trim().to_owned()));
+            return Err(CustodyParseError::Unexpected(
+                text[pos..l.span.start].trim().to_owned(),
+            ));
         }
         out.push(text[l.span.clone()].to_owned());
         pos = l.span.end;
@@ -339,7 +350,11 @@ pub fn parse_section(content: &str) -> (Vec<CustodyEvent>, Vec<BadLine>) {
 pub fn render_section(events: &[CustodyEvent]) -> String {
     let mut sorted: Vec<&CustodyEvent> = events.iter().collect();
     sorted.sort_by(|a, b| b.date.cmp(&a.date));
-    sorted.iter().map(|e| e.to_line()).collect::<Vec<_>>().join("\n")
+    sorted
+        .iter()
+        .map(|e| e.to_line())
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// Where a document is after its custody events.
@@ -395,7 +410,11 @@ impl CustodyState {
                 if person.is_some() {
                     self.last_holder.clone_from(&person);
                 }
-                self.status = if person.is_some() { DocumentStatus::CheckedOut } else { DocumentStatus::Stored };
+                self.status = if person.is_some() {
+                    DocumentStatus::CheckedOut
+                } else {
+                    DocumentStatus::Stored
+                };
             }
             T::Lost => {
                 self.location = None;
@@ -435,9 +454,15 @@ impl CustodyState {
 
     /// Writes `location`, `holder`, `last-holder` and `status` (empty values as `""`).
     pub fn write_to(&self, fm: &mut Frontmatter) -> Result<(), FrontmatterError> {
-        fm.set_text(KnownKey::Location, self.location.clone().unwrap_or_default())?;
+        fm.set_text(
+            KnownKey::Location,
+            self.location.clone().unwrap_or_default(),
+        )?;
         fm.set_text(KnownKey::Holder, self.holder.clone().unwrap_or_default())?;
-        fm.set_text(KnownKey::LastHolder, self.last_holder.clone().unwrap_or_default())?;
+        fm.set_text(
+            KnownKey::LastHolder,
+            self.last_holder.clone().unwrap_or_default(),
+        )?;
         fm.set_text(KnownKey::Status, self.status.as_str())
     }
 }
@@ -494,13 +519,31 @@ mod tests {
             ("2026-01-01 — lost — [[a]]", E::NotABullet),
             ("- 2026-13-01 — lost — [[a]]", E::BadDate),
             ("- 2026-01-01 lost [[a]]", E::MissingSeparator),
-            ("- 2026-01-01 — misplaced — [[a]]", E::UnknownType("misplaced".into())),
-            ("- 2026-01-01 — stored-at — [[a]]", E::MissingPrimary(CustodyEventType::StoredAt)),
-            ("- 2026-01-01 — lost near [[x]] — [[a]]", E::Unexpected("near".into())),
-            ("- 2026-01-01 — lost by [[x]] by [[y]] — [[a]]", E::DuplicateRole),
+            (
+                "- 2026-01-01 — misplaced — [[a]]",
+                E::UnknownType("misplaced".into()),
+            ),
+            (
+                "- 2026-01-01 — stored-at — [[a]]",
+                E::MissingPrimary(CustodyEventType::StoredAt),
+            ),
+            (
+                "- 2026-01-01 — lost near [[x]] — [[a]]",
+                E::Unexpected("near".into()),
+            ),
+            (
+                "- 2026-01-01 — lost by [[x]] by [[y]] — [[a]]",
+                E::DuplicateRole,
+            ),
             ("- 2026-01-01 — lost —", E::MissingSeparator),
-            ("- 2026-01-01 — lost — see notes", E::Unexpected("see notes".into())),
-            ("- 2026-01-01 — lost [[x]] — [[a]]", E::Unexpected("[[x]]".into())),
+            (
+                "- 2026-01-01 — lost — see notes",
+                E::Unexpected("see notes".into()),
+            ),
+            (
+                "- 2026-01-01 — lost [[x]] — [[a]]",
+                E::Unexpected("[[x]]".into()),
+            ),
         ];
         for (line, err) in cases {
             assert_eq!(CustodyEvent::parse(line), Err(err), "{line}");
@@ -530,7 +573,10 @@ mod tests {
             })
         );
         assert_eq!(render_section(&events), section.trim_end());
-        assert_eq!(CustodyState::derive(&events[1..]).map(|s| s.status), Some(DocumentStatus::CheckedOut));
+        assert_eq!(
+            CustodyState::derive(&events[1..]).map(|s| s.status),
+            Some(DocumentStatus::CheckedOut)
+        );
         assert_eq!(CustodyState::derive(&[]), None);
     }
 

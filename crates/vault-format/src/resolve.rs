@@ -32,7 +32,11 @@ fn is_markdown(path: &str) -> bool {
 
 /// The path as it appears in a link: `.md` removed, other extensions kept.
 pub fn link_path(path: &str) -> &str {
-    if is_markdown(path) { &path[..path.len() - 3] } else { path }
+    if is_markdown(path) {
+        &path[..path.len() - 3]
+    } else {
+        path
+    }
 }
 
 /// The name a file is linked by: the file name without `.md` (other extensions kept).
@@ -77,8 +81,14 @@ impl PathIndex {
         let mut by_name: HashMap<String, Vec<usize>> = HashMap::new();
         let mut by_link_path: HashMap<String, Vec<usize>> = HashMap::new();
         for (i, p) in paths.iter().enumerate() {
-            by_name.entry(link_name(p).to_lowercase()).or_default().push(i);
-            by_link_path.entry(link_path(p).to_lowercase()).or_default().push(i);
+            by_name
+                .entry(link_name(p).to_lowercase())
+                .or_default()
+                .push(i);
+            by_link_path
+                .entry(link_path(p).to_lowercase())
+                .or_default()
+                .push(i);
             if is_markdown(p) {
                 // `[[notes/x.md]]` also names the file.
                 by_link_path.entry(p.to_lowercase()).or_default().push(i);
@@ -98,7 +108,9 @@ impl PathIndex {
 
     /// Whether `path` is indexed (exact).
     pub fn contains(&self, path: &str) -> bool {
-        self.paths.binary_search_by(|p| p.as_str().cmp(path)).is_ok()
+        self.paths
+            .binary_search_by(|p| p.as_str().cmp(path))
+            .is_ok()
     }
 
     /// Resolves the path part of a link (`Note`, `folder/Note`, `image.png`, `./x`) written in
@@ -115,7 +127,11 @@ impl PathIndex {
         }
         if t.starts_with("./") || t.starts_with("../") {
             let base = source.map_or("", folder);
-            let joined = if base.is_empty() { t.to_owned() } else { format!("{base}/{t}") };
+            let joined = if base.is_empty() {
+                t.to_owned()
+            } else {
+                format!("{base}/{t}")
+            };
             return match normalize(&joined) {
                 Some(p) => self.narrow(self.exact(&p), &p, source),
                 None => Resolution::Unresolved,
@@ -124,7 +140,11 @@ impl PathIndex {
         let t = t.trim_start_matches('/');
         let candidates = if t.contains('/') {
             let exact = self.exact(t);
-            if exact.is_empty() { self.suffix(t) } else { exact }
+            if exact.is_empty() {
+                self.suffix(t)
+            } else {
+                exact
+            }
         } else {
             let mut c = self
                 .by_name
@@ -201,7 +221,11 @@ impl PathIndex {
             .by_name
             .get(&name.to_lowercase())
             .is_none_or(|v| v.len() <= 1);
-        if unique { name.to_owned() } else { link_path(target).to_owned() }
+        if unique {
+            name.to_owned()
+        } else {
+            link_path(target).to_owned()
+        }
     }
 }
 
@@ -234,7 +258,10 @@ mod tests {
         assert_eq!(i.resolve("Pricing.md", None), r("notes/Pricing.md"));
         assert_eq!(i.resolve(" Pricing ", None), r("notes/Pricing.md"));
         assert_eq!(i.resolve("أحمد سمير", None), r("people/أحمد سمير.md"));
-        assert_eq!(i.resolve("scan.pdf", None), r("attachments/2026/09/scan.pdf"));
+        assert_eq!(
+            i.resolve("scan.pdf", None),
+            r("attachments/2026/09/scan.pdf")
+        );
         assert_eq!(i.resolve("scan", None), Resolution::Unresolved);
         assert_eq!(i.resolve("v1.2 plan", None), r("notes/v1.2 plan.md"));
         assert_eq!(i.resolve("", None), Resolution::CurrentNote);
@@ -245,9 +272,15 @@ mod tests {
         let i = idx();
         assert_eq!(
             i.resolve("Meeting", None),
-            Resolution::Ambiguous(vec!["notes/a/Meeting.md".into(), "notes/b/Meeting.md".into()])
+            Resolution::Ambiguous(vec![
+                "notes/a/Meeting.md".into(),
+                "notes/b/Meeting.md".into()
+            ])
         );
-        assert_eq!(i.resolve("Meeting", Some("notes/b/Other.md")), r("notes/b/Meeting.md"));
+        assert_eq!(
+            i.resolve("Meeting", Some("notes/b/Other.md")),
+            r("notes/b/Meeting.md")
+        );
         assert_eq!(i.resolve("a/Meeting", None), r("notes/a/Meeting.md"));
         assert_eq!(i.resolve("notes/b/Meeting", None), r("notes/b/Meeting.md"));
         assert_eq!(i.resolve("Readme", None), r("Readme.md"));
@@ -261,9 +294,18 @@ mod tests {
     #[test]
     fn relative_links() {
         let i = idx();
-        assert_eq!(i.resolve("./Meeting", Some("notes/a/x.md")), r("notes/a/Meeting.md"));
-        assert_eq!(i.resolve("../b/Meeting", Some("notes/a/x.md")), r("notes/b/Meeting.md"));
-        assert_eq!(i.resolve("../../../x", Some("notes/a/x.md")), Resolution::Unresolved);
+        assert_eq!(
+            i.resolve("./Meeting", Some("notes/a/x.md")),
+            r("notes/a/Meeting.md")
+        );
+        assert_eq!(
+            i.resolve("../b/Meeting", Some("notes/a/x.md")),
+            r("notes/b/Meeting.md")
+        );
+        assert_eq!(
+            i.resolve("../../../x", Some("notes/a/x.md")),
+            Resolution::Unresolved
+        );
     }
 
     #[test]

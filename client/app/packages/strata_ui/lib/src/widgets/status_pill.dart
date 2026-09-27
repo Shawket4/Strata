@@ -62,8 +62,8 @@ enum StatusTone {
 class StatusPill extends StatelessWidget {
   /// Creates a status pill.
   const new({
-    super.key,
     required this.label,
+    super.key,
     this.tone = StatusTone.neutral,
     this.icon,
     this.trailing,

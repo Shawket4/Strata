@@ -88,7 +88,9 @@ impl<'a> MoveSet<'a> {
         };
         let new_target = self.moved(&target);
         let new_source = self.moved(source);
-        if self.after.resolve(&link.path, Some(new_source)) == Resolution::Resolved(new_target.to_owned()) {
+        if self.after.resolve(&link.path, Some(new_source))
+            == Resolution::Resolved(new_target.to_owned())
+        {
             return None;
         }
         let mut text = self.after.link_text_for(new_target);
@@ -107,17 +109,20 @@ impl<'a> MoveSet<'a> {
     /// Rewrites wikilink values of the link-holding known keys (relation lists, `source`,
     /// `location`, `holder`, `last-holder`). Unknown keys are never touched. Returns how many
     /// values changed.
-    pub fn rewrite_frontmatter(&self, fm: &mut Frontmatter, source: &str) -> Result<usize, FrontmatterError> {
+    pub fn rewrite_frontmatter(
+        &self,
+        fm: &mut Frontmatter,
+        source: &str,
+    ) -> Result<usize, FrontmatterError> {
         let mut changed = 0;
         for &key in KnownKey::ALL.iter().filter(|k| k.holds_links()) {
             let Some(value) = fm.get(key.as_str()).cloned() else {
                 continue;
             };
-            let map = |s: &str| {
-                WikiLink::parse_exact(s).and_then(|l| self.rewrite_link(&l, source))
-            };
+            let map =
+                |s: &str| WikiLink::parse_exact(s).and_then(|l| self.rewrite_link(&l, source));
             match (key.shape(), value) {
-                (ValueShape::Link, PropertyValue::Text(s)) => {
+                (ValueShape::Link | ValueShape::LinkList, PropertyValue::Text(s)) => {
                     if let Some(new) = map(&s) {
                         fm.set(key.as_str(), PropertyValue::Text(new))?;
                         changed += 1;
@@ -142,12 +147,6 @@ impl<'a> MoveSet<'a> {
                         changed += n;
                     }
                 }
-                (ValueShape::LinkList, PropertyValue::Text(s)) => {
-                    if let Some(new) = map(&s) {
-                        fm.set(key.as_str(), PropertyValue::Text(new))?;
-                        changed += 1;
-                    }
-                }
                 _ => {}
             }
         }
@@ -161,14 +160,23 @@ mod tests {
 
     fn indexes() -> (PathIndex, PathIndex) {
         let before = PathIndex::new(["notes/Old.md", "notes/Other.md", "x/Thing.md", "img/a.png"]);
-        let after = PathIndex::new(["archive/New.md", "notes/Other.md", "x/Thing.md", "img/a.png"]);
+        let after = PathIndex::new([
+            "archive/New.md",
+            "notes/Other.md",
+            "x/Thing.md",
+            "img/a.png",
+        ]);
         (before, after)
     }
 
     #[test]
     fn rewrites_every_form() {
         let (b, a) = indexes();
-        let set = MoveSet::new(&b, &a, [("notes/Old.md".to_owned(), "archive/New.md".to_owned())]);
+        let set = MoveSet::new(
+            &b,
+            &a,
+            [("notes/Old.md".to_owned(), "archive/New.md".to_owned())],
+        );
         let body = "[[Old]] [[Old|alias]] [[Old#Head]] [[Old#^blk|c]] ![[Old]] | [[Old\\|t]] | [[notes/Old]] [[Old.md]] [[Other]] `[[Old]]`\n";
         let r = set.rewrite_body(body, "notes/Other.md");
         assert_eq!(
@@ -182,7 +190,11 @@ mod tests {
     fn new_name_collision_uses_full_path() {
         let before = PathIndex::new(["a/Old.md", "b/Thing.md"]);
         let after = PathIndex::new(["a/Thing.md", "b/Thing.md"]);
-        let set = MoveSet::new(&before, &after, [("a/Old.md".to_owned(), "a/Thing.md".to_owned())]);
+        let set = MoveSet::new(
+            &before,
+            &after,
+            [("a/Old.md".to_owned(), "a/Thing.md".to_owned())],
+        );
         // Link to the moved note gets the full path; the existing `[[Thing]]` link that used to
         // resolve to b/Thing.md would now be ambiguous, so it is made explicit too.
         let r = set.rewrite_body("[[Old]] [[Thing]]", "c/Note.md");
@@ -194,7 +206,11 @@ mod tests {
     fn unresolved_and_ambiguous_are_left_alone() {
         let before = PathIndex::new(["a/X.md", "b/X.md", "c/Old.md"]);
         let after = PathIndex::new(["a/X.md", "b/X.md", "c/New.md"]);
-        let set = MoveSet::new(&before, &after, [("c/Old.md".to_owned(), "c/New.md".to_owned())]);
+        let set = MoveSet::new(
+            &before,
+            &after,
+            [("c/Old.md".to_owned(), "c/New.md".to_owned())],
+        );
         let r = set.rewrite_body("[[X]] [[Missing]] [[#Local]]", "d/n.md");
         assert_eq!(r.changed, 0);
         assert_eq!(r.text, "[[X]] [[Missing]] [[#Local]]");
@@ -204,7 +220,11 @@ mod tests {
     fn relative_links_follow_moved_source() {
         let before = PathIndex::new(["a/S.md", "a/T.md"]);
         let after = PathIndex::new(["b/S.md", "a/T.md"]);
-        let set = MoveSet::new(&before, &after, [("a/S.md".to_owned(), "b/S.md".to_owned())]);
+        let set = MoveSet::new(
+            &before,
+            &after,
+            [("a/S.md".to_owned(), "b/S.md".to_owned())],
+        );
         let r = set.rewrite_body("[[./T]]", "a/S.md");
         assert_eq!(r.text, "[[T]]");
     }
@@ -212,7 +232,11 @@ mod tests {
     #[test]
     fn frontmatter_relations_follow() {
         let (b, a) = indexes();
-        let set = MoveSet::new(&b, &a, [("notes/Old.md".to_owned(), "archive/New.md".to_owned())]);
+        let set = MoveSet::new(
+            &b,
+            &a,
+            [("notes/Old.md".to_owned(), "archive/New.md".to_owned())],
+        );
         let mut fm = Frontmatter::from_parts(
             "---\n",
             "related: [\"[[Old]]\", \"[[Other]]\"]\nlocation: \"[[Old|safe]]\"\nmine: \"[[Old]]\"\npeople: \"[[Old]]\"\n",
@@ -229,7 +253,15 @@ mod tests {
     fn replace_links_with_closure() {
         let text = "a [[x]] b [[y]]";
         let links = crate::wikilink::find_all(text);
-        let r = replace_links(text, &links, |l| (l.path == "y").then(|| "[[z]]".to_owned()));
-        assert_eq!(r, Rewrite { text: "a [[x]] b [[z]]".into(), changed: 1 });
+        let r = replace_links(text, &links, |l| {
+            (l.path == "y").then(|| "[[z]]".to_owned())
+        });
+        assert_eq!(
+            r,
+            Rewrite {
+                text: "a [[x]] b [[z]]".into(),
+                changed: 1
+            }
+        );
     }
 }

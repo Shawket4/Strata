@@ -44,26 +44,8 @@ class RelationLineStyle {
     this.opacity = 1,
   });
 
-  /// Stroke width in logical pixels.
-  final double strokeWidth;
-
-  /// Alternating on/off lengths; `null` for a solid line.
-  final List<double>? dashPattern;
-
-  /// Whether the edge ends in an arrow head.
-  final bool arrow;
-
-  /// Whether the edge is drawn as two parallel lines.
-  final bool doubleLine;
-
-  /// Whether a small cross is drawn at the midpoint.
-  final bool midCross;
-
-  /// Opacity applied to the colour.
-  final double opacity;
-
   /// The line style of [type], from the design spec.
-  static RelationLineStyle of(RelationType type) => switch (type) {
+  factory of(RelationType type) => switch (type) {
     RelationType.related => const RelationLineStyle(strokeWidth: 1.5),
     RelationType.partOf => const RelationLineStyle(strokeWidth: 2, arrow: true),
     RelationType.supports => const RelationLineStyle(
@@ -93,6 +75,24 @@ class RelationLineStyle {
     RelationType.bodyLink => const RelationLineStyle(strokeWidth: 1),
     RelationType.mention => const RelationLineStyle(strokeWidth: 1),
   };
+
+  /// Stroke width in logical pixels.
+  final double strokeWidth;
+
+  /// Alternating on/off lengths; `null` for a solid line.
+  final List<double>? dashPattern;
+
+  /// Whether the edge ends in an arrow head.
+  final bool arrow;
+
+  /// Whether the edge is drawn as two parallel lines.
+  final bool doubleLine;
+
+  /// Whether a small cross is drawn at the midpoint.
+  final bool midCross;
+
+  /// Opacity applied to the colour.
+  final double opacity;
 }
 
 /// Graph node kinds (SCREEN_SPEC "Node kinds" and "Additions").
@@ -153,18 +153,17 @@ class NodeKindColors {
   /// Creates node colours; a `null` [fill] means an outline-only shape.
   const new({required this.stroke, this.fill});
 
+  /// Linear interpolation used by theme animation.
+  factory lerp(NodeKindColors a, NodeKindColors b, double t) => NodeKindColors(
+    fill: Color.lerp(a.fill, b.fill, t),
+    stroke: Color.lerp(a.stroke, b.stroke, t)!,
+  );
+
   /// Fill colour, or `null` for outline shapes (place).
   final Color? fill;
 
   /// Stroke colour (equals the fill for solid shapes).
   final Color stroke;
-
-  /// Linear interpolation used by theme animation.
-  static NodeKindColors lerp(NodeKindColors a, NodeKindColors b, double t) =>
-      NodeKindColors(
-        fill: Color.lerp(a.fill, b.fill, t),
-        stroke: Color.lerp(a.stroke, b.stroke, t)!,
-      );
 }
 
 /// Relation and node colours for one brightness, as a [ThemeExtension].
@@ -202,15 +201,9 @@ class StrataGraphColors extends ThemeExtension<StrataGraphColors> {
     similarity: Color(0xFF7C8C96),
     bodyLink: Color(0xFF9AAAB3),
     note: NodeKindColors(fill: Color(0xFF0F1B26), stroke: Color(0xFF0F1B26)),
-    concept: NodeKindColors(
-      fill: Color(0xFFDCEAF4),
-      stroke: Color(0xFF2477B3),
-    ),
+    concept: NodeKindColors(fill: Color(0xFFDCEAF4), stroke: Color(0xFF2477B3)),
     person: NodeKindColors(fill: Color(0xFF2F7A55), stroke: Color(0xFF2F7A55)),
-    company: NodeKindColors(
-      fill: Color(0xFF9A6A12),
-      stroke: Color(0xFF9A6A12),
-    ),
+    company: NodeKindColors(fill: Color(0xFF9A6A12), stroke: Color(0xFF9A6A12)),
     document: NodeKindColors(
       fill: Color(0xFF3F4C55),
       stroke: Color(0xFF3F4C55),
@@ -233,15 +226,9 @@ class StrataGraphColors extends ThemeExtension<StrataGraphColors> {
     similarity: Color(0xFF7C8C96),
     bodyLink: Color(0xFF5E7686),
     note: NodeKindColors(fill: Color(0xFFF1F5F7), stroke: Color(0xFFF1F5F7)),
-    concept: NodeKindColors(
-      fill: Color(0xFF1B3A55),
-      stroke: Color(0xFF6CB4DD),
-    ),
+    concept: NodeKindColors(fill: Color(0xFF1B3A55), stroke: Color(0xFF6CB4DD)),
     person: NodeKindColors(fill: Color(0xFF6CC495), stroke: Color(0xFF6CC495)),
-    company: NodeKindColors(
-      fill: Color(0xFFC99A3E),
-      stroke: Color(0xFFC99A3E),
-    ),
+    company: NodeKindColors(fill: Color(0xFFC99A3E), stroke: Color(0xFFC99A3E)),
     document: NodeKindColors(
       fill: Color(0xFFB9C8D0),
       stroke: Color(0xFFB9C8D0),

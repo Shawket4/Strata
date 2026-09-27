@@ -55,7 +55,10 @@ impl BlockKind {
     /// Whether a block ID for this kind goes on its own line after the block (Obsidian's rule
     /// for structured blocks) rather than at the end of its last line.
     pub fn id_on_own_line(self) -> bool {
-        matches!(self, Self::BlockQuote | Self::CodeBlock | Self::Table | Self::Html)
+        matches!(
+            self,
+            Self::BlockQuote | Self::CodeBlock | Self::Table | Self::Html
+        )
     }
 }
 
@@ -187,18 +190,24 @@ impl Structure {
         let mut path: Vec<(u8, String)> = Vec::new();
         let parser = Parser::new_ext(body, markdown_options()).into_offset_iter();
         for (event, range) in parser {
-            let nested = stack
-                .iter()
-                .any(|c| matches!(c, Container::Item { .. } | Container::Quote | Container::Footnote));
+            let nested = stack.iter().any(|c| {
+                matches!(
+                    c,
+                    Container::Item { .. } | Container::Quote | Container::Footnote
+                )
+            });
             match event {
                 Event::Code(_) | Event::InlineMath(_) | Event::DisplayMath(_) => {
                     s.code_spans.push(range);
                 }
-                Event::Start(tag) => s.start(body, tag, range, nested, &mut stack, &mut path),
+                Event::Start(tag) => s.start(body, &tag, range, nested, &mut stack, &mut path),
                 Event::End(end) => {
                     if matches!(
                         end,
-                        TagEnd::Item | TagEnd::BlockQuote(_) | TagEnd::FootnoteDefinition | TagEnd::List(_)
+                        TagEnd::Item
+                            | TagEnd::BlockQuote(_)
+                            | TagEnd::FootnoteDefinition
+                            | TagEnd::List(_)
                     ) {
                         stack.pop();
                     }
@@ -212,7 +221,7 @@ impl Structure {
     fn start(
         &mut self,
         body: &str,
-        tag: Tag<'_>,
+        tag: &Tag<'_>,
         range: Range<usize>,
         nested: bool,
         stack: &mut Vec<Container>,
@@ -226,7 +235,7 @@ impl Structure {
                 }
             }
             Tag::Heading { level, .. } => {
-                let level = level as u8;
+                let level = *level as u8;
                 let span = trim_end_range(body, range);
                 let text = heading_text(&body[span.clone()]);
                 if !nested {
@@ -309,9 +318,18 @@ impl Structure {
         self.push_block(body, BlockKind::Paragraph, span, heading_path);
     }
 
-    fn push_block(&mut self, body: &str, kind: BlockKind, range: Range<usize>, heading_path: Vec<String>) {
+    fn push_block(
+        &mut self,
+        body: &str,
+        kind: BlockKind,
+        range: Range<usize>,
+        heading_path: Vec<String>,
+    ) {
         let span = trim_end_range(body, range);
-        let id = if matches!(kind, BlockKind::Paragraph | BlockKind::ListItem | BlockKind::Footnote) {
+        let id = if matches!(
+            kind,
+            BlockKind::Paragraph | BlockKind::ListItem | BlockKind::Footnote
+        ) {
             trailing_block_id(body, &span)
         } else {
             None
@@ -385,7 +403,11 @@ fn heading_text(src: &str) -> String {
         // Setext: every line except the underline, joined.
         let lines: Vec<&str> = src.lines().collect();
         let content = &lines[..lines.len().saturating_sub(1)];
-        content.iter().map(|l| l.trim()).collect::<Vec<_>>().join(" ")
+        content
+            .iter()
+            .map(|l| l.trim())
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
 
@@ -408,7 +430,9 @@ pub fn is_tag_char(c: char) -> bool {
 pub fn is_valid_tag(name: &str) -> bool {
     !name.is_empty()
         && name.chars().all(is_tag_char)
-        && !name.chars().all(|c| c.is_ascii_digit() || c == '/' || c == '_' || c == '-')
+        && !name
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == '/' || c == '_' || c == '-')
 }
 
 fn scan_tags(text: &str, skip: &[Range<usize>]) -> Vec<InlineTag> {
@@ -465,14 +489,23 @@ mod tests {
     #[test]
     fn tag_spans() {
         let t = tags("a #b/c d");
-        assert_eq!(t, vec![InlineTag { span: 2..6, name: "b/c".into() }]);
+        assert_eq!(
+            t,
+            vec![InlineTag {
+                span: 2..6,
+                name: "b/c".into()
+            }]
+        );
     }
 
     #[test]
     fn headings_and_paths() {
         let body = "# A\n\n## B ##\n\ntext\n\n### C\n\n## D\nSetext\n---\n";
         let h = analyze(body).headings;
-        let got: Vec<_> = h.iter().map(|h| (h.level, h.text.as_str(), h.path.join(">"))).collect();
+        let got: Vec<_> = h
+            .iter()
+            .map(|h| (h.level, h.text.as_str(), h.path.join(">")))
+            .collect();
         assert_eq!(
             got,
             [
@@ -494,7 +527,13 @@ mod tests {
         let got: Vec<_> = a
             .blocks
             .iter()
-            .map(|b| (b.kind, &body[b.span.clone()], b.id.as_ref().map(|i| i.id.as_str())))
+            .map(|b| {
+                (
+                    b.kind,
+                    &body[b.span.clone()],
+                    b.id.as_ref().map(|i| i.id.as_str()),
+                )
+            })
             .collect();
         assert_eq!(
             got,
@@ -508,7 +547,13 @@ mod tests {
             ]
         );
         let p1 = a.block_by_id("p1").map(|b| b.id.clone());
-        assert_eq!(p1, Some(Some(BlockId { id: "p1".into(), span: 9..12 })));
+        assert_eq!(
+            p1,
+            Some(Some(BlockId {
+                id: "p1".into(),
+                span: 9..12
+            }))
+        );
     }
 
     #[test]

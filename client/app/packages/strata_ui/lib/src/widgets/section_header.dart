@@ -8,8 +8,8 @@ import 'package:strata_ui/src/tokens/typography.dart';
 class StrataSectionHeader extends StatelessWidget {
   /// Creates a section header.
   const new({
-    super.key,
     required this.title,
+    super.key,
     this.count,
     this.trailing,
     this.padding = const EdgeInsetsDirectional.fromSTEB(

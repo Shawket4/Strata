@@ -3,14 +3,16 @@
 use crate::resolve::link_name;
 
 /// Characters Obsidian cannot use in note names (they break links or paths).
-pub const FORBIDDEN_CHARS: &[char] = &['*', '"', '\\', '/', '<', '>', ':', '|', '?', '#', '^', '[', ']'];
+pub const FORBIDDEN_CHARS: &[char] = &[
+    '*', '"', '\\', '/', '<', '>', ':', '|', '?', '#', '^', '[', ']',
+];
 
 /// Longest file name (bytes, extension included) Strata writes; most file systems allow 255.
 pub const MAX_NAME_BYTES: usize = 255;
 
 const RESERVED_WINDOWS: &[&str] = &[
-    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1",
-    "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+    "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
+    "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
 ];
 
 /// Why a file name is not allowed.
@@ -57,7 +59,10 @@ pub fn validate_file_name(name: &str) -> Result<(), FileNameError> {
         return Err(FileNameError::EdgeWhitespaceOrDot);
     }
     let stem = name.split('.').next().unwrap_or(name);
-    if RESERVED_WINDOWS.iter().any(|r| r.eq_ignore_ascii_case(stem)) {
+    if RESERVED_WINDOWS
+        .iter()
+        .any(|r| r.eq_ignore_ascii_case(stem))
+    {
         return Err(FileNameError::Reserved(stem.to_owned()));
     }
     if name.len() > MAX_NAME_BYTES {
@@ -113,21 +118,29 @@ pub fn sanitize_file_name(title: &str) -> String {
         }
     }
     let collapsed = mapped.split_whitespace().collect::<Vec<_>>().join(" ");
-    let mut name = collapsed.trim_start_matches('.').trim_end_matches(['.', ' ']).trim().to_owned();
+    let mut name = collapsed
+        .trim_start_matches('.')
+        .trim_end_matches(['.', ' '])
+        .trim()
+        .to_owned();
     if name.len() > 200 {
         let mut cut = 200;
         while !name.is_char_boundary(cut) {
             cut -= 1;
         }
         name.truncate(cut);
-        name = name.trim_end_matches(['.', ' ']).to_owned();
+        let trimmed_len = name.trim_end_matches(['.', ' ']).len();
+        name.truncate(trimmed_len);
     }
     let stem = name.split('.').next().unwrap_or(&name).to_owned();
-    if RESERVED_WINDOWS.iter().any(|r| r.eq_ignore_ascii_case(&stem)) {
+    if RESERVED_WINDOWS
+        .iter()
+        .any(|r| r.eq_ignore_ascii_case(&stem))
+    {
         name.insert(stem.len(), '_');
     }
     if name.is_empty() {
-        name = "Untitled".to_owned();
+        "Untitled".clone_into(&mut name);
     }
     name
 }
@@ -143,11 +156,13 @@ pub fn unique_name<'a, I>(base: &str, taken: I) -> String
 where
     I: IntoIterator<Item = &'a str>,
 {
-    let taken: std::collections::HashSet<String> = taken.into_iter().map(str::to_lowercase).collect();
+    let taken: std::collections::HashSet<String> =
+        taken.into_iter().map(str::to_lowercase).collect();
     if !taken.contains(&base.to_lowercase()) {
         return base.to_owned();
     }
-    (2u32..)
+    // At most `taken.len() + 1` candidates are needed before one is free.
+    (2..=taken.len() + 2)
         .map(|n| format!("{base} {n}"))
         .find(|c| !taken.contains(&c.to_lowercase()))
         .unwrap_or_else(|| base.to_owned())
@@ -163,16 +178,37 @@ mod tests {
         assert_eq!(validate_file_name("أحمد سمير.md"), Ok(()));
         assert_eq!(validate_file_name("Safe — Nasr City office.md"), Ok(()));
         for c in FORBIDDEN_CHARS {
-            assert_eq!(validate_file_name(&format!("a{c}b.md")), Err(FileNameError::ForbiddenChar(*c)));
+            assert_eq!(
+                validate_file_name(&format!("a{c}b.md")),
+                Err(FileNameError::ForbiddenChar(*c))
+            );
         }
         assert_eq!(validate_file_name(""), Err(FileNameError::Empty));
         assert_eq!(validate_file_name("   "), Err(FileNameError::Empty));
-        assert_eq!(validate_file_name("a\tb"), Err(FileNameError::ControlChar(9)));
-        assert_eq!(validate_file_name(".hidden.md"), Err(FileNameError::LeadingDot));
-        assert_eq!(validate_file_name(" a.md"), Err(FileNameError::EdgeWhitespaceOrDot));
-        assert_eq!(validate_file_name("a."), Err(FileNameError::EdgeWhitespaceOrDot));
-        assert_eq!(validate_file_name("con.md"), Err(FileNameError::Reserved("con".into())));
-        assert_eq!(validate_file_name(&"a".repeat(256)), Err(FileNameError::TooLong(256)));
+        assert_eq!(
+            validate_file_name("a\tb"),
+            Err(FileNameError::ControlChar(9))
+        );
+        assert_eq!(
+            validate_file_name(".hidden.md"),
+            Err(FileNameError::LeadingDot)
+        );
+        assert_eq!(
+            validate_file_name(" a.md"),
+            Err(FileNameError::EdgeWhitespaceOrDot)
+        );
+        assert_eq!(
+            validate_file_name("a."),
+            Err(FileNameError::EdgeWhitespaceOrDot)
+        );
+        assert_eq!(
+            validate_file_name("con.md"),
+            Err(FileNameError::Reserved("con".into()))
+        );
+        assert_eq!(
+            validate_file_name(&"a".repeat(256)),
+            Err(FileNameError::TooLong(256))
+        );
     }
 
     #[test]
@@ -181,17 +217,26 @@ mod tests {
         assert_eq!(validate_vault_path("/x.md"), Err(PathError::Absolute));
         assert!(matches!(
             validate_vault_path("notes//x.md"),
-            Err(PathError::Segment { error: FileNameError::Empty, .. })
+            Err(PathError::Segment {
+                error: FileNameError::Empty,
+                ..
+            })
         ));
         assert!(matches!(
             validate_vault_path("../x.md"),
-            Err(PathError::Segment { error: FileNameError::LeadingDot, .. })
+            Err(PathError::Segment {
+                error: FileNameError::LeadingDot,
+                ..
+            })
         ));
     }
 
     #[test]
     fn sanitisation() {
-        assert_eq!(sanitize_file_name("Q3: plan / review"), "Q3 - plan - review");
+        assert_eq!(
+            sanitize_file_name("Q3: plan / review"),
+            "Q3 - plan - review"
+        );
         assert_eq!(sanitize_file_name("What? #1 [draft]"), "What 1 draft");
         assert_eq!(sanitize_file_name("  ..hidden..  "), "hidden");
         assert_eq!(sanitize_file_name("عقد وطنية: نسخة"), "عقد وطنية - نسخة");
@@ -206,9 +251,15 @@ mod tests {
 
     #[test]
     fn sanitised_names_are_valid() {
-        for t in ["a:b", "x|y", "..", "a\u{0}b", "é/è", "#", "[[x]]", "a.", "NUL.txt"] {
+        for t in [
+            "a:b", "x|y", "..", "a\u{0}b", "é/è", "#", "[[x]]", "a.", "NUL.txt",
+        ] {
             let s = sanitize_file_name(t);
-            assert_eq!(validate_file_name(&format!("{s}.md")), Ok(()), "{t:?} -> {s:?}");
+            assert_eq!(
+                validate_file_name(&format!("{s}.md")),
+                Ok(()),
+                "{t:?} -> {s:?}"
+            );
         }
     }
 

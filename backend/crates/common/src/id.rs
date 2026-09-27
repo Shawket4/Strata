@@ -1,4 +1,4 @@
-//! ULID identifiers: typed newtypes (stored as PostgreSQL `uuid`) and injectable generators.
+//! ULID identifiers: typed newtypes (stored as Postgres `uuid`) and injectable generators.
 //!
 //! A ULID and a UUID are both 128 bits; the conversion is a byte-for-byte copy, so ordering by
 //! the `uuid` column equals ordering by ULID (time first).
@@ -42,7 +42,7 @@ macro_rules! ulid_newtype {
                 Self(ulid)
             }
 
-            /// Converts from the `uuid` representation used in PostgreSQL.
+            /// Converts from the `uuid` representation used in Postgres.
             pub fn from_uuid(uuid: Uuid) -> Self {
                 Self(Ulid::from(uuid))
             }
@@ -57,7 +57,7 @@ macro_rules! ulid_newtype {
                 self.0
             }
 
-            /// The `uuid` representation stored in PostgreSQL.
+            /// The `uuid` representation stored in Postgres.
             pub fn as_uuid(&self) -> Uuid {
                 Uuid::from(self.0)
             }

@@ -40,7 +40,7 @@ pub fn quote_ident(name: &str) -> Result<String> {
 }
 
 /// Quotes an SQL string literal (`'…'`, doubling embedded quotes; assumes
-/// `standard_conforming_strings = on`, the default since PostgreSQL 9.1). Rejects NUL.
+/// `standard_conforming_strings = on`, the default since Postgres 9.1). Rejects NUL.
 pub fn quote_literal(value: &str) -> Result<String> {
     if value.contains('\0') {
         return Err(IndexError::InvalidArgument("literal contains NUL".into()));

@@ -1,5 +1,3 @@
-import 'dart:ui' show PathMetric;
-
 import 'package:flutter/material.dart';
 import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_ui/src/theme/strata_theme.dart';
@@ -14,9 +12,9 @@ import 'package:strata_ui/src/widgets/tap_target.dart';
 class RelationChip extends StatelessWidget {
   /// Creates a relation chip.
   const new({
-    super.key,
     required this.type,
     required this.label,
+    super.key,
     this.aiConfidence,
     this.mentionOf = NodeKind.person,
     this.onPressed,
@@ -59,9 +57,8 @@ class RelationChip extends StatelessWidget {
     final typeLabel = l10n.relationTypeLabel(type);
     final semantic = StringBuffer('$typeLabel: $label');
     if (confidence != null) {
-      semantic.write(
-        ', ${l10n.aiConfidenceSemantics(confidence: confidence.toStringAsFixed(2))}',
-      );
+      final value = confidence.toStringAsFixed(2);
+      semantic.write(', ${l10n.aiConfidenceSemantics(confidence: value)}');
     }
     final chip = Container(
       constraints: const BoxConstraints(minHeight: 28),
@@ -90,7 +87,8 @@ class RelationChip extends StatelessWidget {
           ),
           if (confidence != null) ...[
             const SizedBox(width: StrataSpacing.s2),
-            Container(
+            Flexible(
+              child: Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: StrataSpacing.s2 - 2,
               ),
@@ -101,8 +99,10 @@ class RelationChip extends StatelessWidget {
               child: Text(
                 aiTagText(l10n.aiTag, confidence),
                 maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: text.monoSmall.copyWith(color: colors.infoText),
               ),
+            ),
             ),
           ],
         ],
@@ -123,8 +123,8 @@ class RelationChip extends StatelessWidget {
 class RelationLineSample extends StatelessWidget {
   /// Creates a line sample.
   const new({
-    super.key,
     required this.type,
+    super.key,
     this.mentionOf = NodeKind.person,
     this.width = 20,
     this.height = 12,
@@ -196,8 +196,18 @@ class RelationLinePainter extends CustomPainter {
     final lineEnd = style.arrow ? end - 1 : end;
     if (style.doubleLine) {
       const gap = 2.0;
-      _drawLine(canvas, paint, Offset(start, y - gap), Offset(lineEnd, y - gap));
-      _drawLine(canvas, paint, Offset(start, y + gap), Offset(lineEnd, y + gap));
+      _drawLine(
+        canvas,
+        paint,
+        Offset(start, y - gap),
+        Offset(lineEnd, y - gap),
+      );
+      _drawLine(
+        canvas,
+        paint,
+        Offset(start, y + gap),
+        Offset(lineEnd, y + gap),
+      );
     } else {
       _drawLine(canvas, paint, Offset(start, y), Offset(lineEnd, y));
     }
@@ -236,7 +246,7 @@ class RelationLinePainter extends CustomPainter {
       return;
     }
     final dashed = Path();
-    for (final PathMetric metric in path.computeMetrics()) {
+    for (final metric in path.computeMetrics()) {
       var distance = 0.0;
       var i = 0;
       while (distance < metric.length) {

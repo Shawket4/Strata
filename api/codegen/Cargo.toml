@@ -4,8 +4,28 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Strata's own Rust client generator (D15 = c): typify types + MessagePack operations"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "strata-codegen"
+path = "src/main.rs"
 
 [dependencies]
+typify = { workspace = true }
+schemars08 = { workspace = true }
+serde_json = { workspace = true }
+syn = { workspace = true }
+quote = { workspace = true }
+proc-macro2 = { workspace = true }
+prettyplease = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
 
 [lints]
 workspace = true

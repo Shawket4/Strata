@@ -1,5 +1,7 @@
 //! YAML value conversion and canonical scalar rendering.
 
+use std::fmt::Write as _;
+
 use yaml_rust2::{Yaml, YamlLoader};
 
 /// A frontmatter property value, reduced to the shapes Obsidian properties use.
@@ -156,9 +158,9 @@ pub(crate) fn double_quote(s: &str) -> String {
             c if c.is_control() || c == '\u{feff}' || c == '\u{2028}' || c == '\u{2029}' => {
                 let code = u32::from(c);
                 if code <= 0xff {
-                    out.push_str(&format!("\\x{code:02x}"));
+                    let _ = write!(out, "\\x{code:02x}");
                 } else {
-                    out.push_str(&format!("\\u{code:04x}"));
+                    let _ = write!(out, "\\u{code:04x}");
                 }
             }
             c => out.push(c),
@@ -202,17 +204,26 @@ mod tests {
 
     #[test]
     fn plain_when_safe() {
-        assert_eq!(render_scalar("Pricing experiments", false), "Pricing experiments");
+        assert_eq!(
+            render_scalar("Pricing experiments", false),
+            "Pricing experiments"
+        );
         assert_eq!(render_scalar("أحمد سمير", true), "أحمد سمير");
         assert_eq!(render_scalar("A. Samir", true), "A. Samir");
-        assert_eq!(render_scalar("2026-09-27T14:32:00+03:00", false), "2026-09-27T14:32:00+03:00");
+        assert_eq!(
+            render_scalar("2026-09-27T14:32:00+03:00", false),
+            "2026-09-27T14:32:00+03:00"
+        );
         assert_eq!(render_scalar("2027-03-31", false), "2027-03-31");
         assert_eq!(render_scalar("01J8ZK3M4X7Q", false), "01J8ZK3M4X7Q");
     }
 
     #[test]
     fn quoted_when_needed() {
-        assert_eq!(render_scalar("[[Churn notes]]", true), "\"[[Churn notes]]\"");
+        assert_eq!(
+            render_scalar("[[Churn notes]]", true),
+            "\"[[Churn notes]]\""
+        );
         assert_eq!(render_scalar("", false), "\"\"");
         assert_eq!(render_scalar("2024", false), "\"2024\"");
         assert_eq!(render_scalar("true", false), "\"true\"");
@@ -222,7 +233,10 @@ mod tests {
         assert_eq!(render_scalar("a, b", false), "a, b");
         assert_eq!(render_scalar("x #y", false), "\"x #y\"");
         assert_eq!(render_scalar(" lead", false), "\" lead\"");
-        assert_eq!(render_scalar("say \"hi\"\n", false), "\"say \\\"hi\\\"\\n\"");
+        assert_eq!(
+            render_scalar("say \"hi\"\n", false),
+            "\"say \\\"hi\\\"\\n\""
+        );
         assert_eq!(render_scalar("null", false), "\"null\"");
         assert_eq!(render_scalar("~", false), "\"~\"");
         assert_eq!(render_scalar("#tag", true), "\"#tag\"");
@@ -230,7 +244,16 @@ mod tests {
 
     #[test]
     fn rendered_scalars_read_back() {
-        for s in ["a\tb", "\u{7}", "back\\slash", "q'uote", "é", "x\u{2028}y", "-1", "0x10"] {
+        for s in [
+            "a\tb",
+            "\u{7}",
+            "back\\slash",
+            "q'uote",
+            "é",
+            "x\u{2028}y",
+            "-1",
+            "0x10",
+        ] {
             assert_eq!(roundtrip_block(s).as_deref(), Some(s), "{s:?}");
         }
         let items: Vec<String> = ["[[A|b]]", "c,d", "", "e"].map(String::from).to_vec();
@@ -239,9 +262,13 @@ mod tests {
 
     #[test]
     fn converts_unquoted_wikilinks() {
-        let parsed = YamlLoader::load_from_str("a: [[X]]\nb:\n  - [[Y]]\n  - z\n").unwrap_or_default();
+        let parsed =
+            YamlLoader::load_from_str("a: [[X]]\nb:\n  - [[Y]]\n  - z\n").unwrap_or_default();
         let doc = &parsed[0];
-        assert_eq!(to_property(&doc["a"], None), PropertyValue::Text("[[X]]".into()));
+        assert_eq!(
+            to_property(&doc["a"], None),
+            PropertyValue::Text("[[X]]".into())
+        );
         assert_eq!(
             to_property(&doc["b"], None),
             PropertyValue::List(vec!["[[Y]]".into(), "z".into()])
@@ -254,9 +281,15 @@ mod tests {
             to_property(&Yaml::Integer(7), Some("007")),
             PropertyValue::Text("007".into())
         );
-        assert_eq!(to_property(&Yaml::Integer(7), None), PropertyValue::Text("7".into()));
+        assert_eq!(
+            to_property(&Yaml::Integer(7), None),
+            PropertyValue::Text("7".into())
+        );
         assert_eq!(to_property(&Yaml::Null, None), PropertyValue::Null);
-        assert_eq!(PropertyValue::Text("x".into()).to_list(), vec!["x".to_owned()]);
+        assert_eq!(
+            PropertyValue::Text("x".into()).to_list(),
+            vec!["x".to_owned()]
+        );
         assert_eq!(PropertyValue::Null.to_list(), Vec::<String>::new());
     }
 }

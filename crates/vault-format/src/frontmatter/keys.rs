@@ -273,9 +273,15 @@ mod tests {
         let names: Vec<_> = KnownKey::ALL.iter().take(9).map(|k| k.as_str()).collect();
         assert_eq!(
             names,
-            ["id", "kind", "title", "aliases", "tags", "created", "updated", "source", "lang"]
+            [
+                "id", "kind", "title", "aliases", "tags", "created", "updated", "source", "lang"
+            ]
         );
-        let rel: Vec<_> = RelationKey::ALL.iter().take(9).map(|k| k.as_str()).collect();
+        let rel: Vec<_> = RelationKey::ALL
+            .iter()
+            .take(9)
+            .map(|k| k.as_str())
+            .collect();
         assert_eq!(
             rel,
             [

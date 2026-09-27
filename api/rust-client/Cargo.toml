@@ -4,8 +4,32 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Strata API client: generated operations and types (D15) over a MessagePack core, plus WebSocket streaming (D24)"
 
 [dependencies]
+reqwest = { workspace = true }
+rmp-serde = { workspace = true }
+rmpv = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+serde_json = { workspace = true }
+ulid = { workspace = true }
+chrono = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
+percent-encoding = { workspace = true }
+url = { workspace = true }
+bytes = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+strata-api = { workspace = true, features = ["test-support"] }
+strata-codegen = { path = "../codegen" }
+actix-web = { workspace = true }
+pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true

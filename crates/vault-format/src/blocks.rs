@@ -27,7 +27,10 @@ pub enum BlockIdError {
 
 /// Whether `id` is a valid block ID to write (`[a-z0-9-]+`).
 pub fn is_valid_block_id(id: &str) -> bool {
-    !id.is_empty() && id.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+    !id.is_empty()
+        && id
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
 }
 
 /// The result of appending an ID.
@@ -117,29 +120,55 @@ mod tests {
     fn appends_after_structured_blocks() {
         let body = "> quote\r\n> more\r\n\r\nafter\r\n";
         let r = append_block_id(body, 0, "q");
-        assert_eq!(r.map(|r| r.body), Ok("> quote\r\n> more\r\n\r\n^q\r\n\r\nafter\r\n".to_owned()));
+        assert_eq!(
+            r.map(|r| r.body),
+            Ok("> quote\r\n> more\r\n\r\n^q\r\n\r\nafter\r\n".to_owned())
+        );
         let body = "| a |\n|---|\n| 1 |";
         let r = append_block_id(body, 0, "t");
         let new = r.map(|r| r.body).unwrap_or_default();
         assert_eq!(new, "| a |\n|---|\n| 1 |\n\n^t");
-        assert_eq!(body::analyze(&new).blocks[0].id.as_ref().map(|b| b.id.as_str()), Some("t"));
+        assert_eq!(
+            body::analyze(&new).blocks[0]
+                .id
+                .as_ref()
+                .map(|b| b.id.as_str()),
+            Some("t")
+        );
     }
 
     #[test]
     fn errors() {
         let body = "# H\n\npara ^x\n\nother\n";
-        assert_eq!(append_block_id(body, 0, "Bad"), Err(BlockIdError::InvalidId("Bad".into())));
+        assert_eq!(
+            append_block_id(body, 0, "Bad"),
+            Err(BlockIdError::InvalidId("Bad".into()))
+        );
         assert_eq!(append_block_id(body, 0, "y"), Err(BlockIdError::Heading));
-        assert_eq!(append_block_id(body, 5, "y"), Err(BlockIdError::AlreadyHasId("x".into())));
-        assert_eq!(append_block_id(body, 2, "y"), Err(BlockIdError::NoBlockAt(2)));
-        assert_eq!(append_block_id(body, 14, "x"), Err(BlockIdError::Duplicate("x".into())));
-        assert_eq!(append_block_id(body, 14, "y").map(|r| r.body), Ok("# H\n\npara ^x\n\nother ^y\n".into()));
+        assert_eq!(
+            append_block_id(body, 5, "y"),
+            Err(BlockIdError::AlreadyHasId("x".into()))
+        );
+        assert_eq!(
+            append_block_id(body, 2, "y"),
+            Err(BlockIdError::NoBlockAt(2))
+        );
+        assert_eq!(
+            append_block_id(body, 14, "x"),
+            Err(BlockIdError::Duplicate("x".into()))
+        );
+        assert_eq!(
+            append_block_id(body, 14, "y").map(|r| r.body),
+            Ok("# H\n\npara ^x\n\nother ^y\n".into())
+        );
     }
 
     #[test]
     fn appended_id_is_detected() {
         let body = "text with [[link]] and `code`\n";
-        let r = append_block_id(body, 0, "c1d2").map(|r| r.body).unwrap_or_default();
+        let r = append_block_id(body, 0, "c1d2")
+            .map(|r| r.body)
+            .unwrap_or_default();
         let a = body::analyze(&r);
         assert_eq!(a.block_by_id("c1d2").map(|b| b.span.clone()), Some(0..35));
     }

@@ -8,8 +8,8 @@ import 'package:strata_ui/src/tokens/metrics.dart';
 class StrataEmptyState extends StatelessWidget {
   /// Creates an empty state.
   const new({
-    super.key,
     required this.title,
+    super.key,
     this.message,
     this.icon = Icons.inbox_outlined,
     this.action,

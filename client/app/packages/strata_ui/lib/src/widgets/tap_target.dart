@@ -10,9 +10,9 @@ import 'package:strata_ui/src/tokens/metrics.dart';
 class StrataTapTarget extends StatelessWidget {
   /// Creates the tap target.
   const new({
-    super.key,
     required this.child,
     required this.semanticLabel,
+    super.key,
     this.onTap,
     this.onLongPress,
     this.selected,

@@ -10,8 +10,10 @@ import 'package:strata_ui/src/widgets/keyboard_hint_chip.dart';
 
 /// Builds the sync indicator for a size class (e.g. a full pill in the app
 /// bar and sidebar, a dense pill in the rail).
-typedef SyncIndicatorBuilder =
-    Widget Function(BuildContext context, SizeClass sizeClass);
+typedef SyncIndicatorBuilder = Widget Function(
+  BuildContext context,
+  SizeClass sizeClass,
+);
 
 /// Chrome labels are clamped to this text scale so navigation never clips;
 /// content keeps the full system scale (PLAN §11: up to 200 %).
@@ -27,13 +29,13 @@ const double _maxChromeTextScale = 1.5;
 class AdaptiveScaffold extends StatelessWidget {
   /// Creates the shell.
   const new({
-    super.key,
     required this.destinations,
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.body,
     required this.title,
     required this.navigationLabel,
+    super.key,
     this.capture,
     this.appBarActions = const [],
     this.syncIndicatorBuilder,
@@ -185,8 +187,7 @@ class AdaptiveScaffold extends StatelessWidget {
               child: NavigationRail(
                 scrollable: true,
                 selectedIndex: railSelected < 0 ? null : railSelected,
-                onDestinationSelected: (i) =>
-                    onDestinationSelected(primary[i]),
+                onDestinationSelected: (i) => onDestinationSelected(primary[i]),
                 leading: action == null
                     ? null
                     : Padding(
@@ -227,7 +228,15 @@ class AdaptiveScaffold extends StatelessWidget {
                       selectedIcon: Icon(
                         destinations[i].selectedIcon ?? destinations[i].icon,
                       ),
-                      label: Text(destinations[i].label),
+                      label: SizedBox(
+                        width: StrataLayout.railWidth - StrataSpacing.s4,
+                        child: Text(
+                          destinations[i].label,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -269,10 +278,10 @@ class AdaptiveScaffold extends StatelessWidget {
 class RailFooterDestination extends StatelessWidget {
   /// Creates the footer destination.
   const new({
-    super.key,
     required this.destination,
     required this.selected,
     required this.onTap,
+    super.key,
   });
 
   /// The destination.
@@ -302,6 +311,7 @@ class RailFooterDestination extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(
             minWidth: StrataLayout.railWidth,
+            maxWidth: StrataLayout.railWidth,
             minHeight: StrataLayout.minTouchTarget + StrataSpacing.s4,
           ),
           child: Padding(
@@ -327,7 +337,8 @@ class RailFooterDestination extends StatelessWidget {
                 const SizedBox(height: StrataSpacing.s1),
                 Text(
                   destination.label,
-                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: text.caption
                       .withWeight(selected ? FontWeight.w600 : FontWeight.w400)
@@ -348,11 +359,11 @@ class RailFooterDestination extends StatelessWidget {
 class StrataSidebar extends StatelessWidget {
   /// Creates the sidebar.
   const new({
-    super.key,
     required this.destinations,
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.navigationLabel,
+    super.key,
     this.capture,
     this.sections = const [],
     this.syncIndicator,
@@ -500,10 +511,10 @@ class _CaptureButton extends StatelessWidget {
 class SidebarItem extends StatelessWidget {
   /// Creates a sidebar row.
   const new({
-    super.key,
     required this.destination,
     required this.selected,
     required this.onTap,
+    super.key,
   });
 
   /// The destination.

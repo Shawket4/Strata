@@ -71,7 +71,8 @@ impl Document {
     /// the file has none. A created frontmatter that stays empty is not rendered.
     pub fn frontmatter_mut(&mut self) -> &mut Frontmatter {
         let eol = self.eol;
-        self.frontmatter.get_or_insert_with(|| Frontmatter::new(eol))
+        self.frontmatter
+            .get_or_insert_with(|| Frontmatter::new(eol))
     }
 
     /// The body text.
@@ -129,7 +130,11 @@ impl Document {
 
     /// Applies a rename/move to this note (which was at `source` before the moves): body links
     /// and frontmatter link values. Returns the number of changed links.
-    pub fn rewrite_links(&mut self, moves: &MoveSet<'_>, source: &str) -> Result<usize, FrontmatterError> {
+    pub fn rewrite_links(
+        &mut self,
+        moves: &MoveSet<'_>,
+        source: &str,
+    ) -> Result<usize, FrontmatterError> {
         let mut changed = 0;
         if let Some(fm) = self.frontmatter.as_mut()
             && fm.error().is_none()
@@ -164,7 +169,15 @@ mod tests {
 
     #[test]
     fn no_frontmatter_cases() {
-        for t in ["", "body", "---\nno close\n", "--- \n", "----\na: b\n----\n", "x\n---\na: b\n---\n", "---"] {
+        for t in [
+            "",
+            "body",
+            "---\nno close\n",
+            "--- \n",
+            "----\na: b\n----\n",
+            "x\n---\na: b\n---\n",
+            "---",
+        ] {
             let d = Document::parse(t);
             assert!(d.frontmatter().is_none(), "{t:?}");
             assert_eq!(d.body(), t);

@@ -13,7 +13,7 @@
 //!    so it vanishes at commit/rollback and a pooled connection can never carry it into the
 //!    next checkout.
 //! 4. Every repository function takes `&mut ScopedTx` — never a raw user ID. Row-level security
-//!    then makes PostgreSQL itself enforce the scope.
+//!    then makes Postgres itself enforce the scope.
 
 use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 use strata_common::UserId;

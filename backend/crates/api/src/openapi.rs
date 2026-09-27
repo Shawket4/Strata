@@ -420,7 +420,8 @@ fn canonical(value: &Value) -> Value {
     }
 }
 
-/// Checks a built document against the conventions. Returns one message per violation.
+/// Checks a built document against the conventions. Returns one message per violation,
+/// sorted.
 pub fn lint(doc: &Value) -> Vec<String> {
     let mut out = Vec::new();
     let mut ids = std::collections::BTreeSet::new();
@@ -441,7 +442,7 @@ pub fn lint(doc: &Value) -> Vec<String> {
             match op["operationId"].as_str() {
                 Some(id) if !id.is_empty() => {
                     if !ids.insert(id.to_owned()) {
-                        out.push(format!("{at}: duplicate operationId `{id}`"));
+                        out.push(format!("duplicate operationId `{id}`"));
                     }
                 }
                 _ => out.push(format!("{at}: missing operationId")),
@@ -453,6 +454,7 @@ pub fn lint(doc: &Value) -> Vec<String> {
         }
     }
     lint_refs(doc, doc, &mut out);
+    out.sort();
     out
 }
 

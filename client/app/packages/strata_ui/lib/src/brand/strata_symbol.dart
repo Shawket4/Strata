@@ -90,10 +90,7 @@ class StrataSymbolPainter extends CustomPainter {
             clockwise: false,
           )
           ..lineTo(40, 32)
-          ..arcToPoint(
-            const Offset(40, 51),
-            radius: const Radius.circular(9.5),
-          )
+          ..arcToPoint(const Offset(40, 51), radius: const Radius.circular(9.5))
           ..lineTo(14, 51),
       StrataSymbolForm.favicon =>
         Path()

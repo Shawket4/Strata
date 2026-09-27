@@ -10,8 +10,8 @@ import 'package:strata_ui/src/widgets/tap_target.dart';
 class CitationChip extends StatelessWidget {
   /// Creates a citation chip.
   const new({
-    super.key,
     required this.label,
+    super.key,
     this.blockRef,
     this.index,
     this.onPressed,

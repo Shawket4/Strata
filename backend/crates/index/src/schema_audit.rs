@@ -98,101 +98,126 @@ pub async fn audit(conn: &mut PgConnection) -> Result<Vec<Violation>> {
         if GLOBAL_TABLES.contains(&t.relname.as_str()) {
             continue;
         }
-        let name = t.relname.clone();
-        let bridge = ACCOUNT_BRIDGE_TABLES.contains(&name.as_str());
-
-        let user_id: Option<(i16, bool, String)> = sqlx::query_as(
-            "SELECT attnum, attnotnull, pg_catalog.format_type(atttypid, atttypmod) \
-             FROM pg_catalog.pg_attribute WHERE attrelid = $1 AND attname = 'user_id' AND NOT attisdropped",
-        )
-        .bind(t.oid)
-        .fetch_optional(&mut *conn)
-        .await?;
-        match &user_id {
-            None => violations.push(Violation::MissingUserId(name.clone())),
-            Some((_, notnull, ty)) if !notnull || ty != "uuid" => {
-                violations.push(Violation::UserIdWrongType(name.clone()));
-            }
-            Some(_) => {}
-        }
-        let first_pk_col: Option<i16> = sqlx::query_scalar(
-            "SELECT conkey[1] FROM pg_catalog.pg_constraint WHERE conrelid = $1 AND contype = 'p'",
-        )
-        .bind(t.oid)
-        .fetch_optional(&mut *conn)
-        .await?;
-        if first_pk_col.is_none() || first_pk_col != user_id.as_ref().map(|u| u.0) {
-            violations.push(Violation::UserIdNotFirstInPrimaryKey(name.clone()));
-        }
+        let bridge = ACCOUNT_BRIDGE_TABLES.contains(&t.relname.as_str());
+        check_user_id(conn, &t, &mut violations).await?;
         if !t.relrowsecurity {
-            violations.push(Violation::RlsNotEnabled(name.clone()));
+            violations.push(Violation::RlsNotEnabled(t.relname.clone()));
         }
         if !t.relforcerowsecurity {
-            violations.push(Violation::RlsNotForced(name.clone()));
+            violations.push(Violation::RlsNotForced(t.relname.clone()));
         }
-
-        let policies: Vec<PolicyRow> = sqlx::query_as(
-            "SELECT polname::text AS polname, polcmd::text AS cmd, polpermissive AS permissive, \
-                    ARRAY(SELECT CASE WHEN r = 0 THEN 'public' ELSE r::regrole::text END \
-                          FROM unnest(polroles) r ORDER BY 1) AS roles, \
-                    replace(pg_catalog.pg_get_expr(polqual, polrelid), 'strata.', '') AS qual, \
-                    replace(pg_catalog.pg_get_expr(polwithcheck, polrelid), 'strata.', '') AS with_check \
-             FROM pg_catalog.pg_policy WHERE polrelid = $1 ORDER BY polname",
-        )
-        .bind(t.oid)
-        .fetch_all(&mut *conn)
-        .await?;
-        let is_standard = |p: &PolicyRow| {
-            p.polname == STANDARD_POLICY
-                && p.cmd == "*"
-                && p.permissive
-                && p.roles == ["public"]
-                && p.qual.as_deref() == Some(STANDARD_EXPR)
-                && p.with_check.as_deref() == Some(STANDARD_EXPR)
-        };
-        let is_accounts = |p: &PolicyRow| {
-            p.polname == ACCOUNTS_POLICY
-                && p.cmd == "*"
-                && p.permissive
-                && p.roles == ["strata_accounts"]
-                && p.qual.as_deref() == Some("true")
-                && p.with_check.as_deref() == Some("true")
-        };
-        if !policies.iter().any(is_standard) {
-            violations.push(Violation::MissingStandardPolicy(name.clone()));
-        }
-        for p in &policies {
-            if !(is_standard(p) || (bridge && is_accounts(p))) {
-                violations.push(Violation::UnexpectedPolicy(name.clone(), p.polname.clone()));
-            }
-        }
-
-        let mut forbidden = vec!["public"];
-        if !bridge {
-            forbidden.push("strata_accounts");
-        }
-        for role in forbidden {
-            for privilege in ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"] {
-                let has: bool = sqlx::query_scalar(
-                    "SELECT pg_catalog.has_table_privilege($1, $2, $3) \
-                         OR ($3 IN ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES') \
-                             AND pg_catalog.has_any_column_privilege($1, $2, $3))",
-                )
-                .bind(role)
-                .bind(t.oid)
-                .bind(privilege)
-                .fetch_one(&mut *conn)
-                .await?;
-                if has {
-                    violations.push(Violation::ForbiddenPrivilege(
-                        name.clone(),
-                        role.to_owned(),
-                        privilege.to_owned(),
-                    ));
-                }
-            }
-        }
+        check_policies(conn, &t, bridge, &mut violations).await?;
+        check_privileges(conn, &t, bridge, &mut violations).await?;
     }
     violations.sort();
     Ok(violations)
+}
+
+async fn check_user_id(
+    conn: &mut PgConnection,
+    t: &TableRow,
+    violations: &mut Vec<Violation>,
+) -> Result<()> {
+    let user_id: Option<(i16, bool, String)> = sqlx::query_as(
+        "SELECT attnum, attnotnull, pg_catalog.format_type(atttypid, atttypmod) \
+         FROM pg_catalog.pg_attribute WHERE attrelid = $1 AND attname = 'user_id' AND NOT attisdropped",
+    )
+    .bind(t.oid)
+    .fetch_optional(&mut *conn)
+    .await?;
+    match &user_id {
+        None => violations.push(Violation::MissingUserId(t.relname.clone())),
+        Some((_, notnull, ty)) if !notnull || ty != "uuid" => {
+            violations.push(Violation::UserIdWrongType(t.relname.clone()));
+        }
+        Some(_) => {}
+    }
+    let first_pk_col: Option<i16> = sqlx::query_scalar(
+        "SELECT conkey[1] FROM pg_catalog.pg_constraint WHERE conrelid = $1 AND contype = 'p'",
+    )
+    .bind(t.oid)
+    .fetch_optional(&mut *conn)
+    .await?;
+    if first_pk_col.is_none() || first_pk_col != user_id.as_ref().map(|u| u.0) {
+        violations.push(Violation::UserIdNotFirstInPrimaryKey(t.relname.clone()));
+    }
+    Ok(())
+}
+
+async fn check_policies(
+    conn: &mut PgConnection,
+    t: &TableRow,
+    bridge: bool,
+    violations: &mut Vec<Violation>,
+) -> Result<()> {
+    let policies: Vec<PolicyRow> = sqlx::query_as(
+        "SELECT polname::text AS polname, polcmd::text AS cmd, polpermissive AS permissive, \
+                ARRAY(SELECT CASE WHEN r = 0 THEN 'public' ELSE r::regrole::text END \
+                      FROM unnest(polroles) r ORDER BY 1) AS roles, \
+                replace(pg_catalog.pg_get_expr(polqual, polrelid), 'strata.', '') AS qual, \
+                replace(pg_catalog.pg_get_expr(polwithcheck, polrelid), 'strata.', '') AS with_check \
+         FROM pg_catalog.pg_policy WHERE polrelid = $1 ORDER BY polname",
+    )
+    .bind(t.oid)
+    .fetch_all(&mut *conn)
+    .await?;
+    let is_standard = |p: &PolicyRow| {
+        p.polname == STANDARD_POLICY
+            && p.cmd == "*"
+            && p.permissive
+            && p.roles == ["public"]
+            && p.qual.as_deref() == Some(STANDARD_EXPR)
+            && p.with_check.as_deref() == Some(STANDARD_EXPR)
+    };
+    let is_accounts = |p: &PolicyRow| {
+        p.polname == ACCOUNTS_POLICY
+            && p.cmd == "*"
+            && p.permissive
+            && p.roles == ["strata_accounts"]
+            && p.qual.as_deref() == Some("true")
+            && p.with_check.as_deref() == Some("true")
+    };
+    if !policies.iter().any(is_standard) {
+        violations.push(Violation::MissingStandardPolicy(t.relname.clone()));
+    }
+    for p in &policies {
+        if !(is_standard(p) || (bridge && is_accounts(p))) {
+            violations.push(Violation::UnexpectedPolicy(t.relname.clone(), p.polname.clone()));
+        }
+    }
+    Ok(())
+}
+
+async fn check_privileges(
+    conn: &mut PgConnection,
+    t: &TableRow,
+    bridge: bool,
+    violations: &mut Vec<Violation>,
+) -> Result<()> {
+    let mut forbidden = vec!["public"];
+    if !bridge {
+        forbidden.push("strata_accounts");
+    }
+    for role in forbidden {
+        for privilege in ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"] {
+            let has: bool = sqlx::query_scalar(
+                "SELECT pg_catalog.has_table_privilege($1, $2, $3) \
+                     OR ($3 IN ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES') \
+                         AND pg_catalog.has_any_column_privilege($1, $2, $3))",
+            )
+            .bind(role)
+            .bind(t.oid)
+            .bind(privilege)
+            .fetch_one(&mut *conn)
+            .await?;
+            if has {
+                violations.push(Violation::ForbiddenPrivilege(
+                    t.relname.clone(),
+                    role.to_owned(),
+                    privilege.to_owned(),
+                ));
+            }
+        }
+    }
+    Ok(())
 }
