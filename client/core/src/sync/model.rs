@@ -212,8 +212,12 @@ pub enum OpPayload {
     RelinkRequest,
     /// Create a task line.
     TaskCreate {
-        /// The note to add it to (`None`: `tasks/Tasks.md`).
-        note_id: Option<String>,
+        /// The note to add it to. For a task without a home note this is the ID of
+        /// `tasks/Tasks.md`; when that note does not exist yet the client generates the ID and
+        /// sets `create_home`, so the server creates the task home under the client's ID.
+        note_id: String,
+        /// Create `tasks/Tasks.md` with `note_id` first.
+        create_home: bool,
         /// The rendered task line (with its `^t-…` block ID).
         line: String,
         /// Skip the duplicate check.
