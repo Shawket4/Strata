@@ -98,8 +98,12 @@ Future<void> pumpVariant(
 /// Wraps [child] for an alchemist golden of [v]: [fake] as the core, the
 /// Strata theme, localisations, window size and text scale.
 Widget goldenFrame(MatrixVariant v, FakeCoreApi fake, Widget child) {
-  return ProviderScope(
+  final container = ProviderContainer(
     overrides: [coreApiProvider.overrideWithValue(fake)],
+  );
+  addTearDown(container.dispose);
+  return UncontrolledProviderScope(
+    container: container,
     child: Localizations(
       locale: v.locale,
       delegates: StrataLocalizations.localizationsDelegates,

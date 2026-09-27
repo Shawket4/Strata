@@ -293,7 +293,9 @@ impl Retriever {
                 continue;
             };
             if let Some(f) = folder
-                && !note.path.starts_with(&format!("{}/", f.trim_end_matches('/')))
+                && !note
+                    .path
+                    .starts_with(&format!("{}/", f.trim_end_matches('/')))
             {
                 continue;
             }
@@ -351,7 +353,10 @@ mod tests {
         assert!((fused[2].1 - 1.0 / 62.0).abs() < 1e-12);
         // Equal scores: by key.
         let tie = rrf(&[vec!["y"], vec!["x"]]);
-        assert_eq!(tie.iter().map(|(k, _)| *k).collect::<Vec<_>>(), vec!["x", "y"]);
+        assert_eq!(
+            tie.iter().map(|(k, _)| *k).collect::<Vec<_>>(),
+            vec!["x", "y"]
+        );
     }
 
     #[test]

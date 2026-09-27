@@ -526,6 +526,12 @@ abstract class SettingsLocalizations {
   /// In en, this message translates to:
   /// **'You\'re offline.'**
   String get errorOffline;
+
+  /// Heading of the password change group.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get passwordGroup;
 }
 
 class _SettingsLocalizationsDelegate

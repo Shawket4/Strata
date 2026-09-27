@@ -244,7 +244,7 @@ class _AccountSection extends ConsumerWidget {
           ],
         ),
         _Group(
-          title: l10n.changePasswordTitle,
+          title: l10n.passwordGroup,
           children: [
             Padding(
               padding: const EdgeInsets.all(StrataSpacing.s4),

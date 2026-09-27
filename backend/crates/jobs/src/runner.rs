@@ -231,19 +231,24 @@ impl Runner {
             let scope = self.inner.issuer.issue(*user);
             let result = async {
                 let mut tx = self.inner.db.begin(&scope).await?;
-                let n = jobs::requeue_stale(&mut tx, now + chrono::Duration::seconds(1), now)
-                    .await?;
+                let n =
+                    jobs::requeue_stale(&mut tx, now + chrono::Duration::seconds(1), now).await?;
                 tx.commit().await?;
                 Ok::<u64, strata_index::IndexError>(n)
             }
             .await;
             match result {
                 Ok(n) => total += n,
-                Err(e) => tracing::error!(user = %user, error = %e, "re-queueing stale jobs failed"),
+                Err(e) => {
+                    tracing::error!(user = %user, error = %e, "re-queueing stale jobs failed")
+                }
             }
         }
         if total > 0 {
-            tracing::info!(count = total, "re-queued jobs left running by the previous process");
+            tracing::info!(
+                count = total,
+                "re-queued jobs left running by the previous process"
+            );
         }
         total
     }
@@ -256,8 +261,7 @@ impl Runner {
         }
         let today = now.date_naive();
         let daily_limit_reached = self.inner.config.daily_llm_jobs > 0
-            && s
-                .llm_day
+            && s.llm_day
                 .is_some_and(|(d, n)| d == today && n >= self.inner.config.daily_llm_jobs);
         let paused = s.llm_paused_all.is_some_and(|p| p.until > now)
             || s.llm_paused_user.get(&user).is_some_and(|p| p.until > now)
@@ -582,16 +586,17 @@ impl RunnerHandle {
         let _ = self.stop.send(true);
         let _ = self.task.await;
         let mut tasks = self.runner.inner.tasks.lock().await;
-        let drained = tokio::time::timeout(grace, async {
-            while tasks.join_next().await.is_some() {}
-        })
-        .await;
+        let drained =
+            tokio::time::timeout(grace, async { while tasks.join_next().await.is_some() {} }).await;
         if drained.is_ok() {
             0
         } else {
             let left = tasks.len();
             tasks.abort_all();
-            tracing::warn!(count = left, "jobs still running at shutdown; re-queued at next start");
+            tracing::warn!(
+                count = left,
+                "jobs still running at shutdown; re-queued at next start"
+            );
             left
         }
     }

@@ -128,6 +128,8 @@ void main() {
           ),
         );
 
+        await _reveal(tester, _composer());
+        await tester.ensureVisible(_composer());
         await tester.enterText(_composer(), 'بابا عايز يشوف الأرقام بكرة');
         await tester.pump();
         await _tap(tester, find.text(s.homeSave));

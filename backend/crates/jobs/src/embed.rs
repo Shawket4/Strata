@@ -179,7 +179,10 @@ impl JobHandler for EmbedHandler {
             let chunks = chunk::chunk_body(doc.body());
             let mut embeddings = Vec::with_capacity(chunks.len());
             for c in &chunks {
-                embeddings.push(self.embed_one(embedder.as_ref(), c.embed_input(&view.title)).await?);
+                embeddings.push(
+                    self.embed_one(embedder.as_ref(), c.embed_input(&view.title))
+                        .await?,
+                );
             }
             let note_vector = normalized_mean(&embeddings)
                 .ok_or_else(|| JobError::Fatal("the chunk vectors average to zero".into()))?;

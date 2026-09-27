@@ -5,15 +5,13 @@ import 'package:strata_accounts/strata_accounts.dart';
 import 'package:strata_admin/strata_admin.dart';
 import 'package:strata_ask/strata_ask.dart';
 import 'package:strata_directory/strata_directory.dart';
-import 'package:strata_documents/strata_documents.dart';
-import 'package:strata_editor/strata_editor.dart';
 import 'package:strata_home/strata_home.dart';
 import 'package:strata_inbox/strata_inbox.dart';
 import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_maps/strata_maps.dart';
 import 'package:strata_notes/strata_notes.dart';
 import 'package:strata_settings/strata_settings.dart';
-import 'package:strata_state/strata_state.dart' show SignInRequest;
+import 'package:strata_state/strata_state.dart' show DirectoryTab, SignInRequest;
 import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_tasks/strata_tasks.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
@@ -97,7 +95,11 @@ class _StandaloneScreen extends StatelessWidget {
       routes: [
         TypedGoRoute<DirectoryRoute>(
           path: '/directory',
-          routes: [TypedGoRoute<DocumentsRoute>(path: 'documents')],
+          routes: [
+            TypedGoRoute<DocumentRoute>(path: 'documents/:documentId'),
+            TypedGoRoute<PlaceRoute>(path: 'places/:placeId'),
+            TypedGoRoute<EntityRoute>(path: ':entityId'),
+          ],
         ),
       ],
     ),
@@ -205,7 +207,7 @@ class InboxRoute extends GoRouteData with $InboxRoute {
     state,
     InboxScreen(
       onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
-      onOpenEntity: (id) => NoteEditorRoute(noteId: id).go(context),
+      onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
     ),
   );
 }
@@ -221,7 +223,7 @@ class TasksRoute extends GoRouteData with $TasksRoute {
     TasksScreen(
       onOpenTask: (id) => TaskRoute(taskId: id).go(context),
       onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
-      onOpenEntity: (id) => NoteEditorRoute(noteId: id).go(context),
+      onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
     ),
   );
 }
@@ -244,30 +246,47 @@ class TaskRoute extends GoRouteData with $TaskRoute {
         body: TaskDetailScreen(
           taskId: taskId,
           onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
-          onOpenEntity: (id) => NoteEditorRoute(noteId: id).go(context),
+          onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
         ),
       ),
       wide: (context) => TasksScreen(
         initialTaskId: taskId,
         onOpenTask: (id) => TaskRoute(taskId: id).go(context),
         onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
-        onOpenEntity: (id) => NoteEditorRoute(noteId: id).go(context),
+        onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
       ),
     ),
   );
 }
 
-/// `/notes`.
+/// Opens a note, optionally at a block or heading ([OpenNoteAt]).
+void _openNote(BuildContext context, String id, [String? anchor]) =>
+    NoteEditorRoute(noteId: id).go(context);
+
+/// `/notes?folder=`: the notes list of a folder.
 class NotesRoute extends GoRouteData with $NotesRoute {
-  /// Creates the route.
-  const new();
+  /// Creates the route for [folder] (`''` = vault root).
+  const new({this.folder = ''});
+
+  /// The folder shown.
+  final String folder;
 
   @override
-  Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      _page(state, const NotesScreen());
+  Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
+    state,
+    NotesScreen(
+      folder: folder,
+      onOpenFolder: (path) => NotesRoute(folder: path).go(context),
+      onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
+      onOpenLink: (id) => NoteEditorRoute(noteId: id).go(context),
+      onOpenConflict: (opId) => ConflictRoute(opId: opId).go(context),
+      onOpenLocalMap: (id) => MindMapRoute(noteId: id).go(context),
+    ),
+  );
 }
 
-/// `/notes/:noteId`: the note editor.
+/// `/notes/:noteId`: a note (list + detail on wider windows, the note alone
+/// on compact).
 class NoteEditorRoute extends GoRouteData with $NoteEditorRoute {
   /// Creates the route for [noteId].
   const new({required this.noteId});
@@ -278,11 +297,14 @@ class NoteEditorRoute extends GoRouteData with $NoteEditorRoute {
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
     state,
-    NoteEditorScreen(
-      noteId: noteId,
-      onBack: () => const NotesRoute().go(context),
+    NotesScreen(
+      selectedNoteId: noteId,
+      onOpenFolder: (path) => NotesRoute(folder: path).go(context),
+      onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
+      onCloseNote: () => const NotesRoute().go(context),
       onOpenLink: (id) => NoteEditorRoute(noteId: id).go(context),
       onOpenConflict: (opId) => ConflictRoute(opId: opId).go(context),
+      onOpenLocalMap: (id) => MindMapRoute(noteId: id).go(context),
     ),
   );
 }
@@ -344,24 +366,96 @@ class MapRoute extends GoRouteData with $MapRoute {
   );
 }
 
-/// `/directory`.
+/// `/directory?tab=`: people, companies, documents and places.
 class DirectoryRoute extends GoRouteData with $DirectoryRoute {
-  /// Creates the route.
-  const new();
+  /// Creates the route showing [tab] first.
+  const new({this.tab = DirectoryTab.people});
+
+  /// The tab shown first.
+  final DirectoryTab tab;
 
   @override
-  Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      _page(state, const DirectoryScreen());
+  Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
+    state,
+    DirectoryScreen(
+      initialTab: tab,
+      onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
+      onOpenNote: (id, anchor) => _openNote(context, id, anchor),
+      onOpenMindMap: (id) => MindMapRoute(noteId: id).go(context),
+    ),
+  );
 }
 
-/// `/directory/documents`.
-class DocumentsRoute extends GoRouteData with $DocumentsRoute {
-  /// Creates the route.
-  const new();
+/// `/directory/:entityId`: a person or company page.
+class EntityRoute extends GoRouteData with $EntityRoute {
+  /// Creates the route for [entityId].
+  const new({required this.entityId});
+
+  /// The entity's note ID.
+  final String entityId;
 
   @override
-  Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      _page(state, const DocumentsScreen());
+  Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
+    state,
+    _BySize(
+      compact: (context) => EntityScreen(
+        entityId,
+        onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
+        onOpenNote: (id, anchor) => _openNote(context, id, anchor),
+        onOpenMindMap: (id) => MindMapRoute(noteId: id).go(context),
+        onBack: () => const DirectoryRoute().go(context),
+      ),
+      wide: (context) => DirectoryScreen(
+        selectedId: entityId,
+        onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
+        onOpenNote: (id, anchor) => _openNote(context, id, anchor),
+        onOpenMindMap: (id) => MindMapRoute(noteId: id).go(context),
+      ),
+    ),
+  );
+}
+
+/// `/directory/documents/:documentId`: a document page.
+class DocumentRoute extends GoRouteData with $DocumentRoute {
+  /// Creates the route for [documentId].
+  const new({required this.documentId});
+
+  /// The document's note ID.
+  final String documentId;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
+    state,
+    DocumentScreen(
+      documentId,
+      onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
+      onOpenNote: (id, anchor) => _openNote(context, id, anchor),
+      onOpenMindMap: (id) => MindMapRoute(noteId: id).go(context),
+      onBack: () =>
+          const DirectoryRoute(tab: DirectoryTab.documents).go(context),
+    ),
+  );
+}
+
+/// `/directory/places/:placeId`: a place page.
+class PlaceRoute extends GoRouteData with $PlaceRoute {
+  /// Creates the route for [placeId].
+  const new({required this.placeId});
+
+  /// The place's note ID.
+  final String placeId;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
+    state,
+    PlaceScreen(
+      placeId,
+      onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
+      onOpenNote: (id, anchor) => _openNote(context, id, anchor),
+      onOpenMindMap: (id) => MindMapRoute(noteId: id).go(context),
+      onBack: () => const DirectoryRoute(tab: DirectoryTab.places).go(context),
+    ),
+  );
 }
 
 /// `/ask`.

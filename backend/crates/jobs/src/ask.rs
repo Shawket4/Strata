@@ -379,7 +379,8 @@ impl AskEngine {
         let mut out = Vec::new();
         for n in rows {
             if n.trashed
-                || folder.is_some_and(|f| !n.path.starts_with(&format!("{}/", f.trim_end_matches('/'))))
+                || folder
+                    .is_some_and(|f| !n.path.starts_with(&format!("{}/", f.trim_end_matches('/'))))
             {
                 continue;
             }
@@ -454,7 +455,12 @@ impl AskEngine {
             let view = if let Some(v) = views.get(&note.id) {
                 v.clone()
             } else {
-                let v = self.vault.note(scope, note.id).await.ok().filter(|v| !v.trashed);
+                let v = self
+                    .vault
+                    .note(scope, note.id)
+                    .await
+                    .ok()
+                    .filter(|v| !v.trashed);
                 views.insert(note.id, v.clone());
                 v
             };
@@ -555,15 +561,15 @@ impl AskEngine {
         if question.is_empty() {
             return Err(AskError::EmptyQuestion);
         }
-        let caller = AiCaller {
-            scope,
-            username,
-        };
+        let caller = AiCaller { scope, username };
         // Fail fast (before retrieval) when AI is off or paused for this user.
         self.ai.router().route(&caller.username)?;
         self.ai.budget().check(&caller).await?;
         let chunks: Vec<(Note, crate::chunk::ChunkDraft, String)> = match &self.retriever {
-            Some(r) => match r.ask_chunks(&scope, question, self.config.top_k, folder).await {
+            Some(r) => match r
+                .ask_chunks(&scope, question, self.config.top_k, folder)
+                .await
+            {
                 Ok(ranked) => ranked
                     .into_iter()
                     .map(|rc| {

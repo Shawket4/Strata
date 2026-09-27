@@ -301,5 +301,9 @@
   "errorOffline": "You're offline.",
   "@errorOffline": {
     "description": "Core error offline."
+  },
+  "passwordGroup": "Password",
+  "@passwordGroup": {
+    "description": "Heading of the password change group."
   }
 }

@@ -50,7 +50,8 @@ pub struct ChunkDraft {
 impl ChunkDraft {
     /// What is embedded: the note title and heading path give the chunk its context.
     pub fn embed_input(&self, title: &str) -> String {
-        let mut s = String::with_capacity(title.len() + self.heading_path.len() + self.text.len() + 2);
+        let mut s =
+            String::with_capacity(title.len() + self.heading_path.len() + self.text.len() + 2);
         s.push_str(title);
         if !self.heading_path.is_empty() {
             s.push('\n');
@@ -137,7 +138,10 @@ fn split_ranges(text: &str, base: usize, max: usize) -> Vec<(usize, usize)> {
     if first < words.len() {
         pieces.push((words[first].0, words[words.len() - 1].1));
     }
-    pieces.into_iter().map(|(s, e)| (base + s, base + e)).collect()
+    pieces
+        .into_iter()
+        .map(|(s, e)| (base + s, base + e))
+        .collect()
 }
 
 /// The block's content: its span without a trailing `^id` (and the whitespace before it).
@@ -210,7 +214,11 @@ pub fn chunk_body(body_text: &str) -> Vec<ChunkDraft> {
             heading_path: first.heading_path.clone(),
             start: first.start,
             end: current.last().map_or(first.end, |u| u.end),
-            anchor_len: if first.whole { first.end - first.start } else { 0 },
+            anchor_len: if first.whole {
+                first.end - first.start
+            } else {
+                0
+            },
             block_id: first.block_id.clone(),
             token_count: estimate_tokens(&text),
             text,
@@ -292,7 +300,10 @@ mod tests {
         assert_eq!(&body[c.start..c.start + c.anchor_len], "Intro line");
         assert_eq!(c.block_id.as_deref(), Some("intro"));
         assert_eq!(c.heading_path, "");
-        assert_eq!(c.end, body.find("- item one").expect("item") + "- item one".len());
+        assert_eq!(
+            c.end,
+            body.find("- item one").expect("item") + "- item one".len()
+        );
         assert_eq!(
             c.embed_input("Acme"),
             "Acme\nIntro line\n\nWeekly invoicing.\n\n- item one"
@@ -353,7 +364,11 @@ mod tests {
         let start = body.find("word").expect("big");
         assert_eq!(chunks[1].start, start);
         assert_eq!(chunks[2].start, chunks[1].end + 1);
-        assert!(chunks[1..].iter().all(|c| c.text.split(' ').all(|w| w == "word")));
+        assert!(
+            chunks[1..]
+                .iter()
+                .all(|c| c.text.split(' ').all(|w| w == "word"))
+        );
     }
 
     #[test]
@@ -362,7 +377,10 @@ mod tests {
         let chunks = chunk_body(body);
         assert_eq!(chunks.len(), 1);
         assert_eq!(
-            (chunks[0].heading_path.as_str(), chunks[0].block_id.as_deref()),
+            (
+                chunks[0].heading_path.as_str(),
+                chunks[0].block_id.as_deref()
+            ),
             ("العقد", Some("a1"))
         );
         assert_eq!(

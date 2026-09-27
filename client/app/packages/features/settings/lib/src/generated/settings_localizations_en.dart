@@ -246,4 +246,7 @@ class SettingsLocalizationsEn extends SettingsLocalizations {
 
   @override
   String get errorOffline => 'You\'re offline.';
+
+  @override
+  String get passwordGroup => 'Password';
 }

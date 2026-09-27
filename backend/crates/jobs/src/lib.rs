@@ -79,7 +79,10 @@ pub fn standard_handlers(d: &Deps) -> Vec<Arc<dyn JobHandler>> {
             d.ids.clone(),
             25,
         )),
-        Arc::new(summarize::SummarizeHandler::new(d.vault.clone(), d.ai.clone())),
+        Arc::new(summarize::SummarizeHandler::new(
+            d.vault.clone(),
+            d.ai.clone(),
+        )),
         Arc::new(dedupe_sweep::DedupeHandler::new(
             d.db.clone(),
             d.vault.clone(),

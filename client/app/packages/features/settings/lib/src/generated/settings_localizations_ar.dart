@@ -245,4 +245,7 @@ class SettingsLocalizationsAr extends SettingsLocalizations {
 
   @override
   String get errorOffline => 'أنت غير متصل.';
+
+  @override
+  String get passwordGroup => 'كلمة المرور';
 }

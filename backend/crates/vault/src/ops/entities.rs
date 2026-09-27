@@ -193,7 +193,7 @@ impl Core {
                 VaultError::invalid("kind must be person, company, document or place")
             })?;
         let item = dedupe::Item::entity(dkind, Some(&id_text), name, &alias_refs);
-        let candidates = dup::find(
+        let candidates = dup::find_with(
             &mut tx,
             &item,
             &self.inner.config.near_thresholds,
@@ -331,8 +331,7 @@ impl Core {
                 for a in &ep.add_aliases {
                     let alias = dedupe::Item::alias(Some(&id_text), a);
                     keep.extend(
-                        dup::find(&mut tx, &alias, &self.inner.config.near_thresholds, None)
-                            .await?,
+                        dup::find(&mut tx, &alias, &self.inner.config.near_thresholds).await?,
                     );
                 }
                 keep.sort_by(|a, b| a.item.cmp(&b.item));

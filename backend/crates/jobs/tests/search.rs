@@ -23,7 +23,10 @@ const NOTES: [(&str, &str); 4] = [
         "notes/Watanya contract.md",
         "The Watanya contract is stored in the safe at the Nasr City office.",
     ),
-    ("notes/عقد وطنية.md", "عقد وطنية في الخزنة في مكتب مدينة نصر"),
+    (
+        "notes/عقد وطنية.md",
+        "عقد وطنية في الخزنة في مكتب مدينة نصر",
+    ),
     (
         "notes/Banana bread.md",
         "Banana bread recipe with walnuts and cinnamon.",
@@ -64,7 +67,12 @@ async fn semantic_search_ranks_by_the_best_chunk_and_hybrid_fuses_with_arabic_ke
     let mut expected: Vec<(usize, f64)> = NOTES
         .iter()
         .enumerate()
-        .map(|(i, (p, b))| (i, cosine(&q, &bag_of_words(&format!("{}\n{b}", title(p)), 384))))
+        .map(|(i, (p, b))| {
+            (
+                i,
+                cosine(&q, &bag_of_words(&format!("{}\n{b}", title(p)), 384)),
+            )
+        })
         .collect();
     expected.sort_by(|x, y| y.1.total_cmp(&x.1).then(x.0.cmp(&y.0)));
     let hits = retriever
@@ -79,7 +87,10 @@ async fn semantic_search_ranks_by_the_best_chunk_and_hybrid_fuses_with_arabic_ke
     for (h, (_, score)) in hits.iter().zip(&expected) {
         assert!((h.score - score).abs() < 1e-6, "{} vs {score}", h.score);
     }
-    assert!(expected[0].1 > expected[1].1, "the contract note is clearly first");
+    assert!(
+        expected[0].1 > expected[1].1,
+        "the contract note is clearly first"
+    );
     assert_eq!(
         hits[0].snippet.as_deref(),
         Some("The Watanya contract is stored in the safe at the Nasr City office.")
@@ -128,7 +139,10 @@ async fn similarity_edges_are_top_neighbours_above_the_floor() {
     let v = |i: usize| bag_of_words(&format!("{}\n{}", title(NOTES[i].0), NOTES[i].1), 384);
     let expected = cosine(&v(0), &v(3));
     assert!(expected > 0.1);
-    let edges = retriever.similar(&sa, ids[0], 5, 0.05).await.expect("edges");
+    let edges = retriever
+        .similar(&sa, ids[0], 5, 0.05)
+        .await
+        .expect("edges");
     assert_eq!(edges.len(), 1);
     assert_eq!(edges[0].0, ids[3]);
     assert!((edges[0].1 - expected).abs() < 1e-6);
@@ -140,7 +154,10 @@ async fn similarity_edges_are_top_neighbours_above_the_floor() {
     );
     // A note without a vector has no edges.
     let fresh = w.create(&sa, "notes/Fresh.md", "new\n").await;
-    assert_eq!(retriever.similar(&sa, fresh, 5, 0.0).await.expect("edges"), vec![]);
+    assert_eq!(
+        retriever.similar(&sa, fresh, 5, 0.0).await.expect("edges"),
+        vec![]
+    );
     w.finish().await;
 }
 
@@ -169,7 +186,10 @@ async fn retrieval_never_crosses_users() {
         assert!(chunks.iter().all(|c| own.contains(&c.note.id)));
         // Another user's note ID has no vector in this scope: no edges, no error.
         assert_eq!(
-            retriever.similar(scope, other[0], 5, 0.0).await.expect("edges"),
+            retriever
+                .similar(scope, other[0], 5, 0.0)
+                .await
+                .expect("edges"),
             vec![]
         );
     }

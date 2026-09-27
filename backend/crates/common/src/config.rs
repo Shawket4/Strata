@@ -418,8 +418,7 @@ impl Default for AiConfig {
                 onnxruntime_lib: None,
                 model_file: PathBuf::from("onnx/model.onnx"),
                 tokenizer_file: PathBuf::from("tokenizer.json"),
-                model_id: "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model"
-                    .to_owned(),
+                model_id: "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model".to_owned(),
                 dims: 384,
                 pooling: EmbeddingPooling::Cls,
                 max_tokens: 2048,
@@ -691,7 +690,10 @@ impl Config {
         };
         let jobs = &self.jobs;
         positive("jobs.max_concurrency", u64::from(jobs.max_concurrency))?;
-        positive("jobs.poll_interval_secs", u64::from(jobs.poll_interval_secs))?;
+        positive(
+            "jobs.poll_interval_secs",
+            u64::from(jobs.poll_interval_secs),
+        )?;
         positive("jobs.backoff_base_secs", u64::from(jobs.backoff_base_secs))?;
         if jobs.backoff_max_secs < jobs.backoff_base_secs {
             return invalid("jobs.backoff_max_secs must be at least jobs.backoff_base_secs".into());

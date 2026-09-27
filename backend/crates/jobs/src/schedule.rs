@@ -161,7 +161,9 @@ impl Scheduler {
                 match self.ensure_one(user, p, now).await {
                     Ok(true) => added += 1,
                     Ok(false) => {}
-                    Err(e) => tracing::error!(user = %user, kind = p.kind, error = %e, "scheduling failed"),
+                    Err(e) => {
+                        tracing::error!(user = %user, kind = p.kind, error = %e, "scheduling failed")
+                    }
                 }
             }
         }
@@ -283,11 +285,21 @@ mod tests {
     fn weekly_runs_on_its_day_and_dst_gaps_move_forward() {
         // 2026-09-27 is a Sunday.
         assert_eq!(
-            next_run(at("2026-09-27T12:00:00Z"), Cadence::Weekly(Weekday::Mon), 3, Tz::UTC),
+            next_run(
+                at("2026-09-27T12:00:00Z"),
+                Cadence::Weekly(Weekday::Mon),
+                3,
+                Tz::UTC
+            ),
             at("2026-09-28T03:00:00Z")
         );
         assert_eq!(
-            next_run(at("2026-09-27T12:00:00Z"), Cadence::Weekly(Weekday::Sun), 3, Tz::UTC),
+            next_run(
+                at("2026-09-27T12:00:00Z"),
+                Cadence::Weekly(Weekday::Sun),
+                3,
+                Tz::UTC
+            ),
             at("2026-10-04T03:00:00Z")
         );
         // Europe/Berlin springs forward at 02:00 on 2027-03-28: 02:00 does not exist.

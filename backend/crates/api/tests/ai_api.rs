@@ -58,10 +58,16 @@ async fn semantic_and_hybrid_search_return_ranked_hits_with_snippets() {
     h.embed_all().await;
 
     let q = bag_of_words("contract safe", 384);
-    let score = |title: &str, body: &str| cosine(&q, &bag_of_words(&format!("{title}\n{body}"), 384));
-    let semantic = ops::search(c, "contract safe", Some(&types::SearchMode::Semantic), Some(2))
-        .await
-        .expect("search");
+    let score =
+        |title: &str, body: &str| cosine(&q, &bag_of_words(&format!("{title}\n{body}"), 384));
+    let semantic = ops::search(
+        c,
+        "contract safe",
+        Some(&types::SearchMode::Semantic),
+        Some(2),
+    )
+    .await
+    .expect("search");
     assert_eq!(semantic.hits.len(), 2);
     assert_eq!(
         (
@@ -81,7 +87,10 @@ async fn semantic_and_hybrid_search_return_ranked_hits_with_snippets() {
     );
     assert!(
         (semantic.hits[0].score
-            - score("Watanya contract", "The Watanya contract is stored in the safe."))
+            - score(
+                "Watanya contract",
+                "The Watanya contract is stored in the safe."
+            ))
         .abs()
             < 1e-6
     );
@@ -105,7 +114,10 @@ async fn semantic_and_hybrid_search_return_ranked_hits_with_snippets() {
             (banana.id, (r(3.0) * 1e9).round()),
         ]
     );
-    assert_eq!(hybrid.hits[0].snippet.as_deref(), Some("عقد وطنية في الخزنة"));
+    assert_eq!(
+        hybrid.hits[0].snippet.as_deref(),
+        Some("عقد وطنية في الخزنة")
+    );
     // Keyword mode is unchanged.
     let keyword = ops::search(c, "وطنيه", None, None).await.expect("search");
     assert_eq!(keyword.hits.len(), 1);
@@ -167,7 +179,12 @@ async fn ask_streams_tokens_then_citations_resolved_to_blocks_and_saves_as_a_not
         "Acme prefers weekly invoicing.\n\nThey asked for a discount.\n",
     )
     .await;
-    let pricing = create(&alice, "notes/Pricing.md", "Discounts are capped at 5%. ^cap\n").await;
+    let pricing = create(
+        &alice,
+        "notes/Pricing.md",
+        "Discounts are capped at 5%. ^cap\n",
+    )
+    .await;
     h.embed_all().await;
 
     // Without a fixture the provider fails before anything streams: 503 at POST time.
@@ -245,9 +262,8 @@ async fn ask_streams_tokens_then_citations_resolved_to_blocks_and_saves_as_a_not
                 .expect("frame")
         })
         .collect();
-    let answer = format!(
-        "Weekly invoicing [[{call_ref}]] and a discount, capped at 5% [[Pricing#^cap]]."
-    );
+    let answer =
+        format!("Weekly invoicing [[{call_ref}]] and a discount, capped at 5% [[Pricing#^cap]].");
     use strata_api::routes::ai::AskFrame as F;
     use strata_api::wire::ws::Frame;
     assert_eq!(
@@ -332,7 +348,12 @@ async fn ask_streams_tokens_then_citations_resolved_to_blocks_and_saves_as_a_not
                     title: "Pricing".into(),
                 }
             ),
-            (4, types::AskFrame::Done { answer: answer.clone() }),
+            (
+                4,
+                types::AskFrame::Done {
+                    answer: answer.clone()
+                }
+            ),
         ]
     );
 
@@ -355,7 +376,10 @@ async fn ask_streams_tokens_then_citations_resolved_to_blocks_and_saves_as_a_not
         "{}",
         saved.content
     );
-    assert_eq!(h.log(alice.id)[0], "user: create notes/What did Acme ask for.md");
+    assert_eq!(
+        h.log(alice.id)[0],
+        "user: create notes/What did Acme ask for.md"
+    );
 
     // Another user never sees the answer.
     let bob = h.user("bob").await;
@@ -421,7 +445,9 @@ async fn ask_answers_unavailable_or_paused_problems() {
     .expect_err("empty");
     assert_eq!(problem(&empty).type_, "invalid_body");
     // One answer uses the day's budget (1 token); the next ask is paused until tomorrow.
-    ops::ask(&alice.client, &req).await.expect_err("no fixture yet");
+    ops::ask(&alice.client, &req)
+        .await
+        .expect_err("no fixture yet");
     let recorded = h.llm.calls().last().cloned().expect("call");
     h.llm.push(
         &recorded.prompt,
@@ -522,7 +548,10 @@ async fn without_ai_everything_else_keeps_working() {
         "ai_unavailable"
     );
     let hits = ops::search(c, "weekly", None, None).await.expect("keyword");
-    assert_eq!(hits.hits.iter().map(|h| h.id).collect::<Vec<_>>(), vec![note.id]);
+    assert_eq!(
+        hits.hits.iter().map(|h| h.id).collect::<Vec<_>>(),
+        vec![note.id]
+    );
     h.finish().await;
 
     // AI registered but the embedding model fails: semantic search is 503, keyword search
@@ -533,7 +562,9 @@ async fn without_ai_everything_else_keeps_working() {
     create(&alice, "notes/Acme.md", "Weekly invoicing.\n").await;
     h.embed_all().await;
     h.embedder
-        .fail_with(Some(strata_ai::embed::EmbedError::Load("model missing".into())));
+        .fail_with(Some(strata_ai::embed::EmbedError::Load(
+            "model missing".into(),
+        )));
     assert_eq!(
         problem(
             &ops::search(c, "weekly", Some(&types::SearchMode::Semantic), None)
@@ -548,7 +579,11 @@ async fn without_ai_everything_else_keeps_working() {
         )
     );
     assert_eq!(
-        ops::search(c, "weekly", None, None).await.expect("keyword").hits.len(),
+        ops::search(c, "weekly", None, None)
+            .await
+            .expect("keyword")
+            .hits
+            .len(),
         1
     );
     let created = ops::create_note(
@@ -595,7 +630,12 @@ async fn creates_report_semantic_duplicates_with_their_level() {
     assert_eq!(p.candidates.len(), 1);
     let cand = &p.candidates[0];
     assert_eq!(
-        (cand.id, cand.kind.as_str(), cand.title.as_str(), cand.match_level),
+        (
+            cand.id,
+            cand.kind.as_str(),
+            cand.title.as_str(),
+            cand.match_level
+        ),
         (
             first.id,
             "note",

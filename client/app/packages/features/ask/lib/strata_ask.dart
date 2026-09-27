@@ -1,30 +1,12 @@
 /// Strata ask feature (UI only; view-models come from the Rust core,
-/// PLAN L15).
+/// PLAN L15): [AskScreen] (chat over the vault with citations) and
+/// [SearchScreen] (keyword / semantic / hybrid).
 library;
 
-import 'package:flutter/material.dart';
-import 'package:strata_l10n/strata_l10n.dart';
-import 'package:strata_ui/strata_ui.dart';
+import 'package:strata_ask/src/ask_screen.dart';
+import 'package:strata_ask/src/search_screen.dart';
 
-/// Entry widget of the ask feature. Ask: chat over the vault with citations
-/// (PLAN §11 screen 10).
-///
-/// Until the Rust core streams this screen's view-model it renders the
-/// design-system placeholder state.
-class AskScreen extends StatelessWidget {
-  /// Creates the ask entry widget.
-  const new({super.key});
-
-  /// The icon that represents this feature.
-  static const IconData icon = Icons.chat_bubble_outline;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return StrataEmptyState(
-      icon: icon,
-      title: l10n.navAsk,
-      message: l10n.featurePlaceholderMessage,
-    );
-  }
-}
+export 'src/ask_screen.dart' show AskScreen;
+export 'src/common.dart' show OpenNoteAt;
+export 'src/l10n.dart' show AskLocalizationScope, AskLocalizations;
+export 'src/search_screen.dart' show SearchScreen;

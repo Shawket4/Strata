@@ -1,1 +1,234 @@
-{"@@locale": "en", "loading": "Loading…"}
+{
+  "@@locale": "en",
+  "askTitle": "Ask",
+  "@askTitle": {
+    "description": "Ask title."
+  },
+  "conversation": "Conversation",
+  "@conversation": {
+    "description": "Conversation region label."
+  },
+  "newConversation": "New conversation",
+  "@newConversation": {
+    "description": "New conversation."
+  },
+  "newConversationUnavailable": "Starting a new conversation isn't available yet",
+  "@newConversationUnavailable": {
+    "description": "Tooltip."
+  },
+  "offlineTitle": "Ask needs a connection",
+  "@offlineTitle": {
+    "description": "Offline banner."
+  },
+  "offlineMessage": "Your notes are still searchable offline. Ask works again when you are back online.",
+  "@offlineMessage": {
+    "description": "Offline banner body."
+  },
+  "notYetTitle": "Ask isn't available on this server yet",
+  "@notYetTitle": {
+    "description": "Not-yet banner."
+  },
+  "notYetMessage": "Answers with citations will appear here once the server supports Ask.",
+  "@notYetMessage": {
+    "description": "Not-yet banner body."
+  },
+  "notAllowedTitle": "Ask isn't available for this account",
+  "@notAllowedTitle": {
+    "description": "Not-allowed banner."
+  },
+  "emptyTitle": "Ask about your notes",
+  "@emptyTitle": {
+    "description": "Empty conversation."
+  },
+  "emptyMessage": "Answers cite the notes they come from, in English or Arabic.",
+  "@emptyMessage": {
+    "description": "Empty conversation body."
+  },
+  "you": "You",
+  "@you": {
+    "description": "User message label."
+  },
+  "answer": "Answer",
+  "@answer": {
+    "description": "Assistant message label."
+  },
+  "sources": "{count, plural, =0{No sources} =1{Sources · 1} other{Sources · {count}}}",
+  "@sources": {
+    "description": "Sources heading.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveAsNote": "Save as note",
+  "@saveAsNote": {
+    "description": "Save the answer."
+  },
+  "saveAsNoteUnavailable": "Saving answers isn't available yet",
+  "@saveAsNoteUnavailable": {
+    "description": "Tooltip."
+  },
+  "copyAnswer": "Copy answer",
+  "@copyAnswer": {
+    "description": "Copy."
+  },
+  "copied": "Answer copied",
+  "@copied": {
+    "description": "Snack bar."
+  },
+  "question": "Question",
+  "@question": {
+    "description": "Composer label."
+  },
+  "askHint": "Ask about your notes — English or العربية",
+  "@askHint": {
+    "description": "Composer placeholder."
+  },
+  "send": "Send",
+  "@send": {
+    "description": "Send."
+  },
+  "sendUnavailable": "Sending questions from the app isn't available yet",
+  "@sendUnavailable": {
+    "description": "Tooltip / helper."
+  },
+  "scope": "Scope",
+  "@scope": {
+    "description": "Scope selector label."
+  },
+  "scopeAll": "All notes",
+  "@scopeAll": {
+    "description": "Scope."
+  },
+  "sourcePreview": "Source preview",
+  "@sourcePreview": {
+    "description": "Preview panel title."
+  },
+  "sourcePreviewHint": "Select a citation to preview its note",
+  "@sourcePreviewHint": {
+    "description": "Empty preview."
+  },
+  "openAtBlock": "Open at block",
+  "@openAtBlock": {
+    "description": "Opens the cited block."
+  },
+  "noteMissing": "The cited note isn't on this device",
+  "@noteMissing": {
+    "description": "Unresolved citation."
+  },
+  "searchTitle": "Search",
+  "@searchTitle": {
+    "description": "Search title."
+  },
+  "searchField": "Search your notes",
+  "@searchField": {
+    "description": "Search field label."
+  },
+  "searchHint": "Search in English or العربية",
+  "@searchHint": {
+    "description": "Search placeholder."
+  },
+  "searchMode": "Search mode",
+  "@searchMode": {
+    "description": "Mode selector."
+  },
+  "modeKeyword": "Keyword",
+  "@modeKeyword": {
+    "description": "Mode."
+  },
+  "modeSemantic": "Semantic",
+  "@modeSemantic": {
+    "description": "Mode."
+  },
+  "modeHybrid": "Hybrid",
+  "@modeHybrid": {
+    "description": "Mode."
+  },
+  "searchPrompt": "Type to search",
+  "@searchPrompt": {
+    "description": "Empty query."
+  },
+  "searchPromptMessage": "Keyword search works offline; semantic and hybrid search need the server.",
+  "@searchPromptMessage": {
+    "description": "Empty query body."
+  },
+  "noResults": "No results for “{query}”",
+  "@noResults": {
+    "description": "No results.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "noResultsMessage": "Try other words, or the other script.",
+  "@noResultsMessage": {
+    "description": "No results body."
+  },
+  "modeOffline": "{mode} search needs a connection — showing nothing until you are online.",
+  "@modeOffline": {
+    "description": "Mode offline.",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "modeNotYet": "{mode} search isn't available on this server yet.",
+  "@modeNotYet": {
+    "description": "Mode not yet available.",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "modeNotAllowed": "{mode} search isn't available for this account.",
+  "@modeNotAllowed": {
+    "description": "Mode not allowed.",
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "resultsCount": "{count, plural, =1{1 result} other{{count} results}}",
+  "@resultsCount": {
+    "description": "Result count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openNote": "Open note",
+  "@openNote": {
+    "description": "Open."
+  },
+  "preview": "Preview",
+  "@preview": {
+    "description": "Preview panel."
+  },
+  "previewHint": "Select a result to preview it",
+  "@previewHint": {
+    "description": "Empty preview."
+  },
+  "loading": "Loading…",
+  "@loading": {
+    "description": "Loading."
+  },
+  "errorTitle": "This couldn't be loaded",
+  "@errorTitle": {
+    "description": "Error."
+  },
+  "errorMessage": "The app's local data returned an error ({code}).",
+  "@errorMessage": {
+    "description": "Error body.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  }
+}

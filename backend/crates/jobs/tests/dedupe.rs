@@ -154,8 +154,20 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
     register_semantic(&w);
-    set_pair(&w, "Car insurance renewal", "Vehicle policy renewal", (0, 1), 0.97);
-    set_pair(&w, "Office lease", "Rental agreement for the office", (2, 3), 0.93);
+    set_pair(
+        &w,
+        "Car insurance renewal",
+        "Vehicle policy renewal",
+        (0, 1),
+        0.97,
+    );
+    set_pair(
+        &w,
+        "Office lease",
+        "Rental agreement for the office",
+        (2, 3),
+        0.93,
+    );
     set_pair(&w, "Gym plan", "Fitness schedule", (4, 5), 0.92);
     set_pair(&w, "Tax return 2026", "2026 tax filing", (6, 7), 0.98);
     let mut ids = Vec::new();
@@ -181,8 +193,12 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
         .await
         .expect("forced");
     // An exact pair made by a rename (moves skip the create check).
-    let budget = try_create(&w, &sa, "notes/Budget.md", false).await.expect("b");
-    let other = try_create(&w, &sa, "notes/Spending sheet.md", false).await.expect("b2");
+    let budget = try_create(&w, &sa, "notes/Budget.md", false)
+        .await
+        .expect("b");
+    let other = try_create(&w, &sa, "notes/Spending sheet.md", false)
+        .await
+        .expect("b2");
     w.vault
         .move_note(&sa, other, "archive/Budget.md".into(), None)
         .await
@@ -190,7 +206,9 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
     runner.run_until_idle().await;
 
     // Borderline pairs are confirmed by the LLM.
-    let system = prompts::latest(ids::DUPLICATE_CONFIRM).expect("prompt").text;
+    let system = prompts::latest(ids::DUPLICATE_CONFIRM)
+        .expect("prompt")
+        .text;
     let prompt = prompts::latest(ids::DUPLICATE_CONFIRM)
         .expect("prompt")
         .prompt_ref();
@@ -228,7 +246,8 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
         strata_jobs::standard_periodic(),
     );
     assert_eq!(scheduler.ensure().await, 1);
-    w.db.clock.set("2026-09-28T03:00:00Z".parse().expect("time"));
+    w.db.clock
+        .set("2026-09-28T03:00:00Z".parse().expect("time"));
     let claimed = nightly.run_until_idle().await;
     assert_eq!(claimed.len(), 1);
     let confirm_calls = w
@@ -250,7 +269,10 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
         .map(|s| {
             let p: DuplicatesPayload =
                 rmp_serde::from_slice(&s.suggestion.payload).expect("payload");
-            assert_eq!(s.suggestion.note_id.map(|n| n.to_string()), Some(p.a.item.clone()));
+            assert_eq!(
+                s.suggestion.note_id.map(|n| n.to_string()),
+                Some(p.a.item.clone())
+            );
             assert_eq!(p.a.match_level, p.b.match_level);
             (
                 p.a.title,
@@ -296,7 +318,8 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
 
     // A second night finds nothing new and asks the LLM nothing (verdicts are remembered).
     scheduler.ensure().await;
-    w.db.clock.set("2026-09-29T03:00:00Z".parse().expect("time"));
+    w.db.clock
+        .set("2026-09-29T03:00:00Z".parse().expect("time"));
     nightly.run_until_idle().await;
     assert_eq!(
         w.vault
@@ -309,7 +332,11 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
         3
     );
     assert_eq!(
-        w.llm.calls().into_iter().filter(|c| c.prompt == prompt).count(),
+        w.llm
+            .calls()
+            .into_iter()
+            .filter(|c| c.prompt == prompt)
+            .count(),
         2
     );
 

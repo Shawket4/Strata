@@ -56,9 +56,7 @@ impl World {
             Arc::new(MemoryUsageStore::default()),
         );
         let embedder = FakeEmbedder::new(MODEL, 384);
-        let ai = Arc::new(
-            AiService::new(router, budget).with_embedder(Arc::new(embedder.clone())),
-        );
+        let ai = Arc::new(AiService::new(router, budget).with_embedder(Arc::new(embedder.clone())));
         Self {
             db,
             data,
@@ -160,12 +158,11 @@ impl World {
     /// `(kind, status, attempts)` of every job of `user`, by kind then creation.
     pub async fn jobs(&self, user: UserId) -> Vec<(String, String, i32)> {
         let mut tx = self.db.begin(user).await.expect("tx");
-        let rows: Vec<(String, String, i32)> = sqlx::query_as(
-            "SELECT kind, status, attempts FROM jobs ORDER BY kind, created, id",
-        )
-        .fetch_all(tx.conn())
-        .await
-        .expect("jobs");
+        let rows: Vec<(String, String, i32)> =
+            sqlx::query_as("SELECT kind, status, attempts FROM jobs ORDER BY kind, created, id")
+                .fetch_all(tx.conn())
+                .await
+                .expect("jobs");
         tx.commit().await.expect("commit");
         rows
     }

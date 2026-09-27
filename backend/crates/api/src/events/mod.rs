@@ -285,6 +285,7 @@ fn status_of(s: &str) -> SuggestionStatus {
 /// The events of one commit notice, in a fixed order: per note (ID order) its `note.*` event
 /// then its `entity.*` event, then `entity.merged`, relations (removed/added, sorted), tasks,
 /// custody, suggestions, integrity warnings.
+#[allow(clippy::too_many_lines)] // one arm per event kind
 pub fn events_of(c: &Committed) -> Vec<Event> {
     let mut out = Vec::new();
     let merged = c.merged;

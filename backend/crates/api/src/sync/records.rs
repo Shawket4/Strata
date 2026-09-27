@@ -484,12 +484,11 @@ pub async fn bootstrap(
         }
         let (got, last) = fetch(&mut tx, cur.section, cur.after.as_deref(), want).await?;
         items.extend(got);
-        match last {
-            Some(key) => cur.after = Some(key),
-            None => {
-                cur.section += 1;
-                cur.after = None;
-            }
+        if let Some(key) = last {
+            cur.after = Some(key);
+        } else {
+            cur.section += 1;
+            cur.after = None;
         }
     }
     tx.commit().await.map_err(index_problem)?;
@@ -517,6 +516,7 @@ fn entity_type(s: &str) -> Option<EntityType> {
 }
 
 /// The current record of one change-log entity; `None` = tombstone.
+#[allow(clippy::too_many_lines)] // one arm per entity type
 async fn current(tx: &mut ScopedTx, ty: EntityType, id: &str) -> Result<Option<Record>, Problem> {
     Ok(match ty {
         EntityType::Note => None, // read after the transaction

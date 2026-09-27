@@ -1,6 +1,10 @@
 //! The `summarize` job (PLAN §9.2, §6.5): exactly the sidecar change in one `ai:` commit,
 //! skipped when unchanged, disabled users and budget pauses (the job waits, never fails).
-#![allow(clippy::expect_used, clippy::too_many_lines, clippy::many_single_char_names)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod common;
 
@@ -73,7 +77,11 @@ async fn the_summary_goes_into_the_sidecar_in_one_ai_commit_and_is_not_redone() 
     assert_eq!(w.log(a)[0], "ai: summarize notes/Acme.md");
     let sidecar = format!(".meta/notes/{note}.json");
     assert_eq!(w.last_commit_paths(a), vec![sidecar.clone()]);
-    assert_eq!(w.read(a, "notes/Acme.md"), before, "the note is never touched");
+    assert_eq!(
+        w.read(a, "notes/Acme.md"),
+        before,
+        "the note is never touched"
+    );
     let sc: serde_json::Value = serde_json::from_str(&w.read(a, &sidecar)).expect("json");
     assert_eq!(
         (sc["summary"].clone(), sc["content_hash"].clone()),
@@ -100,7 +108,11 @@ async fn users_with_ai_disabled_are_skipped() {
     assert_eq!(w.llm.calls().len(), 0);
     assert_eq!(w.log(a).len(), commits);
     assert_eq!(
-        w.jobs(a).await.into_iter().filter(|j| j.0 == "summarize").collect::<Vec<_>>(),
+        w.jobs(a)
+            .await
+            .into_iter()
+            .filter(|j| j.0 == "summarize")
+            .collect::<Vec<_>>(),
         vec![("summarize".into(), "done".into(), 1)]
     );
     w.finish().await;
@@ -144,7 +156,8 @@ async fn a_reached_budget_pauses_the_job_until_the_next_day() {
     );
     assert_eq!(w.llm.calls().len(), 1);
     // The next budget day it runs.
-    w.db.clock.set("2026-09-28T00:00:00Z".parse().expect("time"));
+    w.db.clock
+        .set("2026-09-28T00:00:00Z".parse().expect("time"));
     runner.run_until_idle().await;
     assert_eq!(w.llm.calls().len(), 2);
     assert_eq!(w.log(a)[0], "ai: summarize notes/Two.md");

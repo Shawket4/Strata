@@ -55,8 +55,12 @@ void main() {
           // The list of sections; nothing selected.
           expect(find.text('Shawket'), findsOneWidget);
           expect(find.text(l10n.sectionReminders), findsOneWidget);
+          await tester.scrollUntilVisible(
+            find.text(l10n.signOut),
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
           expect(find.text(l10n.sectionAdmin), findsOneWidget);
-          expect(find.text(l10n.signOut), findsOneWidget);
           expect(find.bySemanticsLabel(l10n.settingsNav), findsNothing);
         } else {
           // Navigation (224) + the account section.
@@ -199,6 +203,11 @@ void main() {
       final selected = <SettingsSection?>[];
       await _pump(tester, v, onSelect: selected.add);
       await tapVisible(tester, find.text('Reminders'));
+      await tester.scrollUntilVisible(
+        find.text('Users'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tapVisible(tester, find.text('Users'));
       expect(selected, [SettingsSection.reminders, SettingsSection.admin]);
     });
@@ -242,6 +251,11 @@ void main() {
 
     testWidgets('sign out from the list', (tester) async {
       final fake = await _pump(tester, v);
+      await tester.scrollUntilVisible(
+        find.text('Sign out'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tapVisible(tester, find.text('Sign out'));
       expect(fake.calls.last, const CoreCall('signOut', {'force': false}));
     });

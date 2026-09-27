@@ -70,5 +70,6 @@
   "loading": "جارٍ تحميل الإعدادات",
   "loadFailed": "تعذر تحميل الإعدادات",
   "errorGeneric": "حصل خطأ ({code}).",
-  "errorOffline": "أنت غير متصل."
+  "errorOffline": "أنت غير متصل.",
+  "passwordGroup": "كلمة المرور"
 }

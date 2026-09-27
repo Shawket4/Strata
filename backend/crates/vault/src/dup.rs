@@ -120,8 +120,18 @@ pub fn thresholds(overrides: &BTreeMap<String, f32>) -> dedupe::Thresholds {
     t
 }
 
-/// The duplicate candidates of `item` (strongest first), keep-both pairs excluded.
+/// The duplicate candidates of `item` (strongest first), keep-both pairs excluded: exact and
+/// near levels (see [`find_with`] for the semantic level).
 pub async fn find(
+    tx: &mut ScopedTx,
+    item: &Item,
+    overrides: &BTreeMap<String, f32>,
+) -> Result<Vec<Candidate>> {
+    find_with(tx, item, overrides, None).await
+}
+
+/// [`find`] plus the semantic level from `semantic`, when given.
+pub async fn find_with(
     tx: &mut ScopedTx,
     item: &Item,
     overrides: &BTreeMap<String, f32>,

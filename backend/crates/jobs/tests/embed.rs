@@ -44,7 +44,17 @@ fn embed_handler(w: &World, embedder: Arc<dyn Embedder>) -> Arc<dyn JobHandler> 
     ))
 }
 
-type ChunkRow = (i32, Option<String>, String, String, i32, i32, i32, Option<String>, String);
+type ChunkRow = (
+    i32,
+    Option<String>,
+    String,
+    String,
+    i32,
+    i32,
+    i32,
+    Option<String>,
+    String,
+);
 
 async fn chunk_rows(w: &World, user: UserId, note: NoteId) -> Vec<ChunkRow> {
     let mut tx = w.db.begin(user).await.expect("tx");
@@ -60,7 +70,11 @@ async fn chunk_rows(w: &World, user: UserId, note: NoteId) -> Vec<ChunkRow> {
     rows
 }
 
-async fn note_vector(w: &World, user: UserId, note: NoteId) -> Option<(String, String, Vec<f32>, i32)> {
+async fn note_vector(
+    w: &World,
+    user: UserId,
+    note: NoteId,
+) -> Option<(String, String, Vec<f32>, i32)> {
     let mut tx = w.db.begin(user).await.expect("tx");
     let row: Option<(String, String, Vector, i32)> = sqlx::query_as(
         "SELECT model, content_hash, embedding, chunk_count FROM note_vectors WHERE note_id = $1",
@@ -75,12 +89,11 @@ async fn note_vector(w: &World, user: UserId, note: NoteId) -> Option<(String, S
 
 async fn item_vectors(w: &World, user: UserId) -> Vec<(String, String, String)> {
     let mut tx = w.db.begin(user).await.expect("tx");
-    let rows = sqlx::query_as(
-        "SELECT kind, item_id, model FROM dedupe_vectors ORDER BY kind, item_id",
-    )
-    .fetch_all(tx.conn())
-    .await
-    .expect("items");
+    let rows =
+        sqlx::query_as("SELECT kind, item_id, model FROM dedupe_vectors ORDER BY kind, item_id")
+            .fetch_all(tx.conn())
+            .await
+            .expect("items");
     tx.commit().await.expect("commit");
     rows
 }
@@ -151,7 +164,11 @@ async fn notes_are_chunked_by_heading_with_block_ids_and_the_note_vector_is_the_
     // One call per chunk, then the note's duplicate-check item (its title).
     assert_eq!(
         w.embedder.calls(),
-        vec![vec![first_input], vec![second_input], vec!["Pricing".to_owned()]]
+        vec![
+            vec![first_input],
+            vec![second_input],
+            vec!["Pricing".to_owned()]
+        ]
     );
     assert_eq!(
         item_vectors(&w, a).await,
@@ -172,7 +189,9 @@ async fn notes_are_chunked_by_heading_with_block_ids_and_the_note_vector_is_the_
 async fn unchanged_notes_are_skipped_and_changed_ones_re_embedded() {
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
-    let note = w.create(&sa, "notes/Acme.md", "Prefers weekly invoicing.\n").await;
+    let note = w
+        .create(&sa, "notes/Acme.md", "Prefers weekly invoicing.\n")
+        .await;
     let runner = w.runner(eager(), vec![embed_handler(&w, w.embedder_arc())]);
     runner.run_until_idle().await;
     let calls = w.embedder.calls().len();
@@ -194,12 +213,7 @@ async fn unchanged_notes_are_skipped_and_changed_ones_re_embedded() {
     let v = version(&w, &sa, note).await;
     let content = w.vault.note(&sa, note).await.expect("note").content;
     w.vault
-        .update_note(
-            &sa,
-            note,
-            content.replace("weekly", "monthly"),
-            v.clone(),
-        )
+        .update_note(&sa, note, content.replace("weekly", "monthly"), v.clone())
         .await
         .expect("update");
     runner.run_until_idle().await;
@@ -266,10 +280,17 @@ async fn a_model_change_triggers_a_resumable_full_re_embed_with_progress() {
         3,
         vec![],
     );
-    assert_eq!(scheduler.enqueue_for_all("embed_backfill", "backfill").await, 1);
+    assert_eq!(
+        scheduler
+            .enqueue_for_all("embed_backfill", "backfill")
+            .await,
+        1
+    );
     let mut tx = w.db.begin(a).await.expect("tx");
     assert_eq!(
-        strata_jobs::vectors::coverage(&mut tx, "fake-embed@2").await.expect("coverage"),
+        strata_jobs::vectors::coverage(&mut tx, "fake-embed@2")
+            .await
+            .expect("coverage"),
         (0, 3)
     );
     tx.commit().await.expect("commit");
@@ -278,7 +299,9 @@ async fn a_model_change_triggers_a_resumable_full_re_embed_with_progress() {
     runner.run_until_idle().await;
     let mut tx = w.db.begin(a).await.expect("tx");
     assert_eq!(
-        strata_jobs::vectors::coverage(&mut tx, "fake-embed@2").await.expect("coverage"),
+        strata_jobs::vectors::coverage(&mut tx, "fake-embed@2")
+            .await
+            .expect("coverage"),
         (2, 3)
     );
     tx.commit().await.expect("commit");
@@ -293,7 +316,9 @@ async fn a_model_change_triggers_a_resumable_full_re_embed_with_progress() {
     runner.run_until_idle().await;
     let mut tx = w.db.begin(a).await.expect("tx");
     assert_eq!(
-        strata_jobs::vectors::coverage(&mut tx, "fake-embed@2").await.expect("coverage"),
+        strata_jobs::vectors::coverage(&mut tx, "fake-embed@2")
+            .await
+            .expect("coverage"),
         (3, 3)
     );
     let pending: i64 = sqlx::query_scalar(
@@ -318,14 +343,21 @@ async fn trashed_notes_lose_their_vectors_and_task_lines_get_item_vectors() {
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
     let note = w
-        .create(&sa, "notes/Todo.md", "- [ ] Send the ETA invoice to Watanya\n")
+        .create(
+            &sa,
+            "notes/Todo.md",
+            "- [ ] Send the ETA invoice to Watanya\n",
+        )
         .await;
     let runner = w.runner(eager(), vec![embed_handler(&w, w.embedder_arc())]);
     runner.run_until_idle().await;
     let items = item_vectors(&w, a).await;
     assert_eq!(items.len(), 2);
     assert_eq!(items[0], ("note".into(), note.to_string(), MODEL.into()));
-    assert_eq!((items[1].0.as_str(), items[1].1.starts_with("t-")), ("task", true));
+    assert_eq!(
+        (items[1].0.as_str(), items[1].1.starts_with("t-")),
+        ("task", true)
+    );
     assert_eq!(
         w.embedder.calls().last().cloned(),
         Some(vec!["Send the ETA invoice to Watanya".to_owned()])

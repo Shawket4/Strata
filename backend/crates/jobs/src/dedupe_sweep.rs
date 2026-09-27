@@ -164,10 +164,11 @@ impl DedupeHandler {
         let model = embedder.model_id().to_owned();
         let mut tx = self.db.begin(&ctx.scope).await?;
         let items = vectors::all_items(&mut tx).await?;
-        let keep_rows: Vec<(String, String, String)> =
-            sqlx::query_as("SELECT kind, a_id, b_id FROM dedupe_keep_both ORDER BY kind, a_id, b_id")
-                .fetch_all(tx.conn())
-                .await?;
+        let keep_rows: Vec<(String, String, String)> = sqlx::query_as(
+            "SELECT kind, a_id, b_id FROM dedupe_keep_both ORDER BY kind, a_id, b_id",
+        )
+        .fetch_all(tx.conn())
+        .await?;
         let suggested = suggested_pairs(&mut tx).await?;
         tx.commit().await?;
         let mut keep = dedupe::KeepBothSet::new();
@@ -239,21 +240,31 @@ impl DedupeHandler {
             let block_pairs = dedupe::sweep(&block, &self.thresholds, &keep);
             // Borderline semantic scores: confirm with the LLM (bounded per run).
             for id in std::mem::take(&mut outcome.needs_confirmation) {
-                let Some(n) = neighbours.iter().find(|n| n.item.item.id.as_deref() == Some(id.as_str())) else {
+                let Some(n) = neighbours
+                    .iter()
+                    .find(|n| n.item.item.id.as_deref() == Some(id.as_str()))
+                else {
                     continue;
                 };
                 let key = ordered(&it.item_id, &n.item.item_id);
                 if suggested.contains(&key) || found.contains_key(&key) {
                     continue;
                 }
-                let hashes = pair_hashes(&model, (&it.item_id, &it.item), (&n.item.item_id, &n.item.item));
+                let hashes = pair_hashes(
+                    &model,
+                    (&it.item_id, &it.item),
+                    (&n.item.item_id, &n.item.item),
+                );
                 let verdict = match self.stored_verdict(ctx, &key, &hashes).await? {
                     Some(v) => Some(v),
                     None if confirmations < self.max_confirmations => {
                         confirmations += 1;
-                        let v = self.confirm(ctx, &it.item, &n.item.item, n.similarity).await?;
+                        let v = self
+                            .confirm(ctx, &it.item, &n.item.item, n.similarity)
+                            .await?;
                         if let Some((verdict, reason)) = &v {
-                            self.store_verdict(ctx, &key, &hashes, *verdict, reason).await?;
+                            self.store_verdict(ctx, &key, &hashes, *verdict, reason)
+                                .await?;
                         }
                         v
                     }
@@ -272,7 +283,10 @@ impl DedupeHandler {
                 }
             }
             for c in outcome.candidates {
-                let Some(n) = neighbours.iter().find(|n| n.item.item.id.as_deref() == Some(c.id.as_str())) else {
+                let Some(n) = neighbours
+                    .iter()
+                    .find(|n| n.item.item.id.as_deref() == Some(c.id.as_str()))
+                else {
                     continue;
                 };
                 insert_pair(
@@ -435,11 +449,10 @@ fn insert_pair(
 async fn suggested_pairs(
     tx: &mut strata_index::ScopedTx,
 ) -> Result<BTreeSet<(String, String)>, JobError> {
-    let rows: Vec<Vec<u8>> =
-        sqlx::query_scalar("SELECT payload FROM suggestions WHERE kind = $1")
-            .bind(DUPLICATES)
-            .fetch_all(tx.conn())
-            .await?;
+    let rows: Vec<Vec<u8>> = sqlx::query_scalar("SELECT payload FROM suggestions WHERE kind = $1")
+        .bind(DUPLICATES)
+        .fetch_all(tx.conn())
+        .await?;
     Ok(rows
         .iter()
         .filter_map(|p| rmp_serde::from_slice::<DuplicatesPayload>(p).ok())
@@ -465,7 +478,12 @@ fn level_name(level: dedupe::MatchLevel) -> &'static str {
     }
 }
 
-fn payload_item(item: &StoredItem, note: Option<NoteId>, level: &str, score: f32) -> Option<DuplicatePayloadItem> {
+fn payload_item(
+    item: &StoredItem,
+    note: Option<NoteId>,
+    level: &str,
+    score: f32,
+) -> Option<DuplicatePayloadItem> {
     Some(DuplicatePayloadItem {
         id: display_id(item, note)?,
         item: item.item_id.clone(),

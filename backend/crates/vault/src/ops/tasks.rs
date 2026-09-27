@@ -229,7 +229,7 @@ impl Core {
         let parsed =
             TaskLine::parse(&line).ok_or(VaultError::invalid("the task line is invalid"))?;
         let item = dup::task_item(&id, &parsed);
-        let candidates = dup::find(
+        let candidates = dup::find_with(
             &mut tx,
             &item,
             &self.inner.config.near_thresholds,

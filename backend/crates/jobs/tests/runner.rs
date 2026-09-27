@@ -2,7 +2,11 @@
 //! claiming under concurrency, retries with exponential backoff, pauses that wait, debounce,
 //! events, unhandled kinds, the daily limit, graceful shutdown, and the scheduler — all with
 //! the fake clock.
-#![allow(clippy::expect_used, clippy::too_many_lines, clippy::many_single_char_names)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod common;
 
@@ -199,7 +203,11 @@ async fn concurrent_runners_claim_every_job_exactly_once() {
     let r1 = w.runner(config.clone(), vec![script.clone()]);
     let r2 = w.runner(config.clone(), vec![script.clone()]);
     let r3 = w.runner(config, vec![script.clone()]);
-    let (c1, c2, c3) = tokio::join!(r1.run_until_idle(), r2.run_until_idle(), r3.run_until_idle());
+    let (c1, c2, c3) = tokio::join!(
+        r1.run_until_idle(),
+        r2.run_until_idle(),
+        r3.run_until_idle()
+    );
     let mut ran: Vec<JobId> = script.runs().into_iter().map(|r| r.1).collect();
     ran.sort();
     all.sort();
@@ -230,8 +238,18 @@ async fn retries_back_off_exponentially_then_fail_with_an_event() {
     runner.run_until_idle().await;
     let j = job(&w, &sa, flaky).await;
     assert_eq!(
-        (j.status.as_str(), j.attempts, j.run_after, j.last_error.as_deref()),
-        ("queued", 1, t0 + chrono::Duration::seconds(30), Some("flaky"))
+        (
+            j.status.as_str(),
+            j.attempts,
+            j.run_after,
+            j.last_error.as_deref()
+        ),
+        (
+            "queued",
+            1,
+            t0 + chrono::Duration::seconds(30),
+            Some("flaky")
+        )
     );
     // Not due yet: nothing runs.
     w.db.clock.advance(chrono::Duration::seconds(29));
@@ -249,7 +267,10 @@ async fn retries_back_off_exponentially_then_fail_with_an_event() {
     w.db.clock.advance(chrono::Duration::seconds(60));
     runner.run_until_idle().await;
     let j = job(&w, &sa, flaky).await;
-    assert_eq!((j.status.as_str(), j.attempts, j.last_error), ("done", 3, None));
+    assert_eq!(
+        (j.status.as_str(), j.attempts, j.last_error),
+        ("done", 3, None)
+    );
     assert_eq!(
         w.events.notices(),
         vec![
@@ -299,7 +320,12 @@ async fn a_paused_job_waits_without_spending_an_attempt_and_resumes() {
     runner.run_until_idle().await;
     let j = job(&w, &sa, paused).await;
     assert_eq!(
-        (j.status.as_str(), j.attempts, j.run_after, j.last_error.as_deref()),
+        (
+            j.status.as_str(),
+            j.attempts,
+            j.run_after,
+            j.last_error.as_deref()
+        ),
         ("queued", 0, until, Some("paused: UserBudget"))
     );
     assert_eq!(
@@ -313,7 +339,10 @@ async fn a_paused_job_waits_without_spending_an_attempt_and_resumes() {
     runner.run_until_idle().await;
     let ran: Vec<JobId> = script.runs().into_iter().map(|r| r.1).collect();
     assert_eq!(ran, vec![paused, bobs]);
-    assert_eq!(light.runs().into_iter().map(|r| r.1).collect::<Vec<_>>(), vec![light_job]);
+    assert_eq!(
+        light.runs().into_iter().map(|r| r.1).collect::<Vec<_>>(),
+        vec![light_job]
+    );
     assert_eq!(job(&w, &sa, later).await.status.as_str(), "queued");
     // After the pause both run; the paused job still had its single attempt.
     w.db.clock.set(until);
@@ -361,7 +390,10 @@ async fn debounced_jobs_run_once_after_the_last_enqueue() {
     let runner = w.runner(RunnerConfig::default(), vec![script.clone()]);
     runner.run_until_idle().await;
     assert_eq!(script.runs().len(), 1);
-    assert_eq!(w.jobs(sa.user_id()).await, vec![("work".into(), "done".into(), 1)]);
+    assert_eq!(
+        w.jobs(sa.user_id()).await,
+        vec![("work".into(), "done".into(), 1)]
+    );
     // Once it ran, the same key queues a new job.
     let third = enqueue(&w, &sa, "work", &[], Some("note-1"), 3).await;
     assert_ne!(third, first);
@@ -381,7 +413,10 @@ async fn jobs_of_kinds_without_a_handler_stay_queued_and_the_user_is_skipped_for
     assert_eq!(runner.run_until_idle().await, vec![]);
     w.db.clock.advance(chrono::Duration::seconds(60));
     let claimed = runner.run_until_idle().await;
-    assert_eq!(claimed.iter().map(|c| c.id).collect::<Vec<_>>(), vec![later]);
+    assert_eq!(
+        claimed.iter().map(|c| c.id).collect::<Vec<_>>(),
+        vec![later]
+    );
     assert_eq!(
         w.jobs(sa.user_id()).await,
         vec![
@@ -503,13 +538,26 @@ async fn the_scheduler_keeps_one_nightly_job_per_user() {
         )]
     );
     // Backfill fan-out, debounced per user.
-    assert_eq!(scheduler.enqueue_for_all("embed_backfill", "backfill").await, 2);
-    assert_eq!(scheduler.enqueue_for_all("embed_backfill", "backfill").await, 2);
+    assert_eq!(
+        scheduler
+            .enqueue_for_all("embed_backfill", "backfill")
+            .await,
+        2
+    );
+    assert_eq!(
+        scheduler
+            .enqueue_for_all("embed_backfill", "backfill")
+            .await,
+        2
+    );
     let kinds: BTreeMap<String, usize> =
-        w.jobs(b).await.into_iter().fold(BTreeMap::new(), |mut m, j| {
-            *m.entry(j.0).or_insert(0) += 1;
-            m
-        });
+        w.jobs(b)
+            .await
+            .into_iter()
+            .fold(BTreeMap::new(), |mut m, j| {
+                *m.entry(j.0).or_insert(0) += 1;
+                m
+            });
     assert_eq!(
         kinds,
         BTreeMap::from([("dedupe".to_owned(), 1), ("embed_backfill".to_owned(), 1)])

@@ -225,7 +225,7 @@ impl Core {
         id: NoteId,
     ) -> Result<Vec<Candidate>> {
         let item = dup::note_item(path, Some(id), doc);
-        dup::find(
+        dup::find_with(
             tx,
             &item,
             &self.inner.config.near_thresholds,

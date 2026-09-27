@@ -360,17 +360,14 @@ class _SettingsList extends ConsumerWidget {
               minTileHeight: 52,
               leading: Icon(_sectionIcon(section), color: colors.text2),
               title: Text(sectionTitle(l10n, section), style: text.body),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (trailing(section) case final value?)
-                    Text(
-                      value,
-                      style: text.bodySmall.copyWith(color: colors.text2),
-                    ),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
+              subtitle: switch (trailing(section)) {
+                final value? => Text(
+                  value,
+                  style: text.bodySmall.copyWith(color: colors.text2),
+                ),
+                null => null,
+              },
+              trailing: const Icon(Icons.chevron_right),
               onTap: onSelect == null ? null : () => onSelect?.call(section),
             ),
         ],

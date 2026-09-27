@@ -9,11 +9,7 @@ use crate::repo;
 use crate::vectors;
 
 /// The status of `caller`, including queue depth and embedding progress.
-pub async fn ai_status(
-    ai: &AiService,
-    db: &AppDb,
-    caller: &AiCaller,
-) -> Result<AiStatus, AiError> {
+pub async fn ai_status(ai: &AiService, db: &AppDb, caller: &AiCaller) -> Result<AiStatus, AiError> {
     let mut status = ai.status(caller).await?;
     let mut tx = db.begin(&caller.scope).await?;
     status.queue_depth = Some(

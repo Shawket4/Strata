@@ -296,14 +296,20 @@ mod tests {
         let clock = FakeClock::at_default_epoch();
         let live = Arc::new(AtomicUsize::new(0));
         let e = lazy(&clock, &live, None);
-        assert_eq!((e.is_loaded(), e.loads(), live.load(Ordering::SeqCst)), (false, 0, 0));
+        assert_eq!(
+            (e.is_loaded(), e.loads(), live.load(Ordering::SeqCst)),
+            (false, 0, 0)
+        );
         assert_eq!((e.model_id(), e.dims()), ("m@1", 2));
         // Nothing to unload before the first use.
         assert!(!e.unload_if_idle());
 
         let out = e.embed(&["a".into()]).await.expect("embed");
         assert_eq!(out[0].vector, vec![1.0, 0.0]);
-        assert_eq!((e.is_loaded(), e.loads(), live.load(Ordering::SeqCst)), (true, 1, 1));
+        assert_eq!(
+            (e.is_loaded(), e.loads(), live.load(Ordering::SeqCst)),
+            (true, 1, 1)
+        );
         // A second call reuses the loaded model.
         e.embed(&["b".into()]).await.expect("embed");
         assert_eq!(e.loads(), 1);
@@ -313,12 +319,18 @@ mod tests {
         assert!(e.is_loaded());
         clock.advance(chrono::Duration::seconds(1));
         assert!(e.unload_if_idle(), "idle 300 s");
-        assert_eq!((e.is_loaded(), e.unloads(), live.load(Ordering::SeqCst)), (false, 1, 0));
+        assert_eq!(
+            (e.is_loaded(), e.unloads(), live.load(Ordering::SeqCst)),
+            (false, 1, 0)
+        );
         assert!(!e.unload_if_idle(), "already unloaded");
 
         // The next call loads it again.
         e.embed(&["c".into()]).await.expect("embed");
-        assert_eq!((e.is_loaded(), e.loads(), live.load(Ordering::SeqCst)), (true, 2, 1));
+        assert_eq!(
+            (e.is_loaded(), e.loads(), live.load(Ordering::SeqCst)),
+            (true, 2, 1)
+        );
         // Empty input never loads anything.
         clock.advance(chrono::Duration::seconds(300));
         assert!(e.unload_if_idle());
@@ -332,7 +344,11 @@ mod tests {
         let live = Arc::new(AtomicUsize::new(0));
         let started = Arc::new(tokio::sync::Notify::new());
         let release = Arc::new(tokio::sync::Notify::new());
-        let e = Arc::new(lazy(&clock, &live, Some((started.clone(), release.clone()))));
+        let e = Arc::new(lazy(
+            &clock,
+            &live,
+            Some((started.clone(), release.clone())),
+        ));
         let call = tokio::spawn({
             let e = e.clone();
             async move { e.embed(&["x".to_owned()]).await }
@@ -375,7 +391,10 @@ mod tests {
             e.embed(&["a".into()]).await,
             Err(EmbedError::Load("model file missing".into()))
         );
-        assert_eq!((attempts.load(Ordering::SeqCst), e.loads(), e.is_loaded()), (2, 0, false));
+        assert_eq!(
+            (attempts.load(Ordering::SeqCst), e.loads(), e.is_loaded()),
+            (2, 0, false)
+        );
     }
 
     #[tokio::test]
@@ -404,7 +423,11 @@ mod tests {
                 "loaded model m@1 (2 dims), expected other@2 (2 dims)".into()
             ))
         );
-        assert_eq!(live.load(Ordering::SeqCst), 0, "the wrong model was dropped");
+        assert_eq!(
+            live.load(Ordering::SeqCst),
+            0,
+            "the wrong model was dropped"
+        );
     }
 
     #[tokio::test]
@@ -432,7 +455,11 @@ mod tests {
         let texts = vec!["x".to_owned()];
         let mut call = Box::pin(e.embed(&texts));
         assert!((&mut call).now_or_never().is_none());
-        assert_eq!(live.load(Ordering::SeqCst), 0, "not loaded while claude runs");
+        assert_eq!(
+            live.load(Ordering::SeqCst),
+            0,
+            "not loaded while claude runs"
+        );
         drop(llm);
         call.await.expect("embed");
         assert_eq!(live.load(Ordering::SeqCst), 1);

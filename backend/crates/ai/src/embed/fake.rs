@@ -147,9 +147,16 @@ mod tests {
     async fn vectors_are_deterministic_normalised_and_overridable() {
         let e = FakeEmbedder::new("fake@1", 8);
         let a = e.vector("Watanya contract safe");
-        assert_eq!(a, e.vector("watanya CONTRACT, safe!"), "case and punctuation");
+        assert_eq!(
+            a,
+            e.vector("watanya CONTRACT, safe!"),
+            "case and punctuation"
+        );
         assert!((dot(&a, &a) - 1.0).abs() < 1e-6);
-        assert_eq!(e.vector("..."), vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
+        assert_eq!(
+            e.vector("..."),
+            vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        );
         e.set("x", &[3.0, 4.0]);
         assert_eq!(e.vector("x"), vec![0.6, 0.8, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]);
         let out = e.embed(&["x".into()]).await.expect("embed");

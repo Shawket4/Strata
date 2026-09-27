@@ -1,7 +1,11 @@
 //! Ask (PLAN §9.5): hybrid retrieval into the prompt, the streamed answer, citations resolved
 //! to real blocks (IDs appended when missing, one `ai:` commit), unknown refs dropped, and the
 //! unavailable / paused cases.
-#![allow(clippy::expect_used, clippy::too_many_lines, clippy::many_single_char_names)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod common;
 
@@ -45,7 +49,11 @@ async fn answers_stream_then_citations_resolve_to_blocks_with_ids_appended_in_on
         )
         .await;
     let pricing = w
-        .create(&sa, "notes/Pricing.md", "Discounts are capped at 5%. ^cap\n")
+        .create(
+            &sa,
+            "notes/Pricing.md",
+            "Discounts are capped at 5%. ^cap\n",
+        )
         .await;
     w.create(&sa, "notes/Banana.md", "Banana bread with walnuts.\n")
         .await;
@@ -59,7 +67,10 @@ async fn answers_stream_then_citations_resolve_to_blocks_with_ids_appended_in_on
         .expect_err("no fixture");
     assert!(matches!(err, AskError::Unavailable(_)), "{err:?}");
     let recorded = w.llm.calls().last().cloned().expect("a call");
-    assert_eq!(recorded.prompt, prompts::latest(ids::ASK).expect("ask").prompt_ref());
+    assert_eq!(
+        recorded.prompt,
+        prompts::latest(ids::ASK).expect("ask").prompt_ref()
+    );
     let input: serde_json::Value = serde_json::from_str(&recorded.user).expect("json");
     assert_eq!(
         input["question"],
@@ -101,8 +112,15 @@ async fn answers_stream_then_citations_resolve_to_blocks_with_ids_appended_in_on
             ("Pricing", "Discounts are capped at 5%."),
         ]
     );
-    assert!(sources.iter().any(|s| s.0 == "Pricing#^cap"), "existing IDs are reused");
-    assert_eq!(w.log(a).len(), commits, "nothing is written before the answer");
+    assert!(
+        sources.iter().any(|s| s.0 == "Pricing#^cap"),
+        "existing IDs are reused"
+    );
+    assert_eq!(
+        w.log(a).len(),
+        commits,
+        "nothing is written before the answer"
+    );
 
     // Second attempt with the same IDs: the recorded input has a fixture now.
     let system = prompts::latest(ids::ASK).expect("ask").text;
@@ -160,7 +178,10 @@ async fn answers_stream_then_citations_resolve_to_blocks_with_ids_appended_in_on
     // Exactly one commit: the cited block got its ID; the uncited ones did not.
     assert_eq!(w.log(a).len(), commits + 1);
     assert_eq!(w.log(a)[0], "ai: ask notes/Call 2026-09-12.md");
-    assert_eq!(w.last_commit_paths(a), vec!["notes/Call 2026-09-12.md".to_owned()]);
+    assert_eq!(
+        w.last_commit_paths(a),
+        vec!["notes/Call 2026-09-12.md".to_owned()]
+    );
     let text = w.read(a, "notes/Call 2026-09-12.md");
     assert!(
         text.ends_with(&format!(
@@ -190,7 +211,10 @@ async fn ask_is_refused_when_ai_is_off_or_paused_and_works_without_embeddings() 
     );
     let (_, sa) = w.user("alice").await;
     assert_eq!(
-        engine(&w).start(sa, "alice".into(), "  ", None).await.expect_err("empty"),
+        engine(&w)
+            .start(sa, "alice".into(), "  ", None)
+            .await
+            .expect_err("empty"),
         AskError::EmptyQuestion
     );
     // Keyword-only retrieval (no embedder): the call reaches the provider; its usage then
@@ -215,7 +239,9 @@ async fn ask_is_refused_when_ai_is_off_or_paused_and_works_without_embeddings() 
         serde_json::from_str(&w.llm.calls().last().expect("call").user).expect("json");
     assert_eq!(input["sources"][0]["note_title"], "Acme");
     assert_eq!(
-        input["sources"][0]["ref"].as_str().map(|r| r.starts_with("Acme#^ask-")),
+        input["sources"][0]["ref"]
+            .as_str()
+            .map(|r| r.starts_with("Acme#^ask-")),
         Some(true)
     );
     let system = prompts::latest(ids::ASK).expect("ask").text;
