@@ -232,7 +232,7 @@ pub async fn create_user(
     path = "/admin/users/{id}/approve",
     tag = "admin",
     operation_id = "admin_approve_user",
-    params(("id" = String, Path, description = "Account ID (ULID).")),
+    params(("id" = Ulid, Path, description = "Account ID (ULID).")),
     responses(
         (status = 200, description = "Approved.", body = AdminUser),
         (status = 403, description = "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation.", body = Problem),
@@ -268,7 +268,7 @@ pub async fn approve_user(
     path = "/admin/users/{id}/reject",
     tag = "admin",
     operation_id = "admin_reject_user",
-    params(("id" = String, Path, description = "Account ID (ULID).")),
+    params(("id" = Ulid, Path, description = "Account ID (ULID).")),
     responses(
         (status = 200, description = "Rejected; the account can never sign in.", body = AdminUser),
         (status = 403, description = "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation.", body = Problem),
@@ -299,7 +299,7 @@ pub async fn reject_user(
     path = "/admin/users/{id}",
     tag = "admin",
     operation_id = "admin_update_user",
-    params(("id" = String, Path, description = "Account ID (ULID).")),
+    params(("id" = Ulid, Path, description = "Account ID (ULID).")),
     request_body = UpdateUser,
     responses(
         (status = 200, description = "Updated. Disabling or resetting the password ends every session of the account immediately.", body = UpdateUserResult),
@@ -407,7 +407,7 @@ pub async fn update_user(
     path = "/admin/users/{id}",
     tag = "admin",
     operation_id = "admin_delete_user",
-    params(("id" = String, Path, description = "Account ID (ULID).")),
+    params(("id" = Ulid, Path, description = "Account ID (ULID).")),
     responses(
         (status = 200, description = "Scheduled: `deletion_pending` with the purge time in `deletion_at`.", body = AdminUser),
         (status = 403, description = "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation.", body = Problem),
@@ -452,7 +452,7 @@ pub async fn delete_user(
     path = "/admin/users/{id}/cancel-deletion",
     tag = "admin",
     operation_id = "admin_cancel_deletion",
-    params(("id" = String, Path, description = "Account ID (ULID).")),
+    params(("id" = Ulid, Path, description = "Account ID (ULID).")),
     responses(
         (status = 200, description = "Active again; export-only sessions end (the user signs in normally).", body = AdminUser),
         (status = 403, description = "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation.", body = Problem),

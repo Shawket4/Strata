@@ -4,8 +4,17 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Exact and near duplicate detection and candidate ranking shared by the backend and the client core (PLAN §9.7)."
 
 [dependencies]
+domain = { workspace = true }
+text-normalize = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+rmp-serde = { workspace = true }
+pretty_assertions = { workspace = true }
 
 [lints]
 workspace = true

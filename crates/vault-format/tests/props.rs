@@ -97,7 +97,8 @@ fn body(eol: LineEnding) -> impl Strategy<Value = (String, usize, Vec<String>)> 
             text.push_str(p);
             if let Some(id) = id {
                 let id = format!("{id}-{i}");
-                text.push_str(&format!(" ^{id}"));
+                text.push_str(" ^");
+                text.push_str(&id);
                 ids.push(id);
             }
             text.push_str(e);
@@ -107,13 +108,13 @@ fn body(eol: LineEnding) -> impl Strategy<Value = (String, usize, Vec<String>)> 
     })
 }
 
-fn doc_parts() -> impl Strategy<
-    Value = (
-        LineEnding,
-        Vec<(String, PropertyValue)>,
-        (String, usize, Vec<String>),
-    ),
-> {
+type DocParts = (
+    LineEnding,
+    Vec<(String, PropertyValue)>,
+    (String, usize, Vec<String>),
+);
+
+fn doc_parts() -> impl Strategy<Value = DocParts> {
     eol().prop_flat_map(|e| {
         (
             Just(e),

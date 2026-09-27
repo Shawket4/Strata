@@ -44,7 +44,7 @@ export-only session until the purge.*/
 /// `DELETE /api/v1/admin/users/{id}`
 pub async fn admin_delete_user(
     client: &::strata_client::Client,
-    id: &str,
+    id: ::ulid::Ulid,
 ) -> ::std::result::Result<types::AdminUser, ::strata_client::Error> {
     let request = ::strata_client::Request::new(
         ::strata_client::Method::DELETE,
@@ -52,7 +52,7 @@ pub async fn admin_delete_user(
             "/api/v1/admin/users/{}",
             ::strata_client::encode_path_segment(&{
                 let value = &id;
-                (*value).to_owned()
+                value.to_string()
             })?
         ),
         "admin_delete_user",
@@ -65,7 +65,7 @@ pub async fn admin_delete_user(
 /// `PATCH /api/v1/admin/users/{id}`
 pub async fn admin_update_user(
     client: &::strata_client::Client,
-    id: &str,
+    id: ::ulid::Ulid,
     body: &types::UpdateUser,
 ) -> ::std::result::Result<types::UpdateUserResult, ::strata_client::Error> {
     let request = ::strata_client::Request::new(
@@ -74,7 +74,7 @@ pub async fn admin_update_user(
             "/api/v1/admin/users/{}",
             ::strata_client::encode_path_segment(&{
                 let value = &id;
-                (*value).to_owned()
+                value.to_string()
             })?
         ),
         "admin_update_user",
@@ -88,7 +88,7 @@ pub async fn admin_update_user(
 /// `POST /api/v1/admin/users/{id}/approve`
 pub async fn admin_approve_user(
     client: &::strata_client::Client,
-    id: &str,
+    id: ::ulid::Ulid,
 ) -> ::std::result::Result<types::AdminUser, ::strata_client::Error> {
     let request = ::strata_client::Request::new(
         ::strata_client::Method::POST,
@@ -96,7 +96,7 @@ pub async fn admin_approve_user(
             "/api/v1/admin/users/{}/approve",
             ::strata_client::encode_path_segment(&{
                 let value = &id;
-                (*value).to_owned()
+                value.to_string()
             })?
         ),
         "admin_approve_user",
@@ -109,7 +109,7 @@ pub async fn admin_approve_user(
 /// `POST /api/v1/admin/users/{id}/cancel-deletion`
 pub async fn admin_cancel_deletion(
     client: &::strata_client::Client,
-    id: &str,
+    id: ::ulid::Ulid,
 ) -> ::std::result::Result<types::AdminUser, ::strata_client::Error> {
     let request = ::strata_client::Request::new(
         ::strata_client::Method::POST,
@@ -117,7 +117,7 @@ pub async fn admin_cancel_deletion(
             "/api/v1/admin/users/{}/cancel-deletion",
             ::strata_client::encode_path_segment(&{
                 let value = &id;
-                (*value).to_owned()
+                value.to_string()
             })?
         ),
         "admin_cancel_deletion",
@@ -130,7 +130,7 @@ pub async fn admin_cancel_deletion(
 /// `POST /api/v1/admin/users/{id}/reject`
 pub async fn admin_reject_user(
     client: &::strata_client::Client,
-    id: &str,
+    id: ::ulid::Ulid,
 ) -> ::std::result::Result<types::AdminUser, ::strata_client::Error> {
     let request = ::strata_client::Request::new(
         ::strata_client::Method::POST,
@@ -138,7 +138,7 @@ pub async fn admin_reject_user(
             "/api/v1/admin/users/{}/reject",
             ::strata_client::encode_path_segment(&{
                 let value = &id;
-                (*value).to_owned()
+                value.to_string()
             })?
         ),
         "admin_reject_user",
@@ -329,7 +329,7 @@ pub async fn list_devices(
 /// `DELETE /api/v1/devices/{id}`
 pub async fn delete_device(
     client: &::strata_client::Client,
-    id: &str,
+    id: ::ulid::Ulid,
 ) -> ::std::result::Result<(), ::strata_client::Error> {
     let request = ::strata_client::Request::new(
         ::strata_client::Method::DELETE,
@@ -337,7 +337,7 @@ pub async fn delete_device(
             "/api/v1/devices/{}",
             ::strata_client::encode_path_segment(&{
                 let value = &id;
-                (*value).to_owned()
+                value.to_string()
             })?
         ),
         "delete_device",
@@ -350,7 +350,7 @@ pub async fn delete_device(
 /// `PATCH /api/v1/devices/{id}`
 pub async fn update_device(
     client: &::strata_client::Client,
-    id: &str,
+    id: ::ulid::Ulid,
     body: &types::UpdateDevice,
 ) -> ::std::result::Result<types::Device, ::strata_client::Error> {
     let request = ::strata_client::Request::new(
@@ -359,7 +359,7 @@ pub async fn update_device(
             "/api/v1/devices/{}",
             ::strata_client::encode_path_segment(&{
                 let value = &id;
-                (*value).to_owned()
+                value.to_string()
             })?
         ),
         "update_device",

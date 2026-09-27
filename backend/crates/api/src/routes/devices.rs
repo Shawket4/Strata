@@ -108,7 +108,7 @@ pub async fn list_devices(
     path = "/devices/{id}",
     tag = "devices",
     operation_id = "update_device",
-    params(("id" = String, Path, description = "Device ID (ULID).")),
+    params(("id" = Ulid, Path, description = "Device ID (ULID).")),
     request_body = UpdateDevice,
     responses(
         (status = 200, description = "The updated device.", body = Device),
@@ -154,7 +154,7 @@ pub async fn update_device(
     path = "/devices/{id}",
     tag = "devices",
     operation_id = "delete_device",
-    params(("id" = String, Path, description = "Device ID (ULID).")),
+    params(("id" = Ulid, Path, description = "Device ID (ULID).")),
     responses((status = 204, description = "Removed; its tokens stop working immediately.")),
 )]
 pub async fn delete_device(

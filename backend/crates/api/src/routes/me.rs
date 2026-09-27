@@ -410,44 +410,27 @@ pub async fn export_me(
     let (rx, task) = export::stream_vault_zip(state.vaults.vault_dir(user));
     // Chunks as they are written; once the archive is complete the download is recorded
     // (admins see only that timestamp) before the response ends.
-    enum Step {
-        Chunks(tokio::sync::mpsc::Receiver<std::io::Result<bytes::Bytes>>),
-        Finish,
-        Done,
-    }
-    let finish_state = state.clone();
-    let mut task = Some(task);
-    let body = futures_util::stream::unfold(Step::Chunks(rx), move |step| {
-        let state = finish_state.clone();
-        let task = task.take();
-        async move {
-            match step {
-                Step::Chunks(mut rx) => match rx.recv().await {
-                    Some(Ok(chunk)) => Some((Ok(chunk), Step::Chunks(rx))),
-                    Some(Err(err)) => Some((Err(err), Step::Done)),
-                    None => {
-                        let Some(task) = task else {
-                            return None;
-                        };
-                        match task.await {
-                            Ok(Ok(())) => {
-                                let now = state.clock.now();
-                                if let Err(err) =
-                                    state.accounts.mark_export_downloaded(user, now).await
-                                {
-                                    tracing::warn!(user = %user, error = %err, "cannot record the export download");
-                                }
-                                Some((Ok(bytes::Bytes::new()), Step::Finish))
-                            }
-                            Ok(Err(err)) => Some((Err(err), Step::Done)),
-                            Err(err) => Some((Err(std::io::Error::other(err)), Step::Done)),
+    let body = futures_util::stream::unfold(
+        Some((rx, task, state.clone())),
+        move |step| async move {
+            let (mut rx, task, state) = step?;
+            match rx.recv().await {
+                Some(Ok(chunk)) => Some((Ok(chunk), Some((rx, task, state)))),
+                Some(Err(err)) => Some((Err(err), None)),
+                None => match task.await {
+                    Ok(Ok(())) => {
+                        let now = state.clock.now();
+                        if let Err(err) = state.accounts.mark_export_downloaded(user, now).await {
+                            tracing::warn!(user = %user, error = %err, "cannot record the export download");
                         }
+                        None
                     }
+                    Ok(Err(err)) => Some((Err(err), None)),
+                    Err(err) => Some((Err(std::io::Error::other(err)), None)),
                 },
-                Step::Finish | Step::Done => None,
             }
-        }
-    });
+        },
+    );
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, ZIP))
         .insert_header((

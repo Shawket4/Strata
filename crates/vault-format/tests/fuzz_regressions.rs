@@ -7,7 +7,7 @@ use vault_format::frontmatter::FrontmatterError;
 use vault_format::tasks::{DateKind, TaskLine};
 use vault_format::{Document, KnownKey, PropertyValue};
 
-/// fuzz/document: canonical rendering reordered the entries of unreadable YAML (control
+/// `fuzz/document`: canonical rendering reordered the entries of unreadable YAML (control
 /// characters), producing a different document. Such frontmatter must stay verbatim.
 #[test]
 fn invalid_frontmatter_is_never_reordered() {
@@ -24,7 +24,7 @@ fn invalid_frontmatter_is_never_reordered() {
     assert_eq!(doc.render_canonical(), text);
 }
 
-/// fuzz/frontmatter: a bare `\r` is a line break to YAML but not to the entry splitter.
+/// `fuzz/frontmatter`: a bare `\r` is a line break to YAML but not to the entry splitter.
 #[test]
 fn bare_carriage_returns_make_frontmatter_read_only() {
     let text = "---\n#\r\r\t~\t>\rfalse\n?+2\n---\n";
@@ -72,7 +72,7 @@ fn edits_that_would_break_other_entries_are_refused() {
     assert_eq!(doc.render(), text);
 }
 
-/// fuzz/task_line: a date inserted right after a recurrence phrase was glued to the
+/// `fuzz/task_line`: a date inserted right after a recurrence phrase was glued to the
 /// following text and did not parse back.
 #[test]
 fn inserted_fields_stay_separated() {
@@ -94,7 +94,7 @@ fn inserted_fields_stay_separated() {
     );
 }
 
-/// fuzz/task_line: removing a field exposed an earlier duplicate of the same signifier.
+/// `fuzz/task_line`: removing a field exposed an earlier duplicate of the same signifier.
 #[test]
 fn removing_a_field_removes_its_duplicates() {
     let line = "- [/] In progress ⏫ 🛫 2052-09-20 ⏳🛫 2052-09-20 ⏳ 2026-09-22";
@@ -112,7 +112,7 @@ fn removing_a_field_removes_its_duplicates() {
     );
 }
 
-/// fuzz/body: pulldown-cmark 0.13.4 panics on this input; analysis must survive it.
+/// `fuzz/body`: `pulldown-cmark` 0.13.4 panics on this input; analysis must survive it.
 #[test]
 fn markdown_parser_panic_is_contained() {
     let body = "- [n]:`\n\u{b}";

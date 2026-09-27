@@ -157,12 +157,12 @@ pub fn tags(body: &str) -> Vec<InlineTag> {
     analyze(body).tags
 }
 
-/// Runs the CommonMark parser defensively.
+/// Runs the `CommonMark` parser defensively.
 ///
-/// pulldown-cmark 0.13.4 panics when a list item that starts with a link reference definition
-/// is followed by certain whitespace-only lines (found by fuzzing: `"- [a]: b\n        "`,
-/// `"- [n]:`\n\u{b}"`). A whitespace-only line is a blank line to CommonMark, so the parser
-/// is given a copy with those lines emptied (and vertical tab / form feed, which CommonMark
+/// `pulldown-cmark` 0.13.4 panics when a list item that starts with a link reference
+/// definition is followed by certain whitespace-only lines (found by fuzzing, e.g.
+/// `"- [a]: b\n        "`). A whitespace-only line is a blank line to `CommonMark`, so the parser
+/// is given a copy with those lines emptied (and vertical tab / form feed, which `CommonMark`
 /// treats as whitespace, turned into spaces); every range it reports is mapped back to the
 /// original text. Should the parser still panic on some other input, the body is treated as
 /// plain text (no code spans, headings or blocks) instead of taking the caller down.
@@ -171,7 +171,7 @@ fn collect_guarded(body: &str) -> Structure {
     std::panic::catch_unwind(|| Structure::collect(body, &prepared)).unwrap_or_default()
 }
 
-/// Lines as CommonMark sees them: ended by `\r\n`, `\n` or a lone `\r`.
+/// Lines as `CommonMark` sees them: ended by `\r\n`, `\n` or a lone `\r`.
 fn markdown_lines(text: &str) -> impl Iterator<Item = (&str, &str)> {
     let mut rest = text;
     std::iter::from_fn(move || {

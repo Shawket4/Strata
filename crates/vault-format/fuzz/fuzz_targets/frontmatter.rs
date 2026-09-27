@@ -16,7 +16,9 @@ fuzz_target!(|input: (&str, &str)| {
         // accepted edit must read back exactly.
         let fm = doc.frontmatter_mut();
         if fm.set_text(KnownKey::Title, value).is_err()
-            || fm.set_list(KnownKey::Aliases, vec![value.to_owned(), "x".to_owned()]).is_err()
+            || fm
+                .set_list(KnownKey::Aliases, vec![value.to_owned(), "x".to_owned()])
+                .is_err()
         {
             return;
         }
@@ -24,7 +26,10 @@ fuzz_target!(|input: (&str, &str)| {
         let back = Document::parse(&rendered);
         let fm = back.frontmatter().unwrap();
         assert_eq!(fm.error(), None, "{rendered}");
-        assert_eq!(fm.get("title"), Some(&PropertyValue::Text(value.to_owned())));
+        assert_eq!(
+            fm.get("title"),
+            Some(&PropertyValue::Text(value.to_owned()))
+        );
         assert_eq!(fm.aliases(), vec![value.to_owned(), "x".to_owned()]);
     }
 });

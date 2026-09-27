@@ -163,4 +163,24 @@ impl AuthState {
     pub fn tokens(&self) -> &TokenService {
         &self.tokens
     }
+
+    /// Creates an active account with its vault (as `POST /admin/users` does; `actor` is the
+    /// creating admin, `None` for the system).
+    pub async fn create_account(
+        &self,
+        input: &service::NewAccount<'_>,
+        actor: Option<strata_common::UserId>,
+    ) -> Result<strata_index::accounts::User, AccountError> {
+        service::create_active_account(
+            &self.accounts,
+            &self.passwords,
+            self.vaults.as_ref(),
+            self.ids.as_ref(),
+            self.settings.min_password_length,
+            input,
+            actor,
+            self.clock.now(),
+        )
+        .await
+    }
 }
