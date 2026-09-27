@@ -4,6 +4,7 @@
 //! `reindex --user`, `openapi`, `migrate`, `bootstrap-roles`. The library form exists so the startup checks and commands are tested
 //! directly; `main.rs` only parses arguments and dispatches.
 
+pub mod ai;
 pub mod checks;
 pub mod cli;
 pub mod commands;

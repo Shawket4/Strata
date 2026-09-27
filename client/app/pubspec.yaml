@@ -12,6 +12,7 @@ workspace:
   - packages/strata_ui
   - packages/strata_bridge
   - packages/strata_l10n
+  - packages/strata_state
   - packages/features/accounts
   - packages/features/admin
   - packages/features/ask

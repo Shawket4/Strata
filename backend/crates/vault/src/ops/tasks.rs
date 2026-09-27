@@ -311,6 +311,52 @@ impl Core {
             .await
     }
 
+    /// Applies a pushed task edit (`task.update|complete|cancel|reopen|delete`, sync) with the
+    /// shared `sync-model` rules; `if_match` is the task line's version. The device supplies
+    /// the dates and the next occurrence's block ID, so both sides write the same lines.
+    pub async fn apply_task_sync_op(
+        &mut self,
+        scope: UserScope,
+        op: &Op,
+        if_match: Option<&str>,
+    ) -> Result<()> {
+        let (id, message) = match op {
+            Op::TaskUpdate(p) => {
+                if let Some(t) = &p.text {
+                    validate_text(t)?;
+                }
+                if let Some(Some(r)) = &p.recurrence {
+                    validate_recurrence(r)?;
+                }
+                (p.id.as_str(), "task update")
+            }
+            Op::TaskComplete(p) => {
+                if let Some(n) = &p.next_id
+                    && !vault_format::blocks::is_valid_block_id(n)
+                {
+                    return Err(VaultError::invalid("the next task id is not a valid block id"));
+                }
+                (p.id.as_str(), "task complete")
+            }
+            Op::TaskCancel(p) => (p.id.as_str(), "task cancel"),
+            Op::TaskReopen(p) => (p.id.as_str(), "task reopen"),
+            Op::TaskDelete(p) => (p.id.as_str(), "task delete"),
+            _ => return Err(VaultError::invalid("not a task edit")),
+        };
+        let id = id.to_owned();
+        self.apply_task(&scope, &id, op, if_match, message).await
+    }
+
+    /// The task line of `id` now: (note, line version, line).
+    pub async fn task_line(&self, scope: &UserScope, id: &str) -> Result<(NoteId, String, String)> {
+        let (note, path) = self.locate_task(scope, id).await?;
+        let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
+        let doc = Document::parse(&text);
+        let (span, _) = find_task(doc.body(), id).ok_or(VaultError::NotFound)?;
+        let line = doc.body()[span].to_owned();
+        Ok((note, task_line_version(&line).as_str().to_owned(), line))
+    }
+
     /// Applies a task op to the note holding task `id` (one `user:` commit).
     async fn apply_task(
         &mut self,

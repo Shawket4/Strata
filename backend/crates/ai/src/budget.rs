@@ -36,13 +36,13 @@ pub struct BudgetLimits {
 }
 
 impl BudgetLimits {
-    /// From the `[budgets]` config section (it has no global cost cap: unlimited).
+    /// From the `[budgets]` config section.
     pub fn from_config(b: &strata_common::config::Budgets) -> Self {
         Self {
             per_user_daily_tokens: b.per_user_daily_tokens,
             per_user_daily_cost_micros: b.per_user_daily_cost_micros,
             global_daily_tokens: b.global_daily_tokens,
-            global_daily_cost_micros: 0,
+            global_daily_cost_micros: b.global_daily_cost_micros,
         }
     }
 }

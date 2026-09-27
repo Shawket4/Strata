@@ -134,6 +134,7 @@ impl VaultService {
                 .await?;
                 let replies = srepo::replies(&mut tx, id).await?;
                 tx.commit().await?;
+                core.inner.notify(core.user, &suggestion_notice(&decided, false));
                 Ok(SuggestionView {
                     suggestion: decided,
                     replies,
@@ -150,6 +151,19 @@ impl VaultService {
         id: SuggestionId,
         body: String,
     ) -> Result<SuggestionView> {
+        let reply = ReplyId::generate(self.inner.ids.as_ref());
+        self.reply_suggestion_as(scope, id, reply, body).await
+    }
+
+    /// [`Self::reply_suggestion`] with a client-generated reply ID (sync). A reply whose ID
+    /// is already in the thread is not added again.
+    pub async fn reply_suggestion_as(
+        &self,
+        scope: &UserScope,
+        id: SuggestionId,
+        reply_id: ReplyId,
+        body: String,
+    ) -> Result<SuggestionView> {
         let text = body.trim().to_owned();
         if text.is_empty() {
             return Err(VaultError::invalid("the reply is empty"));
@@ -160,13 +174,22 @@ impl VaultService {
         let s = srepo::get_suggestion(&mut tx, id)
             .await?
             .ok_or(VaultError::NotFound)?;
+        if srepo::replies(&mut tx, id)
+            .await?
+            .iter()
+            .any(|r| r.id == reply_id)
+        {
+            let view = self.view_suggestion(&mut tx, s).await?;
+            tx.commit().await?;
+            return Ok(view);
+        }
         if s.status != SuggestionStatus::Pending {
             return Err(VaultError::invalid("the suggestion was already decided"));
         }
         srepo::add_reply(
             &mut tx,
             &Reply {
-                id: ReplyId::generate(self.inner.ids.as_ref()),
+                id: reply_id,
                 suggestion_id: id,
                 author: ReplyAuthor::User,
                 body: text,
@@ -188,7 +211,39 @@ impl VaultService {
         .await?;
         let view = self.view_suggestion(&mut tx, s).await?;
         tx.commit().await?;
+        self.inner
+            .notify(scope.user_id(), &suggestion_notice(&view.suggestion, false));
         Ok(view)
+    }
+
+    /// Records a new pending suggestion (with its change-log row) and announces it.
+    pub async fn create_suggestion(
+        &self,
+        scope: &UserScope,
+        id: SuggestionId,
+        note: Option<NoteId>,
+        kind: &str,
+        payload: &[u8],
+    ) -> Result<Suggestion> {
+        let now = self.inner.clock.now();
+        let mut tx = self.inner.db.begin(scope).await?;
+        let s = srepo::create_suggestion(&mut tx, id, note, kind, payload, now).await?;
+        let id_text = id.to_string();
+        sync::append_change(
+            &mut tx,
+            &NewChange {
+                entity_type: "suggestion",
+                entity_id: &id_text,
+                op: ChangeOp::Upsert,
+                version: None,
+                at: now,
+            },
+        )
+        .await?;
+        tx.commit().await?;
+        self.inner
+            .notify(scope.user_id(), &suggestion_notice(&s, true));
+        Ok(s)
     }
 
     /// Pending suggestions of a note.
@@ -203,5 +258,18 @@ impl VaultService {
             .into_iter()
             .filter(|s| s.suggestion.note_id == Some(note))
             .collect())
+    }
+}
+
+fn suggestion_notice(s: &Suggestion, created: bool) -> crate::events::Committed {
+    crate::events::Committed {
+        suggestions: vec![crate::events::SuggestionEvent {
+            id: s.id,
+            note_id: s.note_id,
+            kind: s.kind.clone(),
+            status: s.status.as_str().to_owned(),
+            created,
+        }],
+        ..crate::events::Committed::default()
     }
 }

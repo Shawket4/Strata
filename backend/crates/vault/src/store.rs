@@ -162,11 +162,6 @@ impl VaultService {
             .unwrap_or_else(PoisonError::into_inner) = Some(listener);
     }
 
-    /// Hands a commit notice of `user` to the listener (no-op without one or when empty).
-    pub(crate) fn notify(&self, user: UserId, notice: &Committed) {
-        self.inner.notify(user, notice);
-    }
-
     fn sender(&self, user: UserId) -> mpsc::UnboundedSender<Job> {
         let mut actors = self
             .inner

@@ -656,12 +656,29 @@ impl Core {
     /// principle 5). Never refused as a duplicate: likely duplicates become a `duplicate`
     /// suggestion on the inbox note.
     pub async fn capture(&mut self, scope: UserScope, text: String) -> Result<Captured> {
+        self.capture_as(scope, text, None, None).await
+    }
+
+    /// [`Self::capture`] with a client-generated ID and the device's capture time (offline
+    /// captures keep both, §7.5 Sync).
+    pub async fn capture_as(
+        &mut self,
+        scope: UserScope,
+        text: String,
+        id: Option<NoteId>,
+        created: Option<chrono::DateTime<chrono::FixedOffset>>,
+    ) -> Result<Captured> {
+        if let Some(id) = id
+            && self.state()?.contains_id(id)
+        {
+            return Err(VaultError::invalid("a note with this id already exists"));
+        }
         let mut tx = self.begin(&scope).await?;
         let tz = self.tz(&mut tx).await?;
-        let now = self.local_now(tz);
+        let now = created.unwrap_or_else(|| self.local_now(tz));
         let stamp = now.format("%Y-%m-%d-%H%M%S").to_string();
         let path = self.free_path(&format!("{}/{stamp}.md", paths::INBOX_DIR), false)?;
-        let id = NoteId::generate(self.ids());
+        let id = id.unwrap_or_else(|| NoteId::generate(self.ids()));
         let mut body = text;
         if !body.ends_with('\n') {
             body.push('\n');
@@ -709,6 +726,20 @@ impl Core {
             .await?;
             tx.commit().await?;
             suggestion = Some(sid);
+            self.inner.notify(
+                self.user,
+                &crate::events::Committed {
+                    user: Some(self.user),
+                    suggestions: vec![crate::events::SuggestionEvent {
+                        id: sid,
+                        note_id: Some(id),
+                        kind: "duplicate".to_owned(),
+                        status: "pending".to_owned(),
+                        created: true,
+                    }],
+                    ..crate::events::Committed::default()
+                },
+            );
         }
         Ok(Captured {
             note: self.view(id).await?,

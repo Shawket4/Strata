@@ -1,0 +1,30 @@
+name: strata_state
+description: >-
+  Riverpod plumbing between the Rust client core and the feature UIs: the
+  CoreApi seam over the strata_bridge facade, one provider per view-model
+  stream or one-shot, and shared widget-test helpers and fixtures. Providers
+  only adapt; no logic lives here (PLAN L15).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.4.3
+  # `lib/testing.dart` (pumpStrataScreen) is imported by every feature's tests.
+  flutter_test:
+    sdk: flutter
+  riverpod_annotation: ^4.0.7
+  strata_bridge: any
+  strata_l10n: any
+  strata_ui: any
+
+dev_dependencies:
+  build_runner: ^2.16.1
+  riverpod_generator: ^4.0.9
+  very_good_analysis: ^11.0.0

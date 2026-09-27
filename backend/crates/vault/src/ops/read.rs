@@ -291,6 +291,39 @@ impl VaultService {
         })
     }
 
+    /// The note's content at `version`, searched newest first in its git history (at most
+    /// `max_revisions` revisions); `None` when no revision has that version. This is the base
+    /// of a 3-way merge of a stale sync update (D19).
+    pub async fn content_at_version(
+        &self,
+        scope: &UserScope,
+        id: NoteId,
+        version: &str,
+        max_revisions: usize,
+    ) -> Result<Option<String>> {
+        self.ready(scope).await?;
+        let row = self.note_row(scope, id).await?;
+        let dir = self.vault_dir(scope.user_id());
+        let path = row.path.clone();
+        let want = version.to_owned();
+        blocking(move || {
+            let history = git::history(&dir, &path)?;
+            for rev in history
+                .iter()
+                .filter(|r| r.change != git::Change::Deleted)
+                .take(max_revisions)
+            {
+                if let Some(bytes) = git::blob_at(&dir, &rev.commit.id, &rev.path)?
+                    && fsio::version_of(&bytes) == want
+                {
+                    return Ok(Some(String::from_utf8_lossy(&bytes).into_owned()));
+                }
+            }
+            Ok(None)
+        })
+        .await
+    }
+
     /// Keyword search (Postgres full-text over Arabic/Latin-normalised text).
     pub async fn search(
         &self,

@@ -5,7 +5,7 @@
 //! segments, case-insensitive) override the matching key, e.g.
 //! `STRATA__DATABASE__APP_URL=postgres://…` or `STRATA__THRESHOLDS__DEDUPE__TASK__NEAR=0.6`.
 //! The override value is parsed with the type of the key it replaces (string, integer, float,
-//! boolean); keys that are unset by default are parsed as boolean/integer/float if possible and
+//! boolean, or a TOML array literal such as `["sudo", "-n"]`); keys that are unset by default are parsed as boolean/integer/float if possible and
 //! as a string otherwise. Unknown keys — in the file or the environment — are errors, so typos
 //! never pass silently.
 
@@ -74,29 +74,119 @@ pub enum AiProviderKind {
     Disabled,
 }
 
-/// AI provider settings.
+/// AI provider settings (PLAN §9.1, §9.1b, D9, D20, D23).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AiConfig {
-    /// Provider for users without an entry in `user_providers`.
+    /// Provider for users without an entry in `user_providers` (D23: `claude_cli` serves every
+    /// account by default).
     pub default_provider: AiProviderKind,
-    /// Per-username provider override (D23: chosen per user in config).
+    /// Per-user provider override, keyed by username exactly as stored (`users.username`), so
+    /// the API provider can take over a user without code changes (D23).
     pub user_providers: BTreeMap<String, AiProviderKind>,
-    /// Path of the `claude` binary.
-    pub claude_bin: PathBuf,
-    /// Model identifier passed to the provider.
-    pub model: String,
-    /// File holding the Anthropic API key (0600; read at startup, never logged).
+    /// Maximum AI jobs per day across all users (0 = unlimited; §9.1 keeps Strata from
+    /// crowding out the owner's interactive use of the subscription).
+    pub daily_job_limit: u32,
+    /// `claude -p` provider (L18, D20 = a).
+    pub claude_cli: ClaudeCliSettings,
+    /// Anthropic Messages API provider (D20, D23).
+    pub anthropic_api: AnthropicApiSettings,
+    /// Local embeddings (L19, D9 = a).
+    pub embedding: EmbeddingSettings,
+}
+
+/// How `stratad` runs `claude -p` (docs/RUNBOOK.md §9).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ClaudeCliSettings {
+    /// Launcher argument vector; the `claude` arguments are appended. Production:
+    /// `["sudo", "-n", "-u", "strata-ai", "/usr/local/lib/strata/claude-ai"]`.
+    pub command: Vec<String>,
+    /// Empty scratch working directory of the process.
+    pub scratch_dir: PathBuf,
+    /// `--model` (alias or full name); unset lets the CLI choose.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// Concurrent `claude` processes (§9.1: low).
+    pub max_concurrency: u32,
+    /// Wall-clock limit per call, in seconds.
+    pub timeout_secs: u32,
+    /// Seconds between SIGTERM and SIGKILL when a call is cancelled or times out.
+    pub kill_grace_secs: u32,
+    /// Pause after a usage limit whose reset time is unknown, in seconds.
+    pub usage_limit_pause_secs: u32,
+}
+
+/// The Anthropic Messages API provider (docs/RUNBOOK.md §11).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AnthropicApiSettings {
+    /// File holding the API key (0600; read at startup, never logged). Required when any
+    /// user is routed to `anthropic_api`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub api_key_file: Option<PathBuf>,
-    /// Directory with the int8 ONNX embedding model and tokenizer (L19, D9).
+    /// Model ID.
+    pub model: String,
+    /// API base URL (no trailing slash).
+    pub base_url: String,
+    /// `output_config.effort` (`low`, `medium`, `high`, `xhigh`, `max`); unset = the model's
+    /// default.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub embedding_model_dir: Option<PathBuf>,
-    /// Concurrent provider calls (§9.1: low by default).
-    pub max_concurrency: u32,
-    /// Maximum AI jobs per day across all users (0 = unlimited).
-    pub daily_job_limit: u32,
+    pub effort: Option<String>,
+    /// Retries after the first attempt for transient errors (408/409/429/5xx/529).
+    pub max_retries: u32,
+    /// Per-request timeout in seconds (the whole response, including a stream).
+    pub timeout_secs: u32,
+    /// Uncached input price of `model`, micro-USD per million tokens (cost caps).
+    pub input_micros_per_mtok: u64,
+    /// Output price of `model`, micro-USD per million tokens.
+    pub output_micros_per_mtok: u64,
 }
+
+/// How token states become one embedding vector.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EmbeddingPooling {
+    /// The first token's hidden state (granite-embedding r2).
+    Cls,
+    /// The mean over attended tokens.
+    Mean,
+}
+
+/// The in-process ONNX embedder (docs/RUNBOOK.md §10). Embeddings are off, with a log line at
+/// startup, while `model_dir` or `onnxruntime_lib` is unset or missing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EmbeddingSettings {
+    /// Model directory (the Hugging Face repository layout).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model_dir: Option<PathBuf>,
+    /// `libonnxruntime.so` (ONNX Runtime ≥ 1.22), loaded at run time.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub onnxruntime_lib: Option<PathBuf>,
+    /// ONNX file, relative to `model_dir`.
+    pub model_file: PathBuf,
+    /// `tokenizer.json`, relative to `model_dir`.
+    pub tokenizer_file: PathBuf,
+    /// Model ID stored with every vector (a change triggers a full re-embed).
+    pub model_id: String,
+    /// Output dimensions (the `chunks.embedding` column is `vector(384)`).
+    pub dims: u32,
+    /// Pooling.
+    pub pooling: EmbeddingPooling,
+    /// Tokens per text; longer texts are truncated.
+    pub max_tokens: u32,
+    /// Padded tokens per batch (bounds peak memory).
+    pub max_batch_tokens: u32,
+    /// Whether texts of different lengths may share a padded batch (off for the quint8
+    /// export, whose output changes with padding).
+    pub pad_batches: bool,
+    /// Nice value of the embedding thread (0–19).
+    pub nice: i32,
+}
+
+/// Effort levels accepted by the Messages API.
+pub const ANTHROPIC_EFFORTS: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
 /// Per-kind duplicate-detection thresholds (§9.7).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -120,16 +210,21 @@ pub struct Thresholds {
     pub dedupe: BTreeMap<String, DedupeThreshold>,
 }
 
-/// AI budgets; exceeding one pauses (never fails) the affected jobs.
+/// AI budgets; exceeding one pauses (never fails) the affected work until the next budget day.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Budgets {
+    /// IANA timezone whose calendar days the caps count (unset = `default_timezone`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub timezone: Option<String>,
     /// Tokens (input + output) per user per day (0 = unlimited).
     pub per_user_daily_tokens: u64,
-    /// Tokens per day across all users (0 = unlimited).
-    pub global_daily_tokens: u64,
     /// Estimated cost per user per day in micro-USD (0 = unlimited).
     pub per_user_daily_cost_micros: u64,
+    /// Tokens per day across all users (0 = unlimited).
+    pub global_daily_tokens: u64,
+    /// Estimated cost per day across all users in micro-USD (0 = unlimited).
+    pub global_daily_cost_micros: u64,
 }
 
 /// Account lifecycle settings.
@@ -232,6 +327,10 @@ pub struct PushConfig {
     pub wns_credentials_path: Option<PathBuf>,
 }
 
+/// Default Anthropic API model (Claude Opus 5.5; list price $4 / $20 per million input/output
+/// tokens, the default `input_micros_per_mtok` / `output_micros_per_mtok`).
+pub const DEFAULT_ANTHROPIC_MODEL: &str = "claude-opus-5-5";
+
 /// Item kinds with duplicate thresholds by default, and their defaults `(near, semantic)`.
 pub const DEFAULT_DEDUPE_THRESHOLDS: &[(&str, f64, f64)] = &[
     ("alias", 0.8, 0.9),
@@ -260,12 +359,41 @@ impl Default for Config {
             ai: AiConfig {
                 default_provider: AiProviderKind::ClaudeCli,
                 user_providers: BTreeMap::new(),
-                claude_bin: PathBuf::from("/usr/bin/claude"),
-                model: "default".to_owned(),
-                api_key_file: None,
-                embedding_model_dir: None,
-                max_concurrency: 1,
                 daily_job_limit: 0,
+                claude_cli: ClaudeCliSettings {
+                    command: vec!["/usr/local/bin/claude".to_owned()],
+                    scratch_dir: PathBuf::from("/var/lib/strata-ai/scratch"),
+                    model: None,
+                    max_concurrency: 1,
+                    timeout_secs: 300,
+                    kill_grace_secs: 5,
+                    usage_limit_pause_secs: 1800,
+                },
+                anthropic_api: AnthropicApiSettings {
+                    api_key_file: None,
+                    model: DEFAULT_ANTHROPIC_MODEL.to_owned(),
+                    base_url: "https://api.anthropic.com".to_owned(),
+                    effort: None,
+                    max_retries: 3,
+                    timeout_secs: 600,
+                    input_micros_per_mtok: 4_000_000,
+                    output_micros_per_mtok: 20_000_000,
+                },
+                embedding: EmbeddingSettings {
+                    model_dir: None,
+                    onnxruntime_lib: None,
+                    model_file: PathBuf::from("onnx/model_quint8_avx2.onnx"),
+                    tokenizer_file: PathBuf::from("tokenizer.json"),
+                    model_id:
+                        "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"
+                            .to_owned(),
+                    dims: 384,
+                    pooling: EmbeddingPooling::Cls,
+                    max_tokens: 2048,
+                    max_batch_tokens: 8192,
+                    pad_batches: false,
+                    nice: 19,
+                },
             },
             thresholds: Thresholds {
                 relation: 0.7,
@@ -278,9 +406,11 @@ impl Default for Config {
                     .collect(),
             },
             budgets: Budgets {
+                timezone: None,
                 per_user_daily_tokens: 2_000_000,
-                global_daily_tokens: 4_000_000,
                 per_user_daily_cost_micros: 0,
+                global_daily_tokens: 4_000_000,
+                global_daily_cost_micros: 0,
             },
             accounts: AccountsConfig {
                 deletion_grace_days: 14,
@@ -389,11 +519,7 @@ impl Config {
                 "database.max_connections must be at least 1".into(),
             ));
         }
-        if self.ai.max_concurrency == 0 {
-            return Err(ConfigError::Invalid(
-                "ai.max_concurrency must be at least 1".into(),
-            ));
-        }
+        self.validate_ai()?;
         self.validate_auth()?;
         for (name, url) in [
             ("database.owner_url", &self.database.owner_url),
@@ -406,6 +532,96 @@ impl Config {
                 )));
             }
         }
+        Ok(())
+    }
+
+    fn validate_ai(&self) -> Result<(), ConfigError> {
+        let invalid = |m: String| Err(ConfigError::Invalid(m));
+        let positive = |name: &str, v: u64| {
+            if v == 0 {
+                invalid(format!("{name} must be at least 1"))
+            } else {
+                Ok(())
+            }
+        };
+        let ai = &self.ai;
+        let cli = &ai.claude_cli;
+        if cli.command.first().is_none_or(|c| c.trim().is_empty()) {
+            return invalid("ai.claude_cli.command must name a program".into());
+        }
+        if !cli.scratch_dir.is_absolute() {
+            return invalid("ai.claude_cli.scratch_dir must be an absolute path".into());
+        }
+        positive(
+            "ai.claude_cli.max_concurrency",
+            u64::from(cli.max_concurrency),
+        )?;
+        positive("ai.claude_cli.timeout_secs", u64::from(cli.timeout_secs))?;
+        positive(
+            "ai.claude_cli.usage_limit_pause_secs",
+            u64::from(cli.usage_limit_pause_secs),
+        )?;
+        let api = &ai.anthropic_api;
+        if api.model.trim().is_empty() {
+            return invalid("ai.anthropic_api.model must not be empty".into());
+        }
+        if !api.base_url.starts_with("https://") && !api.base_url.starts_with("http://")
+            || api.base_url.ends_with('/')
+        {
+            return invalid(
+                "ai.anthropic_api.base_url must be an http(s) URL without a trailing slash".into(),
+            );
+        }
+        if let Some(e) = &api.effort
+            && !ANTHROPIC_EFFORTS.contains(&e.as_str())
+        {
+            return invalid(format!(
+                "ai.anthropic_api.effort must be one of {}, got `{e}`",
+                ANTHROPIC_EFFORTS.join(", ")
+            ));
+        }
+        if api.max_retries > 10 {
+            return invalid("ai.anthropic_api.max_retries must be at most 10".into());
+        }
+        positive("ai.anthropic_api.timeout_secs", u64::from(api.timeout_secs))?;
+        if api.api_key_file.is_none() {
+            if ai.default_provider == AiProviderKind::AnthropicApi {
+                return invalid(
+                    "ai.anthropic_api.api_key_file is required: ai.default_provider is anthropic_api"
+                        .into(),
+                );
+            }
+            if let Some((user, _)) = ai
+                .user_providers
+                .iter()
+                .find(|(_, k)| **k == AiProviderKind::AnthropicApi)
+            {
+                return invalid(format!(
+                    "ai.anthropic_api.api_key_file is required: user `{user}` is routed to anthropic_api"
+                ));
+            }
+        }
+        if ai.user_providers.keys().any(|u| u.trim().is_empty()) {
+            return invalid("ai.user_providers keys must be usernames".into());
+        }
+        let emb = &ai.embedding;
+        if emb.model_id.trim().is_empty() {
+            return invalid("ai.embedding.model_id must not be empty".into());
+        }
+        positive("ai.embedding.dims", u64::from(emb.dims))?;
+        positive("ai.embedding.max_tokens", u64::from(emb.max_tokens))?;
+        if emb.max_batch_tokens < emb.max_tokens {
+            return invalid(
+                "ai.embedding.max_batch_tokens must be at least ai.embedding.max_tokens".into(),
+            );
+        }
+        if !(0..=19).contains(&emb.nice) {
+            return invalid(format!(
+                "ai.embedding.nice must be within 0..=19, got {}",
+                emb.nice
+            ));
+        }
+        self.budget_tz()?;
         Ok(())
     }
 
@@ -461,6 +677,22 @@ impl Config {
                 self.default_timezone
             ))
         })
+    }
+
+    /// The timezone whose days the AI budgets count (`budgets.timezone`, else
+    /// `default_timezone`).
+    pub fn budget_tz(&self) -> Result<Tz, ConfigError> {
+        match &self.budgets.timezone {
+            None => self.default_tz(),
+            Some(name) => Tz::from_str(name).map_err(|_| {
+                ConfigError::Invalid(format!("budgets.timezone `{name}` is not an IANA timezone"))
+            }),
+        }
+    }
+
+    /// Whether any user is routed to `kind` (the default or an override).
+    pub fn ai_provider_in_use(&self, kind: AiProviderKind) -> bool {
+        self.ai.default_provider == kind || self.ai.user_providers.values().any(|k| *k == kind)
     }
 
     /// The account-deletion grace period as a duration.
@@ -540,6 +772,14 @@ fn apply_env_override(root: &mut toml::Table, name: &str, raw: &str) -> Result<(
         }
         Some(toml::Value::Boolean(_)) => {
             toml::Value::Boolean(raw.trim().parse().map_err(|_| bad("true or false"))?)
+        }
+        Some(toml::Value::Array(_)) => {
+            let parsed: toml::Table = toml::from_str(&format!("v = {raw}"))
+                .map_err(|_| bad("a TOML array, e.g. [\"a\", \"b\"]"))?;
+            match parsed.get("v") {
+                Some(v @ toml::Value::Array(_)) => v.clone(),
+                _ => return Err(bad("a TOML array, e.g. [\"a\", \"b\"]")),
+            }
         }
         Some(toml::Value::Table(_)) => return Err(bad("a section path, not a value")),
         Some(_) => return Err(bad("a scalar key")),
@@ -756,6 +996,243 @@ mod tests {
             Err(ConfigError::Invalid(
                 "database.app_url must be a postgres:// URL".into()
             ))
+        );
+    }
+
+    #[test]
+    fn ai_settings_have_documented_defaults() {
+        let config = Config::from_sources("", env(&[])).expect("defaults");
+        let ai = &config.ai;
+        assert_eq!(ai.default_provider, AiProviderKind::ClaudeCli);
+        assert_eq!(ai.user_providers, BTreeMap::new());
+        assert_eq!(
+            ai.claude_cli,
+            ClaudeCliSettings {
+                command: vec!["/usr/local/bin/claude".into()],
+                scratch_dir: PathBuf::from("/var/lib/strata-ai/scratch"),
+                model: None,
+                max_concurrency: 1,
+                timeout_secs: 300,
+                kill_grace_secs: 5,
+                usage_limit_pause_secs: 1800,
+            }
+        );
+        assert_eq!(
+            ai.anthropic_api,
+            AnthropicApiSettings {
+                api_key_file: None,
+                model: "claude-opus-5-5".into(),
+                base_url: "https://api.anthropic.com".into(),
+                effort: None,
+                max_retries: 3,
+                timeout_secs: 600,
+                input_micros_per_mtok: 4_000_000,
+                output_micros_per_mtok: 20_000_000,
+            }
+        );
+        assert_eq!(
+            (
+                ai.embedding.model_dir.as_ref(),
+                ai.embedding.onnxruntime_lib.as_ref(),
+                ai.embedding.pooling,
+                ai.embedding.max_tokens,
+                ai.embedding.dims,
+                ai.embedding.nice
+            ),
+            (None, None, EmbeddingPooling::Cls, 2048, 384, 19)
+        );
+        assert_eq!(
+            config.budgets,
+            Budgets {
+                timezone: None,
+                per_user_daily_tokens: 2_000_000,
+                per_user_daily_cost_micros: 0,
+                global_daily_tokens: 4_000_000,
+                global_daily_cost_micros: 0,
+            }
+        );
+        assert_eq!(config.budget_tz().expect("tz"), Tz::UTC);
+        // D23: claude -p serves every account unless configured otherwise.
+        assert_eq!(config.ai_provider_for("anyone"), AiProviderKind::ClaudeCli);
+        assert!(config.ai_provider_in_use(AiProviderKind::ClaudeCli));
+        assert!(!config.ai_provider_in_use(AiProviderKind::AnthropicApi));
+    }
+
+    #[test]
+    fn ai_settings_from_file_and_environment() {
+        let text = r#"
+            default_timezone = "Africa/Cairo"
+            [ai]
+            user_providers = { guest = "anthropic_api", kid = "disabled" }
+            [ai.claude_cli]
+            command = ["sudo", "-n", "-u", "strata-ai", "/usr/local/lib/strata/claude-ai"]
+            model = "opus"
+            [ai.anthropic_api]
+            api_key_file = "/etc/strata/anthropic.key"
+            effort = "high"
+            [ai.embedding]
+            model_dir = "/opt/models/granite"
+            onnxruntime_lib = "/opt/onnxruntime/lib/libonnxruntime.so.1.30.0"
+            pooling = "mean"
+            [budgets]
+            timezone = "Europe/Berlin"
+            global_daily_cost_micros = 5000000
+        "#;
+        let config = Config::from_sources(
+            text,
+            env(&[
+                ("STRATA__AI__CLAUDE_CLI__COMMAND", r#"["/usr/bin/claude"]"#),
+                ("STRATA__AI__CLAUDE_CLI__TIMEOUT_SECS", "120"),
+                ("STRATA__AI__CLAUDE_CLI__SCRATCH_DIR", "/tmp/scratch"),
+                ("STRATA__AI__ANTHROPIC_API__MAX_RETRIES", "5"),
+                ("STRATA__AI__ANTHROPIC_API__MODEL", "claude-opus-5"),
+                ("STRATA__AI__USER_PROVIDERS__OWNER", "claude_cli"),
+                ("STRATA__AI__EMBEDDING__MAX_TOKENS", "1024"),
+                ("STRATA__BUDGETS__PER_USER_DAILY_COST_MICROS", "250000"),
+            ]),
+        )
+        .expect("valid");
+        let mut expected = Config::default();
+        expected.default_timezone = "Africa/Cairo".into();
+        expected.ai.user_providers = [
+            ("guest".to_owned(), AiProviderKind::AnthropicApi),
+            ("kid".to_owned(), AiProviderKind::Disabled),
+            ("owner".to_owned(), AiProviderKind::ClaudeCli),
+        ]
+        .into_iter()
+        .collect();
+        expected.ai.claude_cli.command = vec!["/usr/bin/claude".into()];
+        expected.ai.claude_cli.model = Some("opus".into());
+        expected.ai.claude_cli.timeout_secs = 120;
+        expected.ai.claude_cli.scratch_dir = PathBuf::from("/tmp/scratch");
+        expected.ai.anthropic_api.api_key_file = Some("/etc/strata/anthropic.key".into());
+        expected.ai.anthropic_api.effort = Some("high".into());
+        expected.ai.anthropic_api.max_retries = 5;
+        expected.ai.anthropic_api.model = "claude-opus-5".into();
+        expected.ai.embedding.model_dir = Some("/opt/models/granite".into());
+        expected.ai.embedding.onnxruntime_lib =
+            Some("/opt/onnxruntime/lib/libonnxruntime.so.1.30.0".into());
+        expected.ai.embedding.pooling = EmbeddingPooling::Mean;
+        expected.ai.embedding.max_tokens = 1024;
+        expected.budgets.timezone = Some("Europe/Berlin".into());
+        expected.budgets.global_daily_cost_micros = 5_000_000;
+        expected.budgets.per_user_daily_cost_micros = 250_000;
+        assert_eq!(config, expected);
+        assert_eq!(config.budget_tz().expect("tz"), chrono_tz::Europe::Berlin);
+        assert_eq!(
+            config.ai_provider_for("guest"),
+            AiProviderKind::AnthropicApi
+        );
+        assert_eq!(config.ai_provider_for("kid"), AiProviderKind::Disabled);
+        assert_eq!(config.ai_provider_for("owner"), AiProviderKind::ClaudeCli);
+        assert_eq!(config.ai_provider_for("other"), AiProviderKind::ClaudeCli);
+        assert!(config.ai_provider_in_use(AiProviderKind::AnthropicApi));
+    }
+
+    #[test]
+    fn ai_settings_are_validated() {
+        let invalid = |text: &str, message: &str| {
+            assert_eq!(
+                Config::from_sources(text, env(&[])),
+                Err(ConfigError::Invalid(message.into())),
+                "{text}"
+            );
+        };
+        invalid(
+            "[ai.claude_cli]\ncommand = []",
+            "ai.claude_cli.command must name a program",
+        );
+        invalid(
+            "[ai.claude_cli]\ncommand = [\" \"]",
+            "ai.claude_cli.command must name a program",
+        );
+        invalid(
+            "[ai.claude_cli]\nscratch_dir = \"scratch\"",
+            "ai.claude_cli.scratch_dir must be an absolute path",
+        );
+        invalid(
+            "[ai.claude_cli]\nmax_concurrency = 0",
+            "ai.claude_cli.max_concurrency must be at least 1",
+        );
+        invalid(
+            "[ai.claude_cli]\ntimeout_secs = 0",
+            "ai.claude_cli.timeout_secs must be at least 1",
+        );
+        invalid(
+            "[ai.anthropic_api]\nmodel = \"\"",
+            "ai.anthropic_api.model must not be empty",
+        );
+        invalid(
+            "[ai.anthropic_api]\nbase_url = \"https://api.anthropic.com/\"",
+            "ai.anthropic_api.base_url must be an http(s) URL without a trailing slash",
+        );
+        invalid(
+            "[ai.anthropic_api]\neffort = \"extreme\"",
+            "ai.anthropic_api.effort must be one of low, medium, high, xhigh, max, got `extreme`",
+        );
+        invalid(
+            "[ai.anthropic_api]\nmax_retries = 11",
+            "ai.anthropic_api.max_retries must be at most 10",
+        );
+        invalid(
+            "[ai]\ndefault_provider = \"anthropic_api\"",
+            "ai.anthropic_api.api_key_file is required: ai.default_provider is anthropic_api",
+        );
+        invalid(
+            "[ai.user_providers]\nguest = \"anthropic_api\"",
+            "ai.anthropic_api.api_key_file is required: user `guest` is routed to anthropic_api",
+        );
+        invalid(
+            "[ai.embedding]\nmax_tokens = 9000",
+            "ai.embedding.max_batch_tokens must be at least ai.embedding.max_tokens",
+        );
+        invalid(
+            "[ai.embedding]\nnice = 20",
+            "ai.embedding.nice must be within 0..=19, got 20",
+        );
+        invalid(
+            "[ai.embedding]\ndims = 0",
+            "ai.embedding.dims must be at least 1",
+        );
+        invalid(
+            "[budgets]\ntimezone = \"Mars/Base\"",
+            "budgets.timezone `Mars/Base` is not an IANA timezone",
+        );
+        // Unknown keys and wrong types are rejected, in the file and the environment.
+        assert!(matches!(
+            Config::from_sources("[ai]\nclaude_bin = \"/usr/bin/claude\"", env(&[])),
+            Err(ConfigError::Parse(_))
+        ));
+        assert!(matches!(
+            Config::from_sources("[ai.embedding]\npooling = \"max\"", env(&[])),
+            Err(ConfigError::Parse(_))
+        ));
+        assert!(matches!(
+            Config::from_sources("", env(&[("STRATA__AI__CLAUDE_CLI__TYPO", "1")])),
+            Err(ConfigError::Parse(_))
+        ));
+        assert!(matches!(
+            Config::from_sources("", env(&[("STRATA__AI__USER_PROVIDERS__BOB", "gpt")])),
+            Err(ConfigError::Parse(_))
+        ));
+        for raw in ["/usr/bin/claude", "[1, 2", "\"x\""] {
+            assert_eq!(
+                Config::from_sources("", env(&[("STRATA__AI__CLAUDE_CLI__COMMAND", raw)])),
+                Err(ConfigError::Env {
+                    name: "STRATA__AI__CLAUDE_CLI__COMMAND".into(),
+                    message: "expected a TOML array, e.g. [\"a\", \"b\"]".into()
+                }),
+                "{raw}"
+            );
+        }
+        let with_key = Config::from_sources(
+            "[ai]\ndefault_provider = \"anthropic_api\"\n[ai.anthropic_api]\napi_key_file = \"/k\"",
+            env(&[]),
+        )
+        .expect("key given");
+        assert_eq!(
+            with_key.ai_provider_for("anyone"),
+            AiProviderKind::AnthropicApi
         );
     }
 

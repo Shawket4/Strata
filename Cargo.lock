@@ -4630,6 +4630,7 @@ dependencies = [
  "percent-encoding",
  "pretty_assertions",
  "sqlx",
+ "strata-ai",
  "strata-api",
  "strata-common",
  "strata-index",

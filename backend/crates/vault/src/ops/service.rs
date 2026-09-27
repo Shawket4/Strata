@@ -155,6 +155,45 @@ impl VaultService {
         on_actor!(self, scope, |core, s| core.capture(s, text))
     }
 
+    /// A capture pushed by a device: client-generated ID and capture time (sync).
+    pub async fn capture_as(
+        &self,
+        scope: &UserScope,
+        text: String,
+        id: NoteId,
+        created: chrono::DateTime<chrono::FixedOffset>,
+    ) -> Result<Captured> {
+        on_actor!(self, scope, |core, s| core.capture_as(
+            s,
+            text,
+            Some(id),
+            Some(created)
+        ))
+    }
+
+    /// A pushed task edit (`task.update|complete|cancel|reopen|delete`) with the device's
+    /// dates and next-occurrence ID; `if_match` is the line version (sync).
+    pub async fn apply_task_sync_op(
+        &self,
+        scope: &UserScope,
+        op: sync_model::Op,
+        if_match: Option<String>,
+    ) -> Result<()> {
+        on_actor!(self, scope, |core, s| core.apply_task_sync_op(
+            s,
+            &op,
+            if_match.as_deref()
+        ))
+    }
+
+    /// The task line of `id`: (note, line version, line), read on the writer.
+    pub async fn task_line(&self, scope: &UserScope, id: String) -> Result<(NoteId, String, String)> {
+        self.exec(scope, move |core, s| {
+            Box::pin(async move { core.task_line(&s, &id).await })
+        })
+        .await
+    }
+
     /// Records keep-both pairs for a note.
     pub async fn keep_both_notes(
         &self,

@@ -79,6 +79,8 @@ pub struct RevocationSet {
     /// How long a revocation must be remembered: the access-token lifetime plus skew.
     retention: Duration,
     clock: Arc<dyn Clock>,
+    /// Bumped on every change (streams re-check their caller when it moves).
+    changes: tokio::sync::watch::Sender<u64>,
 }
 
 /// Token skew tolerated on top of the access-token lifetime.
@@ -91,7 +93,14 @@ impl RevocationSet {
             state: RwLock::new(State::default()),
             retention: access_ttl + RETENTION_SKEW,
             clock,
+            changes: tokio::sync::watch::Sender::new(0),
         }
+    }
+
+    /// A receiver that changes whenever the set changes (a revocation, a flag, a reload), so
+    /// long-lived streams can re-check their caller with [`Self::check`].
+    pub fn subscribe(&self) -> tokio::sync::watch::Receiver<u64> {
+        self.changes.subscribe()
     }
 
     fn read(&self) -> std::sync::RwLockReadGuard<'_, State> {
@@ -99,7 +108,10 @@ impl RevocationSet {
     }
 
     fn write(&self) -> std::sync::RwLockWriteGuard<'_, State> {
-        self.state.write().unwrap_or_else(PoisonError::into_inner)
+        let guard = self.state.write().unwrap_or_else(PoisonError::into_inner);
+        // Receivers re-check under the read lock, so they see this write once it is done.
+        self.changes.send_modify(|v| *v = v.wrapping_add(1));
+        guard
     }
 
     /// Checks a token's session and user; returns the user's restrictions if allowed.

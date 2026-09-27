@@ -41,6 +41,8 @@ pub struct Prepared {
     pub issuer: ScopeIssuer,
     /// The accounts database (for listing users to reconcile).
     pub accounts: AccountsDb,
+    /// The AI foundation: providers, router, budget guard, embedder.
+    pub ai: crate::ai::AiParts,
 }
 
 impl std::fmt::Debug for Prepared {
@@ -85,6 +87,12 @@ pub async fn prepare_all(config: &Config) -> Result<Prepared, StartupError> {
     let clock: Arc<dyn Clock> = Arc::new(SystemClock);
     let ids: Arc<dyn IdGenerator> = Arc::new(SystemIdGenerator::new(clock.clone()));
     let vault = vault_service(config, app_db.clone(), clock.clone(), ids.clone());
+    let ai = {
+        let (config, db, clock) = (config.clone(), app_db.clone(), clock.clone());
+        tokio::task::spawn_blocking(move || crate::ai::build(&config, db, clock))
+            .await
+            .map_err(|e| StartupError::Config(format!("ai: {e}")))??
+    };
     let state = AuthState::new(
         AuthDeps {
             accounts_pool: accounts.clone(),
@@ -104,6 +112,7 @@ pub async fn prepare_all(config: &Config) -> Result<Prepared, StartupError> {
         vault,
         issuer,
         accounts: AccountsDb::new(accounts),
+        ai,
     })
 }
 
@@ -195,6 +204,7 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
     let prepared = prepare_all(&config).await?;
     let state = prepared.auth.clone();
     let vault = web::Data::new(prepared.vault.clone());
+    let ai = web::Data::new(prepared.ai.service.clone());
     let reconcile = spawn_reconciliation(&prepared);
     let reload = spawn_revocation_reload(
         state.clone(),
@@ -211,6 +221,7 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
         App::new()
             .app_data(app_state.clone())
             .app_data(vault.clone())
+            .app_data(ai.clone())
             .wrap(from_fn(crate::logging::log_request))
             .configure(strata_api::app::configure)
     })
