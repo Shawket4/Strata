@@ -1,0 +1,8 @@
+arb-dir: lib/l10n
+template-arb-file: directory_en.arb
+output-dir: lib/src/generated
+output-localization-file: directory_localizations.dart
+output-class: DirectoryLocalizations
+nullable-getter: false
+use-named-parameters: true
+format: true

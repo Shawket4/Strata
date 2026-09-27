@@ -12,10 +12,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_hooks: ^0.21.3+1
+  hooks_riverpod: ^3.4.3
   strata_l10n: any
+  strata_state: any
   strata_ui: any
 
 dev_dependencies:
+  alchemist: ^0.14.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^11.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true

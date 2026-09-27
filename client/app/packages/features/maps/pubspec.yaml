@@ -1,6 +1,6 @@
 name: strata_maps
 description: >-
-  Strata "maps" feature UI (widgets only; view-models come from the Rust core).
+  Strata "maps" feature UI: the global map (one CustomPainter, positions from the Rust core), the local mind map (widget canvas in an InteractiveViewer) and the embeddable mini graph. Widgets only (PLAN L15).
 version: 0.1.0
 publish_to: none
 resolution: workspace
@@ -12,10 +12,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_hooks: ^0.21.3+1
+  flutter_localizations:
+    sdk: flutter
+  hooks_riverpod: ^3.4.3
   strata_l10n: any
+  strata_state: any
   strata_ui: any
 
 dev_dependencies:
+  alchemist: ^0.14.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^11.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true

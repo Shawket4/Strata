@@ -1,46 +1,1134 @@
-//! `POST /sync/push` (PLAN §7.5 Sync, §12.4, §16.3–16.4, D19).
+//! `POST /sync/push` (PLAN §7.5 Sync, §12.4, §16.3–16.4, D19): every op kind with exact
+//! results, the clean-merge and conflict-copy paths, duplicates then a forced retry,
+//! byte-identical replays without a second commit, ordering within one push, and isolation.
 #![allow(clippy::expect_used, clippy::too_many_lines)]
 
 mod sync_harness;
 
+use chrono::{NaiveDate, TimeZone, Utc};
+use domain::{CustodyEventType, DedupeKind, MatchLevel, NoteKind};
 use pretty_assertions::assert_eq;
-use sync_harness::{H, header, version};
+use strata_client::{operations as ops, types};
+use sync_harness::{H, User, header, version};
 use sync_model::ops::{self as o, Op};
-use sync_model::{OpResult, SyncOp};
+use sync_model::{ConflictResolution, OpResult, Problem, SyncOp, Version};
 use ulid::Ulid;
 
-fn op(n: u128, base: Option<sync_model::Version>, op: Op) -> SyncOp {
-    SyncOp::new(Ulid(0x0199_0000_0000_0000_0000_0000_0000_0000 + n), base, op)
+const OP_BASE: u128 = 0x0199_0000_0000_0000_0000_0000_0000_0000;
+const ID_BASE: u128 = 0x0199_1111_0000_0000_0000_0000_0000_0000;
+
+fn op_id(n: u128) -> Ulid {
+    Ulid(OP_BASE + n)
+}
+
+fn id(n: u128) -> Ulid {
+    Ulid(ID_BASE + n)
+}
+
+fn op(n: u128, base: Option<Version>, op: Op) -> SyncOp {
+    SyncOp::new(op_id(n), base, op)
+}
+
+fn d(y: i32, m: u32, day: u32) -> NaiveDate {
+    NaiveDate::from_ymd_opt(y, m, day).expect("date")
+}
+
+fn applied(v: &str) -> OpResult {
+    OpResult::Applied {
+        new_version: Some(version(v)),
+        merged: false,
+    }
+}
+
+fn applied_none() -> OpResult {
+    OpResult::Applied {
+        new_version: None,
+        merged: false,
+    }
+}
+
+fn not_found() -> OpResult {
+    OpResult::Rejected {
+        problem: Problem {
+            problem_type: "not_found".into(),
+            title: "Not found".into(),
+            status: 404,
+            detail: None,
+        },
+    }
+}
+
+async fn one(h: &H, user: &User, sync_op: SyncOp) -> OpResult {
+    let (res, _) = h.push(user, vec![sync_op]).await;
+    res.results.into_iter().next().expect("one result").result
+}
+
+fn create(n: u128, path: &str, body: &str) -> Op {
+    Op::NoteCreate(o::NoteCreate {
+        id: id(n),
+        path: path.into(),
+        content: body.into(),
+        force: false,
+    })
 }
 
 #[tokio::test]
-async fn smoke() {
+async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     let h = H::new().await;
     let alice = h.user("alice").await;
-    let id = Ulid(0x0199_1111_0000_0000_0000_0000_0000_0001);
+    let uid = alice.id;
+    let commits = |h: &H| h.log(uid).len();
+
+    // note.create: the server stamps id/created/updated; the result is the stored version.
+    let before = commits(&h);
+    let r = one(&h, &alice, op(1, None, create(1, "notes/A.md", "# A\n\nline one\n"))).await;
+    let a = h.read(uid, "notes/A.md");
+    assert_eq!(a, format!("{}# A\n\nline one\n", header(&id(1).to_string())));
+    assert_eq!(r, applied(&a));
+    assert_eq!(commits(&h), before + 1);
+    assert_eq!(h.log(uid)[0], "user: create notes/A.md");
+    let r = one(&h, &alice, op(2, None, create(2, "notes/B.md", "# B\n"))).await;
+    let b = h.read(uid, "notes/B.md");
+    assert_eq!(r, applied(&b));
+
+    // note.update with the current version.
+    let edited = a.replace("line one\n", "line one\nline two\n");
+    let r = one(
+        &h,
+        &alice,
+        op(
+            3,
+            Some(version(&a)),
+            Op::NoteUpdate(o::NoteUpdate {
+                id: id(1),
+                content: edited.clone(),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(h.read(uid, "notes/A.md"), edited);
+    assert_eq!(r, applied(&edited));
+    assert_eq!(h.log(uid)[0], "user: update notes/A.md");
+
+    // capture keeps the client ID and names the inbox file from the device time.
+    let at = Utc
+        .with_ymd_and_hms(2026, 9, 26, 8, 30, 5)
+        .single()
+        .expect("ts")
+        .fixed_offset();
+    let r = one(
+        &h,
+        &alice,
+        op(
+            4,
+            None,
+            Op::Capture(o::Capture {
+                id: id(3),
+                text: "Call the notary".into(),
+                created: at,
+            }),
+        ),
+    )
+    .await;
+    let cap = h.read(uid, "inbox/2026-09-26-083005.md");
+    assert_eq!(
+        cap,
+        format!(
+            "---\nid: {}\ncreated: 2026-09-26T08:30:05+00:00\n---\nCall the notary\n",
+            id(3)
+        )
+    );
+    assert_eq!(r, applied(&cap));
+
+    // relation.add / retype / remove: the source note's new version.
+    let rel = |t: &str| t.parse().expect("relation");
+    let r = one(
+        &h,
+        &alice,
+        op(
+            5,
+            None,
+            Op::RelationAdd(o::RelationRef {
+                src_id: id(1),
+                dst_id: id(2),
+                relation: rel("related"),
+            }),
+        ),
+    )
+    .await;
+    let a2 = h.read(uid, "notes/A.md");
+    assert!(a2.contains("related: [\"[[B]]\"]\n"), "{a2}");
+    assert_eq!(r, applied(&a2));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            6,
+            None,
+            Op::RelationRetype(o::RelationRetype {
+                src_id: id(1),
+                dst_id: id(2),
+                relation: rel("related"),
+                new_type: rel("supports"),
+            }),
+        ),
+    )
+    .await;
+    let a3 = h.read(uid, "notes/A.md");
+    assert!(a3.contains("supports: [\"[[B]]\"]\n") && !a3.contains("related:"), "{a3}");
+    assert_eq!(r, applied(&a3));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            7,
+            None,
+            Op::RelationRemove(o::RelationRef {
+                src_id: id(1),
+                dst_id: id(2),
+                relation: rel("supports"),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(h.read(uid, "notes/A.md"), edited);
+    assert_eq!(r, applied(&edited));
+    // Removing it again (another device did too) is already in effect.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            8,
+            None,
+            Op::RelationRemove(o::RelationRef {
+                src_id: id(1),
+                dst_id: id(2),
+                relation: rel("supports"),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied(&edited));
+
+    // entity.create / patch / merge.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            9,
+            None,
+            Op::EntityCreate(o::EntityCreate {
+                id: id(4),
+                kind: NoteKind::Person,
+                name: "Sam Hany".into(),
+                aliases: vec!["سام".into()],
+                fields: [("role".to_owned(), "Accountant".to_owned())].into(),
+                force: false,
+            }),
+        ),
+    )
+    .await;
+    let sam = h.read(uid, "people/Sam Hany.md");
+    assert_eq!(r, applied(&sam));
+    assert!(sam.contains("kind: person\n") && sam.contains("role: Accountant\n"), "{sam}");
+    let r = one(
+        &h,
+        &alice,
+        op(
+            10,
+            Some(version(&sam)),
+            Op::EntityPatch(o::EntityPatch {
+                id: id(4),
+                set: [("phone".to_owned(), "0100".to_owned())].into(),
+                unset: vec!["role".into()],
+                add_aliases: vec!["Sammy H".into()],
+                remove_aliases: vec![],
+            }),
+        ),
+    )
+    .await;
+    let sam2 = h.read(uid, "people/Sam Hany.md");
+    assert!(
+        sam2.contains("phone: \"0100\"\n") || sam2.contains("phone: '0100'\n"),
+        "{sam2}"
+    );
+    assert!(!sam2.contains("role:") && sam2.contains("Sammy H"), "{sam2}");
+    assert_eq!(r, applied(&sam2));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            11,
+            None,
+            Op::EntityCreate(o::EntityCreate {
+                id: id(5),
+                kind: NoteKind::Person,
+                name: "Samuel Hany".into(),
+                aliases: vec![],
+                fields: Default::default(),
+                force: true,
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied(&h.read(uid, "people/Samuel Hany.md")));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            12,
+            None,
+            Op::EntityMerge(o::EntityMerge {
+                id: id(5),
+                into_id: id(4),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied(&h.read(uid, "people/Sam Hany.md")));
+    assert!(!h.exists(uid, "people/Samuel Hany.md"));
+    assert_eq!(
+        h.log(uid)[0],
+        "user: merge people/Samuel Hany.md -> people/Sam Hany.md"
+    );
+
+    // place.create / patch, document.create / patch / custody.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            13,
+            None,
+            Op::PlaceCreate(o::PlaceCreate {
+                id: id(6),
+                name: "Office safe".into(),
+                aliases: vec![],
+                parent_id: None,
+                address: None,
+                force: false,
+            }),
+        ),
+    )
+    .await;
+    let safe = h.read(uid, "places/Office safe.md");
+    assert_eq!(r, applied(&safe));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            14,
+            Some(version(&safe)),
+            Op::PlacePatch(o::EntityPatch {
+                id: id(6),
+                set: [("address".to_owned(), "Nasr City".to_owned())].into(),
+                ..o::EntityPatch::default()
+            }),
+        ),
+    )
+    .await;
+    let safe2 = h.read(uid, "places/Office safe.md");
+    assert!(safe2.contains("address: Nasr City\n"), "{safe2}");
+    assert_eq!(r, applied(&safe2));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            15,
+            None,
+            Op::DocumentCreate(o::DocumentCreate {
+                id: id(7),
+                name: "Lease contract".into(),
+                aliases: vec![],
+                doc_type: Some("contract".into()),
+                copy: Some(domain::CopyKind::Original),
+                copy_of: None,
+                companies: vec![],
+                people: vec![id(4)],
+                expires: None,
+                force: false,
+            }),
+        ),
+    )
+    .await;
+    let lease = h.read(uid, "documents/Lease contract.md");
+    assert!(lease.contains("people: [\"[[Sam Hany]]\"]\n"), "{lease}");
+    assert_eq!(r, applied(&lease));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            16,
+            Some(version(&lease)),
+            Op::DocumentPatch(o::EntityPatch {
+                id: id(7),
+                set: [("expires".to_owned(), "2027-01-31".to_owned())].into(),
+                ..o::EntityPatch::default()
+            }),
+        ),
+    )
+    .await;
+    let lease2 = h.read(uid, "documents/Lease contract.md");
+    assert!(lease2.contains("expires: 2027-01-31\n"), "{lease2}");
+    assert_eq!(r, applied(&lease2));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            17,
+            None,
+            Op::DocumentCustody(o::DocumentCustody {
+                document_id: id(7),
+                event: CustodyEventType::StoredAt,
+                at: d(2026, 9, 20),
+                place_id: Some(id(6)),
+                person_id: None,
+                counterparty_id: None,
+            }),
+        ),
+    )
+    .await;
+    let lease3 = h.read(uid, "documents/Lease contract.md");
+    assert!(lease3.contains("location: \"[[Office safe]]\"\n"), "{lease3}");
+    assert!(lease3.contains("## Custody\n"), "{lease3}");
+    assert_eq!(r, applied(&lease3));
+    assert_eq!(h.log(uid)[0], "user: custody documents/Lease contract.md");
+    // A patch to the wrong kind is refused like a missing entity.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            18,
+            Some(version(&lease3)),
+            Op::PlacePatch(o::EntityPatch {
+                id: id(7),
+                ..o::EntityPatch::default()
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, not_found());
+
+    // task.create / update / complete / reopen / cancel / delete (line versions).
+    let tid = "t-01j9taskaaaaaaaaaaaaaaaaaa".to_owned();
+    let r = one(
+        &h,
+        &alice,
+        op(
+            19,
+            None,
+            Op::TaskCreate(o::TaskCreate {
+                id: tid.clone(),
+                note_id: None,
+                text: "Renew the lease".into(),
+                due: Some(d(2026, 10, 5)),
+                scheduled: None,
+                start: None,
+                recurrence: None,
+                reminders: vec![],
+                priority: None,
+                force: false,
+            }),
+        ),
+    )
+    .await;
+    let line1 = format!("- [ ] Renew the lease 📅 2026-10-05 ^{tid}");
+    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line1}\n")));
+    assert_eq!(r, applied(&line1));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            20,
+            Some(version(&line1)),
+            Op::TaskUpdate(o::TaskUpdate {
+                id: tid.clone(),
+                text: Some("Renew the office lease".into()),
+                due: Some(None),
+                ..o::TaskUpdate::default()
+            }),
+        ),
+    )
+    .await;
+    let line2 = format!("- [ ] Renew the office lease ^{tid}");
+    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line2}\n")));
+    assert_eq!(r, applied(&line2));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            21,
+            Some(version(&line2)),
+            Op::TaskComplete(o::TaskComplete {
+                id: tid.clone(),
+                done: d(2026, 9, 25),
+                next_id: None,
+            }),
+        ),
+    )
+    .await;
+    let line3 = format!("- [x] Renew the office lease ✅ 2026-09-25 ^{tid}");
+    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line3}\n")));
+    assert_eq!(r, applied(&line3));
+    assert_eq!(h.log(uid)[0], "user: task complete tasks/Tasks.md");
+    let r = one(
+        &h,
+        &alice,
+        op(22, Some(version(&line3)), Op::TaskReopen(o::TaskRef { id: tid.clone() })),
+    )
+    .await;
+    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line2}\n")));
+    assert_eq!(r, applied(&line2));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            23,
+            Some(version(&line2)),
+            Op::TaskCancel(o::TaskCancel {
+                id: tid.clone(),
+                date: d(2026, 9, 26),
+            }),
+        ),
+    )
+    .await;
+    let line4 = format!("- [-] Renew the office lease ❌ 2026-09-26 ^{tid}");
+    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line4}\n")));
+    assert_eq!(r, applied(&line4));
+    let r = one(
+        &h,
+        &alice,
+        op(24, Some(version(&line4)), Op::TaskDelete(o::TaskRef { id: tid.clone() })),
+    )
+    .await;
+    assert!(!h.read(uid, "tasks/Tasks.md").contains(&tid));
+    assert_eq!(r, applied_none());
+    assert_eq!(h.log(uid)[0], "user: task delete tasks/Tasks.md");
+
+    // note.move and note.delete.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            25,
+            Some(version(&b)),
+            Op::NoteMove(o::NoteMove {
+                id: id(2),
+                new_path: "archive/B.md".into(),
+            }),
+        ),
+    )
+    .await;
+    let b2 = h.read(uid, "archive/B.md");
+    assert_eq!(b2, b);
+    assert_eq!(r, applied(&b2));
+    let r = one(
+        &h,
+        &alice,
+        op(26, Some(version(&b2)), Op::NoteDelete(o::NoteRef { id: id(2) })),
+    )
+    .await;
+    assert_eq!(r, applied_none());
+    assert_eq!(h.read(uid, ".trash/archive/B.md"), b2);
+    // Deleting again is already in effect.
+    let r = one(
+        &h,
+        &alice,
+        op(27, Some(version(&b2)), Op::NoteDelete(o::NoteRef { id: id(2) })),
+    )
+    .await;
+    assert_eq!(r, applied_none());
+
+    // relink.request queues a job (no commit).
+    let before = commits(&h);
+    let r = one(&h, &alice, op(28, None, Op::RelinkRequest(o::NoteRef { id: id(1) }))).await;
+    assert_eq!(r, applied_none());
+    assert_eq!(commits(&h), before);
+    let mut tx = h.db.app_db.begin(&h.db.issuer.issue(uid)).await.expect("tx");
+    let queued: Vec<(String, uuid::Uuid)> =
+        sqlx::query_as("SELECT kind, note_id FROM jobs WHERE kind = 'link'")
+            .fetch_all(tx.conn())
+            .await
+            .expect("jobs");
+    tx.commit().await.expect("commit");
+    assert_eq!(queued, vec![("link".to_owned(), uuid::Uuid::from(id(1)))]);
+
+    // device.settings on the pushing device.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            29,
+            None,
+            Op::DeviceSettings(o::DeviceSettings {
+                device_id: alice.device,
+                reminders_enabled: Some(false),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied_none());
+    let devices = ops::list_devices(&alice.client).await.expect("devices");
+    assert!(!devices[0].reminders_enabled);
+
+    // suggestion.reply / accept / reject on duplicate suggestions from captures.
+    let dup = |n: u128, i: u128| {
+        op(
+            n,
+            None,
+            Op::Capture(o::Capture {
+                id: id(i),
+                text: "Call the notary".into(),
+                created: at + chrono::Duration::seconds(i64::try_from(i).expect("small")),
+            }),
+        )
+    };
+    let (res, _) = h.push(&alice, vec![dup(30, 20), dup(31, 21)]).await;
+    assert!(matches!(res.results[0].result, OpResult::Applied { .. }));
+    let pending = ops::list_suggestions(&alice.client, None)
+        .await
+        .expect("suggestions");
+    let ids: Vec<Ulid> = pending.items.iter().map(|s| s.id).collect();
+    assert_eq!(ids.len(), 2, "{pending:?}");
+    let r = one(
+        &h,
+        &alice,
+        op(
+            32,
+            None,
+            Op::SuggestionReply(o::SuggestionReply {
+                id: ids[0],
+                reply_id: id(30),
+                text: "keep them both".into(),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied_none());
+    let r = one(
+        &h,
+        &alice,
+        op(33, None, Op::SuggestionAccept(o::SuggestionAccept { id: ids[0], edits: None })),
+    )
+    .await;
+    assert_eq!(r, applied_none());
+    let r = one(
+        &h,
+        &alice,
+        op(
+            34,
+            None,
+            Op::SuggestionReject(o::SuggestionReject {
+                id: ids[1],
+                reason: None,
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied_none());
+    // Deciding again (another device did it first) keeps the server's decision.
+    let r = one(
+        &h,
+        &alice,
+        op(35, None, Op::SuggestionAccept(o::SuggestionAccept { id: ids[1], edits: None })),
+    )
+    .await;
+    assert_eq!(
+        r,
+        OpResult::Conflict {
+            server_version: None,
+            resolution: ConflictResolution::ServerKept {
+                reason: "the suggestion was already decided".into()
+            }
+        }
+    );
+    let all = ops::list_suggestions(&alice.client, Some(&types::SuggestionStatus::Accepted))
+        .await
+        .expect("accepted");
+    assert_eq!(all.items.len(), 1);
+    assert_eq!(all.items[0].replies.len(), 1);
+    assert_eq!(all.items[0].replies[0].id, id(30));
+
+    // Every kind was exercised.
+    h.finish().await;
+}
+
+#[tokio::test]
+async fn stale_updates_merge_cleanly_or_become_conflict_copies() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let uid = alice.id;
+    let body = "# Plan\n\nalpha\nbeta\ngamma\n";
+    one(&h, &alice, op(1, None, create(1, "notes/Plan.md", body))).await;
+    let v1 = h.read(uid, "notes/Plan.md");
+    // The server (another device) edits the first line.
+    let server = v1.replace("alpha\n", "ALPHA\n");
+    one(
+        &h,
+        &alice,
+        op(
+            2,
+            Some(version(&v1)),
+            Op::NoteUpdate(o::NoteUpdate {
+                id: id(1),
+                content: server.clone(),
+            }),
+        ),
+    )
+    .await;
+    let v2 = h.read(uid, "notes/Plan.md");
+    assert_eq!(v2, server);
+
+    // A device still on v1 edits the last line: non-overlapping → clean 3-way merge.
+    let device = v1.replace("gamma\n", "GAMMA\n");
+    let commits = h.log(uid).len();
+    let r = one(
+        &h,
+        &alice,
+        op(
+            3,
+            Some(version(&v1)),
+            Op::NoteUpdate(o::NoteUpdate {
+                id: id(1),
+                content: device,
+            }),
+        ),
+    )
+    .await;
+    let merged = v1.replace("alpha\n", "ALPHA\n").replace("gamma\n", "GAMMA\n");
+    assert_eq!(h.read(uid, "notes/Plan.md"), merged);
+    assert_eq!(
+        r,
+        OpResult::Applied {
+            new_version: Some(version(&merged)),
+            merged: true
+        }
+    );
+    assert_eq!(h.log(uid).len(), commits + 1);
+
+    // Another device on v1 changes the first line differently: overlap → conflict copy.
+    let other = v1.replace("alpha\n", "Alpha (draft)\n");
+    let r = one(
+        &h,
+        &alice,
+        op(
+            4,
+            Some(version(&v1)),
+            Op::NoteUpdate(o::NoteUpdate {
+                id: id(1),
+                content: other.clone(),
+            }),
+        ),
+    )
+    .await;
+    // The server version stands.
+    assert_eq!(h.read(uid, "notes/Plan.md"), merged);
+    let copy_path = "notes/Plan (conflict 2026-09-27 120000).md";
+    let copy = h.read(uid, copy_path);
+    // The copy is the device's content under its own ID (the op ID).
+    assert_eq!(
+        copy,
+        other.replace(&format!("id: {}", id(1)), &format!("id: {}", op_id(4)))
+    );
+    assert_eq!(
+        r,
+        OpResult::Conflict {
+            server_version: Some(version(&merged)),
+            resolution: ConflictResolution::ConflictCopy {
+                note_id: op_id(4),
+                path: copy_path.into(),
+                version: version(&copy),
+            }
+        }
+    );
+    // The conflict is recorded as a suggestion on the note.
+    let pending = ops::list_suggestions(&alice.client, None)
+        .await
+        .expect("suggestions");
+    assert_eq!(pending.items.len(), 1);
+    let s = &pending.items[0];
+    assert_eq!((s.id, s.kind.as_str(), s.note_id), (op_id(4), "conflict", Some(id(1))));
+    let payload: strata_api::sync::push::ConflictPayload = match &s.payload {
+        types::SuggestionPayload::Opaque { data } => {
+            rmp_serde::from_slice(data).expect("conflict payload")
+        }
+        other => panic!("unexpected payload {other:?}"),
+    };
+    assert_eq!(
+        payload,
+        strata_api::sync::push::ConflictPayload {
+            op_id: op_id(4).to_string(),
+            copy_id: op_id(4).to_string(),
+            copy_path: copy_path.into(),
+            base_version: version(&v1).to_string(),
+            server_version: version(&merged).to_string(),
+            hunks: 1,
+        }
+    );
+    // An edit equal to the current content is already applied.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            5,
+            Some(version(&v1)),
+            Op::NoteUpdate(o::NoteUpdate {
+                id: id(1),
+                content: merged.clone(),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied(&merged));
+    h.finish().await;
+}
+
+#[tokio::test]
+async fn duplicate_creates_answer_candidates_then_a_forced_retry_creates_and_keeps_both() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let uid = alice.id;
+    one(
+        &h,
+        &alice,
+        op(1, None, create(1, "notes/ETA invoice for Watanya.md", "Monthly invoice\n")),
+    )
+    .await;
+    let dup = create(2, "notes/ETA invoice for Watanya.md", "Monthly invoice\n");
+    let Op::NoteCreate(mut p) = dup else {
+        unreachable!()
+    };
+    p.path = "notes/Watanya ETA invoice.md".into();
+    let commits = h.log(uid).len();
+    let r = one(&h, &alice, op(2, None, Op::NoteCreate(p.clone()))).await;
+    let OpResult::Duplicate { candidates } = &r else {
+        panic!("expected duplicate, got {r:?}");
+    };
+    assert_eq!(candidates.len(), 1);
+    let c = &candidates[0];
+    assert_eq!(
+        (c.id.as_str(), c.kind, c.title.as_str(), c.level),
+        (id(1).to_string().as_str(), DedupeKind::Note, "ETA invoice for Watanya", MatchLevel::Exact)
+    );
+    assert_eq!(c.score, 1.0);
+    assert_eq!(h.log(uid).len(), commits, "nothing written");
+    assert!(!h.exists(uid, "notes/Watanya ETA invoice.md"));
+    // The device retries with force (a new op).
+    p.force = true;
+    let r = one(&h, &alice, op(3, None, Op::NoteCreate(p))).await;
+    let created = h.read(uid, "notes/Watanya ETA invoice.md");
+    assert_eq!(r, applied(&created));
+    let sidecar = h.read(uid, &format!(".meta/notes/{}.json", id(2)));
+    assert!(sidecar.contains(&id(1).to_string()), "{sidecar}");
+    // The pair is never flagged again.
+    let again = create(4, "notes/Invoice ETA Watanya.md", "Monthly invoice\n");
+    let r = one(&h, &alice, op(4, None, again)).await;
+    assert!(matches!(r, OpResult::Duplicate { .. }), "a third note is still checked: {r:?}");
+    h.finish().await;
+}
+
+#[tokio::test]
+async fn a_replayed_op_returns_the_stored_bytes_and_is_not_applied_again() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let uid = alice.id;
+    let ops_ = vec![
+        op(1, None, create(1, "notes/A.md", "one\n")),
+        op(
+            2,
+            None,
+            Op::TaskCreate(o::TaskCreate {
+                id: "t-01j9replayaaaaaaaaaaaaaaaa".into(),
+                note_id: None,
+                text: "Pay rent".into(),
+                due: None,
+                scheduled: None,
+                start: None,
+                recurrence: None,
+                reminders: vec![],
+                priority: None,
+                force: false,
+            }),
+        ),
+    ];
+    let (first, first_bytes) = h.push(&alice, ops_.clone()).await;
+    let commits = h.log(uid).len();
+    let a = h.read(uid, "notes/A.md");
+    // Change the note meanwhile: the replay must still answer the original result.
+    one(
+        &h,
+        &alice,
+        op(
+            3,
+            Some(version(&a)),
+            Op::NoteUpdate(o::NoteUpdate {
+                id: id(1),
+                content: a.replace("one", "two"),
+            }),
+        ),
+    )
+    .await;
+    let commits_after_edit = h.log(uid).len();
+    assert_eq!(commits_after_edit, commits + 1);
+    let (second, second_bytes) = h.push(&alice, ops_).await;
+    assert_eq!(second, first);
+    assert_eq!(second_bytes, first_bytes, "byte-identical replay");
+    assert_eq!(h.log(uid).len(), commits_after_edit, "no second commit");
+    // The same op twice in one push: applied once, answered twice identically.
+    let dup = op(4, None, create(5, "notes/C.md", "c\n"));
+    let (res, bytes) = h.push(&alice, vec![dup.clone(), dup]).await;
+    assert_eq!(res.results[0], res.results[1]);
+    assert_eq!(h.log(uid)[0], "user: create notes/C.md");
+    assert_eq!(h.log(uid)[1], "user: update notes/A.md");
+    // Stored as MessagePack under the op ID.
+    let mut tx = h.db.app_db.begin(&h.db.issuer.issue(uid)).await.expect("tx");
+    let stored = strata_index::repo::sync::idempotency_get(
+        &mut tx,
+        strata_common::OpId::from_ulid(op_id(4)),
+    )
+    .await
+    .expect("get")
+    .expect("stored");
+    tx.commit().await.expect("commit");
+    assert_eq!(stored.result, rmp_serde::to_vec_named(&res.results[0].result).expect("enc"));
+    assert!(bytes.windows(stored.result.len()).any(|w| w == stored.result.as_slice()));
+    h.finish().await;
+}
+
+#[tokio::test]
+async fn ops_apply_in_order_within_one_push() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let uid = alice.id;
+    let content = "# Draft\n\nfirst\n";
+    let edit = "# Draft\n\nfirst\nsecond\n";
     let (res, _) = h
         .push(
             &alice,
-            vec![op(
-                1,
-                None,
-                Op::NoteCreate(o::NoteCreate {
-                    id,
-                    path: "notes/A.md".into(),
-                    content: "# A\n\nline one\n".into(),
-                    force: false,
-                }),
-            )],
+            vec![
+                op(1, None, create(1, "notes/Draft.md", content)),
+                // Based on the content the device just created (the server stamped it).
+                op(
+                    2,
+                    Some(version(content)),
+                    Op::NoteUpdate(o::NoteUpdate {
+                        id: id(1),
+                        content: edit.into(),
+                    }),
+                ),
+                op(
+                    3,
+                    Some(version(edit)),
+                    Op::NoteMove(o::NoteMove {
+                        id: id(1),
+                        new_path: "notes/Final.md".into(),
+                    }),
+                ),
+                // Depends on the move having happened (forced: same title as before).
+                op(
+                    4,
+                    None,
+                    Op::NoteCreate(o::NoteCreate {
+                        id: id(2),
+                        path: "notes/Draft.md".into(),
+                        content: "# Another draft\n".into(),
+                        force: true,
+                    }),
+                ),
+                // Invalid: the previous op must not stop later ones.
+                op(
+                    5,
+                    Some(version("x")),
+                    Op::NoteUpdate(o::NoteUpdate {
+                        id: id(99),
+                        content: "nothing".into(),
+                    }),
+                ),
+                op(6, None, create(3, "notes/Last.md", "last\n")),
+            ],
         )
         .await;
-    let text = h.read(alice.id, "notes/A.md");
-    assert_eq!(text, format!("{}# A\n\nline one\n", header(&id.to_string())));
+    let fin = h.read(uid, "notes/Final.md");
+    assert_eq!(fin, format!("{}{edit}", header(&id(1).to_string())));
+    let results: Vec<OpResult> = res.results.into_iter().map(|r| r.result).collect();
+    let created1 = format!("{}{content}", header(&id(1).to_string()));
     assert_eq!(
-        res.results[0].result,
-        OpResult::Applied {
-            new_version: Some(version(&text)),
-            merged: false
-        }
+        results,
+        vec![
+            applied(&created1),
+            OpResult::Applied {
+                new_version: Some(version(&fin)),
+                merged: true
+            },
+            applied(&fin),
+            applied(&h.read(uid, "notes/Draft.md")),
+            not_found(),
+            applied(&h.read(uid, "notes/Last.md")),
+        ]
     );
+    assert_eq!(
+        h.log(uid)[..5].to_vec(),
+        vec![
+            "user: create notes/Last.md",
+            "user: create notes/Draft.md",
+            "user: move notes/Draft.md -> notes/Final.md",
+            "user: update notes/Draft.md",
+            "user: create notes/Draft.md",
+        ]
+    );
+    h.finish().await;
+}
+
+#[tokio::test]
+async fn invalid_envelopes_are_rejected_per_op() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let mut bad = op(1, None, create(1, "notes/A.md", "a\n"));
+    bad.entity_id = "something-else".into();
+    let missing_base = op(
+        2,
+        None,
+        Op::NoteUpdate(o::NoteUpdate {
+            id: id(1),
+            content: "b".into(),
+        }),
+    );
+    let (res, _) = h.push(&alice, vec![bad, missing_base]).await;
+    let invalid = |detail: &str| OpResult::Rejected {
+        problem: Problem {
+            problem_type: "invalid_body".into(),
+            title: "Request body is invalid".into(),
+            status: 422,
+            detail: Some(detail.into()),
+        },
+    };
+    assert_eq!(
+        res.results.into_iter().map(|r| r.result).collect::<Vec<_>>(),
+        vec![
+            invalid(&format!(
+                "entity_id \"something-else\" does not match the payload (\"{}\")",
+                id(1)
+            )),
+            invalid("`note.update` requires a base_version"),
+        ]
+    );
+    h.finish().await;
+}
+
+#[tokio::test]
+async fn another_users_ids_are_rejected_as_not_found_and_never_applied() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let bob = h.user("bob").await;
+    one(&h, &alice, op(1, None, create(1, "notes/Secret.md", "alice's\n"))).await;
+    let secret = h.read(alice.id, "notes/Secret.md");
+    one(
+        &h,
+        &alice,
+        op(
+            2,
+            None,
+            Op::EntityCreate(o::EntityCreate {
+                id: id(2),
+                kind: NoteKind::Person,
+                name: "Sam".into(),
+                aliases: vec![],
+                fields: Default::default(),
+                force: false,
+            }),
+        ),
+    )
+    .await;
+    let alice_commits = h.log(alice.id).len();
+    let bob_commits = h.log(bob.id).len();
+    // Bob's own note to point relations at.
+    one(&h, &bob, op(3, None, create(3, "notes/Mine.md", "bob's\n"))).await;
+    let foreign = vec![
+        op(
+            10,
+            Some(version(&secret)),
+            Op::NoteUpdate(o::NoteUpdate {
+                id: id(1),
+                content: "pwned".into(),
+            }),
+        ),
+        op(
+            11,
+            Some(version(&secret)),
+            Op::NoteMove(o::NoteMove {
+                id: id(1),
+                new_path: "notes/Moved.md".into(),
+            }),
+        ),
+        op(12, Some(version(&secret)), Op::NoteDelete(o::NoteRef { id: id(1) })),
+        op(
+            13,
+            None,
+            Op::RelationAdd(o::RelationRef {
+                src_id: id(3),
+                dst_id: id(1),
+                relation: "related".parse().expect("rel"),
+            }),
+        ),
+        op(
+            14,
+            Some(version(&secret)),
+            Op::EntityPatch(o::EntityPatch {
+                id: id(2),
+                ..o::EntityPatch::default()
+            }),
+        ),
+        op(
+            15,
+            None,
+            Op::EntityMerge(o::EntityMerge {
+                id: id(2),
+                into_id: id(2),
+            }),
+        ),
+        op(16, None, Op::RelinkRequest(o::NoteRef { id: id(1) })),
+        op(
+            17,
+            None,
+            Op::DeviceSettings(o::DeviceSettings {
+                device_id: alice.device,
+                reminders_enabled: Some(false),
+            }),
+        ),
+        op(
+            18,
+            None,
+            Op::DocumentCustody(o::DocumentCustody {
+                document_id: id(2),
+                event: CustodyEventType::Lost,
+                at: d(2026, 9, 1),
+                place_id: None,
+                person_id: None,
+                counterparty_id: None,
+            }),
+        ),
+    ];
+    let n = foreign.len();
+    let (res, _) = h.push(&bob, foreign).await;
+    let results: Vec<OpResult> = res.results.into_iter().map(|r| r.result).collect();
+    let merge_self = OpResult::Rejected {
+        problem: Problem {
+            problem_type: "invalid_body".into(),
+            title: "Request body is invalid".into(),
+            status: 422,
+            detail: Some("an entity cannot be merged into itself".into()),
+        },
+    };
+    let mut expected = vec![not_found(); n];
+    expected[5] = merge_self;
+    assert_eq!(results, expected);
+    // Nothing of Alice's changed.
+    assert_eq!(h.read(alice.id, "notes/Secret.md"), secret);
+    assert_eq!(h.log(alice.id).len(), alice_commits);
+    assert_eq!(h.log(bob.id).len(), bob_commits + 1);
+    let devices = ops::list_devices(&alice.client).await.expect("devices");
+    assert!(devices[0].reminders_enabled);
+    // Bob's op IDs are his own: Alice may reuse one without seeing Bob's result.
+    let r = one(&h, &alice, op(10, None, create(9, "notes/Other.md", "x\n"))).await;
+    assert_eq!(r, applied(&h.read(alice.id, "notes/Other.md")));
     h.finish().await;
 }

@@ -1,0 +1,9 @@
+arb-dir: lib/l10n
+template-arb-file: home_en.arb
+output-dir: lib/src/generated
+output-localization-file: home_localizations.dart
+output-class: HomeLocalizations
+nullable-getter: false
+required-resource-attributes: true
+use-named-parameters: true
+format: true

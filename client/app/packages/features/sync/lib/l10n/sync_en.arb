@@ -1,0 +1,542 @@
+{
+  "@@locale": "en",
+  "pillOffline": "{count, plural, =0{Offline} =1{Offline · 1 queued} other{Offline · {count} queued}}",
+  "@pillOffline": {
+    "description": "Sync pill while offline, with the queued op count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pillOnline": "{count, plural, =0{Synced} =1{Online · 1 queued} other{Online · {count} queued}}",
+  "@pillOnline": {
+    "description": "Sync pill while online.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pillUnknown": "{count, plural, =0{Not synced yet} =1{Not synced · 1 queued} other{Not synced · {count} queued}}",
+  "@pillUnknown": {
+    "description": "Sync pill before the first request completed.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pillConflicts": "{count, plural, =1{1 conflict} other{{count} conflicts}}",
+  "@pillConflicts": {
+    "description": "Conflict count badge on the sync pill.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pillSemantics": "Sync status: {status}",
+  "@pillSemantics": {
+    "description": "Accessibility label of the sync pill.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "pillOpenHint": "Open sync status",
+  "@pillOpenHint": {
+    "description": "Accessibility hint: the pill opens the sync status."
+  },
+  "titleOnline": "Online",
+  "@titleOnline": {
+    "description": "Sync panel headline when the server is reachable."
+  },
+  "titleOffline": "Offline",
+  "@titleOffline": {
+    "description": "Sync panel headline when offline."
+  },
+  "titleUnknown": "Connecting",
+  "@titleUnknown": {
+    "description": "Sync panel headline before the first request completed."
+  },
+  "bodyOnline": "Changes sync automatically with your server.",
+  "@bodyOnline": {
+    "description": "Sync panel description online."
+  },
+  "bodyOffline": "Your changes are saved on this device and will sync when you're back online.",
+  "@bodyOffline": {
+    "description": "Sync panel description offline."
+  },
+  "bodyUnknown": "Waiting for the first answer from your server.",
+  "@bodyUnknown": {
+    "description": "Sync panel description before the first request."
+  },
+  "phaseIdle": "Idle",
+  "@phaseIdle": {
+    "description": "Sync engine phase: nothing running."
+  },
+  "phaseBootstrapping": "Downloading your vault",
+  "@phaseBootstrapping": {
+    "description": "Sync engine phase: bootstrap."
+  },
+  "phasePushing": "Sending changes",
+  "@phasePushing": {
+    "description": "Sync engine phase: push."
+  },
+  "phasePulling": "Pulling changes",
+  "@phasePulling": {
+    "description": "Sync engine phase: pull."
+  },
+  "phaseBackoff": "Waiting to retry",
+  "@phaseBackoff": {
+    "description": "Sync engine phase: backoff."
+  },
+  "progressPages": "{done} of {total} pages",
+  "@progressPages": {
+    "description": "Bootstrap progress with a known total.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "progressPagesUnknown": "{done} pages",
+  "@progressPagesUnknown": {
+    "description": "Bootstrap progress without a known total.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      }
+    }
+  },
+  "progressOps": "{count, plural, =0{No changes in flight} =1{1 change in flight} other{{count} changes in flight}}",
+  "@progressOps": {
+    "description": "Ops in the push in flight.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "retryAt": "Next attempt at {time}",
+  "@retryAt": {
+    "description": "When the next sync attempt runs.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lastSynced": "Last synced",
+  "@lastSynced": {
+    "description": "Label of the last sync time."
+  },
+  "lastSyncedNever": "Never",
+  "@lastSyncedNever": {
+    "description": "No sync completed yet."
+  },
+  "lastSyncedValue": "{date} {time}",
+  "@lastSyncedValue": {
+    "description": "Date and time of the last sync.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "server": "Server",
+  "@server": {
+    "description": "Label of the server URL."
+  },
+  "snapshot": "Full copy on this device",
+  "@snapshot": {
+    "description": "Label: the bootstrap finished."
+  },
+  "snapshotDone": "Yes",
+  "@snapshotDone": {
+    "description": "The bootstrap is complete."
+  },
+  "snapshotPending": "Not yet",
+  "@snapshotPending": {
+    "description": "The bootstrap is not complete."
+  },
+  "outboxTitle": "{count, plural, =0{Nothing queued} =1{1 change queued} other{{count} changes queued}}",
+  "@outboxTitle": {
+    "description": "Outbox heading with the number of queued ops.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "outboxOrder": "Oldest first",
+  "@outboxOrder": {
+    "description": "The outbox is listed in push order."
+  },
+  "outboxEmpty": "Every change on this device has synced.",
+  "@outboxEmpty": {
+    "description": "Empty outbox message."
+  },
+  "statusPending": "Queued",
+  "@statusPending": {
+    "description": "Outbox op status: waiting."
+  },
+  "statusInflight": "Sending",
+  "@statusInflight": {
+    "description": "Outbox op status: being pushed."
+  },
+  "statusConflict": "Conflict",
+  "@statusConflict": {
+    "description": "Outbox op status: conflict."
+  },
+  "statusDuplicate": "Already exists?",
+  "@statusDuplicate": {
+    "description": "Outbox op status: duplicate prompt."
+  },
+  "attempts": "{count, plural, =0{} =1{1 attempt} other{{count} attempts}}",
+  "@attempts": {
+    "description": "Push attempts of an op.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "kindNoteCreate": "New note",
+  "@kindNoteCreate": {
+    "description": "Outbox op kind note.create."
+  },
+  "kindNoteUpdate": "Edit note",
+  "@kindNoteUpdate": {
+    "description": "Outbox op kind note.update."
+  },
+  "kindNoteMove": "Move note",
+  "@kindNoteMove": {
+    "description": "Outbox op kind note.move."
+  },
+  "kindNoteDelete": "Delete note",
+  "@kindNoteDelete": {
+    "description": "Outbox op kind note.delete."
+  },
+  "kindEntityCreate": "New person or company",
+  "@kindEntityCreate": {
+    "description": "Outbox op kind entity.create."
+  },
+  "kindEntityPatch": "Edit person or company",
+  "@kindEntityPatch": {
+    "description": "Outbox op kind entity.patch."
+  },
+  "kindEntityMerge": "Merge",
+  "@kindEntityMerge": {
+    "description": "Outbox op kind entity.merge."
+  },
+  "kindDocument": "Document change",
+  "@kindDocument": {
+    "description": "Outbox op kinds document.*."
+  },
+  "kindPlace": "Place change",
+  "@kindPlace": {
+    "description": "Outbox op kinds place.*."
+  },
+  "kindRelationAdd": "Add relation",
+  "@kindRelationAdd": {
+    "description": "Outbox op kind relation.add."
+  },
+  "kindRelationRemove": "Remove relation",
+  "@kindRelationRemove": {
+    "description": "Outbox op kind relation.remove."
+  },
+  "kindRelationRetype": "Change relation type",
+  "@kindRelationRetype": {
+    "description": "Outbox op kind relation.retype."
+  },
+  "kindRelink": "Relink request",
+  "@kindRelink": {
+    "description": "Outbox op kind relink.request."
+  },
+  "kindSuggestionAccept": "Accept suggestion",
+  "@kindSuggestionAccept": {
+    "description": "Outbox op kind suggestion.accept."
+  },
+  "kindSuggestionReject": "Reject suggestion",
+  "@kindSuggestionReject": {
+    "description": "Outbox op kind suggestion.reject."
+  },
+  "kindSuggestionReply": "Answer suggestion",
+  "@kindSuggestionReply": {
+    "description": "Outbox op kind suggestion.reply."
+  },
+  "kindTaskCreate": "New task",
+  "@kindTaskCreate": {
+    "description": "Outbox op kind task.create."
+  },
+  "kindTaskUpdate": "Edit task",
+  "@kindTaskUpdate": {
+    "description": "Outbox op kind task.update."
+  },
+  "kindTaskComplete": "Complete task",
+  "@kindTaskComplete": {
+    "description": "Outbox op kind task.complete."
+  },
+  "kindTaskCancel": "Cancel task",
+  "@kindTaskCancel": {
+    "description": "Outbox op kind task.cancel."
+  },
+  "kindTaskReopen": "Reopen task",
+  "@kindTaskReopen": {
+    "description": "Outbox op kind task.reopen."
+  },
+  "kindTaskDelete": "Delete task",
+  "@kindTaskDelete": {
+    "description": "Outbox op kind task.delete."
+  },
+  "kindDeviceSettings": "Device settings",
+  "@kindDeviceSettings": {
+    "description": "Outbox op kind device.settings."
+  },
+  "kindOther": "Change",
+  "@kindOther": {
+    "description": "An op kind this app version does not name."
+  },
+  "conflictsTitle": "{count, plural, =1{1 conflict needs review} other{{count} conflicts need review}}",
+  "@conflictsTitle": {
+    "description": "Conflicts section heading.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conflictRow": "Edited here and on the server",
+  "@conflictRow": {
+    "description": "Conflict row subtitle."
+  },
+  "review": "Review",
+  "@review": {
+    "description": "Opens a conflict."
+  },
+  "reviewSemantics": "Review conflict on {title}",
+  "@reviewSemantics": {
+    "description": "Accessibility label of a conflict's Review button.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "rejectionsTitle": "Changes the server refused",
+  "@rejectionsTitle": {
+    "description": "Rejected ops section heading."
+  },
+  "dismiss": "Dismiss",
+  "@dismiss": {
+    "description": "Dismisses a rejected op notice."
+  },
+  "dismissSemantics": "Dismiss notice: {message}",
+  "@dismissSemantics": {
+    "description": "Accessibility label of Dismiss.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "lastError": "Last error",
+  "@lastError": {
+    "description": "Label of the last sync error."
+  },
+  "retryNow": "Retry now",
+  "@retryNow": {
+    "description": "Sync now while offline or backing off."
+  },
+  "syncNow": "Sync now",
+  "@syncNow": {
+    "description": "Sync now."
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Closes the sync panel."
+  },
+  "panelTitle": "Sync",
+  "@panelTitle": {
+    "description": "Title of the sync drawer / screen."
+  },
+  "loading": "Loading sync status",
+  "@loading": {
+    "description": "Loading state label."
+  },
+  "loadFailed": "Sync status could not be loaded",
+  "@loadFailed": {
+    "description": "Error state title."
+  },
+  "conflictBreadcrumb": "Sync › Conflicts",
+  "@conflictBreadcrumb": {
+    "description": "Breadcrumb over the conflict screen."
+  },
+  "conflictIntro": "This device and the server both edited this note. Changes that don't overlap were merged; parts changed on both sides need your choice.",
+  "@conflictIntro": {
+    "description": "Conflict screen introduction."
+  },
+  "conflictCleanIntro": "This device and the server both edited this note. The changes don't overlap and merged cleanly.",
+  "@conflictCleanIntro": {
+    "description": "Conflict screen introduction for a clean merge."
+  },
+  "conflictGone": "This conflict is resolved",
+  "@conflictGone": {
+    "description": "The conflict no longer exists."
+  },
+  "conflictGoneBody": "Nothing is left to decide here.",
+  "@conflictGoneBody": {
+    "description": "Body of the resolved-conflict state."
+  },
+  "columnDevice": "This device",
+  "@columnDevice": {
+    "description": "Local version column."
+  },
+  "columnMerged": "Merged result",
+  "@columnMerged": {
+    "description": "Merged column."
+  },
+  "columnMergedEditable": "editable",
+  "@columnMergedEditable": {
+    "description": "Suffix: the merged result can be edited."
+  },
+  "columnServer": "Server",
+  "@columnServer": {
+    "description": "Server version column."
+  },
+  "columnBase": "Base",
+  "@columnBase": {
+    "description": "Base version."
+  },
+  "versionMissing": "Not available yet",
+  "@versionMissing": {
+    "description": "A side of the conflict is not known yet."
+  },
+  "mergedFieldLabel": "Merged note text",
+  "@mergedFieldLabel": {
+    "description": "Accessibility label of the merged editor."
+  },
+  "hunkTitle": "Changed on both sides · {location}",
+  "@hunkTitle": {
+    "description": "Heading of a conflicting hunk.",
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "hunkOurs": "Keep this device's text",
+  "@hunkOurs": {
+    "description": "Hunk choice: ours."
+  },
+  "hunkTheirs": "Keep the server's text",
+  "@hunkTheirs": {
+    "description": "Hunk choice: theirs."
+  },
+  "hunkBase": "Keep the original",
+  "@hunkBase": {
+    "description": "Hunk choice: base."
+  },
+  "hunkBoth": "Keep both",
+  "@hunkBoth": {
+    "description": "Hunk choice: ours then theirs."
+  },
+  "hunkOwn": "Write my own",
+  "@hunkOwn": {
+    "description": "Hunk choice: own text."
+  },
+  "hunkOwnField": "Your text for {location}",
+  "@hunkOwnField": {
+    "description": "Label of the own-text field of a hunk.",
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "hunksLeft": "{count, plural, =0{Every choice made} =1{1 choice left} other{{count} choices left}}",
+  "@hunksLeft": {
+    "description": "Undecided hunks.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "conflictFooter": "Nothing is lost — other versions stay in History.",
+  "@conflictFooter": {
+    "description": "Reassurance in the conflict footer."
+  },
+  "keepServer": "Keep server",
+  "@keepServer": {
+    "description": "Resolve: keep the server version."
+  },
+  "keepDevice": "Keep this device",
+  "@keepDevice": {
+    "description": "Resolve: keep the local version."
+  },
+  "keepMerged": "Keep merged",
+  "@keepMerged": {
+    "description": "Resolve: keep the merged result."
+  },
+  "decideLater": "Close and decide later",
+  "@decideLater": {
+    "description": "Closes the conflict screen."
+  },
+  "resolveFailed": "The conflict could not be resolved: {message}",
+  "@resolveFailed": {
+    "description": "Snackbar when resolving fails.",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "errorOffline": "You're offline.",
+  "@errorOffline": {
+    "description": "Core error offline."
+  },
+  "errorNotFound": "It no longer exists.",
+  "@errorNotFound": {
+    "description": "Core error not_found."
+  },
+  "errorGeneric": "Something went wrong ({code}).",
+  "@errorGeneric": {
+    "description": "Any other core error.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "pillWithConflicts": "{status} · {conflicts}",
+  "@pillWithConflicts": {
+    "description": "Sync pill copy followed by the conflict badge.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      },
+      "conflicts": {
+        "type": "String"
+      }
+    }
+  },
+  "pillSemanticsWithHint": "Sync status: {status}. Open sync status",
+  "@pillSemanticsWithHint": {
+    "description": "Accessibility label of the sync pill when it opens the sync status.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  }
+}

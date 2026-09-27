@@ -46,6 +46,47 @@ pub struct Config {
     pub push: PushConfig,
     /// Tokens, passwords and rate limits (PLAN §8, D6).
     pub auth: AuthConfig,
+    /// Background job runner (PLAN §5.2 fair scheduling, §9.2).
+    pub jobs: JobsConfig,
+}
+
+/// The background job runner (PLAN §5.2, §9.2): fair round-robin across users, a global
+/// concurrency limit within the VPS budget, retries with exponential backoff, and the
+/// nightly/weekly scheduler.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JobsConfig {
+    /// Jobs running at once across all users (1 CPU core: keep it low). Embedding jobs are
+    /// additionally limited to one at a time and LLM jobs by `ai.claude_cli.max_concurrency`.
+    pub max_concurrency: u32,
+    /// Seconds between scheduling passes when nothing is runnable.
+    pub poll_interval_secs: u32,
+    /// Seconds a user whose queued jobs are all of kinds this process does not run is skipped
+    /// before being looked at again.
+    pub idle_recheck_secs: u32,
+    /// First retry delay in seconds; doubles per attempt.
+    pub backoff_base_secs: u32,
+    /// Longest retry delay in seconds.
+    pub backoff_max_secs: u32,
+    /// Local hour (0–23, in `default_timezone`) at which nightly jobs (`dedupe`) run.
+    pub nightly_hour: u32,
+    /// Seconds a graceful shutdown waits for running jobs (unfinished ones are re-queued at
+    /// the next start).
+    pub shutdown_grace_secs: u32,
+}
+
+impl Default for JobsConfig {
+    fn default() -> Self {
+        Self {
+            max_concurrency: 2,
+            poll_interval_secs: 5,
+            idle_recheck_secs: 60,
+            backoff_base_secs: 30,
+            backoff_max_secs: 3600,
+            nightly_hour: 3,
+            shutdown_grace_secs: 30,
+        }
+    }
 }
 
 /// One connection URL per database role.
@@ -183,6 +224,9 @@ pub struct EmbeddingSettings {
     pub pad_batches: bool,
     /// Nice value of the embedding thread (0–19).
     pub nice: i32,
+    /// Seconds without an embedding call after which the model is unloaded to free its memory
+    /// (≈ 390 MB for the fp32 export); it is loaded again on the next call (§9.1b).
+    pub idle_unload_secs: u32,
 }
 
 /// Effort levels accepted by the Messages API.
@@ -372,17 +416,17 @@ impl Default for AiConfig {
             embedding: EmbeddingSettings {
                 model_dir: None,
                 onnxruntime_lib: None,
-                model_file: PathBuf::from("onnx/model_quint8_avx2.onnx"),
+                model_file: PathBuf::from("onnx/model.onnx"),
                 tokenizer_file: PathBuf::from("tokenizer.json"),
-                model_id:
-                    "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"
-                        .to_owned(),
+                model_id: "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model"
+                    .to_owned(),
                 dims: 384,
                 pooling: EmbeddingPooling::Cls,
                 max_tokens: 2048,
                 max_batch_tokens: 8192,
-                pad_batches: false,
+                pad_batches: true,
                 nice: 19,
+                idle_unload_secs: 300,
             },
         }
     }
@@ -457,6 +501,7 @@ impl Default for Config {
                     },
                 },
             },
+            jobs: JobsConfig::default(),
         }
     }
 }
@@ -627,7 +672,24 @@ impl Config {
                 emb.nice
             ));
         }
+        positive(
+            "ai.embedding.idle_unload_secs",
+            u64::from(emb.idle_unload_secs),
+        )?;
         self.budget_tz()?;
+        let jobs = &self.jobs;
+        positive("jobs.max_concurrency", u64::from(jobs.max_concurrency))?;
+        positive("jobs.poll_interval_secs", u64::from(jobs.poll_interval_secs))?;
+        positive("jobs.backoff_base_secs", u64::from(jobs.backoff_base_secs))?;
+        if jobs.backoff_max_secs < jobs.backoff_base_secs {
+            return invalid("jobs.backoff_max_secs must be at least jobs.backoff_base_secs".into());
+        }
+        if jobs.nightly_hour > 23 {
+            return invalid(format!(
+                "jobs.nightly_hour must be within 0..=23, got {}",
+                jobs.nightly_hour
+            ));
+        }
         Ok(())
     }
 
@@ -1047,6 +1109,33 @@ mod tests {
             ),
             (None, None, EmbeddingPooling::Cls, 2048, 384, 19)
         );
+        // fp32 weights by default (owner decision 2026-09-27, PLAN §9.1b), unloaded after 5 min.
+        assert_eq!(
+            (
+                ai.embedding.model_file.to_str(),
+                ai.embedding.model_id.as_str(),
+                ai.embedding.pad_batches,
+                ai.embedding.idle_unload_secs
+            ),
+            (
+                Some("onnx/model.onnx"),
+                "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model",
+                true,
+                300
+            )
+        );
+        assert_eq!(
+            config.jobs,
+            JobsConfig {
+                max_concurrency: 2,
+                poll_interval_secs: 5,
+                idle_recheck_secs: 60,
+                backoff_base_secs: 30,
+                backoff_max_secs: 3600,
+                nightly_hour: 3,
+                shutdown_grace_secs: 30,
+            }
+        );
         assert_eq!(
             config.budgets,
             Budgets {
@@ -1196,6 +1285,18 @@ mod tests {
         invalid(
             "[ai.embedding]\nnice = 20",
             "ai.embedding.nice must be within 0..=19, got 20",
+        );
+        invalid(
+            "[ai.embedding]\nidle_unload_secs = 0",
+            "ai.embedding.idle_unload_secs must be at least 1",
+        );
+        invalid(
+            "[jobs]\nnightly_hour = 24",
+            "jobs.nightly_hour must be within 0..=23, got 24",
+        );
+        invalid(
+            "[jobs]\nbackoff_base_secs = 60\nbackoff_max_secs = 30",
+            "jobs.backoff_max_secs must be at least jobs.backoff_base_secs",
         );
         invalid(
             "[ai.embedding]\ndims = 0",

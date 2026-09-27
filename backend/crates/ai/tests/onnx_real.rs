@@ -22,7 +22,7 @@ fn config() -> OnnxEmbedderConfig {
         .unwrap_or_else(|_| "/opt/models/granite-embedding-97m-multilingual-r2".into());
     let lib = std::env::var("STRATA_ONNXRUNTIME_LIB")
         .unwrap_or_else(|_| "/opt/onnxruntime/lib/libonnxruntime.so.1.30.0".into());
-    OnnxEmbedderConfig::granite_97m_r2(PathBuf::from(dir), PathBuf::from(lib))
+    OnnxEmbedderConfig::granite_97m_r2_quint8(PathBuf::from(dir), PathBuf::from(lib))
 }
 
 #[derive(serde::Deserialize)]

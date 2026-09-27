@@ -35,11 +35,12 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
             20_260_927_000_006,
             20_260_927_000_007,
             20_260_927_000_008,
-            20_260_927_000_010
+            20_260_927_000_010,
+            20_260_927_000_011
         ]
     );
     assert!(after_first.iter().all(|r| r.1));
-    assert_eq!(tables(&db).await.len(), 41);
+    assert_eq!(tables(&db).await.len(), 43);
 
     migrate(&db.owner).await.expect("second run");
     let after_second: Vec<(i64, bool, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
@@ -57,7 +58,7 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
 #[tokio::test]
 async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
     let db = TestDb::new_unmigrated().await.expect("db");
-    let expected_new_tables: [&[&str]; 9] = [
+    let expected_new_tables: [&[&str]; 10] = [
         &[
             "_sqlx_migrations",
             "audit_log",
@@ -105,6 +106,7 @@ async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
         &["ai_usage_global"],
         // 010: columns only (devices.reminders_enabled, users.must_change_password).
         &[],
+        &["dedupe_vectors", "note_vectors"],
     ];
     let mut before = tables(&db).await;
     let mut user = None;

@@ -103,6 +103,9 @@ problem_types! {
     RateLimited = ("rate_limited", 429, "Too many requests");
     /// The AI subsystem is disabled or not available yet (semantic/hybrid search, ask).
     AiUnavailable = ("ai_unavailable", 503, "AI unavailable");
+    /// AI work is paused: a daily budget is reached or the provider hit its usage limit
+    /// (PLAN §9.1); `detail` names the reason. Retry after the pause ends.
+    AiPaused = ("ai_paused", 503, "AI paused");
     /// Unexpected server error; details are logged, never returned.
     Internal = ("internal", 500, "Internal server error");
 }
@@ -184,6 +187,7 @@ mod tests {
                 ("epoch_changed", 410),
                 ("rate_limited", 429),
                 ("ai_unavailable", 503),
+                ("ai_paused", 503),
                 ("internal", 500),
             ]
         );

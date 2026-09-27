@@ -24,7 +24,7 @@ async fn every_non_global_table_is_user_owned_with_forced_rls_and_the_standard_p
             .await
             .expect("owned")
             .len(),
-        35
+        37
     );
 }
 

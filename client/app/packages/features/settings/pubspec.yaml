@@ -1,6 +1,8 @@
 name: strata_settings
 description: >-
-  Strata "settings" feature UI (widgets only; view-models come from the Rust core).
+  Strata "settings" feature UI: account, devices, reminders, AI status, integrity, export/import
+  and about. Widgets only; view-models come from the
+  Rust core (PLAN L15).
 version: 0.1.0
 publish_to: none
 resolution: workspace
@@ -12,10 +14,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_hooks: ^0.21.3
+  flutter_localizations:
+    sdk: flutter
+  hooks_riverpod: ^3.4.3
   strata_l10n: any
+  strata_state: any
   strata_ui: any
 
 dev_dependencies:
+  alchemist: ^0.14.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^11.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true

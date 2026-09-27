@@ -49,22 +49,36 @@ pub struct OnnxEmbedderConfig {
 }
 
 impl OnnxEmbedderConfig {
-    /// IBM granite-embedding-97m-multilingual-r2, int8 (quint8, AVX2) ONNX export as published
-    /// in the model repository (`onnx/model_quint8_avx2.onnx`), CLS pooling, 384 dimensions.
+    /// IBM granite-embedding-97m-multilingual-r2, full-precision (fp32) ONNX export as
+    /// published in the model repository (`onnx/model.onnx`), CLS pooling, 384 dimensions.
+    /// The default (owner decision 2026-09-27, PLAN §9.1b: on the target CPU the int8 export
+    /// was not faster and separated Arabic/English paraphrases worse). The fp32 export is
+    /// padding-invariant, so texts of different lengths may share a batch.
     pub fn granite_97m_r2(model_dir: PathBuf, onnxruntime_lib: PathBuf) -> Self {
         Self {
             model_dir,
-            model_file: PathBuf::from("onnx/model_quint8_avx2.onnx"),
+            model_file: PathBuf::from("onnx/model.onnx"),
             tokenizer_file: PathBuf::from("tokenizer.json"),
             onnxruntime_lib,
-            model_id: "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"
-                .to_owned(),
+            model_id: "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model".to_owned(),
             dims: 384,
             pooling: Pooling::Cls,
             max_tokens: 2048,
             max_batch_tokens: 8192,
-            pad_batches: false,
+            pad_batches: true,
             nice: 19,
+        }
+    }
+
+    /// The same model's int8 (quint8, AVX2) export (`onnx/model_quint8_avx2.onnx`). Its output
+    /// changes when a text is padded, so only equal-length texts share a batch.
+    pub fn granite_97m_r2_quint8(model_dir: PathBuf, onnxruntime_lib: PathBuf) -> Self {
+        Self {
+            model_file: PathBuf::from("onnx/model_quint8_avx2.onnx"),
+            model_id: "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"
+                .to_owned(),
+            pad_batches: false,
+            ..Self::granite_97m_r2(model_dir, onnxruntime_lib)
         }
     }
 }

@@ -1,0 +1,9 @@
+arb-dir: lib/l10n
+template-arb-file: tasks_en.arb
+output-dir: lib/src/generated
+output-localization-file: tasks_localizations.dart
+output-class: TasksLocalizations
+nullable-getter: false
+required-resource-attributes: true
+use-named-parameters: true
+format: true

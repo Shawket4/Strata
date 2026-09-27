@@ -1,0 +1,193 @@
+{
+  "@@locale": "en",
+  "editorScreenTitle": "Note editor",
+  "@editorScreenTitle": {
+    "description": "Title of the standalone note editor screen."
+  },
+  "editorBodyLabel": "Note body",
+  "@editorBodyLabel": {
+    "description": "Semantics label of the markdown editor area."
+  },
+  "statusSaved": "Saved",
+  "@statusSaved": {
+    "description": "Note status: the note has no local changes waiting."
+  },
+  "statusUnsaved": "Unsaved changes",
+  "@statusUnsaved": {
+    "description": "Note status: the editor has edits that were not saved yet."
+  },
+  "statusPending": "{count, plural, =1{Saved on this device · 1 change to sync} other{Saved on this device · {count} changes to sync}}",
+  "@statusPending": {
+    "description": "Note status: saved locally, ops waiting to sync.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "statusConflict": "Conflict",
+  "@statusConflict": {
+    "description": "Note status: an edit conflicts with the server."
+  },
+  "conflictBannerTitle": "This note was also changed on the server",
+  "@conflictBannerTitle": {
+    "description": "Title of the conflict banner above the editor."
+  },
+  "conflictBannerMessage": "Your edit overlaps with the server's version. Resolve the conflict to keep syncing this note.",
+  "@conflictBannerMessage": {
+    "description": "Body of the conflict banner."
+  },
+  "conflictResolve": "Resolve",
+  "@conflictResolve": {
+    "description": "Button that opens the conflict screen."
+  },
+  "noteNotFoundTitle": "Note not found",
+  "@noteNotFoundTitle": {
+    "description": "Empty state when the note does not exist."
+  },
+  "noteNotFoundMessage": "It may have been deleted or moved.",
+  "@noteNotFoundMessage": {
+    "description": "Empty state message when the note does not exist."
+  },
+  "noteLoadErrorTitle": "Couldn't open this note",
+  "@noteLoadErrorTitle": {
+    "description": "Error state title when the note stream fails."
+  },
+  "noteLoadErrorMessage": "Something went wrong while reading this note on this device.",
+  "@noteLoadErrorMessage": {
+    "description": "Error state message when the note stream fails."
+  },
+  "saveFailed": "Couldn't save. Your text is still here.",
+  "@saveFailed": {
+    "description": "Snack bar when saving fails."
+  },
+  "toolbarLabel": "Formatting",
+  "@toolbarLabel": {
+    "description": "Semantics label of the formatting toolbar."
+  },
+  "toolUndo": "Undo",
+  "@toolUndo": {
+    "description": "Toolbar button: undo."
+  },
+  "toolRedo": "Redo",
+  "@toolRedo": {
+    "description": "Toolbar button: redo."
+  },
+  "toolHeading": "Heading",
+  "@toolHeading": {
+    "description": "Toolbar button: start a heading line."
+  },
+  "toolBold": "Bold",
+  "@toolBold": {
+    "description": "Toolbar button: bold."
+  },
+  "toolItalic": "Italic",
+  "@toolItalic": {
+    "description": "Toolbar button: italic."
+  },
+  "toolBulletList": "Bulleted list",
+  "@toolBulletList": {
+    "description": "Toolbar button: bulleted list item."
+  },
+  "toolChecklist": "Checklist item",
+  "@toolChecklist": {
+    "description": "Toolbar button: task line."
+  },
+  "toolWikilink": "Insert wikilink",
+  "@toolWikilink": {
+    "description": "Toolbar button: start a [[wikilink]]."
+  },
+  "toolMention": "Mention a person or company",
+  "@toolMention": {
+    "description": "Toolbar button: start an @mention."
+  },
+  "toolTag": "Tag",
+  "@toolTag": {
+    "description": "Toolbar button: start a #tag."
+  },
+  "toolHideKeyboard": "Hide keyboard",
+  "@toolHideKeyboard": {
+    "description": "Toolbar button: hide the on-screen keyboard."
+  },
+  "toolOpenLink": "Open link",
+  "@toolOpenLink": {
+    "description": "Toolbar button: open the wikilink under the caret."
+  },
+  "taskComplete": "Complete task: {task}",
+  "@taskComplete": {
+    "description": "Semantics label of an open task's checkbox.",
+    "placeholders": {
+      "task": {
+        "type": "String",
+        "example": "Draft two pricing page variants"
+      }
+    }
+  },
+  "taskReopen": "Reopen task: {task}",
+  "@taskReopen": {
+    "description": "Semantics label of a done or cancelled task's checkbox.",
+    "placeholders": {
+      "task": {
+        "type": "String",
+        "example": "Draft two pricing page variants"
+      }
+    }
+  },
+  "taskNotSynced": "Task line (save to enable)",
+  "@taskNotSynced": {
+    "description": "Semantics label of a task checkbox whose task the core does not know yet."
+  },
+  "suggestionsLabel": "Suggestions",
+  "@suggestionsLabel": {
+    "description": "Semantics label of the autocomplete panel."
+  },
+  "suggestionsPeople": "People",
+  "@suggestionsPeople": {
+    "description": "Autocomplete section: people."
+  },
+  "suggestionsCompanies": "Companies",
+  "@suggestionsCompanies": {
+    "description": "Autocomplete section: companies."
+  },
+  "suggestionsNotes": "Notes",
+  "@suggestionsNotes": {
+    "description": "Autocomplete section: notes."
+  },
+  "suggestionsNone": "No matches",
+  "@suggestionsNone": {
+    "description": "Autocomplete: nothing matches."
+  },
+  "suggestionsTypeToSearch": "Type to search",
+  "@suggestionsTypeToSearch": {
+    "description": "Autocomplete: the query is still empty."
+  },
+  "suggestionsTagsUnavailable": "Tag suggestions aren't available yet.",
+  "@suggestionsTagsUnavailable": {
+    "description": "Autocomplete: the core has no tag list yet."
+  },
+  "suggestionsBlocksUnavailable": "Block references can't be listed yet.",
+  "@suggestionsBlocksUnavailable": {
+    "description": "Block reference picker: the core has no block list yet."
+  },
+  "suggestionsSearchUnavailable": "Search isn't available right now.",
+  "@suggestionsSearchUnavailable": {
+    "description": "Autocomplete: search is unavailable."
+  },
+  "suggestionsDismiss": "Dismiss suggestions",
+  "@suggestionsDismiss": {
+    "description": "Button that closes the autocomplete panel."
+  },
+  "statusBarMarkdown": "Markdown",
+  "@statusBarMarkdown": {
+    "description": "Status bar: the editor edits markdown source."
+  },
+  "statusBarRtl": "RTL · auto per paragraph",
+  "@statusBarRtl": {
+    "description": "Status bar: paragraph direction is automatic."
+  },
+  "shortcutSave": "Save",
+  "@shortcutSave": {
+    "description": "Keyboard shortcut description: save."
+  }
+}

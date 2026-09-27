@@ -1,0 +1,5 @@
+{
+  "@@locale": "en",
+  "tasksDue": "Due {date}",
+  "@tasksDue": {"description": "x", "placeholders": {"date": {"type": "DateTime", "format": "EEE d MMM", "isCustomDateFormat": "true"}}}
+}

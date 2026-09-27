@@ -1,0 +1,9 @@
+arb-dir: lib/l10n
+template-arb-file: sync_en.arb
+output-dir: lib/src/generated
+output-localization-file: sync_localizations.dart
+output-class: SyncLocalizations
+nullable-getter: false
+required-resource-attributes: true
+use-named-parameters: true
+format: true

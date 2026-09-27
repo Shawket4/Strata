@@ -72,21 +72,26 @@ output_micros_per_mtok = 20000000
 # until both paths are set and exist:
 # model_dir = "/opt/models/granite-embedding-97m-multilingual-r2"
 # onnxruntime_lib = "/opt/onnxruntime/lib/libonnxruntime.so.1.30.0"
-# Relative to model_dir.
-model_file = "onnx/model_quint8_avx2.onnx"
+# Relative to model_dir. Full-precision (fp32) export (owner decision 2026-09-27, PLAN §9.1b);
+# the int8 file is onnx/model_quint8_avx2.onnx (then use its own model_id and pad_batches = false).
+model_file = "onnx/model.onnx"
 tokenizer_file = "tokenizer.json"
 # Stored with every vector; changing it triggers a full re-embed.
-model_id = "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"
+model_id = "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model"
 dims = 384
 # "cls" (granite-embedding r2) or "mean".
 pooling = "cls"
 # Tokens per text (longer texts are truncated) and padded tokens per batch.
 max_tokens = 2048
 max_batch_tokens = 8192
-# Whether texts of different lengths share a padded batch (off for the quint8 export).
-pad_batches = false
+# Whether texts of different lengths share a padded batch (the fp32 export is padding-invariant;
+# off for the quint8 export).
+pad_batches = true
 # Nice value of the embedding thread (0–19).
 nice = 19
+# Seconds without an embedding call after which the model is unloaded (frees ≈ 390 MB); the next
+# call loads it again (a second or two).
+idle_unload_secs = 300
 
 [budgets]
 # Daily AI caps; 0 = unlimited. A reached cap pauses (never fails) AI work until the next day.
@@ -194,3 +199,20 @@ window_secs = 3600
 [auth.rate_limits.signup_global]
 max = 30
 window_secs = 3600
+
+[jobs]
+# Background jobs (PLAN §5.2, §9.2): fair round-robin across users. Jobs running at once across
+# all users (1 CPU core); embeddings also run one at a time, LLM calls at most
+# ai.claude_cli.max_concurrency at a time.
+max_concurrency = 2
+# Seconds between scheduling passes when nothing is runnable.
+poll_interval_secs = 5
+# Seconds a user whose queued jobs are all of kinds this build does not run is skipped.
+idle_recheck_secs = 60
+# Retry delays: first retry after backoff_base_secs, doubling per attempt, at most backoff_max_secs.
+backoff_base_secs = 30
+backoff_max_secs = 3600
+# Local hour (0–23, default_timezone) of the nightly jobs (semantic duplicate sweep).
+nightly_hour = 3
+# Seconds a graceful shutdown waits for running jobs (unfinished ones are re-queued at start).
+shutdown_grace_secs = 30
