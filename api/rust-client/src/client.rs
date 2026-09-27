@@ -257,7 +257,7 @@ fn problem_error(operation: &'static str, raw: &Raw) -> Error {
     if is_media(raw.content_type.as_deref(), PROBLEM_MSGPACK)
         && let Ok(problem) = decode_exact::<Problem>(&raw.body)
     {
-        return Error::Api(ApiError::from_problem(problem));
+        return ApiError::from_problem(problem).into();
     }
     Error::UnexpectedResponse {
         operation,

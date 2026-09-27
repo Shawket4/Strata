@@ -106,9 +106,9 @@ impl fmt::Display for ApiError {
 /// Everything a client call can fail with.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    /// The server answered with problem details.
+    /// The server answered with problem details (boxed to keep `Result`s small).
     #[error("{0}")]
-    Api(ApiError),
+    Api(Box<ApiError>),
     /// Network / HTTP failure.
     #[error("transport: {0}")]
     Transport(#[from] reqwest::Error),
@@ -164,9 +164,15 @@ impl Error {
     /// The typed problem, if the server sent one.
     pub fn api(&self) -> Option<&ApiError> {
         match self {
-            Self::Api(e) => Some(e),
+            Self::Api(e) => Some(e.as_ref()),
             _ => None,
         }
+    }
+}
+
+impl From<ApiError> for Error {
+    fn from(e: ApiError) -> Self {
+        Self::Api(Box::new(e))
     }
 }
 

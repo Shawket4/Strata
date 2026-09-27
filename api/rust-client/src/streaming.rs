@@ -211,10 +211,10 @@ impl<P: DeserializeOwned> Subscription<P> {
                 return None;
             }
             let Some(socket) = self.socket.as_mut() else {
-                if let Err(err) = self.connect().await {
-                    if let Some(fatal) = self.on_failure(err).await {
-                        return Some(Err(fatal));
-                    }
+                if let Err(err) = self.connect().await
+                    && let Some(fatal) = self.on_failure(err).await
+                {
+                    return Some(Err(fatal));
                 }
                 continue;
             };
@@ -255,7 +255,7 @@ impl<P: DeserializeOwned> Subscription<P> {
                 }
                 Ok(Frame::Error { problem, .. }) => {
                     self.close().await;
-                    return Some(Err(Error::Api(ApiError::from_problem(problem))));
+                    return Some(Err(ApiError::from_problem(problem).into()));
                 }
                 Ok(Frame::Unknown) => {}
                 Err(message) => {

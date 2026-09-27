@@ -35,6 +35,7 @@ fn main() -> ExitCode {
 }
 
 #[cfg(feature = "test-support")]
+#[allow(clippy::unnecessary_wraps)] // same signature as the variant without the feature
 fn demo_document() -> Option<serde_json::Value> {
     Some(strata_api::testing::demo::document())
 }
