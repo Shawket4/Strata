@@ -21,4 +21,5 @@ export 'src/common/record_move.dart'
     show MoveEvent, RecordMoveForm, openRecordMove, showRecordMove;
 export 'src/common/widgets.dart';
 export 'src/document/document_screen.dart' show DocumentPage, DocumentScreen;
+export 'src/document/documents_list_screen.dart' show DocumentsScreen;
 export 'src/place/place_screen.dart' show PlacePage, PlaceScreen;

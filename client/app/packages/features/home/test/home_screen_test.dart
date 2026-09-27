@@ -30,20 +30,14 @@ final _empty = HomeView(
 );
 
 Future<void> _reveal(WidgetTester tester, Finder finder) async {
-  if (finder.evaluate().isNotEmpty) return;
   final scrollables = find.byType(Scrollable).evaluate().toList();
   for (final scrollable in scrollables) {
-    for (final delta in const [200.0, -200.0]) {
-      try {
-        await tester.scrollUntilVisible(
-          finder,
-          delta,
-          scrollable: find.byWidget(scrollable.widget),
-        );
-        return;
-      } on StateError {
-        continue;
+    for (final step in const [-200.0, 200.0]) {
+      for (var i = 0; i < 20 && finder.evaluate().isEmpty; i++) {
+        await tester.drag(find.byWidget(scrollable.widget), Offset(0, step));
+        await tester.pump();
       }
+      if (finder.evaluate().isNotEmpty) return;
     }
   }
 }

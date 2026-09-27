@@ -43,6 +43,12 @@ pub struct Prepared {
     pub accounts: AccountsDb,
     /// The AI foundation: providers, router, budget guard, embedder.
     pub ai: crate::ai::AiParts,
+    /// The `strata_app` database (jobs, AI features).
+    pub app_db: AppDb,
+    /// The clock.
+    pub clock: Arc<dyn Clock>,
+    /// The ID generator.
+    pub ids: Arc<dyn IdGenerator>,
 }
 
 impl std::fmt::Debug for Prepared {
@@ -96,12 +102,12 @@ pub async fn prepare_all(config: &Config) -> Result<Prepared, StartupError> {
     let state = AuthState::new(
         AuthDeps {
             accounts_pool: accounts.clone(),
-            app_db,
+            app_db: app_db.clone(),
             issuer: issuer.clone(),
             keys,
             vaults: Arc::new(vault.clone()),
-            ids,
-            clock,
+            ids: ids.clone(),
+            clock: clock.clone(),
         },
         config,
     )
@@ -113,6 +119,9 @@ pub async fn prepare_all(config: &Config) -> Result<Prepared, StartupError> {
         issuer,
         accounts: AccountsDb::new(accounts),
         ai,
+        app_db,
+        clock,
+        ids,
     })
 }
 
@@ -226,6 +235,26 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
     let vault = web::Data::new(prepared.vault.clone());
     let ai = web::Data::new(prepared.ai.service.clone());
     let (events, sync) = install_sync(&prepared.vault, SystemClock.now());
+    let ai_api = web::Data::new(crate::jobs::ai_api(
+        &prepared.ai,
+        &prepared.app_db,
+        &prepared.vault,
+        prepared.clock.clone(),
+        prepared.ids.clone(),
+        &config,
+    )?);
+    let background = crate::jobs::start(
+        &config,
+        &prepared.ai,
+        &prepared.app_db,
+        &prepared.issuer,
+        &prepared.accounts,
+        &prepared.vault,
+        events.clone().into_inner(),
+        prepared.clock.clone(),
+        prepared.ids.clone(),
+    )
+    .await?;
     let reconcile = spawn_reconciliation(&prepared);
     let reload = spawn_revocation_reload(
         state.clone(),
@@ -243,6 +272,7 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
             .app_data(app_state.clone())
             .app_data(vault.clone())
             .app_data(ai.clone())
+            .app_data(ai_api.clone())
             .app_data(events.clone())
             .app_data(sync.clone())
             .wrap(from_fn(crate::logging::log_request))
@@ -255,6 +285,9 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
         Ok(server) => server.run().await.map_err(StartupError::from),
         Err(err) => Err(err),
     };
+    background
+        .shutdown(StdDuration::from_secs(u64::from(config.jobs.shutdown_grace_secs)))
+        .await;
     reload.abort();
     purge.abort();
     reconcile.abort();

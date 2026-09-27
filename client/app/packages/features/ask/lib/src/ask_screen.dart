@@ -98,34 +98,9 @@ class _Conversation extends HookWidget {
       Availability.notAllowed => (Icons.block, l10n.notAllowedTitle, null),
     };
     final shown = banner;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(
-            StrataSpacing.s4,
-            StrataSpacing.s2,
-            StrataSpacing.s2,
-            0,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(l10n.askTitle, style: text.titleSmall),
-                ),
-              ),
-              IconButton(
-                tooltip: l10n.newConversationUnavailable,
-                onPressed: null,
-                icon: const Icon(Icons.add_comment_outlined),
-              ),
-            ],
-          ),
-        ),
-        if (shown != null)
-          Padding(
+    final bannerWidget = shown == null
+        ? null
+        : Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: StrataSpacing.s4,
               vertical: StrataSpacing.s2,
@@ -187,36 +162,60 @@ class _Conversation extends HookWidget {
                 ),
               ),
             ),
+          );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+            StrataSpacing.s4,
+            StrataSpacing.s2,
+            StrataSpacing.s2,
+            0,
           ),
-        Expanded(
-          child: view.messages.isEmpty
-              ? StrataEmptyState(
-                  icon: AskScreenIcon.icon,
-                  title: l10n.emptyTitle,
-                  message: l10n.emptyMessage,
-                )
-              : Semantics(
-                  label: l10n.conversation,
-                  container: true,
-                  explicitChildNodes: true,
-                  child: ListView(
-                    padding: const EdgeInsets.all(StrataSpacing.s4),
-                    children: [
-                      for (final message in view.messages)
-                        Center(
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 760),
-                            child: message.role == 'user'
-                                ? _UserMessage(message: message)
-                                : _Answer(
-                                    message: message,
-                                    onCitation: onCitation,
-                                  ),
-                          ),
-                        ),
-                    ],
-                  ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(l10n.askTitle, style: text.titleSmall),
                 ),
+              ),
+              IconButton(
+                tooltip: l10n.newConversationUnavailable,
+                onPressed: null,
+                icon: const Icon(Icons.add_comment_outlined),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: Semantics(
+            label: l10n.conversation,
+            container: true,
+            explicitChildNodes: true,
+            child: ListView(
+              padding: const EdgeInsets.all(StrataSpacing.s4),
+              children: [
+                ?bannerWidget,
+                if (view.messages.isEmpty)
+                  StrataEmptyState(
+                    icon: AskScreenIcon.icon,
+                    title: l10n.emptyTitle,
+                    message: l10n.emptyMessage,
+                  ),
+                for (final message in view.messages)
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: message.role == 'user'
+                          ? _UserMessage(message: message)
+                          : _Answer(message: message, onCitation: onCitation),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
         _Composer(controller: question),
       ],
@@ -303,13 +302,16 @@ class _Answer extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: StrataSpacing.s3),
-              Semantics(
-                header: true,
-                child: Text(
-                  l10n.sources(count: citations.length),
-                  style: text.caption
-                      .withWeight(FontWeight.w700)
-                      .copyWith(color: colors.text2),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.sources(count: citations.length),
+                    style: text.caption
+                        .withWeight(FontWeight.w700)
+                        .copyWith(color: colors.text2),
+                  ),
                 ),
               ),
               Card(
@@ -476,7 +478,6 @@ class _SourcePreview extends ConsumerWidget {
         : ref.watch(noteProvider(noteId)).value?.note;
     final open = onOpenNote;
     return Semantics(
-      label: l10n.sourcePreview,
       container: true,
       explicitChildNodes: true,
       child: ColoredBox(

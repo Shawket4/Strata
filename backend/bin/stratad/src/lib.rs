@@ -8,5 +8,6 @@ pub mod ai;
 pub mod checks;
 pub mod cli;
 pub mod commands;
+pub mod jobs;
 pub mod logging;
 pub mod serve;

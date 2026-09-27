@@ -7,8 +7,10 @@
 //!   `anthropic_api` when any user is; a provider nobody uses is not built (no key read, no
 //!   launcher check).
 //! - Embeddings are optional: while `ai.embedding.model_dir` or `ai.embedding.onnxruntime_lib`
-//!   is unset or missing, or the model fails to load, they are off and one log line says why;
-//!   everything else keeps working (principle 6).
+//!   is unset or a file is missing, they are off and one log line says why; everything else
+//!   keeps working (principle 6). When configured, the model is not loaded at startup: a
+//!   [`LazyEmbedder`] loads it on first use and unloads it after `ai.embedding.idle_unload_secs`
+//!   without calls (§9.1b); a load failure fails only the calls that needed it.
 
 use std::path::Path;
 use std::sync::Arc;
@@ -20,8 +22,8 @@ use strata_ai::embed::Pooling;
 use strata_ai::embed::onnx::{OnnxEmbedder, OnnxEmbedderConfig};
 use strata_ai::retry::TokioSleeper;
 use strata_ai::{
-    AiService, BudgetGuard, BudgetLimits, CpuGate, Embedder, LlmProvider, PgUsageStore,
-    ProviderRouter,
+    AiService, BudgetGuard, BudgetLimits, CpuGate, Embedder, EmbedderLoader, LazyEmbedder,
+    LlmProvider, PgUsageStore, ProviderRouter,
 };
 use strata_common::config::{AiProviderKind, EmbeddingPooling, EmbeddingSettings};
 use strata_common::{Clock, Config};
@@ -57,8 +59,10 @@ pub struct AiParts {
     pub anthropic_api: Option<Arc<dyn LlmProvider>>,
     /// The budget guard inside `service`.
     pub budget: BudgetGuard,
-    /// The embedder, when on.
+    /// The embedder, when on (the [`LazyEmbedder`] below).
     pub embedder: Option<Arc<dyn Embedder>>,
+    /// The on-demand embedder, for its idle reaper.
+    pub lazy_embedder: Option<Arc<LazyEmbedder>>,
     /// Whether embeddings are on, and why not.
     pub embedder_state: EmbedderState,
     /// The gate shared by the CLI provider and the embedder.
@@ -144,18 +148,31 @@ pub fn embedder_config(s: &EmbeddingSettings) -> Result<OnnxEmbedderConfig, Stri
 fn load_embedder(
     s: &EmbeddingSettings,
     gate: &CpuGate,
-) -> (Option<Arc<dyn Embedder>>, EmbedderState) {
-    let loaded = embedder_config(s).and_then(|cfg| {
-        OnnxEmbedder::load(&cfg, gate.clone()).map_err(|e| format!("loading the model failed: {e}"))
-    });
-    match loaded {
-        Ok(embedder) => {
-            let model_id = embedder.model_id().to_owned();
-            tracing::info!(model = %model_id, "embeddings enabled");
-            (
-                Some(Arc::new(embedder) as Arc<dyn Embedder>),
-                EmbedderState::Ready { model_id },
-            )
+    clock: Arc<dyn Clock>,
+) -> (Option<Arc<LazyEmbedder>>, EmbedderState) {
+    match embedder_config(s) {
+        Ok(cfg) => {
+            let model_id = cfg.model_id.clone();
+            let dims = cfg.dims;
+            let load_gate = gate.clone();
+            let loader: EmbedderLoader = Arc::new(move || {
+                OnnxEmbedder::load(&cfg, load_gate.clone())
+                    .map(|e| Arc::new(e) as Arc<dyn Embedder>)
+            });
+            tracing::info!(
+                model = %model_id,
+                idle_unload_secs = s.idle_unload_secs,
+                "embeddings enabled (the model loads on first use)"
+            );
+            let lazy = LazyEmbedder::new(
+                model_id.clone(),
+                dims,
+                loader,
+                clock,
+                Duration::from_secs(u64::from(s.idle_unload_secs)),
+                Some(gate.clone()),
+            );
+            (Some(Arc::new(lazy)), EmbedderState::Ready { model_id })
         }
         Err(reason) => {
             tracing::warn!(
@@ -171,6 +188,7 @@ fn load_embedder(
 /// Builds the AI foundation. Blocks while the embedding model loads; call it from a blocking
 /// context (`serve` uses `spawn_blocking`).
 pub fn build(config: &Config, db: AppDb, clock: Arc<dyn Clock>) -> Result<AiParts, StartupError> {
+    let lazy_clock = clock.clone();
     let gate = CpuGate::new();
     let mut router = ProviderRouter::from_config(&config.ai);
     let claude_cli: Option<Arc<dyn LlmProvider>> =
@@ -219,7 +237,11 @@ pub fn build(config: &Config, db: AppDb, clock: Arc<dyn Clock>) -> Result<AiPart
         clock,
         Arc::new(PgUsageStore::new(db)),
     );
-    let (embedder, embedder_state) = load_embedder(&config.ai.embedding, &gate);
+    let (lazy_embedder, embedder_state) =
+        load_embedder(&config.ai.embedding, &gate, lazy_clock);
+    let embedder: Option<Arc<dyn Embedder>> = lazy_embedder
+        .clone()
+        .map(|e| e as Arc<dyn Embedder>);
     let mut service = AiService::new(router.clone(), budget.clone());
     if let Some(e) = &embedder {
         service = service.with_embedder(e.clone());
@@ -238,6 +260,7 @@ pub fn build(config: &Config, db: AppDb, clock: Arc<dyn Clock>) -> Result<AiPart
         anthropic_api,
         budget,
         embedder,
+        lazy_embedder,
         embedder_state,
         gate,
     })
@@ -343,11 +366,11 @@ mod tests {
             embedder_config(&s),
             Err(format!(
                 "model file {} does not exist",
-                dir.path().join("onnx/model_quint8_avx2.onnx").display()
+                dir.path().join("onnx/model.onnx").display()
             ))
         );
         std::fs::create_dir_all(dir.path().join("onnx")).expect("dir");
-        std::fs::write(dir.path().join("onnx/model_quint8_avx2.onnx"), b"").expect("model");
+        std::fs::write(dir.path().join("onnx/model.onnx"), b"").expect("model");
         assert_eq!(
             embedder_config(&s),
             Err(format!(

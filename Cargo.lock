@@ -4658,6 +4658,7 @@ name = "stratad"
 version = "0.1.0"
 dependencies = [
  "actix-web",
+ "async-trait",
  "chrono",
  "clap",
  "futures-util",
@@ -4668,6 +4669,7 @@ dependencies = [
  "strata-api",
  "strata-common",
  "strata-index",
+ "strata-jobs",
  "strata-testkit",
  "strata-vault",
  "tempfile",

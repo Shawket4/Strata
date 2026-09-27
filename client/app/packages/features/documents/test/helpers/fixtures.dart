@@ -33,10 +33,10 @@ abstract final class DocFixtures {
   );
 
   /// A document without custody, location or copies.
-  static final EntityScreen bareDocument = EntityScreen(
+  static const EntityScreen bareDocument = EntityScreen(
     id: 'd-bare',
     kind: EntityPageKind.document,
-    document: const DocumentView(
+    document: DocumentView(
       id: 'd-bare',
       title: 'Title deed — Nasr City office',
       aliases: [],
@@ -48,17 +48,17 @@ abstract final class DocFixtures {
   );
 
   /// "Safe — Nasr City office", nested in the office, nothing inside.
-  static final EntityScreen safe = EntityScreen(
+  static const EntityScreen safe = EntityScreen(
     id: 'pl-nasr-city-safe',
     kind: EntityPageKind.place,
     place: PlaceView(
       id: 'pl-nasr-city-safe',
       title: 'Safe — Nasr City office',
-      aliases: const ['الخزنة — مكتب مدينة نصر'],
-      breadcrumb: const [StrataFixtures.nasrCityOfficeRef],
-      subPlaces: const [],
-      documents: const [],
-      recentMovements: const [],
+      aliases: ['الخزنة — مكتب مدينة نصر'],
+      breadcrumb: [StrataFixtures.nasrCityOfficeRef],
+      subPlaces: [],
+      documents: [],
+      recentMovements: [],
     ),
   );
 

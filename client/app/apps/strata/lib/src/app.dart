@@ -23,7 +23,10 @@ class StrataApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final startup = ref.watch(coreStartupProvider);
-    final language = ref.watch(sessionProvider).value?.account?.uiLanguage;
+    // The session stream exists only once the core is open.
+    final language = startup.hasValue
+        ? ref.watch(sessionProvider).value?.account?.uiLanguage
+        : null;
     final uiLocale = locale ?? (language == null ? null : Locale(language));
     Widget app({required Widget home}) => MaterialApp(
       onGenerateTitle: (context) => context.l10n.appTitle,

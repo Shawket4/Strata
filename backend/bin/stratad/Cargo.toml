@@ -19,6 +19,8 @@ strata-common = { workspace = true, features = ["sqlx"] }
 strata-index = { workspace = true }
 strata-vault = { workspace = true }
 strata-ai = { workspace = true }
+strata-jobs = { workspace = true }
+async-trait = { workspace = true }
 actix-web = { workspace = true }
 sqlx = { workspace = true }
 tokio = { workspace = true }

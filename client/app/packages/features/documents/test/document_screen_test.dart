@@ -164,7 +164,7 @@ void main() {
   });
 
   group('Record a move', () {
-    for (final v in variants(scales: const [1, 2])) {
+    for (final v in variants()) {
       testWidgets('form $v', (tester) async {
         final fake = _fake();
         fake.directory[(DirectoryTab.places, '')].add(
