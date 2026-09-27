@@ -494,6 +494,7 @@ class _DetailLayoutState extends State<DetailLayout> {
     if (expanded) {
       if (widget.contextPanel.isEmpty) return page;
       return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(child: page),
           VerticalDivider(width: 1, color: colors.border),

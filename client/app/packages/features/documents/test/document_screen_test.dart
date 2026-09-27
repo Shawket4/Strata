@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_documents/src/generated/documents_localizations.dart';
 import 'package:strata_documents/strata_documents.dart';
+import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
@@ -66,16 +67,27 @@ void main() {
         );
         if (v.textScale == 1) await expectAccessible(tester);
         // The place breadcrumb and the last holder open their pages.
-        await tester.tap(find.bySemanticsLabel('Shady').first);
+        final shady = find.bySemanticsLabel('Shady').first;
+        await tester.ensureVisible(shady);
+        await tester.pump();
+        await tester.tap(shady);
         expect(opened, ['p-shady']);
-        await tester.tap(find.bySemanticsLabel('Nasr City office').first);
+        final office = find.bySemanticsLabel('Nasr City office').first;
+        await tester.ensureVisible(office);
+        await tester.pump();
+        await tester.tap(office);
         expect(opened.last, 'pl-nasr-city-office');
         // A custody citation opens its block.
-        final chip = find.bySemanticsLabel('Source: 2026-09-20 18-05');
+        final chip = find.bySemanticsLabel(
+          lookupStrataLocalizations(v.locale)
+              .citationSemantics(label: '2026-09-20 18-05'),
+        );
         await tester.ensureVisible(chip);
+        await tester.pump();
         await tester.tap(chip);
         expect(notes, [('n-capture-watanya-safe', 'c7d8')]);
         if (compact) {
+          await tester.ensureVisible(find.byTooltip(l10n.backToDocuments));
           await tester.tap(find.byTooltip(l10n.backToDocuments));
           expect(back, 1);
         }
@@ -180,7 +192,10 @@ void main() {
         );
         await pumpVariant(tester, v, const DocumentScreen(_id), fake);
         final l10n = lookupDocumentsLocalizations(v.locale);
-        await tester.tap(find.text(l10n.recordMove).first);
+        final record = find.text(l10n.recordMove).first;
+        await tester.ensureVisible(record);
+        await tester.pumpAndSettle();
+        await tester.tap(record);
         await tester.pumpAndSettle();
         expectNoErrors(tester);
         expect(find.text(l10n.whatHappened), findsOneWidget);

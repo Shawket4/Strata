@@ -142,7 +142,7 @@ class NotesLocalizationsEn extends NotesLocalizations {
 
   @override
   String tagChip({required String tag}) {
-    return '#$tag';
+    return '⁨#$tag⁩';
   }
 
   @override
@@ -151,6 +151,11 @@ class NotesLocalizationsEn extends NotesLocalizations {
   @override
   String aiConfidence({required String value}) {
     return 'confidence $value';
+  }
+
+  @override
+  String relationLine({required String type, required String title}) {
+    return '$type · $title';
   }
 
   @override

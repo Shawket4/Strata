@@ -99,7 +99,6 @@ class _NoteRelationChipState extends State<NoteRelationChip> {
                 width: 340,
                 child: Material(
                   color: context.strataColors.surface,
-                  elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: StrataRadii.cardRadius,
                     side: BorderSide(color: context.strataColors.border),
@@ -213,8 +212,12 @@ class AiRelationCard extends ConsumerWidget {
           ),
           const SizedBox(height: StrataSpacing.s1),
           Text(
-            '${context.l10n.relationTypeLabel(type)} · '
-            '${relation.target.title}',
+            l10n.relationLine(
+              type: isNamedRelation(relation.relType)
+                  ? context.l10n.relationTypeLabel(type)
+                  : relation.relType,
+              title: relation.target.title,
+            ),
             style: text.caption.copyWith(color: colors.text2),
           ),
           const SizedBox(height: StrataSpacing.s2),
@@ -269,7 +272,11 @@ class AiRelationCard extends ConsumerWidget {
     );
   }
 
-  Future<void> _retype(BuildContext context, WidgetRef ref, String target) async {
+  Future<void> _retype(
+    BuildContext context,
+    WidgetRef ref,
+    String target,
+  ) async {
     final api = ref.read(coreApiProvider);
     final chosen = await showDialog<String>(
       context: context,

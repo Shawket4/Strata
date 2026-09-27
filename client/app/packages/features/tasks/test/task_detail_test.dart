@@ -7,6 +7,13 @@ import 'package:strata_tasks/strata_tasks.dart';
 import 'helpers/harness.dart';
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+  }
   await tester.ensureVisible(finder.first);
   await tester.pumpAndSettle();
   await tester.tap(finder.first);

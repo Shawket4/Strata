@@ -119,6 +119,7 @@ pub struct LlmPause {
 struct State {
     running_total: usize,
     running_kind: HashMap<&'static str, usize>,
+    running_user: HashMap<UserId, usize>,
     /// Pass counter value at a user's last claim (round-robin order).
     last_served: HashMap<UserId, u64>,
     served_counter: u64,
@@ -322,7 +323,11 @@ impl Runner {
         if !blocked && earliest.is_some_and(|e| e <= now) {
             let recheck = now + self.inner.config.idle_recheck;
             let until = next.map_or(recheck, |n| n.min(recheck));
-            self.state().skip_until.insert(scope.user_id(), until);
+            let mut s = self.state();
+            // A running job of this user may still queue follow-up work: never skip then.
+            if s.running_user.get(&scope.user_id()).copied().unwrap_or(0) == 0 {
+                s.skip_until.insert(scope.user_id(), until);
+            }
         }
         Ok(None)
     }
@@ -369,7 +374,7 @@ impl Runner {
                         }
                     }
                     Ok(None) => {}
-                    Err(e) => tracing::error!(user = %user, error = %e, "claiming a job failed"),
+                    Err(e) => { eprintln!("DEBUGCLAIM {e}"); tracing::error!(user = %user, error = %e, "claiming a job failed") },
                 }
             }
             if !progressed || next_round.is_empty() {
@@ -388,6 +393,7 @@ impl Runner {
             let mut s = self.state();
             s.running_total += 1;
             *s.running_kind.entry(kind).or_insert(0) += 1;
+            *s.running_user.entry(scope.user_id()).or_insert(0) += 1;
             s.served_counter += 1;
             let c = s.served_counter;
             s.last_served.insert(scope.user_id(), c);
@@ -414,9 +420,17 @@ impl Runner {
             me.finish(scope, &job, handler.class(), result).await;
             {
                 let mut s = me.state();
+                // The job may have queued follow-up work for its user: look again.
+                s.skip_until.remove(&scope.user_id());
                 s.running_total = s.running_total.saturating_sub(1);
                 if let Some(n) = s.running_kind.get_mut(kind) {
                     *n = n.saturating_sub(1);
+                }
+                if let Some(n) = s.running_user.get_mut(&scope.user_id()) {
+                    *n = n.saturating_sub(1);
+                    if *n == 0 {
+                        s.running_user.remove(&scope.user_id());
+                    }
                 }
             }
             me.inner.finished.notify_one();
@@ -490,7 +504,7 @@ impl Runner {
             ),
             Ok(None) => {}
             Err(e) => {
-                tracing::error!(job = %job.id, error = %e, "recording a job outcome failed");
+                eprintln!("DEBUGFINISH {e}"); tracing::error!(job = %job.id, error = %e, "recording a job outcome failed");
             }
         }
     }

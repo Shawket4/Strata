@@ -174,9 +174,9 @@
   "@tagsLabel": {
     "description": "Properties row: tags."
   },
-  "tagChip": "#{tag}",
+  "tagChip": "⁨#{tag}⁩",
   "@tagChip": {
-    "description": "A tag chip (the tag as the core gives it).",
+    "description": "A tag chip (the tag as the core gives it), isolated so it keeps its own direction.",
     "placeholders": {
       "tag": {
         "type": "String",
@@ -195,6 +195,20 @@
       "value": {
         "type": "String",
         "example": "0.72"
+      }
+    }
+  },
+  "relationLine": "{type} · {title}",
+  "@relationLine": {
+    "description": "Relation type and target on the AI card.",
+    "placeholders": {
+      "type": {
+        "type": "String",
+        "example": "contradicts"
+      },
+      "title": {
+        "type": "String",
+        "example": "Discount policy"
       }
     }
   },

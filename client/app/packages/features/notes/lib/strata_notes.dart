@@ -1,29 +1,17 @@
-/// Strata notes feature (UI only; view-models come from the Rust core,
-/// PLAN L15).
+/// Strata notes feature: the notes list and the note view (editor,
+/// Properties panel with typed relation chips, backlinks by relation type,
+/// history, local graph slot), adaptive per size class (PLAN §11). UI only;
+/// view-models and intents come from the Rust core (PLAN L15).
 library;
 
-import 'package:flutter/material.dart';
-import 'package:strata_l10n/strata_l10n.dart';
-import 'package:strata_ui/strata_ui.dart';
-
-/// Entry widget of the notes feature. Notes list (PLAN §11).
-///
-/// Until the Rust core streams this screen's view-model it renders the
-/// design-system placeholder state.
-class NotesScreen extends StatelessWidget {
-  /// Creates the notes entry widget.
-  const new({super.key});
-
-  /// The icon that represents this feature.
-  static const IconData icon = Icons.description_outlined;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return StrataEmptyState(
-      icon: icon,
-      title: l10n.navNotes,
-      message: l10n.featurePlaceholderMessage,
-    );
-  }
-}
+export 'src/context/note_context.dart'
+    show BacklinksSection, HistorySection, LocalGraphSlot, NoteContextPanel;
+export 'src/detail/note_detail.dart'
+    show CompactNotePage, NoteActions, NoteDetailPane;
+export 'src/detail/properties_panel.dart' show PropertiesPanel;
+export 'src/detail/relation_actions.dart'
+    show AiRelationCard, NoteRelationChip, showAiRelationSheet;
+export 'src/generated/notes_localizations.dart' show NotesLocalizations;
+export 'src/list/notes_list_pane.dart' show NoteRow, NotesListPane;
+export 'src/notes_scope.dart' show NotesLocalizationsScope;
+export 'src/notes_screen.dart' show NotesScreen;

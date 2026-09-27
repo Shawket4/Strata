@@ -418,7 +418,8 @@ class NoteRow extends ConsumerWidget {
 
   Future<void> _menu(BuildContext context, WidgetRef ref, Offset at) async {
     final l10n = NotesLocalizations.of(context);
-    final overlay = Overlay.of(context).context.findRenderObject()! as RenderBox;
+    final overlay =
+        Overlay.of(context).context.findRenderObject()! as RenderBox;
     final choice = await showMenu<String>(
       context: context,
       position: RelativeRect.fromRect(
@@ -477,7 +478,11 @@ class NoteRow extends ConsumerWidget {
             onLongPress: () {
               final box = context.findRenderObject()! as RenderBox;
               unawaited(
-                _menu(context, ref, box.localToGlobal(box.size.center(Offset.zero))),
+                _menu(
+                  context,
+                  ref,
+                  box.localToGlobal(box.size.center(Offset.zero)),
+                ),
               );
             },
             child: Semantics(

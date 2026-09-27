@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:strata_editor/src/editor/note_editor_controller.dart';
+import 'package:strata_editor/src/source/source_document.dart';
 import 'package:strata_state/strata_state.dart' show HintKind, TaskState;
 import 'package:strata_ui/strata_ui.dart';
 import 'package:super_editor/super_editor.dart';
@@ -32,6 +33,33 @@ final class HintAttribution implements Attribution {
 const NamedAttribution taskClosedAttribution = NamedAttribution(
   'strata.task.closed',
 );
+
+/// The direction of a line by its first strong character (Unicode bidi rule
+/// P2, what `dir="auto"` does): markdown markers, digits and punctuation
+/// before the first letter do not count, so `- خصم` and `## الفرضيات` are
+/// right-to-left. `super_editor` only looks at the first non-space
+/// character. Lines without a strong character are left-to-right.
+///
+/// This is text layout, not note logic; the core does not stream line
+/// directions yet (docs/CORE_GAPS.md).
+TextDirection firstStrongDirection(String text) {
+  for (final rune in text.runes) {
+    if (_isRtl(rune)) return TextDirection.rtl;
+    if (_strongLtr.hasMatch(String.fromCharCode(rune))) {
+      return TextDirection.ltr;
+    }
+  }
+  return TextDirection.ltr;
+}
+
+bool _isRtl(int rune) =>
+    (rune >= 0x0590 && rune <= 0x08FF) ||
+    (rune >= 0xFB1D && rune <= 0xFDFF) ||
+    (rune >= 0xFE70 && rune <= 0xFEFF) ||
+    (rune >= 0x10800 && rune <= 0x10FFF) ||
+    (rune >= 0x1E800 && rune <= 0x1EFFF);
+
+final RegExp _strongLtr = RegExp(r'\p{L}', unicode: true);
 
 /// Adds the core's hints (and task states) of each line to the laid-out
 /// text. Re-runs whenever the controller's hints or the note's tasks change.
@@ -69,21 +97,27 @@ final class HintStylePhase extends SingleColumnLayoutStylePhase {
       padding: viewModel.padding,
       componentViewModels: [
         for (final component in viewModel.componentViewModels)
-          _style(component, hints.of(component.nodeId).isEmpty),
+          _style(component, hints.of(component.nodeId)),
       ],
     );
   }
 
   SingleColumnLayoutComponentViewModel _style(
     SingleColumnLayoutComponentViewModel component,
-    bool noHints,
+    List<LineSpan> spans,
   ) {
-    if (noHints || component is! TextComponentViewModel) return component;
+    if (component is! TextComponentViewModel) return component;
     final copy = component.copy();
     final textModel = copy as TextComponentViewModel;
     final text = textModel.text.copy();
     final length = text.length;
-    for (final span in controller.lineHints.of(component.nodeId)) {
+    final direction = firstStrongDirection(text.toPlainText());
+    textModel
+      ..textDirection = direction
+      ..textAlignment = direction == TextDirection.rtl
+          ? TextAlign.right
+          : TextAlign.left;
+    for (final span in spans) {
       final end = span.end.clamp(0, length);
       final start = span.start.clamp(0, end);
       if (end <= start) continue;

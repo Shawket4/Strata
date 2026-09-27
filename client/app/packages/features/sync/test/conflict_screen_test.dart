@@ -43,6 +43,23 @@ Future<FakeCoreApi> _pump(
   return fake;
 }
 
+/// Asserts the last call resolved [_op] with exactly these fields (frb
+/// compares lists by identity, so the choices are compared one by one).
+void _expectResolution(
+  FakeCoreApi fake,
+  ResolutionKind kind, {
+  String? content,
+  List<HunkChoice> choices = const [],
+}) {
+  final call = fake.calls.last;
+  expect(call.method, 'resolveConflict');
+  expect(call.args['opId'], _op);
+  final resolution = call.args['resolution']! as ConflictResolution;
+  expect(resolution.kind, kind);
+  expect(resolution.content, content);
+  expect(resolution.choices, orderedEquals(choices));
+}
+
 Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
   await tester.pump();
@@ -134,27 +151,9 @@ void main() {
       var resolved = 0;
       final fake = await _pump(tester, expanded, onResolved: () => resolved++);
       await _tapVisible(tester, find.text('Keep server'));
-      expect(
-        fake.calls.last,
-        const CoreCall('resolveConflict', {
-          'opId': _op,
-          'resolution': ConflictResolution(
-            kind: ResolutionKind.keepServer,
-            choices: [],
-          ),
-        }),
-      );
+      _expectResolution(fake, ResolutionKind.keepServer);
       await _tapVisible(tester, find.text('Keep this device'));
-      expect(
-        fake.calls.last,
-        const CoreCall('resolveConflict', {
-          'opId': _op,
-          'resolution': ConflictResolution(
-            kind: ResolutionKind.keepMine,
-            choices: [],
-          ),
-        }),
-      );
+      _expectResolution(fake, ResolutionKind.keepMine);
       expect(resolved, 2);
     });
 
@@ -167,18 +166,13 @@ void main() {
       await _tapVisible(tester, find.text("Keep this device's text").last);
       expect(find.text('Every choice made'), findsOneWidget);
       await _tapVisible(tester, find.text('Keep merged'));
-      expect(
-        fake.calls.last,
-        const CoreCall('resolveConflict', {
-          'opId': _op,
-          'resolution': ConflictResolution(
-            kind: ResolutionKind.hunks,
-            choices: [
-              HunkChoice(hunk: 0, choice: HunkChoiceKind.theirs),
-              HunkChoice(hunk: 1, choice: HunkChoiceKind.ours),
-            ],
-          ),
-        }),
+      _expectResolution(
+        fake,
+        ResolutionKind.hunks,
+        choices: const [
+          HunkChoice(hunk: 0, choice: HunkChoiceKind.theirs),
+          HunkChoice(hunk: 1, choice: HunkChoiceKind.ours),
+        ],
       );
     });
 
@@ -191,22 +185,17 @@ void main() {
       );
       await _tapVisible(tester, find.text('Keep the original').last);
       await _tapVisible(tester, find.text('Keep merged'));
-      expect(
-        fake.calls.last,
-        const CoreCall('resolveConflict', {
-          'opId': _op,
-          'resolution': ConflictResolution(
-            kind: ResolutionKind.hunks,
-            choices: [
-              HunkChoice(
-                hunk: 0,
-                choice: HunkChoiceKind.text,
-                text: '- Payment terms: net 10.\n',
-              ),
-              HunkChoice(hunk: 1, choice: HunkChoiceKind.base),
-            ],
+      _expectResolution(
+        fake,
+        ResolutionKind.hunks,
+        choices: const [
+          HunkChoice(
+            hunk: 0,
+            choice: HunkChoiceKind.text,
+            text: '- Payment terms: net 10.\n',
           ),
-        }),
+          HunkChoice(hunk: 1, choice: HunkChoiceKind.base),
+        ],
       );
     });
 
@@ -220,16 +209,10 @@ void main() {
       );
       await tester.pump();
       await _tapVisible(tester, find.text('Keep merged'));
-      expect(
-        fake.calls.last,
-        const CoreCall('resolveConflict', {
-          'opId': _op,
-          'resolution': ConflictResolution(
-            kind: ResolutionKind.merged,
-            content: 'Merged by hand.\n',
-            choices: [],
-          ),
-        }),
+      _expectResolution(
+        fake,
+        ResolutionKind.merged,
+        content: 'Merged by hand.\n',
       );
     });
 
@@ -248,16 +231,10 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
       await settle(tester);
-      expect(
-        fake.calls.last,
-        CoreCall('resolveConflict', {
-          'opId': _op,
-          'resolution': ConflictResolution(
-            kind: ResolutionKind.merged,
-            content: SyncFixtures.clean.mergedPreview,
-            choices: const [],
-          ),
-        }),
+      _expectResolution(
+        fake,
+        ResolutionKind.merged,
+        content: SyncFixtures.clean.mergedPreview,
       );
     });
 

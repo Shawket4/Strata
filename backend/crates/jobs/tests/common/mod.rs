@@ -176,6 +176,15 @@ impl World {
     }
 }
 
+/// Runner settings for tests that run only some kinds: users whose other due jobs this
+/// runner does not handle are not skipped.
+pub fn eager() -> RunnerConfig {
+    RunnerConfig {
+        idle_recheck: chrono::Duration::zero(),
+        ..RunnerConfig::default()
+    }
+}
+
 /// A fresh ID generator (so a test can reproduce a sequence of IDs).
 pub fn fresh_ids() -> Arc<SequentialIdGenerator> {
     Arc::new(SequentialIdGenerator::default())

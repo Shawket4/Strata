@@ -89,20 +89,29 @@ class _NotesScreenState extends State<NotesScreen> {
 
   void _openFolder(String folder) {
     final open = widget.onOpenFolder;
-    if (open != null) return open(folder);
-    setState(() => _folder = folder);
+    if (open != null) {
+      open(folder);
+    } else {
+      setState(() => _folder = folder);
+    }
   }
 
   void _openNote(String id) {
     final open = widget.onOpenNote;
-    if (open != null) return open(id);
-    setState(() => _selected = id);
+    if (open != null) {
+      open(id);
+    } else {
+      setState(() => _selected = id);
+    }
   }
 
   void _closeNote() {
     final close = widget.onCloseNote;
-    if (close != null) return close();
-    setState(() => _selected = null);
+    if (close != null) {
+      close();
+    } else {
+      setState(() => _selected = null);
+    }
   }
 
   void _toggleContext(SizeClass sizeClass) => setState(() {
@@ -182,10 +191,16 @@ class _NotesScreenState extends State<NotesScreen> {
                   _searchFocus.requestFocus,
               const SingleActivator(LogicalKeyboardKey.keyF, control: true):
                   _searchFocus.requestFocus,
-              const SingleActivator(LogicalKeyboardKey.period, meta: true): () =>
+              const SingleActivator(
+                LogicalKeyboardKey.period,
+                meta: true,
+              ): () =>
                   _toggleContext(sizeClass),
-              const SingleActivator(LogicalKeyboardKey.period, control: true):
-                  () => _toggleContext(sizeClass),
+              const SingleActivator(
+                LogicalKeyboardKey.period,
+                control: true,
+              ): () =>
+                  _toggleContext(sizeClass),
             },
             child: StrataPanes(
               list: list,

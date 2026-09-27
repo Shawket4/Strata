@@ -110,7 +110,10 @@ class _GroupHeader extends StatelessWidget {
         header: true,
         child: Row(
           children: [
-            RelationLineSample(type: type, mentionOf: mentionKindOf(group.kind)),
+            RelationLineSample(
+              type: type,
+              mentionOf: mentionKindOf(group.kind),
+            ),
             const SizedBox(width: StrataSpacing.s2),
             Flexible(
               child: Text(
@@ -418,11 +421,7 @@ class _NoteContextPanelState extends State<NoteContextPanel> {
 }
 
 class _TabButton extends StatelessWidget {
-  const new({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
+  const new({required this.label, required this.selected, required this.onTap});
 
   final String label;
   final bool selected;

@@ -120,7 +120,9 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
                     tooltip: _expanded
                         ? l10n.collapseProperties
                         : l10n.expandProperties,
-                    icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                    icon: Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                    ),
                     color: colors.text2,
                     onPressed: () => setState(() => _expanded = !_expanded),
                   ),

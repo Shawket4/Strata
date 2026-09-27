@@ -228,46 +228,72 @@ class _ConflictResolutionViewState extends State<ConflictResolutionView> {
         const SingleActivator(LogicalKeyboardKey.enter, control: true):
             _keepMerged,
       },
-      child: Material(
-        color: context.strataColors.background,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Header(
-              detail: detail,
-              onClose: widget.onClose,
-              compact: sizeClass == SizeClass.compact,
-            ),
-            const Divider(height: 1),
-            Expanded(child: body),
-            const Divider(height: 1),
-            _Footer(
-              undecided: _undecided,
-              busy: _busy,
-              wide: sizeClass != SizeClass.compact,
-              onKeepServer: () => unawaited(
-                _resolve(
-                  const ConflictResolution(
-                    kind: ResolutionKind.keepServer,
-                    choices: [],
-                  ),
+      child: Focus(
+        autofocus: true,
+        child: Material(
+          color: context.strataColors.background,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Bounded(
+                fraction: 0.3,
+                child: _Header(
+                  detail: detail,
+                  onClose: widget.onClose,
+                  compact: sizeClass == SizeClass.compact,
                 ),
               ),
-              onKeepDevice: () => unawaited(
-                _resolve(
-                  const ConflictResolution(
-                    kind: ResolutionKind.keepMine,
-                    choices: [],
+              const Divider(height: 1),
+              Expanded(child: body),
+              const Divider(height: 1),
+              _Bounded(
+                fraction: 0.4,
+                child: _Footer(
+                  undecided: _undecided,
+                  busy: _busy,
+                  wide: sizeClass != SizeClass.compact,
+                  onKeepServer: () => unawaited(
+                    _resolve(
+                      const ConflictResolution(
+                        kind: ResolutionKind.keepServer,
+                        choices: [],
+                      ),
+                    ),
                   ),
+                  onKeepDevice: () => unawaited(
+                    _resolve(
+                      const ConflictResolution(
+                        kind: ResolutionKind.keepMine,
+                        choices: [],
+                      ),
+                    ),
+                  ),
+                  onKeepMerged: resolution == null ? null : _keepMerged,
                 ),
               ),
-              onKeepMerged: resolution == null ? null : _keepMerged,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Caps [child] at [fraction] of the window height and scrolls it beyond
+/// (large text scales on short windows).
+class _Bounded extends StatelessWidget {
+  const new({required this.fraction, required this.child});
+
+  final double fraction;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+    constraints: BoxConstraints(
+      maxHeight: MediaQuery.sizeOf(context).height * fraction,
+    ),
+    child: SingleChildScrollView(child: child),
+  );
 }
 
 class _Header extends StatelessWidget {
@@ -432,33 +458,36 @@ class _MergedColumn extends StatelessWidget {
     final l10n = context.syncL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    return ListView(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(StrataSpacing.s4),
-      children: [
-        _ColumnTitle(
-          title: l10n.columnMerged,
-          suffix: l10n.columnMergedEditable,
-        ),
-        const SizedBox(height: StrataSpacing.s3),
-        for (final hunk in hunks) ...[
-          _HunkCard(
-            hunk: hunk,
-            choice: choices[hunk.id],
-            own: ownFor(hunk),
-            onChoice: (choice) => onChoice(hunk.id, choice),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ColumnTitle(
+            title: l10n.columnMerged,
+            suffix: l10n.columnMergedEditable,
           ),
           const SizedBox(height: StrataSpacing.s3),
+          for (final hunk in hunks) ...[
+            _HunkCard(
+              hunk: hunk,
+              choice: choices[hunk.id],
+              own: ownFor(hunk),
+              onChoice: (choice) => onChoice(hunk.id, choice),
+            ),
+            const SizedBox(height: StrataSpacing.s3),
+          ],
+          TextField(
+            controller: controller,
+            onChanged: (_) => onEdited(),
+            minLines: 6,
+            maxLines: null,
+            keyboardType: TextInputType.multiline,
+            style: text.mono.copyWith(color: colors.text),
+            decoration: InputDecoration(labelText: l10n.mergedFieldLabel),
+          ),
         ],
-        TextField(
-          controller: controller,
-          onChanged: (_) => onEdited(),
-          minLines: 6,
-          maxLines: null,
-          keyboardType: TextInputType.multiline,
-          style: text.mono.copyWith(color: colors.text),
-          decoration: InputDecoration(labelText: l10n.mergedFieldLabel),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -621,10 +650,15 @@ class _Footer extends StatelessWidget {
                   children: [
                     Expanded(child: summary),
                     const SizedBox(width: StrataSpacing.s3),
-                    for (final button in buttons) ...[
-                      button,
-                      const SizedBox(width: StrataSpacing.s2),
-                    ],
+                    Flexible(
+                      flex: 2,
+                      child: Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: StrataSpacing.s2,
+                        runSpacing: StrataSpacing.s2,
+                        children: buttons,
+                      ),
+                    ),
                   ],
                 )
               : Column(

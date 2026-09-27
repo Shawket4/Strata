@@ -163,9 +163,6 @@ class _TaskDetailBody extends ConsumerWidget {
       children: [
         Expanded(
           child: ListView(
-            // Only laid-out rows carry semantics: nothing hidden under the
-            // action bar is announced.
-            cacheExtent: 0,
             padding: const EdgeInsets.all(StrataSpacing.s4),
             children: [
               Row(
@@ -424,66 +421,61 @@ class _TaskDetailBody extends ConsumerWidget {
                   ),
                 ),
               ],
+              const SizedBox(height: StrataSpacing.s5),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: StrataSpacing.s2,
+                runSpacing: StrataSpacing.s2,
+                children: open
+                    ? [
+                        OutlinedButton(
+                          onPressed: () => unawaited(
+                            forwardIntent(
+                              context,
+                              api.cancelTask(taskId: task.id),
+                            ),
+                          ),
+                          child: Text(
+                            l10n.tasksActionCancelTask,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        FilledButton.icon(
+                          style: tallFilledButton,
+                          onPressed: () => unawaited(
+                            forwardIntent(
+                              context,
+                              api.completeTask(taskId: task.id),
+                            ),
+                          ),
+                          icon: const Icon(Icons.check),
+                          label: Text(
+                            l10n.tasksActionMarkDone,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ]
+                    : [
+                        FilledButton.icon(
+                          style: tallFilledButton,
+                          onPressed: () => unawaited(
+                            forwardIntent(
+                              context,
+                              api.reopenTask(taskId: task.id),
+                            ),
+                          ),
+                          icon: const Icon(Icons.undo),
+                          label: Text(
+                            l10n.tasksActionReopen,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+              ),
             ],
-          ),
-        ),
-        Material(
-          color: colors.surface2,
-          child: Padding(
-            padding: const EdgeInsets.all(StrataSpacing.s3),
-            child: Wrap(
-              alignment: WrapAlignment.end,
-              spacing: StrataSpacing.s2,
-              runSpacing: StrataSpacing.s2,
-              children: open
-                  ? [
-                      OutlinedButton(
-                        onPressed: () => unawaited(
-                          forwardIntent(
-                            context,
-                            api.cancelTask(taskId: task.id),
-                          ),
-                        ),
-                        child: Text(
-                          l10n.tasksActionCancelTask,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      FilledButton.icon(
-                        style: tallFilledButton,
-                        onPressed: () => unawaited(
-                          forwardIntent(
-                            context,
-                            api.completeTask(taskId: task.id),
-                          ),
-                        ),
-                        icon: const Icon(Icons.check),
-                        label: Text(
-                          l10n.tasksActionMarkDone,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ]
-                  : [
-                      FilledButton.icon(
-                        style: tallFilledButton,
-                        onPressed: () => unawaited(
-                          forwardIntent(
-                            context,
-                            api.reopenTask(taskId: task.id),
-                          ),
-                        ),
-                        icon: const Icon(Icons.undo),
-                        label: Text(
-                          l10n.tasksActionReopen,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-            ),
           ),
         ),
       ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:strata_editor/strata_editor.dart';
 import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_notes/src/context/note_context.dart';

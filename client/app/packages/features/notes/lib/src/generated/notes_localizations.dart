@@ -308,10 +308,10 @@ abstract class NotesLocalizations {
   /// **'Tags'**
   String get tagsLabel;
 
-  /// A tag chip (the tag as the core gives it).
+  /// A tag chip (the tag as the core gives it), isolated so it keeps its own direction.
   ///
   /// In en, this message translates to:
-  /// **'#{tag}'**
+  /// **'⁨#{tag}⁩'**
   String tagChip({required String tag});
 
   /// Title of the AI relation card.
@@ -325,6 +325,12 @@ abstract class NotesLocalizations {
   /// In en, this message translates to:
   /// **'confidence {value}'**
   String aiConfidence({required String value});
+
+  /// Relation type and target on the AI card.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} · {title}'**
+  String relationLine({required String type, required String title});
 
   /// AI relation without a reason.
   ///

@@ -8,7 +8,7 @@ mod common;
 
 use std::sync::Arc;
 
-use common::{MODEL, World};
+use common::{MODEL, World, eager};
 use pgvector::Vector;
 use pretty_assertions::assert_eq;
 use strata_ai::embed::fake::FakeEmbedder;
@@ -95,7 +95,7 @@ async fn notes_are_chunked_by_heading_with_block_ids_and_the_note_vector_is_the_
     let second_input = "Pricing\nOne/Two\nTiny tail".to_owned();
     w.embedder.set(&first_input, &unit(0));
     w.embedder.set(&second_input, &[0.0, 3.0, 4.0]);
-    let runner = w.runner(RunnerConfig::default(), vec![embed_handler(&w, w.embedder_arc())]);
+    let runner = w.runner(eager(), vec![embed_handler(&w, w.embedder_arc())]);
     runner.run_until_idle().await;
 
     let v = version(&w, &sa, note).await;
@@ -168,7 +168,7 @@ async fn unchanged_notes_are_skipped_and_changed_ones_re_embedded() {
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
     let note = w.create(&sa, "notes/Acme.md", "Prefers weekly invoicing.\n").await;
-    let runner = w.runner(RunnerConfig::default(), vec![embed_handler(&w, w.embedder_arc())]);
+    let runner = w.runner(eager(), vec![embed_handler(&w, w.embedder_arc())]);
     runner.run_until_idle().await;
     let calls = w.embedder.calls().len();
     assert_eq!(calls, 2, "one chunk and one item");
@@ -270,7 +270,10 @@ async fn a_model_change_triggers_a_resumable_full_re_embed_with_progress() {
     tx.commit().await.expect("commit");
 
     // First pass: a batch of two (most recently updated first), then the backfill waits.
-    runner.run_until_idle().await;
+    let dbg_jobs = w.jobs(a).await;
+    let wk: Vec<(uuid::Uuid, chrono::DateTime<chrono::Utc>)> = sqlx::query_as("SELECT user_id, run_after FROM job_wakeups").fetch_all(&w.db.superuser).await.expect("wk");
+    let c = runner.run_until_idle().await;
+    eprintln!("DEBUGPASS now={} jobs={dbg_jobs:?} wk={wk:?} claimed={c:?} after={:?}", w.db.clock.now(), w.jobs(a).await);
     let mut tx = w.db.begin(a).await.expect("tx");
     assert_eq!(
         strata_jobs::vectors::coverage(&mut tx, "fake-embed@2").await.expect("coverage"),
@@ -315,7 +318,7 @@ async fn trashed_notes_lose_their_vectors_and_task_lines_get_item_vectors() {
     let note = w
         .create(&sa, "notes/Todo.md", "- [ ] Send the ETA invoice to Watanya\n")
         .await;
-    let runner = w.runner(RunnerConfig::default(), vec![embed_handler(&w, w.embedder_arc())]);
+    let runner = w.runner(eager(), vec![embed_handler(&w, w.embedder_arc())]);
     runner.run_until_idle().await;
     let items = item_vectors(&w, a).await;
     assert_eq!(items.len(), 2);

@@ -109,7 +109,7 @@ void main() {
         final l10n = lookupDocumentsLocalizations(v.locale);
         await tester.tap(find.text(l10n.recordMove));
         await tester.pumpAndSettle();
-        expect(find.text(l10n.documentField), findsOneWidget);
+        expect(find.text(l10n.whatHappened), findsOneWidget);
         expect(find.text('Petrol Arrows commercial register'), findsWidgets);
       });
     }

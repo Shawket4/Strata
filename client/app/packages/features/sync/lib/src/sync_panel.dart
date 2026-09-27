@@ -119,86 +119,89 @@ class SyncStatusContent extends StatelessWidget {
         : StrataSpacing.s5;
     final lastError = view.lastError;
     final close = onClose;
-    return ListView(
-      shrinkWrap: surface == SyncSurface.popover,
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(pad, StrataSpacing.s2, pad, pad),
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ToneBadge(connectivity: pill.connectivity),
-            const SizedBox(width: StrataSpacing.s3),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    header: true,
-                    container: true,
-                    child: Text(
-                      SyncLabels.pill(l10n, pill),
-                      style: surface == SyncSurface.popover
-                          ? text.titleSmall
-                          : text.title,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ToneBadge(connectivity: pill.connectivity),
+              const SizedBox(width: StrataSpacing.s3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Semantics(
+                      header: true,
+                      container: true,
+                      child: Text(
+                        SyncLabels.pill(l10n, pill),
+                        style: surface == SyncSurface.popover
+                            ? text.titleSmall
+                            : text.title,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: StrataSpacing.s1),
-                  Text(
-                    SyncLabels.body(l10n, pill.connectivity),
-                    style: text.bodySmall.copyWith(color: colors.text2),
-                  ),
-                ],
+                    const SizedBox(height: StrataSpacing.s1),
+                    Text(
+                      SyncLabels.body(l10n, pill.connectivity),
+                      style: text.bodySmall.copyWith(color: colors.text2),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (close != null)
-              IconButton(
-                tooltip: l10n.close,
-                onPressed: close,
-                icon: const Icon(Icons.close),
-              ),
+              if (close != null)
+                IconButton(
+                  tooltip: l10n.close,
+                  onPressed: close,
+                  icon: const Icon(Icons.close),
+                ),
+            ],
+          ),
+          if (pill.activity.phase != SyncPhase.idle) ...[
+            const SizedBox(height: StrataSpacing.s4),
+            _Activity(activity: pill.activity),
           ],
-        ),
-        if (pill.activity.phase != SyncPhase.idle) ...[
           const SizedBox(height: StrataSpacing.s4),
-          _Activity(activity: pill.activity),
-        ],
-        const SizedBox(height: StrataSpacing.s4),
-        _Details(view: view, serverUrl: serverUrl),
-        if (view.conflicts.isNotEmpty) ...[
+          _Details(view: view, serverUrl: serverUrl),
+          if (view.conflicts.isNotEmpty) ...[
+            const SizedBox(height: StrataSpacing.s4),
+            _Conflicts(conflicts: view.conflicts, onOpen: onOpenConflict),
+          ],
           const SizedBox(height: StrataSpacing.s4),
-          _Conflicts(conflicts: view.conflicts, onOpen: onOpenConflict),
+          _Outbox(items: view.outbox),
+          if (view.rejections.isNotEmpty) ...[
+            const SizedBox(height: StrataSpacing.s4),
+            _Rejections(items: view.rejections, onDismiss: onDismissRejection),
+          ],
+          if (lastError != null) ...[
+            const SizedBox(height: StrataSpacing.s4),
+            Text(
+              l10n.lastError,
+              style: text.caption.copyWith(color: colors.text2),
+            ),
+            Text(
+              lastError,
+              style: text.monoSmall.copyWith(color: colors.dangerText),
+            ),
+          ],
+          const SizedBox(height: StrataSpacing.s5),
+          FilledButton.icon(
+            onPressed: onSyncNow,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(StrataLayout.minTouchTarget),
+            ),
+            icon: const Icon(Icons.sync, size: 18),
+            label: Text(
+              pill.connectivity == Connectivity.offline
+                  ? l10n.retryNow
+                  : l10n.syncNow,
+            ),
+          ),
         ],
-        const SizedBox(height: StrataSpacing.s4),
-        _Outbox(items: view.outbox),
-        if (view.rejections.isNotEmpty) ...[
-          const SizedBox(height: StrataSpacing.s4),
-          _Rejections(items: view.rejections, onDismiss: onDismissRejection),
-        ],
-        if (lastError != null) ...[
-          const SizedBox(height: StrataSpacing.s4),
-          Text(
-            l10n.lastError,
-            style: text.caption.copyWith(color: colors.text2),
-          ),
-          Text(
-            lastError,
-            style: text.monoSmall.copyWith(color: colors.dangerText),
-          ),
-        ],
-        const SizedBox(height: StrataSpacing.s5),
-        FilledButton.icon(
-          onPressed: onSyncNow,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(StrataLayout.minTouchTarget),
-          ),
-          icon: const Icon(Icons.sync, size: 18),
-          label: Text(
-            pill.connectivity == Connectivity.offline
-                ? l10n.retryNow
-                : l10n.syncNow,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

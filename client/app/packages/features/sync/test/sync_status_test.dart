@@ -15,11 +15,14 @@ Future<FakeCoreApi> _open(
   Variant v,
   void Function(FakeCoreApi fake) seed, {
   List<String>? opened,
+  void Function(FakeCoreApi fake)? afterOpen,
 }) async {
   final fake = FakeCoreApi()..session.add(StrataFixtures.sessionActive);
   seed(fake);
   await pumpVariant(tester, v, SyncHost(opened: opened), fake: fake);
   await tester.tap(find.text(SyncHost.openLabel));
+  await settle(tester);
+  afterOpen?.call(fake);
   await settle(tester);
   return fake;
 }
@@ -99,7 +102,8 @@ void main() {
         await _open(
           tester,
           v,
-          (f) => f.syncStatus.addError(StrataFixtures.coreFailure),
+          (_) {},
+          afterOpen: (f) => f.syncStatus.addError(StrataFixtures.coreFailure),
         );
         _expectSurface(v);
         expect(find.text(l10n.loadFailed), findsOneWidget);
