@@ -1,0 +1,11 @@
+[package]
+name = "strata-ai"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+
+[lints]
+workspace = true

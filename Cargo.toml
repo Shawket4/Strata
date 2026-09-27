@@ -1,0 +1,79 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/vault-format",
+    "crates/text-normalize",
+    "crates/domain",
+    "backend/crates/common",
+    "backend/crates/api",
+    "backend/crates/vault",
+    "backend/crates/index",
+    "backend/crates/jobs",
+    "backend/crates/ai",
+    "backend/crates/graph",
+    "backend/crates/testkit",
+    "backend/bin/stratad",
+    "api/codegen",
+    "api/rust-client",
+    "client/core",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "UNLICENSED"
+rust-version = "1.94"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "warn"
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+
+[workspace.dependencies]
+# internal
+vault-format = { path = "crates/vault-format" }
+text-normalize = { path = "crates/text-normalize" }
+domain = { path = "crates/domain" }
+strata-common = { path = "backend/crates/common" }
+strata-api = { path = "backend/crates/api" }
+strata-vault = { path = "backend/crates/vault" }
+strata-index = { path = "backend/crates/index" }
+strata-jobs = { path = "backend/crates/jobs" }
+strata-ai = { path = "backend/crates/ai" }
+strata-graph = { path = "backend/crates/graph" }
+strata-testkit = { path = "backend/crates/testkit" }
+strata-client = { path = "api/rust-client" }
+
+# external (verify API against the resolved version when adopting)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rmp-serde = "1.3"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tokio = { version = "1", features = ["full"] }
+futures = "0.3"
+ulid = { version = "1", features = ["serde", "uuid"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
+unicode-normalization = "0.1"
+sha2 = "0.10"
+hex = "0.4"
+proptest = "1"
+insta = { version = "1", features = ["yaml"] }
+pretty_assertions = "1"
