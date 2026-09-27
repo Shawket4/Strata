@@ -12,9 +12,14 @@ fuzz_target!(|input: (&str, &str)| {
     assert_eq!(doc.render(), text);
     let editable = doc.frontmatter().is_some_and(|f| f.error().is_none());
     if editable {
+        // Edits may be refused (when they would change how other entries read), but an
+        // accepted edit must read back exactly.
         let fm = doc.frontmatter_mut();
-        fm.set_text(KnownKey::Title, value).unwrap();
-        fm.set_list(KnownKey::Aliases, vec![value.to_owned(), "x".to_owned()]).unwrap();
+        if fm.set_text(KnownKey::Title, value).is_err()
+            || fm.set_list(KnownKey::Aliases, vec![value.to_owned(), "x".to_owned()]).is_err()
+        {
+            return;
+        }
         let rendered = doc.render();
         let back = Document::parse(&rendered);
         let fm = back.frontmatter().unwrap();

@@ -17,8 +17,8 @@ import 'package:strata_ui/testing.dart';
 
 /// Boots the real app (ProviderScope + MaterialApp.router) with the core's
 /// sync stream replaced by a fixture, at [size] / [brightness] / [locale] /
-/// [textScale]. Returns the router for deep-link assertions.
-Future<GoRouter> _boot(
+/// [textScale].
+Future<void> _boot(
   WidgetTester tester, {
   Size size = StrataTestSizes.compact,
   Brightness brightness = Brightness.light,
@@ -48,8 +48,12 @@ Future<GoRouter> _boot(
     ),
   );
   await tester.pumpAndSettle();
-  return container.read(appRouterProvider);
 }
+
+/// The app's router, for deep-link assertions.
+GoRouter _router(WidgetTester tester) =>
+    ProviderScope.containerOf(tester.element(find.byType(StrataApp)))
+        .read(appRouterProvider);
 
 void main() {
   group('app shell matrix', () {
@@ -124,7 +128,8 @@ void main() {
     testWidgets('bottom bar switches branches and keeps typed locations', (
       tester,
     ) async {
-      final router = await _boot(tester);
+      await _boot(tester);
+      final router = _router(tester);
       expect(router.state.uri.path, const HomeRoute().location);
       await tester.tap(find.text('Inbox'));
       await tester.pumpAndSettle();
@@ -149,11 +154,10 @@ void main() {
       expect(find.byType(TasksScreen), findsOneWidget);
     });
 
-    testWidgets('deep links open nested and standalone routes', (
-      tester,
-    ) async {
-      final router = await _boot(tester, size: StrataTestSizes.expanded);
-      router.go(const NoteEditorRoute(noteId: 'pricing-01').location);
+    testWidgets('deep links open nested and standalone routes', (tester) async {
+      await _boot(tester, size: StrataTestSizes.expanded);
+      final router = _router(tester)
+        ..go(const NoteEditorRoute(noteId: 'pricing-01').location);
       await tester.pumpAndSettle();
       expect(find.byType(NoteEditorScreen), findsOneWidget);
       // Nested in the Notes branch: the sidebar highlights Notes.
@@ -192,9 +196,7 @@ void main() {
       }
     });
 
-    testWidgets('no sync pill until the core reports a status', (
-      tester,
-    ) async {
+    testWidgets('no sync pill until the core reports a status', (tester) async {
       await _boot(tester, sync: null);
       expect(find.byType(SyncPill), findsNothing);
     });

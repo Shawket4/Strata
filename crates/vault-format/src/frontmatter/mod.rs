@@ -60,6 +60,13 @@ struct Entry {
     order: usize,
 }
 
+/// An entry placed in an output layout.
+struct Placed<'a> {
+    entry: &'a Entry,
+    raw: String,
+    value: PropertyValue,
+}
+
 /// Frontmatter of one note. Construct with [`crate::Document::parse`] or [`Frontmatter::new`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Frontmatter {
@@ -286,8 +293,9 @@ impl Frontmatter {
         self.wrap(&self.layout(false, false))
     }
 
-    /// Entries in output order with the raw text each would be written with.
-    fn layout(&self, canonical: bool, reorder: bool) -> Vec<(&Entry, String)> {
+    /// Entries in output order with the raw text each would be written with and the value
+    /// that text must read back as.
+    fn layout(&self, canonical: bool, reorder: bool) -> Vec<Placed<'_>> {
         let mut ordered: Vec<&Entry> = self.entries.iter().collect();
         if reorder {
             ordered.sort_by_key(|e| (sort_rank(e), e.order));
@@ -296,27 +304,36 @@ impl Frontmatter {
             .into_iter()
             .map(|e| {
                 let known = e.key.as_deref().and_then(KnownKey::from_name);
-                let raw = match known.filter(|_| canonical) {
-                    Some(k) => canonical_value(k, &e.value)
-                        .map_or_else(|| e.raw.clone(), |v| render_entry(k.as_str(), &v, self.eol)),
-                    None => e.raw.clone(),
-                };
-                (e, raw)
+                let rewritten = known
+                    .filter(|_| canonical)
+                    .and_then(|k| Some((k, canonical_value(k, &e.value)?)));
+                match rewritten {
+                    Some((k, v)) => Placed {
+                        entry: e,
+                        raw: render_entry(k.as_str(), &v, self.eol),
+                        value: v,
+                    },
+                    None => Placed {
+                        entry: e,
+                        raw: e.raw.clone(),
+                        value: e.value.clone(),
+                    },
+                }
             })
             .collect()
     }
 
-    fn inner(&self, layout: &[(&Entry, String)]) -> String {
+    fn inner(&self, layout: &[Placed<'_>]) -> String {
         let mut out = String::new();
-        for (e, raw) in layout {
-            out.push_str(&e.leading);
-            out.push_str(raw);
+        for p in layout {
+            out.push_str(&p.entry.leading);
+            out.push_str(&p.raw);
         }
         out.push_str(&self.trailing);
         out
     }
 
-    fn wrap(&self, layout: &[(&Entry, String)]) -> String {
+    fn wrap(&self, layout: &[Placed<'_>]) -> String {
         if self.created && self.entries.is_empty() && self.trailing.is_empty() {
             return String::new();
         }
@@ -324,7 +341,7 @@ impl Frontmatter {
     }
 
     /// Whether `layout` parses back to exactly the entries' keys and values.
-    fn valid(&self, layout: &[(&Entry, String)]) -> bool {
+    fn valid(&self, layout: &[Placed<'_>]) -> bool {
         let inner = self.inner(layout);
         if has_bare_cr(&inner) {
             return false;
@@ -339,11 +356,12 @@ impl Frontmatter {
             _ => return false,
         };
         map.len() == layout.len()
-            && layout.iter().all(|(e, raw)| {
-                e.key
+            && layout.iter().all(|p| {
+                p.entry
+                    .key
                     .as_deref()
                     .and_then(|k| lookup(map, k))
-                    .is_some_and(|node| yaml::to_property(node, raw_scalar(raw)) == e.value)
+                    .is_some_and(|node| yaml::to_property(node, raw_scalar(&p.raw)) == p.value)
             })
     }
 }

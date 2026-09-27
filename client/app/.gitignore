@@ -1,0 +1,2 @@
+# Golden-test failure images written next to the goldens by flutter_test.
+**/test/**/failures/

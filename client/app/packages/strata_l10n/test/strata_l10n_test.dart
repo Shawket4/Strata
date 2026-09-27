@@ -48,13 +48,10 @@ void main() {
 
     test('every English message carries a description', () {
       final en = _readArb('strata_en.arb');
-      final undocumented = en.keys
-          .where((k) => !k.startsWith('@'))
-          .where((k) {
-            final meta = en['@$k'];
-            return meta is! Map || (meta['description'] as String?) == null;
-          })
-          .toList();
+      final undocumented = en.keys.where((k) => !k.startsWith('@')).where((k) {
+        final meta = en['@$k'];
+        return meta is! Map || (meta['description'] as String?) == null;
+      }).toList();
       expect(undocumented, isEmpty);
     });
   });

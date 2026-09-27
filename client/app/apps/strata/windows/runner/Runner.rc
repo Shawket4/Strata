@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "app.strata" "\0"
-            VALUE "FileDescription", "strata" "\0"
+            VALUE "FileDescription", "Strata" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "strata" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 app.strata. All rights reserved." "\0"
             VALUE "OriginalFilename", "strata.exe" "\0"
-            VALUE "ProductName", "strata" "\0"
+            VALUE "ProductName", "Strata" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
