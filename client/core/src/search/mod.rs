@@ -109,7 +109,7 @@ mod tests {
     fn queries_are_normalised_prefix_terms() {
         assert_eq!(fts_query("Pricing  TIERS").as_deref(), Some("\"pricing\"* \"tiers\"*"));
         assert_eq!(fts_query("   "), None);
-        // Quotes are escaped.
-        assert_eq!(fts_query("a\"b").as_deref(), Some("\"a\"\"b\"*"));
+        // Punctuation (quotes included) separates tokens after normalisation.
+        assert_eq!(fts_query("a\"b").as_deref(), Some("\"a\"* \"b\"*"));
     }
 }

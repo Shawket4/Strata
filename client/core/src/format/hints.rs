@@ -136,8 +136,8 @@ mod tests {
             vec![
                 (HintKind::Frontmatter, 0, 14),
                 (HintKind::Heading, 14, 21),
-                (HintKind::TaskLine, 22, 36),
-                (HintKind::BlockId, 32, 36),
+                (HintKind::TaskLine, 22, 35),
+                (HintKind::BlockId, 31, 35),
             ]
         );
     }

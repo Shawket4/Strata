@@ -180,6 +180,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         routes::vault_ops::import_vault,
         routes::vault_ops::integrity,
     ),
+    components(schemas(routes::search::SearchMode, routes::tasks::TaskViewKind)),
     tags(
         (name = "notes", description = "Notes, the vault tree, backlinks, history and revert (PLAN §7.5 Notes)."),
         (name = "search", description = "Keyword search; semantic and hybrid need the AI subsystem."),

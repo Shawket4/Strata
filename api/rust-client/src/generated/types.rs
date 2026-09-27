@@ -122,6 +122,123 @@ pub struct AuthSession {
     ///The user.
     pub user_id: ::ulid::Ulid,
 }
+///One backlink.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Backlink {
+    ///Heading anchor of a body link.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub anchor: ::std::option::Option<::std::string::String>,
+    ///Block anchor of a body link.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub block_id: ::std::option::Option<::std::string::String>,
+    ///Relation provenance (`user` / `ai`), for relations.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub by: ::std::option::Option<::std::string::String>,
+    ///AI confidence, for AI relations.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub confidence: ::std::option::Option<f64>,
+    ///Linking note.
+    pub source_id: ::ulid::Ulid,
+    ///Its path.
+    pub source_path: ::std::string::String,
+    ///Its title.
+    pub source_title: ::std::string::String,
+}
+///Backlinks of one kind.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct BacklinkGroup {
+    ///Backlinks, by source path.
+    pub items: ::std::vec::Vec<Backlink>,
+    ///`link`, `embed`, or a relation type (`related`, `part-of`, `people`, …).
+    pub kind: ::std::string::String,
+}
+///Body links and relations pointing at a note, grouped by kind.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Backlinks {
+    ///Groups: `link`, `embed`, then relation types alphabetically.
+    pub groups: ::std::vec::Vec<BacklinkGroup>,
+}
+///A saved capture.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Capture {
+    ///Items it resembles (it was saved anyway).
+    pub duplicates: ::std::vec::Vec<DuplicateCandidate>,
+    ///The inbox note (`inbox/YYYY-MM-DD-HHmmss.md`).
+    pub note: Note,
+    ///The `duplicate` suggestion created for them, if any.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub suggestion_id: ::std::option::Option<::ulid::Ulid>,
+}
+///`POST /capture`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CaptureRequest {
+    ///The captured text (saved verbatim as the note body).
+    pub text: ::std::string::String,
+}
+///Who made a commit.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum CommitAuthor {
+    #[serde(rename = "user")]
+    User,
+    #[serde(rename = "ai")]
+    Ai,
+    #[serde(rename = "system")]
+    System,
+}
+impl ::std::fmt::Display for CommitAuthor {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::User => f.write_str("user"),
+            Self::Ai => f.write_str("ai"),
+            Self::System => f.write_str("system"),
+        }
+    }
+}
+impl ::std::str::FromStr for CommitAuthor {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "user" => Ok(Self::User),
+            "ai" => Ok(Self::Ai),
+            "system" => Ok(Self::System),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for CommitAuthor {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for CommitAuthor {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///Result of `POST /commits/{commit}/revert`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CommitReverted {
+    ///The new commit (absent if nothing had to change).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub commit: ::std::option::Option<::std::string::String>,
+    ///Vault paths the revert changed, sorted.
+    pub paths: ::std::vec::Vec<::std::string::String>,
+}
 ///`reset`: refetch state, then continue after `seq`. `end`: the stream finished.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct ControlFrame {
@@ -183,6 +300,191 @@ impl ::std::convert::TryFrom<::std::string::String> for ControlFrameKind {
         value.parse()
     }
 }
+///Copy kind of a document.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum CopyKind {
+    #[serde(rename = "original")]
+    Original,
+    #[serde(rename = "certified copy")]
+    CertifiedCopy,
+    #[serde(rename = "copy")]
+    Copy,
+    #[serde(rename = "digital")]
+    Digital,
+}
+impl ::std::fmt::Display for CopyKind {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Original => f.write_str("original"),
+            Self::CertifiedCopy => f.write_str("certified copy"),
+            Self::Copy => f.write_str("copy"),
+            Self::Digital => f.write_str("digital"),
+        }
+    }
+}
+impl ::std::str::FromStr for CopyKind {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "original" => Ok(Self::Original),
+            "certified copy" => Ok(Self::CertifiedCopy),
+            "copy" => Ok(Self::Copy),
+            "digital" => Ok(Self::Digital),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for CopyKind {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for CopyKind {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///`POST /documents`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CreateDocumentRequest {
+    ///Aliases.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub aliases: ::std::vec::Vec<::std::string::String>,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub copy: ::std::option::Option<CopyKind>,
+    ///`doc-type`.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub doc_type: ::std::option::Option<::std::string::String>,
+    ///Expiry.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub expires: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///Create even if it looks like a duplicate.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///Client-generated ID.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub id: ::std::option::Option<::ulid::Ulid>,
+    ///Name.
+    pub name: ::std::string::String,
+    ///Tags.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub tags: ::std::vec::Vec<::std::string::String>,
+}
+///`POST /entities`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CreateEntityRequest {
+    ///Aliases (both scripts).
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub aliases: ::std::vec::Vec<::std::string::String>,
+    /**User fields: person `role`, `phone`, `email`; company `industry`, `website`;
+    document `doc-type`, `copy`, `expires`; place `address`.*/
+    #[serde(
+        default,
+        skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+    )]
+    pub fields: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
+    ///Create even if it looks like a duplicate (records keep-both).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///Client-generated ID.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub id: ::std::option::Option<::ulid::Ulid>,
+    ///Kind.
+    pub kind: EntityKind,
+    ///Name (becomes the file name, sanitised; the exact name is kept as `title` if needed).
+    pub name: ::std::string::String,
+    ///Places: the enclosing place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub parent_id: ::std::option::Option<::ulid::Ulid>,
+    ///Tags.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub tags: ::std::vec::Vec<::std::string::String>,
+}
+///`POST /notes`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CreateNoteRequest {
+    ///Full content; `id`, `created` and `updated` are set by the server.
+    pub content: ::std::string::String,
+    ///Create even if it looks like a duplicate (records keep-both).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///Client-generated ID (offline creates keep their IDs).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub id: ::std::option::Option<::ulid::Ulid>,
+    ///Vault path ending in `.md` (Obsidian-safe names, no hidden folders).
+    pub path: ::std::string::String,
+}
+///`POST /places`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CreatePlaceRequest {
+    ///Address (user-entered).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub address: ::std::option::Option<::std::string::String>,
+    ///Aliases.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub aliases: ::std::vec::Vec<::std::string::String>,
+    ///Create even if it looks like a duplicate.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///Client-generated ID.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub id: ::std::option::Option<::ulid::Ulid>,
+    ///Name.
+    pub name: ::std::string::String,
+    ///Enclosing place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub parent_id: ::std::option::Option<::ulid::Ulid>,
+    ///Tags.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub tags: ::std::vec::Vec<::std::string::String>,
+}
+///`POST /tasks`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CreateTaskRequest {
+    ///📅
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub due: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///Create even if it looks like a duplicate (records keep-both).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///Client-generated block ID (`t-<ulid>`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub id: ::std::option::Option<::std::string::String>,
+    ///Home note (default `tasks/Tasks.md`, under a heading per month).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub note_id: ::std::option::Option<::ulid::Ulid>,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub priority: ::std::option::Option<TaskPriority>,
+    ///🔁 phrase in the Tasks plugin's language (`every month on the 1st`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub recurrence: ::std::option::Option<::std::string::String>,
+    ///Reminders.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub reminders: ::std::vec::Vec<ReminderAt>,
+    ///⏳
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub scheduled: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///🛫
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub start: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///Description (may contain `[[links]]` and `#tags`).
+    pub text: ::std::string::String,
+}
 ///`POST /admin/users` body: an active account, created by an admin.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CreateUser {
@@ -194,6 +496,134 @@ pub struct CreateUser {
     pub role: Role,
     ///Username (same rules as sign-up).
     pub username: ::std::string::String,
+}
+///A custody event (newest first in the history).
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CustodyEvent {
+    ///Date (midnight UTC of the resolved date).
+    pub at: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///`user` / `ai`.
+    pub by: ::std::string::String,
+    ///Third party.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub counterparty_id: ::std::option::Option<::ulid::Ulid>,
+    ///Event ID (stable across rebuilds).
+    pub id: ::ulid::Ulid,
+    ///Person.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub person_id: ::std::option::Option<::ulid::Ulid>,
+    ///Place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub place_id: ::std::option::Option<::ulid::Ulid>,
+    ///The cited block.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub source_block_id: ::std::option::Option<::std::string::String>,
+    ///The cited note.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub source_note_id: ::std::option::Option<::ulid::Ulid>,
+    ///Type.
+    #[serde(rename = "type")]
+    pub type_: CustodyEventKind,
+}
+///Custody event type (§6.12).
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum CustodyEventKind {
+    #[serde(rename = "stored-at")]
+    StoredAt,
+    #[serde(rename = "moved-to")]
+    MovedTo,
+    #[serde(rename = "handed-to")]
+    HandedTo,
+    #[serde(rename = "returned-by")]
+    ReturnedBy,
+    #[serde(rename = "sent-to")]
+    SentTo,
+    #[serde(rename = "received-from")]
+    ReceivedFrom,
+    #[serde(rename = "lost")]
+    Lost,
+    #[serde(rename = "found")]
+    Found,
+    #[serde(rename = "destroyed")]
+    Destroyed,
+}
+impl ::std::fmt::Display for CustodyEventKind {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::StoredAt => f.write_str("stored-at"),
+            Self::MovedTo => f.write_str("moved-to"),
+            Self::HandedTo => f.write_str("handed-to"),
+            Self::ReturnedBy => f.write_str("returned-by"),
+            Self::SentTo => f.write_str("sent-to"),
+            Self::ReceivedFrom => f.write_str("received-from"),
+            Self::Lost => f.write_str("lost"),
+            Self::Found => f.write_str("found"),
+            Self::Destroyed => f.write_str("destroyed"),
+        }
+    }
+}
+impl ::std::str::FromStr for CustodyEventKind {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "stored-at" => Ok(Self::StoredAt),
+            "moved-to" => Ok(Self::MovedTo),
+            "handed-to" => Ok(Self::HandedTo),
+            "returned-by" => Ok(Self::ReturnedBy),
+            "sent-to" => Ok(Self::SentTo),
+            "received-from" => Ok(Self::ReceivedFrom),
+            "lost" => Ok(Self::Lost),
+            "found" => Ok(Self::Found),
+            "destroyed" => Ok(Self::Destroyed),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for CustodyEventKind {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for CustodyEventKind {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///`POST /documents/{id}/custody`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct CustodyEventRequest {
+    ///Date of the event.
+    pub at: ::chrono::naive::NaiveDate,
+    ///Third party, person or company (required for `sent-to`, `received-from`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub counterparty_id: ::std::option::Option<::ulid::Ulid>,
+    ///Person (required for `handed-to`, `returned-by`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub person_id: ::std::option::Option<::ulid::Ulid>,
+    ///Place (required for `stored-at`, `moved-to`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub place_id: ::std::option::Option<::ulid::Ulid>,
+    ///The note stating the event (cited); the document itself when absent.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub source_note_id: ::std::option::Option<::ulid::Ulid>,
+    ///Type.
+    #[serde(rename = "type")]
+    pub type_: CustodyEventKind,
 }
 ///A signed-in device of the caller.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -276,6 +706,173 @@ impl ::std::convert::TryFrom<::std::string::String> for DevicePlatform {
         value.parse()
     }
 }
+///Direction of an entity relation.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum Direction {
+    #[serde(rename = "out")]
+    Out,
+    #[serde(rename = "in")]
+    In,
+}
+impl ::std::fmt::Display for Direction {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Out => f.write_str("out"),
+            Self::In => f.write_str("in"),
+        }
+    }
+}
+impl ::std::str::FromStr for Direction {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "out" => Ok(Self::Out),
+            "in" => Ok(Self::In),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for Direction {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for Direction {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///The document page.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Document {
+    ///Copies of this document.
+    pub copies: ::std::vec::Vec<::std::string::String>,
+    ///Custody history, newest first.
+    pub custody: ::std::vec::Vec<CustodyEvent>,
+    ///Properties as in lists.
+    pub document: DocumentSummary,
+    ///Place breadcrumb, outermost first (the location last).
+    pub location_path: ::std::vec::Vec<::std::string::String>,
+    ///The note.
+    pub note: Note,
+}
+///Documents.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct DocumentList {
+    ///By name.
+    pub items: ::std::vec::Vec<DocumentSummary>,
+}
+///Where a document is, per its newest custody event.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum DocumentStatus {
+    #[serde(rename = "stored")]
+    Stored,
+    #[serde(rename = "checked-out")]
+    CheckedOut,
+    #[serde(rename = "with-third-party")]
+    WithThirdParty,
+    #[serde(rename = "lost")]
+    Lost,
+    #[serde(rename = "destroyed")]
+    Destroyed,
+}
+impl ::std::fmt::Display for DocumentStatus {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Stored => f.write_str("stored"),
+            Self::CheckedOut => f.write_str("checked-out"),
+            Self::WithThirdParty => f.write_str("with-third-party"),
+            Self::Lost => f.write_str("lost"),
+            Self::Destroyed => f.write_str("destroyed"),
+        }
+    }
+}
+impl ::std::str::FromStr for DocumentStatus {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "stored" => Ok(Self::Stored),
+            "checked-out" => Ok(Self::CheckedOut),
+            "with-third-party" => Ok(Self::WithThirdParty),
+            "lost" => Ok(Self::Lost),
+            "destroyed" => Ok(Self::Destroyed),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for DocumentStatus {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for DocumentStatus {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///A document in a list.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct DocumentSummary {
+    ///Aliases.
+    pub aliases: ::std::vec::Vec<::std::string::String>,
+    ///Copy kind.
+    pub copy: CopyKind,
+    ///The document this is a copy of.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub copy_of: ::std::option::Option<::ulid::Ulid>,
+    ///`doc-type` (contract, id, licence, deed, invoice, certificate, other, or free text).
+    pub doc_type: ::std::string::String,
+    ///Expiry date.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub expires: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///Current holder.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub holder_id: ::std::option::Option<::ulid::Ulid>,
+    ///Document (note) ID.
+    pub id: ::ulid::Ulid,
+    ///Last holder.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub last_holder_id: ::std::option::Option<::ulid::Ulid>,
+    ///Current place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub location_id: ::std::option::Option<::ulid::Ulid>,
+    ///Name.
+    pub name: ::std::string::String,
+    ///Note path.
+    pub path: ::std::string::String,
+    ///Status.
+    pub status: DocumentStatus,
+}
 ///An existing item a create request resembles (`409 duplicate_candidates`, §7.5).
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct DuplicateCandidate {
@@ -292,6 +889,158 @@ pub struct DuplicateCandidate {
     pub snippet: ::std::option::Option<::std::string::String>,
     ///Display title.
     pub title: ::std::string::String,
+}
+///The aggregated entity page.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Entity {
+    ///Aliases.
+    pub aliases: ::std::vec::Vec<::std::string::String>,
+    ///Related documents.
+    pub documents: EntityDocuments,
+    ///Entity (note) ID.
+    pub id: ::ulid::Ulid,
+    ///Kind.
+    pub kind: EntityKind,
+    ///Total mentioning notes.
+    pub mention_count: u32,
+    ///Mentioning notes, newest first (first 50).
+    pub mentions: ::std::vec::Vec<MentioningNote>,
+    ///Display name.
+    pub name: ::std::string::String,
+    ///Note path.
+    pub path: ::std::string::String,
+    ///Frontmatter properties.
+    pub properties: ::std::vec::Vec<Property>,
+    ///Relations to and from other notes (not counting `people`/`companies`/`concepts`).
+    pub relations: ::std::vec::Vec<EntityRelation>,
+    ///Level-2 sections in body order (AI sections and the user's `## Notes`).
+    pub sections: ::std::vec::Vec<EntitySection>,
+    ///Tags.
+    pub tags: ::std::vec::Vec<::std::string::String>,
+    ///Note version (for `If-Match`).
+    pub version: ::std::string::String,
+}
+///Documents related to an entity.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct EntityDocuments {
+    ///Concerning the entity (`companies:` / `people:`).
+    pub concerning: ::std::vec::Vec<::std::string::String>,
+    ///Held now.
+    pub holds: ::std::vec::Vec<::std::string::String>,
+    ///Last handled.
+    pub last_handled: ::std::vec::Vec<::std::string::String>,
+}
+///Kind of an entity.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum EntityKind {
+    #[serde(rename = "person")]
+    Person,
+    #[serde(rename = "company")]
+    Company,
+    #[serde(rename = "document")]
+    Document,
+    #[serde(rename = "place")]
+    Place,
+}
+impl ::std::fmt::Display for EntityKind {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Person => f.write_str("person"),
+            Self::Company => f.write_str("company"),
+            Self::Document => f.write_str("document"),
+            Self::Place => f.write_str("place"),
+        }
+    }
+}
+impl ::std::str::FromStr for EntityKind {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "person" => Ok(Self::Person),
+            "company" => Ok(Self::Company),
+            "document" => Ok(Self::Document),
+            "place" => Ok(Self::Place),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for EntityKind {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for EntityKind {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///Entities.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct EntityList {
+    ///Best match first (by name without a query).
+    pub items: ::std::vec::Vec<EntitySummary>,
+}
+///A relation of an entity.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct EntityRelation {
+    ///`user` / `ai`.
+    pub by: ::std::string::String,
+    ///Direction.
+    pub direction: Direction,
+    ///The other note.
+    pub other_id: ::ulid::Ulid,
+    ///Its title.
+    pub other_title: ::std::string::String,
+    ///Relation type.
+    #[serde(rename = "type")]
+    pub type_: ::std::string::String,
+}
+///A section of an entity note.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct EntitySection {
+    ///Its own content (trimmed).
+    pub content: ::std::string::String,
+    ///Heading (`Summary`, `Insights`, `Open items`, `Timeline`, `Custody`, `Notes`, …).
+    pub title: ::std::string::String,
+}
+///One entity in a list.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct EntitySummary {
+    ///Aliases (both scripts).
+    pub aliases: ::std::vec::Vec<::std::string::String>,
+    ///Entity (note) ID.
+    pub id: ::ulid::Ulid,
+    ///Company industry.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub industry: ::std::option::Option<::std::string::String>,
+    ///Kind.
+    pub kind: EntityKind,
+    ///Display name.
+    pub name: ::std::string::String,
+    ///Note path.
+    pub path: ::std::string::String,
+    ///Person role.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub role: ::std::option::Option<::std::string::String>,
+    ///Match score for `q` (0 without a query).
+    pub score: f64,
+    ///Tags.
+    pub tags: ::std::vec::Vec<::std::string::String>,
 }
 ///Terminal stream failure.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -343,6 +1092,65 @@ impl ::std::convert::TryFrom<&str> for ErrorFrameKind {
     }
 }
 impl ::std::convert::TryFrom<::std::string::String> for ErrorFrameKind {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///How a commit changed the file.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum FileChange {
+    #[serde(rename = "added")]
+    Added,
+    #[serde(rename = "modified")]
+    Modified,
+    #[serde(rename = "renamed")]
+    Renamed,
+    #[serde(rename = "deleted")]
+    Deleted,
+}
+impl ::std::fmt::Display for FileChange {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Added => f.write_str("added"),
+            Self::Modified => f.write_str("modified"),
+            Self::Renamed => f.write_str("renamed"),
+            Self::Deleted => f.write_str("deleted"),
+        }
+    }
+}
+impl ::std::str::FromStr for FileChange {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "added" => Ok(Self::Added),
+            "modified" => Ok(Self::Modified),
+            "renamed" => Ok(Self::Renamed),
+            "deleted" => Ok(Self::Deleted),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for FileChange {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for FileChange {
     type Error = self::error::ConversionError;
     fn try_from(
         value: ::std::string::String,
@@ -402,6 +1210,62 @@ impl ::std::convert::TryFrom<::std::string::String> for HealthStatus {
     ) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
+}
+///A note's history, newest first (follows moves and trash).
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct History {
+    ///Revisions.
+    pub revisions: ::std::vec::Vec<Revision>,
+}
+///Result of an import.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct ImportReport {
+    /**The import commit (revert it with `POST /commits/{commit}/revert` to undo the
+    import); absent if nothing changed.*/
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub commit: ::std::option::Option<::std::string::String>,
+    ///Notes that were given an ID (or task block IDs).
+    pub ids_assigned: ::std::vec::Vec<::std::string::String>,
+    ///Vault paths written, sorted.
+    pub imported: ::std::vec::Vec<::std::string::String>,
+    ///Entries skipped (hidden files such as `.obsidian/`, unsafe names), sorted.
+    pub skipped: ::std::vec::Vec<::std::string::String>,
+}
+///The inbox, newest first.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Inbox {
+    ///Items.
+    pub items: ::std::vec::Vec<InboxItem>,
+}
+///One inbox note with its pending suggestions.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct InboxItem {
+    ///The inbox note.
+    pub note: Note,
+    ///Its pending suggestions.
+    pub suggestions: ::std::vec::Vec<Suggestion>,
+}
+///Integrity warnings, newest first.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Integrity {
+    ///Warnings (at most 500).
+    pub warnings: ::std::vec::Vec<IntegrityWarning>,
+}
+///One integrity warning.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct IntegrityWarning {
+    ///When.
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///What happened (content-free).
+    pub detail: ::std::string::String,
+    ///Warning ID.
+    pub id: ::ulid::Ulid,
+    /**`temp_file_removed`, `uncommitted_changes`, `id_assigned`, `out_of_band_edit`,
+    `missing_file`, `sidecar_repaired`, `orphan_sidecar_removed` or `index_repaired`.*/
+    pub kind: ::std::string::String,
+    ///Vault path concerned.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub path: ::std::option::Option<::std::string::String>,
 }
 ///`POST /auth/login` body.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -499,6 +1363,256 @@ pub struct Me {
     ///Username as entered at sign-up.
     pub username: ::std::string::String,
 }
+///A note mentioning an entity.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct MentioningNote {
+    ///Note ID.
+    pub id: ::ulid::Ulid,
+    ///Path.
+    pub path: ::std::string::String,
+    ///The first line linking to the entity.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub snippet: ::std::option::Option<::std::string::String>,
+    ///Title.
+    pub title: ::std::string::String,
+    ///Last update.
+    pub updated: ::chrono::DateTime<::chrono::offset::Utc>,
+}
+///Notes mentioning an entity, newest first.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct MentioningNotes {
+    ///Notes.
+    pub items: ::std::vec::Vec<MentioningNote>,
+}
+///`POST /entities/{id}/merge`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct MergeRequest {
+    ///The surviving entity (same kind).
+    pub into_id: ::ulid::Ulid,
+}
+///`POST /notes/{id}/move`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct MoveNoteRequest {
+    ///New vault path ending in `.md`.
+    pub new_path: ::std::string::String,
+}
+///A note with its content (`version` is the value for `If-Match`).
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Note {
+    ///The whole file (frontmatter and body).
+    pub content: ::std::string::String,
+    ///Frontmatter `created`.
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///Note ID.
+    pub id: ::ulid::Ulid,
+    ///Kind.
+    pub kind: NoteKind,
+    ///Vault path (`.trash/…` while deleted).
+    pub path: ::std::string::String,
+    ///Parsed frontmatter, in file order (empty when it is not readable).
+    pub properties: ::std::vec::Vec<Property>,
+    ///Display title (frontmatter `title`, else the file name).
+    pub title: ::std::string::String,
+    ///In the trash.
+    pub trashed: bool,
+    ///Frontmatter `updated`.
+    pub updated: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///Content hash (`sha256:<hex>`).
+    pub version: ::std::string::String,
+}
+///Kind of a note.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum NoteKind {
+    #[serde(rename = "note")]
+    Note,
+    #[serde(rename = "concept")]
+    Concept,
+    #[serde(rename = "person")]
+    Person,
+    #[serde(rename = "company")]
+    Company,
+    #[serde(rename = "document")]
+    Document,
+    #[serde(rename = "place")]
+    Place,
+}
+impl ::std::fmt::Display for NoteKind {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Note => f.write_str("note"),
+            Self::Concept => f.write_str("concept"),
+            Self::Person => f.write_str("person"),
+            Self::Company => f.write_str("company"),
+            Self::Document => f.write_str("document"),
+            Self::Place => f.write_str("place"),
+        }
+    }
+}
+impl ::std::str::FromStr for NoteKind {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "note" => Ok(Self::Note),
+            "concept" => Ok(Self::Concept),
+            "person" => Ok(Self::Person),
+            "company" => Ok(Self::Company),
+            "document" => Ok(Self::Document),
+            "place" => Ok(Self::Place),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for NoteKind {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for NoteKind {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///A note as of a commit.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct NoteRevision {
+    ///Commit ID.
+    pub commit: ::std::string::String,
+    ///Content in that commit.
+    pub content: ::std::string::String,
+    ///Path in that commit.
+    pub path: ::std::string::String,
+    ///Version (hash) of that content.
+    pub version: ::std::string::String,
+}
+/**`PATCH /documents/{id}` (location, holder and status change only through custody
+events).*/
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default, PartialEq)]
+pub struct PatchDocumentRequest {
+    ///Replaces the aliases.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub aliases: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
+    ///Remove the expiry.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub clear_expires: ::std::option::Option<bool>,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub copy: ::std::option::Option<CopyKind>,
+    ///`doc-type`.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub doc_type: ::std::option::Option<::std::string::String>,
+    ///Expiry.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub expires: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///Save new aliases even if they match other documents.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///New name (rename; links rewritten).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub name: ::std::option::Option<::std::string::String>,
+    ///Replaces the tags.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub tags: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
+}
+///`PATCH /entities/{id}`; absent fields are unchanged.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default, PartialEq)]
+pub struct PatchEntityRequest {
+    ///Replaces the aliases (new aliases run the duplicate check).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub aliases: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
+    ///Places: remove the enclosing place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub clear_parent: ::std::option::Option<bool>,
+    ///Save new aliases even if they match other entities (records keep-both).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///New name (renames the note; every link is rewritten in the same commit).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub name: ::std::option::Option<::std::string::String>,
+    ///Places: the new enclosing place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub parent_id: ::std::option::Option<::ulid::Ulid>,
+    ///User fields to set.
+    #[serde(
+        default,
+        skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+    )]
+    pub set_fields: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
+    ///Replaces the tags.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub tags: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
+    ///User fields to remove.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub unset_fields: ::std::vec::Vec<::std::string::String>,
+}
+///`PATCH /places/{id}`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default, PartialEq)]
+pub struct PatchPlaceRequest {
+    ///Address.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub address: ::std::option::Option<::std::string::String>,
+    ///Replaces the aliases.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub aliases: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
+    ///Remove the address.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub clear_address: ::std::option::Option<bool>,
+    ///Remove the enclosing place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub clear_parent: ::std::option::Option<bool>,
+    ///Save new aliases even if they match other places.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///New name (rename; links rewritten).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub name: ::std::option::Option<::std::string::String>,
+    ///New enclosing place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub parent_id: ::std::option::Option<::ulid::Ulid>,
+    ///Replaces the tags.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub tags: ::std::option::Option<::std::vec::Vec<::std::string::String>>,
+}
+///`PATCH /tasks/{id}`: set fields are changed in place; `clear` removes fields.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default, PartialEq)]
+pub struct PatchTaskRequest {
+    ///Fields to remove.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub clear: ::std::vec::Vec<TaskField>,
+    ///📅
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub due: ::std::option::Option<::chrono::naive::NaiveDate>,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub priority: ::std::option::Option<TaskPriority>,
+    ///🔁
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub recurrence: ::std::option::Option<::std::string::String>,
+    ///Replaces the reminders.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub reminders: ::std::option::Option<::std::vec::Vec<ReminderAt>>,
+    ///⏳
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub scheduled: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///🛫
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub start: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///New description.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub text: ::std::option::Option<::std::string::String>,
+}
 ///An account awaiting approval.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct PendingAccount {
@@ -510,6 +1624,41 @@ pub struct PendingAccount {
     pub status: AccountStatus,
     ///Username as entered.
     pub username: ::std::string::String,
+}
+///The place page.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Place {
+    ///Enclosing places, nearest first.
+    pub ancestors: ::std::vec::Vec<::std::string::String>,
+    ///Places directly inside.
+    pub children: ::std::vec::Vec<::std::string::String>,
+    ///Documents here or in any place nested inside.
+    pub documents: ::std::vec::Vec<::std::string::String>,
+    ///The note.
+    pub note: Note,
+    ///The place.
+    pub place: PlaceSummary,
+}
+///Places.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct PlaceList {
+    ///By name.
+    pub items: ::std::vec::Vec<PlaceSummary>,
+}
+///A place in a list.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct PlaceSummary {
+    ///Aliases.
+    pub aliases: ::std::vec::Vec<::std::string::String>,
+    ///Place (note) ID.
+    pub id: ::ulid::Ulid,
+    ///Name.
+    pub name: ::std::string::String,
+    ///Enclosing place.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub parent_id: ::std::option::Option<::ulid::Ulid>,
+    ///Note path.
+    pub path: ::std::string::String,
 }
 ///RFC 7807 problem details, encoded as `application/problem+msgpack`. `type` is a problem slug (e.g. `not_found`, `duplicate_candidates`); clients treat unknown slugs by `status`.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -548,11 +1697,167 @@ pub struct ProblemFieldError {
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub pointer: ::std::option::Option<::std::string::String>,
 }
+///One frontmatter property.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Property {
+    ///Key.
+    pub key: ::std::string::String,
+    ///Value.
+    pub value: PropertyValueDto,
+}
+///A frontmatter property value.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(tag = "type")]
+pub enum PropertyValueDto {
+    #[serde(rename = "null")]
+    Null,
+    ///A scalar (numbers and booleans keep their source spelling).
+    #[serde(rename = "text")]
+    Text {
+        ///The text.
+        value: ::std::string::String,
+    },
+    ///A flat list of scalars (relations are wikilink strings).
+    #[serde(rename = "list")]
+    List {
+        ///The items.
+        items: ::std::vec::Vec<::std::string::String>,
+    },
+    #[serde(rename = "other")]
+    Other,
+}
 ///`POST /auth/refresh` body.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct RefreshRequest {
     ///The current refresh token (single use).
     pub refresh_token: ::std::string::String,
+}
+///Identifies one edge.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct RelationRef {
+    ///Target note.
+    pub dst_id: ::ulid::Ulid,
+    ///Source note (the edge is stored in its frontmatter).
+    pub src_id: ::ulid::Ulid,
+    /**Relation type: `related`, `part-of`, `supports`, `contradicts`, `follows-up`,
+    `duplicates`, `concepts`, `people`, `companies`, an entity relation (`works-at`, …) or
+    `copy-of`.*/
+    #[serde(rename = "type")]
+    pub type_: ::std::string::String,
+}
+///An edge after a change.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct RelationResult {
+    /**`POST`: false if it already existed. `DELETE`: true if it was an AI edge and is now
+    recorded as rejected.*/
+    pub changed: bool,
+    ///Target note.
+    pub dst_id: ::ulid::Ulid,
+    ///Source note.
+    pub src_id: ::ulid::Ulid,
+    ///Type.
+    #[serde(rename = "type")]
+    pub type_: ::std::string::String,
+}
+///A reminder: a wall-clock time in the user's time zone.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct ReminderAt {
+    ///Date.
+    pub date: ::chrono::naive::NaiveDate,
+    ///Time `HH:MM` (24 h, e.g. `09:00`).
+    pub time: ::std::string::String,
+}
+///Who wrote a reply.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum ReplyAuthorDto {
+    #[serde(rename = "user")]
+    User,
+    #[serde(rename = "ai")]
+    Ai,
+}
+impl ::std::fmt::Display for ReplyAuthorDto {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::User => f.write_str("user"),
+            Self::Ai => f.write_str("ai"),
+        }
+    }
+}
+impl ::std::str::FromStr for ReplyAuthorDto {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "user" => Ok(Self::User),
+            "ai" => Ok(Self::Ai),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for ReplyAuthorDto {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for ReplyAuthorDto {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///`POST /suggestions/{id}/reply`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct ReplyRequest {
+    ///The reply ("no, the Petrol Arrows one").
+    pub body: ::std::string::String,
+}
+///`PATCH /relations`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct RetypeRelation {
+    ///Target note.
+    pub dst_id: ::ulid::Ulid,
+    ///New type.
+    pub new_type: ::std::string::String,
+    ///Source note.
+    pub src_id: ::ulid::Ulid,
+    ///Current type.
+    #[serde(rename = "type")]
+    pub type_: ::std::string::String,
+}
+///`POST /notes/{id}/revert`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct RevertNoteRequest {
+    ///A commit from the note's history.
+    pub commit: ::std::string::String,
+}
+///A commit that touched the note.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Revision {
+    ///When.
+    pub at: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///Who made it.
+    pub author: CommitAuthor,
+    ///How it changed the note.
+    pub change: FileChange,
+    ///Commit ID (40 hex characters).
+    pub commit: ::std::string::String,
+    ///Commit message.
+    pub message: ::std::string::String,
+    ///The note's path in that commit.
+    pub path: ::std::string::String,
 }
 ///Account role.
 #[derive(
@@ -604,6 +1909,84 @@ impl ::std::convert::TryFrom<::std::string::String> for Role {
     ) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
+}
+///One hit.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct SearchHit {
+    ///Note.
+    pub id: ::ulid::Ulid,
+    ///Kind.
+    pub kind: NoteKind,
+    ///Path.
+    pub path: ::std::string::String,
+    ///Rank (higher is better).
+    pub score: f64,
+    ///The first body line matching the query.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub snippet: ::std::option::Option<::std::string::String>,
+    ///Title.
+    pub title: ::std::string::String,
+}
+///Search mode.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum SearchMode {
+    #[serde(rename = "keyword")]
+    Keyword,
+    #[serde(rename = "semantic")]
+    Semantic,
+    #[serde(rename = "hybrid")]
+    Hybrid,
+}
+impl ::std::fmt::Display for SearchMode {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Keyword => f.write_str("keyword"),
+            Self::Semantic => f.write_str("semantic"),
+            Self::Hybrid => f.write_str("hybrid"),
+        }
+    }
+}
+impl ::std::str::FromStr for SearchMode {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "keyword" => Ok(Self::Keyword),
+            "semantic" => Ok(Self::Semantic),
+            "hybrid" => Ok(Self::Hybrid),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for SearchMode {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for SearchMode {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///Search results, best first.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct SearchResults {
+    ///Hits.
+    pub hits: ::std::vec::Vec<SearchHit>,
 }
 ///Status an admin can set directly.
 #[derive(
@@ -726,6 +2109,469 @@ impl ::std::convert::TryFrom<::std::string::String> for StreamFrameKind {
         value.parse()
     }
 }
+///A suggestion.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Suggestion {
+    ///Created.
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///Accepted/rejected at.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub decided_at: ::std::option::Option<::chrono::DateTime<::chrono::offset::Utc>>,
+    ///Suggestion ID.
+    pub id: ::ulid::Ulid,
+    ///Kind (`duplicate`; AI kinds from Phase 4).
+    pub kind: ::std::string::String,
+    ///The note it concerns.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub note_id: ::std::option::Option<::ulid::Ulid>,
+    ///What it proposes.
+    pub payload: SuggestionPayload,
+    ///Thread.
+    pub replies: ::std::vec::Vec<SuggestionReply>,
+    ///Status.
+    pub status: SuggestionStatus,
+    ///Last change.
+    pub updated: ::chrono::DateTime<::chrono::offset::Utc>,
+}
+///What a suggestion proposes.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(tag = "type")]
+pub enum SuggestionPayload {
+    ///The note resembles existing items; accepting keeps both.
+    #[serde(rename = "duplicate")]
+    Duplicate {
+        ///The items it resembles.
+        candidates: ::std::vec::Vec<DuplicateCandidate>,
+    },
+    ///A kind this version does not describe (MessagePack as stored).
+    #[serde(rename = "opaque")]
+    Opaque {
+        ///The raw payload.
+        data: ::serde_bytes::ByteBuf,
+    },
+}
+///One reply in a suggestion thread.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct SuggestionReply {
+    ///Author.
+    pub author: ReplyAuthorDto,
+    ///Text.
+    pub body: ::std::string::String,
+    ///When.
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///Reply ID.
+    pub id: ::ulid::Ulid,
+}
+///Suggestion status.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum SuggestionStatus {
+    #[serde(rename = "pending")]
+    Pending,
+    #[serde(rename = "accepted")]
+    Accepted,
+    #[serde(rename = "rejected")]
+    Rejected,
+    #[serde(rename = "superseded")]
+    Superseded,
+}
+impl ::std::fmt::Display for SuggestionStatus {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Pending => f.write_str("pending"),
+            Self::Accepted => f.write_str("accepted"),
+            Self::Rejected => f.write_str("rejected"),
+            Self::Superseded => f.write_str("superseded"),
+        }
+    }
+}
+impl ::std::str::FromStr for SuggestionStatus {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "pending" => Ok(Self::Pending),
+            "accepted" => Ok(Self::Accepted),
+            "rejected" => Ok(Self::Rejected),
+            "superseded" => Ok(Self::Superseded),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for SuggestionStatus {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for SuggestionStatus {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///Suggestions.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Suggestions {
+    ///Oldest first.
+    pub items: ::std::vec::Vec<Suggestion>,
+}
+///A task.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Task {
+    ///✅ date.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub done_at: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///📅
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub due: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///Block ID (`t-<ulid>`).
+    pub id: ::std::string::String,
+    ///The whole checklist line.
+    pub line: ::std::string::String,
+    ///The note holding the line.
+    pub note_id: ::ulid::Ulid,
+    ///Its path.
+    pub note_path: ::std::string::String,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub priority: ::std::option::Option<TaskPriority>,
+    ///🔁 phrase, verbatim.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub recurrence: ::std::option::Option<::std::string::String>,
+    ///False when the phrase is outside the supported grammar (kept verbatim, flagged).
+    pub recurrence_understood: bool,
+    ///Reminder instants (from `(@…)` in the user's time zone).
+    pub reminders: ::std::vec::Vec<::chrono::DateTime<::chrono::offset::Utc>>,
+    ///Compiled RFC 5545 rule.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub rrule: ::std::option::Option<::std::string::String>,
+    ///⏳
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub scheduled: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///🛫
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub start: ::std::option::Option<::chrono::naive::NaiveDate>,
+    ///Status.
+    pub status: TaskStatus,
+    ///Description (links and tags kept, signifiers removed).
+    pub text: ::std::string::String,
+    ///Version for `If-Match` (hash of the line).
+    pub version: ::std::string::String,
+}
+///A field `PATCH /tasks/{id}` can remove.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum TaskField {
+    #[serde(rename = "due")]
+    Due,
+    #[serde(rename = "scheduled")]
+    Scheduled,
+    #[serde(rename = "start")]
+    Start,
+    #[serde(rename = "recurrence")]
+    Recurrence,
+    #[serde(rename = "priority")]
+    Priority,
+    #[serde(rename = "reminders")]
+    Reminders,
+}
+impl ::std::fmt::Display for TaskField {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Due => f.write_str("due"),
+            Self::Scheduled => f.write_str("scheduled"),
+            Self::Start => f.write_str("start"),
+            Self::Recurrence => f.write_str("recurrence"),
+            Self::Priority => f.write_str("priority"),
+            Self::Reminders => f.write_str("reminders"),
+        }
+    }
+}
+impl ::std::str::FromStr for TaskField {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "due" => Ok(Self::Due),
+            "scheduled" => Ok(Self::Scheduled),
+            "start" => Ok(Self::Start),
+            "recurrence" => Ok(Self::Recurrence),
+            "priority" => Ok(Self::Priority),
+            "reminders" => Ok(Self::Reminders),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for TaskField {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for TaskField {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///Tasks.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct TaskList {
+    ///In the view's order.
+    pub items: ::std::vec::Vec<Task>,
+}
+///Priority (Tasks plugin signifiers 🔺⏫🔼🔽⏬; absent = normal).
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum TaskPriority {
+    #[serde(rename = "highest")]
+    Highest,
+    #[serde(rename = "high")]
+    High,
+    #[serde(rename = "medium")]
+    Medium,
+    #[serde(rename = "low")]
+    Low,
+    #[serde(rename = "lowest")]
+    Lowest,
+}
+impl ::std::fmt::Display for TaskPriority {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Highest => f.write_str("highest"),
+            Self::High => f.write_str("high"),
+            Self::Medium => f.write_str("medium"),
+            Self::Low => f.write_str("low"),
+            Self::Lowest => f.write_str("lowest"),
+        }
+    }
+}
+impl ::std::str::FromStr for TaskPriority {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "highest" => Ok(Self::Highest),
+            "high" => Ok(Self::High),
+            "medium" => Ok(Self::Medium),
+            "low" => Ok(Self::Low),
+            "lowest" => Ok(Self::Lowest),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for TaskPriority {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for TaskPriority {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///Task status.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum TaskStatus {
+    #[serde(rename = "open")]
+    Open,
+    #[serde(rename = "done")]
+    Done,
+    #[serde(rename = "cancelled")]
+    Cancelled,
+}
+impl ::std::fmt::Display for TaskStatus {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Open => f.write_str("open"),
+            Self::Done => f.write_str("done"),
+            Self::Cancelled => f.write_str("cancelled"),
+        }
+    }
+}
+impl ::std::str::FromStr for TaskStatus {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "open" => Ok(Self::Open),
+            "done" => Ok(Self::Done),
+            "cancelled" => Ok(Self::Cancelled),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for TaskStatus {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for TaskStatus {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///Result of a transition.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct TaskTransitioned {
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub next: ::std::option::Option<Task>,
+    ///The task after the transition.
+    pub task: Task,
+}
+///List view.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum TaskViewKind {
+    #[serde(rename = "today")]
+    Today,
+    #[serde(rename = "upcoming")]
+    Upcoming,
+    #[serde(rename = "overdue")]
+    Overdue,
+    #[serde(rename = "recurring")]
+    Recurring,
+    #[serde(rename = "done")]
+    Done,
+    #[serde(rename = "all")]
+    All,
+}
+impl ::std::fmt::Display for TaskViewKind {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Today => f.write_str("today"),
+            Self::Upcoming => f.write_str("upcoming"),
+            Self::Overdue => f.write_str("overdue"),
+            Self::Recurring => f.write_str("recurring"),
+            Self::Done => f.write_str("done"),
+            Self::All => f.write_str("all"),
+        }
+    }
+}
+impl ::std::str::FromStr for TaskViewKind {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "today" => Ok(Self::Today),
+            "upcoming" => Ok(Self::Upcoming),
+            "overdue" => Ok(Self::Overdue),
+            "recurring" => Ok(Self::Recurring),
+            "done" => Ok(Self::Done),
+            "all" => Ok(Self::All),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for TaskViewKind {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for TaskViewKind {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///The vault tree (hidden folders excluded), sorted by path.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Tree {
+    ///Entries.
+    pub entries: ::std::vec::Vec<TreeItem>,
+}
+///One entry of the vault tree.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(tag = "type")]
+pub enum TreeItem {
+    ///A folder.
+    #[serde(rename = "folder")]
+    Folder {
+        ///Path.
+        path: ::std::string::String,
+    },
+    ///A note.
+    #[serde(rename = "note")]
+    Note {
+        ///Note ID.
+        id: ::ulid::Ulid,
+        ///Kind.
+        kind: NoteKind,
+        ///Path.
+        path: ::std::string::String,
+        ///Title.
+        title: ::std::string::String,
+        ///Last update.
+        updated: ::chrono::DateTime<::chrono::offset::Utc>,
+    },
+    ///Any other file (attachment, canvas).
+    #[serde(rename = "file")]
+    File {
+        ///Path.
+        path: ::std::string::String,
+    },
+}
 ///UI language of the app.
 #[derive(
     ::serde::Deserialize,
@@ -809,6 +2655,12 @@ pub struct UpdateMe {
     pub timezone: ::std::option::Option<::std::string::String>,
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub ui_language: ::std::option::Option<UiLanguage>,
+}
+///`PUT /notes/{id}`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct UpdateNoteRequest {
+    ///Full new content (the `id` property cannot change).
+    pub content: ::std::string::String,
 }
 ///`PATCH /admin/users/{id}` body; absent fields are unchanged.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default, PartialEq)]

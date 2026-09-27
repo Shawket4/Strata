@@ -201,6 +201,43 @@ pub async fn signup(
     let request = request.body(body)?;
     client.send(request).await
 }
+/// Capture text into the inbox (saved before anything else, never refused as a duplicate).
+///
+/// `POST /api/v1/capture`
+pub async fn capture(
+    client: &crate::Client,
+    body: &types::CaptureRequest,
+) -> ::std::result::Result<types::Capture, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/capture"),
+        "capture",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Revert a whole commit (typically an `ai:` commit) on top of the current state.
+///
+/// `POST /api/v1/commits/{commit}/revert`
+pub async fn revert_commit(
+    client: &crate::Client,
+    commit: &str,
+) -> ::std::result::Result<types::CommitReverted, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/commits/{}/revert",
+            crate::encode_path_segment(&{
+                let value = &commit;
+                (*value).to_owned()
+            })?
+        ),
+        "revert_commit",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
 /// The caller's devices, most recently seen first.
 ///
 /// `GET /api/v1/devices`
@@ -259,6 +296,316 @@ pub async fn update_device(
     let request = request.body(body)?;
     client.send(request).await
 }
+/// Documents, filtered (`place` includes nested places).
+///
+/// `GET /api/v1/documents`
+pub async fn list_documents(
+    client: &crate::Client,
+    q: ::std::option::Option<&str>,
+    place: ::std::option::Option<::ulid::Ulid>,
+    holder: ::std::option::Option<::ulid::Ulid>,
+    status: ::std::option::Option<&types::DocumentStatus>,
+    expiring_before: ::std::option::Option<&str>,
+) -> ::std::result::Result<types::DocumentList, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/documents"),
+        "list_documents",
+    );
+    let request = request.authenticated();
+    let request = match &q {
+        ::std::option::Option::Some(value) => request.query("q", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &place {
+        ::std::option::Option::Some(value) => request.query("place", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &holder {
+        ::std::option::Option::Some(value) => request.query("holder", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &status {
+        ::std::option::Option::Some(value) => request.query("status", crate::param_string(value)?),
+        ::std::option::Option::None => request,
+    };
+    let request = match &expiring_before {
+        ::std::option::Option::Some(value) => request.query("expiring_before", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Create a document (duplicate check unless `force`).
+///
+/// `POST /api/v1/documents`
+pub async fn create_document(
+    client: &crate::Client,
+    body: &types::CreateDocumentRequest,
+) -> ::std::result::Result<types::Document, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/documents"),
+        "create_document",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// A document with its custody history, location breadcrumb and copies.
+///
+/// `GET /api/v1/documents/{id}`
+pub async fn get_document(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Document, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/documents/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_document",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Edit a document's user fields (not location/holder/status: those follow custody events).
+///
+/// `PATCH /api/v1/documents/{id}`
+pub async fn patch_document(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    body: &types::PatchDocumentRequest,
+) -> ::std::result::Result<types::Document, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PATCH,
+        ::std::format!(
+            "/api/v1/documents/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "patch_document",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => {
+            request.header("If-Match", crate::param_string(value)?)
+        }
+        ::std::option::Option::None => request,
+    };
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Record a manual custody event (`by: user`); the frontmatter follows the newest event.
+///
+/// `POST /api/v1/documents/{id}/custody`
+pub async fn add_custody_event(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::CustodyEventRequest,
+) -> ::std::result::Result<types::Document, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/documents/{}/custody",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "add_custody_event",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Entities of any or one kind, matching `q` in any script.
+///
+/// `GET /api/v1/entities`
+pub async fn list_entities(
+    client: &crate::Client,
+    kind: ::std::option::Option<&types::EntityKind>,
+    q: ::std::option::Option<&str>,
+    tag: ::std::option::Option<&str>,
+    limit: ::std::option::Option<u64>,
+) -> ::std::result::Result<types::EntityList, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/entities"),
+        "list_entities",
+    );
+    let request = request.authenticated();
+    let request = match &kind {
+        ::std::option::Option::Some(value) => request.query("kind", crate::param_string(value)?),
+        ::std::option::Option::None => request,
+    };
+    let request = match &q {
+        ::std::option::Option::Some(value) => request.query("q", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &tag {
+        ::std::option::Option::Some(value) => request.query("tag", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &limit {
+        ::std::option::Option::Some(value) => request.query("limit", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Create a person, company, document or place (duplicate check unless `force`).
+///
+/// `POST /api/v1/entities`
+pub async fn create_entity(
+    client: &crate::Client,
+    body: &types::CreateEntityRequest,
+) -> ::std::result::Result<types::Entity, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/entities"),
+        "create_entity",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// The aggregated entity page.
+///
+/// `GET /api/v1/entities/{id}`
+pub async fn get_entity(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Entity, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/entities/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_entity",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Edit user fields, aliases, tags or the name (contact fields are only ever user-written).
+///
+/// `PATCH /api/v1/entities/{id}`
+pub async fn patch_entity(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    body: &types::PatchEntityRequest,
+) -> ::std::result::Result<types::Entity, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PATCH,
+        ::std::format!(
+            "/api/v1/entities/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "patch_entity",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => {
+            request.header("If-Match", crate::param_string(value)?)
+        }
+        ::std::option::Option::None => request,
+    };
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Documents the entity holds now, last handled, or that concern it.
+///
+/// `GET /api/v1/entities/{id}/documents`
+pub async fn get_entity_documents(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::EntityDocuments, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/entities/{}/documents",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_entity_documents",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/** Merge this entity into another of the same kind (links rewritten, aliases unioned, `##
+Notes` moved under a dated sub-heading, this one trashed — one commit).*/
+///
+/// `POST /api/v1/entities/{id}/merge`
+pub async fn merge_entity(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::MergeRequest,
+) -> ::std::result::Result<types::Entity, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/entities/{}/merge",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "merge_entity",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Notes mentioning the entity, newest first, with the mention line.
+///
+/// `GET /api/v1/entities/{id}/notes`
+pub async fn get_entity_notes(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::MentioningNotes, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/entities/{}/notes",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_entity_notes",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// The vault as a zip (with `.meta/`, without `.git/`, plus `.obsidian/app.json`).
+///
+/// `GET /api/v1/export`
+pub async fn export_vault(
+    client: &crate::Client,
+) -> ::std::result::Result<::bytes::Bytes, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/export"),
+        "export_vault",
+    );
+    let request = request.authenticated();
+    client.send_zip(request).await
+}
 /// Liveness probe.
 ///
 /// `GET /api/v1/health`
@@ -268,6 +615,50 @@ pub async fn health(client: &crate::Client) -> ::std::result::Result<types::Heal
         ::std::string::String::from("/api/v1/health"),
         "health",
     );
+    client.send(request).await
+}
+/// Import an Obsidian vault zip in one revertible commit.
+///
+/// `POST /api/v1/import`
+pub async fn import_vault(
+    client: &crate::Client,
+    body: ::bytes::Bytes,
+) -> ::std::result::Result<types::ImportReport, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/import"),
+        "import_vault",
+    );
+    let request = request.authenticated();
+    let request = request.zip_body(body);
+    client.send(request).await
+}
+/// Inbox notes, newest first, with their pending suggestions.
+///
+/// `GET /api/v1/inbox`
+pub async fn get_inbox(
+    client: &crate::Client,
+) -> ::std::result::Result<types::Inbox, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/inbox"),
+        "get_inbox",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Integrity warnings raised by reconciliation, newest first.
+///
+/// `GET /api/v1/integrity`
+pub async fn get_integrity(
+    client: &crate::Client,
+) -> ::std::result::Result<types::Integrity, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/integrity"),
+        "get_integrity",
+    );
+    let request = request.authenticated();
     client.send(request).await
 }
 /// The signed-in user, role and settings.
@@ -323,4 +714,690 @@ pub async fn export_me(
     );
     let request = request.authenticated();
     client.send_zip(request).await
+}
+/// Create a note (duplicate check unless `force`).
+///
+/// `POST /api/v1/notes`
+pub async fn create_note(
+    client: &crate::Client,
+    body: &types::CreateNoteRequest,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/notes"),
+        "create_note",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// A live note by vault path.
+///
+/// `GET /api/v1/notes/by-path`
+pub async fn get_note_by_path(
+    client: &crate::Client,
+    path: &str,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/notes/by-path"),
+        "get_note_by_path",
+    );
+    let request = request.authenticated();
+    let request = {
+        let value = &path;
+        request.query("path", (*value).to_owned())
+    };
+    client.send(request).await
+}
+/// A note (live or trashed) with its content and version.
+///
+/// `GET /api/v1/notes/{id}`
+pub async fn get_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/notes/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_note",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Replace a note's content (`If-Match`: its current version).
+///
+/// `PUT /api/v1/notes/{id}`
+pub async fn update_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    if_match: &str,
+    body: &types::UpdateNoteRequest,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PUT,
+        ::std::format!(
+            "/api/v1/notes/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "update_note",
+    );
+    let request = request.authenticated();
+    let request = {
+        let value = &if_match;
+        request.header("If-Match", (*value).to_owned())
+    };
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Soft-delete a note (moved to `.trash/`).
+///
+/// `DELETE /api/v1/notes/{id}`
+pub async fn delete_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::DELETE,
+        ::std::format!(
+            "/api/v1/notes/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "delete_note",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Body links and relations pointing at a note, grouped by kind.
+///
+/// `GET /api/v1/notes/{id}/backlinks`
+pub async fn get_backlinks(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Backlinks, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/notes/{}/backlinks",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_backlinks",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// The git history of a note, newest first.
+///
+/// `GET /api/v1/notes/{id}/history`
+pub async fn get_note_history(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::History, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/notes/{}/history",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_note_history",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// A note's content as of a commit in its history.
+///
+/// `GET /api/v1/notes/{id}/history/{commit}`
+pub async fn get_note_revision(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    commit: &str,
+) -> ::std::result::Result<types::NoteRevision, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/notes/{}/history/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?,
+            crate::encode_path_segment(&{
+                let value = &commit;
+                (*value).to_owned()
+            })?
+        ),
+        "get_note_revision",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Move or rename a note: every inbound link and relation is rewritten in the same commit.
+///
+/// `POST /api/v1/notes/{id}/move`
+pub async fn move_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    body: &types::MoveNoteRequest,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/notes/{}/move",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "move_note",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => {
+            request.header("If-Match", crate::param_string(value)?)
+        }
+        ::std::option::Option::None => request,
+    };
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Restore a note's content from a commit in its history (a new `user: revert` commit).
+///
+/// `POST /api/v1/notes/{id}/revert`
+pub async fn revert_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::RevertNoteRequest,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/notes/{}/revert",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "revert_note",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Places.
+///
+/// `GET /api/v1/places`
+pub async fn list_places(
+    client: &crate::Client,
+    q: ::std::option::Option<&str>,
+) -> ::std::result::Result<types::PlaceList, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/places"),
+        "list_places",
+    );
+    let request = request.authenticated();
+    let request = match &q {
+        ::std::option::Option::Some(value) => request.query("q", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Create a place (optionally inside another).
+///
+/// `POST /api/v1/places`
+pub async fn create_place(
+    client: &crate::Client,
+    body: &types::CreatePlaceRequest,
+) -> ::std::result::Result<types::Place, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/places"),
+        "create_place",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// A place with its nesting and every document inside it (recursively).
+///
+/// `GET /api/v1/places/{id}`
+pub async fn get_place(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Place, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/places/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_place",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Edit a place (name, aliases, tags, address, enclosing place).
+///
+/// `PATCH /api/v1/places/{id}`
+pub async fn patch_place(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    body: &types::PatchPlaceRequest,
+) -> ::std::result::Result<types::Place, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PATCH,
+        ::std::format!(
+            "/api/v1/places/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "patch_place",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => {
+            request.header("If-Match", crate::param_string(value)?)
+        }
+        ::std::option::Option::None => request,
+    };
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Add a user edge (no-op if it exists).
+///
+/// `POST /api/v1/relations`
+pub async fn add_relation(
+    client: &crate::Client,
+    body: &types::RelationRef,
+) -> ::std::result::Result<types::RelationResult, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/relations"),
+        "add_relation",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Remove an edge; an AI edge is recorded as rejected and never re-added.
+///
+/// `DELETE /api/v1/relations`
+pub async fn remove_relation(
+    client: &crate::Client,
+    body: &types::RelationRef,
+) -> ::std::result::Result<types::RelationResult, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::DELETE,
+        ::std::string::String::from("/api/v1/relations"),
+        "remove_relation",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Change an edge's type (a retyped AI edge is rejected under its old type).
+///
+/// `PATCH /api/v1/relations`
+pub async fn retype_relation(
+    client: &crate::Client,
+    body: &types::RetypeRelation,
+) -> ::std::result::Result<types::RelationResult, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PATCH,
+        ::std::string::String::from("/api/v1/relations"),
+        "retype_relation",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Search the vault.
+///
+/// `GET /api/v1/search`
+pub async fn search(
+    client: &crate::Client,
+    q: &str,
+    mode: ::std::option::Option<&types::SearchMode>,
+    limit: ::std::option::Option<u64>,
+) -> ::std::result::Result<types::SearchResults, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/search"),
+        "search",
+    );
+    let request = request.authenticated();
+    let request = {
+        let value = &q;
+        request.query("q", (*value).to_owned())
+    };
+    let request = match &mode {
+        ::std::option::Option::Some(value) => request.query("mode", crate::param_string(value)?),
+        ::std::option::Option::None => request,
+    };
+    let request = match &limit {
+        ::std::option::Option::Some(value) => request.query("limit", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Suggestions with a status (default pending), oldest first.
+///
+/// `GET /api/v1/suggestions`
+pub async fn list_suggestions(
+    client: &crate::Client,
+    status: ::std::option::Option<&types::SuggestionStatus>,
+) -> ::std::result::Result<types::Suggestions, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/suggestions"),
+        "list_suggestions",
+    );
+    let request = request.authenticated();
+    let request = match &status {
+        ::std::option::Option::Some(value) => request.query("status", crate::param_string(value)?),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Accept a pending suggestion (a `duplicate` suggestion: keep both).
+///
+/// `POST /api/v1/suggestions/{id}/accept`
+pub async fn accept_suggestion(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Suggestion, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/suggestions/{}/accept",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "accept_suggestion",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Reject a pending suggestion.
+///
+/// `POST /api/v1/suggestions/{id}/reject`
+pub async fn reject_suggestion(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Suggestion, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/suggestions/{}/reject",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "reject_suggestion",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Reply to a pending suggestion (the AI re-proposes once the AI subsystem exists).
+///
+/// `POST /api/v1/suggestions/{id}/reply`
+pub async fn reply_suggestion(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::ReplyRequest,
+) -> ::std::result::Result<types::Suggestion, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/suggestions/{}/reply",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "reply_suggestion",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Tasks of a view.
+///
+/// `GET /api/v1/tasks`
+pub async fn list_tasks(
+    client: &crate::Client,
+    view: ::std::option::Option<&types::TaskViewKind>,
+    entity: ::std::option::Option<::ulid::Ulid>,
+    note: ::std::option::Option<::ulid::Ulid>,
+) -> ::std::result::Result<types::TaskList, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/tasks"),
+        "list_tasks",
+    );
+    let request = request.authenticated();
+    let request = match &view {
+        ::std::option::Option::Some(value) => request.query("view", crate::param_string(value)?),
+        ::std::option::Option::None => request,
+    };
+    let request = match &entity {
+        ::std::option::Option::Some(value) => request.query("entity", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &note {
+        ::std::option::Option::Some(value) => request.query("note", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Create a task line (duplicate check unless `force`).
+///
+/// `POST /api/v1/tasks`
+pub async fn create_task(
+    client: &crate::Client,
+    body: &types::CreateTaskRequest,
+) -> ::std::result::Result<types::Task, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/tasks"),
+        "create_task",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Edit a task line in place (`If-Match`: the task's version).
+///
+/// `PATCH /api/v1/tasks/{id}`
+pub async fn patch_task(
+    client: &crate::Client,
+    id: &str,
+    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    body: &types::PatchTaskRequest,
+) -> ::std::result::Result<types::Task, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PATCH,
+        ::std::format!(
+            "/api/v1/tasks/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                (*value).to_owned()
+            })?
+        ),
+        "patch_task",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => {
+            request.header("If-Match", crate::param_string(value)?)
+        }
+        ::std::option::Option::None => request,
+    };
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Cancel a task.
+///
+/// `POST /api/v1/tasks/{id}/cancel`
+pub async fn cancel_task(
+    client: &crate::Client,
+    id: &str,
+    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+) -> ::std::result::Result<types::TaskTransitioned, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/tasks/{}/cancel",
+            crate::encode_path_segment(&{
+                let value = &id;
+                (*value).to_owned()
+            })?
+        ),
+        "cancel_task",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => {
+            request.header("If-Match", crate::param_string(value)?)
+        }
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Complete a task (a recurring task gets its next occurrence above the done line).
+///
+/// `POST /api/v1/tasks/{id}/complete`
+pub async fn complete_task(
+    client: &crate::Client,
+    id: &str,
+    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+) -> ::std::result::Result<types::TaskTransitioned, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/tasks/{}/complete",
+            crate::encode_path_segment(&{
+                let value = &id;
+                (*value).to_owned()
+            })?
+        ),
+        "complete_task",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => {
+            request.header("If-Match", crate::param_string(value)?)
+        }
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Reopen a done or cancelled task.
+///
+/// `POST /api/v1/tasks/{id}/reopen`
+pub async fn reopen_task(
+    client: &crate::Client,
+    id: &str,
+    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+) -> ::std::result::Result<types::TaskTransitioned, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/tasks/{}/reopen",
+            crate::encode_path_segment(&{
+                let value = &id;
+                (*value).to_owned()
+            })?
+        ),
+        "reopen_task",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => {
+            request.header("If-Match", crate::param_string(value)?)
+        }
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Permanently delete a trashed note and its sidecar (history keeps it).
+///
+/// `DELETE /api/v1/trash/{id}`
+pub async fn purge_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<(), crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::DELETE,
+        ::std::format!(
+            "/api/v1/trash/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "purge_note",
+    );
+    let request = request.authenticated();
+    client.send_empty(request).await
+}
+/// Restore a trashed note to its original path (or a free name next to it).
+///
+/// `POST /api/v1/trash/{id}/restore`
+pub async fn restore_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/trash/{}/restore",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "restore_note",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// The vault tree: folders, notes and other files (hidden folders excluded).
+///
+/// `GET /api/v1/tree`
+pub async fn get_tree(client: &crate::Client) -> ::std::result::Result<types::Tree, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/tree"),
+        "get_tree",
+    );
+    let request = request.authenticated();
+    client.send(request).await
 }

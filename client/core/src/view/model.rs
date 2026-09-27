@@ -12,7 +12,7 @@
 // sealed classes in Dart one to one.
 #![allow(clippy::large_enum_variant)]
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 
 // ---------------------------------------------------------------------------------------------
 // Shared pieces
@@ -407,6 +407,44 @@ pub struct TasksView {
     pub sections: TaskSections,
     /// Done and cancelled tasks, most recent first (≤ 50).
     pub done: Vec<TaskItem>,
+}
+
+/// A task to create (from the task editor).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskDraft {
+    /// The note to add it to (`None`: `tasks/Tasks.md`).
+    pub note_id: Option<String>,
+    /// Description (may contain wikilinks).
+    pub description: String,
+    /// 📅
+    pub due: Option<NaiveDate>,
+    /// ⏳
+    pub scheduled: Option<NaiveDate>,
+    /// 🔁 phrase (`every month on the 1st`).
+    pub recurrence: Option<String>,
+    /// Reminders (local wall-clock times).
+    pub reminders: Vec<NaiveDateTime>,
+    /// Priority (`highest` … `lowest`; `None` = normal).
+    pub priority: Option<String>,
+}
+
+/// Field edits of a task: `None` leaves a field unchanged; the `clear_*` flags remove it.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TaskPatch {
+    /// New description.
+    pub text: Option<String>,
+    /// New 📅.
+    pub due: Option<NaiveDate>,
+    /// Remove 📅.
+    pub clear_due: bool,
+    /// New 🔁 phrase.
+    pub recurrence: Option<String>,
+    /// Remove 🔁.
+    pub clear_recurrence: bool,
+    /// Replace all reminders.
+    pub reminders: Option<Vec<NaiveDateTime>>,
+    /// New priority (`normal` removes it).
+    pub priority: Option<String>,
 }
 
 /// Task detail.

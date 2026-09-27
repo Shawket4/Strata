@@ -35,7 +35,7 @@ fn parses_a_document_note() {
     assert_eq!(p.tasks.len(), 1);
     let t = &p.tasks[0];
     assert_eq!(t.block_id.as_deref(), Some("t-r1"));
-    assert_eq!(t.line_no, 21);
+    assert_eq!(t.line_no, 20);
     assert_eq!(t.description, "Renew");
     assert_eq!(t.due.map(|d| d.to_string()).as_deref(), Some("2027-03-01"));
     assert_eq!(t.reminders.len(), 1);

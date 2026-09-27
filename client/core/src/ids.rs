@@ -92,10 +92,10 @@ mod tests {
         let g = SeqIds::new(1_790_000_000_000);
         let a = g.ulid();
         let b = g.ulid();
-        assert_eq!(a.to_string(), "01K5DSSE000000000000000001");
-        assert_eq!(b.to_string(), "01K5DSSE000000000000000002");
+        assert_eq!(a.to_string(), "01M3250V000000000000000001");
+        assert_eq!(b.to_string(), "01M3250V000000000000000002");
         assert!(a < b);
-        assert_eq!(task_block_id(a), "t-01k5dsse000000000000000001");
+        assert_eq!(task_block_id(a), "t-01m3250v000000000000000001");
     }
 
     #[test]

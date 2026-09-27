@@ -186,8 +186,7 @@ pub struct TasksQuery {
 pub struct ReminderAt {
     /// Date.
     pub date: NaiveDate,
-    /// Time `HH:MM` (24 h).
-    #[schema(pattern = "^([01][0-9]|2[0-3]):[0-5][0-9]$")]
+    /// Time `HH:MM` (24 h, e.g. `09:00`).
     pub time: String,
 }
 

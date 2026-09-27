@@ -255,10 +255,174 @@
         ],
         "type": "object"
       },
+      "Backlink": {
+        "description": "One backlink.",
+        "properties": {
+          "anchor": {
+            "description": "Heading anchor of a body link.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "block_id": {
+            "description": "Block anchor of a body link.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "by": {
+            "description": "Relation provenance (`user` / `ai`), for relations.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "description": "AI confidence, for AI relations.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "source_id": {
+            "description": "Linking note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "source_path": {
+            "description": "Its path.",
+            "type": "string"
+          },
+          "source_title": {
+            "description": "Its title.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "source_path",
+          "source_title"
+        ],
+        "type": "object"
+      },
+      "BacklinkGroup": {
+        "description": "Backlinks of one kind.",
+        "properties": {
+          "items": {
+            "description": "Backlinks, by source path.",
+            "items": {
+              "$ref": "#/components/schemas/Backlink"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "`link`, `embed`, or a relation type (`related`, `part-of`, `people`, …).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "items"
+        ],
+        "type": "object"
+      },
+      "Backlinks": {
+        "description": "Body links and relations pointing at a note, grouped by kind.",
+        "properties": {
+          "groups": {
+            "description": "Groups: `link`, `embed`, then relation types alphabetically.",
+            "items": {
+              "$ref": "#/components/schemas/BacklinkGroup"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "groups"
+        ],
+        "type": "object"
+      },
       "Binary": {
         "description": "Raw bytes, carried as MessagePack `bin`.",
         "format": "binary",
         "type": "string"
+      },
+      "Capture": {
+        "description": "A saved capture.",
+        "properties": {
+          "duplicates": {
+            "description": "Items it resembles (it was saved anyway).",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateCandidate"
+            },
+            "type": "array"
+          },
+          "note": {
+            "$ref": "#/components/schemas/Note",
+            "description": "The inbox note (`inbox/YYYY-MM-DD-HHmmss.md`)."
+          },
+          "suggestion_id": {
+            "description": "The `duplicate` suggestion created for them, if any.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "note",
+          "duplicates"
+        ],
+        "type": "object"
+      },
+      "CaptureRequest": {
+        "description": "`POST /capture`.",
+        "properties": {
+          "text": {
+            "description": "The captured text (saved verbatim as the note body).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "CommitAuthor": {
+        "description": "Who made a commit.",
+        "enum": [
+          "user",
+          "ai",
+          "system"
+        ],
+        "type": "string"
+      },
+      "CommitReverted": {
+        "description": "Result of `POST /commits/{commit}/revert`.",
+        "properties": {
+          "commit": {
+            "description": "The new commit (absent if nothing had to change).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paths": {
+            "description": "Vault paths the revert changed, sorted.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "paths"
+        ],
+        "type": "object"
       },
       "ControlFrame": {
         "description": "`reset`: refetch state, then continue after `seq`. `end`: the stream finished.",
@@ -295,6 +459,308 @@
         ],
         "type": "object"
       },
+      "CopyKind": {
+        "description": "Copy kind of a document.",
+        "enum": [
+          "original",
+          "certified copy",
+          "copy",
+          "digital"
+        ],
+        "type": "string"
+      },
+      "CreateDocumentRequest": {
+        "description": "`POST /documents`.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "copy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CopyKind",
+                "description": "Copy kind."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "doc_type": {
+            "description": "`doc-type`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires": {
+            "description": "Expiry.",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "force": {
+            "description": "Create even if it looks like a duplicate.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated ID.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "tags": {
+            "description": "Tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "CreateEntityRequest": {
+        "description": "`POST /entities`.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases (both scripts).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "User fields: person `role`, `phone`, `email`; company `industry`, `website`;\ndocument `doc-type`, `copy`, `expires`; place `address`.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "force": {
+            "description": "Create even if it looks like a duplicate (records keep-both).",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated ID.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EntityKind",
+            "description": "Kind."
+          },
+          "name": {
+            "description": "Name (becomes the file name, sanitised; the exact name is kept as `title` if needed).",
+            "type": "string"
+          },
+          "parent_id": {
+            "description": "Places: the enclosing place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "description": "Tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "CreateNoteRequest": {
+        "description": "`POST /notes`.",
+        "properties": {
+          "content": {
+            "description": "Full content; `id`, `created` and `updated` are set by the server.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Create even if it looks like a duplicate (records keep-both).",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated ID (offline creates keep their IDs).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "description": "Vault path ending in `.md` (Obsidian-safe names, no hidden folders).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "type": "object"
+      },
+      "CreatePlaceRequest": {
+        "description": "`POST /places`.",
+        "properties": {
+          "address": {
+            "description": "Address (user-entered).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aliases": {
+            "description": "Aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "force": {
+            "description": "Create even if it looks like a duplicate.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated ID.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "parent_id": {
+            "description": "Enclosing place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "description": "Tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "CreateTaskRequest": {
+        "description": "`POST /tasks`.",
+        "properties": {
+          "due": {
+            "description": "📅",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "force": {
+            "description": "Create even if it looks like a duplicate (records keep-both).",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated block ID (`t-<ulid>`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "note_id": {
+            "description": "Home note (default `tasks/Tasks.md`, under a heading per month).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TaskPriority",
+                "description": "Priority."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recurrence": {
+            "description": "🔁 phrase in the Tasks plugin's language (`every month on the 1st`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reminders": {
+            "description": "Reminders.",
+            "items": {
+              "$ref": "#/components/schemas/ReminderAt"
+            },
+            "type": "array"
+          },
+          "scheduled": {
+            "description": "⏳",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "🛫",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "description": "Description (may contain `[[links]]` and `#tags`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
       "CreateUser": {
         "description": "`POST /admin/users` body: an active account, created by an admin.",
         "properties": {
@@ -320,6 +786,141 @@
           "password",
           "display_name",
           "role"
+        ],
+        "type": "object"
+      },
+      "CustodyEvent": {
+        "description": "A custody event (newest first in the history).",
+        "properties": {
+          "at": {
+            "description": "Date (midnight UTC of the resolved date).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "by": {
+            "description": "`user` / `ai`.",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "description": "Third party.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Event ID (stable across rebuilds).",
+            "format": "ulid",
+            "type": "string"
+          },
+          "person_id": {
+            "description": "Person.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "place_id": {
+            "description": "Place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_block_id": {
+            "description": "The cited block.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_note_id": {
+            "description": "The cited note.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/CustodyEventKind",
+            "description": "Type."
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "at",
+          "by"
+        ],
+        "type": "object"
+      },
+      "CustodyEventKind": {
+        "description": "Custody event type (§6.12).",
+        "enum": [
+          "stored-at",
+          "moved-to",
+          "handed-to",
+          "returned-by",
+          "sent-to",
+          "received-from",
+          "lost",
+          "found",
+          "destroyed"
+        ],
+        "type": "string"
+      },
+      "CustodyEventRequest": {
+        "description": "`POST /documents/{id}/custody`.",
+        "properties": {
+          "at": {
+            "description": "Date of the event.",
+            "format": "date",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "description": "Third party, person or company (required for `sent-to`, `received-from`).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "person_id": {
+            "description": "Person (required for `handed-to`, `returned-by`).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "place_id": {
+            "description": "Place (required for `stored-at`, `moved-to`).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_note_id": {
+            "description": "The note stating the event (cited); the document itself when absent.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/CustodyEventKind",
+            "description": "Type."
+          }
+        },
+        "required": [
+          "type",
+          "at"
         ],
         "type": "object"
       },
@@ -380,6 +981,170 @@
         ],
         "type": "string"
       },
+      "Direction": {
+        "description": "Direction of an entity relation.",
+        "enum": [
+          "out",
+          "in"
+        ],
+        "type": "string"
+      },
+      "Document": {
+        "description": "The document page.",
+        "properties": {
+          "copies": {
+            "description": "Copies of this document.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "custody": {
+            "description": "Custody history, newest first.",
+            "items": {
+              "$ref": "#/components/schemas/CustodyEvent"
+            },
+            "type": "array"
+          },
+          "document": {
+            "$ref": "#/components/schemas/DocumentSummary",
+            "description": "Properties as in lists."
+          },
+          "location_path": {
+            "description": "Place breadcrumb, outermost first (the location last).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "note": {
+            "$ref": "#/components/schemas/Note",
+            "description": "The note."
+          }
+        },
+        "required": [
+          "document",
+          "custody",
+          "location_path",
+          "copies",
+          "note"
+        ],
+        "type": "object"
+      },
+      "DocumentList": {
+        "description": "Documents.",
+        "properties": {
+          "items": {
+            "description": "By name.",
+            "items": {
+              "$ref": "#/components/schemas/DocumentSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "DocumentStatus": {
+        "description": "Where a document is, per its newest custody event.",
+        "enum": [
+          "stored",
+          "checked-out",
+          "with-third-party",
+          "lost",
+          "destroyed"
+        ],
+        "type": "string"
+      },
+      "DocumentSummary": {
+        "description": "A document in a list.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "copy": {
+            "$ref": "#/components/schemas/CopyKind",
+            "description": "Copy kind."
+          },
+          "copy_of": {
+            "description": "The document this is a copy of.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "doc_type": {
+            "description": "`doc-type` (contract, id, licence, deed, invoice, certificate, other, or free text).",
+            "type": "string"
+          },
+          "expires": {
+            "description": "Expiry date.",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "holder_id": {
+            "description": "Current holder.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Document (note) ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "last_holder_id": {
+            "description": "Last holder.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "location_id": {
+            "description": "Current place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Note path.",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DocumentStatus",
+            "description": "Status."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "path",
+          "aliases",
+          "doc_type",
+          "copy",
+          "status"
+        ],
+        "type": "object"
+      },
       "DuplicateCandidate": {
         "description": "An existing item a create request resembles (`409 duplicate_candidates`, §7.5).",
         "properties": {
@@ -424,6 +1189,275 @@
         ],
         "type": "object"
       },
+      "Entity": {
+        "description": "The aggregated entity page.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "documents": {
+            "$ref": "#/components/schemas/EntityDocuments",
+            "description": "Related documents."
+          },
+          "id": {
+            "description": "Entity (note) ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EntityKind",
+            "description": "Kind."
+          },
+          "mention_count": {
+            "description": "Total mentioning notes.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "mentions": {
+            "description": "Mentioning notes, newest first (first 50).",
+            "items": {
+              "$ref": "#/components/schemas/MentioningNote"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "Display name.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Note path.",
+            "type": "string"
+          },
+          "properties": {
+            "description": "Frontmatter properties.",
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            },
+            "type": "array"
+          },
+          "relations": {
+            "description": "Relations to and from other notes (not counting `people`/`companies`/`concepts`).",
+            "items": {
+              "$ref": "#/components/schemas/EntityRelation"
+            },
+            "type": "array"
+          },
+          "sections": {
+            "description": "Level-2 sections in body order (AI sections and the user's `## Notes`).",
+            "items": {
+              "$ref": "#/components/schemas/EntitySection"
+            },
+            "type": "array"
+          },
+          "tags": {
+            "description": "Tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "version": {
+            "description": "Note version (for `If-Match`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "path",
+          "version",
+          "aliases",
+          "tags",
+          "properties",
+          "sections",
+          "mentions",
+          "mention_count",
+          "relations",
+          "documents"
+        ],
+        "type": "object"
+      },
+      "EntityDocuments": {
+        "description": "Documents related to an entity.",
+        "properties": {
+          "concerning": {
+            "description": "Concerning the entity (`companies:` / `people:`).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "holds": {
+            "description": "Held now.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "last_handled": {
+            "description": "Last handled.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "holds",
+          "last_handled",
+          "concerning"
+        ],
+        "type": "object"
+      },
+      "EntityKind": {
+        "description": "Kind of an entity.",
+        "enum": [
+          "person",
+          "company",
+          "document",
+          "place"
+        ],
+        "type": "string"
+      },
+      "EntityList": {
+        "description": "Entities.",
+        "properties": {
+          "items": {
+            "description": "Best match first (by name without a query).",
+            "items": {
+              "$ref": "#/components/schemas/EntitySummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "EntityRelation": {
+        "description": "A relation of an entity.",
+        "properties": {
+          "by": {
+            "description": "`user` / `ai`.",
+            "type": "string"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/Direction",
+            "description": "Direction."
+          },
+          "other_id": {
+            "description": "The other note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "other_title": {
+            "description": "Its title.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Relation type.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "other_id",
+          "other_title",
+          "direction",
+          "by"
+        ],
+        "type": "object"
+      },
+      "EntitySection": {
+        "description": "A section of an entity note.",
+        "properties": {
+          "content": {
+            "description": "Its own content (trimmed).",
+            "type": "string"
+          },
+          "title": {
+            "description": "Heading (`Summary`, `Insights`, `Open items`, `Timeline`, `Custody`, `Notes`, …).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "content"
+        ],
+        "type": "object"
+      },
+      "EntitySummary": {
+        "description": "One entity in a list.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases (both scripts).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Entity (note) ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "industry": {
+            "description": "Company industry.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EntityKind",
+            "description": "Kind."
+          },
+          "name": {
+            "description": "Display name.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Note path.",
+            "type": "string"
+          },
+          "role": {
+            "description": "Person role.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "score": {
+            "description": "Match score for `q` (0 without a query).",
+            "format": "double",
+            "type": "number"
+          },
+          "tags": {
+            "description": "Tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "path",
+          "aliases",
+          "tags",
+          "score"
+        ],
+        "type": "object"
+      },
       "ErrorFrame": {
         "description": "Terminal stream failure.",
         "properties": {
@@ -458,6 +1492,16 @@
         ],
         "type": "object"
       },
+      "FileChange": {
+        "description": "How a commit changed the file.",
+        "enum": [
+          "added",
+          "modified",
+          "renamed",
+          "deleted"
+        ],
+        "type": "string"
+      },
       "Health": {
         "description": "Liveness response.",
         "properties": {
@@ -477,6 +1521,151 @@
           "ok"
         ],
         "type": "string"
+      },
+      "History": {
+        "description": "A note's history, newest first (follows moves and trash).",
+        "properties": {
+          "revisions": {
+            "description": "Revisions.",
+            "items": {
+              "$ref": "#/components/schemas/Revision"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "revisions"
+        ],
+        "type": "object"
+      },
+      "ImportReport": {
+        "description": "Result of an import.",
+        "properties": {
+          "commit": {
+            "description": "The import commit (revert it with `POST /commits/{commit}/revert` to undo the\nimport); absent if nothing changed.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ids_assigned": {
+            "description": "Notes that were given an ID (or task block IDs).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "imported": {
+            "description": "Vault paths written, sorted.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "skipped": {
+            "description": "Entries skipped (hidden files such as `.obsidian/`, unsafe names), sorted.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "imported",
+          "ids_assigned",
+          "skipped"
+        ],
+        "type": "object"
+      },
+      "Inbox": {
+        "description": "The inbox, newest first.",
+        "properties": {
+          "items": {
+            "description": "Items.",
+            "items": {
+              "$ref": "#/components/schemas/InboxItem"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "InboxItem": {
+        "description": "One inbox note with its pending suggestions.",
+        "properties": {
+          "note": {
+            "$ref": "#/components/schemas/Note",
+            "description": "The inbox note."
+          },
+          "suggestions": {
+            "description": "Its pending suggestions.",
+            "items": {
+              "$ref": "#/components/schemas/Suggestion"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "note",
+          "suggestions"
+        ],
+        "type": "object"
+      },
+      "Integrity": {
+        "description": "Integrity warnings, newest first.",
+        "properties": {
+          "warnings": {
+            "description": "Warnings (at most 500).",
+            "items": {
+              "$ref": "#/components/schemas/IntegrityWarning"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "warnings"
+        ],
+        "type": "object"
+      },
+      "IntegrityWarning": {
+        "description": "One integrity warning.",
+        "properties": {
+          "created": {
+            "description": "When.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "detail": {
+            "description": "What happened (content-free).",
+            "type": "string"
+          },
+          "id": {
+            "description": "Warning ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "`temp_file_removed`, `uncommitted_changes`, `id_assigned`, `out_of_band_edit`,\n`missing_file`, `sidecar_repaired`, `orphan_sidecar_removed` or `index_repaired`.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Vault path concerned.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "detail",
+          "created"
+        ],
+        "type": "object"
       },
       "LoginRequest": {
         "description": "`POST /auth/login` body.",
@@ -594,6 +1783,455 @@
         ],
         "type": "object"
       },
+      "MentioningNote": {
+        "description": "A note mentioning an entity.",
+        "properties": {
+          "id": {
+            "description": "Note ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "path": {
+            "description": "Path.",
+            "type": "string"
+          },
+          "snippet": {
+            "description": "The first line linking to the entity.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Title.",
+            "type": "string"
+          },
+          "updated": {
+            "description": "Last update.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "title",
+          "updated"
+        ],
+        "type": "object"
+      },
+      "MentioningNotes": {
+        "description": "Notes mentioning an entity, newest first.",
+        "properties": {
+          "items": {
+            "description": "Notes.",
+            "items": {
+              "$ref": "#/components/schemas/MentioningNote"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "MergeRequest": {
+        "description": "`POST /entities/{id}/merge`.",
+        "properties": {
+          "into_id": {
+            "description": "The surviving entity (same kind).",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "into_id"
+        ],
+        "type": "object"
+      },
+      "MoveNoteRequest": {
+        "description": "`POST /notes/{id}/move`.",
+        "properties": {
+          "new_path": {
+            "description": "New vault path ending in `.md`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_path"
+        ],
+        "type": "object"
+      },
+      "Note": {
+        "description": "A note with its content (`version` is the value for `If-Match`).",
+        "properties": {
+          "content": {
+            "description": "The whole file (frontmatter and body).",
+            "type": "string"
+          },
+          "created": {
+            "description": "Frontmatter `created`.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Note ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NoteKind",
+            "description": "Kind."
+          },
+          "path": {
+            "description": "Vault path (`.trash/…` while deleted).",
+            "type": "string"
+          },
+          "properties": {
+            "description": "Parsed frontmatter, in file order (empty when it is not readable).",
+            "items": {
+              "$ref": "#/components/schemas/Property"
+            },
+            "type": "array"
+          },
+          "title": {
+            "description": "Display title (frontmatter `title`, else the file name).",
+            "type": "string"
+          },
+          "trashed": {
+            "description": "In the trash.",
+            "type": "boolean"
+          },
+          "updated": {
+            "description": "Frontmatter `updated`.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "version": {
+            "description": "Content hash (`sha256:<hex>`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "title",
+          "kind",
+          "content",
+          "version",
+          "properties",
+          "created",
+          "updated",
+          "trashed"
+        ],
+        "type": "object"
+      },
+      "NoteKind": {
+        "description": "Kind of a note.",
+        "enum": [
+          "note",
+          "concept",
+          "person",
+          "company",
+          "document",
+          "place"
+        ],
+        "type": "string"
+      },
+      "NoteRevision": {
+        "description": "A note as of a commit.",
+        "properties": {
+          "commit": {
+            "description": "Commit ID.",
+            "type": "string"
+          },
+          "content": {
+            "description": "Content in that commit.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Path in that commit.",
+            "type": "string"
+          },
+          "version": {
+            "description": "Version (hash) of that content.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commit",
+          "path",
+          "content",
+          "version"
+        ],
+        "type": "object"
+      },
+      "PatchDocumentRequest": {
+        "description": "`PATCH /documents/{id}` (location, holder and status change only through custody\nevents).",
+        "properties": {
+          "aliases": {
+            "description": "Replaces the aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "clear_expires": {
+            "description": "Remove the expiry.",
+            "type": "boolean"
+          },
+          "copy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CopyKind",
+                "description": "Copy kind."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "doc_type": {
+            "description": "`doc-type`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires": {
+            "description": "Expiry.",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "force": {
+            "description": "Save new aliases even if they match other documents.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "New name (rename; links rewritten).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "description": "Replaces the tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "PatchEntityRequest": {
+        "description": "`PATCH /entities/{id}`; absent fields are unchanged.",
+        "properties": {
+          "aliases": {
+            "description": "Replaces the aliases (new aliases run the duplicate check).",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "clear_parent": {
+            "description": "Places: remove the enclosing place.",
+            "type": "boolean"
+          },
+          "force": {
+            "description": "Save new aliases even if they match other entities (records keep-both).",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "New name (renames the note; every link is rewritten in the same commit).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parent_id": {
+            "description": "Places: the new enclosing place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "set_fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "User fields to set.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "tags": {
+            "description": "Replaces the tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "unset_fields": {
+            "description": "User fields to remove.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "PatchPlaceRequest": {
+        "description": "`PATCH /places/{id}`.",
+        "properties": {
+          "address": {
+            "description": "Address.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aliases": {
+            "description": "Replaces the aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "clear_address": {
+            "description": "Remove the address.",
+            "type": "boolean"
+          },
+          "clear_parent": {
+            "description": "Remove the enclosing place.",
+            "type": "boolean"
+          },
+          "force": {
+            "description": "Save new aliases even if they match other places.",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "New name (rename; links rewritten).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "parent_id": {
+            "description": "New enclosing place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "description": "Replaces the tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "PatchTaskRequest": {
+        "description": "`PATCH /tasks/{id}`: set fields are changed in place; `clear` removes fields.",
+        "properties": {
+          "clear": {
+            "description": "Fields to remove.",
+            "items": {
+              "$ref": "#/components/schemas/TaskField"
+            },
+            "type": "array"
+          },
+          "due": {
+            "description": "📅",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TaskPriority",
+                "description": "Priority."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recurrence": {
+            "description": "🔁",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reminders": {
+            "description": "Replaces the reminders.",
+            "items": {
+              "$ref": "#/components/schemas/ReminderAt"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "scheduled": {
+            "description": "⏳",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "🛫",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "description": "New description.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "PendingAccount": {
         "description": "An account awaiting approval.",
         "properties": {
@@ -620,6 +2258,104 @@
           "username",
           "display_name",
           "status"
+        ],
+        "type": "object"
+      },
+      "Place": {
+        "description": "The place page.",
+        "properties": {
+          "ancestors": {
+            "description": "Enclosing places, nearest first.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "children": {
+            "description": "Places directly inside.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "documents": {
+            "description": "Documents here or in any place nested inside.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "note": {
+            "$ref": "#/components/schemas/Note",
+            "description": "The note."
+          },
+          "place": {
+            "$ref": "#/components/schemas/PlaceSummary",
+            "description": "The place."
+          }
+        },
+        "required": [
+          "place",
+          "ancestors",
+          "children",
+          "documents",
+          "note"
+        ],
+        "type": "object"
+      },
+      "PlaceList": {
+        "description": "Places.",
+        "properties": {
+          "items": {
+            "description": "By name.",
+            "items": {
+              "$ref": "#/components/schemas/PlaceSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "PlaceSummary": {
+        "description": "A place in a list.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Place (note) ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "parent_id": {
+            "description": "Enclosing place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "description": "Note path.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "path",
+          "aliases"
         ],
         "type": "object"
       },
@@ -709,6 +2445,105 @@
         ],
         "type": "object"
       },
+      "Property": {
+        "description": "One frontmatter property.",
+        "properties": {
+          "key": {
+            "description": "Key.",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/PropertyValueDto",
+            "description": "Value."
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object"
+      },
+      "PropertyValueDto": {
+        "description": "A frontmatter property value.",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "description": "`key:` with no value.",
+            "properties": {
+              "type": {
+                "enum": [
+                  "null"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A scalar (numbers and booleans keep their source spelling).",
+            "properties": {
+              "type": {
+                "enum": [
+                  "text"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "description": "The text.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "value",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A flat list of scalars (relations are wikilink strings).",
+            "properties": {
+              "items": {
+                "description": "The items.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": {
+                "enum": [
+                  "list"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "items",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A nested value (read the raw content).",
+            "properties": {
+              "type": {
+                "enum": [
+                  "other"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "RefreshRequest": {
         "description": "`POST /auth/refresh` body.",
         "properties": {
@@ -722,6 +2557,183 @@
         ],
         "type": "object"
       },
+      "RelationRef": {
+        "description": "Identifies one edge.",
+        "properties": {
+          "dst_id": {
+            "description": "Target note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "src_id": {
+            "description": "Source note (the edge is stored in its frontmatter).",
+            "format": "ulid",
+            "type": "string"
+          },
+          "type": {
+            "description": "Relation type: `related`, `part-of`, `supports`, `contradicts`, `follows-up`,\n`duplicates`, `concepts`, `people`, `companies`, an entity relation (`works-at`, …) or\n`copy-of`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "src_id",
+          "dst_id",
+          "type"
+        ],
+        "type": "object"
+      },
+      "RelationResult": {
+        "description": "An edge after a change.",
+        "properties": {
+          "changed": {
+            "description": "`POST`: false if it already existed. `DELETE`: true if it was an AI edge and is now\nrecorded as rejected.",
+            "type": "boolean"
+          },
+          "dst_id": {
+            "description": "Target note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "src_id": {
+            "description": "Source note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "type": {
+            "description": "Type.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "src_id",
+          "dst_id",
+          "type",
+          "changed"
+        ],
+        "type": "object"
+      },
+      "ReminderAt": {
+        "description": "A reminder: a wall-clock time in the user's time zone.",
+        "properties": {
+          "date": {
+            "description": "Date.",
+            "format": "date",
+            "type": "string"
+          },
+          "time": {
+            "description": "Time `HH:MM` (24 h, e.g. `09:00`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "time"
+        ],
+        "type": "object"
+      },
+      "ReplyAuthorDto": {
+        "description": "Who wrote a reply.",
+        "enum": [
+          "user",
+          "ai"
+        ],
+        "type": "string"
+      },
+      "ReplyRequest": {
+        "description": "`POST /suggestions/{id}/reply`.",
+        "properties": {
+          "body": {
+            "description": "The reply (\"no, the Petrol Arrows one\").",
+            "type": "string"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "type": "object"
+      },
+      "RetypeRelation": {
+        "description": "`PATCH /relations`.",
+        "properties": {
+          "dst_id": {
+            "description": "Target note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "new_type": {
+            "description": "New type.",
+            "type": "string"
+          },
+          "src_id": {
+            "description": "Source note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "type": {
+            "description": "Current type.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "src_id",
+          "dst_id",
+          "type",
+          "new_type"
+        ],
+        "type": "object"
+      },
+      "RevertNoteRequest": {
+        "description": "`POST /notes/{id}/revert`.",
+        "properties": {
+          "commit": {
+            "description": "A commit from the note's history.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commit"
+        ],
+        "type": "object"
+      },
+      "Revision": {
+        "description": "A commit that touched the note.",
+        "properties": {
+          "at": {
+            "description": "When.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "author": {
+            "$ref": "#/components/schemas/CommitAuthor",
+            "description": "Who made it."
+          },
+          "change": {
+            "$ref": "#/components/schemas/FileChange",
+            "description": "How it changed the note."
+          },
+          "commit": {
+            "description": "Commit ID (40 hex characters).",
+            "type": "string"
+          },
+          "message": {
+            "description": "Commit message.",
+            "type": "string"
+          },
+          "path": {
+            "description": "The note's path in that commit.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "commit",
+          "message",
+          "author",
+          "at",
+          "path",
+          "change"
+        ],
+        "type": "object"
+      },
       "Role": {
         "description": "Account role.",
         "enum": [
@@ -729,6 +2741,73 @@
           "member"
         ],
         "type": "string"
+      },
+      "SearchHit": {
+        "description": "One hit.",
+        "properties": {
+          "id": {
+            "description": "Note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NoteKind",
+            "description": "Kind."
+          },
+          "path": {
+            "description": "Path.",
+            "type": "string"
+          },
+          "score": {
+            "description": "Rank (higher is better).",
+            "format": "double",
+            "type": "number"
+          },
+          "snippet": {
+            "description": "The first body line matching the query.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Title.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "title",
+          "kind",
+          "score"
+        ],
+        "type": "object"
+      },
+      "SearchMode": {
+        "description": "Search mode.",
+        "enum": [
+          "keyword",
+          "semantic",
+          "hybrid"
+        ],
+        "type": "string"
+      },
+      "SearchResults": {
+        "description": "Search results, best first.",
+        "properties": {
+          "hits": {
+            "description": "Hits.",
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "hits"
+        ],
+        "type": "object"
       },
       "SettableStatus": {
         "description": "Status an admin can set directly.",
@@ -770,6 +2849,483 @@
           "end"
         ],
         "type": "string"
+      },
+      "Suggestion": {
+        "description": "A suggestion.",
+        "properties": {
+          "created": {
+            "description": "Created.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "decided_at": {
+            "description": "Accepted/rejected at.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Suggestion ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Kind (`duplicate`; AI kinds from Phase 4).",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "The note it concerns.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/SuggestionPayload",
+            "description": "What it proposes."
+          },
+          "replies": {
+            "description": "Thread.",
+            "items": {
+              "$ref": "#/components/schemas/SuggestionReply"
+            },
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SuggestionStatus",
+            "description": "Status."
+          },
+          "updated": {
+            "description": "Last change.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "payload",
+          "replies",
+          "created",
+          "updated"
+        ],
+        "type": "object"
+      },
+      "SuggestionPayload": {
+        "description": "What a suggestion proposes.",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "description": "The note resembles existing items; accepting keeps both.",
+            "properties": {
+              "candidates": {
+                "description": "The items it resembles.",
+                "items": {
+                  "$ref": "#/components/schemas/DuplicateCandidate"
+                },
+                "type": "array"
+              },
+              "type": {
+                "enum": [
+                  "duplicate"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "candidates",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A kind this version does not describe (MessagePack as stored).",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/Binary",
+                "description": "The raw payload."
+              },
+              "type": {
+                "enum": [
+                  "opaque"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SuggestionReply": {
+        "description": "One reply in a suggestion thread.",
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/ReplyAuthorDto",
+            "description": "Author."
+          },
+          "body": {
+            "description": "Text.",
+            "type": "string"
+          },
+          "created": {
+            "description": "When.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Reply ID.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "author",
+          "body",
+          "created"
+        ],
+        "type": "object"
+      },
+      "SuggestionStatus": {
+        "description": "Suggestion status.",
+        "enum": [
+          "pending",
+          "accepted",
+          "rejected",
+          "superseded"
+        ],
+        "type": "string"
+      },
+      "Suggestions": {
+        "description": "Suggestions.",
+        "properties": {
+          "items": {
+            "description": "Oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/Suggestion"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "Task": {
+        "description": "A task.",
+        "properties": {
+          "done_at": {
+            "description": "✅ date.",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due": {
+            "description": "📅",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Block ID (`t-<ulid>`).",
+            "type": "string"
+          },
+          "line": {
+            "description": "The whole checklist line.",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "The note holding the line.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "note_path": {
+            "description": "Its path.",
+            "type": "string"
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TaskPriority",
+                "description": "Priority."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recurrence": {
+            "description": "🔁 phrase, verbatim.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recurrence_understood": {
+            "description": "False when the phrase is outside the supported grammar (kept verbatim, flagged).",
+            "type": "boolean"
+          },
+          "reminders": {
+            "description": "Reminder instants (from `(@…)` in the user's time zone).",
+            "items": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "rrule": {
+            "description": "Compiled RFC 5545 rule.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "scheduled": {
+            "description": "⏳",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "🛫",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus",
+            "description": "Status."
+          },
+          "text": {
+            "description": "Description (links and tags kept, signifiers removed).",
+            "type": "string"
+          },
+          "version": {
+            "description": "Version for `If-Match` (hash of the line).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "note_id",
+          "note_path",
+          "text",
+          "line",
+          "version",
+          "status",
+          "recurrence_understood",
+          "reminders"
+        ],
+        "type": "object"
+      },
+      "TaskField": {
+        "description": "A field `PATCH /tasks/{id}` can remove.",
+        "enum": [
+          "due",
+          "scheduled",
+          "start",
+          "recurrence",
+          "priority",
+          "reminders"
+        ],
+        "type": "string"
+      },
+      "TaskList": {
+        "description": "Tasks.",
+        "properties": {
+          "items": {
+            "description": "In the view's order.",
+            "items": {
+              "$ref": "#/components/schemas/Task"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "TaskPriority": {
+        "description": "Priority (Tasks plugin signifiers 🔺⏫🔼🔽⏬; absent = normal).",
+        "enum": [
+          "highest",
+          "high",
+          "medium",
+          "low",
+          "lowest"
+        ],
+        "type": "string"
+      },
+      "TaskStatus": {
+        "description": "Task status.",
+        "enum": [
+          "open",
+          "done",
+          "cancelled"
+        ],
+        "type": "string"
+      },
+      "TaskTransitioned": {
+        "description": "Result of a transition.",
+        "properties": {
+          "next": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Task",
+                "description": "Completing a recurring task: the next occurrence (written above it)."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "task": {
+            "$ref": "#/components/schemas/Task",
+            "description": "The task after the transition."
+          }
+        },
+        "required": [
+          "task"
+        ],
+        "type": "object"
+      },
+      "TaskViewKind": {
+        "description": "List view.",
+        "enum": [
+          "today",
+          "upcoming",
+          "overdue",
+          "recurring",
+          "done",
+          "all"
+        ],
+        "type": "string"
+      },
+      "Tree": {
+        "description": "The vault tree (hidden folders excluded), sorted by path.",
+        "properties": {
+          "entries": {
+            "description": "Entries.",
+            "items": {
+              "$ref": "#/components/schemas/TreeItem"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "type": "object"
+      },
+      "TreeItem": {
+        "description": "One entry of the vault tree.",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "description": "A folder.",
+            "properties": {
+              "path": {
+                "description": "Path.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "folder"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A note.",
+            "properties": {
+              "id": {
+                "description": "Note ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/NoteKind",
+                "description": "Kind."
+              },
+              "path": {
+                "description": "Path.",
+                "type": "string"
+              },
+              "title": {
+                "description": "Title.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "note"
+                ],
+                "type": "string"
+              },
+              "updated": {
+                "description": "Last update.",
+                "format": "date-time",
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "id",
+              "title",
+              "kind",
+              "updated",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Any other file (attachment, canvas).",
+            "properties": {
+              "path": {
+                "description": "Path.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "file"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
       },
       "UiLanguage": {
         "description": "UI language of the app.",
@@ -855,6 +3411,19 @@
             ]
           }
         },
+        "type": "object"
+      },
+      "UpdateNoteRequest": {
+        "description": "`PUT /notes/{id}`.",
+        "properties": {
+          "content": {
+            "description": "Full new content (the `id` property cannot change).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
         "type": "object"
       },
       "UpdateUser": {
@@ -1648,6 +4217,115 @@
         ]
       }
     },
+    "/api/v1/capture": {
+      "post": {
+        "operationId": "capture",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Capture"
+                }
+              }
+            },
+            "description": "Saved; one `user: capture <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Capture text into the inbox (saved before anything else, never refused as a duplicate).",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/commits/{commit}/revert": {
+      "post": {
+        "operationId": "revert_commit",
+        "parameters": [
+          {
+            "description": "Commit ID (40 hex characters).",
+            "in": "path",
+            "name": "commit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommitReverted"
+                }
+              }
+            },
+            "description": "Reverted in one new commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`revert_conflict`: later changes conflict with the revert."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Revert a whole commit (typically an `ai:` commit) on top of the current state.",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
     "/api/v1/devices": {
       "get": {
         "operationId": "list_devices",
@@ -1797,6 +4475,824 @@
         ]
       }
     },
+    "/api/v1/documents": {
+      "get": {
+        "operationId": "list_documents",
+        "parameters": [
+          {
+            "description": "Name or alias, any script.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only documents in this place or any place nested inside it.",
+            "in": "query",
+            "name": "place",
+            "required": false,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only documents this person holds now.",
+            "in": "query",
+            "name": "holder",
+            "required": false,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only this status.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/DocumentStatus"
+            }
+          },
+          {
+            "description": "Only documents expiring strictly before this date.",
+            "in": "query",
+            "name": "expiring_before",
+            "required": false,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentList"
+                }
+              }
+            },
+            "description": "Documents."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Documents, filtered (`place` includes nested places).",
+        "tags": [
+          "entities"
+        ]
+      },
+      "post": {
+        "operationId": "create_document",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Create a document (duplicate check unless `force`).",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/documents/{id}": {
+      "get": {
+        "operationId": "get_document",
+        "parameters": [
+          {
+            "description": "Document ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            },
+            "description": "The document."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "A document with its custody history, location breadcrumb and copies.",
+        "tags": [
+          "entities"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_document",
+        "parameters": [
+          {
+            "description": "Document ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: the note's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates`, `version_conflict` or `path_taken`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Edit a document's user fields (not location/holder/status: those follow custody events).",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/documents/{id}/custody": {
+      "post": {
+        "operationId": "add_custody_event",
+        "parameters": [
+          {
+            "description": "Document ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/CustodyEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Document"
+                }
+              }
+            },
+            "description": "Recorded in one `user: custody <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Record a manual custody event (`by: user`); the frontmatter follows the newest event.",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/entities": {
+      "get": {
+        "operationId": "list_entities",
+        "parameters": [
+          {
+            "description": "Only this kind.",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/EntityKind"
+            }
+          },
+          {
+            "description": "Name or alias, any script (normalised, substring or trigram match).",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only entities with this tag.",
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Maximum results (1–500, default 100).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityList"
+                }
+              }
+            },
+            "description": "Entities."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Entities of any or one kind, matching `q` in any script.",
+        "tags": [
+          "entities"
+        ]
+      },
+      "post": {
+        "operationId": "create_entity",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEntityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entity"
+                }
+              }
+            },
+            "description": "Created; one `user: create <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates` (resend with `force`)."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Create a person, company, document or place (duplicate check unless `force`).",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/entities/{id}": {
+      "get": {
+        "operationId": "get_entity",
+        "parameters": [
+          {
+            "description": "Entity ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entity"
+                }
+              }
+            },
+            "description": "The entity."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The aggregated entity page.",
+        "tags": [
+          "entities"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_entity",
+        "parameters": [
+          {
+            "description": "Entity ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: the note's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchEntityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entity"
+                }
+              }
+            },
+            "description": "Updated in one commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates` (new aliases), `version_conflict` or `path_taken`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Edit user fields, aliases, tags or the name (contact fields are only ever user-written).",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/entities/{id}/documents": {
+      "get": {
+        "operationId": "get_entity_documents",
+        "parameters": [
+          {
+            "description": "Entity ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntityDocuments"
+                }
+              }
+            },
+            "description": "Related documents."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Documents the entity holds now, last handled, or that concern it.",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/entities/{id}/merge": {
+      "post": {
+        "operationId": "merge_entity",
+        "parameters": [
+          {
+            "description": "The entity merged away (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entity"
+                }
+              }
+            },
+            "description": "The survivor."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Merge this entity into another of the same kind (links rewritten, aliases unioned, `##\nNotes` moved under a dated sub-heading, this one trashed — one commit).",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/entities/{id}/notes": {
+      "get": {
+        "operationId": "get_entity_notes",
+        "parameters": [
+          {
+            "description": "Entity ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/MentioningNotes"
+                }
+              }
+            },
+            "description": "Mentioning notes."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Notes mentioning the entity, newest first, with the mention line.",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/export": {
+      "get": {
+        "operationId": "export_vault",
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "description": "A zip archive.",
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The vault; the same vault always exports to the same bytes."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The vault as a zip (with `.meta/`, without `.git/`, plus `.obsidian/app.json`).",
+        "tags": [
+          "vault"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health",
@@ -1824,6 +5320,141 @@
         "summary": "Liveness probe.",
         "tags": [
           "system"
+        ]
+      }
+    },
+    "/api/v1/import": {
+      "post": {
+        "operationId": "import_vault",
+        "requestBody": {
+          "content": {
+            "application/zip": {
+              "schema": {
+                "description": "A zip archive.",
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "description": "A zip of an Obsidian vault.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReport"
+                }
+              }
+            },
+            "description": "Imported; one `user: import <n> files` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`payload_too_large`: the archive, an entry, or their total is too large."
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_archive`: not a zip, or an entry is a symlink, absolute, or contains `..`."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Import an Obsidian vault zip in one revertible commit.",
+        "tags": [
+          "vault"
+        ]
+      }
+    },
+    "/api/v1/inbox": {
+      "get": {
+        "operationId": "get_inbox",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Inbox"
+                }
+              }
+            },
+            "description": "The inbox."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Inbox notes, newest first, with their pending suggestions.",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/integrity": {
+      "get": {
+        "operationId": "get_integrity",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Integrity"
+                }
+              }
+            },
+            "description": "Warnings."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Integrity warnings raised by reconciliation, newest first.",
+        "tags": [
+          "vault"
         ]
       }
     },
@@ -1987,6 +5618,1904 @@
           "account"
         ]
       }
+    },
+    "/api/v1/notes": {
+      "post": {
+        "operationId": "create_note",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "Created; one `user: create <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates` (resend with `force`) or `path_taken`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_name` (path) or `invalid_body`."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Create a note (duplicate check unless `force`).",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/notes/by-path": {
+      "get": {
+        "operationId": "get_note_by_path",
+        "parameters": [
+          {
+            "description": "Vault path, e.g. `notes/Pricing.md`.",
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "The note."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "A live note by vault path.",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/notes/{id}": {
+      "delete": {
+        "operationId": "delete_note",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "Trashed; one `user: delete <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Soft-delete a note (moved to `.trash/`).",
+        "tags": [
+          "notes"
+        ]
+      },
+      "get": {
+        "operationId": "get_note",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "The note."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "A note (live or trashed) with its content and version.",
+        "tags": [
+          "notes"
+        ]
+      },
+      "put": {
+        "operationId": "update_note",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The note's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "Updated; one `user: update <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version_conflict` with `current_version`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Replace a note's content (`If-Match`: its current version).",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/notes/{id}/backlinks": {
+      "get": {
+        "operationId": "get_backlinks",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Backlinks"
+                }
+              }
+            },
+            "description": "Backlinks."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Body links and relations pointing at a note, grouped by kind.",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/notes/{id}/history": {
+      "get": {
+        "operationId": "get_note_history",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/History"
+                }
+              }
+            },
+            "description": "Commits that touched the note."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The git history of a note, newest first.",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/notes/{id}/history/{commit}": {
+      "get": {
+        "operationId": "get_note_revision",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Commit ID (40 hex characters) from the note's history.",
+            "in": "path",
+            "name": "commit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteRevision"
+                }
+              }
+            },
+            "description": "The note in that commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "A note's content as of a commit in its history.",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/notes/{id}/move": {
+      "post": {
+        "operationId": "move_note",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: the note's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "Moved; one `user: move <old> -> <new>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`path_taken` or `version_conflict`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Move or rename a note: every inbound link and relation is rewritten in the same commit.",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/notes/{id}/revert": {
+      "post": {
+        "operationId": "revert_note",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/RevertNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "Reverted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Restore a note's content from a commit in its history (a new `user: revert` commit).",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/places": {
+      "get": {
+        "operationId": "list_places",
+        "parameters": [
+          {
+            "description": "Name or alias, any script.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceList"
+                }
+              }
+            },
+            "description": "Places."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Places.",
+        "tags": [
+          "entities"
+        ]
+      },
+      "post": {
+        "operationId": "create_place",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePlaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Create a place (optionally inside another).",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/places/{id}": {
+      "get": {
+        "operationId": "get_place",
+        "parameters": [
+          {
+            "description": "Place ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
+              }
+            },
+            "description": "The place."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "A place with its nesting and every document inside it (recursively).",
+        "tags": [
+          "entities"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_place",
+        "parameters": [
+          {
+            "description": "Place ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: the note's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPlaceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates`, `version_conflict` or `path_taken`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Edit a place (name, aliases, tags, address, enclosing place).",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
+    "/api/v1/relations": {
+      "delete": {
+        "operationId": "remove_relation",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/RelationRef"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationResult"
+                }
+              }
+            },
+            "description": "Removed; one `user: relation remove <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such edge in the caller's vault."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Remove an edge; an AI edge is recorded as rejected and never re-added.",
+        "tags": [
+          "relations"
+        ]
+      },
+      "patch": {
+        "operationId": "retype_relation",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/RetypeRelation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationResult"
+                }
+              }
+            },
+            "description": "Retyped; one `user: relation retype <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such edge in the caller's vault."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Change an edge's type (a retyped AI edge is rejected under its old type).",
+        "tags": [
+          "relations"
+        ]
+      },
+      "post": {
+        "operationId": "add_relation",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/RelationRef"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationResult"
+                }
+              }
+            },
+            "description": "Added; one `user: relation add <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: a note is not in the caller's vault."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Add a user edge (no-op if it exists).",
+        "tags": [
+          "relations"
+        ]
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "operationId": "search",
+        "parameters": [
+          {
+            "description": "Query text (web-search syntax: words, `\"phrases\"`, `-exclusions`, `or`).",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Mode (default `keyword`).",
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SearchMode"
+            }
+          },
+          {
+            "description": "Maximum hits (1–100, default 20).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResults"
+                }
+              }
+            },
+            "description": "Hits, best first."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable`: semantic and hybrid need the AI subsystem."
+          }
+        },
+        "summary": "Search the vault.",
+        "tags": [
+          "search"
+        ]
+      }
+    },
+    "/api/v1/suggestions": {
+      "get": {
+        "operationId": "list_suggestions",
+        "parameters": [
+          {
+            "description": "Status (default `pending`).",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SuggestionStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestions"
+                }
+              }
+            },
+            "description": "Suggestions."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Suggestions with a status (default pending), oldest first.",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/suggestions/{id}/accept": {
+      "post": {
+        "operationId": "accept_suggestion",
+        "parameters": [
+          {
+            "description": "Suggestion ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description": "Accepted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: already decided."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Accept a pending suggestion (a `duplicate` suggestion: keep both).",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/suggestions/{id}/reject": {
+      "post": {
+        "operationId": "reject_suggestion",
+        "parameters": [
+          {
+            "description": "Suggestion ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description": "Rejected."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: already decided."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Reject a pending suggestion.",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/suggestions/{id}/reply": {
+      "post": {
+        "operationId": "reply_suggestion",
+        "parameters": [
+          {
+            "description": "Suggestion ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description": "The suggestion with the reply."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Reply to a pending suggestion (the AI re-proposes once the AI subsystem exists).",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/tasks": {
+      "get": {
+        "operationId": "list_tasks",
+        "parameters": [
+          {
+            "description": "View (default `all`); \"today\" is the user's time zone's.",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/TaskViewKind"
+            }
+          },
+          {
+            "description": "Only tasks linking to this entity.",
+            "in": "query",
+            "name": "entity",
+            "required": false,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only tasks in this note.",
+            "in": "query",
+            "name": "note",
+            "required": false,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskList"
+                }
+              }
+            },
+            "description": "Tasks."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Tasks of a view.",
+        "tags": [
+          "tasks"
+        ]
+      },
+      "post": {
+        "operationId": "create_task",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            },
+            "description": "Created; one `user: task create <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Create a task line (duplicate check unless `force`).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}": {
+      "patch": {
+        "operationId": "patch_task",
+        "parameters": [
+          {
+            "description": "Task block ID (`t-<ulid>`).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: the task's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchTaskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Task"
+                }
+              }
+            },
+            "description": "Updated."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version_conflict`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Edit a task line in place (`If-Match`: the task's version).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/cancel": {
+      "post": {
+        "operationId": "cancel_task",
+        "parameters": [
+          {
+            "description": "Task block ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: the task's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskTransitioned"
+                }
+              }
+            },
+            "description": "Cancelled."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`task_state_conflict` or `version_conflict`."
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Cancel a task.",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/complete": {
+      "post": {
+        "operationId": "complete_task",
+        "parameters": [
+          {
+            "description": "Task block ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: the task's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskTransitioned"
+                }
+              }
+            },
+            "description": "Completed."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`task_state_conflict` or `version_conflict`."
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Complete a task (a recurring task gets its next occurrence above the done line).",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/reopen": {
+      "post": {
+        "operationId": "reopen_task",
+        "parameters": [
+          {
+            "description": "Task block ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: the task's current version.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskTransitioned"
+                }
+              }
+            },
+            "description": "Reopened."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`task_state_conflict` or `version_conflict`."
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Reopen a done or cancelled task.",
+        "tags": [
+          "tasks"
+        ]
+      }
+    },
+    "/api/v1/trash/{id}": {
+      "delete": {
+        "operationId": "purge_note",
+        "parameters": [
+          {
+            "description": "Note ID (ULID) of a trashed note.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Purged; one `user: purge <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Permanently delete a trashed note and its sidecar (history keeps it).",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/trash/{id}/restore": {
+      "post": {
+        "operationId": "restore_note",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "Restored; one `user: restore <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Restore a trashed note to its original path (or a free name next to it).",
+        "tags": [
+          "notes"
+        ]
+      }
+    },
+    "/api/v1/tree": {
+      "get": {
+        "operationId": "get_tree",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tree"
+                }
+              }
+            },
+            "description": "Every folder, note and file, sorted by path."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The vault tree: folders, notes and other files (hidden folders excluded).",
+        "tags": [
+          "notes"
+        ]
+      }
     }
   },
   "security": [
@@ -2014,6 +7543,34 @@
     {
       "description": "Account administration (admins only).",
       "name": "admin"
+    },
+    {
+      "description": "Notes, the vault tree, backlinks, history and revert (PLAN §7.5 Notes).",
+      "name": "notes"
+    },
+    {
+      "description": "Keyword search; semantic and hybrid need the AI subsystem.",
+      "name": "search"
+    },
+    {
+      "description": "Capture, inbox and suggestions.",
+      "name": "inbox"
+    },
+    {
+      "description": "Typed relations between notes.",
+      "name": "relations"
+    },
+    {
+      "description": "People, companies, documents and places.",
+      "name": "entities"
+    },
+    {
+      "description": "Tasks as Obsidian Tasks checklist lines.",
+      "name": "tasks"
+    },
+    {
+      "description": "Export, import and integrity.",
+      "name": "vault"
     }
   ]
 }
