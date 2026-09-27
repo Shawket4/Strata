@@ -29,6 +29,7 @@ use vault_format::sidecar::NoteSidecar;
 
 use crate::derive::{self, Context, Derived};
 use crate::error::{Result, VaultError};
+use crate::events::{CommitListener, Committed, ListenerSlot};
 use crate::git::{self, FileChange};
 use crate::paths;
 use crate::state::{NoteMeta, VaultState, name_key};
@@ -93,6 +94,7 @@ pub(crate) struct Inner {
     actors: Mutex<HashMap<UserId, mpsc::UnboundedSender<Job>>>,
     pub(crate) loaded: Mutex<std::collections::HashSet<UserId>>,
     runtime: Option<tokio::runtime::Handle>,
+    listener: ListenerSlot,
 }
 
 /// The vault store for all users (cheap to clone).
@@ -127,6 +129,7 @@ impl VaultService {
                 actors: Mutex::new(HashMap::new()),
                 loaded: Mutex::new(std::collections::HashSet::new()),
                 runtime: tokio::runtime::Handle::try_current().ok(),
+                listener: std::sync::RwLock::new(None),
             }),
         }
     }
@@ -150,6 +153,20 @@ impl VaultService {
         self.user_dir(user).join("vault")
     }
 
+    /// Registers the receiver of commit notices (the event bus); replaces any earlier one.
+    pub fn set_listener(&self, listener: Arc<dyn CommitListener>) {
+        *self
+            .inner
+            .listener
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = Some(listener);
+    }
+
+    /// Hands a commit notice of `user` to the listener (no-op without one or when empty).
+    pub(crate) fn notify(&self, user: UserId, notice: &Committed) {
+        self.inner.notify(user, notice);
+    }
+
     fn sender(&self, user: UserId) -> mpsc::UnboundedSender<Job> {
         let mut actors = self
             .inner
@@ -168,6 +185,8 @@ impl VaultService {
             inner: self.inner.clone(),
             state: None,
             repair: false,
+            pending: Committed::default(),
+            merge_hint: None,
         };
         let task = run_actor(core, rx);
         match &self.inner.runtime {
@@ -243,6 +262,22 @@ impl VaultService {
     }
 }
 
+impl Inner {
+    pub(crate) fn notify(&self, user: UserId, notice: &Committed) {
+        if notice.is_empty() {
+            return;
+        }
+        let listener = self
+            .listener
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        if let Some(l) = listener {
+            l.committed(user, notice);
+        }
+    }
+}
+
 async fn run_actor(mut core: Core, mut rx: mpsc::UnboundedReceiver<Job>) {
     while let Some(job) = rx.recv().await {
         let outcome = AssertUnwindSafe(job(&mut core)).catch_unwind().await;
@@ -250,6 +285,8 @@ async fn run_actor(mut core: Core, mut rx: mpsc::UnboundedReceiver<Job>) {
             tracing::error!(user = %core.user, "vault job panicked; reloading the vault state");
             core.state = None;
             core.repair = true;
+            core.pending = Committed::default();
+            core.merge_hint = None;
         }
     }
 }
@@ -293,6 +330,10 @@ pub struct Core {
     pub(crate) state: Option<VaultState>,
     /// Set after a failed or panicked write: the next load repairs the index from the files.
     pub(crate) repair: bool,
+    /// What the write in progress changed; handed to the listener after its commit.
+    pub(crate) pending: Committed,
+    /// `(loser, survivor)` of the entity merge in progress.
+    pub(crate) merge_hint: Option<(NoteId, NoteId)>,
 }
 
 impl fmt::Debug for Core {
@@ -494,11 +535,21 @@ impl Core {
         }
         let state = self.state_mut()?;
         let mut before_versions: HashMap<NoteId, (String, String)> = HashMap::new();
+        // Live path and kind of every touched note before the change (for the notice).
+        let mut before_live: HashMap<NoteId, (String, domain::NoteKind)> = HashMap::new();
         let mut touched: BTreeSet<NoteId> = BTreeSet::new();
         let mut names: BTreeSet<String> = BTreeSet::new();
         for p in paths {
+            if let Some(id) = sidecar_id(p)
+                && let Some((lp, m)) = state.note(id)
+            {
+                before_live.entry(id).or_insert((lp.to_owned(), m.kind));
+            }
+        }
+        for p in paths {
             if let Some(m) = state.remove_note(p) {
                 before_versions.insert(m.id, (p.clone(), m.version.clone()));
+                before_live.insert(m.id, (p.clone(), m.kind));
                 touched.insert(m.id);
                 names.insert(name_key(p));
             }
@@ -552,6 +603,8 @@ impl Core {
         }
         let mut affected: BTreeSet<NoteId> = touched.clone();
         affected.extend(state.linking_to(&names));
+        let watch_sidecars = paths.iter().any(|p| sidecar_id(p).is_some());
+        let before = crate::diff::Snapshot::take(tx, &affected, watch_sidecars).await?;
         let synced = self.reindex_ids(tx, &affected, tz).await?;
         let state = self.state()?;
         let mut out = Synced::default();
@@ -574,8 +627,152 @@ impl Core {
         for id in &out.removed {
             indexer::purge(tx, *id, synced.get(id)).await?;
         }
+        let notes = self.note_events(&touched, &before_live, &before_versions)?;
         self.log_changes(tx, &out).await?;
+        let after = crate::diff::Snapshot::take(tx, &affected, watch_sidecars).await?;
+        let mut notice = self.log_derived_diff(tx, &before, &after).await?;
+        notice.notes = notes;
+        self.pending.absorb(notice);
         Ok(out)
+    }
+
+    /// The note part of a commit notice for the `touched` notes.
+    fn note_events(
+        &self,
+        touched: &BTreeSet<NoteId>,
+        before_live: &HashMap<NoteId, (String, domain::NoteKind)>,
+        before_versions: &HashMap<NoteId, (String, String)>,
+    ) -> Result<Vec<crate::events::NoteEvent>> {
+        use crate::events::{NoteChange, NoteEvent};
+        let state = self.state()?;
+        let mut out = Vec::new();
+        for id in touched {
+            let now = state.note(*id);
+            let before = before_live.get(id);
+            let event = match (before, now) {
+                (Some((old, _)), Some((path, m))) => {
+                    let version_changed = before_versions
+                        .get(id)
+                        .is_some_and(|(_, v)| *v != m.version);
+                    let change = if old != path {
+                        NoteChange::Moved
+                    } else if version_changed {
+                        NoteChange::Updated
+                    } else {
+                        continue;
+                    };
+                    NoteEvent {
+                        id: *id,
+                        kind: m.kind,
+                        change,
+                        path: path.to_owned(),
+                        old_path: (old != path).then(|| old.clone()),
+                        version: Some(m.version.clone()),
+                    }
+                }
+                (None, Some((path, m))) => NoteEvent {
+                    id: *id,
+                    kind: m.kind,
+                    change: NoteChange::Created,
+                    path: path.to_owned(),
+                    old_path: None,
+                    version: Some(m.version.clone()),
+                },
+                (Some((old, kind)), None) => NoteEvent {
+                    id: *id,
+                    kind: *kind,
+                    change: NoteChange::Deleted,
+                    path: old.clone(),
+                    old_path: None,
+                    version: None,
+                },
+                (None, None) => continue,
+            };
+            out.push(event);
+        }
+        Ok(out)
+    }
+
+    /// Appends change-log rows for derived records that are not in note text (relations with
+    /// provenance, rejections, keep-both pairs) and returns the rest of the commit notice
+    /// (relations, tasks, custody).
+    pub(crate) async fn log_derived_diff(
+        &self,
+        tx: &mut ScopedTx,
+        before: &crate::diff::Snapshot,
+        after: &crate::diff::Snapshot,
+    ) -> Result<Committed> {
+        let now = self.now();
+        let diff = crate::diff::diff(before, after);
+        for (entity_type, entity_id, op) in &diff.log {
+            sync::append_change(
+                tx,
+                &NewChange {
+                    entity_type,
+                    entity_id,
+                    op: *op,
+                    version: None,
+                    at: now,
+                },
+            )
+            .await?;
+        }
+        let mut notice = Committed {
+            relations: diff.relations,
+            ..Committed::default()
+        };
+        let state = self.state()?;
+        for (task, note) in diff.tasks {
+            let version = match &note {
+                Some(n) => match state.note(*n) {
+                    Some((p, _)) => self.read_text(p).await?.and_then(|t| {
+                        let doc = vault_format::Document::parse(&t);
+                        sync_model::apply::find_task(doc.body(), &task).map(|(span, _)| {
+                            sync_model::apply::task_line_version(&doc.body()[span])
+                                .as_str()
+                                .to_owned()
+                        })
+                    }),
+                    None => None,
+                },
+                None => None,
+            };
+            let note_id = note
+                .or_else(|| before.task_note(&task))
+                .unwrap_or_else(|| NoteId::from_ulid(ulid::Ulid::nil()));
+            notice.tasks.push(crate::events::TaskEvent {
+                id: task,
+                note_id,
+                version,
+            });
+        }
+        for doc in diff.custody {
+            notice.custody.push(crate::events::CustodyEvent {
+                document_id: doc,
+                version: state.note(doc).map(|(_, m)| m.version.clone()),
+            });
+        }
+        Ok(notice)
+    }
+
+    /// Hands the pending notice to the listener (after the commit of `message`).
+    pub(crate) fn flush_notice(&mut self, message: &str) {
+        let mut notice = std::mem::take(&mut self.pending);
+        notice.merged = self.merge_hint.take();
+        notice.op = crate::events::op_label(message);
+        notice.user = Some(self.user);
+        self.inner.notify(self.user, &notice);
+    }
+
+    /// Starts a fresh notice for the write about to run (keeps a merge hint set for it).
+    pub(crate) fn drop_notice_keep_merge(&mut self) {
+        self.pending = Committed::default();
+    }
+
+    /// Drops the pending notice (the write failed).
+    pub(crate) fn drop_notice(&mut self) {
+        self.pending = Committed::default();
+        self.merge_hint = None;
     }
 
     /// Re-derives the given notes (live or trashed) from their files and writes the rows.

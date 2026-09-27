@@ -633,6 +633,7 @@ impl Core {
         };
         changes.insert(lpath.clone(), None);
         changes.insert(trash, Some(ltext.into_bytes()));
+        self.merge_hint = Some((loser, survivor));
         self.finish(
             tx,
             changes.into_iter().collect(),

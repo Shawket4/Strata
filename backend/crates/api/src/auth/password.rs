@@ -154,7 +154,10 @@ mod tests {
         assert!(!hasher.verify("x", "not a phc string"));
         assert!(!hasher.verify("x", ""));
         // The retired `temporary:` prefix (migration 010 strips it) is not a PHC string.
-        assert!(!hasher.verify("x", &format!("temporary:{}", hasher.hash("x").expect("hash"))));
+        assert!(!hasher.verify(
+            "x",
+            &format!("temporary:{}", hasher.hash("x").expect("hash"))
+        ));
         let hash = hasher.hash("x").expect("hash");
         assert!(!hasher.verify(&"x".repeat(MAX_PASSWORD_BYTES + 1), &hash));
         hasher.verify_dummy("anything");

@@ -31,7 +31,6 @@ use sqlx::PgPool;
 use strata_common::{Clock, SessionId, UserId};
 use strata_index::AccountsDb;
 
-
 /// Account-level restrictions of one user.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct UserFlags {

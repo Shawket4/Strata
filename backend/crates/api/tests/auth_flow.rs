@@ -388,6 +388,7 @@ async fn password_change_requires_the_current_password_and_signs_out_other_devic
         .await
         .expect("changed");
     assert!(!me.password_change_required);
+    assert_eq!(stored().await, (true, false));
     // This device keeps working; the other one is signed out immediately.
     ops::get_me(&client).await.expect("current session kept");
     assert_problem(
@@ -432,6 +433,17 @@ async fn admin_password_reset_forces_a_change_at_next_login() {
         .expect("temporary password");
     assert_eq!(temporary.chars().count(), 16);
     assert!(reset.user.password_change_required);
+    // The flag is a column; the hash is a plain PHC string.
+    let stored = || async {
+        let (hash, flag): (String, bool) =
+            sqlx::query_as("SELECT password_hash, must_change_password FROM users WHERE id = $1")
+                .bind(member)
+                .fetch_one(&h.db.accounts)
+                .await
+                .expect("user row");
+        (hash.starts_with("$argon2id$"), flag)
+    };
+    assert_eq!(stored().await, (true, true));
     assert_problem(
         ops::get_me(&h.with_token(&before.access_token)).await,
         &unauthorized("session revoked"),
@@ -470,6 +482,7 @@ async fn admin_password_reset_forces_a_change_at_next_login() {
     .await
     .expect("changed");
     assert!(!me.password_change_required);
+    assert_eq!(stored().await, (true, false));
     // The device from before the reset is still listed (its session ended).
     assert_eq!(
         ops::list_devices(&client)
@@ -686,7 +699,8 @@ async fn confusable_usernames_are_rejected() {
 async fn devices_are_listed_renamed_and_removed_within_the_callers_scope() {
     let h = Harness::new().await;
     let (_, admin) = h.admin().await;
-    h.create_user("lina", "lina-password-1", UserRole::Member)
+    let lina_id = h
+        .create_user("lina", "lina-password-1", UserRole::Member)
         .await;
     let first = h.login("lina", "lina-password-1").await;
     h.clock.advance(Duration::seconds(5));
@@ -730,6 +744,34 @@ async fn devices_are_listed_renamed_and_removed_within_the_callers_scope() {
     assert_eq!(renamed.name, "Pixel");
     assert!(!renamed.reminders_enabled);
     assert!(!renamed.current);
+    // Stored in `devices.reminders_enabled`, not in the user's settings.
+    let mut tx = h.db.begin(lina_id).await.expect("scope");
+    let rows: Vec<(String, bool)> =
+        sqlx::query_as("SELECT name, reminders_enabled FROM devices ORDER BY created")
+            .fetch_all(tx.conn())
+            .await
+            .expect("devices");
+    let settings: Vec<String> = sqlx::query_scalar("SELECT key FROM settings")
+        .fetch_all(tx.conn())
+        .await
+        .expect("settings");
+    tx.commit().await.expect("commit");
+    assert_eq!(
+        rows,
+        vec![
+            ("Pixel".to_owned(), false),
+            ("test-device".to_owned(), true)
+        ]
+    );
+    assert_eq!(settings, Vec::<String>::new());
+    let listed = ops::list_devices(&lina).await.expect("devices");
+    assert_eq!(
+        listed
+            .iter()
+            .map(|d| (d.id, d.reminders_enabled))
+            .collect::<Vec<_>>(),
+        vec![(second.device_id, true), (first.device_id, false)]
+    );
     assert_problem(
         ops::update_device(
             &lina,
@@ -829,6 +871,98 @@ async fn settings_round_trip_through_patch_me() {
             "at most 64 preferences; keys of 1 to 64 bytes, values up to 1024 bytes",
         ),
     );
+    h.finish().await;
+}
+
+/// Makes every insert into `strata.<table>` fail (installed as the superuser, test database
+/// only) until [`heal`] runs.
+async fn break_inserts(h: &Harness, table: &str) {
+    for stmt in [
+        "CREATE OR REPLACE FUNCTION strata.test_injected_failure() RETURNS trigger \
+         LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected failure'; END $$"
+            .to_owned(),
+        format!(
+            "CREATE TRIGGER test_injected_failure BEFORE INSERT ON strata.{table} \
+             FOR EACH ROW EXECUTE FUNCTION strata.test_injected_failure()"
+        ),
+    ] {
+        sqlx::query(sqlx::AssertSqlSafe(stmt))
+            .execute(&h.db.superuser)
+            .await
+            .expect("inject failure");
+    }
+}
+
+async fn heal(h: &Harness, table: &str) {
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "DROP TRIGGER test_injected_failure ON strata.{table}"
+    )))
+    .execute(&h.db.superuser)
+    .await
+    .expect("remove failure");
+}
+
+/// `(devices, sessions, refresh tokens)` rows, and the refresh tokens not yet spent.
+async fn account_rows(h: &Harness) -> (i64, i64, i64, i64) {
+    sqlx::query_as(
+        "SELECT (SELECT count(*) FROM devices), (SELECT count(*) FROM sessions), \
+                (SELECT count(*) FROM refresh_tokens), \
+                (SELECT count(*) FROM refresh_tokens WHERE used_at IS NULL)",
+    )
+    .fetch_one(&h.db.accounts)
+    .await
+    .expect("counts")
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn login_and_refresh_writes_are_one_transaction() {
+    let h = Harness::new().await;
+    h.create_user("omar", "omar-password-1", UserRole::Member)
+        .await;
+    let internal = plain("internal", "Internal server error", 500, None);
+
+    // The refresh-token insert (the last write of a login) fails: no device or session is
+    // left behind.
+    break_inserts(&h, "refresh_tokens").await;
+    assert_problem(h.try_login("omar", "omar-password-1").await, &internal);
+    assert_eq!(account_rows(&h).await, (0, 0, 0, 0));
+    // The session insert (the middle write) fails: no device either.
+    heal(&h, "refresh_tokens").await;
+    break_inserts(&h, "sessions").await;
+    assert_problem(h.try_login("omar", "omar-password-1").await, &internal);
+    assert_eq!(account_rows(&h).await, (0, 0, 0, 0));
+    heal(&h, "sessions").await;
+    let session = h.login("omar", "omar-password-1").await;
+    assert_eq!(account_rows(&h).await, (1, 1, 1, 1));
+
+    // A rotation whose new-token insert fails spends nothing and touches nothing: the old
+    // token still works afterwards (and is not treated as reuse).
+    h.clock.advance(Duration::minutes(20));
+    break_inserts(&h, "refresh_tokens").await;
+    assert_problem(
+        ops::refresh(&h.anon(), &refresh_body(&session.refresh_token)).await,
+        &internal,
+    );
+    assert_eq!(account_rows(&h).await, (1, 1, 1, 1));
+    let last_seen: chrono::DateTime<chrono::Utc> =
+        sqlx::query_scalar("SELECT last_seen FROM devices")
+            .fetch_one(&h.db.accounts)
+            .await
+            .expect("device");
+    assert_eq!(last_seen, h.now() - Duration::minutes(20));
+    heal(&h, "refresh_tokens").await;
+    let rotated = ops::refresh(&h.anon(), &refresh_body(&session.refresh_token))
+        .await
+        .expect("old token still valid");
+    assert_eq!(
+        (rotated.session_id, rotated.device_id),
+        (session.session_id, session.device_id)
+    );
+    assert_eq!(account_rows(&h).await, (1, 1, 2, 1));
+    let me = ops::get_me(&h.with_token(&rotated.access_token))
+        .await
+        .expect("me");
+    assert_eq!(me.username, "omar");
     h.finish().await;
 }
 

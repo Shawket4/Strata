@@ -539,10 +539,7 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
         ]
     );
     let text = h.read(alice.id, "documents/Passport.md");
-    let custody = text
-        .split("## Custody\n")
-        .nth(1)
-        .expect("custody section");
+    let custody = text.split("## Custody\n").nth(1).expect("custody section");
     assert_eq!(
         custody,
         "- 2026-05-21 — found at [[Office]] — [[Call]]\n\

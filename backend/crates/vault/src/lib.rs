@@ -25,8 +25,10 @@
 
 pub mod archive;
 pub mod derive;
+pub mod diff;
 pub mod dup;
 pub mod error;
+pub mod events;
 pub mod fsio;
 pub mod git;
 pub mod indexer;
@@ -40,4 +42,5 @@ pub mod state;
 pub mod store;
 
 pub use error::{Candidate, MatchLevel, Result, VaultError};
+pub use events::{CommitListener, Committed};
 pub use store::{Author, Core, ImportLimits, VaultConfig, VaultService};

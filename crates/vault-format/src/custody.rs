@@ -551,7 +551,10 @@ mod tests {
         assert_eq!(e.to_line(), line);
         for (line, kind) in [
             ("- 2026-01-01 — lost", CustodyEventType::Lost),
-            ("- 2026-01-01 — destroyed by [[Shady]]", CustodyEventType::Destroyed),
+            (
+                "- 2026-01-01 — destroyed by [[Shady]]",
+                CustodyEventType::Destroyed,
+            ),
             ("- 2026-01-01 - sent-to [[Bank]]", CustodyEventType::SentTo),
         ] {
             let e = CustodyEvent::parse(line).expect(line);

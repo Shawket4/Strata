@@ -163,21 +163,31 @@ impl Core {
         message: String,
     ) -> Result<Option<String>> {
         let paths: BTreeSet<String> = changes.iter().map(|(p, _)| p.clone()).collect();
-        let commit = self.apply(changes, message).await?;
+        self.drop_notice_keep_merge();
+        let commit = match self.apply(changes, message.clone()).await {
+            Ok(c) => c,
+            Err(e) => {
+                self.drop_notice();
+                return Err(e);
+            }
+        };
         let synced = self.sync_paths(&mut tx, &paths).await;
         match synced {
             Ok(_) => {}
             Err(e) => {
                 self.state = None;
                 self.repair = true;
+                self.drop_notice();
                 return Err(e);
             }
         }
         if let Err(e) = tx.commit().await {
             self.state = None;
             self.repair = true;
+            self.drop_notice();
             return Err(e.into());
         }
+        self.flush_notice(&message);
         Ok(commit)
     }
 

@@ -371,10 +371,14 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
         .filter_map(|id| derived.get(id).cloned())
         .collect();
     report.reindexed = batch.len();
+    let mut watched = affected.clone();
+    watched.extend(removed.iter().copied());
+    let before = crate::diff::Snapshot::take(&mut tx, &watched, !first_build).await?;
     indexer::write(&mut tx, &batch).await?;
     for id in &removed {
         indexer::purge(&mut tx, *id, None).await?;
     }
+    let after = crate::diff::Snapshot::take(&mut tx, &watched, !first_build).await?;
 
     // Warnings.
     let (oob_kind, oob_detail) = if repair {
@@ -450,16 +454,94 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
         )
         .await?;
     }
+    let old_paths: HashMap<NoteId, String> = indexed
+        .iter()
+        .filter(|n| !n.trashed)
+        .map(|n| (n.id, n.path.clone()))
+        .collect();
     core.state = Some(state);
+    let mut notice = crate::events::Committed::default();
     if !first_build {
+        notice = core.log_derived_diff(&mut tx, &before, &after).await?;
+        notice.notes = reconciled_note_events(core, &changed, &removed, &old_paths, &indexed)?;
         let synced = Synced {
             changed: changed.into_iter().collect(),
             removed,
+            ..Synced::default()
         };
         core.log_changes(&mut tx, &synced).await?;
     }
+    let warnings = vrepo::list_warnings(&mut tx, i64::MAX).await?.len();
     tx.commit().await?;
+    notice.integrity_warnings = u32::try_from(
+        report.temp_files_removed.len()
+            + usize::from(!report.recovered.is_empty())
+            + report.ids_assigned.len()
+            + report.sidecars_repaired.len()
+            + report.out_of_band.len()
+            + report.missing.len(),
+    )
+    .unwrap_or(u32::MAX)
+    .min(u32::try_from(warnings).unwrap_or(u32::MAX));
+    notice.op = "reconcile".to_owned();
+    notice.user = Some(core.user);
+    core.inner.notify(core.user, &notice);
     Ok(report)
+}
+
+/// Note events for what reconciliation re-derived or purged.
+fn reconciled_note_events(
+    core: &Core,
+    changed: &BTreeSet<NoteId>,
+    removed: &[NoteId],
+    old_paths: &HashMap<NoteId, String>,
+    indexed: &[notes::Note],
+) -> Result<Vec<crate::events::NoteEvent>> {
+    use crate::events::{NoteChange, NoteEvent};
+    let state = core.state()?;
+    let mut out = Vec::new();
+    let mut ids: BTreeSet<NoteId> = changed.clone();
+    ids.extend(removed.iter().copied());
+    for id in ids {
+        let before = old_paths.get(&id);
+        let event = match (before, state.note(id)) {
+            (Some(old), Some((path, m))) => NoteEvent {
+                id,
+                kind: m.kind,
+                change: if old == path {
+                    NoteChange::Updated
+                } else {
+                    NoteChange::Moved
+                },
+                path: path.to_owned(),
+                old_path: (old != path).then(|| old.clone()),
+                version: Some(m.version.clone()),
+            },
+            (None, Some((path, m))) => NoteEvent {
+                id,
+                kind: m.kind,
+                change: NoteChange::Created,
+                path: path.to_owned(),
+                old_path: None,
+                version: Some(m.version.clone()),
+            },
+            (Some(old), None) => NoteEvent {
+                id,
+                kind: indexed
+                    .iter()
+                    .find(|n| n.id == id)
+                    .and_then(|n| n.kind.as_str().parse().ok())
+                    .unwrap_or(domain::NoteKind::Note),
+                change: NoteChange::Deleted,
+                path: old.clone(),
+                old_path: None,
+                version: None,
+            },
+            (None, None) => continue,
+        };
+        out.push(event);
+    }
+    Ok(out)
 }
 
 fn derive_all(
