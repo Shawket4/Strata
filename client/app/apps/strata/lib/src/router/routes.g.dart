@@ -99,9 +99,19 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           factory: $DirectoryRoute._fromState,
           routes: [
             GoRouteData.$route(
-              path: 'documents',
+              path: 'documents/:documentId',
               hasOverriddenOnExit: false,
-              factory: $DocumentsRoute._fromState,
+              factory: $DocumentRoute._fromState,
+            ),
+            GoRouteData.$route(
+              path: 'places/:placeId',
+              hasOverriddenOnExit: false,
+              factory: $PlaceRoute._fromState,
+            ),
+            GoRouteData.$route(
+              path: ':entityId',
+              hasOverriddenOnExit: false,
+              factory: $EntityRoute._fromState,
             ),
           ],
         ),
@@ -229,10 +239,16 @@ mixin $TaskRoute on GoRouteData {
 }
 
 mixin $NotesRoute on GoRouteData {
-  static NotesRoute _fromState(GoRouterState state) => const NotesRoute();
+  static NotesRoute _fromState(GoRouterState state) =>
+      NotesRoute(folder: state.uri.queryParameters['folder'] ?? '');
+
+  NotesRoute get _self => this as NotesRoute;
 
   @override
-  String get location => GoRouteData.$location('/notes');
+  String get location => GoRouteData.$location(
+    '/notes',
+    queryParams: {if (_self.folder != '') 'folder': _self.folder},
+  );
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -342,11 +358,26 @@ mixin $MapRoute on GoRouteData {
 }
 
 mixin $DirectoryRoute on GoRouteData {
-  static DirectoryRoute _fromState(GoRouterState state) =>
-      const DirectoryRoute();
+  static DirectoryRoute _fromState(GoRouterState state) => DirectoryRoute(
+    tab:
+        _$convertMapValue(
+          'tab',
+          state.uri.queryParameters,
+          _$DirectoryTabEnumMap._$fromName,
+        ) ??
+        DirectoryTab.people,
+  );
+
+  DirectoryRoute get _self => this as DirectoryRoute;
 
   @override
-  String get location => GoRouteData.$location('/directory');
+  String get location => GoRouteData.$location(
+    '/directory',
+    queryParams: {
+      if (_self.tab != DirectoryTab.people)
+        'tab': _$DirectoryTabEnumMap[_self.tab],
+    },
+  );
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -362,12 +393,73 @@ mixin $DirectoryRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
-mixin $DocumentsRoute on GoRouteData {
-  static DocumentsRoute _fromState(GoRouterState state) =>
-      const DocumentsRoute();
+const _$DirectoryTabEnumMap = {
+  DirectoryTab.people: 'people',
+  DirectoryTab.companies: 'companies',
+  DirectoryTab.documents: 'documents',
+  DirectoryTab.places: 'places',
+};
+
+mixin $DocumentRoute on GoRouteData {
+  static DocumentRoute _fromState(GoRouterState state) =>
+      DocumentRoute(documentId: state.pathParameters['documentId']!);
+
+  DocumentRoute get _self => this as DocumentRoute;
 
   @override
-  String get location => GoRouteData.$location('/directory/documents');
+  String get location => GoRouteData.$location(
+    '/directory/documents/${Uri.encodeComponent(_self.documentId)}',
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $PlaceRoute on GoRouteData {
+  static PlaceRoute _fromState(GoRouterState state) =>
+      PlaceRoute(placeId: state.pathParameters['placeId']!);
+
+  PlaceRoute get _self => this as PlaceRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/directory/places/${Uri.encodeComponent(_self.placeId)}',
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $EntityRoute on GoRouteData {
+  static EntityRoute _fromState(GoRouterState state) =>
+      EntityRoute(entityId: state.pathParameters['entityId']!);
+
+  EntityRoute get _self => this as EntityRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/directory/${Uri.encodeComponent(_self.entityId)}',
+  );
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -466,6 +558,20 @@ mixin $SettingsSectionRoute on GoRouteData {
 
   @override
   void replace(BuildContext context) => context.replace(location);
+}
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
+extension<T extends Enum> on Map<T, String> {
+  T? _$fromName(String? value) =>
+      entries.where((element) => element.value == value).firstOrNull?.key;
 }
 
 RouteBase get $syncRoute => GoRouteData.$route(
@@ -594,15 +700,6 @@ mixin $ApprovalRoute on GoRouteData {
   @override
   void replace(BuildContext context) =>
       context.replace(location, extra: _self.$extra);
-}
-
-T? _$convertMapValue<T>(
-  String key,
-  Map<String, String> map,
-  T? Function(String) converter,
-) {
-  final value = map[key];
-  return value == null ? null : converter(value);
 }
 
 bool _$boolConverter(String value) {

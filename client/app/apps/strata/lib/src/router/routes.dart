@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:strata/src/shell/app_shell.dart';
 import 'package:strata_accounts/strata_accounts.dart';
 import 'package:strata_admin/strata_admin.dart';
-import 'package:strata_ask/strata_ask.dart';
+import 'package:strata_ask/strata_ask.dart' show AskScreen;
 import 'package:strata_directory/strata_directory.dart';
 import 'package:strata_home/strata_home.dart';
 import 'package:strata_inbox/strata_inbox.dart';
@@ -11,7 +11,8 @@ import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_maps/strata_maps.dart';
 import 'package:strata_notes/strata_notes.dart';
 import 'package:strata_settings/strata_settings.dart';
-import 'package:strata_state/strata_state.dart' show DirectoryTab, SignInRequest;
+import 'package:strata_state/strata_state.dart'
+    show DirectoryTab, SignInRequest;
 import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_tasks/strata_tasks.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
@@ -241,13 +242,10 @@ class TaskRoute extends GoRouteData with $TaskRoute {
   Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
     state,
     _BySize(
-      compact: (context) => Scaffold(
-        appBar: AppBar(),
-        body: TaskDetailScreen(
-          taskId: taskId,
-          onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
-          onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
-        ),
+      compact: (context) => TaskDetailScreen(
+        taskId: taskId,
+        onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
+        onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
       ),
       wide: (context) => TasksScreen(
         initialTaskId: taskId,
@@ -259,7 +257,8 @@ class TaskRoute extends GoRouteData with $TaskRoute {
   );
 }
 
-/// Opens a note, optionally at a block or heading ([OpenNoteAt]).
+/// Opens a note for an `OpenNoteAt` callback (the anchor is not routed
+/// yet: the notes screen takes no block or heading).
 void _openNote(BuildContext context, String id, [String? anchor]) =>
     NoteEditorRoute(noteId: id).go(context);
 
