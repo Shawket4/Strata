@@ -5,7 +5,7 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// A screen with one button opening the account sheet.
 class AccountHost extends StatelessWidget {
   /// Creates the host.
-  const AccountHost({super.key, this.onDevices, this.onAdmin});
+  const new({super.key, this.onDevices, this.onAdmin});
 
   /// Devices tapped.
   final VoidCallback? onDevices;
@@ -36,7 +36,7 @@ class AccountHost extends StatelessWidget {
 /// The account sheet (compact) or dialog (wider) drawn in place, for goldens.
 class AccountSheetPreview extends StatelessWidget {
   /// Creates the preview.
-  const AccountSheetPreview({required this.sizeClass, super.key});
+  const new({required this.sizeClass, super.key});
 
   /// Which surface.
   final SizeClass sizeClass;
@@ -62,7 +62,7 @@ class AccountSheetPreview extends StatelessWidget {
             : Dialog(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
-                  child: AccountSheet(),
+                  child: const AccountSheet(),
                 ),
               ),
       ),

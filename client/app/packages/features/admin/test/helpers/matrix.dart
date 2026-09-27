@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:alchemist/alchemist.dart';
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/misc.dart' show Override;
 import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
@@ -12,7 +14,7 @@ import 'package:strata_ui/testing.dart';
 @immutable
 class Variant {
   /// Creates a variant.
-  const Variant(
+  const new(
     this.sizeName,
     this.size,
     this.brightness,
@@ -50,7 +52,7 @@ class Variant {
   String toString() => id;
 }
 
-const _locales = [StrataLocales.english, StrataLocales.arabic];
+const List<Locale> _locales = [StrataLocales.english, StrataLocales.arabic];
 
 /// Every size × light/dark × en/ar × 1.0/2.0 (32 variants).
 List<Variant> matrix({Map<String, Size> sizes = StrataTestSizes.all}) => [
@@ -163,11 +165,14 @@ void goldens(
   PumpAction? pump,
 }) {
   for (final v in goldenMatrix()) {
-    goldenTest(
-      '$name ${v.id}',
-      fileName: '${name}_${v.id}',
-      pumpBeforeTest: pump ?? pumpNTimes(4, const Duration(milliseconds: 100)),
-      builder: () => builder(v),
+    unawaited(
+      goldenTest(
+        '$name ${v.id}',
+        fileName: '${name}_${v.id}',
+        pumpBeforeTest:
+            pump ?? pumpNTimes(4, const Duration(milliseconds: 100)),
+        builder: () => builder(v),
+      ),
     );
   }
 }

@@ -362,7 +362,8 @@ impl H {
     ) -> Result<ChangesPage, (u16, Vec<u8>)> {
         let mut path = format!("/api/v1/sync/changes?since={since}&epoch={epoch}");
         if let Some(l) = limit {
-            path.push_str(&format!("&limit={l}"));
+            use std::fmt::Write as _;
+            let _ = write!(path, "&limit={l}");
         }
         let (status, _, bytes) = self
             .raw(

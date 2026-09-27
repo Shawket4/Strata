@@ -18,7 +18,7 @@ FakeCoreApi _fake([SettingsView view = StrataFixtures.settingsView]) =>
 
 /// A stand-in for Admin → Users in the wide content pane.
 class _AdminPane extends StatelessWidget {
-  const _AdminPane();
+  const new();
 
   @override
   Widget build(BuildContext context) => const Center(child: Text('ADMIN PANE'));

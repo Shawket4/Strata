@@ -9,13 +9,13 @@ import 'package:strata_state/testing.dart';
 /// [gate] holds the start until completed (splash tests).
 class FakeBootstrap implements CoreBootstrap {
   /// Creates the bootstrap.
-  FakeBootstrap({this.gate, this.error});
+  new({this.gate, this.error});
 
   /// Completes the library load when given.
   final Completer<void>? gate;
 
   /// Thrown by the load when set.
-  Object? error;
+  Exception? error;
 
   /// How often the library was loaded.
   int loads = 0;
@@ -36,7 +36,7 @@ class FakeBootstrap implements CoreBootstrap {
 @immutable
 class PlatformCall {
   /// Creates the record.
-  const PlatformCall(this.method, [this.args = const {}]);
+  const new(this.method, [this.args = const {}]);
 
   /// `initialize`, `schedule`, `show`, `cancel`, `launchTap`.
   final String method;
@@ -61,7 +61,7 @@ class PlatformCall {
 /// [result].
 class FakeNotificationPlatform implements NotificationPlatform {
   /// Creates the fake.
-  FakeNotificationPlatform({this.launch});
+  new({this.launch});
 
   /// Every call, in order.
   final List<PlatformCall> calls = [];

@@ -1,7 +1,14 @@
 //! `POST /sync/push` (PLAN §7.5 Sync, §12.4, §16.3–16.4, D19): every op kind with exact
 //! results, the clean-merge and conflict-copy paths, duplicates then a forced retry,
 //! byte-identical replays without a second commit, ordering within one push, and isolation.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names,
+    clippy::assigning_clones,
+    clippy::default_trait_access,
+    clippy::float_cmp
+)]
 
 mod sync_harness;
 

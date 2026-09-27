@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:alchemist/alchemist.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata/strata.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_ui/testing.dart';
-import 'package:alchemist/alchemist.dart';
 
 import '../helpers/matrix.dart';
 

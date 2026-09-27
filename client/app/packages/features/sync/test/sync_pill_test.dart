@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_state/strata_state.dart';
-import 'package:strata_state/testing.dart';
 import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 

@@ -6,7 +6,7 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// the window's size class; records conflicts opened from it.
 class SyncHost extends StatelessWidget {
   /// Creates the host.
-  const SyncHost({super.key, this.opened});
+  const new({super.key, this.opened});
 
   /// Receives the op IDs of conflicts opened from the surface.
   final List<String>? opened;
@@ -19,10 +19,7 @@ class SyncHost extends StatelessWidget {
     body: Center(
       child: Builder(
         builder: (context) => FilledButton(
-          onPressed: () => showSyncStatus(
-            context,
-            onOpenConflict: opened == null ? null : opened!.add,
-          ),
+          onPressed: () => showSyncStatus(context, onOpenConflict: opened?.add),
           child: const Text(openLabel),
         ),
       ),
@@ -34,7 +31,7 @@ class SyncHost extends StatelessWidget {
 /// which cannot open routes).
 class SurfacePreview extends StatelessWidget {
   /// Creates the preview.
-  const SurfacePreview({required this.sizeClass, super.key});
+  const new({required this.sizeClass, super.key});
 
   /// Which surface.
   final SizeClass sizeClass;

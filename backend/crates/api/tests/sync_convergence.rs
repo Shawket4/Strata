@@ -5,7 +5,14 @@
 //! devices, both caches equal a fresh bootstrap, every note record equals its file, every
 //! conflict copy exists with the device's content, no op was rejected for anything but a note
 //! the other device deleted meanwhile, and a replayed push answers the same bytes.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names,
+    clippy::assigning_clones,
+    clippy::default_trait_access,
+    clippy::float_cmp
+)]
 
 mod sync_harness;
 

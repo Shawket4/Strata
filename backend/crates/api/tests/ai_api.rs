@@ -3,7 +3,12 @@
 //! citations resolved to real blocks, resume), save as note, AI status, the semantic level of
 //! the create check, the `ai_unavailable` / `ai_paused` problems, and principle 6 (AI down,
 //! everything else works). Every response is validated against the contract.
-#![allow(clippy::expect_used, clippy::too_many_lines, clippy::float_cmp)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::float_cmp,
+    clippy::similar_names
+)]
 
 mod ai_harness;
 
@@ -17,6 +22,8 @@ use strata_ai::BudgetLimits;
 use strata_ai::embed::fake::bag_of_words;
 use strata_ai::prompts::{self, ids};
 use strata_ai::request::input_hash;
+use strata_api::routes::ai::AskFrame as F;
+use strata_api::wire::ws::Frame;
 use strata_client::streaming::{StreamEvent, StreamOptions};
 use strata_client::{operations as ops, streams, types};
 use strata_testkit::Fixture;
@@ -255,17 +262,12 @@ async fn ask_streams_tokens_then_citations_resolved_to_blocks_and_saves_as_a_not
             .validate_frame("ask_stream", f)
             .expect("frame conforms");
     }
-    let decoded: Vec<strata_api::wire::ws::Frame<strata_api::routes::ai::AskFrame>> = frames
+    let decoded: Vec<Frame<F>> = frames
         .iter()
-        .map(|b| {
-            strata_api::wire::ws::Frame::decode(b, &strata_api::wire::DecodeLimits::default())
-                .expect("frame")
-        })
+        .map(|b| Frame::decode(b, &strata_api::wire::DecodeLimits::default()).expect("frame"))
         .collect();
     let answer =
         format!("Weekly invoicing [[{call_ref}]] and a discount, capped at 5% [[Pricing#^cap]].");
-    use strata_api::routes::ai::AskFrame as F;
-    use strata_api::wire::ws::Frame;
     assert_eq!(
         decoded,
         vec![
@@ -330,7 +332,7 @@ async fn ask_streams_tokens_then_citations_resolved_to_blocks_and_saves_as_a_not
     while let Some(ev) = sub.next().await {
         match ev.expect("event") {
             StreamEvent::Data { seq, payload } => rest.push((seq, payload)),
-            other => panic!("unexpected {other:?}"),
+            other @ StreamEvent::Reset { .. } => panic!("unexpected {other:?}"),
         }
     }
     assert_eq!(

@@ -15,7 +15,7 @@ import 'matrix.dart';
 /// The pieces of a booted app.
 class Booted {
   /// Creates the record.
-  Booted(this.fake, this.platform, this.bootstrap, this.container);
+  new(this.fake, this.platform, this.bootstrap, this.container);
 
   /// The core.
   final FakeCoreApi fake;
@@ -93,5 +93,5 @@ Future<void> go(WidgetTester tester, Booted app, String location) async {
   await settle(tester);
 }
 
-/// The size class of [v]'s window.
+/// The size class of a window of [size].
 SizeClass sizeClassOf(Size size) => SizeClass.fromWidth(size.width);

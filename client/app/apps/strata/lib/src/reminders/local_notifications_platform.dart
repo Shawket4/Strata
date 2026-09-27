@@ -5,7 +5,8 @@ import 'package:strata/src/reminders/notification_platform.dart';
 import 'package:strata_state/strata_state.dart';
 // `TZDateTime` is only used to hand the core's UTC instant to
 // `zonedSchedule` unchanged (no time maths); `timezone` comes with
-// flutter_local_notifications.
+// flutter_local_notifications (not a direct dependency: the logic guard
+// allows only the plugin in the app).
 // ignore: depend_on_referenced_packages
 import 'package:timezone/timezone.dart' as tz;
 

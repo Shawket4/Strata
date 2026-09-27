@@ -1,7 +1,14 @@
 //! `GET /events` (PLAN §7.5 Events, D24, §16.3): subscribed through the generated
 //! `Subscription`, exact frame sequences for writes, frames conforming to the contract,
 //! resume after reconnect, isolation, and `account.disabled` then close.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names,
+    clippy::assigning_clones,
+    clippy::default_trait_access,
+    clippy::float_cmp
+)]
 
 mod sync_harness;
 

@@ -1,7 +1,14 @@
 //! `GET /sync/bootstrap` and `GET /sync/changes` (PLAN §7.4, §7.5 Sync, §12.4, §16.3):
 //! stable paging under concurrent writes, exact change records with tombstones, `410` on an
 //! epoch change, and isolation of the feeds.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names,
+    clippy::assigning_clones,
+    clippy::default_trait_access,
+    clippy::float_cmp
+)]
 
 mod sync_harness;
 
