@@ -196,7 +196,8 @@ fn leading_date(text: &str) -> Option<NaiveDate> {
 
 /// Checks AI content for a section: no headings; bullet sections hold only `- ` bullets, each
 /// with at least one (non-embed) wikilink; timeline/custody bullets start with a date and are
-/// newest first; custody bullets parse as custody events.
+/// newest first; custody bullets parse as custody events and cite at least one note (the
+/// argument links do not count; citation-free lines are for user-recorded events only).
 pub fn validate_content(section: AiSection, content: &str) -> Result<(), Vec<Violation>> {
     let mut v = Vec::new();
     let mut last_date: Option<NaiveDate> = None;
@@ -220,7 +221,12 @@ pub fn validate_content(section: AiSection, content: &str) -> Result<(), Vec<Vio
             v.push(Violation::NotABullet(n));
             continue;
         };
-        if !wikilink::find_all(item).iter().any(|l| !l.embed) {
+        // Custody lines' argument links are not citations: an AI custody event must carry its
+        // own citation part (only user-recorded events may omit it, and they are never
+        // written through here).
+        let custody = (section == AiSection::Custody).then(|| custody::CustodyEvent::parse(line));
+        let uncited_event = matches!(&custody, Some(Ok(e)) if e.require_citation().is_err());
+        if uncited_event || !wikilink::find_all(item).iter().any(|l| !l.embed) {
             v.push(Violation::Uncited(n));
         }
         if section.is_dated() {
@@ -234,9 +240,7 @@ pub fn validate_content(section: AiSection, content: &str) -> Result<(), Vec<Vio
                 None => v.push(Violation::Undated(n)),
             }
         }
-        if section == AiSection::Custody
-            && let Err(error) = custody::CustodyEvent::parse(line)
-        {
+        if let Some(Err(error)) = custody {
             v.push(Violation::Custody { line: n, error });
         }
     }
@@ -550,6 +554,16 @@ mod tests {
                 line: 1,
                 error: CustodyParseError::UnknownType("misplaced".into())
             }])
+        );
+        // AI custody events must cite: the argument links are not citations.
+        assert_eq!(
+            validate_content(
+                AiSection::Custody,
+                "- 2026-09-21 — handed-to [[Shady]] — [[Capture#^c1]]\n\
+                 - 2026-09-20 — handed-to [[Shady]]\n\
+                 - 2026-09-19 — lost"
+            ),
+            Err(vec![Violation::Uncited(2), Violation::Uncited(3)])
         );
         assert_eq!(
             validate_content(AiSection::OpenItems, "- Send the quote [[Call#^b1]]"),

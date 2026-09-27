@@ -55,6 +55,7 @@ async fn signup_approve_disable_enable_lifecycle() {
             deletion_requested_at: None,
             deletion_at: None,
             export_downloaded_at: None,
+            must_change_password: false,
         }
     );
     assert_eq!(db.accounts_db.count_pending().await.expect("count"), 1);
@@ -150,11 +151,28 @@ async fn signup_approve_disable_enable_lifecycle() {
 
     let reset = db
         .accounts_db
-        .set_password_hash(new.id, "$argon2id$new", t1)
+        .set_password_hash(new.id, "$argon2id$new", true, t1)
         .await
         .expect("pw")
         .expect("user");
-    assert_eq!(reset.password_hash, "$argon2id$new");
+    assert_eq!(
+        (
+            reset.password_hash.as_str(),
+            reset.must_change_password,
+            reset.updated
+        ),
+        ("$argon2id$new", true, t1)
+    );
+    let chosen = db
+        .accounts_db
+        .set_password_hash(new.id, "$argon2id$chosen", false, t1)
+        .await
+        .expect("pw")
+        .expect("user");
+    assert_eq!(
+        (chosen.password_hash.as_str(), chosen.must_change_password),
+        ("$argon2id$chosen", false)
+    );
     let promoted = db
         .accounts_db
         .set_role(new.id, UserRole::Admin, t1)
@@ -410,7 +428,7 @@ async fn devices_and_sessions_across_accounts_and_app_roles() {
     let b = TestUser::new("bob").create(&db).await.expect("b").id;
     let t0 = db.clock.now();
     let (dev_a, ses_a) = login(&db, a, t0).await;
-    let (_dev_b, ses_b) = login(&db, b, t0).await;
+    let (dev_b, ses_b) = login(&db, b, t0).await;
 
     // App side, scoped: sees only its own device, can set a push token and revoke (logout).
     let mut tx = db.begin(a).await.expect("tx");
@@ -434,9 +452,41 @@ async fn devices_and_sessions_across_accounts_and_app_roles() {
         .expect("get")
         .expect("exists");
     assert_eq!(
-        (d.push_provider, d.push_token.as_deref(), d.push_updated),
-        (PushProvider::Fcm, Some("tok"), Some(t0))
+        (
+            d.push_provider,
+            d.push_token.as_deref(),
+            d.push_updated,
+            d.reminders_enabled
+        ),
+        (PushProvider::Fcm, Some("tok"), Some(t0), true)
     );
+    // Rename and reminders (D27) are per device and scoped: B's device is untouched and
+    // invisible.
+    assert!(
+        devices::set_reminders_enabled(&mut tx, dev_a, false)
+            .await
+            .expect("reminders")
+    );
+    assert!(
+        devices::rename_device(&mut tx, dev_a, "Pixel 9")
+            .await
+            .expect("rename")
+    );
+    assert!(
+        !devices::set_reminders_enabled(&mut tx, dev_b, false)
+            .await
+            .expect("foreign")
+    );
+    assert!(
+        !devices::rename_device(&mut tx, dev_b, "mine")
+            .await
+            .expect("foreign")
+    );
+    let d = devices::get_device(&mut tx, dev_a)
+        .await
+        .expect("get")
+        .expect("exists");
+    assert_eq!((d.name.as_str(), d.reminders_enabled), ("Pixel 9", false));
     assert!(
         devices::touch_device(&mut tx, dev_a, t0 + Duration::minutes(5))
             .await
@@ -608,5 +658,164 @@ async fn refresh_tokens_rotate_once_and_reuse_revokes_the_session() {
             .await
             .expect("expired"),
         RefreshOutcome::Invalid
+    );
+}
+
+async fn count(db: &TestDb, table: &str) -> i64 {
+    sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT count(*) FROM {table}")))
+        .fetch_one(&db.accounts)
+        .await
+        .expect("count")
+}
+
+#[tokio::test]
+async fn account_transactions_commit_everything_or_nothing() {
+    let db = TestDb::new().await.expect("db");
+    let a = TestUser::new("alice").create(&db).await.expect("a").id;
+    let t0 = db.clock.now();
+    let session = |device: DeviceId, id: SessionId| Session {
+        user_id: a,
+        id,
+        device_id: device,
+        created: t0,
+        expires: t0 + Duration::days(30),
+        revoked_at: None,
+        revoked_reason: None,
+        export_only: false,
+    };
+    let token = |hash: u8, session_id: SessionId| RefreshToken {
+        user_id: a,
+        token_hash: vec![hash; 32],
+        session_id,
+        issued: t0,
+        expires: t0 + Duration::days(30),
+        used_at: None,
+    };
+
+    // A login whose last write fails (duplicate token hash) and one dropped part-way leave
+    // no device, session or token behind.
+    let (d1, s1) = (
+        DeviceId::generate(db.ids.as_ref()),
+        SessionId::generate(db.ids.as_ref()),
+    );
+    let mut tx = db.accounts_db.begin().await.expect("begin");
+    let device = tx
+        .create_device(a, d1, "Pixel", Platform::Android, t0)
+        .await
+        .expect("device");
+    assert!(device.reminders_enabled);
+    tx.create_session(&session(d1, s1)).await.expect("session");
+    tx.insert_refresh_token(&token(1, s1)).await.expect("token");
+    let err = tx
+        .insert_refresh_token(&token(1, s1))
+        .await
+        .expect_err("duplicate hash");
+    assert!(err.is_unique_violation(), "{err}");
+    drop(tx);
+    let mut tx = db.accounts_db.begin().await.expect("begin");
+    tx.create_device(a, d1, "Pixel", Platform::Android, t0)
+        .await
+        .expect("device");
+    tx.rollback().await.expect("rollback");
+    for table in ["devices", "sessions", "refresh_tokens"] {
+        assert_eq!(count(&db, table).await, 0, "{table}");
+    }
+
+    // A committed login is visible as a whole.
+    let mut tx = db.accounts_db.begin().await.expect("begin");
+    tx.create_device(a, d1, "Pixel", Platform::Android, t0)
+        .await
+        .expect("device");
+    tx.create_session(&session(d1, s1)).await.expect("session");
+    tx.insert_refresh_token(&token(1, s1)).await.expect("token");
+    tx.commit().await.expect("commit");
+    for table in ["devices", "sessions", "refresh_tokens"] {
+        assert_eq!(count(&db, table).await, 1, "{table}");
+    }
+
+    // A rotation that fails before commit leaves the old token unspent and no new one.
+    let t1 = t0 + Duration::minutes(15);
+    let mut tx = db.accounts_db.begin().await.expect("begin");
+    assert_eq!(
+        tx.use_refresh_token(&[1; 32], t1).await.expect("use"),
+        RefreshOutcome::Fresh(RefreshToken {
+            used_at: Some(t1),
+            ..token(1, s1)
+        })
+    );
+    assert!(tx.touch_device(a, d1, t1).await.expect("touch"));
+    tx.insert_refresh_token(&token(2, s1))
+        .await
+        .expect("new token");
+    drop(tx);
+    let mut tx = db.accounts_db.begin().await.expect("begin");
+    assert_eq!(
+        tx.use_refresh_token(&[1; 32], t1).await.expect("use"),
+        RefreshOutcome::Fresh(RefreshToken {
+            used_at: Some(t1),
+            ..token(1, s1)
+        })
+    );
+    tx.insert_refresh_token(&token(2, s1))
+        .await
+        .expect("new token");
+    assert!(tx.touch_device(a, d1, t1).await.expect("touch"));
+    assert_eq!(tx.user_by_id(a).await.expect("user").map(|u| u.id), Some(a));
+    assert_eq!(
+        tx.session_by_id(s1).await.expect("session").map(|s| s.id),
+        Some(s1)
+    );
+    tx.commit().await.expect("commit");
+    let tokens: Vec<(Vec<u8>, Option<chrono::DateTime<chrono::Utc>>)> =
+        sqlx::query_as("SELECT token_hash, used_at FROM refresh_tokens ORDER BY token_hash")
+            .fetch_all(&db.accounts)
+            .await
+            .expect("tokens");
+    assert_eq!(tokens, vec![(vec![1; 32], Some(t1)), (vec![2; 32], None)]);
+    let last_seen: chrono::DateTime<chrono::Utc> =
+        sqlx::query_scalar("SELECT last_seen FROM devices")
+            .fetch_one(&db.accounts)
+            .await
+            .expect("device");
+    assert_eq!(last_seen, t1);
+
+    // In a transaction: revoke, and the reuse revocation is kept on commit.
+    let mut tx = db.accounts_db.begin().await.expect("begin");
+    assert!(matches!(
+        tx.use_refresh_token(&[1; 32], t1).await.expect("reuse"),
+        RefreshOutcome::Reused(_)
+    ));
+    assert!(
+        !tx.revoke_session(s1, RevokeReason::Admin, t1)
+            .await
+            .expect("already revoked")
+    );
+    tx.commit().await.expect("commit");
+    assert_eq!(
+        db.accounts_db
+            .session_by_id(s1)
+            .await
+            .expect("get")
+            .map(|s| s.revoked_reason),
+        Some(Some(RevokeReason::RefreshReuse))
+    );
+    let updated = db
+        .accounts_db
+        .begin()
+        .await
+        .expect("begin")
+        .set_password_hash(a, "$argon2id$x", true, t1)
+        .await
+        .expect("pw")
+        .map(|u| u.must_change_password);
+    assert_eq!(updated, Some(true));
+    // …but the transaction above was dropped, so nothing changed.
+    assert_eq!(
+        db.accounts_db
+            .user_by_id(a)
+            .await
+            .expect("get")
+            .map(|u| u.must_change_password),
+        Some(false)
     );
 }

@@ -494,6 +494,65 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     assert_eq!(doc.document.status, types::DocumentStatus::Stored);
     assert_eq!(doc.document.location_id, Some(office.place.id));
     assert_eq!(doc.custody.len(), 6);
+    // An event with a source note cites it; events recorded without one carry no citation
+    // (`by: user`), rather than an invented one.
+    let call = ops::create_note(
+        c,
+        &types::CreateNoteRequest {
+            content: "Found the passport at the office.\n".into(),
+            force: None,
+            id: None,
+            path: "notes/Call.md".into(),
+        },
+    )
+    .await
+    .expect("call note");
+    let doc = ops::add_custody_event(
+        c,
+        pid,
+        &types::CustodyEventRequest {
+            source_note_id: Some(call.id),
+            ..event(
+                types::CustodyEventKind::Found,
+                d(2026, 5, 21),
+                Some(office.place.id),
+                None,
+                None,
+            )
+        },
+    )
+    .await
+    .expect("found");
+    assert_eq!(
+        doc.custody
+            .iter()
+            .map(|e| (e.by.as_str(), e.source_note_id))
+            .collect::<Vec<_>>(),
+        vec![
+            ("user", Some(call.id)),
+            ("user", None),
+            ("user", None),
+            ("user", None),
+            ("user", None),
+            ("user", None),
+            ("user", None),
+        ]
+    );
+    let text = h.read(alice.id, "documents/Passport.md");
+    let custody = text
+        .split("## Custody\n")
+        .nth(1)
+        .expect("custody section");
+    assert_eq!(
+        custody,
+        "- 2026-05-21 — found at [[Office]] — [[Call]]\n\
+         - 2026-05-20 — stored-at [[Office]]\n\
+         - 2026-04-02 — sent-to [[Bank Misr]]\n\
+         - 2026-03-15 — returned-by [[Watanya]] to [[Safe]]\n\
+         - 2026-03-01 — handed-to [[Watanya]]\n\
+         - 2026-01-10 — stored-at [[Safe]]\n\
+         - 2025-12-01 — lost\n"
+    );
 
     // Wrong-kind arguments are refused.
     let wrong = ops::add_custody_event(

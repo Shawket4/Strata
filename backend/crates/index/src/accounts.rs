@@ -3,7 +3,7 @@
 //! no grants on vault data, so nothing here can read notes even through a bug.
 
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
 use strata_common::{AuditId, DeviceId, InviteId, SessionId, UserId};
 
 use crate::error::Result;
@@ -52,6 +52,9 @@ pub struct User {
     pub deletion_at: Option<DateTime<Utc>>,
     /// When the user downloaded their export.
     pub export_downloaded_at: Option<DateTime<Utc>>,
+    /// Set by an admin password reset: the account is restricted until the user chooses a new
+    /// password (`PATCH /me`).
+    pub must_change_password: bool,
 }
 
 /// Input for [`AccountsDb::create_user`].
@@ -132,6 +135,8 @@ pub struct Device {
     pub push_token: Option<String>,
     /// Last push registration change.
     pub push_updated: Option<DateTime<Utc>>,
+    /// Whether the device schedules local reminder notifications (D27, default true).
+    pub reminders_enabled: bool,
 }
 
 /// A `sessions` row.
@@ -183,24 +188,36 @@ pub enum RefreshOutcome {
     Invalid,
 }
 
+macro_rules! user_cols {
+    () => {
+        concat!(
+            "id, username, username_normalized, display_name, password_hash, role, status, ",
+            "created, updated, approved_by, approved_at, rejected_at, disabled_at, deletion_requested_by, ",
+            "deletion_requested_at, deletion_at, export_downloaded_at, must_change_password"
+        )
+    };
+}
 macro_rules! user_query {
     ($tail:literal) => {
-        concat!(
-            "SELECT id, username, username_normalized, display_name, password_hash, role, status, ",
-            "created, updated, approved_by, approved_at, rejected_at, disabled_at, deletion_requested_by, ",
-            "deletion_requested_at, deletion_at, export_downloaded_at FROM users ",
-            $tail
-        )
+        concat!("SELECT ", user_cols!(), " FROM users ", $tail)
     };
 }
 macro_rules! user_update {
     ($set:literal, $where:literal) => {
         concat!(
-            "UPDATE users SET ", $set, " WHERE id = $1 AND ", $where, " RETURNING ",
-            "id, username, username_normalized, display_name, password_hash, role, status, ",
-            "created, updated, approved_by, approved_at, rejected_at, disabled_at, deletion_requested_by, ",
-            "deletion_requested_at, deletion_at, export_downloaded_at"
+            "UPDATE users SET ",
+            $set,
+            " WHERE id = $1 AND ",
+            $where,
+            " RETURNING ",
+            user_cols!()
         )
+    };
+}
+macro_rules! device_cols {
+    () => {
+        "user_id, id, name, platform, created, last_seen, push_provider, push_token, push_updated, \
+         reminders_enabled"
     };
 }
 
@@ -220,9 +237,7 @@ impl AccountsDb {
             "INSERT INTO users (id, username, username_normalized, display_name, password_hash, role, ",
             "status, created, updated, approved_by, approved_at) ",
             "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10) RETURNING ",
-            "id, username, username_normalized, display_name, password_hash, role, status, ",
-            "created, updated, approved_by, approved_at, rejected_at, disabled_at, deletion_requested_by, ",
-            "deletion_requested_at, deletion_at, export_downloaded_at"
+            user_cols!()
         ))
         .bind(new.id)
         .bind(&new.username)
@@ -240,10 +255,7 @@ impl AccountsDb {
 
     /// Looks a user up by ID.
     pub async fn user_by_id(&self, id: UserId) -> Result<Option<User>> {
-        Ok(sqlx::query_as(user_query!("WHERE id = $1"))
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?)
+        user_by_id(&mut *self.pool.acquire().await?, id).await
     }
 
     /// Looks a user up by normalised username.
@@ -391,21 +403,23 @@ impl AccountsDb {
         .await?)
     }
 
-    /// Replaces the password hash.
+    /// Replaces the password hash and sets whether the user must change it (true after an
+    /// admin reset, false when the user chose it).
     pub async fn set_password_hash(
         &self,
         id: UserId,
         password_hash: &str,
+        must_change_password: bool,
         now: DateTime<Utc>,
     ) -> Result<Option<User>> {
-        Ok(
-            sqlx::query_as(user_update!("password_hash = $2, updated = $3", "true"))
-                .bind(id)
-                .bind(password_hash)
-                .bind(now)
-                .fetch_optional(&self.pool)
-                .await?,
+        set_password_hash(
+            &mut *self.pool.acquire().await?,
+            id,
+            password_hash,
+            must_change_password,
+            now,
         )
+        .await
     }
 
     /// Changes the role.
@@ -514,6 +528,14 @@ impl AccountsDb {
 
     // ---- devices, sessions, refresh tokens (account bridge) ---------------------------------
 
+    /// Starts a transaction: the account writes of one login or one refresh-token rotation
+    /// either all happen or none do ([`AccountsTx`]).
+    pub async fn begin(&self) -> Result<AccountsTx> {
+        Ok(AccountsTx {
+            tx: self.pool.begin().await?,
+        })
+    }
+
     /// Creates a device at login.
     pub async fn create_device(
         &self,
@@ -523,48 +545,25 @@ impl AccountsDb {
         platform: Platform,
         now: DateTime<Utc>,
     ) -> Result<Device> {
-        Ok(sqlx::query_as(
-            "INSERT INTO devices (user_id, id, name, platform, created, last_seen) \
-             VALUES ($1, $2, $3, $4, $5, $5) \
-             RETURNING user_id, id, name, platform, created, last_seen, push_provider, push_token, push_updated",
+        create_device(
+            &mut *self.pool.acquire().await?,
+            user_id,
+            id,
+            name,
+            platform,
+            now,
         )
-        .bind(user_id)
-        .bind(id)
-        .bind(name)
-        .bind(platform)
-        .bind(now)
-        .fetch_one(&self.pool)
-        .await?)
+        .await
     }
 
     /// Creates a session for a device.
     pub async fn create_session(&self, session: &Session) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO sessions (user_id, id, device_id, created, expires, revoked_at, revoked_reason, export_only) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-        )
-        .bind(session.user_id)
-        .bind(session.id)
-        .bind(session.device_id)
-        .bind(session.created)
-        .bind(session.expires)
-        .bind(session.revoked_at)
-        .bind(session.revoked_reason)
-        .bind(session.export_only)
-        .execute(&self.pool)
-        .await?;
-        Ok(())
+        create_session(&mut *self.pool.acquire().await?, session).await
     }
 
     /// Looks a session up by ID (from access-token claims).
     pub async fn session_by_id(&self, id: SessionId) -> Result<Option<Session>> {
-        Ok(sqlx::query_as(
-            "SELECT user_id, id, device_id, created, expires, revoked_at, revoked_reason, export_only \
-             FROM sessions WHERE id = $1",
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?)
+        session_by_id(&mut *self.pool.acquire().await?, id).await
     }
 
     /// Revokes one session; false if unknown or already revoked.
@@ -574,15 +573,7 @@ impl AccountsDb {
         reason: RevokeReason,
         now: DateTime<Utc>,
     ) -> Result<bool> {
-        let done = sqlx::query(
-            "UPDATE sessions SET revoked_at = $3, revoked_reason = $2 WHERE id = $1 AND revoked_at IS NULL",
-        )
-        .bind(id)
-        .bind(reason)
-        .bind(now)
-        .execute(&self.pool)
-        .await?;
-        Ok(done.rows_affected() == 1)
+        revoke_session(&mut *self.pool.acquire().await?, id, reason, now).await
     }
 
     /// Revokes every live session of a user (disable, deletion scheduling); returns the IDs.
@@ -615,39 +606,134 @@ impl AccountsDb {
 
     /// Stores a newly issued refresh token.
     pub async fn insert_refresh_token(&self, token: &RefreshToken) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO refresh_tokens (user_id, token_hash, session_id, issued, expires, used_at) \
-             VALUES ($1, $2, $3, $4, $5, $6)",
-        )
-        .bind(token.user_id)
-        .bind(&token.token_hash)
-        .bind(token.session_id)
-        .bind(token.issued)
-        .bind(token.expires)
-        .bind(token.used_at)
-        .execute(&self.pool)
-        .await?;
-        Ok(())
+        insert_refresh_token(&mut *self.pool.acquire().await?, token).await
     }
 
-    /// Spends a refresh token (rotation). A second use of the same token revokes its session
-    /// (`refresh_reuse`) and reports [`RefreshOutcome::Reused`]. Unknown, expired, or
-    /// revoked-session tokens are [`RefreshOutcome::Invalid`].
+    /// Spends a refresh token (rotation) in its own transaction; see
+    /// [`AccountsTx::use_refresh_token`].
     pub async fn use_refresh_token(
         &self,
         token_hash: &[u8],
         now: DateTime<Utc>,
     ) -> Result<RefreshOutcome> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.begin().await?;
+        let outcome = tx.use_refresh_token(token_hash, now).await?;
+        tx.commit().await?;
+        Ok(outcome)
+    }
+}
+
+/// One `strata_accounts` transaction over users and the account-bridge tables. Dropping it
+/// without [`commit`](Self::commit) rolls everything back, so a failure part-way through a
+/// login or a refresh-token rotation leaves no device, session or token behind.
+#[derive(Debug)]
+pub struct AccountsTx {
+    tx: sqlx::Transaction<'static, sqlx::Postgres>,
+}
+
+impl AccountsTx {
+    /// Commits.
+    pub async fn commit(self) -> Result<()> {
+        self.tx.commit().await?;
+        Ok(())
+    }
+
+    /// Rolls back (same as dropping, but reports errors).
+    pub async fn rollback(self) -> Result<()> {
+        self.tx.rollback().await?;
+        Ok(())
+    }
+
+    /// See [`AccountsDb::user_by_id`].
+    pub async fn user_by_id(&mut self, id: UserId) -> Result<Option<User>> {
+        user_by_id(&mut self.tx, id).await
+    }
+
+    /// See [`AccountsDb::set_password_hash`].
+    pub async fn set_password_hash(
+        &mut self,
+        id: UserId,
+        password_hash: &str,
+        must_change_password: bool,
+        now: DateTime<Utc>,
+    ) -> Result<Option<User>> {
+        set_password_hash(&mut self.tx, id, password_hash, must_change_password, now).await
+    }
+
+    /// See [`AccountsDb::create_device`].
+    pub async fn create_device(
+        &mut self,
+        user_id: UserId,
+        id: DeviceId,
+        name: &str,
+        platform: Platform,
+        now: DateTime<Utc>,
+    ) -> Result<Device> {
+        create_device(&mut self.tx, user_id, id, name, platform, now).await
+    }
+
+    /// Updates a device's `last_seen` (never backwards). False if absent.
+    pub async fn touch_device(
+        &mut self,
+        user_id: UserId,
+        id: DeviceId,
+        now: DateTime<Utc>,
+    ) -> Result<bool> {
+        let done = sqlx::query(
+            "UPDATE devices SET last_seen = GREATEST(last_seen, $3) WHERE user_id = $1 AND id = $2",
+        )
+        .bind(user_id)
+        .bind(id)
+        .bind(now)
+        .execute(&mut *self.tx)
+        .await?;
+        Ok(done.rows_affected() == 1)
+    }
+
+    /// See [`AccountsDb::create_session`].
+    pub async fn create_session(&mut self, session: &Session) -> Result<()> {
+        create_session(&mut self.tx, session).await
+    }
+
+    /// See [`AccountsDb::session_by_id`].
+    pub async fn session_by_id(&mut self, id: SessionId) -> Result<Option<Session>> {
+        session_by_id(&mut self.tx, id).await
+    }
+
+    /// See [`AccountsDb::revoke_session`].
+    pub async fn revoke_session(
+        &mut self,
+        id: SessionId,
+        reason: RevokeReason,
+        now: DateTime<Utc>,
+    ) -> Result<bool> {
+        revoke_session(&mut self.tx, id, reason, now).await
+    }
+
+    /// See [`AccountsDb::insert_refresh_token`].
+    pub async fn insert_refresh_token(&mut self, token: &RefreshToken) -> Result<()> {
+        insert_refresh_token(&mut self.tx, token).await
+    }
+
+    /// Spends a refresh token (rotation). A second use of the same token revokes its session
+    /// (`refresh_reuse`) and reports [`RefreshOutcome::Reused`]; commit to keep that
+    /// revocation. Unknown, expired, or revoked-session tokens are
+    /// [`RefreshOutcome::Invalid`]. The token row stays locked until the transaction ends, so
+    /// a concurrent rotation of the same token waits and then sees it spent.
+    pub async fn use_refresh_token(
+        &mut self,
+        token_hash: &[u8],
+        now: DateTime<Utc>,
+    ) -> Result<RefreshOutcome> {
         let token: Option<RefreshToken> = sqlx::query_as(
             "SELECT t.user_id, t.token_hash, t.session_id, t.issued, t.expires, t.used_at \
              FROM refresh_tokens t JOIN sessions s ON s.user_id = t.user_id AND s.id = t.session_id \
              WHERE t.token_hash = $1 AND s.revoked_at IS NULL FOR UPDATE OF t",
         )
         .bind(token_hash)
-        .fetch_optional(&mut *tx)
+        .fetch_optional(&mut *self.tx)
         .await?;
-        let outcome = match token {
+        Ok(match token {
             None => RefreshOutcome::Invalid,
             Some(t) if t.used_at.is_some() => {
                 sqlx::query(
@@ -657,7 +743,7 @@ impl AccountsDb {
                 .bind(t.user_id)
                 .bind(t.session_id)
                 .bind(now)
-                .execute(&mut *tx)
+                .execute(&mut *self.tx)
                 .await?;
                 RefreshOutcome::Reused(t)
             }
@@ -666,13 +752,122 @@ impl AccountsDb {
                 sqlx::query("UPDATE refresh_tokens SET used_at = $2 WHERE token_hash = $1")
                     .bind(token_hash)
                     .bind(now)
-                    .execute(&mut *tx)
+                    .execute(&mut *self.tx)
                     .await?;
                 t.used_at = Some(now);
                 RefreshOutcome::Fresh(t)
             }
-        };
-        tx.commit().await?;
-        Ok(outcome)
+        })
     }
+}
+
+// ---- statements shared by the pool and transaction forms -------------------------------------
+
+async fn user_by_id(conn: &mut PgConnection, id: UserId) -> Result<Option<User>> {
+    Ok(sqlx::query_as(user_query!("WHERE id = $1"))
+        .bind(id)
+        .fetch_optional(conn)
+        .await?)
+}
+
+async fn set_password_hash(
+    conn: &mut PgConnection,
+    id: UserId,
+    password_hash: &str,
+    must_change_password: bool,
+    now: DateTime<Utc>,
+) -> Result<Option<User>> {
+    Ok(sqlx::query_as(user_update!(
+        "password_hash = $2, must_change_password = $3, updated = $4",
+        "true"
+    ))
+    .bind(id)
+    .bind(password_hash)
+    .bind(must_change_password)
+    .bind(now)
+    .fetch_optional(conn)
+    .await?)
+}
+
+async fn create_device(
+    conn: &mut PgConnection,
+    user_id: UserId,
+    id: DeviceId,
+    name: &str,
+    platform: Platform,
+    now: DateTime<Utc>,
+) -> Result<Device> {
+    Ok(sqlx::query_as(concat!(
+        "INSERT INTO devices (user_id, id, name, platform, created, last_seen) \
+         VALUES ($1, $2, $3, $4, $5, $5) RETURNING ",
+        device_cols!()
+    ))
+    .bind(user_id)
+    .bind(id)
+    .bind(name)
+    .bind(platform)
+    .bind(now)
+    .fetch_one(conn)
+    .await?)
+}
+
+async fn create_session(conn: &mut PgConnection, session: &Session) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO sessions (user_id, id, device_id, created, expires, revoked_at, revoked_reason, export_only) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    )
+    .bind(session.user_id)
+    .bind(session.id)
+    .bind(session.device_id)
+    .bind(session.created)
+    .bind(session.expires)
+    .bind(session.revoked_at)
+    .bind(session.revoked_reason)
+    .bind(session.export_only)
+    .execute(conn)
+    .await?;
+    Ok(())
+}
+
+async fn session_by_id(conn: &mut PgConnection, id: SessionId) -> Result<Option<Session>> {
+    Ok(sqlx::query_as(
+        "SELECT user_id, id, device_id, created, expires, revoked_at, revoked_reason, export_only \
+         FROM sessions WHERE id = $1",
+    )
+    .bind(id)
+    .fetch_optional(conn)
+    .await?)
+}
+
+async fn revoke_session(
+    conn: &mut PgConnection,
+    id: SessionId,
+    reason: RevokeReason,
+    now: DateTime<Utc>,
+) -> Result<bool> {
+    let done = sqlx::query(
+        "UPDATE sessions SET revoked_at = $3, revoked_reason = $2 WHERE id = $1 AND revoked_at IS NULL",
+    )
+    .bind(id)
+    .bind(reason)
+    .bind(now)
+    .execute(conn)
+    .await?;
+    Ok(done.rows_affected() == 1)
+}
+
+async fn insert_refresh_token(conn: &mut PgConnection, token: &RefreshToken) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO refresh_tokens (user_id, token_hash, session_id, issued, expires, used_at) \
+         VALUES ($1, $2, $3, $4, $5, $6)",
+    )
+    .bind(token.user_id)
+    .bind(&token.token_hash)
+    .bind(token.session_id)
+    .bind(token.issued)
+    .bind(token.expires)
+    .bind(token.used_at)
+    .execute(conn)
+    .await?;
+    Ok(())
 }

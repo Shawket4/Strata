@@ -7,9 +7,18 @@
 //! - 2026-09-20 — returned-by [[Shady]] to [[Safe — Nasr City office]] — [[Capture 2026-09-20#^c1d2]]
 //! ```
 //!
-//! `- <date> — <type> <arguments> — <citation> [<citation> …]`. Arguments are wikilinks: the
+//! `- <date> — <type> <arguments>[ — <citation> [<citation> …]]`. Arguments are wikilinks: the
 //! type's primary argument without a keyword, others after `at`/`to`/`in` (place), `by`
 //! (person) or `with`/`from` (counterparty).
+//!
+//! Citations are required for AI-produced events (PLAN §6.12: "each cited"; enforced by
+//! [`crate::sections::validate_content`], which every AI write goes through). An event the
+//! user recorded (`by: user`, e.g. `POST /documents/{id}/custody` without a source note) may
+//! have none and is written without the trailing ` — ` part:
+//!
+//! ```text
+//! - 2026-09-21 — handed-to [[Shady]]
+//! ```
 
 use std::fmt::Write as _;
 
@@ -58,7 +67,8 @@ pub struct CustodyEvent {
     pub person: Option<String>,
     /// Third party involved.
     pub counterparty: Option<String>,
-    /// Citations (wikilinks to the notes/blocks stating the event); at least one.
+    /// Citations (wikilinks to the notes/blocks stating the event). Empty only for an event
+    /// the user recorded ([`Self::is_user_recorded`]); AI events always cite.
     pub citations: Vec<String>,
 }
 
@@ -86,8 +96,8 @@ pub enum CustodyParseError {
     /// The same role was given twice.
     #[error("role given twice")]
     DuplicateRole,
-    /// No citation.
-    #[error("custody events must cite at least one note")]
+    /// No citation (only user-recorded events may omit it; AI events must cite).
+    #[error("AI custody events must cite at least one note")]
     NoCitation,
 }
 
@@ -132,15 +142,33 @@ impl CustodyEvent {
                 let _ = write!(out, " {kw} {link}");
             }
         }
-        out.push_str(" —");
-        for c in &self.citations {
-            out.push(' ');
-            out.push_str(c);
+        if !self.citations.is_empty() {
+            out.push_str(" —");
+            for c in &self.citations {
+                out.push(' ');
+                out.push_str(c);
+            }
         }
         out
     }
 
-    /// Parses a custody line (canonical or with `–`/`-` separators).
+    /// Whether the event was recorded by the user (`by: user`): it carries no citation. AI
+    /// events always cite the note stating them.
+    pub fn is_user_recorded(&self) -> bool {
+        self.citations.is_empty()
+    }
+
+    /// Checks the AI rule: at least one citation ([`CustodyParseError::NoCitation`]).
+    pub fn require_citation(&self) -> Result<(), CustodyParseError> {
+        if self.citations.is_empty() {
+            Err(CustodyParseError::NoCitation)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Parses a custody line (canonical or with `–`/`-` separators). The citation part is
+    /// optional (a user-recorded event); see [`Self::require_citation`] for AI content.
     pub fn parse(line: &str) -> Result<Self, CustodyParseError> {
         let rest = line
             .trim_end()
@@ -157,10 +185,11 @@ impl CustodyEvent {
             .ok_or(CustodyParseError::MissingSeparator)?;
         let body = &after_date[sep.len()..];
         let links = wikilink::find_all(body);
-        let split =
-            last_separator_outside(body, &links).ok_or(CustodyParseError::MissingSeparator)?;
-        let (event, cites) = (&body[..split.0], &body[split.1..]);
-        let citations = parse_citations(cites)?;
+        // No second separator: a user-recorded event without citations.
+        let (event, citations) = match last_separator_outside(body, &links) {
+            Some((end, start)) => (&body[..end], parse_citations(&body[start..])?),
+            None => (body, Vec::new()),
+        };
         let mut words = event.splitn(2, ' ');
         let kind_text = words.next().unwrap_or("");
         let kind = kind_text
@@ -238,7 +267,6 @@ fn last_separator_outside(body: &str, links: &[WikiLink]) -> Option<(usize, usiz
             return best;
         }
     }
-    // An event with a trailing " —" and no citations still separates.
     best
 }
 
@@ -451,6 +479,11 @@ mod tests {
                 e.counterparty = None;
             }
             let line = e.to_line();
+            assert_eq!(CustodyEvent::parse(&line), Ok(e.clone()), "{line}");
+            // The same event recorded by the user, without citations.
+            e.citations.clear();
+            let line = e.to_line();
+            assert!(!line.ends_with('—'), "{line}");
             assert_eq!(CustodyEvent::parse(&line), Ok(e), "{line}");
         }
     }
@@ -478,7 +511,11 @@ mod tests {
                 "- 2026-01-01 — lost by [[x]] by [[y]] — [[a]]",
                 E::DuplicateRole,
             ),
-            ("- 2026-01-01 — lost —", E::MissingSeparator),
+            ("- 2026-01-01 — lost —", E::Unexpected("—".into())),
+            (
+                "- 2026-01-01 — handed-to [[x]] - see notes",
+                E::Unexpected("see notes".into()),
+            ),
             (
                 "- 2026-01-01 — lost — see notes",
                 E::Unexpected("see notes".into()),
@@ -491,6 +528,48 @@ mod tests {
         for (line, err) in cases {
             assert_eq!(CustodyEvent::parse(line), Err(err), "{line}");
         }
+    }
+
+    #[test]
+    fn user_recorded_events_need_no_citation() {
+        let line = "- 2026-09-21 — returned-by [[Shady]] to [[Safe — Nasr City office]]";
+        let e = CustodyEvent::parse(line);
+        assert_eq!(
+            e,
+            Ok(CustodyEvent {
+                date: d(2026, 9, 21),
+                kind: CustodyEventType::ReturnedBy,
+                place: Some("[[Safe — Nasr City office]]".into()),
+                person: Some("[[Shady]]".into()),
+                counterparty: None,
+                citations: vec![],
+            })
+        );
+        let e = e.expect("parsed");
+        assert!(e.is_user_recorded());
+        assert_eq!(e.require_citation(), Err(CustodyParseError::NoCitation));
+        assert_eq!(e.to_line(), line);
+        for (line, kind) in [
+            ("- 2026-01-01 — lost", CustodyEventType::Lost),
+            ("- 2026-01-01 — destroyed by [[Shady]]", CustodyEventType::Destroyed),
+            ("- 2026-01-01 - sent-to [[Bank]]", CustodyEventType::SentTo),
+        ] {
+            let e = CustodyEvent::parse(line).expect(line);
+            assert_eq!((e.kind, e.citations.len()), (kind, 0), "{line}");
+        }
+        let cited = CustodyEvent::parse("- 2026-01-01 — lost — [[C]]").expect("cited");
+        assert!(!cited.is_user_recorded());
+        assert_eq!(cited.require_citation(), Ok(()));
+        // A section may mix both; the state derives from all of them.
+        let section = "- 2026-09-21 — handed-to [[Shady]]\n\
+                       - 2026-01-01 — stored-at [[Safe]] — [[C0]]\n";
+        let (events, bad) = parse_section(section);
+        assert_eq!(bad, vec![]);
+        assert_eq!(render_section(&events), section.trim_end());
+        assert_eq!(
+            CustodyState::derive(&events).map(|s| (s.holder, s.status)),
+            Some((Some("[[Shady]]".into()), DocumentStatus::CheckedOut))
+        );
     }
 
     #[test]

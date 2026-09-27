@@ -1,6 +1,6 @@
 //! The app-side view of the scoped user's devices and sessions (`GET /devices`,
-//! `DELETE /devices/{id}`, `PUT /devices/{id}/push`, logout). Devices and sessions are created
-//! by the accounts layer at login.
+//! `PATCH /devices/{id}`, `DELETE /devices/{id}`, `PUT /devices/{id}/push`, logout). Devices
+//! and sessions are created by the accounts layer at login.
 
 use chrono::{DateTime, Utc};
 use strata_common::{DeviceId, SessionId};
@@ -10,8 +10,8 @@ use crate::error::Result;
 use crate::scope::ScopedTx;
 use crate::types::{PushProvider, RevokeReason};
 
-const DEVICE_COLS: &str =
-    "user_id, id, name, platform, created, last_seen, push_provider, push_token, push_updated";
+const DEVICE_COLS: &str = "user_id, id, name, platform, created, last_seen, push_provider, \
+     push_token, push_updated, reminders_enabled";
 
 /// The user's devices, most recently seen first.
 pub async fn list_devices(tx: &mut ScopedTx) -> Result<Vec<Device>> {
@@ -54,6 +54,26 @@ pub async fn set_push(
     .bind(now)
     .execute(tx.conn())
     .await?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// Renames a device. False if absent.
+pub async fn rename_device(tx: &mut ScopedTx, id: DeviceId, name: &str) -> Result<bool> {
+    let done = sqlx::query("UPDATE devices SET name = $2 WHERE id = $1")
+        .bind(id)
+        .bind(name)
+        .execute(tx.conn())
+        .await?;
+    Ok(done.rows_affected() == 1)
+}
+
+/// Turns local reminder notifications on this device on or off (D27). False if absent.
+pub async fn set_reminders_enabled(tx: &mut ScopedTx, id: DeviceId, enabled: bool) -> Result<bool> {
+    let done = sqlx::query("UPDATE devices SET reminders_enabled = $2 WHERE id = $1")
+        .bind(id)
+        .bind(enabled)
+        .execute(tx.conn())
+        .await?;
     Ok(done.rows_affected() == 1)
 }
 

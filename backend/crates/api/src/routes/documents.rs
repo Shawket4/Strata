@@ -401,7 +401,7 @@ pub struct CustodyEventRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>, format = "ulid")]
     pub counterparty_id: Option<Ulid>,
-    /// The note stating the event (cited); the document itself when absent.
+    /// The note stating the event (cited on the line); when absent the line has no citation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>, format = "ulid")]
     pub source_note_id: Option<Ulid>,

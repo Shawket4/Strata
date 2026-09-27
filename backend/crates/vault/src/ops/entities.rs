@@ -642,8 +642,9 @@ impl Core {
         self.view(survivor).await
     }
 
-    /// Records a manual custody event on a document: the `## Custody` line (cited) and the
-    /// frontmatter state derived from the newest event, one `user:` commit.
+    /// Records a manual custody event on a document: the `## Custody` line (citing the source
+    /// note when given, else uncited) and the frontmatter state derived from the newest event,
+    /// one `user:` commit.
     pub async fn add_custody_event(
         &mut self,
         scope: UserScope,
@@ -669,14 +670,14 @@ impl Core {
         check(ev.place, &[NoteKind::Place])?;
         check(ev.person, &[NoteKind::Person])?;
         check(ev.counterparty, &[NoteKind::Person, NoteKind::Company])?;
-        // The shared line grammar needs at least one citation: the stating note, else the
-        // document itself (a user-recorded event, `by: user`).
-        let citation = match ev.source {
+        // A user-recorded event (`by: user`) cites the note stating it when one is given and
+        // is written without a citation otherwise (only AI events must cite).
+        let citations = match ev.source {
             Some(s) => {
                 self.state()?.note(s).ok_or(VaultError::NotFound)?;
-                self.link_to(s)?
+                vec![self.link_to(s)?]
             }
-            None => self.link_to(document)?,
+            None => Vec::new(),
         };
         let op = sync_model::ops::DocumentCustody {
             document_id: document.as_ulid(),
@@ -689,7 +690,7 @@ impl Core {
         let event = sync_model::apply::custody_event(
             &op,
             |u| self.link_to(NoteId::from_ulid(u)).ok(),
-            vec![citation],
+            citations,
         )
         .map_err(|_| VaultError::invalid("the event type's primary argument is missing"))?;
         let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;

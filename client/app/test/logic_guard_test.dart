@@ -271,7 +271,8 @@ void main() {
     expect(File('${root.path}/pubspec.yaml').existsSync(), isTrue);
     final packages = loadWorkspace(root);
     expect(packages.map((p) => p.name), contains('strata_ui'));
-    expect(packages, hasLength(17));
+    expect(packages.map((p) => p.name), contains('strata_bridge'));
+    expect(packages, hasLength(18));
     expect(runGuard(root), isEmpty);
   });
 }

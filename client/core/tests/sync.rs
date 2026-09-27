@@ -737,7 +737,10 @@ async fn an_edit_made_while_bootstrap_paging_was_interrupted_is_pulled_afterward
     let mut engine = s.engine().clone();
     engine.crash_after = Some(Step::BootstrapApplied);
     let report = s.sync_with(&engine, Trigger::Start).await.expect("sync");
-    assert_eq!(report.outcome, CycleOutcome::Crashed(Step::BootstrapApplied));
+    assert_eq!(
+        report.outcome,
+        CycleOutcome::Crashed(Step::BootstrapApplied)
+    );
     drop(s);
     // N1 was on the first page; it changes before the second page is fetched.
     h.server.remote_upsert(

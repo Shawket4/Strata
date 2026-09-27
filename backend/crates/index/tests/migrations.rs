@@ -4,7 +4,7 @@
 
 use pretty_assertions::assert_eq;
 use strata_index::{MIGRATOR, bootstrap, migrate, schema_audit};
-use strata_testkit::{TestDb, TestUser};
+use strata_testkit::TestDb;
 
 async fn tables(db: &TestDb) -> Vec<String> {
     let mut conn = db.superuser.acquire().await.expect("conn");
@@ -34,7 +34,8 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
             20_260_927_000_005,
             20_260_927_000_006,
             20_260_927_000_007,
-            20_260_927_000_008
+            20_260_927_000_008,
+            20_260_927_000_010
         ]
     );
     assert!(after_first.iter().all(|r| r.1));
@@ -56,7 +57,7 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
 #[tokio::test]
 async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
     let db = TestDb::new_unmigrated().await.expect("db");
-    let expected_new_tables: [&[&str]; 8] = [
+    let expected_new_tables: [&[&str]; 9] = [
         &[
             "_sqlx_migrations",
             "audit_log",
@@ -102,6 +103,8 @@ async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
         ],
         &["integrity_warnings"],
         &["ai_usage_global"],
+        // 010: columns only (devices.reminders_enabled, users.must_change_password).
+        &[],
     ];
     let mut before = tables(&db).await;
     let mut user = None;
@@ -125,7 +128,21 @@ async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
         before = after;
         match step {
             // Fixture data written right after the step that creates its table.
-            0 => user = Some(TestUser::new("keeper").create(&db).await.expect("user").id),
+            // Raw SQL: `AccountsDb` reads columns that later migrations add.
+            0 => {
+                let id = strata_common::UserId::generate(db.ids.as_ref());
+                sqlx::query(
+                    "INSERT INTO users (id, username, username_normalized, display_name, \
+                     password_hash, role, status, created, updated, approved_at) VALUES \
+                     ($1, 'keeper', 'keeper', 'Keeper', '$argon2id$x', 'member', 'active', \
+                     now(), now(), now())",
+                )
+                .bind(id)
+                .execute(&db.accounts)
+                .await
+                .expect("user");
+                user = Some(id);
+            }
             2 => {
                 let u = user.expect("user from step 0");
                 let mut tx = db.begin(u).await.expect("tx");

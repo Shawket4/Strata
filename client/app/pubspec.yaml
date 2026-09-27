@@ -106,3 +106,16 @@ melos:
     logic-guard:
       description: Enforce PLAN L15 in Dart (dependency allow-list and allowed Dart folders).
       run: dart run tool/logic_guard.dart
+
+    gen:bridge:
+      description: >-
+        Regenerate the flutter_rust_bridge bindings of strata_bridge from the
+        Rust client core's `api` module (codegen 2.13.0), then rustfmt them with
+        the workspace's edition.
+      run: cd packages/strata_bridge && flutter_rust_bridge_codegen generate && cargo fmt -p strata-core
+
+    build:core:
+      description: >-
+        Build the Rust client core for the host (the strata_bridge smoke test
+        loads target/debug/libstrata_core.so; app builds use cargokit).
+      run: cargo build -p strata-core
