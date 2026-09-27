@@ -2,27 +2,29 @@
 
 Design canvas (Claude Design): https://claude.ai/artifact/PttxTsS31VynwkgAC2cx7F
 
-- **Brand system** page: 11 slides (wordmarks, symbol, endorsement, lockups, colourways, icons, palette, type, clear space).
+- **Brand system** page: 11 slides (wordmarks, symbol, strata bands, lockups, colourways, icons, palette, type, clear space).
 - **Brand board** page: on paper, on ink, icon tiles, small sizes, home screens, splash & store.
-
-Strata is drawn as a Madar family product, following the Madar brand system and the Dawam board.
 
 ## Brand files
 
 | File | Use |
 |------|-----|
-| `brand/strata-symbol.svg` | Symbol, ink on light grounds |
-| `brand/strata-badge.svg` | App icon / badge tile (ink) |
+| `brand/strata-symbol.svg` | Symbol, shale on light grounds |
+| `brand/strata-badge.svg` | App icon / badge tile (shale) |
 | `brand/strata-favicon.svg` | Favicon form (16–32 px) |
 
-## Tokens (draft)
+## Colour tokens (draft) — "sediment"
 
 | Token | Hex | Use |
 |-------|-----|-----|
-| ink | `#14181E` | Mark, text, default icon tile |
-| paper | `#EFF3F4` | Backgrounds, surfaces |
-| slate | `#768288` | Endorsement "by", dividers (text use `#5E6A70`) |
-| madar-teal-deep | `#0D6273` | Endorsement on paper, links, focus |
-| madar-teal-light | `#2E94A6` | Endorsement and accents on ink |
+| shale | `#1F1D1B` | Mark, text, default icon tile, dark UI ground |
+| limestone | `#F4F0E8` | Backgrounds, surfaces; the mark on dark |
+| flint | `#8A8178` | Dividers, quiet UI (text use `#625B54`) |
+| rust | `#9A4F1E` | Accent on light: links, focus, eyebrows, accent tile |
+| ochre | `#E0975A` | The same accent on dark grounds |
 
-Type: Cairo (UI, Arabic, content), IBM Plex Mono (technical labels, markdown source). Latin wordmark currently set in Quicksand Bold and the Arabic wordmark in Cairo Bold as placeholders until custom logotypes are drawn.
+Signature device: the **strata bands** — horizontal bands of uneven depth, one tone apart, with a single thin rust seam.
+
+## Type
+
+Cairo (UI, Arabic, note content) and IBM Plex Mono (technical labels, markdown source). The Latin wordmark is set in Quicksand Bold and the Arabic wordmark in Cairo Bold as placeholders until custom logotypes are drawn.
