@@ -449,4 +449,17 @@ class SyncLocalizationsAr extends SyncLocalizations {
   String errorGeneric({required String code}) {
     return 'حصل خطأ ($code).';
   }
+
+  @override
+  String pillWithConflicts({
+    required String status,
+    required String conflicts,
+  }) {
+    return '$status · $conflicts';
+  }
+
+  @override
+  String pillSemanticsWithHint({required String status}) {
+    return 'حالة المزامنة: $status. افتح حالة المزامنة';
+  }
 }

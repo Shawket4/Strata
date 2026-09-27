@@ -1,0 +1,419 @@
+{
+  "@@locale": "en",
+  "signInTitle": "Sign in",
+  "@signInTitle": {
+    "description": "Sign-in screen title and button."
+  },
+  "signInSubtitle": "Your notes stay on your server and on this device.",
+  "@signInSubtitle": {
+    "description": "Sign-in subtitle (compact)."
+  },
+  "signInSubtitleWide": "One account per device. Your notes are private to you.",
+  "@signInSubtitleWide": {
+    "description": "Sign-in subtitle (wide layouts)."
+  },
+  "brandKicker": "SELF-HOSTED KNOWLEDGE",
+  "@brandKicker": {
+    "description": "Small caps line over the brand panel."
+  },
+  "brandTagline": "Captures filed, notes linked, people and companies kept current. In Arabic and English, online or off.",
+  "@brandTagline": {
+    "description": "Brand panel tagline."
+  },
+  "fieldServer": "Server",
+  "@fieldServer": {
+    "description": "Server URL field label."
+  },
+  "fieldUsername": "Username",
+  "@fieldUsername": {
+    "description": "Username field label."
+  },
+  "fieldPassword": "Password",
+  "@fieldPassword": {
+    "description": "Password field label."
+  },
+  "fieldConfirmPassword": "Confirm password",
+  "@fieldConfirmPassword": {
+    "description": "Confirm password field label."
+  },
+  "fieldNewPassword": "New password",
+  "@fieldNewPassword": {
+    "description": "New password field label."
+  },
+  "fieldCurrentPassword": "Current password",
+  "@fieldCurrentPassword": {
+    "description": "Current password field label."
+  },
+  "fieldDeviceName": "Device name",
+  "@fieldDeviceName": {
+    "description": "Device name field label."
+  },
+  "fieldDisplayName": "Display name",
+  "@fieldDisplayName": {
+    "description": "Display name field label."
+  },
+  "deviceNameHint": "Shown in your list of signed-in devices. You can rename it later.",
+  "@deviceNameHint": {
+    "description": "Helper text under the device name."
+  },
+  "showPassword": "Show password",
+  "@showPassword": {
+    "description": "Tooltip of the show-password button."
+  },
+  "hidePassword": "Hide password",
+  "@hidePassword": {
+    "description": "Tooltip of the hide-password button."
+  },
+  "enterToSignIn": "to sign in",
+  "@enterToSignIn": {
+    "description": "Keyboard hint after the Enter key chip."
+  },
+  "newHere": "New here?",
+  "@newHere": {
+    "description": "Prompt before the sign-up link."
+  },
+  "createAccount": "Create an account",
+  "@createAccount": {
+    "description": "Sign-up link and screen title."
+  },
+  "forgotPassword": "Forgot it? Ask your admin to reset it.",
+  "@forgotPassword": {
+    "description": "Password help line."
+  },
+  "knownAccountsTitle": "Accounts on this device",
+  "@knownAccountsTitle": {
+    "description": "Heading of the known accounts list."
+  },
+  "continueAs": "Continue as {name}",
+  "@continueAs": {
+    "description": "Switches to a known account.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "signUpOn": "on {server}",
+  "@signUpOn": {
+    "description": "Sign-up subtitle with the server.",
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "approvalNotice": "An administrator must approve new accounts. You'll be able to sign in once approved.",
+  "@approvalNotice": {
+    "description": "Notice on the sign-up form."
+  },
+  "requestAccount": "Request account",
+  "@requestAccount": {
+    "description": "Sign-up submit button."
+  },
+  "haveAccount": "Already have an account?",
+  "@haveAccount": {
+    "description": "Prompt before the sign-in link."
+  },
+  "backToSignIn": "Back to sign in",
+  "@backToSignIn": {
+    "description": "Back button of the sign-up screen."
+  },
+  "passwordsMatch": "Passwords match",
+  "@passwordsMatch": {
+    "description": "Confirm-password helper when both fields are equal."
+  },
+  "passwordsDiffer": "Passwords don't match",
+  "@passwordsDiffer": {
+    "description": "Confirm-password error."
+  },
+  "pendingPill": "Pending",
+  "@pendingPill": {
+    "description": "Status pill on the waiting screen."
+  },
+  "pendingTitle": "Waiting for approval",
+  "@pendingTitle": {
+    "description": "Waiting-for-approval title."
+  },
+  "pendingBody": "Your request for @{username} was sent.",
+  "@pendingBody": {
+    "description": "Waiting-for-approval text.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "pendingNext": "We'll let you sign in as soon as an administrator approves your account.",
+  "@pendingNext": {
+    "description": "Waiting-for-approval explanation."
+  },
+  "checkAgain": "Check again",
+  "@checkAgain": {
+    "description": "Retries the sign-in to see if the account was approved."
+  },
+  "stillPending": "Still waiting for approval.",
+  "@stillPending": {
+    "description": "Snackbar after checking again."
+  },
+  "useAnotherAccount": "Use a different account",
+  "@useAnotherAccount": {
+    "description": "Returns to the sign-in screen."
+  },
+  "rejectedTitle": "This account request wasn't approved.",
+  "@rejectedTitle": {
+    "description": "Rejected variant title."
+  },
+  "rejectedBody": "Contact your administrator if this looks wrong. Nothing was stored on this device.",
+  "@rejectedBody": {
+    "description": "Rejected variant body."
+  },
+  "roleAdmin": "Admin",
+  "@roleAdmin": {
+    "description": "Account role admin."
+  },
+  "roleMember": "Member",
+  "@roleMember": {
+    "description": "Account role member."
+  },
+  "accountSheetLabel": "Account",
+  "@accountSheetLabel": {
+    "description": "Accessibility label of the account sheet."
+  },
+  "atUsername": "@{username}",
+  "@atUsername": {
+    "description": "A username as shown under a name.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "thisDevice": "This device",
+  "@thisDevice": {
+    "description": "Label of the current device."
+  },
+  "devices": "Devices",
+  "@devices": {
+    "description": "Opens the devices settings."
+  },
+  "adminUsers": "Admin → Users",
+  "@adminUsers": {
+    "description": "Opens Admin → Users."
+  },
+  "signOut": "Sign out",
+  "@signOut": {
+    "description": "Sign-out action."
+  },
+  "unsyncedTitle": "{count, plural, =1{1 change hasn't synced yet} other{{count} changes haven't synced yet}}",
+  "@unsyncedTitle": {
+    "description": "Sign-out warning title.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "unsyncedBody": "Signing out removes this account's data from this device. Sync first to keep them.",
+  "@unsyncedBody": {
+    "description": "Sign-out warning body."
+  },
+  "syncNow": "Sync now",
+  "@syncNow": {
+    "description": "Sync first, then sign out later."
+  },
+  "signOutAnyway": "Sign out anyway",
+  "@signOutAnyway": {
+    "description": "Signs out, discarding unsynced changes."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancels."
+  },
+  "disabledTitle": "This account was disabled",
+  "@disabledTitle": {
+    "description": "Account disabled title."
+  },
+  "disabledBody": "An administrator disabled @{username}. Local data on this device will be removed.",
+  "@disabledBody": {
+    "description": "Account disabled explanation.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "disabledServerNote": "Notes that already synced stay with the account on the server.",
+  "@disabledServerNote": {
+    "description": "Account disabled reassurance."
+  },
+  "unsyncedCount": "{count, plural, =0{No unsynced changes} =1{1 unsynced change} other{{count} unsynced changes}}",
+  "@unsyncedCount": {
+    "description": "Unsynced changes heading.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "onlyOnDevice": "only on this device",
+  "@onlyOnDevice": {
+    "description": "Tag next to unsynced changes."
+  },
+  "exportFirst": "Export them first",
+  "@exportFirst": {
+    "description": "Exports unsynced changes before removal."
+  },
+  "exportFirstNote": "Export saves them as markdown files you can keep.",
+  "@exportFirstNote": {
+    "description": "Explains the export."
+  },
+  "removeAndSignOut": "Remove and sign out",
+  "@removeAndSignOut": {
+    "description": "Acknowledges the disabled account."
+  },
+  "deletionTitle": "Your account is being deleted",
+  "@deletionTitle": {
+    "description": "Deletion pending title."
+  },
+  "daysLeft": "{count, plural, =0{Deleted today} =1{1 day left} other{{count} days left}}",
+  "@daysLeft": {
+    "description": "Deletion countdown pill.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deletionBody": "An administrator scheduled @{username} for deletion on {date}. Download your notes before then.",
+  "@deletionBody": {
+    "description": "Deletion pending explanation.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadExport": "Download export (.zip)",
+  "@downloadExport": {
+    "description": "Downloads the account export."
+  },
+  "unsyncedNotInExport": "{count, plural, =1{1 change on this device wasn't synced} other{{count} changes on this device weren't synced}}",
+  "@unsyncedNotInExport": {
+    "description": "Deletion pending: unsynced ops heading.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notInExport": "They aren't in the export.",
+  "@notInExport": {
+    "description": "Deletion pending: unsynced ops are not exported."
+  },
+  "saveAsFile": "Save them as a file",
+  "@saveAsFile": {
+    "description": "Saves unsynced ops as a file."
+  },
+  "deleteNow": "Delete now",
+  "@deleteNow": {
+    "description": "Deletes the account immediately."
+  },
+  "readOnlyNote": "Your notes are read-only until then.",
+  "@readOnlyNote": {
+    "description": "Deletion pending: read-only notice."
+  },
+  "notAvailableYet": "Not available yet",
+  "@notAvailableYet": {
+    "description": "Tooltip of an action the app cannot perform yet."
+  },
+  "passwordChangeTitle": "Choose a new password",
+  "@passwordChangeTitle": {
+    "description": "Password change required title."
+  },
+  "passwordChangeBody": "An administrator reset your password. Choose a new one to continue.",
+  "@passwordChangeBody": {
+    "description": "Password change required explanation."
+  },
+  "changePassword": "Change password",
+  "@changePassword": {
+    "description": "Submits a password change."
+  },
+  "errorInvalidCredentials": "Username or password is incorrect",
+  "@errorInvalidCredentials": {
+    "description": "Core error invalid_credentials."
+  },
+  "errorOffline": "Can't reach the server. Check the address and your connection.",
+  "@errorOffline": {
+    "description": "Core error offline."
+  },
+  "errorAccountPending": "This account is waiting for approval.",
+  "@errorAccountPending": {
+    "description": "Core error account_pending."
+  },
+  "errorAccountRejected": "This account request wasn't approved.",
+  "@errorAccountRejected": {
+    "description": "Core error account_rejected."
+  },
+  "errorAccountDisabled": "This account was disabled by an administrator.",
+  "@errorAccountDisabled": {
+    "description": "Core error account_disabled."
+  },
+  "errorAccountDeletion": "This account is scheduled for deletion.",
+  "@errorAccountDeletion": {
+    "description": "Core error account_deletion_pending."
+  },
+  "errorSessionExpired": "Your session ended. Sign in again.",
+  "@errorSessionExpired": {
+    "description": "Core error session_expired."
+  },
+  "errorRateLimited": "Too many attempts. Wait a minute and try again.",
+  "@errorRateLimited": {
+    "description": "Core error rate_limited."
+  },
+  "errorInvalidInput": "Check the {field} field.",
+  "@errorInvalidInput": {
+    "description": "Core error invalid_input.",
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "errorServer": "The server answered with an error ({status}).",
+  "@errorServer": {
+    "description": "Core error server.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "errorNotAvailable": "This isn't available yet.",
+  "@errorNotAvailable": {
+    "description": "Core error not_available."
+  },
+  "errorGeneric": "Something went wrong ({code}).",
+  "@errorGeneric": {
+    "description": "Any other core error.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "unsyncedItem": "{kind} · {time}",
+  "@unsyncedItem": {
+    "description": "An unsynced op: its kind and when it was queued.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  }
+}

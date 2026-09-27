@@ -58,9 +58,15 @@ void drawStyledEdge(
     final back = end - dir * head;
     canvas.drawPath(
       Path()
-        ..moveTo(back.dx + normal.dx * head * 0.6, back.dy + normal.dy * head * 0.6)
+        ..moveTo(
+          back.dx + normal.dx * head * 0.6,
+          back.dy + normal.dy * head * 0.6,
+        )
         ..lineTo(end.dx, end.dy)
-        ..lineTo(back.dx - normal.dx * head * 0.6, back.dy - normal.dy * head * 0.6),
+        ..lineTo(
+          back.dx - normal.dx * head * 0.6,
+          back.dy - normal.dy * head * 0.6,
+        ),
       solid,
     );
   }

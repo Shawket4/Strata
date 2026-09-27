@@ -229,7 +229,13 @@ impl Core {
         let parsed =
             TaskLine::parse(&line).ok_or(VaultError::invalid("the task line is invalid"))?;
         let item = dup::task_item(&id, &parsed);
-        let candidates = dup::find(&mut tx, &item, &self.inner.config.near_thresholds).await?;
+        let candidates = dup::find(
+            &mut tx,
+            &item,
+            &self.inner.config.near_thresholds,
+            self.inner.semantic().as_deref(),
+        )
+        .await?;
         if !candidates.is_empty() && !req.force {
             return Err(VaultError::Duplicate(candidates));
         }

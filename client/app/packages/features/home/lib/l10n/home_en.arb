@@ -1,0 +1,132 @@
+{
+  "@@locale": "en",
+  "homeTitle": "Home",
+  "@homeTitle": {
+    "description": "Home heading (medium / expanded)."
+  },
+  "homeLoadError": "Couldn't load Home",
+  "@homeLoadError": {
+    "description": "Home error title."
+  },
+  "homeComposerLabel": "Capture a thought",
+  "@homeComposerLabel": {
+    "description": "Capture composer label."
+  },
+  "homeComposerHint": "Type or dictate · Arabic or English",
+  "@homeComposerHint": {
+    "description": "Capture composer hint."
+  },
+  "homeComposerFooter": "AI files it into your inbox; nothing is filed until you accept.",
+  "@homeComposerFooter": {
+    "description": "Capture composer footer."
+  },
+  "homeComposerOffline": "Offline · captures are kept on this device and sync later.",
+  "@homeComposerOffline": {
+    "description": "Capture composer footer while offline."
+  },
+  "homeFocusHint": "capture",
+  "@homeFocusHint": {
+    "description": "Label next to the Ctrl/Cmd+N key hint."
+  },
+  "homeSave": "Save",
+  "@homeSave": {
+    "description": "Saves the capture."
+  },
+  "homeCaptureSaved": "Saved to Inbox",
+  "@homeCaptureSaved": {
+    "description": "Snack bar after a capture."
+  },
+  "homeCaptureFailed": "Couldn't save the capture",
+  "@homeCaptureFailed": {
+    "description": "Snack bar when a capture failed."
+  },
+  "homeCaptureFailedCode": "Couldn't save the capture ({code})",
+  "@homeCaptureFailedCode": {
+    "description": "Snack bar with the core failure code.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "homeInboxWaiting": "{count, plural, =0{Inbox is clear} =1{1 capture waiting for filing} other{{count} captures waiting for filing}}",
+  "@homeInboxWaiting": {
+    "description": "Inbox count card.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeAllTasks": "All tasks",
+  "@homeAllTasks": {
+    "description": "Opens Tasks."
+  },
+  "homeAllNotes": "All notes",
+  "@homeAllNotes": {
+    "description": "Opens the notes list."
+  },
+  "homeNoOpenTasks": "No open tasks. Add one from a capture or with New task.",
+  "@homeNoOpenTasks": {
+    "description": "Compact Home without tasks."
+  },
+  "homeNothingToday": "Nothing due today.",
+  "@homeNothingToday": {
+    "description": "Today block without tasks."
+  },
+  "homeRecentNotes": "Recent notes",
+  "@homeRecentNotes": {
+    "description": "Recent notes section."
+  },
+  "homeNoNotes": "No notes yet. Your first capture becomes one once you accept it.",
+  "@homeNoNotes": {
+    "description": "No recent notes."
+  },
+  "homeColumnNote": "NOTE",
+  "@homeColumnNote": {
+    "description": "Recent notes column."
+  },
+  "homeColumnPath": "PATH",
+  "@homeColumnPath": {
+    "description": "Recent notes column."
+  },
+  "homeColumnEdited": "EDITED",
+  "@homeColumnEdited": {
+    "description": "Recent notes column."
+  },
+  "homeEdited": "{date}",
+  "@homeEdited": {
+    "description": "Last change of a note.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "d MMM",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "homeSecondaryLabel": "Today, inbox and AI activity",
+  "@homeSecondaryLabel": {
+    "description": "Semantics label of the secondary column."
+  },
+  "homeAiActivity": "AI activity",
+  "@homeAiActivity": {
+    "description": "AI activity feed title."
+  },
+  "homeAiActivityUnavailable": "Relations the AI adds, contradictions it finds and automatic changes you can undo will show here.",
+  "@homeAiActivityUnavailable": {
+    "description": "AI activity feed not provided yet."
+  },
+  "homeOpenItems": "Open items",
+  "@homeOpenItems": {
+    "description": "Open items roll-up title."
+  },
+  "homeOpenItemsUnavailable": "Open items from people and company pages will be rolled up here.",
+  "@homeOpenItemsUnavailable": {
+    "description": "Open items roll-up not provided yet."
+  },
+  "homeNotYetAvailable": "Not available yet",
+  "@homeNotYetAvailable": {
+    "description": "State of a block the core does not provide yet."
+  }
+}

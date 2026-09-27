@@ -83,7 +83,7 @@ class RecurrenceEditor extends HookConsumerWidget {
                 ),
               ),
             );
-            unawaited(Navigator.maybePop(context));
+            Navigator.maybePop(context);
           }
 
           void stop() {
@@ -99,7 +99,7 @@ class RecurrenceEditor extends HookConsumerWidget {
                 ),
               ),
             );
-            unawaited(Navigator.maybePop(context));
+            Navigator.maybePop(context);
           }
 
           final section = text.caption
@@ -158,7 +158,10 @@ class RecurrenceEditor extends HookConsumerWidget {
                   const SizedBox(height: StrataSpacing.s2),
                   SegmentedButton<int>(
                     segments: [
-                      ButtonSegment(value: 0, label: Text(l10n.recurrenceDaily)),
+                      ButtonSegment(
+                        value: 0,
+                        label: Text(l10n.recurrenceDaily),
+                      ),
                       ButtonSegment(
                         value: 1,
                         label: Text(l10n.recurrenceWeekly),

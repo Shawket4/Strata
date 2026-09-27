@@ -715,6 +715,18 @@ abstract class SyncLocalizations {
   /// In en, this message translates to:
   /// **'Something went wrong ({code}).'**
   String errorGeneric({required String code});
+
+  /// Sync pill copy followed by the conflict badge.
+  ///
+  /// In en, this message translates to:
+  /// **'{status} · {conflicts}'**
+  String pillWithConflicts({required String status, required String conflicts});
+
+  /// Accessibility label of the sync pill when it opens the sync status.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync status: {status}. Open sync status'**
+  String pillSemanticsWithHint({required String status});
 }
 
 class _SyncLocalizationsDelegate

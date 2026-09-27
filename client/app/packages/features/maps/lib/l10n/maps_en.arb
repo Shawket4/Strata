@@ -1,149 +1,423 @@
 {
   "@@locale": "en",
   "mapTitle": "Map",
-  "@mapTitle": {"description": "Title of the global map."},
+  "@mapTitle": {
+    "description": "Title of the global map."
+  },
   "mapCompactTitle": "The map needs a wider window",
-  "@mapCompactTitle": {"description": "Global map on a phone-sized window (only local mind maps are shown on compact)."},
+  "@mapCompactTitle": {
+    "description": "Global map on a phone-sized window (only local mind maps are shown on compact)."
+  },
   "mapCompactMessage": "Open a note and use its local map, or make the window wider.",
-  "@mapCompactMessage": {"description": "Body of the compact global map notice."},
+  "@mapCompactMessage": {
+    "description": "Body of the compact global map notice."
+  },
   "mapEmptyTitle": "Nothing to map yet",
-  "@mapEmptyTitle": {"description": "Empty global map."},
+  "@mapEmptyTitle": {
+    "description": "Empty global map."
+  },
   "mapEmptyMessage": "Notes, people and their links appear here as you write.",
-  "@mapEmptyMessage": {"description": "Empty global map body."},
+  "@mapEmptyMessage": {
+    "description": "Empty global map body."
+  },
   "mapCounts": "{nodes} nodes · {edges} edges · {clusters} clusters",
-  "@mapCounts": {"description": "Header subtitle of the global map.", "placeholders": {"nodes": {"type": "int"}, "edges": {"type": "int"}, "clusters": {"type": "int"}}},
+  "@mapCounts": {
+    "description": "Header subtitle of the global map.",
+    "placeholders": {
+      "nodes": {
+        "type": "int"
+      },
+      "edges": {
+        "type": "int"
+      },
+      "clusters": {
+        "type": "int"
+      }
+    }
+  },
   "mapSemantics": "Global map with {nodes} nodes and {edges} links",
-  "@mapSemantics": {"description": "Accessibility label of the global map canvas.", "placeholders": {"nodes": {"type": "int"}, "edges": {"type": "int"}}},
+  "@mapSemantics": {
+    "description": "Accessibility label of the global map canvas.",
+    "placeholders": {
+      "nodes": {
+        "type": "int"
+      },
+      "edges": {
+        "type": "int"
+      }
+    }
+  },
   "lensLabel": "Lens",
-  "@lensLabel": {"description": "Label of the lens selector."},
+  "@lensLabel": {
+    "description": "Label of the lens selector."
+  },
   "lensNotes": "Notes",
-  "@lensNotes": {"description": "Lens: the note graph."},
+  "@lensNotes": {
+    "description": "Lens: the note graph."
+  },
   "lensPeople": "People",
-  "@lensPeople": {"description": "Lens: people-centred graph."},
+  "@lensPeople": {
+    "description": "Lens: people-centred graph."
+  },
   "lensCompanies": "Companies",
-  "@lensCompanies": {"description": "Lens: company-centred graph."},
+  "@lensCompanies": {
+    "description": "Lens: company-centred graph."
+  },
   "notAvailableYet": "Not available yet",
-  "@notAvailableYet": {"description": "Tooltip / helper of a control that the core does not support yet."},
+  "@notAvailableYet": {
+    "description": "Tooltip / helper of a control that the core does not support yet."
+  },
   "searchToFocus": "Search to focus…",
-  "@searchToFocus": {"description": "Placeholder of the map search field."},
+  "@searchToFocus": {
+    "description": "Placeholder of the map search field."
+  },
   "searchToFocusLabel": "Search to focus",
-  "@searchToFocusLabel": {"description": "Accessibility label of the map search field."},
+  "@searchToFocusLabel": {
+    "description": "Accessibility label of the map search field."
+  },
   "searchNoResults": "No matching notes",
-  "@searchNoResults": {"description": "Map search without results."},
+  "@searchNoResults": {
+    "description": "Map search without results."
+  },
   "focusedOn": "Focused on {title}",
-  "@focusedOn": {"description": "Status chip when a node is selected.", "placeholders": {"title": {"type": "String"}}},
+  "@focusedOn": {
+    "description": "Status chip when a node is selected.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "clearFocus": "Clear",
-  "@clearFocus": {"description": "Clears the map selection."},
+  "@clearFocus": {
+    "description": "Clears the map selection."
+  },
   "zoomGroup": "Zoom",
-  "@zoomGroup": {"description": "Accessibility label of the zoom controls."},
+  "@zoomGroup": {
+    "description": "Accessibility label of the zoom controls."
+  },
   "zoomIn": "Zoom in",
-  "@zoomIn": {"description": "Zoom in button."},
+  "@zoomIn": {
+    "description": "Zoom in button."
+  },
   "zoomOut": "Zoom out",
-  "@zoomOut": {"description": "Zoom out button."},
+  "@zoomOut": {
+    "description": "Zoom out button."
+  },
   "zoomToFit": "Zoom to fit",
-  "@zoomToFit": {"description": "Fit the whole graph in view."},
+  "@zoomToFit": {
+    "description": "Fit the whole graph in view."
+  },
   "zoomLevelFar": "{percent}% · labels: clusters",
-  "@zoomLevelFar": {"description": "Zoom indicator at far zoom.", "placeholders": {"percent": {"type": "int"}}},
+  "@zoomLevelFar": {
+    "description": "Zoom indicator at far zoom.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "zoomLevelMid": "{percent}% · labels: hubs",
-  "@zoomLevelMid": {"description": "Zoom indicator at mid zoom.", "placeholders": {"percent": {"type": "int"}}},
+  "@zoomLevelMid": {
+    "description": "Zoom indicator at mid zoom.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "zoomLevelNear": "{percent}% · labels: all",
-  "@zoomLevelNear": {"description": "Zoom indicator at near zoom.", "placeholders": {"percent": {"type": "int"}}},
+  "@zoomLevelNear": {
+    "description": "Zoom indicator at near zoom.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
   "minimap": "Minimap",
-  "@minimap": {"description": "Accessibility label of the minimap."},
+  "@minimap": {
+    "description": "Accessibility label of the minimap."
+  },
   "filters": "Filters",
-  "@filters": {"description": "Filters button / panel title."},
+  "@filters": {
+    "description": "Filters button / panel title."
+  },
   "mapFilters": "Map filters",
-  "@mapFilters": {"description": "Filters drawer title (medium)."},
+  "@mapFilters": {
+    "description": "Filters drawer title (medium)."
+  },
   "resetFilters": "Reset",
-  "@resetFilters": {"description": "Resets the map filters."},
+  "@resetFilters": {
+    "description": "Resets the map filters."
+  },
   "closeFilters": "Close filters",
-  "@closeFilters": {"description": "Closes the filters drawer."},
+  "@closeFilters": {
+    "description": "Closes the filters drawer."
+  },
   "edgeTypes": "Edge types",
-  "@edgeTypes": {"description": "Filter group: edge types."},
+  "@edgeTypes": {
+    "description": "Filter group: edge types."
+  },
   "edgeBodyLinks": "body links",
-  "@edgeBodyLinks": {"description": "Filter: plain wikilinks."},
+  "@edgeBodyLinks": {
+    "description": "Filter: plain wikilinks."
+  },
   "nodeKinds": "Node kinds",
-  "@nodeKinds": {"description": "Filter group: node kinds."},
+  "@nodeKinds": {
+    "description": "Filter group: node kinds."
+  },
   "similarityTitle": "AI similarity",
-  "@similarityTitle": {"description": "Similarity toggle title."},
+  "@similarityTitle": {
+    "description": "Similarity toggle title."
+  },
   "similarityHelp": "Faint links between look-alike notes. Never saved to your vault.",
-  "@similarityHelp": {"description": "Similarity toggle help."},
+  "@similarityHelp": {
+    "description": "Similarity toggle help."
+  },
   "clusterFocus": "Cluster focus",
-  "@clusterFocus": {"description": "Filter group: focus one cluster."},
+  "@clusterFocus": {
+    "description": "Filter group: focus one cluster."
+  },
   "allClusters": "All clusters",
-  "@allClusters": {"description": "Cluster focus: none."},
+  "@allClusters": {
+    "description": "Cluster focus: none."
+  },
   "clusterMembers": "{count}",
-  "@clusterMembers": {"description": "Member count of a cluster.", "placeholders": {"count": {"type": "int"}}},
+  "@clusterMembers": {
+    "description": "Member count of a cluster.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "hoverLinks": "{count, plural, =1{1 link} other{{count} links}}",
-  "@hoverLinks": {"description": "Degree of a node in the hover card.", "placeholders": {"count": {"type": "int"}}},
+  "@hoverLinks": {
+    "description": "Degree of a node in the hover card.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "openNote": "Open note",
-  "@openNote": {"description": "Opens the selected note."},
+  "@openNote": {
+    "description": "Opens the selected note."
+  },
   "openLocalMap": "Open local map",
-  "@openLocalMap": {"description": "Opens the local mind map of the selected node."},
+  "@openLocalMap": {
+    "description": "Opens the local mind map of the selected node."
+  },
   "localMap": "Local map",
-  "@localMap": {"description": "Subtitle of the local mind map."},
+  "@localMap": {
+    "description": "Subtitle of the local mind map."
+  },
   "depth": "Depth",
-  "@depth": {"description": "Depth control label."},
+  "@depth": {
+    "description": "Depth control label."
+  },
   "depthValue": "Depth {depth}",
-  "@depthValue": {"description": "Accessibility label of a depth option.", "placeholders": {"depth": {"type": "int"}}},
+  "@depthValue": {
+    "description": "Accessibility label of a depth option.",
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      }
+    }
+  },
   "recentreOn": "Recentre on {title}",
-  "@recentreOn": {"description": "Recentre the mind map on a node.", "placeholders": {"title": {"type": "String"}}},
+  "@recentreOn": {
+    "description": "Recentre the mind map on a node.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "centreMapOn": "Centre map on {title}",
-  "@centreMapOn": {"description": "Aside action: recentre on the selected node.", "placeholders": {"title": {"type": "String"}}},
+  "@centreMapOn": {
+    "description": "Aside action: recentre on the selected node.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "saveLayout": "Save layout",
-  "@saveLayout": {"description": "Saves the mind map layout as a .canvas file."},
+  "@saveLayout": {
+    "description": "Saves the mind map layout as a .canvas file."
+  },
   "saveLayoutTarget": "→ .canvas",
-  "@saveLayoutTarget": {"description": "Hint next to Save layout."},
+  "@saveLayoutTarget": {
+    "description": "Hint next to Save layout."
+  },
   "saveLayoutUnavailable": "Saving layouts isn't available yet",
-  "@saveLayoutUnavailable": {"description": "Tooltip of the disabled Save layout button."},
+  "@saveLayoutUnavailable": {
+    "description": "Tooltip of the disabled Save layout button."
+  },
   "dragHint": "Drop a note on another to create a relation",
-  "@dragHint": {"description": "Mind map hint."},
+  "@dragHint": {
+    "description": "Mind map hint."
+  },
   "dragHintMore": "· drag to rearrange, then Save layout",
-  "@dragHintMore": {"description": "Mind map hint, second part."},
+  "@dragHintMore": {
+    "description": "Mind map hint, second part."
+  },
   "mindMapCounts": "depth {depth} · {nodes} nodes · {edges} edges",
-  "@mindMapCounts": {"description": "Mind map status chip.", "placeholders": {"depth": {"type": "int"}, "nodes": {"type": "int"}, "edges": {"type": "int"}}},
+  "@mindMapCounts": {
+    "description": "Mind map status chip.",
+    "placeholders": {
+      "depth": {
+        "type": "int"
+      },
+      "nodes": {
+        "type": "int"
+      },
+      "edges": {
+        "type": "int"
+      }
+    }
+  },
   "mindMapSemantics": "Local mind map for {title}",
-  "@mindMapSemantics": {"description": "Accessibility label of the mind map canvas.", "placeholders": {"title": {"type": "String"}}},
+  "@mindMapSemantics": {
+    "description": "Accessibility label of the mind map canvas.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "mindMapNotFound": "This note isn't in the vault any more",
-  "@mindMapNotFound": {"description": "Mind map of an unknown note."},
+  "@mindMapNotFound": {
+    "description": "Mind map of an unknown note."
+  },
   "mindMapNotFoundMessage": "It may have been deleted or moved on another device.",
-  "@mindMapNotFoundMessage": {"description": "Mind map of an unknown note, body."},
+  "@mindMapNotFoundMessage": {
+    "description": "Mind map of an unknown note, body."
+  },
   "selectedRelation": "Selected relation",
-  "@selectedRelation": {"description": "Edge sheet title (accessibility)."},
+  "@selectedRelation": {
+    "description": "Edge sheet title (accessibility)."
+  },
   "edgeFromTo": "{from} → {to}",
-  "@edgeFromTo": {"description": "Edge sheet heading.", "placeholders": {"from": {"type": "String"}, "to": {"type": "String"}}},
+  "@edgeFromTo": {
+    "description": "Edge sheet heading.",
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
   "edgeSemantics": "{type}: {from} to {to}",
-  "@edgeSemantics": {"description": "Accessibility label of an edge label.", "placeholders": {"type": {"type": "String"}, "from": {"type": "String"}, "to": {"type": "String"}}},
+  "@edgeSemantics": {
+    "description": "Accessibility label of an edge label.",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
   "whyAi": "Why AI suggested this",
-  "@whyAi": {"description": "Heading of the AI reason."},
+  "@whyAi": {
+    "description": "Heading of the AI reason."
+  },
   "reasonUnavailable": "The AI's reason for this link isn't shown here yet.",
-  "@reasonUnavailable": {"description": "Shown until the core streams edge reasons."},
+  "@reasonUnavailable": {
+    "description": "Shown until the core streams edge reasons."
+  },
   "retype": "Retype",
-  "@retype": {"description": "Change a relation's type."},
+  "@retype": {
+    "description": "Change a relation's type."
+  },
   "reject": "Reject",
-  "@reject": {"description": "Reject a relation."},
+  "@reject": {
+    "description": "Reject a relation."
+  },
   "retypeTitle": "Change relation type",
-  "@retypeTitle": {"description": "Retype menu title."},
+  "@retypeTitle": {
+    "description": "Retype menu title."
+  },
   "selectedNode": "Selected node",
-  "@selectedNode": {"description": "Aside label (mind map, expanded)."},
+  "@selectedNode": {
+    "description": "Aside label (mind map, expanded)."
+  },
   "clearSelection": "Clear selection",
-  "@clearSelection": {"description": "Clears the selected node."},
+  "@clearSelection": {
+    "description": "Clears the selected node."
+  },
   "relations": "Relations",
-  "@relations": {"description": "Aside section: outgoing relations."},
+  "@relations": {
+    "description": "Aside section: outgoing relations."
+  },
   "backlinks": "Backlinks",
-  "@backlinks": {"description": "Aside section: incoming links."},
+  "@backlinks": {
+    "description": "Aside section: incoming links."
+  },
   "backToNote": "Back to note",
-  "@backToNote": {"description": "Back button of the compact mind map."},
+  "@backToNote": {
+    "description": "Back button of the compact mind map."
+  },
   "entityGraph": "Graph",
-  "@entityGraph": {"description": "Mini graph section title."},
+  "@entityGraph": {
+    "description": "Mini graph section title."
+  },
   "openInMap": "Open in map",
-  "@openInMap": {"description": "Opens the local mind map from the mini graph."},
+  "@openInMap": {
+    "description": "Opens the local mind map from the mini graph."
+  },
   "miniGraphSemantics": "Graph of {title}: {count, plural, =1{1 connected item} other{{count} connected items}}",
-  "@miniGraphSemantics": {"description": "Mini graph accessibility label.", "placeholders": {"title": {"type": "String"}, "count": {"type": "int"}}},
+  "@miniGraphSemantics": {
+    "description": "Mini graph accessibility label.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "loading": "Loading…",
-  "@loading": {"description": "Loading state label."},
+  "@loading": {
+    "description": "Loading state label."
+  },
   "errorTitle": "This couldn't be loaded",
-  "@errorTitle": {"description": "Error state title."},
+  "@errorTitle": {
+    "description": "Error state title."
+  },
   "errorMessage": "The app's local data returned an error ({code}).",
-  "@errorMessage": {"description": "Error state body.", "placeholders": {"code": {"type": "String"}}}
+  "@errorMessage": {
+    "description": "Error state body.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "nodeSemantics": "{kind}: {title}",
+  "@nodeSemantics": {
+    "description": "Mind map label.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mapBreadcrumb": "Map / Local map",
+  "@mapBreadcrumb": {
+    "description": "Mind map label."
+  }
 }

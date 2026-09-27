@@ -172,16 +172,14 @@ class _Batch {
   }
 
   void _grow() {
-    final next = Float32List(_data.length * 2);
-    next.setRange(0, _length, _data);
-    _data = next;
+    _data = Float32List(_data.length * 2)..setRange(0, _length, _data);
   }
 
   Float32List get view => Float32List.sublistView(_data, 0, _length);
 }
 
 class _Label {
-  _Label(this.fill, this.stroke);
+  new(this.fill, this.stroke);
 
   final TextPainter fill;
   final TextPainter stroke;
@@ -201,20 +199,19 @@ class GraphPainter extends CustomPainter {
   /// Creates the painter.
   new({
     required this.scene,
-    required this.camera,
+    required this.view,
     required this.palette,
     required this.cache,
     required this.textDirection,
     this.options = const GraphPaintOptions(),
     this.clusterRegions = true,
-    super.repaint,
-  });
+  }) : super(repaint: view);
 
   /// The graph.
   final GraphScene scene;
 
-  /// Pan and zoom.
-  final GraphCamera camera;
+  /// Pan and zoom (repaints when it changes).
+  final GraphViewController view;
 
   /// Colours.
   final GraphPalette palette;
@@ -246,6 +243,8 @@ class GraphPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     cache._prepare(scene, palette, textDirection);
+    view.attach(scene.bounds, size);
+    final camera = view.camera;
     final n = scene.nodeCount;
     if (n == 0) return;
     final s = camera.scale;
@@ -302,19 +301,20 @@ class GraphPainter extends CustomPainter {
       }
       if (!halo.isEmpty) {
         final fill = palette.graph.clusterFill;
-        canvas.saveLayer(
-          Offset.zero & size,
-          Paint()..color = Color.fromRGBO(0, 0, 0, fill.a),
-        );
-        canvas.drawRawPoints(
-          ui.PointMode.points,
-          halo.view,
-          Paint()
-            ..color = fill.withValues(alpha: 1)
-            ..strokeWidth = clusterHalo * 2 * s
-            ..strokeCap = StrokeCap.round,
-        );
-        canvas.restore();
+        canvas
+          ..saveLayer(
+            Offset.zero & size,
+            Paint()..color = Color.fromRGBO(0, 0, 0, fill.a),
+          )
+          ..drawRawPoints(
+            ui.PointMode.points,
+            halo.view,
+            Paint()
+              ..color = fill.withValues(alpha: 1)
+              ..strokeWidth = clusterHalo * 2 * s
+              ..strokeCap = StrokeCap.round,
+          )
+          ..restore();
       }
     }
 
@@ -607,7 +607,7 @@ class GraphPainter extends CustomPainter {
   @override
   bool shouldRepaint(GraphPainter oldDelegate) =>
       !identical(oldDelegate.scene, scene) ||
-      oldDelegate.camera != camera ||
+      !identical(oldDelegate.view, view) ||
       oldDelegate.palette != palette ||
       oldDelegate.textDirection != textDirection ||
       !identical(oldDelegate.options, options) ||

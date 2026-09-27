@@ -58,7 +58,10 @@ fn options(resume_from: Option<u64>) -> StreamOptions {
 async fn take(sub: &mut Subscription<types::Event>, n: usize) -> Vec<(u64, types::Event)> {
     let mut out = Vec::new();
     while out.len() < n {
-        match sub.next().await {
+        let next = tokio::time::timeout(Duration::from_secs(10), sub.next())
+            .await
+            .unwrap_or_else(|_| panic!("timed out after {} events: {out:#?}", out.len()));
+        match next {
             Some(Ok(StreamEvent::Data { seq, payload })) => out.push((seq, payload)),
             other => panic!("expected data, got {other:?}"),
         }

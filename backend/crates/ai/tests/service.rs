@@ -481,6 +481,7 @@ async fn status_reports_provider_usage_budget_and_pause() {
             },
             limits: caps(1000, 5000),
             embeddings: None,
+            embedding_progress: None,
         }
     );
     let carol = w

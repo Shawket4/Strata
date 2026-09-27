@@ -1,4 +1,5 @@
-//! Duplicate check on create (PLAN §9.7: exact and near levels; semantic is Phase 4).
+//! Duplicate check on create (PLAN §9.7): exact and near levels always; the semantic level
+//! when a [`SemanticDuplicates`] source is registered and can embed the new text cheaply.
 //!
 //! The decision is the shared `dedupe` crate's (L16), so the server's check and the client
 //! core's offline check always agree:
@@ -8,7 +9,10 @@
 //!    [`note_item`], [`task_item`], [`rows`].
 //! 2. A new item's [`CandidateQuery`] selects candidates with SQL (exact and transliteration
 //!    keys, `pg_trgm` similarity above the query's floor).
-//! 3. [`dedupe::check`] decides, with keep-both pairs from `dedupe_keep_both`.
+//! 3. With a [`SemanticDuplicates`] source (the AI subsystem), stored items whose vector is
+//!    close to the new text's get [`dedupe::SemanticEvidence`] (cosine only: a borderline
+//!    score is not confirmed by an LLM on the synchronous path, so it does not block).
+//! 4. [`dedupe::check`] decides, with keep-both pairs from `dedupe_keep_both`.
 
 use std::collections::BTreeMap;
 
@@ -24,6 +28,7 @@ use vault_format::tasks::TaskLine;
 use crate::derive::{DedupeRow, dedupe_kind, kind_of, title_of};
 use crate::error::{Candidate, MatchLevel, Result};
 use crate::prepare::task_ulid;
+pub use crate::semantic::{SemanticDuplicates, SemanticMatch};
 
 /// The first non-empty line of `text`, at most 120 characters.
 pub fn snippet_of(text: &str) -> Option<String> {
@@ -120,6 +125,7 @@ pub async fn find(
     tx: &mut ScopedTx,
     item: &Item,
     overrides: &BTreeMap<String, f32>,
+    semantic: Option<&dyn SemanticDuplicates>,
 ) -> Result<Vec<Candidate>> {
     let thresholds = thresholds(overrides);
     let q = CandidateQuery::for_item(item, &thresholds);
@@ -134,11 +140,29 @@ pub async fn find(
         200,
     )
     .await?;
-    let existing: Vec<Existing> = blobs
+    let mut existing: Vec<Existing> = blobs
         .iter()
         .filter_map(|b| rmp_serde::from_slice::<Item>(b).ok())
         .map(Existing::from)
         .collect();
+    if let Some(source) = semantic {
+        for m in source.evidence(tx, item).await {
+            let evidence = dedupe::SemanticEvidence {
+                cosine: m.cosine,
+                llm_confirmed: None,
+            };
+            match existing
+                .iter_mut()
+                .find(|e| e.item.kind == m.item.kind && e.item.id == m.item.id)
+            {
+                Some(e) => e.semantic = Some(evidence),
+                None => existing.push(Existing {
+                    item: m.item,
+                    semantic: Some(evidence),
+                }),
+            }
+        }
+    }
     let mut keep = KeepBothSet::new();
     if let Some(own) = &item.id {
         for (kind, a, b) in vrepo::keep_both_pairs_of(tx, own).await? {
@@ -171,6 +195,7 @@ pub async fn find(
                 dedupe::MatchLevel::Near | dedupe::MatchLevel::Semantic => MatchLevel::Near,
             },
             score: f64::from(c.score),
+            semantic: c.level == dedupe::MatchLevel::Semantic,
         });
     }
     Ok(out)
@@ -188,6 +213,7 @@ pub fn forced_pairs(item: &Item, candidates: &[Candidate]) -> Vec<KeepBoth> {
             snippet: c.snippet.clone(),
             level: match c.level {
                 MatchLevel::Exact => dedupe::MatchLevel::Exact,
+                MatchLevel::Near if c.semantic => dedupe::MatchLevel::Semantic,
                 MatchLevel::Near => dedupe::MatchLevel::Near,
             },
             #[allow(clippy::cast_possible_truncation)]

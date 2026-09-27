@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_sync/src/l10n.dart';
 import 'package:strata_sync/src/labels.dart';
-import 'package:strata_ui/strata_ui.dart';
+import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// The always-visible sync indicator, rendered 1:1 from the core's
 /// [SyncPill]: connectivity (tone, icon, copy), queued ops, an activity
@@ -12,7 +12,12 @@ import 'package:strata_ui/strata_ui.dart';
 /// the tooltip and semantics).
 class SyncStatusPill extends StatelessWidget {
   /// Creates the pill for [pill].
-  const new({required this.pill, super.key, this.onPressed, this.dense = false});
+  const new({
+    required this.pill,
+    super.key,
+    this.onPressed,
+    this.dense = false,
+  });
 
   /// The core's pill view-model.
   final SyncPill pill;

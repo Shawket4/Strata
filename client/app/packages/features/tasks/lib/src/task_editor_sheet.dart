@@ -94,7 +94,7 @@ class TaskEditorSheet extends HookConsumerWidget {
     Future<void> create({required bool force}) async {
       final api = ref.read(coreApiProvider);
       final messenger = ScaffoldMessenger.maybeOf(context);
-      final l10n = context.tasksL10n;
+      final l10n = lookupTasksLocalizations(Localizations.localeOf(context));
       try {
         final outcome = await api.createTask(draft: draft(), force: force);
         final id = outcome.id;
@@ -165,7 +165,7 @@ class TaskEditorSheet extends HookConsumerWidget {
                 candidates: found,
                 onOpenExisting: (candidate) {
                   onOpenExisting?.call(candidate);
-                  unawaited(Navigator.maybePop(context));
+                  Navigator.maybePop(context);
                 },
                 onCreateAnyway: () => unawaited(create(force: true)),
                 onCancel: () => candidates.value = null,
@@ -228,7 +228,8 @@ class TaskEditorSheet extends HookConsumerWidget {
                       StrataSpacing.s4,
                       StrataSpacing.s4,
                       StrataSpacing.s4,
-                      StrataSpacing.s4 + MediaQuery.viewInsetsOf(context).bottom,
+                      StrataSpacing.s4 +
+                          MediaQuery.viewInsetsOf(context).bottom,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -238,8 +239,6 @@ class TaskEditorSheet extends HookConsumerWidget {
                           autofocus: true,
                           minLines: 2,
                           maxLines: 6,
-                          keyboardType: TextInputType.multiline,
-                          textAlign: TextAlign.start,
                           decoration: InputDecoration(
                             labelText: l10n.editorTextLabel,
                             hintText: l10n.editorTextHint,

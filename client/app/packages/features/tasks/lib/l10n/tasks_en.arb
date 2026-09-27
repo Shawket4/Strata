@@ -1,5 +1,692 @@
 {
   "@@locale": "en",
-  "tasksDue": "Due {date}",
-  "@tasksDue": {"description": "x", "placeholders": {"date": {"type": "DateTime", "format": "EEE d MMM", "isCustomDateFormat": "true"}}}
+  "commonCancel": "Cancel",
+  "@commonCancel": {
+    "description": "Common action: cancel."
+  },
+  "commonSave": "Save",
+  "@commonSave": {
+    "description": "Common action: save."
+  },
+  "commonLoading": "Loading",
+  "@commonLoading": {
+    "description": "Semantics label of a progress indicator."
+  },
+  "commonCoreFailure": "The app reported: {code}",
+  "@commonCoreFailure": {
+    "description": "Error state message with the core failure code.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "commonUnknownFailure": "Something went wrong on this device.",
+  "@commonUnknownFailure": {
+    "description": "Error state message without a code."
+  },
+  "commonIntentFailed": "Couldn't apply that change",
+  "@commonIntentFailed": {
+    "description": "Snack bar when the core refused an intent."
+  },
+  "commonIntentFailedCode": "Couldn't apply that change ({code})",
+  "@commonIntentFailedCode": {
+    "description": "Snack bar when the core refused an intent, with its failure code.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "commonNone": "—",
+  "@commonNone": {
+    "description": "Empty table cell."
+  },
+  "commonNotSynced": "Not synced yet",
+  "@commonNotSynced": {
+    "description": "Marker for items with unsynced changes."
+  },
+  "commonNotYetAvailable": "Not available yet",
+  "@commonNotYetAvailable": {
+    "description": "Tooltip / state of a feature the core does not provide yet."
+  },
+  "dupEyebrow": "ALREADY EXISTS",
+  "@dupEyebrow": {
+    "description": "Eyebrow of the duplicate prompt."
+  },
+  "dupTitle": "Looks like you already have this",
+  "@dupTitle": {
+    "description": "Duplicate prompt headline."
+  },
+  "dupSubtitle": "A similar {kind} already covers “{title}”.",
+  "@dupSubtitle": {
+    "description": "Duplicate prompt subtitle: kind and title of the item being created.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "dupOpenExisting": "Open existing",
+  "@dupOpenExisting": {
+    "description": "Duplicate prompt action."
+  },
+  "dupCreateAnyway": "Create anyway",
+  "@dupCreateAnyway": {
+    "description": "Duplicate prompt action."
+  },
+  "dupCancel": "Cancel",
+  "@dupCancel": {
+    "description": "Duplicate prompt action: do not create."
+  },
+  "dupFootnote": "Create anyway keeps both and won't ask about this pair again.",
+  "@dupFootnote": {
+    "description": "Duplicate prompt footnote."
+  },
+  "dupMatch": "{level} · match {score}",
+  "@dupMatch": {
+    "description": "Match level and score of a duplicate candidate.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "dupMatchExact": "exact",
+  "@dupMatchExact": {
+    "description": "Duplicate match level."
+  },
+  "dupMatchNear": "near",
+  "@dupMatchNear": {
+    "description": "Duplicate match level."
+  },
+  "dupMatchSemantic": "semantic",
+  "@dupMatchSemantic": {
+    "description": "Duplicate match level."
+  },
+  "dupCandidateSemantics": "Open existing: {title}, {kind}, {match}",
+  "@dupCandidateSemantics": {
+    "description": "Semantics label of a duplicate candidate card.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "kind": {
+        "type": "String"
+      },
+      "match": {
+        "type": "String"
+      }
+    }
+  },
+  "dupLoadError": "Couldn't load the duplicate check",
+  "@dupLoadError": {
+    "description": "Error title of the duplicate prompt."
+  },
+  "dupNoneOpen": "Nothing is waiting for a duplicate check.",
+  "@dupNoneOpen": {
+    "description": "Duplicate prompt with no open prompts."
+  },
+  "kindTask": "task",
+  "@kindTask": {
+    "description": "Item kind."
+  },
+  "kindNote": "note",
+  "@kindNote": {
+    "description": "Item kind."
+  },
+  "kindPerson": "person",
+  "@kindPerson": {
+    "description": "Item kind."
+  },
+  "kindCompany": "company",
+  "@kindCompany": {
+    "description": "Item kind."
+  },
+  "kindConcept": "concept",
+  "@kindConcept": {
+    "description": "Item kind."
+  },
+  "kindDocument": "document",
+  "@kindDocument": {
+    "description": "Item kind."
+  },
+  "kindPlace": "place",
+  "@kindPlace": {
+    "description": "Item kind."
+  },
+  "kindItem": "item",
+  "@kindItem": {
+    "description": "Item kind (unknown)."
+  },
+  "editorNewTaskTitle": "New task",
+  "@editorNewTaskTitle": {
+    "description": "New task sheet title."
+  },
+  "editorTextLabel": "What needs doing?",
+  "@editorTextLabel": {
+    "description": "Task text field label."
+  },
+  "editorTextHint": "e.g. Send the weekly invoicing proposal to Ahmed",
+  "@editorTextHint": {
+    "description": "Task text field hint."
+  },
+  "editorParsedTitle": "UNDERSTOOD AS",
+  "@editorParsedTitle": {
+    "description": "Section title of the parsed task details."
+  },
+  "editorParsedUnavailable": "Reading dates and repeats from the text is not available yet",
+  "@editorParsedUnavailable": {
+    "description": "Parsed details are not provided by the core yet."
+  },
+  "editorDue": "Due",
+  "@editorDue": {
+    "description": "Due date field."
+  },
+  "editorPickDate": "Pick a date",
+  "@editorPickDate": {
+    "description": "Opens the date picker."
+  },
+  "editorRepeat": "Repeat (rule as written)",
+  "@editorRepeat": {
+    "description": "Recurrence phrase field."
+  },
+  "editorReminders": "Reminders",
+  "@editorReminders": {
+    "description": "Reminders field."
+  },
+  "editorAddReminder": "Add reminder",
+  "@editorAddReminder": {
+    "description": "Adds a reminder."
+  },
+  "editorReminderAt": "{at}",
+  "@editorReminderAt": {
+    "description": "A picked reminder date and time.",
+    "placeholders": {
+      "at": {
+        "type": "DateTime",
+        "format": "EEE d MMM HH:mm",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "editorRemoveReminder": "Remove reminder {time}",
+  "@editorRemoveReminder": {
+    "description": "Removes a picked reminder.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "editorHomeNote": "Home note",
+  "@editorHomeNote": {
+    "description": "The note the task line goes into."
+  },
+  "editorDefaultHome": "Default task list",
+  "@editorDefaultHome": {
+    "description": "Home note when none is chosen."
+  },
+  "editorClose": "Close",
+  "@editorClose": {
+    "description": "Closes the new task sheet."
+  },
+  "editorSaveFailed": "Couldn't save the task",
+  "@editorSaveFailed": {
+    "description": "Snack bar when creating a task failed."
+  },
+  "recurrenceTitle": "Recurrence",
+  "@recurrenceTitle": {
+    "description": "Recurrence editor title."
+  },
+  "recurrenceClose": "Close recurrence editor",
+  "@recurrenceClose": {
+    "description": "Close button of the recurrence editor."
+  },
+  "recurrencePhraseLabel": "Rule as written",
+  "@recurrencePhraseLabel": {
+    "description": "Recurrence phrase field label."
+  },
+  "recurrencePhraseHint": "every month on the 1st",
+  "@recurrencePhraseHint": {
+    "description": "Recurrence phrase example (Tasks plugin grammar, always English)."
+  },
+  "recurrencePhraseHelper": "Kept verbatim in the note, in the Obsidian Tasks language.",
+  "@recurrencePhraseHelper": {
+    "description": "Recurrence phrase helper text."
+  },
+  "recurrenceFrequency": "FREQUENCY",
+  "@recurrenceFrequency": {
+    "description": "Recurrence builder section."
+  },
+  "recurrenceDaily": "Daily",
+  "@recurrenceDaily": {
+    "description": "Frequency."
+  },
+  "recurrenceWeekly": "Weekly",
+  "@recurrenceWeekly": {
+    "description": "Frequency."
+  },
+  "recurrenceMonthly": "Monthly",
+  "@recurrenceMonthly": {
+    "description": "Frequency."
+  },
+  "recurrenceYearly": "Yearly",
+  "@recurrenceYearly": {
+    "description": "Frequency."
+  },
+  "recurrenceOnDayOfMonth": "On a day of the month",
+  "@recurrenceOnDayOfMonth": {
+    "description": "Monthly option."
+  },
+  "recurrenceOnNthWeekday": "On the nth weekday",
+  "@recurrenceOnNthWeekday": {
+    "description": "Monthly option."
+  },
+  "recurrenceOnLastDay": "On the last day",
+  "@recurrenceOnLastDay": {
+    "description": "Monthly option."
+  },
+  "recurrenceEndsNever": "Ends never",
+  "@recurrenceEndsNever": {
+    "description": "Ends option."
+  },
+  "recurrenceEndsOnDate": "Ends on a date",
+  "@recurrenceEndsOnDate": {
+    "description": "Ends option."
+  },
+  "recurrenceEndsAfter": "Ends after N occurrences",
+  "@recurrenceEndsAfter": {
+    "description": "Ends option."
+  },
+  "recurrenceBuilderUnavailable": "Building a rule from options is not available yet",
+  "@recurrenceBuilderUnavailable": {
+    "description": "The core rule builder is missing."
+  },
+  "recurrencePreviewTitle": "NEXT DATES",
+  "@recurrencePreviewTitle": {
+    "description": "Preview section title."
+  },
+  "recurrencePreviewUnavailable": "A preview of the next dates isn't available yet.",
+  "@recurrencePreviewUnavailable": {
+    "description": "The core preview is missing."
+  },
+  "recurrenceSave": "Save rule",
+  "@recurrenceSave": {
+    "description": "Saves the rule."
+  },
+  "recurrenceStop": "Stop repeating",
+  "@recurrenceStop": {
+    "description": "Removes the recurrence."
+  },
+  "tasksTitle": "Tasks",
+  "@tasksTitle": {
+    "description": "Tasks screen title."
+  },
+  "tasksNewTask": "New task",
+  "@tasksNewTask": {
+    "description": "New task action."
+  },
+  "tasksTabToday": "Today",
+  "@tasksTabToday": {
+    "description": "Task view."
+  },
+  "tasksTabUpcoming": "Upcoming",
+  "@tasksTabUpcoming": {
+    "description": "Task view."
+  },
+  "tasksTabOverdue": "Overdue",
+  "@tasksTabOverdue": {
+    "description": "Task view."
+  },
+  "tasksTabRecurring": "Recurring",
+  "@tasksTabRecurring": {
+    "description": "Task view."
+  },
+  "tasksTabNoDate": "No date",
+  "@tasksTabNoDate": {
+    "description": "Task view."
+  },
+  "tasksTabDone": "Done",
+  "@tasksTabDone": {
+    "description": "Task view."
+  },
+  "tasksTabOpen": "Open",
+  "@tasksTabOpen": {
+    "description": "Task view (expanded table)."
+  },
+  "tasksTabWithCount": "{label} · {count}",
+  "@tasksTabWithCount": {
+    "description": "A task view with its item count.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tasksEmptyTitle": "Nothing here",
+  "@tasksEmptyTitle": {
+    "description": "Empty task list title."
+  },
+  "tasksEmptyMessage": "Tasks are checklist lines in your notes. Add one with New task.",
+  "@tasksEmptyMessage": {
+    "description": "Empty task list message."
+  },
+  "tasksLoadError": "Couldn't load tasks",
+  "@tasksLoadError": {
+    "description": "Tasks error title."
+  },
+  "tasksDetailLoadError": "Couldn't load this task",
+  "@tasksDetailLoadError": {
+    "description": "Task detail error title."
+  },
+  "tasksDetailTitle": "Task",
+  "@tasksDetailTitle": {
+    "description": "Task detail app bar title."
+  },
+  "tasksDetailPanelLabel": "Task detail",
+  "@tasksDetailPanelLabel": {
+    "description": "Semantics label of the task detail panel."
+  },
+  "tasksSelectPrompt": "Select a task to see its details",
+  "@tasksSelectPrompt": {
+    "description": "Detail pane without a selection."
+  },
+  "tasksNotFoundTitle": "Task not found",
+  "@tasksNotFoundTitle": {
+    "description": "Task detail for an unknown id."
+  },
+  "tasksNotFoundMessage": "It may have been deleted or moved on another device.",
+  "@tasksNotFoundMessage": {
+    "description": "Task detail for an unknown id."
+  },
+  "tasksDueOn": "Due {date}",
+  "@tasksDueOn": {
+    "description": "Due date of a task.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "tasksOverdueSince": "Overdue · due {date}",
+  "@tasksOverdueSince": {
+    "description": "Due date of an overdue task.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "tasksDateShort": "{date}",
+  "@tasksDateShort": {
+    "description": "A short date.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "tasksDateLong": "{date}",
+  "@tasksDateLong": {
+    "description": "A long date.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM y",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "tasksDoneOn": "Done {date}",
+  "@tasksDoneOn": {
+    "description": "Done date of a task.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "d MMM",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "tasksHistoryDue": "due {date}",
+  "@tasksHistoryDue": {
+    "description": "Due date of a completed occurrence.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "d MMM y",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "tasksRuleNext": "{rule} · next {date}",
+  "@tasksRuleNext": {
+    "description": "A recurring rule with its next occurrence.",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      },
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "tasksCancelled": "Cancelled",
+  "@tasksCancelled": {
+    "description": "Cancelled task state."
+  },
+  "tasksStateDone": "Done",
+  "@tasksStateDone": {
+    "description": "Done task state."
+  },
+  "tasksRecurrenceNotUnderstood": "Recurrence not understood",
+  "@tasksRecurrenceNotUnderstood": {
+    "description": "The recurrence phrase is outside the grammar."
+  },
+  "tasksReminderSemantics": "Reminder {time}",
+  "@tasksReminderSemantics": {
+    "description": "Semantics of a reminder.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "tasksMarkDoneSemantics": "Mark done: {title}",
+  "@tasksMarkDoneSemantics": {
+    "description": "Checkbox label of an open task.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "tasksReopenSemantics": "Reopen: {title}",
+  "@tasksReopenSemantics": {
+    "description": "Checkbox label of a closed task.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "tasksActionMarkDone": "Mark done",
+  "@tasksActionMarkDone": {
+    "description": "Task action."
+  },
+  "tasksActionReopen": "Reopen",
+  "@tasksActionReopen": {
+    "description": "Task action."
+  },
+  "tasksActionCancelTask": "Cancel task",
+  "@tasksActionCancelTask": {
+    "description": "Task action."
+  },
+  "tasksActionEditRule": "Edit rule",
+  "@tasksActionEditRule": {
+    "description": "Opens the recurrence editor."
+  },
+  "tasksActionChangeDue": "Change due date",
+  "@tasksActionChangeDue": {
+    "description": "Opens the date picker."
+  },
+  "tasksActionClearDue": "Remove due date",
+  "@tasksActionClearDue": {
+    "description": "Removes the due date."
+  },
+  "tasksActionAddReminder": "Add reminder",
+  "@tasksActionAddReminder": {
+    "description": "Adds a reminder."
+  },
+  "tasksActionOpenInNote": "Open in note",
+  "@tasksActionOpenInNote": {
+    "description": "Opens the home note."
+  },
+  "tasksActionEditText": "Edit text",
+  "@tasksActionEditText": {
+    "description": "Edits the task text."
+  },
+  "tasksActionCloseDetail": "Close detail",
+  "@tasksActionCloseDetail": {
+    "description": "Closes the detail panel."
+  },
+  "tasksRecurring": "Recurring",
+  "@tasksRecurring": {
+    "description": "Recurring task pill."
+  },
+  "tasksOneOff": "One-off",
+  "@tasksOneOff": {
+    "description": "One-off task pill."
+  },
+  "tasksFieldRepeat": "Repeat",
+  "@tasksFieldRepeat": {
+    "description": "Detail field."
+  },
+  "tasksFieldDue": "Due",
+  "@tasksFieldDue": {
+    "description": "Detail field."
+  },
+  "tasksFieldReminders": "Reminders",
+  "@tasksFieldReminders": {
+    "description": "Detail field."
+  },
+  "tasksFieldLinked": "Linked",
+  "@tasksFieldLinked": {
+    "description": "Detail field."
+  },
+  "tasksFieldHomeNote": "Home note",
+  "@tasksFieldHomeNote": {
+    "description": "Detail field."
+  },
+  "tasksFieldStoredLine": "Stored line",
+  "@tasksFieldStoredLine": {
+    "description": "Detail field: the raw task line."
+  },
+  "tasksDoesNotRepeat": "Does not repeat",
+  "@tasksDoesNotRepeat": {
+    "description": "No recurrence."
+  },
+  "tasksNoDueDate": "No due date",
+  "@tasksNoDueDate": {
+    "description": "No due date."
+  },
+  "tasksNoReminders": "No reminders",
+  "@tasksNoReminders": {
+    "description": "No reminders."
+  },
+  "tasksNoLinks": "Nothing linked",
+  "@tasksNoLinks": {
+    "description": "No linked entities."
+  },
+  "tasksHistoryTitle": "History",
+  "@tasksHistoryTitle": {
+    "description": "History section."
+  },
+  "tasksHistorySubtitle": "completed occurrences",
+  "@tasksHistorySubtitle": {
+    "description": "History section subtitle."
+  },
+  "tasksHistoryEmpty": "No completed occurrences yet",
+  "@tasksHistoryEmpty": {
+    "description": "Empty history."
+  },
+  "tasksNoSkipping": "Occurrences can't be skipped: an overdue one stays open until it's done or cancelled.",
+  "@tasksNoSkipping": {
+    "description": "Recurring task note."
+  },
+  "tasksShortcutsLabel": "Keyboard shortcuts",
+  "@tasksShortcutsLabel": {
+    "description": "Shortcut legend label."
+  },
+  "tasksShortcutMove": "move",
+  "@tasksShortcutMove": {
+    "description": "Shortcut legend."
+  },
+  "tasksShortcutDone": "done",
+  "@tasksShortcutDone": {
+    "description": "Shortcut legend."
+  },
+  "tasksShortcutRepeat": "repeat",
+  "@tasksShortcutRepeat": {
+    "description": "Shortcut legend."
+  },
+  "tasksShortcutDue": "due date",
+  "@tasksShortcutDue": {
+    "description": "Shortcut legend."
+  },
+  "tasksShortcutOpen": "open in note",
+  "@tasksShortcutOpen": {
+    "description": "Shortcut legend."
+  },
+  "tasksColumnTask": "TASK",
+  "@tasksColumnTask": {
+    "description": "Table column."
+  },
+  "tasksColumnLinked": "LINKED",
+  "@tasksColumnLinked": {
+    "description": "Table column."
+  },
+  "tasksColumnRepeat": "REPEAT",
+  "@tasksColumnRepeat": {
+    "description": "Table column."
+  },
+  "tasksColumnRemind": "REMIND",
+  "@tasksColumnRemind": {
+    "description": "Table column."
+  },
+  "tasksColumnDue": "DUE",
+  "@tasksColumnDue": {
+    "description": "Table column."
+  },
+  "tasksFooterNote": "Tasks are Obsidian Tasks lines collected from your notes. Editing here rewrites the line in its home note.",
+  "@tasksFooterNote": {
+    "description": "Footer note of the task table."
+  },
+  "dupSubtitleUntitled": "A similar {kind} already exists.",
+  "@dupSubtitleUntitled": {
+    "description": "Duplicate prompt subtitle when the title is unknown.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  }
 }

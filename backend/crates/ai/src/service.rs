@@ -87,6 +87,16 @@ impl AiService {
         &self.budget
     }
 
+    /// The embedder reported in [`AiStatus`], if any.
+    pub fn embedder(&self) -> Option<&Arc<dyn Embedder>> {
+        self.embedder.as_ref()
+    }
+
+    /// The provider router.
+    pub fn router(&self) -> &ProviderRouter {
+        &self.router
+    }
+
     /// One structured call, validated against `req.schema`.
     pub async fn complete_json(&self, req: JsonRequest) -> Result<ValidatedJson, AiError> {
         let provider = self.router.route(&req.caller.username)?;
@@ -229,7 +239,9 @@ impl AiService {
             embeddings: self.embedder.as_ref().map(|e| EmbeddingsStatus {
                 model_id: e.model_id().to_owned(),
                 dims: e.dims(),
+                loaded: e.is_loaded(),
             }),
+            embedding_progress: None,
         })
     }
 }

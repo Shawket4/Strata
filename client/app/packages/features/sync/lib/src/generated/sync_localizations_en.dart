@@ -422,4 +422,17 @@ class SyncLocalizationsEn extends SyncLocalizations {
   String errorGeneric({required String code}) {
     return 'Something went wrong ($code).';
   }
+
+  @override
+  String pillWithConflicts({
+    required String status,
+    required String conflicts,
+  }) {
+    return '$status · $conflicts';
+  }
+
+  @override
+  String pillSemanticsWithHint({required String status}) {
+    return 'Sync status: $status. Open sync status';
+  }
 }

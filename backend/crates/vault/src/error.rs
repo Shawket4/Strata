@@ -18,10 +18,14 @@ pub struct Candidate {
     pub title: String,
     /// Short excerpt.
     pub snippet: Option<String>,
-    /// `exact` or `near`.
+    /// `exact` or `near`. A semantic match (§9.7) is reported as `near` with
+    /// [`Candidate::semantic`] set, so existing matches on [`MatchLevel`] keep compiling;
+    /// the API maps it to the wire's `semantic` level.
     pub level: MatchLevel,
-    /// Similarity in `[0, 1]`.
+    /// Similarity in `[0, 1]` (the embedding cosine for semantic matches).
     pub score: f64,
+    /// Whether the match came from embedding similarity (the semantic level).
+    pub semantic: bool,
 }
 
 /// How a duplicate candidate matched.

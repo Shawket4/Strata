@@ -31,7 +31,12 @@ CREATE TABLE note_vectors (
     PRIMARY KEY (user_id, note_id),
     FOREIGN KEY (user_id, note_id) REFERENCES notes (user_id, id) ON DELETE CASCADE
 );
-CREATE INDEX note_vectors_embedding ON note_vectors USING hnsw (embedding vector_cosine_ops);
+-- No HNSW index: nearest-neighbour queries are exact scans of one user's rows. An approximate
+-- index scan returns the globally nearest candidates first and row-level security then drops
+-- other users' rows, which can leave a user with too few (or no) results; pgvector < 0.8 has
+-- no iterative scans to compensate. At the target scale (~10k notes per user) the exact scan
+-- takes milliseconds.
+CREATE INDEX note_vectors_model ON note_vectors (user_id, model);
 SELECT strata_make_user_owned('note_vectors');
 
 -- One vector per duplicate-check item (`dedupe_keys` item: note title, capture text, entity
@@ -51,5 +56,5 @@ CREATE TABLE dedupe_vectors (
     PRIMARY KEY (user_id, kind, item_id)
 );
 CREATE INDEX dedupe_vectors_note ON dedupe_vectors (user_id, note_id);
-CREATE INDEX dedupe_vectors_embedding ON dedupe_vectors USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX dedupe_vectors_model ON dedupe_vectors (user_id, model, kind);
 SELECT strata_make_user_owned('dedupe_vectors');

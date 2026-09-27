@@ -72,5 +72,7 @@
   "miniGraphSemantics": "رسم {title}: {count, plural, =1{عنصر واحد مرتبط} other{{count} عناصر مرتبطة}}",
   "loading": "جارِ التحميل…",
   "errorTitle": "تعذّر التحميل",
-  "errorMessage": "البيانات المحلية للتطبيق رجّعت خطأ ({code})."
+  "errorMessage": "البيانات المحلية للتطبيق رجّعت خطأ ({code}).",
+  "nodeSemantics": "{kind}: {title}",
+  "mapBreadcrumb": "الخريطة / خريطة محلية"
 }

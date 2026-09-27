@@ -1,30 +1,14 @@
-/// Strata accounts feature (UI only; view-models come from the Rust core,
-/// PLAN L15).
+/// Strata accounts feature (PLAN §11 screens 1 and 15, §12.7): sign in, sign
+/// up, waiting for approval, the account sheet with sign-out, and the
+/// restricted screens (account disabled, deletion pending, password change
+/// required). UI only; view-models come from the Rust core (L15).
 library;
 
-import 'package:flutter/material.dart';
-import 'package:strata_l10n/strata_l10n.dart';
-import 'package:strata_ui/strata_ui.dart';
-
-/// Entry widget of the accounts feature. Accounts: sign in, sign up, approval
-/// and account states (PLAN §11 screen 1).
-///
-/// Until the Rust core streams this screen's view-model it renders the
-/// design-system placeholder state.
-class SignInScreen extends StatelessWidget {
-  /// Creates the accounts entry widget.
-  const new({super.key});
-
-  /// The icon that represents this feature.
-  static const IconData icon = Icons.login;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return StrataEmptyState(
-      icon: icon,
-      title: l10n.featureAccounts,
-      message: l10n.featurePlaceholderMessage,
-    );
-  }
-}
+export 'src/account_sheet.dart';
+export 'src/auth_layout.dart'
+    show AuthLayout, BrandPanel, FormAlert, LabeledField, PrimaryButton;
+export 'src/l10n.dart';
+export 'src/pending_approval_screen.dart';
+export 'src/restricted_screens.dart';
+export 'src/sign_in_screen.dart';
+export 'src/sign_up_screen.dart';

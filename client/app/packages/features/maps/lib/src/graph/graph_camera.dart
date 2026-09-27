@@ -110,3 +110,59 @@ class GraphCamera {
   @override
   int get hashCode => Object.hash(scale, offset);
 }
+
+/// Holds the camera of one painted graph and repaints it on change. Before the
+/// viewer pans or zooms, the camera fits the whole graph in the viewport.
+class GraphViewController extends ChangeNotifier {
+  GraphCamera? _camera;
+  Rect _bounds = Rect.zero;
+  Size _viewport = Size.zero;
+
+  /// Screen padding kept around the graph when fitting.
+  double fitPadding = 48;
+
+  /// The largest zoom used when fitting.
+  double fitMaxScale = 1.5;
+
+  /// The current camera (fitted until the viewer moves it).
+  GraphCamera get camera =>
+      _camera ??
+      GraphCamera.fit(
+        _bounds,
+        _viewport,
+        padding: fitPadding,
+        maxScale: fitMaxScale,
+      );
+
+  set camera(GraphCamera value) {
+    if (value == _camera) return;
+    _camera = value;
+    notifyListeners();
+  }
+
+  /// The viewport size last painted.
+  Size get viewport => _viewport;
+
+  /// Records the graph bounds and viewport (called while painting; does not
+  /// notify).
+  void attach(Rect bounds, Size viewport) {
+    _bounds = bounds;
+    _viewport = viewport;
+  }
+
+  /// Zooms by [factor] around the viewport centre.
+  void zoomBy(double factor) => camera = camera.zoomed(
+    factor,
+    Offset(_viewport.width / 2, _viewport.height / 2),
+  );
+
+  /// Fits the whole graph again.
+  void fit() {
+    _camera = null;
+    notifyListeners();
+  }
+
+  /// Centres [world] in the viewport, zooming in to at least [minZoom].
+  void centreOn(Offset world, {double minZoom = 0}) =>
+      camera = camera.centredOn(world, _viewport, minZoom: minZoom);
+}

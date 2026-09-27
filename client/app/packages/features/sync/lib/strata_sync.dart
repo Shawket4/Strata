@@ -1,30 +1,12 @@
-/// Strata sync feature (UI only; view-models come from the Rust core,
-/// PLAN L15).
+/// Strata sync feature (PLAN §11 screen 12b): the sync pill, the sync status
+/// as a sheet (compact), drawer (medium) or popover (expanded), the `/sync`
+/// page and conflict resolution. UI only; view-models come from the Rust
+/// core (L15).
 library;
 
-import 'package:flutter/material.dart';
-import 'package:strata_l10n/strata_l10n.dart';
-import 'package:strata_ui/strata_ui.dart';
-
-/// Entry widget of the sync feature. Sync status and conflict resolution (PLAN
-/// §11 screen 12b).
-///
-/// Until the Rust core streams this screen's view-model it renders the
-/// design-system placeholder state.
-class SyncScreen extends StatelessWidget {
-  /// Creates the sync entry widget.
-  const new({super.key});
-
-  /// The icon that represents this feature.
-  static const IconData icon = Icons.sync;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return StrataEmptyState(
-      icon: icon,
-      title: l10n.featureSync,
-      message: l10n.featurePlaceholderMessage,
-    );
-  }
-}
+export 'src/conflict_screen.dart';
+export 'src/l10n.dart';
+export 'src/labels.dart' show SyncLabels, formatSyncClock, formatSyncTime;
+export 'src/sync_panel.dart';
+export 'src/sync_pill.dart';
+export 'src/sync_surfaces.dart';

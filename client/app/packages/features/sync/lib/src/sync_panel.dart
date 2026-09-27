@@ -3,7 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_sync/src/l10n.dart';
 import 'package:strata_sync/src/labels.dart';
-import 'package:strata_ui/strata_ui.dart';
+import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// Where the sync status is shown; only density and chrome differ.
 enum SyncSurface {
@@ -258,10 +258,7 @@ class _Activity extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            SyncLabels.phase(l10n, activity.phase),
-            style: text.bodyStrong,
-          ),
+          Text(SyncLabels.phase(l10n, activity.phase), style: text.bodyStrong),
           const SizedBox(height: StrataSpacing.s2),
           ClipRRect(
             borderRadius: StrataRadii.pillRadius,

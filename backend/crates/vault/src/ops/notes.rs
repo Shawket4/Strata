@@ -54,7 +54,7 @@ pub struct DuplicatePayloadItem {
     pub kind: String,
     /// Title.
     pub title: String,
-    /// `exact` / `near`.
+    /// `exact` / `near` / `semantic`.
     pub match_level: String,
     /// Score.
     pub score: f64,
@@ -75,6 +75,7 @@ impl DuplicatePayloadItem {
                 crate::error::MatchLevel::Near
             },
             score: self.score,
+            semantic: self.match_level == "semantic",
         })
     }
 }
@@ -93,6 +94,7 @@ impl DuplicatePayload {
                     title: c.title.clone(),
                     match_level: match c.level {
                         crate::error::MatchLevel::Exact => "exact".into(),
+                        crate::error::MatchLevel::Near if c.semantic => "semantic".into(),
                         crate::error::MatchLevel::Near => "near".into(),
                     },
                     score: c.score,
@@ -223,7 +225,13 @@ impl Core {
         id: NoteId,
     ) -> Result<Vec<Candidate>> {
         let item = dup::note_item(path, Some(id), doc);
-        dup::find(tx, &item, &self.inner.config.near_thresholds).await
+        dup::find(
+            tx,
+            &item,
+            &self.inner.config.near_thresholds,
+            self.inner.semantic().as_deref(),
+        )
+        .await
     }
 
     /// Records keep-both for `item` (of the note `sidecar` belongs to) and `candidates`:

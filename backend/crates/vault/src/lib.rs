@@ -38,6 +38,7 @@ pub mod paths;
 pub mod prepare;
 pub mod reconcile;
 pub mod revert;
+pub mod semantic;
 pub mod state;
 pub mod store;
 

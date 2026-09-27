@@ -290,4 +290,12 @@ class MapsLocalizationsAr extends MapsLocalizations {
   String errorMessage({required String code}) {
     return 'البيانات المحلية للتطبيق رجّعت خطأ ($code).';
   }
+
+  @override
+  String nodeSemantics({required String kind, required String title}) {
+    return '$kind: $title';
+  }
+
+  @override
+  String get mapBreadcrumb => 'الخريطة / خريطة محلية';
 }

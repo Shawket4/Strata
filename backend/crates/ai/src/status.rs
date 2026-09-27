@@ -46,6 +46,18 @@ pub struct EmbeddingsStatus {
     pub model_id: String,
     /// Vector dimensions.
     pub dims: usize,
+    /// Whether the model is in memory now (it loads on demand and unloads when idle, §9.1b).
+    pub loaded: bool,
+}
+
+/// Progress of embedding the user's notes with the current model (first import, model
+/// change: a resumable background backfill, §9.1b).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct EmbeddingProgress {
+    /// Live notes whose vectors are current (same model, same note version).
+    pub embedded: u64,
+    /// Live notes.
+    pub total: u64,
 }
 
 /// Status for one user.
@@ -63,6 +75,9 @@ pub struct AiStatus {
     pub usage: UsageStatus,
     /// Budget caps (0 = unlimited).
     pub limits: BudgetLimits,
-    /// The embedding model, when one is loaded.
+    /// The embedding model, when one is configured.
     pub embeddings: Option<EmbeddingsStatus>,
+    /// Embedding coverage of the user's notes; filled in by the job runner (`None` until it
+    /// exists or without an embedding model).
+    pub embedding_progress: Option<EmbeddingProgress>,
 }

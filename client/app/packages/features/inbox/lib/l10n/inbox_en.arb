@@ -1,0 +1,304 @@
+{
+  "@@locale": "en",
+  "inboxTitle": "Inbox",
+  "@inboxTitle": {
+    "description": "Inbox list title."
+  },
+  "inboxLoadError": "Couldn't load the inbox",
+  "@inboxLoadError": {
+    "description": "Inbox error title."
+  },
+  "inboxEmptyTitle": "Inbox zero",
+  "@inboxEmptyTitle": {
+    "description": "Empty inbox title."
+  },
+  "inboxEmptyMessage": "Captures you save land here, and the AI proposes where they go. Nothing is filed until you accept.",
+  "@inboxEmptyMessage": {
+    "description": "Empty inbox message."
+  },
+  "inboxAccept": "Accept",
+  "@inboxAccept": {
+    "description": "Accept a proposal."
+  },
+  "inboxReject": "Reject",
+  "@inboxReject": {
+    "description": "Reject a proposal."
+  },
+  "inboxEdit": "Edit",
+  "@inboxEdit": {
+    "description": "Edit (opens the capture note)."
+  },
+  "inboxCancel": "Cancel",
+  "@inboxCancel": {
+    "description": "Cancel."
+  },
+  "inboxUndo": "Undo",
+  "@inboxUndo": {
+    "description": "Undo an automatic change."
+  },
+  "inboxDiscard": "Discard",
+  "@inboxDiscard": {
+    "description": "Discard a duplicate capture."
+  },
+  "inboxDismiss": "Dismiss",
+  "@inboxDismiss": {
+    "description": "Dismiss an unsupported suggestion."
+  },
+  "inboxActionFailed": "Couldn't apply that change",
+  "@inboxActionFailed": {
+    "description": "Snack bar when an inbox action failed."
+  },
+  "inboxActionFailedCode": "Couldn't apply that change ({code})",
+  "@inboxActionFailedCode": {
+    "description": "Snack bar with the core failure code.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxAiConfidence": "AI · {score}",
+  "@inboxAiConfidence": {
+    "description": "AI confidence tag.",
+    "placeholders": {
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxAiProposal": "AI PROPOSAL",
+  "@inboxAiProposal": {
+    "description": "Header of the AI proposal of a capture."
+  },
+  "inboxNoProposalYet": "No proposal yet — the AI has not read this capture.",
+  "@inboxNoProposalYet": {
+    "description": "Capture without suggestions."
+  },
+  "inboxProposalCount": "{count, plural, =1{1 proposal} other{{count} proposals}}",
+  "@inboxProposalCount": {
+    "description": "Number of suggestions of a capture.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inboxTag": "#{tag}",
+  "@inboxTag": {
+    "description": "A proposed tag.",
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxPeopleAndCompanies": "PEOPLE & COMPANIES",
+  "@inboxPeopleAndCompanies": {
+    "description": "Filing proposal section."
+  },
+  "inboxCreatesNoteIn": "Accepting files it as a new note in {folder}",
+  "@inboxCreatesNoteIn": {
+    "description": "Filing proposal footnote.",
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxRejectRelation": "Reject relation",
+  "@inboxRejectRelation": {
+    "description": "Rejects one proposed relation."
+  },
+  "inboxTaskProposal": "Proposed task",
+  "@inboxTaskProposal": {
+    "description": "A task proposal label."
+  },
+  "inboxNeedsYou": "Needs you",
+  "@inboxNeedsYou": {
+    "description": "Badge of a suggestion that needs a decision."
+  },
+  "inboxAppliedAutomatically": "Applied automatically",
+  "@inboxAppliedAutomatically": {
+    "description": "Badge of an automatically applied custody change."
+  },
+  "inboxCustodySuggestion": "Needs you · custody",
+  "@inboxCustodySuggestion": {
+    "description": "Badge of a custody suggestion."
+  },
+  "inboxPossibleDuplicate": "Possible duplicate",
+  "@inboxPossibleDuplicate": {
+    "description": "Badge of a duplicate-flagged item."
+  },
+  "inboxRelationSuggestion": "Relation suggestion",
+  "@inboxRelationSuggestion": {
+    "description": "Badge of a relation suggestion."
+  },
+  "inboxTaskSuggestion": "Task suggestion",
+  "@inboxTaskSuggestion": {
+    "description": "Badge of a task suggestion."
+  },
+  "inboxFilingProposal": "Filing proposal",
+  "@inboxFilingProposal": {
+    "description": "Badge of a filing suggestion."
+  },
+  "inboxUnsupportedBadge": "Suggestion",
+  "@inboxUnsupportedBadge": {
+    "description": "Badge of a suggestion kind this version cannot show."
+  },
+  "inboxUnsupported": "This app version can’t show “{kind}” suggestions yet. Update the app to review it.",
+  "@inboxUnsupported": {
+    "description": "Unsupported suggestion message.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxRejected": "Rejected",
+  "@inboxRejected": {
+    "description": "A rejected suggestion."
+  },
+  "inboxWhoIs": "Who is “{mention}”?",
+  "@inboxWhoIs": {
+    "description": "Link-or-create question.",
+    "placeholders": {
+      "mention": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxNoPersonMatches": "A nickname. No person in your vault matches it yet.",
+  "@inboxNoPersonMatches": {
+    "description": "Link-or-create with no candidates."
+  },
+  "inboxPossibleMatches": "Possible matches in your vault:",
+  "@inboxPossibleMatches": {
+    "description": "Link-or-create with candidates."
+  },
+  "inboxLinkExisting": "Link to existing person…",
+  "@inboxLinkExisting": {
+    "description": "Link-or-create action."
+  },
+  "inboxLinkUnavailable": "Linking to an existing person is not available yet",
+  "@inboxLinkUnavailable": {
+    "description": "Link-or-create link action is not provided by the core yet."
+  },
+  "inboxCreatePerson": "Create person…",
+  "@inboxCreatePerson": {
+    "description": "Link-or-create action."
+  },
+  "inboxAliasNote": "Accepting adds “{mention}” as an alias, so future mentions resolve.",
+  "@inboxAliasNote": {
+    "description": "Link-or-create alias note.",
+    "placeholders": {
+      "mention": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxCreatePersonTitle": "Create person",
+  "@inboxCreatePersonTitle": {
+    "description": "Create person sheet title."
+  },
+  "inboxPersonName": "Name",
+  "@inboxPersonName": {
+    "description": "Person name field."
+  },
+  "inboxAliases": "ALIASES",
+  "@inboxAliases": {
+    "description": "Aliases section."
+  },
+  "inboxCreatePersonSave": "Create",
+  "@inboxCreatePersonSave": {
+    "description": "Create person action."
+  },
+  "inboxWhichDocument": "Which document?",
+  "@inboxWhichDocument": {
+    "description": "Ambiguous custody suggestion question."
+  },
+  "inboxChoiceUnavailable": "Choosing one of these is not available yet",
+  "@inboxChoiceUnavailable": {
+    "description": "The core has no intent to accept with a choice yet."
+  },
+  "inboxCaptureSemantics": "Capture",
+  "@inboxCaptureSemantics": {
+    "description": "Semantics label of a capture card."
+  },
+  "inboxBulkActions": "Bulk actions",
+  "@inboxBulkActions": {
+    "description": "Bulk bar label."
+  },
+  "inboxSelectAll": "Select all captures",
+  "@inboxSelectAll": {
+    "description": "Select all checkbox."
+  },
+  "inboxSelectedCount": "{count, plural, =0{None selected} =1{1 selected} other{{count} selected}}",
+  "@inboxSelectedCount": {
+    "description": "Number of selected captures.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inboxClearSelection": "Clear selection",
+  "@inboxClearSelection": {
+    "description": "Clears the bulk selection."
+  },
+  "inboxSelectCapture": "Select capture",
+  "@inboxSelectCapture": {
+    "description": "Checkbox of one capture."
+  },
+  "inboxSuggestionsHeader": "Suggestions",
+  "@inboxSuggestionsHeader": {
+    "description": "List section of standalone suggestions."
+  },
+  "inboxCapturesHeader": "Captures",
+  "@inboxCapturesHeader": {
+    "description": "List section of captures."
+  },
+  "inboxAlsoNeedsYou": "Also needs you",
+  "@inboxAlsoNeedsYou": {
+    "description": "Detail section of standalone suggestions."
+  },
+  "inboxCaptureHeader": "CAPTURE",
+  "@inboxCaptureHeader": {
+    "description": "Detail section with the capture text."
+  },
+  "inboxRelationSummary": "{type} {target}",
+  "@inboxRelationSummary": {
+    "description": "A relation suggestion summary.",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxShortcutsLabel": "Keyboard shortcuts",
+  "@inboxShortcutsLabel": {
+    "description": "Shortcut legend label."
+  },
+  "inboxKeyMove": "move",
+  "@inboxKeyMove": {
+    "description": "Shortcut legend."
+  },
+  "inboxKeySelect": "select",
+  "@inboxKeySelect": {
+    "description": "Shortcut legend."
+  },
+  "inboxKeyAccept": "accept",
+  "@inboxKeyAccept": {
+    "description": "Shortcut legend."
+  },
+  "inboxKeyReject": "reject",
+  "@inboxKeyReject": {
+    "description": "Shortcut legend."
+  },
+  "inboxKeyEdit": "edit",
+  "@inboxKeyEdit": {
+    "description": "Shortcut legend."
+  }
+}

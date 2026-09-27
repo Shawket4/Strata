@@ -4,8 +4,43 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Strata background jobs and AI pipelines: fair job runner, scheduler, embed/summarize/dedupe jobs, semantic and hybrid retrieval, Ask, similarity edges"
+
+[features]
+# Deterministic fakes for other crates' tests (the fake embedder of strata-ai).
+test-support = ["strata-ai/test-support"]
 
 [dependencies]
+strata-common = { workspace = true, features = ["sqlx"] }
+strata-index = { workspace = true }
+strata-ai = { workspace = true, default-features = false }
+strata-vault = { workspace = true }
+vault-format = { workspace = true }
+text-normalize = { workspace = true }
+dedupe = { workspace = true }
+domain = { workspace = true }
+sqlx = { workspace = true }
+pgvector = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rmp-serde = { workspace = true }
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+ulid = { workspace = true }
+
+[dev-dependencies]
+strata-testkit = { workspace = true }
+strata-ai = { workspace = true, default-features = false, features = ["test-support"] }
+tempfile = { workspace = true }
+pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true

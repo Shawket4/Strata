@@ -84,12 +84,7 @@ Future<void> forwardIntent(BuildContext context, Future<Object?> intent) async {
 /// resolves locally (`id` set).
 class EntityRefChip extends StatelessWidget {
   /// Creates the chip.
-  const new({
-    required this.entity,
-    super.key,
-    this.kind,
-    this.onOpen,
-  });
+  const new({required this.entity, super.key, this.kind, this.onOpen});
 
   /// The reference.
   final EntityRef entity;

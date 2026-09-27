@@ -386,7 +386,11 @@ class _TaskDetailBody extends ConsumerWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline, size: 18, color: colors.infoText),
+                      Icon(
+                        Icons.info_outline,
+                        size: 18,
+                        color: colors.infoText,
+                      ),
                       const SizedBox(width: StrataSpacing.s2),
                       Expanded(
                         child: Text(

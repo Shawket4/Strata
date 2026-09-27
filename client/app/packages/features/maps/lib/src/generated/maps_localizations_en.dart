@@ -290,4 +290,12 @@ class MapsLocalizationsEn extends MapsLocalizations {
   String errorMessage({required String code}) {
     return 'The app\'s local data returned an error ($code).';
   }
+
+  @override
+  String nodeSemantics({required String kind, required String title}) {
+    return '$kind: $title';
+  }
+
+  @override
+  String get mapBreadcrumb => 'Map / Local map';
 }

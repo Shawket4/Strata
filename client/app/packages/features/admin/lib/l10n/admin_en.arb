@@ -1,0 +1,363 @@
+{
+  "@@locale": "en",
+  "usersTitle": "Users",
+  "@usersTitle": {
+    "description": "Admin → Users title."
+  },
+  "breadcrumb": "Settings / Admin",
+  "@breadcrumb": {
+    "description": "Breadcrumb over the users title."
+  },
+  "intro": "Admins manage accounts. Nobody else can see a user's notes.",
+  "@intro": {
+    "description": "Privacy note under the title."
+  },
+  "createAccount": "Create account",
+  "@createAccount": {
+    "description": "Creates an account."
+  },
+  "pendingTitle": "Pending approval",
+  "@pendingTitle": {
+    "description": "Pending approvals heading."
+  },
+  "pendingEmpty": "No account is waiting for approval.",
+  "@pendingEmpty": {
+    "description": "Empty pending queue."
+  },
+  "allUsers": "All users",
+  "@allUsers": {
+    "description": "Users list heading."
+  },
+  "requested": "@{username} · requested {date}",
+  "@requested": {
+    "description": "A pending account's subtitle.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "userSubtitle": "@{username} · {role}",
+  "@userSubtitle": {
+    "description": "A user row's subtitle.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "approve": "Approve",
+  "@approve": {
+    "description": "Approves a pending account."
+  },
+  "reject": "Reject",
+  "@reject": {
+    "description": "Rejects a pending account."
+  },
+  "approveSemantics": "Approve {name}",
+  "@approveSemantics": {
+    "description": "Accessibility label of Approve.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rejectSemantics": "Reject {name}",
+  "@rejectSemantics": {
+    "description": "Accessibility label of Reject.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAdmin": "Admin",
+  "@roleAdmin": {
+    "description": "Role admin."
+  },
+  "roleMember": "Member",
+  "@roleMember": {
+    "description": "Role member."
+  },
+  "statusActive": "Active",
+  "@statusActive": {
+    "description": "Account status active."
+  },
+  "statusDisabled": "Disabled",
+  "@statusDisabled": {
+    "description": "Account status disabled."
+  },
+  "statusPending": "Pending",
+  "@statusPending": {
+    "description": "Account status pending."
+  },
+  "statusRejected": "Rejected",
+  "@statusRejected": {
+    "description": "Account status rejected."
+  },
+  "statusDeletion": "Deletion {date}",
+  "@statusDeletion": {
+    "description": "Account status deletion pending with the purge date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "statusDeletionNoDate": "Deletion scheduled",
+  "@statusDeletionNoDate": {
+    "description": "Account status deletion pending without a date."
+  },
+  "statusOther": "{status}",
+  "@statusOther": {
+    "description": "An account status this app version does not name.",
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "exportNotDownloaded": "Export not downloaded yet",
+  "@exportNotDownloaded": {
+    "description": "The user has not downloaded their export."
+  },
+  "exportDownloaded": "Export downloaded {date}",
+  "@exportDownloaded": {
+    "description": "The user downloaded their export.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "columnName": "Name",
+  "@columnName": {
+    "description": "Table column."
+  },
+  "columnUsername": "Username",
+  "@columnUsername": {
+    "description": "Table column."
+  },
+  "columnRole": "Role",
+  "@columnRole": {
+    "description": "Table column."
+  },
+  "columnStatus": "Status",
+  "@columnStatus": {
+    "description": "Table column."
+  },
+  "columnCreated": "Created",
+  "@columnCreated": {
+    "description": "Table column."
+  },
+  "columnActions": "Actions",
+  "@columnActions": {
+    "description": "Table column."
+  },
+  "disable": "Disable",
+  "@disable": {
+    "description": "Disables an account."
+  },
+  "enable": "Enable",
+  "@enable": {
+    "description": "Enables an account."
+  },
+  "resetPassword": "Reset password",
+  "@resetPassword": {
+    "description": "Resets an account's password."
+  },
+  "scheduleDeletion": "Schedule deletion",
+  "@scheduleDeletion": {
+    "description": "Schedules an account's deletion."
+  },
+  "cancelDeletion": "Cancel deletion",
+  "@cancelDeletion": {
+    "description": "Cancels a scheduled deletion."
+  },
+  "disableSemantics": "Disable {name}",
+  "@disableSemantics": {
+    "description": "Accessibility label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enableSemantics": "Enable {name}",
+  "@enableSemantics": {
+    "description": "Accessibility label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "resetSemantics": "Reset password for {name}",
+  "@resetSemantics": {
+    "description": "Accessibility label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteSemantics": "Delete {name}…",
+  "@deleteSemantics": {
+    "description": "Accessibility label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelDeletionSemantics": "Cancel deletion of {name}",
+  "@cancelDeletionSemantics": {
+    "description": "Accessibility label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "userActions": "Actions for {name}",
+  "@userActions": {
+    "description": "Title of a user's action sheet.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "footnoteDisable": "Disable signs a user out everywhere and removes their data from their devices.",
+  "@footnoteDisable": {
+    "description": "Footnote under the table."
+  },
+  "footnoteReset": "Reset password gives you a one-time password to pass on.",
+  "@footnoteReset": {
+    "description": "Footnote under the table."
+  },
+  "notAvailableYet": "Not available yet",
+  "@notAvailableYet": {
+    "description": "Tooltip of an action the app cannot perform yet."
+  },
+  "scheduleTitle": "Schedule deletion of @{username}?",
+  "@scheduleTitle": {
+    "description": "Schedule deletion confirmation title.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "scheduleBody": "{name}'s account is signed out everywhere and deleted on {date}. Until then {name} can sign in only to download an export of their notes. You won't see the export.",
+  "@scheduleBody": {
+    "description": "Schedule deletion confirmation body.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancels a dialog."
+  },
+  "oneTimeTitle": "One-time password for @{username}",
+  "@oneTimeTitle": {
+    "description": "One-time password dialog title.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "oneTimeBody": "Pass it on privately. It's shown only once; {name} must choose a new password after signing in.",
+  "@oneTimeBody": {
+    "description": "One-time password dialog body.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "copy": "Copy",
+  "@copy": {
+    "description": "Copies the one-time password."
+  },
+  "copied": "Copied",
+  "@copied": {
+    "description": "Snackbar after copying."
+  },
+  "done": "Done",
+  "@done": {
+    "description": "Closes the one-time password dialog."
+  },
+  "offlineTitle": "Admin → Users needs a connection",
+  "@offlineTitle": {
+    "description": "Offline state title."
+  },
+  "offlineBody": "Managing accounts happens on the server. Connect and try again.",
+  "@offlineBody": {
+    "description": "Offline state body."
+  },
+  "notYetTitle": "Not available yet",
+  "@notYetTitle": {
+    "description": "Not-yet-available state title."
+  },
+  "notYetBody": "This server doesn't offer account management yet.",
+  "@notYetBody": {
+    "description": "Not-yet-available state body."
+  },
+  "notAllowedTitle": "Admins only",
+  "@notAllowedTitle": {
+    "description": "Not-allowed state title."
+  },
+  "notAllowedBody": "Only administrators can manage users.",
+  "@notAllowedBody": {
+    "description": "Not-allowed state body."
+  },
+  "loadFailed": "Users could not be loaded",
+  "@loadFailed": {
+    "description": "Error state title."
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Reloads."
+  },
+  "loading": "Loading users",
+  "@loading": {
+    "description": "Loading label."
+  },
+  "errorGeneric": "Something went wrong ({code}).",
+  "@errorGeneric": {
+    "description": "Any core error.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "errorOffline": "You're offline.",
+  "@errorOffline": {
+    "description": "Core error offline."
+  },
+  "atUsername": "@{username}",
+  "@atUsername": {
+    "description": "A username.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  }
+}

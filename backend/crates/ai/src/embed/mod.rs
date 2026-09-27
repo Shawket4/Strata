@@ -5,10 +5,15 @@
 //! first token) followed by L2 normalisation; mean pooling is supported for other models.
 //! Every [`Embedding`] carries the model ID that produced it, to be stored with the vector.
 
+pub mod lazy;
 pub mod pooling;
 
+#[cfg(feature = "test-support")]
+pub mod fake;
 #[cfg(feature = "onnx")]
 pub mod onnx;
+
+pub use lazy::{EmbedderLoader, LazyEmbedder};
 
 use std::fmt;
 
@@ -52,6 +57,13 @@ pub trait Embedder: Send + Sync + fmt::Debug {
 
     /// Embeds `texts` (one vector per text, same order).
     async fn embed(&self, texts: &[String]) -> Result<Vec<Embedding>, EmbedError>;
+
+    /// Whether the model is in memory now, so an embedding costs only inference (a
+    /// [`LazyEmbedder`] unloads itself when idle). Callers that must stay fast, like the
+    /// synchronous duplicate check on create, embed only when this is true.
+    fn is_loaded(&self) -> bool {
+        true
+    }
 }
 
 /// How token states become one vector.

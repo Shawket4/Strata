@@ -14,7 +14,7 @@ import 'package:strata_ui/strata_ui.dart';
 /// here decides what the graph contains: positions, degrees, clusters and
 /// edges are the core's (D3 = a); this only indexes them for drawing.
 class GraphScene {
-  GraphScene._({
+  new _({
     required this.nodes,
     required this.edges,
     required this.index,
@@ -26,12 +26,12 @@ class GraphScene {
     required this.edgeDst,
     required this.edgeClasses,
     required this.bounds,
-    required Map<int, List<int>> grid,
-  }) : _grid = grid;
+    required this.grid,
+  });
 
   /// Indexes [nodes] and [edges] (edges whose ends are not in [nodes] are not
   /// drawn).
-  factory GraphScene.from(List<GraphNode> nodes, List<GraphEdge> edges) {
+  factory from(List<GraphNode> nodes, List<GraphEdge> edges) {
     final n = nodes.length;
     final index = <String, int>{};
     final xs = Float32List(n);
@@ -81,9 +81,7 @@ class GraphScene {
       edgeSrc: Int32List.fromList(src),
       edgeDst: Int32List.fromList(dst),
       edgeClasses: classes,
-      bounds: n == 0
-          ? Rect.zero
-          : Rect.fromLTRB(minX, minY, maxX, maxY),
+      bounds: n == 0 ? Rect.zero : Rect.fromLTRB(minX, minY, maxX, maxY),
       grid: grid,
     );
   }
@@ -138,7 +136,8 @@ class GraphScene {
   /// Bounding box of every node position (world units).
   final Rect bounds;
 
-  final Map<int, List<int>> _grid;
+  /// Hit-testing grid: node indices by cell key.
+  final Map<int, List<int>> grid;
 
   /// Number of nodes.
   int get nodeCount => xs.length;
@@ -159,7 +158,7 @@ class GraphScene {
     var bestDistance = double.infinity;
     for (var dx = -reach; dx <= reach; dx++) {
       for (var dy = -reach; dy <= reach; dy++) {
-        final cell = _grid[_cellKeyOf(cx + dx, cy + dy)];
+        final cell = grid[_cellKeyOf(cx + dx, cy + dy)];
         if (cell == null) continue;
         for (final i in cell) {
           final ddx = xs[i] - world.dx;

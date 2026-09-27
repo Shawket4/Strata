@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:strata_sync/src/l10n.dart';
 import 'package:strata_sync/src/sync_panel.dart';
-import 'package:strata_ui/strata_ui.dart';
+import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// Opens the sync status in the surface of the window's size class: a
 /// bottom sheet on compact, a drawer from the end edge on medium and a
@@ -53,10 +53,10 @@ Future<void> showSyncStatus(
         transitionBuilder: (context, animation, _, child) {
           final rtl = Directionality.of(context) == TextDirection.rtl;
           return SlideTransition(
-            position: Tween(
-              begin: Offset(rtl ? -1 : 1, 0),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOut)),
+            position: Tween(begin: Offset(rtl ? -1 : 1, 0), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                ),
             child: child,
           );
         },
@@ -103,7 +103,6 @@ class SyncDrawer extends StatelessWidget {
       label: context.syncL10n.panelTitle,
       child: Material(
         color: colors.surface,
-        elevation: 0,
         shape: BorderDirectional(start: BorderSide(color: colors.border)),
         child: SizedBox(
           width: 380,

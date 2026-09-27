@@ -86,9 +86,9 @@ class TaskMeta extends StatelessWidget {
                 ? l10n.tasksOverdueSince(date: due)
                 : l10n.tasksDueOn(date: due),
             style: overdue
-                ? style.withWeight(FontWeight.w600).copyWith(
-                    color: colors.dangerText,
-                  )
+                ? style
+                      .withWeight(FontWeight.w600)
+                      .copyWith(color: colors.dangerText)
                 : style,
           ),
         if (done != null) Text(l10n.tasksDoneOn(date: done), style: style),
@@ -300,7 +300,9 @@ class RecurringRuleRow extends StatelessWidget {
     return InkWell(
       onTap: open == null ? null : () => open(task.id),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: StrataLayout.minTouchTarget),
+        constraints: const BoxConstraints(
+          minHeight: StrataLayout.minTouchTarget,
+        ),
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: StrataSpacing.s4,

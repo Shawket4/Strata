@@ -95,6 +95,7 @@ pub(crate) struct Inner {
     pub(crate) loaded: Mutex<std::collections::HashSet<UserId>>,
     runtime: Option<tokio::runtime::Handle>,
     listener: ListenerSlot,
+    semantic: std::sync::RwLock<Option<Arc<dyn crate::semantic::SemanticDuplicates>>>,
 }
 
 /// The vault store for all users (cheap to clone).
@@ -130,6 +131,7 @@ impl VaultService {
                 loaded: Mutex::new(std::collections::HashSet::new()),
                 runtime: tokio::runtime::Handle::try_current().ok(),
                 listener: std::sync::RwLock::new(None),
+                semantic: std::sync::RwLock::new(None),
             }),
         }
     }
@@ -160,6 +162,16 @@ impl VaultService {
             .listener
             .write()
             .unwrap_or_else(PoisonError::into_inner) = Some(listener);
+    }
+
+    /// Registers the semantic level of the duplicate check on create (the AI subsystem,
+    /// PLAN §9.7); replaces any earlier one.
+    pub fn set_semantic(&self, source: Arc<dyn crate::semantic::SemanticDuplicates>) {
+        *self
+            .inner
+            .semantic
+            .write()
+            .unwrap_or_else(PoisonError::into_inner) = Some(source);
     }
 
     fn sender(&self, user: UserId) -> mpsc::UnboundedSender<Job> {
@@ -258,6 +270,14 @@ impl VaultService {
 }
 
 impl Inner {
+    /// The registered semantic duplicate source, if any.
+    pub(crate) fn semantic(&self) -> Option<Arc<dyn crate::semantic::SemanticDuplicates>> {
+        self.semantic
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
+    }
+
     pub(crate) fn notify(&self, user: UserId, notice: &Committed) {
         if notice.is_empty() {
             return;

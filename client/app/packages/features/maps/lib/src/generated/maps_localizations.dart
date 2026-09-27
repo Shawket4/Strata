@@ -547,6 +547,18 @@ abstract class MapsLocalizations {
   /// In en, this message translates to:
   /// **'The app\'s local data returned an error ({code}).'**
   String errorMessage({required String code});
+
+  /// Mind map label.
+  ///
+  /// In en, this message translates to:
+  /// **'{kind}: {title}'**
+  String nodeSemantics({required String kind, required String title});
+
+  /// Mind map label.
+  ///
+  /// In en, this message translates to:
+  /// **'Map / Local map'**
+  String get mapBreadcrumb;
 }
 
 class _MapsLocalizationsDelegate

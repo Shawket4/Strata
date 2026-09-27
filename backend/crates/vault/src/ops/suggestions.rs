@@ -3,6 +3,8 @@
 //! Manual kinds exist now; AI kinds (filing, relations, entity links, custody, tasks) arrive
 //! with Phase 4 and reuse these endpoints.
 //!
+//! - `duplicates` (a pair found by the nightly sweep, §9.7): rejecting records keep-both for
+//!   the pair; accepting only records the decision (merging is the user's action).
 //! - `duplicate` (a capture that resembles existing items, §9.7): accepting means "keep
 //!   both" — the pairs are recorded (sidecar + `dedupe_keep_both`) and never flagged again;
 //!   rejecting dismisses the flag (the user may then delete the capture).
@@ -31,6 +33,8 @@ pub struct SuggestionView {
 pub enum Payload {
     /// `duplicate`.
     Duplicate(DuplicatePayload),
+    /// `duplicates` (nightly semantic sweep, §9.7).
+    Duplicates(crate::ops::ai::DuplicatesPayload),
     /// Any other kind (opaque `MessagePack`).
     Opaque(Vec<u8>),
 }
@@ -42,6 +46,10 @@ impl SuggestionView {
             "duplicate" => rmp_serde::from_slice(&self.suggestion.payload).map_or_else(
                 |_| Payload::Opaque(self.suggestion.payload.clone()),
                 Payload::Duplicate,
+            ),
+            "duplicates" => rmp_serde::from_slice(&self.suggestion.payload).map_or_else(
+                |_| Payload::Opaque(self.suggestion.payload.clone()),
+                Payload::Duplicates,
             ),
             _ => Payload::Opaque(self.suggestion.payload.clone()),
         }
@@ -109,6 +117,15 @@ impl VaultService {
                         core.keep_both_notes(scope, note, &candidates, Author::User)
                             .await?;
                     }
+                }
+                // Rejecting "these are duplicates" means they are distinct: never again.
+                if !accept
+                    && s.kind == "duplicates"
+                    && let Some(note) = s.note_id
+                    && let Ok(p) =
+                        rmp_serde::from_slice::<crate::ops::ai::DuplicatesPayload>(&s.payload)
+                {
+                    core.reject_duplicates(scope, note, &p).await?;
                 }
                 let now = core.now();
                 let mut tx = core.begin(&scope).await?;

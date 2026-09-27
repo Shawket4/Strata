@@ -2,6 +2,7 @@
 //! [`crate::store`]); [`service`] exposes them on [`crate::VaultService`]. Reads are in
 //! [`read`].
 
+pub mod ai;
 pub mod entities;
 pub mod notes;
 pub mod read;

@@ -21,13 +21,15 @@ class DuplicateCandidatesView extends StatelessWidget {
     required this.onCreateAnyway,
     required this.onCancel,
     super.key,
+    this.cancelLabel,
+    this.createAnywayLabel,
   });
 
   /// Kind of the item being created (`task`, `note`, `person`, …).
   final String kind;
 
-  /// Title of the item being created.
-  final String title;
+  /// Title of the item being created (`null` when the core does not say).
+  final String? title;
 
   /// Candidates, best first (as the core orders them).
   final List<CandidateItem> candidates;
@@ -40,6 +42,12 @@ class DuplicateCandidatesView extends StatelessWidget {
 
   /// Does not create it.
   final VoidCallback onCancel;
+
+  /// Label of [onCancel] (default "Cancel").
+  final String? cancelLabel;
+
+  /// Label of [onCreateAnyway] (default "Create anyway").
+  final String? createAnywayLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -91,13 +99,15 @@ class DuplicateCandidatesView extends StatelessWidget {
                   child: Text(l10n.dupTitle, style: text.titleSmall),
                 ),
                 const SizedBox(height: StrataSpacing.s1),
-                Text(
-                  l10n.dupSubtitle(
+                Text(switch (title) {
+                  final String t => l10n.dupSubtitle(
                     kind: CoreLabels.itemKind(l10n, kind),
-                    title: title,
+                    title: t,
                   ),
-                  style: text.bodySmall.copyWith(color: colors.text2),
-                ),
+                  null => l10n.dupSubtitleUntitled(
+                    kind: CoreLabels.itemKind(l10n, kind),
+                  ),
+                }, style: text.bodySmall.copyWith(color: colors.text2)),
                 const SizedBox(height: StrataSpacing.s4),
                 for (final candidate in candidates) ...[
                   _CandidateCard(
@@ -114,11 +124,11 @@ class DuplicateCandidatesView extends StatelessWidget {
                   children: [
                     TextButton(
                       onPressed: onCancel,
-                      child: Text(l10n.dupCancel),
+                      child: Text(cancelLabel ?? l10n.dupCancel),
                     ),
                     OutlinedButton(
                       onPressed: onCreateAnyway,
-                      child: Text(l10n.dupCreateAnyway),
+                      child: Text(createAnywayLabel ?? l10n.dupCreateAnyway),
                     ),
                     if (best != null)
                       FilledButton(
@@ -186,11 +196,7 @@ class _CandidateCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
                   child: kind == null
-                      ? Icon(
-                          Icons.task_alt,
-                          size: 18,
-                          color: colors.accentText,
-                        )
+                      ? Icon(Icons.task_alt, size: 18, color: colors.accentText)
                       : NodeKindGlyph(kind: kind, size: 18, decorative: true),
                 ),
                 const SizedBox(width: StrataSpacing.s3),
@@ -308,7 +314,7 @@ class DuplicatePromptSheet extends ConsumerWidget {
                   api.resolveDuplicate(opId: prompt.opId, choice: choice),
                 ),
               );
-              if (closeOnResolve) unawaited(Navigator.maybePop(context));
+              if (closeOnResolve) Navigator.maybePop(context);
             }
 
             return DuplicateCandidatesView(

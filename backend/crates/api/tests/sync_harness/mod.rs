@@ -184,7 +184,39 @@ impl H {
             id,
             client,
             token: session.access_token,
-            device: devices[0].id,
+            device: devices.iter().find(|d| d.current).map(|d| d.id).expect("current device"),
+        }
+    }
+
+    /// Another device of `name` (signed in with the harness password).
+    pub async fn login(&self, user: &User, name: &str, device_name: &str) -> User {
+        let anon = Client::builder(&self.server.base_url())
+            .observer(self.conformance.clone())
+            .build()
+            .expect("client");
+        let session = ops::login(
+            &anon,
+            &types::LoginRequest {
+                username: name.to_owned(),
+                password: format!("{name}-password-1"),
+                device_name: device_name.to_owned(),
+                platform: types::DevicePlatform::Android,
+            },
+        )
+        .await
+        .expect("login");
+        let client = self.client(&session.access_token);
+        let devices = ops::list_devices(&client).await.expect("devices");
+        let device = devices
+            .iter()
+            .find(|d| d.current)
+            .map(|d| d.id)
+            .expect("current device");
+        User {
+            id: user.id,
+            client,
+            token: session.access_token,
+            device,
         }
     }
 

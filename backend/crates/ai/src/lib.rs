@@ -44,7 +44,7 @@ pub mod status;
 pub use anthropic_api::{AnthropicApiConfig, AnthropicApiProvider, ApiKey, Pricing};
 pub use budget::{BudgetGuard, BudgetLimits, MemoryUsageStore, PgUsageStore, UsageStore};
 pub use claude_cli::{ClaudeCliConfig, ClaudeCliProvider};
-pub use embed::{Embedder, Embedding};
+pub use embed::{EmbedError, Embedder, EmbedderLoader, Embedding, LazyEmbedder};
 pub use error::{AiError, PauseReason, ProviderError};
 pub use gate::CpuGate;
 pub use prompts::{LANGUAGE_INSTRUCTION, PROMPTS, PromptDef};
@@ -56,4 +56,4 @@ pub use router::ProviderRouter;
 pub use service::{
     AiService, AiTokenStream, MAX_INVALID_OUTPUT_RETRIES, Structured, ValidatedJson,
 };
-pub use status::{AiStatus, PauseInfo, UsageStatus};
+pub use status::{AiStatus, EmbeddingProgress, EmbeddingsStatus, PauseInfo, UsageStatus};

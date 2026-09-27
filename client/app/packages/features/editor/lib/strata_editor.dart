@@ -1,30 +1,26 @@
-/// Strata editor feature (UI only; view-models come from the Rust core,
-/// PLAN L15).
+/// Strata editor feature: the markdown note editor (PLAN §11 screen 4, D2 =
+/// b) on `super_editor`, with a byte-exact source serialiser, the core's
+/// highlight hints, task-line checkboxes, wikilinks, and `[[` / `@` / `#`
+/// autocomplete. UI only; view-models, hints and intents come from the Rust
+/// core (PLAN L15).
 library;
 
-import 'package:flutter/material.dart';
-import 'package:strata_l10n/strata_l10n.dart';
-import 'package:strata_ui/strata_ui.dart';
-
-/// Entry widget of the editor feature. Note view/editor with properties,
-/// backlinks and history (PLAN §11 screen 4).
-///
-/// Until the Rust core streams this screen's view-model it renders the
-/// design-system placeholder state.
-class NoteEditorScreen extends StatelessWidget {
-  /// Creates the editor entry widget.
-  const new({super.key});
-
-  /// The icon that represents this feature.
-  static const IconData icon = Icons.edit_note;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return StrataEmptyState(
-      icon: icon,
-      title: l10n.featureEditor,
-      message: l10n.featurePlaceholderMessage,
-    );
-  }
-}
+export 'src/editor/completions_panel.dart' show CompletionsPanel;
+export 'src/editor/editor_chrome.dart'
+    show FormattingToolbar, NoteConflictBanner, NoteStatusLabel;
+export 'src/editor/note_editor_controller.dart'
+    show EditorTrigger, NoteEditStatus, NoteEditorController, TriggerKind;
+export 'src/editor/strata_note_editor.dart' show StrataNoteEditor;
+export 'src/generated/editor_localizations.dart' show EditorLocalizations;
+export 'src/note_editor_screen.dart'
+    show
+        NoteEditorHeader,
+        NoteEditorPane,
+        NoteEditorScreen,
+        NoteLoadError,
+        saveNote;
+export 'src/note_editor_session.dart'
+    show EditorLocalizationsScope, NoteEditorSession, NoteSessionBuilder;
+export 'src/source/markdown_source.dart' show MarkdownSource, SourceLine;
+export 'src/source/source_document.dart'
+    show LineHints, LineSpan, documentOf, linesOf;

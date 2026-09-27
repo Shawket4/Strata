@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_sync/src/l10n.dart';
-import 'package:strata_ui/strata_ui.dart';
+import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// 1:1 renderings of the sync view-model's enums and codes (copy, tone,
 /// icon). Nothing is derived: every value comes from the core.
 abstract final class SyncLabels {
   /// The pill copy for [pill]'s connectivity and queued op count.
-  static String pill(SyncLocalizations l10n, SyncPill pill) =>
-      switch (pill.connectivity) {
-        Connectivity.online => l10n.pillOnline(count: pill.pendingOps),
-        Connectivity.offline => l10n.pillOffline(count: pill.pendingOps),
-        Connectivity.unknown => l10n.pillUnknown(count: pill.pendingOps),
-      };
+  static String pill(SyncLocalizations l10n, SyncPill pill) {
+    final count = pill.pendingOps;
+    return switch (pill.connectivity) {
+      Connectivity.online => l10n.pillOnline(count: count),
+      Connectivity.offline => l10n.pillOffline(count: count),
+      Connectivity.unknown => l10n.pillUnknown(count: count),
+    };
+  }
 
   /// The tone of a connectivity.
   static StatusTone tone(Connectivity connectivity) => switch (connectivity) {
