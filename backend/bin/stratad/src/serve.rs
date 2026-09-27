@@ -161,6 +161,26 @@ pub fn spawn_reconciliation(prepared: &Prepared) -> JoinHandle<()> {
     })
 }
 
+/// The event bus (the vault store's commit listener) and the sync state. Event seqs start
+/// after the start time in microseconds, so a restarted server never reuses a seq a client
+/// may resume from (it gets `reset` instead).
+pub fn install_sync(
+    vault: &VaultService,
+    started: chrono::DateTime<chrono::Utc>,
+) -> (
+    web::Data<strata_api::events::EventBus>,
+    web::Data<strata_api::sync::SyncState>,
+) {
+    strata_api::sync::install(
+        vault,
+        strata_api::events::BusConfig {
+            first_seq_after: u64::try_from(started.timestamp_micros()).unwrap_or(0),
+            ..strata_api::events::BusConfig::default()
+        },
+        strata_api::sync::SyncConfig::default(),
+    )
+}
+
 /// Reloads the revocation set every `period`.
 pub fn spawn_revocation_reload(state: web::Data<AuthState>, period: StdDuration) -> JoinHandle<()> {
     tokio::spawn(async move {
@@ -205,6 +225,7 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
     let state = prepared.auth.clone();
     let vault = web::Data::new(prepared.vault.clone());
     let ai = web::Data::new(prepared.ai.service.clone());
+    let (events, sync) = install_sync(&prepared.vault, SystemClock.now());
     let reconcile = spawn_reconciliation(&prepared);
     let reload = spawn_revocation_reload(
         state.clone(),
@@ -222,6 +243,8 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
             .app_data(app_state.clone())
             .app_data(vault.clone())
             .app_data(ai.clone())
+            .app_data(events.clone())
+            .app_data(sync.clone())
             .wrap(from_fn(crate::logging::log_request))
             .configure(strata_api::app::configure)
     })
