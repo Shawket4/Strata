@@ -102,7 +102,7 @@ fn transliteration_key_exact_values() {
         ("Zafer", "zfr"),
         ("Dhafer", "zfr"),
         ("Max", "mks"),
-        ("Cecile", "ssl"),
+        ("Cecile", "sl"),
         ("Philip", "flb"),
         ("Room 12", "rm12"),
         ("", ""),

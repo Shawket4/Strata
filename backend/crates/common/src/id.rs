@@ -225,10 +225,17 @@ pub trait IdGenerator: Send + Sync + fmt::Debug {
 
 /// Monotonic ULIDs whose timestamp comes from an injected [`Clock`] and whose random part comes
 /// from the OS RNG.
-#[derive(Debug)]
 pub struct SystemIdGenerator {
     clock: Arc<dyn Clock>,
     inner: Mutex<ulid::Generator>,
+}
+
+impl fmt::Debug for SystemIdGenerator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SystemIdGenerator")
+            .field("clock", &self.clock)
+            .finish_non_exhaustive()
+    }
 }
 
 impl SystemIdGenerator {

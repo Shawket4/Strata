@@ -9,7 +9,7 @@
 //! 3. **Canonical decomposition (NFD)** so every accent and every Arabic hamza/madda is a
 //!    separate combining mark, then per character:
 //!    - drop Arabic tashkeel and Quranic marks (U+0610–U+061A, U+064B–U+065F, U+0670,
-//!      U+0674, U+06D6–U+06ED, U+08D3–U+08FF) and tatweel (U+0640);
+//!      U+0674, U+06D6–U+06ED, U+0898–U+089F, U+08CA–U+08FF) and tatweel (U+0640);
 //!    - drop Latin/Greek/Cyrillic combining diacritics (U+0300–U+036F, U+1AB0–U+1AFF,
 //!      U+1DC0–U+1DFF, U+20D0–U+20FF, U+FE20–U+FE2F), so `é` → `e`;
 //!    - drop invisible format characters (bidi marks and embeddings, ZWJ/ZWNJ, BOM, soft hyphen,
@@ -132,7 +132,8 @@ pub(crate) fn is_arabic_mark(c: char) -> bool {
             | '\u{0670}'
             | '\u{0674}'
             | '\u{06D6}'..='\u{06ED}'
-            | '\u{08D3}'..='\u{08FF}'
+            | '\u{0898}'..='\u{089F}'
+            | '\u{08CA}'..='\u{08FF}'
     )
 }
 

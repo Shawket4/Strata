@@ -480,7 +480,6 @@ mod tests {
                 ("STRATA__DATABASE__MAX_CONNECTIONS", "3"),
                 ("STRATA__THRESHOLDS__RELATION", "0.75"),
                 ("STRATA__BIND", "0.0.0.0:9000"),
-                ("STRATA__PUSH__APNS_TEAM_ID", "1234567890"),
                 ("STRATA__THRESHOLDS__DEDUPE__NOTE__NEAR", "0.65"),
                 ("UNRELATED", "ignored"),
                 ("STRATA_TEST_DATABASE_URL", "ignored too"),
@@ -491,12 +490,13 @@ mod tests {
         assert_eq!(config.database.max_connections, 3);
         assert_eq!(config.thresholds.relation, 0.75);
         assert_eq!(config.bind, "0.0.0.0:9000".parse::<SocketAddr>().expect("addr"));
-        // Unset-by-default keys infer their type: a numeric team ID would become an integer
-        // and fail deserialisation into `Option<String>`, so it must be quoted in TOML instead.
         assert_eq!(config.thresholds.dedupe["note"].near, 0.65);
-        assert_eq!(config.push.apns_team_id, None::<String>.or(config.push.apns_team_id.clone()));
+        assert_eq!(config.thresholds.dedupe["note"].semantic, 0.9);
     }
 
+    /// Keys that are unset by default have no type to guide parsing, so a numeric-looking value
+    /// becomes an integer and fails to deserialise into `Option<String>`; such values belong in
+    /// the TOML file (quoted). The failure is loud, never a silent misconfiguration.
     #[test]
     fn numeric_env_value_for_unset_string_key_is_reported() {
         let err = Config::from_sources("", env(&[("STRATA__PUSH__APNS_TEAM_ID", "1234567890")]))
