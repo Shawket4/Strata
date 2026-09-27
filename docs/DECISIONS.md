@@ -7,8 +7,13 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 ### D22 — Account creation: (b) open self-signup with admin approval
 - New accounts register via `POST /auth/signup` and stay `pending` until an admin approves; the user directory is created on approval. Adds signup/approve/reject endpoints, `pending`/`rejected` statuses, signup rate limits and a pending cap, and sign-up + approval-queue screens (PLAN §7.5, §8, §11, §15, §16).
 
-### D21 — Per-user storage isolation: (b) shared database with `user_id` scoping, **plus row-level security** — engine pending
-- Owner picked (b) with RLS. SQLite has no row-level security, so the database engine for the server-side shared store is being confirmed with the owner before PLAN is updated.
+### D21 — Per-user storage isolation: (b) shared database + row-level security, on PostgreSQL
+- **New L22:** server database is the existing PostgreSQL instance on the VPS. One `strata` database; every user-owned row carries `user_id`; RLS enabled and forced on every user-owned table; scope set per transaction (`strata.user_id`), unset scope sees zero rows.
+- Roles: `strata_owner` (migrations), `strata_app` (requests/jobs, NOBYPASSRLS, owns nothing), `strata_accounts` (account tables only, no grants on vault data).
+- SQLite FTS5 / sqlite-vec replaced by `tsvector` over Rust-normalised text + `pg_trgm`, and pgvector (HNSW). Vaults stay as per-user directories. Clients keep local SQLite.
+
+### Backups out of scope
+- Owner handles backups with their own DevOps scripts (PostgreSQL WAL + full backups already running; vault directories too). D12 withdrawn; Phase 6 no longer includes backups or a restore drill.
 
 ### Owner direction: Flutter everywhere, no web client
 - **Changed L3:** the Angular PWA is dropped. The client is one Flutter app for Android, iOS, macOS, Windows, and Linux with **adaptive layouts** per size class (PLAN §11).

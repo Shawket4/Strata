@@ -46,7 +46,7 @@ Client:
 
 ## 2. Core principles (non-negotiable)
 
-1. **Markdown files are the only source of truth.** SQLite index, embeddings, clusters, and graph layouts are caches that can be deleted and rebuilt from the vault.
+1. **Markdown files are the only source of truth.** The database index, embeddings, clusters, and graph layouts are caches that can be deleted and rebuilt from the vault.
 2. **All reads and writes go through the Actix API.** No client, tool, or person touches vault files directly: no SSH editing, no git clone/pull by clients, no file sync, no direct Obsidian access to the server folder. Obsidian compatibility is a *format* guarantee delivered through API export/import (§6.10).
 3. **The AI never edits the user's prose.** AI output goes into frontmatter relation keys, sidecar metadata, concept notes, and AI-owned folders only.
 4. **Every write is a git commit** (local repo on the VPS), prefixed `user:` or `ai:`. Any AI change is revertible via the API.
@@ -80,7 +80,8 @@ Client:
 | L17 | Product name is **Strata**. Use it for the app name, bundle/package IDs, binary names, and branding. |
 | L18 | **Provisional (revisit before Phase 4):** LLM calls go through **`claude -p`** (Claude Code headless mode) on the VPS, on the owner's Max subscription, behind the `LlmProvider` trait (§9.1). Embeddings are local (L19). |
 | L19 | Embedding model is **IBM granite-embedding-97m-multilingual-r2** (Apache 2.0, 97M params, 384-dim vectors, 32K-token context, Arabic among its enhanced languages), run locally on the VPS CPU. Runtime per D9. |
-| L20 | **Multi-user with fully isolated accounts.** Each user gets their own vault (folder + git repo), index, embeddings, jobs, AI budget, settings, sessions/devices, and change log. Roles: `admin` (manages accounts) and `member`. No sharing between users. Storage layout per D21. |
+| L20 | **Multi-user with fully isolated accounts.** Each user gets their own vault (folder + git repo), index, embeddings, jobs, AI budget, settings, sessions/devices, and change log. Roles: `admin` (manages accounts) and `member`. No sharing between users. Storage per D21 / L22. |
+| L22 | **Server database is PostgreSQL** (the existing instance on the VPS) with **row-level security**. One shared `strata` database; every user-owned row carries `user_id`; RLS policies enforced by the database for the application role (§5.2, §7.4). Clients keep a local SQLite cache (L14). |
 | L21 | **Wire format is MessagePack everywhere.** Every request and response body, error, sync payload, and streamed event is MessagePack (`application/msgpack`), described by the OpenAPI contract. No JSON on the wire. JSON remains only where a file format requires it on disk (`.canvas`, `.meta/*.json`, the OpenAPI document itself). (§7.7) |
 
 ---
@@ -97,13 +98,12 @@ Client:
 | D9 | Embedding runtime (model is locked, L19) | (a) In-process in `stratad`: ONNX model via the `ort` crate + `tokenizers`, int8 quantized; no extra service. (b) Separate local service (e.g. Ollama or a small ONNX server) called over HTTP; verify the model is available there. | Phase 4 |
 | D10 | Clustering algorithm | (a) Louvain. (b) Leiden. Both over petgraph data in Rust. | Phase 5 |
 | D11 | Flutter UI binding | Binding (logic-free either way): (a) `StreamBuilder`/`ValueListenableBuilder` directly on frb view-model streams; (b) a thin reactive package used purely for rebuilds. | Phase 3 |
-| D12 | Off-site backup target | Owner picks (e.g. encrypted restic snapshots to object storage). Backup is outbound-only and never a client read path. | Phase 6 |
 | D13 | New entity creation | (a) AI auto-creates a person/company when confident; ambiguous matches become merge suggestions. (b) AI always proposes new entities as suggestions; only links to existing entities apply automatically. | Phase 4 |
 | D14 | Client token storage | (a) Rust keychain/keystore crate called from the core (verify Android, iOS, macOS, Windows, Linux support). (b) Platform secure storage via a minimal plugin the core invokes through an frb callback (plumbing only). (c) Token encrypted in local SQLite with a key held in the platform keystore. | Phase 2 |
 | D15 | Rust client generation (must emit MessagePack, L21) | (a) progenitor for types and endpoints, with its JSON body handling replaced by an `rmp-serde` codec layer (verify it can be swapped cleanly). (b) openapi-generator `rust` with custom templates for the MessagePack codec. (c) Own build-time generator: `typify` for types from the schema + a small template for endpoint functions using `rmp-serde`. Check OpenAPI 3.1 support against utoipa's output for each. | Phase 1 |
 | D19 | Sync conflict resolution for note bodies | (a) 3-way merge against the base version (from git) when edits don't overlap, conflict copy otherwise. (b) Always keep server version and save the client edit as a conflict copy for manual resolution. | Phase 1 |
 | D20 | Final LLM transport (replaces provisional L18) | (a) Claude Code `claude -p` on the Strata VPS (current). (b) Direct Messages API from `stratad` with an API key (lightweight, pay per token). (c) Relay service on another server that runs `claude -p` and returns JSON. All sit behind the same `LlmProvider` trait. Measure `claude -p` RAM/CPU on the VPS (`/usr/bin/time -v`) before deciding. | Phase 4 |
-| D21 | Per-user storage isolation | (a) Per-user directory holding that user's vault + git + its own `index.db`; a separate `system.db` for users, sessions, devices. Physical separation; a query can't cross users. (b) Per-user vault directories + one shared SQLite with `user_id` on every table and enforced scoping in the data layer. Simpler ops; isolation relies on code. | Phase 1 |
+| D21 | Per-user storage isolation | (a) Per-user directory holding that user's vault + git + its own index database; a separate system database for users, sessions, devices. (b) Per-user vault directories + one shared database with `user_id` on every table and enforced scoping. **Decided 2026-09-27: (b) with database-enforced row-level security, on PostgreSQL (L22).** | Phase 1 |
 | D22 | Account creation | (a) Admin creates accounts / sends invite links only. (b) Open self-signup with admin approval. **Decided 2026-09-27: (b).** | Phase 1 |
 | D23 | AI for users other than the owner | The owner's `claude -p` subscription must serve only the owner. For other users: (a) direct API backend with the server's API key and a per-user budget; (b) each user supplies their own API key (stored encrypted, server-side only); (c) AI disabled for non-owner accounts. | Phase 4 |
 | D24 | Streaming transport for `/events` and `/ask` (MessagePack frames) | (a) WebSocket with one binary MessagePack frame per event/token batch. (b) Long-lived HTTP response streaming length-prefixed MessagePack frames. (c) Server-Sent Events carrying base64-encoded MessagePack (keeps SSE semantics and reconnection behaviour; ~33% size overhead from base64). | Phase 1 |
@@ -138,17 +138,17 @@ Withdrawn with the Angular PWA (2026-09-27): D5 (nginx `/api` proxy vs subdomain
  │  │  └──────┬───────┘   └───────────────────┘  │ │
  │  └─────────┼──────────────────────────────────┘ │
  │     ┌──────▼──────┐        ┌──────────────────┐ │
- │     │ vault/ (.md │        │ index.db         │ │
- │     │ + git repo) │        │ SQLite FTS5 +    │ │
- │     └─────────────┘        │ sqlite-vec + app │ │
+ │     │ users/<id>/ │        │ PostgreSQL       │ │
+ │     │ vault/ (.md │        │ (existing, RLS)  │ │
+ │     │ + git repo) │        │ full-text ·      │ │
+ │     └─────────────┘        │ pgvector · app   │ │
  │                            └──────────────────┘ │
- │     system.db (users, roles, sessions, devices) │
  └─────────────────────────────────────────────────┘
 ```
 
 - The diagram shows one user's vault and index; with multiple users (L20) there is one of each **per user** (§5.2).
 - **vault/** contains only Obsidian-compatible content plus a hidden `.meta/` sidecar folder. It is a git repository with no remotes that clients can reach.
-- **index.db** (outside the vault) holds that user's derived index, jobs, suggestions, settings, and change log. Deleting the derived tables and running `reindex` must fully rebuild them.
+- **PostgreSQL** (outside the vault) holds every user's derived index, jobs, suggestions, settings, and change log, isolated per user by row-level security, plus the global account tables. Deleting a user's derived rows and running `reindex --user` must fully rebuild them.
 
 ### 5.1 Repository layout (monorepo)
 
@@ -174,11 +174,16 @@ PLAN.md         this file
 ### 5.2 Multi-user layout (L20, D21)
 ```
 /srv/strata/
-  system.db                 users, roles, sessions, devices, invites, audit log
   users/<user_id>/
     vault/                  that user's Obsidian-compatible vault + .git
-    index.db                that user's index, jobs, suggestions, change log (layout per D21)
+PostgreSQL database `strata` (existing server instance)
+  global tables             users, invites, audit_log (no RLS; reachable only by the account-management role)
+  user-owned tables         everything else, each with user_id + RLS
 ```
+- **Database roles:** `strata_owner` owns the schema and runs migrations only. `strata_app` is used for all request and job work: not a superuser, `NOBYPASSRLS`, not the owner of any table. `strata_accounts` is used only by account endpoints (login, signup, admin user management) and can reach the global tables but has **no grants on user-owned tables**, so admins cannot read vault data even through a bug.
+- **RLS on every user-owned table:** `ENABLE` + `FORCE ROW LEVEL SECURITY`, one policy `USING (user_id = strata_current_user()) WITH CHECK (user_id = strata_current_user())`, where `strata_current_user()` reads the transaction-local setting `strata.user_id` and returns NULL when unset — so a query with no scope sees **zero rows**, never all rows.
+- **`UserScope` = a transaction.** The middleware resolves the user once; every data-layer call runs inside a transaction that first executes `SELECT set_config('strata.user_id', $1, true)` (transaction-local, so pooled connections can't leak a scope). Data-layer functions take `UserScope`, never a raw user ID. Job workers open the same kind of scoped transaction per job.
+- A CI test enumerates every table in the schema and fails if a user-owned table lacks `user_id`, RLS enabled + forced, or the standard policy.
 - Every request resolves `user_id` from the session **once**, in auth middleware, and passes a `UserScope` handle down; data-layer functions take `UserScope`, never a raw user ID from the request.
 - One vault-store writer actor per user; users never block each other's writes.
 - The job runner schedules **fairly across users** (round-robin per-user queues), keeping global concurrency within the VPS limits (§9.1, §9.1b).
@@ -374,7 +379,7 @@ backend/
   crates/
     api/        Actix app: routes, auth middleware (UserScope), MessagePack extractor/responder, streaming, OpenAPI (utoipa)
     vault/      file store: atomic writes, git, link rewriting (parsing via /crates/vault-format)
-    index/      SQLite schema, migrations, FTS5, sqlite-vec, graph queries, reindex
+    index/      PostgreSQL schema, migrations, RLS policies, full-text, pgvector, graph queries, reindex
     jobs/       job queue, fair per-user runner, scheduling (debounce, nightly)
     ai/         provider traits, prompts, structured-output parsing, budget
     graph/      graph assembly, clustering (petgraph)
@@ -383,7 +388,7 @@ backend/
   bin/stratad    main binary; subcommands: serve, reindex [--user], verify [--user], create-user [--admin], openapi (writes /api/openapi.json)
 ```
 
-Suggested crates (verify current maintenance before adopting): `actix-web`, `tokio`, `sqlx` (SQLite), `sqlite-vec`, `comrak` or `pulldown-cmark` (parse; custom wikilink extension), a maintained YAML crate, `gix` or `git2`, `argon2`, `ulid`, `utoipa`, `rmp-serde`, `petgraph`, `reqwest`, `serde`, `tracing`. Test tooling: `proptest`, `insta` (snapshots), `cargo-fuzz`, `cargo-llvm-cov`, `cargo-mutants`, `criterion`, `jsonschema` (contract validation).
+Suggested crates (verify current maintenance before adopting): `actix-web`, `tokio`, `sqlx` (PostgreSQL), `pgvector`, `comrak` or `pulldown-cmark` (parse; custom wikilink extension), a maintained YAML crate, `gix` or `git2`, `argon2`, `ulid`, `utoipa`, `rmp-serde`, `petgraph`, `reqwest`, `serde`, `tracing`. Test tooling: `proptest`, `insta` (snapshots), `cargo-fuzz`, `cargo-llvm-cov`, `cargo-mutants`, `criterion`, `jsonschema` (contract validation).
 
 ### 7.2 Vault store (write path)
 - **Single writer**: all writes go through one async actor/queue per vault, so no two writes race. Reads are concurrent.
@@ -400,7 +405,9 @@ Since only the API writes, out-of-band changes indicate tampering or a crash. On
 - Detect uncommitted changes in git; commit them as `system: recovered changes` and warn.
 - Validate sidecar ↔ frontmatter consistency; repair from frontmatter (frontmatter wins for existence of an edge; sidecar supplies provenance).
 
-### 7.4 SQLite schema (index.db, derived tables marked *)
+### 7.4 PostgreSQL schema (derived tables marked *)
+
+Every table below except the global block has `user_id` as the first column of its primary key and the RLS policy from §5.2. IDs are ULIDs stored as `uuid`.
 ```
 notes*        (id PK, path UNIQUE, title, kind, lang, created, updated, content_hash, word_count)
 aliases*      (note_id, alias)
@@ -409,18 +416,18 @@ links*        (src_id, dst_id NULL, dst_raw, kind[link|embed], anchor, block_id)
 relations*    (src_id, dst_id, type, by[user|ai], confidence, reason, created)
 rejected*     (src_id, dst_id, type, at)
 blocks*       (note_id, block_id, heading_path, text, start_offset, end_offset)
-notes_fts*    FTS5 (title, body, tags) — tokenizer must handle Arabic (unicode61 + remove_diacritics)
+notes.search* tsvector column (`simple` config) built from title/body/tags **after** Arabic/Latin normalisation in Rust (`/crates/text-normalize`), GIN index; `pg_trgm` GIN index on normalised aliases for fuzzy entity matching
 chunks*       (id, note_id, block_id, text, token_count)
-chunk_vec*    sqlite-vec virtual table (chunk_id, embedding)
+chunks.embedding* vector(384) (pgvector), HNSW index; model id stored per row
 entities*     (note_id PK, kind[person|company], display_name, role, industry)
 entity_aliases* (note_id, alias, alias_normalized)   -- normalized: Arabic normalisation + lowercase + transliteration key
 mentions*     (entity_id, note_id, block_id, first_seen, last_seen)   -- from people:/companies: keys + AI mention spans
 clusters*     (note_id, cluster_id), cluster_names* (cluster_id, name)
--- system.db (global, per D21)
+-- global tables (no user_id; strata_accounts role only)
 users         (id, username, display_name, password_hash, role[admin|member], status[pending|active|disabled|rejected], created, approved_by, approved_at)
 invites       (id, token_hash, role, created_by, expires, used_at)
 audit_log     (id, actor_id, action, target, at)
--- per-user app state (not derived)
+-- per-user app state (not derived; user_id + RLS)
 devices       (id, user_id, name, platform, created, last_seen)
 sessions      (id/token_hash, device_id, expires, revoked)
 jobs          (id, kind, note_id, payload, status, attempts, run_after, last_error, created, updated)
@@ -580,7 +587,7 @@ trait Embedder    { async fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f3
 - Every vector row stores the embedding model ID. Changing models triggers a full resumable re-embed.
 - Before Phase 4 sign-off, benchmark retrieval on 20–30 of the owner's real notes (Egyptian Arabic, English, mixed) and report results.
 
-### 9.2 Jobs (queue in SQLite)
+### 9.2 Jobs (queue in PostgreSQL, `FOR UPDATE SKIP LOCKED`)
 
 | Job | Trigger | Does |
 |-----|---------|------|
@@ -768,7 +775,8 @@ Run as a design session (Claude Design) before any code. Output to `/design`:
 - **VPS**: Linux, systemd service `stratad` running as an unprivileged user; data root `/srv/strata` laid out per §5.2, permissions 0700 for that service user only.
 - **nginx**: TLS (Let's Encrypt), reverse proxy to Actix with streaming-friendly settings for D24 (`proxy_buffering off`, long read timeout, WebSocket upgrade headers if D24 = a), security headers (HSTS). No static site.
 - **Config**: `stratad.toml` + env for secrets. Settings: data root, bind address, AI provider/model/keys, embedding config, thresholds, budgets, schedules.
-- **Backups** (D12): nightly encrypted snapshot of `system.db` and every user directory (vault incl. `.git` + index app tables); per-user restore supported; outbound only; restore procedure documented in `docs/RUNBOOK.md` and tested.
+- **Database**: the existing PostgreSQL instance on the VPS; `stratad` gets its own database and the three roles from §5.2. Connection pool kept small (VPS: 4 GB RAM, 1 core).
+- **Backups**: out of scope for this project. The owner already runs WAL archiving and full backups for PostgreSQL and handles vault-directory backups with their own DevOps scripts.
 - **Observability**: structured logs (`tracing`), `/api/v1/health` (unauthenticated liveness only, no data), AI usage stats.
 - **App distribution**: Android (Play / APK), iOS (App Store / TestFlight), macOS (signed + notarised), Windows (signed MSIX), Linux (AppImage or Flatpak); release builds per platform in CI.
 - **CI** (all required, no retries — a flaky test is a bug): Rust fmt/clippy (deny warnings)/tests with coverage gates for backend, shared crates, client core; fuzz smoke runs; mutation testing on the critical crates; OpenAPI generation + Rust client regeneration diff check + breaking-change diff; frb codegen diff check; Flutter analyze (strict) + widget/golden tests at every size class + integration tests; full-stack E2E on Linux desktop and an Android emulator; **Dart logic guard** (pubspec allowlist + folder rule from §12.1); builds for every target platform.
@@ -806,7 +814,8 @@ The bar is a polished product, not a demo. Tests are part of every feature, writ
 - **Mutation testing (cargo-mutants):** surviving mutants in these crates fail CI unless explicitly justified.
 
 ### 16.3 Backend
-- **Unit tests** for every module; **integration tests** against real SQLite and real temp git repositories (no mocks of storage).
+- **Unit tests** for every module; **integration tests** against a real PostgreSQL (each test gets its own database cloned from a migrated template) and real temp git repositories (no mocks of storage).
+- **RLS at the database level:** connected as `strata_app`, a transaction with no scope sees zero rows in every user-owned table; a transaction scoped to user A sees none of B's rows and cannot insert or update rows with B's `user_id` (policy `WITH CHECK` violation asserted); `strata_accounts` gets permission errors on every user-owned table; the schema-enumeration test from §5.2.
 - **API tests** through the generated Rust client against an in-process server, MessagePack on the wire, asserting full decoded payloads.
 - **Contract conformance:** every response in every API test is validated against its OpenAPI schema; a schema-driven fuzzer (e.g. Schemathesis with a MessagePack serializer, or an in-repo proptest generator from the contract) hits every operation and asserts no 5xx, and that every response conforms to the contract.
 - **Wire-format goldens:** byte-exact MessagePack fixtures for representative payloads; decode limits (depth, size, trailing bytes) tested.
@@ -853,12 +862,12 @@ Every phase's acceptance includes: all tests required by §16 for its scope writ
 | Phase | Scope | Acceptance |
 |-------|-------|------------|
 | **0 Design** | §13 | Owner approves design; D2–D4 recorded |
-| **1 Foundation** | Monorepo, CI with all gates, `testkit`, shared crates (`vault-format`, `text-normalize`, `domain`), backend skeleton, config, **multi-user foundations (L20, D21, D22: `system.db`, roles, per-user storage, `UserScope`, admin endpoints)**, auth + devices (D6, D7), MessagePack wire layer (L21) and streaming transport (D24), vault store (parse/serialise/atomic write/git), notes CRUD, manual entity CRUD + merge, tree, move with link rewrite, soft delete, history/revert, export/import, reconciliation, change log + idempotency + sync endpoints (D19), utoipa OpenAPI + generated Rust client (D15), deploy scripts | Golden, property, fuzz-smoke, contract-conformance, and isolation suites pass; deployed to VPS behind nginx |
+| **1 Foundation** | Monorepo, CI with all gates, `testkit`, shared crates (`vault-format`, `text-normalize`, `domain`), backend skeleton, config, **multi-user foundations (L20, L22, D21, D22: PostgreSQL schema with RLS and the three roles, per-user vault directories, `UserScope` transactions, signup/approval and admin endpoints)**, auth + devices (D6, D7), MessagePack wire layer (L21) and streaming transport (D24), vault store (parse/serialise/atomic write/git), notes CRUD, manual entity CRUD + merge, tree, move with link rewrite, soft delete, history/revert, export/import, reconciliation, change log + idempotency + sync endpoints (D19), utoipa OpenAPI + generated Rust client (D15), deploy scripts | Golden, property, fuzz-smoke, contract-conformance, and isolation suites pass; deployed to VPS behind nginx |
 | **2 Client core** | Rust client core (§12.1–12.5, 12.7): local DB per account, outbox, sync engine, local search/graph, auth + token storage (D14), view-models, frb facade — tested headless | Sync convergence and conflict tests pass; full offline edit → reconnect → sync works in tests; 10k-note bootstrap within budget |
 | **3 App core** | Flutter app (§11, D11, D2): adaptive shell at all size classes, login, capture, inbox (manual), note view/editor, backlinks, People & Companies + entity pages (manual data), `@` mentions, search, history/revert, sync status & conflicts, settings, Admin → Users, RTL; CI Dart logic guard; builds for all five platforms | Owner uses the app on phone and desktop, fully offline and back; widget + golden tests at every size class pass; E2E suite green on Linux desktop and Android |
 | **4 AI linking** | Provider layer (`claude -p` per L18 for the owner, D23 for other users, local granite embeddings per L19, runtime D9), jobs, embeddings, summaries, auto-linking, concepts, entity extraction/resolution (D13, nickname rules), entity insights (no-speculation and timeline-date rules), inbox filing, suggestions UI, ask with citations, budget/status | New notes get typed relations and people/company links automatically; entity pages show cited insights, open items, timeline; rejected edges stay rejected; ask cites real blocks |
 | **5 Graph** | Graph APIs, similarity, clustering (D10) + names, global map (D3), local mind map (D4), edge edit interactions, entity lens, saved `.canvas` layouts, live animations | Map reflects vault live; saved maps open in Obsidian after export; map performance budget met at 10k notes |
-| **6 Hardening** | Backups (D12), restore drill, digests, dedupe suggestions, performance with 10k-note synthetic vault, security checklist, store/release pipelines | Restore tested; checklist passes; signed releases for every platform |
+| **6 Hardening** | Digests, dedupe suggestions, performance with 10k-note synthetic vault, security checklist, store/release pipelines | Checklist passes; signed releases for every platform |
 | **7 Deferred** | §18, when the owner starts it | Per §18 |
 
 ---
