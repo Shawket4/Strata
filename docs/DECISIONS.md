@@ -4,6 +4,9 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### D25 — Export for a deleted user: (a) in-app pickup during a grace period
+- Admin deletion schedules the account as `deletion_pending` (default 14 days), revokes its sessions, and allows only an export-only sign-in (`GET /me/export`, `POST /me/confirm-deletion`). The purge runs when the period ends or the user confirms. Admins can cancel and can see whether the export was downloaded, never the export itself. No email infrastructure needed.
+
 ### D22 — Account creation: (b) open self-signup with admin approval
 - New accounts register via `POST /auth/signup` and stay `pending` until an admin approves; the user directory is created on approval. Adds signup/approve/reject endpoints, `pending`/`rejected` statuses, signup rate limits and a pending cap, and sign-up + approval-queue screens (PLAN §7.5, §8, §11, §15, §16).
 

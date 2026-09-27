@@ -106,6 +106,7 @@ Client:
 | D21 | Per-user storage isolation | (a) Per-user directory holding that user's vault + git + its own index database; a separate system database for users, sessions, devices. (b) Per-user vault directories + one shared database with `user_id` on every table and enforced scoping. **Decided 2026-09-27: (b) with database-enforced row-level security, on PostgreSQL (L22).** | Phase 1 |
 | D22 | Account creation | (a) Admin creates accounts / sends invite links only. (b) Open self-signup with admin approval. **Decided 2026-09-27: (b).** | Phase 1 |
 | D23 | AI for users other than the owner | The owner's `claude -p` subscription must serve only the owner. For other users: (a) direct API backend with the server's API key and a per-user budget; (b) each user supplies their own API key (stored encrypted, server-side only); (c) AI disabled for non-owner accounts. | Phase 4 |
+| D25 | How a deleted user receives their export | (a) In-app pickup during a grace period (restricted export-only sign-in). (b) Emailed single-use link. (c) Either, with the export encrypted by a key derived from the user's password. **Decided 2026-09-27: (a).** | Phase 1 |
 | D24 | Streaming transport for `/events` and `/ask` (MessagePack frames) | (a) WebSocket with one binary MessagePack frame per event/token batch. (b) Long-lived HTTP response streaming length-prefixed MessagePack frames. (c) Server-Sent Events carrying base64-encoded MessagePack (keeps SSE semantics and reconnection behaviour; ~33% size overhead from base64). | Phase 1 |
 
 Withdrawn with the Angular PWA (2026-09-27): D5 (nginx `/api` proxy vs subdomain — no browser client, CORS no longer applies), D16 (TypeScript client generator), D17 (Angular toolchain), D18 (Angular data layer). The old D2–D4 (web editor and web graph libraries) are replaced by the Flutter versions above.
@@ -187,7 +188,7 @@ PostgreSQL database `strata` (existing server instance)
 - Every request resolves `user_id` from the session **once**, in auth middleware, and passes a `UserScope` handle down; data-layer functions take `UserScope`, never a raw user ID from the request.
 - One vault-store writer actor per user; users never block each other's writes.
 - The job runner schedules **fairly across users** (round-robin per-user queues), keeping global concurrency within the VPS limits (§9.1, §9.1b).
-- Deleting an account: admin-triggered; offers an export first; removes the user directory and system rows; one audit-log entry.
+- Deleting an account (D25 = a): the admin schedules it; the account becomes `deletion_pending` for a grace period (config, default 14 days) and all its sessions are revoked. The user may still sign in, but only into an **export-only session**: `GET /me/export` (read-only vault zip, produced under the user's own scope), `POST /me/confirm-deletion`, `GET /me`, and logout; every other endpoint returns `403 account_deletion_pending`. When the period ends or the user confirms, a job purges the user directory and all of the user's rows in one transaction and writes one audit-log entry. The admin can cancel before then; the admin never receives or sees the export.
 
 ---
 
@@ -424,7 +425,7 @@ entity_aliases* (note_id, alias, alias_normalized)   -- normalized: Arabic norma
 mentions*     (entity_id, note_id, block_id, first_seen, last_seen)   -- from people:/companies: keys + AI mention spans
 clusters*     (note_id, cluster_id), cluster_names* (cluster_id, name)
 -- global tables (no user_id; strata_accounts role only)
-users         (id, username, display_name, password_hash, role[admin|member], status[pending|active|disabled|rejected], created, approved_by, approved_at)
+users         (id, username, display_name, password_hash, role[admin|member], status[pending|active|disabled|rejected|deletion_pending], created, approved_by, approved_at, deletion_at, export_downloaded_at)
 invites       (id, token_hash, role, created_by, expires, used_at)
 audit_log     (id, actor_id, action, target, at)
 -- per-user app state (not derived; user_id + RLS)
@@ -454,7 +455,8 @@ Schema changes go through versioned, forward-only migrations, each with a test t
 **Account & admin**
 - `GET /me` — current user, role, settings
 - `PATCH /me` — change password, UI language, preferences
-- `GET /admin/users?status=pending|active|disabled`, `POST /admin/users` (admin-created account), `POST /admin/users/{id}/approve`, `POST /admin/users/{id}/reject`, `PATCH /admin/users/{id}` (disable/enable, role, reset password), `DELETE /admin/users/{id}` (after export offer) — admin only
+- `GET /admin/users?status=pending|active|disabled`, `POST /admin/users` (admin-created account), `POST /admin/users/{id}/approve`, `POST /admin/users/{id}/reject`, `PATCH /admin/users/{id}` (disable/enable, role, reset password), `DELETE /admin/users/{id}` (schedules deletion, D25), `POST /admin/users/{id}/cancel-deletion` — admin only. Admins see deletion status and date and whether the export was downloaded, never the export itself.
+- `GET /me/export` — the caller's own vault as a zip; the only data endpoint available to a `deletion_pending` account. `POST /me/confirm-deletion` — the user ends the grace period early.
 - All other endpoints are implicitly scoped to the session's user (principle 7).
 
 **Notes**
@@ -672,7 +674,8 @@ Computed on request (not stored) from note-level embeddings: top-n neighbours ab
 11. **Suggestions** — duplicates, low-confidence proposals, new-entity and entity-merge proposals.
 12. **Sync status & Conflicts** — online/offline, pending outbox ops, last sync, conflict resolution per D19.
 13. **Settings** — account (password, language), AI thresholds, auto-file toggle, budget, digests schedule, devices (revoke), export/import, integrity warnings, AI status, sign out.
-14. **Admin → Users** (admins only) — pending approvals queue (approve / reject), list, create, disable, reset password, delete with export.
+14. **Admin → Users** (admins only) — pending approvals queue (approve / reject), list, create, disable, reset password, schedule deletion (with grace period, cancel, export-downloaded status).
+15. **Deletion pending** — restricted screen for an account scheduled for deletion: days remaining, download export, delete now.
 
 **Live updates:** the core subscribes to `/events` (D24) and pulls changes; view-model streams update the UI; graph node/edge additions animate.
 
@@ -743,6 +746,7 @@ Works offline: capture, browse, edit, search, backlinks, entity pages, local min
 - One signed-in account at a time. Each account gets its **own local database file**, keyed by user ID; switching accounts never mixes data.
 - Sign-out: if the outbox has pending ops, warn and offer to sync first; then delete that account's local DB and tokens.
 - Account disabled on the server → next sync returns `401`; the core wipes that account's local data after warning.
+- Account scheduled for deletion → next sync returns `403 account_deletion_pending`; the app shows the deletion-pending screen (days remaining, "Download your export" via `GET /me/export` saved to a user-chosen location, unsynced outbox ops listed and exportable as a file, "Delete now"). Local data stays read-only until the user finishes or the grace period ends, then it is wiped.
 
 **Deferred:** voice/photo/file capture (§18), share-sheet target.
 
@@ -826,6 +830,7 @@ The bar is a polished product, not a demo. Tests are part of every feature, writ
 - **AI (FakeLlmProvider):** threshold application, rejected-edge suppression, removal of stale AI edges only, invalid JSON retry, budget pause (per user and global), fair scheduling across users.
 - **Entities:** alias matching across Arabic/Latin spellings; nickname/kinship mention → suggestion, never auto-created; accepting adds the alias and the next mention resolves automatically; relative dates in Timeline resolved against `created`; ambiguous match → suggestion; merge rewrites links and preserves user `## Notes`; AI sections regenerate without touching user sections; uncited insight bullets rejected; speculative insights from a one-line capture rejected; contact fields never written by AI.
 - **Search:** Arabic normalisation cases end to end (index + query).
+- **Account deletion (D25):** scheduling revokes all sessions; a new login yields an export-only session; every non-allowed endpoint returns `403 account_deletion_pending`; `GET /me/export` contains exactly the user's vault and nothing of any other user; admins have no route to the export; cancel restores `active`; the purge job (fake clock past the grace period, and early confirm) removes the directory and every row of that user across all tables and nothing else; audit entry written.
 - **Accounts (D22):** signup creates `pending` with no vault or session; pending/rejected/disabled users cannot log in (exact problem types asserted); approval creates the user directory exactly once; only admins can approve; signup rate limits and pending cap enforced; confusable usernames rejected.
 - **Isolation:** two users with overlapping note titles/entity names; verify zero leakage across every endpoint, job, event stream, sync feed, and export; admins cannot read member vaults; a disabled user's sessions die immediately.
 - **Migrations:** each migration tested from the previous schema with fixture data.
@@ -846,7 +851,7 @@ The bar is a polished product, not a demo. Tests are part of every feature, writ
 
 ### 16.6 End-to-end (full stack)
 - Spawned `stratad` on a temp data root + the real app on **Linux desktop (CI, headless display)** and an **Android emulator**; macOS/Windows/iOS runs on release branches.
-- Scenarios (each asserts UI state and server state): first login; capture → inbox → accept filing; edit a note, go offline, edit again, reconnect, resolve a conflict; entity page shows cited insights from fixture AI; nickname link-or-create → alias added → next mention auto-links; reject an AI edge and verify it never returns; ask with citations opens the cited block (fake LLM); admin creates a user, the user signs in on another device, isolation verified; sign-out with pending outbox; account disabled mid-session.
+- Scenarios (each asserts UI state and server state): first login; capture → inbox → accept filing; edit a note, go offline, edit again, reconnect, resolve a conflict; entity page shows cited insights from fixture AI; nickname link-or-create → alias added → next mention auto-links; reject an AI edge and verify it never returns; ask with citations opens the cited block (fake LLM); admin creates a user, the user signs in on another device, isolation verified; sign-out with pending outbox; account disabled mid-session; account scheduled for deletion → export downloaded in the app → deletion completes.
 
 ### 16.7 Coverage and performance gates
 - Line coverage ≥ 90% and branch coverage tracked for backend, shared crates, and client core (`cargo-llvm-cov`); the threshold only goes up.
