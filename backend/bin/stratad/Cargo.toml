@@ -4,8 +4,36 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Strata server: API, account purge, maintenance commands"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "stratad"
+path = "src/main.rs"
 
 [dependencies]
+strata-api = { workspace = true }
+strata-common = { workspace = true, features = ["sqlx"] }
+strata-index = { workspace = true }
+actix-web = { workspace = true }
+sqlx = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true }
+url = { workspace = true }
+percent-encoding = { workspace = true }
+futures-util = { workspace = true }
+
+[dev-dependencies]
+strata-testkit = { workspace = true }
+tempfile = { workspace = true }
+pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true

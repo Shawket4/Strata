@@ -32,7 +32,7 @@ fn scalar() -> impl Strategy<Value = String> {
 
 fn known_entry() -> impl Strategy<Value = (String, PropertyValue)> {
     (
-        prop::sample::select(KnownKey::ALL.to_vec()),
+        prop::sample::select(KnownKey::all().collect::<Vec<_>>()),
         scalar(),
         prop::collection::vec(scalar(), 0..4),
     )
@@ -269,7 +269,13 @@ fn task_spec() -> impl Strategy<Value = TaskSpec> {
                 TaskStatus::Other('/'),
             ]),
             description(),
-            prop::option::of(prop::sample::select(Priority::ALL.to_vec())),
+            prop::option::of(prop::sample::select(
+                Priority::ALL
+                    .iter()
+                    .copied()
+                    .filter(|p| p.signifier().is_some())
+                    .collect::<Vec<_>>(),
+            )),
             prop::option::of(prop::sample::select(vec![
                 "every day",
                 "every 2 weeks on Monday, Thursday",

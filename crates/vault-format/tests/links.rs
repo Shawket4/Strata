@@ -5,6 +5,7 @@
 use pretty_assertions::assert_eq;
 use vault_format::blocks::append_block_id;
 use vault_format::canvas::Canvas;
+use vault_format::domain::RelationType;
 use vault_format::rewrite::MoveSet;
 use vault_format::{Document, PathIndex, RelationKey, Resolution, analyze};
 
@@ -117,7 +118,9 @@ See [[Pricing tests 2026|the tests]], [[Pricing tests 2026#Results]], \
 ```\n[[Pricing experiments]]\n```\n"
     );
     assert_eq!(
-        doc.frontmatter().unwrap().relation(RelationKey::Related),
+        doc.frontmatter()
+            .unwrap()
+            .relation(RelationKey::Note(RelationType::Related)),
         ["[[Pricing tests 2026]]", "[[Churn notes]]"]
     );
 }

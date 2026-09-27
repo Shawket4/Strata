@@ -11,8 +11,10 @@ use pretty_assertions::assert_eq;
 use vault_format::body::BlockKind;
 use vault_format::canvas::Canvas;
 use vault_format::custody::{self, CustodyState};
+use vault_format::domain::{DocumentStatus, Lang, NoteKind};
+use vault_format::domain::{EntityRelationType, MentionType, RelationType};
 use vault_format::filename::{title_from_path, validate_vault_path};
-use vault_format::frontmatter::{DocumentStatus, Lang, NoteKind};
+use vault_format::frontmatter::Open;
 use vault_format::sections::{self, AiProfile, AiSection};
 use vault_format::sidecar::NoteSidecar;
 use vault_format::tasks::{self, DateKind};
@@ -67,12 +69,15 @@ fn canonical_person_note_is_stable() {
     assert_eq!(doc.render_canonical(), PERSON);
     let fm = doc.frontmatter().unwrap();
     assert_eq!(fm.error(), None);
-    assert_eq!(fm.kind(), Some(NoteKind::Person));
+    assert_eq!(fm.kind(), Some(Open::Known(NoteKind::Person)));
     assert_eq!(fm.aliases(), ["أحمد سمير", "Ahmed S.", "A. Samir"]);
-    assert_eq!(fm.lang(), Some(Lang::Mixed));
+    assert_eq!(fm.lang(), Some(Open::Known(Lang::Mixed)));
     assert_eq!(fm.text(KnownKey::Role), Some("Operations manager"));
     assert_eq!(fm.text(KnownKey::Phone), Some(""));
-    assert_eq!(fm.relation(RelationKey::WorksAt), ["[[Acme Logistics]]"]);
+    assert_eq!(
+        fm.relation(RelationKey::Entity(EntityRelationType::WorksAt)),
+        ["[[Acme Logistics]]"]
+    );
     assert_eq!(
         fm.created().unwrap(),
         Some(DateTime::parse_from_rfc3339("2026-09-27T14:32:00+03:00").unwrap())
@@ -84,7 +89,8 @@ fn canonical_person_note_is_stable() {
 fn editing_a_canonical_note_keeps_it_canonical() {
     let mut doc = Document::parse(PERSON);
     let fm = doc.frontmatter_mut();
-    fm.add_relation_link(RelationKey::Knows, "مريم").unwrap();
+    fm.add_relation_link(RelationKey::Entity(EntityRelationType::Knows), "مريم")
+        .unwrap();
     fm.set_updated(&DateTime::parse_from_rfc3339("2026-09-28T08:00:00+03:00").unwrap())
         .unwrap();
     let expected = PERSON
@@ -134,14 +140,14 @@ fn unknown_keys_survive_untouched_and_after_edits() {
         Some(&PropertyValue::Text("line one\n\nline three\n".into()))
     );
     assert_eq!(
-        fm.relation(RelationKey::Related),
+        fm.relation(RelationKey::Note(RelationType::Related)),
         ["[[Churn notes]]", "[[Discount policy|policy]]"]
     );
 
     let mut edited = doc.clone();
     edited
         .frontmatter_mut()
-        .add_relation_link(RelationKey::Concepts, "Pricing")
+        .add_relation_link(RelationKey::Mention(MentionType::Concepts), "Pricing")
         .unwrap();
     assert_eq!(edited.render(), MESSY_EXPECTED);
     assert_eq!(doc.render_canonical(), MESSY_CANONICAL);
@@ -316,7 +322,7 @@ fn document_custody_matches_frontmatter() {
     let doc = Document::parse(CONTRACT);
     assert_eq!(doc.render(), CONTRACT);
     let fm = doc.frontmatter().unwrap();
-    assert_eq!(fm.kind(), Some(NoteKind::Document));
+    assert_eq!(fm.kind(), Some(Open::Known(NoteKind::Document)));
     assert_eq!(fm.expires().unwrap(), NaiveDate::from_ymd_opt(2027, 3, 31));
     let body = doc.body();
     let custody_section = sections::sections(body)
@@ -333,7 +339,7 @@ fn document_custody_matches_frontmatter() {
         fm.text(KnownKey::Holder).unwrap()
     );
     assert_eq!(state.last_holder.as_deref(), fm.text(KnownKey::LastHolder));
-    assert_eq!(Some(state.status.clone()), fm.status());
+    assert_eq!(fm.status(), Some(Open::Known(state.status)));
     assert_eq!(state.status, DocumentStatus::Stored);
 
     let mut rewritten = doc.clone();

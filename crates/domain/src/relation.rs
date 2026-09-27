@@ -55,6 +55,35 @@ pub const NOTE_RELATION_KEYS: [&str; 9] = [
 ];
 
 string_enum! {
+    /// "This note is about / meaningfully involves" links (§6.4): the frontmatter keys after
+    /// the [`RelationType`] keys in [`NOTE_RELATION_KEYS`].
+    pub enum MentionType("mention type") {
+        /// `concepts`: concept notes this note is about.
+        Concepts => "concepts",
+        /// `people`: person entities.
+        People => "people",
+        /// `companies`: company entities.
+        Companies => "companies",
+    }
+}
+
+impl MentionType {
+    /// The frontmatter key holding this link list.
+    pub const fn frontmatter_key(self) -> &'static str {
+        self.as_str()
+    }
+
+    /// The kind of note these links point at.
+    pub const fn target_kind(self) -> NoteKind {
+        match self {
+            Self::Concepts => NoteKind::Concept,
+            Self::People => NoteKind::Person,
+            Self::Companies => NoteKind::Company,
+        }
+    }
+}
+
+string_enum! {
     /// Entity-to-entity relation (§6.7), stored as a frontmatter key on the subject entity.
     pub enum EntityRelationType("entity relation type") {
         /// Person → company, current.

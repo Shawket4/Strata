@@ -29,6 +29,9 @@
 //! - [`tasks`]: Obsidian Tasks lines, the recurrence grammar, RRULEs and completion.
 //! - [`sidecar`], [`clusters`], [`canvas`]: JSON files on disk.
 
+/// The shared vocabulary (PLAN L16) this crate's frontmatter, sidecar and task types use.
+pub use domain;
+
 pub mod blocks;
 pub mod body;
 pub mod canvas;
@@ -47,9 +50,7 @@ pub mod wikilink;
 
 pub use body::{BodyAnalysis, analyze};
 pub use document::Document;
-pub use frontmatter::{
-    Frontmatter, FrontmatterError, KnownKey, NoteKind, PropertyValue, RelationKey,
-};
+pub use frontmatter::{Frontmatter, FrontmatterError, KnownKey, Open, PropertyValue, RelationKey};
 pub use line::LineEnding;
 pub use resolve::{PathIndex, Resolution};
 pub use wikilink::{Anchor, WikiLink};

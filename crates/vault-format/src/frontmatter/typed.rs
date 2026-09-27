@@ -1,122 +1,85 @@
 //! Typed access to the known frontmatter keys.
 
 use std::fmt;
+use std::str::FromStr;
 
 use chrono::{DateTime, FixedOffset, NaiveDate, SecondsFormat};
+use domain::{CopyKind, DocType, DocumentStatus, Lang, NoteKind};
 use ulid::Ulid;
 
 use super::{Frontmatter, FrontmatterError, KnownKey, PropertyValue, RelationKey};
 use crate::wikilink::WikiLink;
 
-macro_rules! open_enum {
-    ($(#[$doc:meta])* $name:ident { $( $(#[$vdoc:meta])* $variant:ident = $text:literal ),+ $(,)? }) => {
-        $(#[$doc])*
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-        pub enum $name {
-            $( $(#[$vdoc])* $variant, )+
-            /// Any other value, kept verbatim.
-            Other(String),
-        }
+/// A `domain` vocabulary enum whose canonical spelling can be read back.
+pub trait Vocabulary: Copy + FromStr {
+    /// The canonical spelling.
+    fn name(self) -> &'static str;
+}
 
-        impl $name {
-            /// The frontmatter spelling.
-            pub fn as_str(&self) -> &str {
-                match self {
-                    $( Self::$variant => $text, )+
-                    Self::Other(s) => s,
-                }
+macro_rules! vocabulary {
+    ($($t:ty),+) => {
+        $(impl Vocabulary for $t {
+            fn name(self) -> &'static str {
+                self.as_str()
             }
-
-            /// Parses a frontmatter value (exact spelling; anything else is `Other`).
-            pub fn parse(s: &str) -> Self {
-                match s {
-                    $( $text => Self::$variant, )+
-                    other => Self::Other(other.to_owned()),
-                }
-            }
-        }
-
-        impl fmt::Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-                f.write_str(self.as_str())
-            }
-        }
+        })+
     };
 }
 
-open_enum! {
-    /// The `kind` of a note. Ordinary notes have no `kind`.
-    NoteKind {
-        /// `concepts/…` (§6.6)
-        Concept = "concept",
-        /// `people/…` (§6.7)
-        Person = "person",
-        /// `companies/…` (§6.7)
-        Company = "company",
-        /// `documents/…` (§6.12)
-        Document = "document",
-        /// `places/…` (§6.12)
-        Place = "place",
+vocabulary!(
+    domain::NoteKind,
+    domain::Lang,
+    domain::DocType,
+    domain::CopyKind,
+    domain::DocumentStatus
+);
+
+/// A frontmatter value from a shared `domain` vocabulary, or any other text the user wrote
+/// (kept verbatim). Only the canonical spelling reads as [`Open::Known`], so every value
+/// renders back exactly as written.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Open<T> {
+    /// A value of the shared vocabulary.
+    Known(T),
+    /// Any other value, verbatim.
+    Other(String),
+}
+
+impl<T: Vocabulary> Open<T> {
+    /// Parses a frontmatter value.
+    pub fn parse(s: &str) -> Self {
+        match s.parse::<T>() {
+            Ok(t) if t.name() == s => Self::Known(t),
+            _ => Self::Other(s.to_owned()),
+        }
+    }
+
+    /// The frontmatter spelling.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Known(t) => t.name(),
+            Self::Other(s) => s,
+        }
+    }
+
+    /// The vocabulary value, if known.
+    pub fn known(&self) -> Option<T> {
+        match self {
+            Self::Known(t) => Some(*t),
+            Self::Other(_) => None,
+        }
     }
 }
 
-open_enum! {
-    /// Dominant language of a note.
-    Lang {
-        /// Arabic
-        Ar = "ar",
-        /// English
-        En = "en",
-        /// Mixed
-        Mixed = "mixed",
+impl<T: Vocabulary> fmt::Display for Open<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
-open_enum! {
-    /// Where a document is, as a status.
-    DocumentStatus {
-        /// In a place.
-        Stored = "stored",
-        /// With a person.
-        CheckedOut = "checked-out",
-        /// With a third party.
-        WithThirdParty = "with-third-party",
-        /// Lost.
-        Lost = "lost",
-        /// Destroyed.
-        Destroyed = "destroyed",
-    }
-}
-
-open_enum! {
-    /// Which copy of a document a note describes.
-    CopyKind {
-        /// The original.
-        Original = "original",
-        /// A certified copy.
-        CertifiedCopy = "certified copy",
-        /// A plain copy.
-        Copy = "copy",
-        /// A digital copy.
-        Digital = "digital",
-    }
-}
-
-open_enum! {
-    /// Document type (free text allowed).
-    DocType {
-        /// Contract.
-        Contract = "contract",
-        /// Identity document.
-        Id = "id",
-        /// Licence.
-        Licence = "licence",
-        /// Deed.
-        Deed = "deed",
-        /// Invoice.
-        Invoice = "invoice",
-        /// Certificate.
-        Certificate = "certificate",
+impl<T> From<T> for Open<T> {
+    fn from(t: T) -> Self {
+        Self::Known(t)
     }
 }
 
@@ -175,12 +138,16 @@ impl Frontmatter {
     }
 
     /// `kind`.
-    pub fn kind(&self) -> Option<NoteKind> {
-        self.text(KnownKey::Kind).map(NoteKind::parse)
+    pub fn kind(&self) -> Option<Open<NoteKind>> {
+        self.text(KnownKey::Kind).map(Open::parse)
     }
 
     /// Sets `kind`.
-    pub fn set_kind(&mut self, kind: &NoteKind) -> Result<(), FrontmatterError> {
+    pub fn set_kind(&mut self, kind: NoteKind) -> Result<(), FrontmatterError> {
+        if kind == NoteKind::Note {
+            // Plain notes carry no `kind` (PLAN §6.4).
+            return self.remove_key(KnownKey::Kind).map(|_| ());
+        }
         self.set_text(KnownKey::Kind, kind.as_str())
     }
 
@@ -241,23 +208,23 @@ impl Frontmatter {
     }
 
     /// `lang`.
-    pub fn lang(&self) -> Option<Lang> {
-        self.text(KnownKey::Lang).map(Lang::parse)
+    pub fn lang(&self) -> Option<Open<Lang>> {
+        self.text(KnownKey::Lang).map(Open::parse)
     }
 
     /// `doc-type`.
-    pub fn doc_type(&self) -> Option<DocType> {
-        self.text(KnownKey::DocType).map(DocType::parse)
+    pub fn doc_type(&self) -> Option<Open<DocType>> {
+        self.text(KnownKey::DocType).map(Open::parse)
     }
 
     /// `copy`.
-    pub fn copy_kind(&self) -> Option<CopyKind> {
-        self.text(KnownKey::Copy).map(CopyKind::parse)
+    pub fn copy_kind(&self) -> Option<Open<CopyKind>> {
+        self.text(KnownKey::Copy).map(Open::parse)
     }
 
     /// `status`.
-    pub fn status(&self) -> Option<DocumentStatus> {
-        self.text(KnownKey::Status).map(DocumentStatus::parse)
+    pub fn status(&self) -> Option<Open<DocumentStatus>> {
+        self.text(KnownKey::Status).map(Open::parse)
     }
 
     /// `expires` (`YYYY-MM-DD`).
@@ -346,6 +313,7 @@ impl Frontmatter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use domain::{MentionType, RelationType};
 
     fn fm(inner: &str) -> Frontmatter {
         Frontmatter::from_parts("---\n", inner, "---\n")
@@ -372,27 +340,31 @@ mod tests {
             f.id().ok().flatten().map(|u| u.to_string()),
             Some("01J8ZK3M4X7Q9W2E5R6T8Y0V1H".into())
         );
-        assert_eq!(f.kind(), Some(NoteKind::Person));
+        assert_eq!(f.kind(), Some(Open::Known(NoteKind::Person)));
         assert_eq!(f.tags(), vec!["a".to_owned(), "b".to_owned()]);
         assert_eq!(
             f.created().ok().flatten().map(|t| format_timestamp(&t)),
             Some("2026-09-27T14:32:00+03:00".into())
         );
-        assert_eq!(f.lang(), Some(Lang::Ar));
+        assert_eq!(f.lang(), Some(Open::Known(Lang::Ar)));
         assert_eq!(f.expires(), Ok(NaiveDate::from_ymd_opt(2027, 3, 31)));
-        assert_eq!(f.status(), Some(DocumentStatus::CheckedOut));
-        assert_eq!(f.copy_kind(), Some(CopyKind::CertifiedCopy));
-        assert_eq!(f.doc_type(), Some(DocType::Other("passport".into())));
+        assert_eq!(f.status(), Some(Open::Known(DocumentStatus::CheckedOut)));
+        assert_eq!(f.copy_kind(), Some(Open::Known(CopyKind::CertifiedCopy)));
+        assert_eq!(f.doc_type(), Some(Open::Other("passport".into())));
         assert_eq!(
             f.link(KnownKey::Location).map(|l| l.path),
             Some("Safe — Nasr City office".into())
         );
         assert_eq!(f.link(KnownKey::Holder), None);
         assert_eq!(
-            f.relation(RelationKey::People),
+            f.relation(RelationKey::Mention(MentionType::People)),
             vec!["[[Ahmed Samir]]".to_owned(), "plain".to_owned()]
         );
-        assert_eq!(f.relation_links(RelationKey::People).len(), 1);
+        assert_eq!(
+            f.relation_links(RelationKey::Mention(MentionType::People))
+                .len(),
+            1
+        );
     }
 
     #[test]
@@ -412,24 +384,56 @@ mod tests {
     #[test]
     fn relation_editing() {
         let mut f = fm("related: [\"[[A]]\"]\n");
-        assert_eq!(f.add_relation_link(RelationKey::Related, "A"), Ok(false));
-        assert_eq!(f.add_relation_link(RelationKey::Related, "B"), Ok(true));
+        assert_eq!(
+            f.add_relation_link(RelationKey::Note(RelationType::Related), "A"),
+            Ok(false)
+        );
+        assert_eq!(
+            f.add_relation_link(RelationKey::Note(RelationType::Related), "B"),
+            Ok(true)
+        );
         assert_eq!(f.render(), "---\nrelated: [\"[[A]]\", \"[[B]]\"]\n---\n");
-        assert_eq!(f.remove_relation_link(RelationKey::Related, "A"), Ok(1));
-        assert_eq!(f.remove_relation_link(RelationKey::Related, "Z"), Ok(0));
+        assert_eq!(
+            f.remove_relation_link(RelationKey::Note(RelationType::Related), "A"),
+            Ok(1)
+        );
+        assert_eq!(
+            f.remove_relation_link(RelationKey::Note(RelationType::Related), "Z"),
+            Ok(0)
+        );
         assert_eq!(f.render(), "---\nrelated: [\"[[B]]\"]\n---\n");
     }
 
     #[test]
-    fn enums_round_trip() {
+    fn open_values_round_trip() {
         for s in [
-            "concept", "person", "company", "document", "place", "meeting",
+            "concept", "person", "company", "document", "place", "note", "meeting", "Person",
         ] {
-            assert_eq!(NoteKind::parse(s).as_str(), s);
+            assert_eq!(Open::<NoteKind>::parse(s).as_str(), s);
         }
         assert_eq!(
-            DocumentStatus::WithThirdParty.to_string(),
+            Open::<NoteKind>::parse("Person"),
+            Open::Other("Person".into())
+        );
+        // Aliases accepted by `domain` stay verbatim here so the file round-trips.
+        assert_eq!(
+            Open::<CopyKind>::parse("certified-copy"),
+            Open::Other("certified-copy".into())
+        );
+        assert_eq!(Open::<DocType>::parse("other"), Open::Known(DocType::Other));
+        assert_eq!(
+            Open::from(DocumentStatus::WithThirdParty).to_string(),
             "with-third-party"
         );
+        assert_eq!(Open::Known(Lang::Mixed).known(), Some(Lang::Mixed));
+    }
+
+    #[test]
+    fn set_kind_writes_or_removes() {
+        let mut f = fm("kind: concept\n");
+        f.set_kind(NoteKind::Person).unwrap_or_default();
+        assert_eq!(f.render(), "---\nkind: person\n---\n");
+        f.set_kind(NoteKind::Note).unwrap_or_default();
+        assert_eq!(f.render(), "---\n---\n");
     }
 }

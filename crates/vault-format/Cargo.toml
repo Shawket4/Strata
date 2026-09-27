@@ -8,6 +8,7 @@ publish = false
 description = "Strata vault format: Obsidian-compatible markdown, frontmatter, links, tasks, sidecar and canvas types"
 
 [dependencies]
+domain = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

@@ -6,9 +6,10 @@ use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
 use domain::{
-    AccountStatus, CopyKind, CustodyEdge, CustodyEventType, DedupeKind, DocumentStatus,
-    EntityRelationType, GraphEdgeKind, GraphNodeKind, Lang, MatchLevel, NoteKind, ParseError,
-    Priority, RelationOrigin, RelationType, Role, TaskStatus,
+    AccountStatus, CopyKind, CustodyEdge, CustodyEventType, DedupeKind, DocType,
+    DocumentRelationType, DocumentStatus, EntityRelationType, GraphEdgeKind, GraphNodeKind, Lang,
+    MatchLevel, MentionType, NoteKind, ParseError, Priority, RelationOrigin, RelationType, Role,
+    TaskStatus,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -205,6 +206,47 @@ fn copy_kind() -> TestResult {
     );
     assert_eq!(serde_json::to_string(&CertifiedCopy)?, "\"certified copy\"");
     Ok(())
+}
+
+#[test]
+fn doc_type() -> TestResult {
+    use DocType::*;
+    check(
+        "document type",
+        DocType::ALL,
+        &[
+            (Contract, "contract"),
+            (Id, "id"),
+            (Licence, "licence"),
+            (Deed, "deed"),
+            (Invoice, "invoice"),
+            (Certificate, "certificate"),
+            (Other, "other"),
+        ],
+    )
+}
+
+#[test]
+fn document_relation_type() -> TestResult {
+    check(
+        "document relation type",
+        DocumentRelationType::ALL,
+        &[(DocumentRelationType::CopyOf, "copy-of")],
+    )
+}
+
+#[test]
+fn mention_type() -> TestResult {
+    use MentionType::*;
+    check(
+        "mention type",
+        MentionType::ALL,
+        &[
+            (Concepts, "concepts"),
+            (People, "people"),
+            (Companies, "companies"),
+        ],
+    )
 }
 
 #[test]

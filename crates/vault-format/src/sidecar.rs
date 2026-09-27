@@ -9,17 +9,12 @@ use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 
+use domain::RelationType;
+
 use crate::frontmatter::RelationKey;
 
-/// Who created an edge.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-pub enum By {
-    /// The AI.
-    Ai,
-    /// The user (also the default for frontmatter edges without sidecar provenance).
-    User,
-}
+/// Who created an edge (`ai` | `user`; shared vocabulary, PLAN L16).
+pub use domain::RelationOrigin as By;
 
 /// Provenance of one relation stored in the note's frontmatter.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -127,9 +122,10 @@ impl NoteSidecar {
     /// Whether the AI may add `kind` to `target`: not if that triple was rejected, and not as
     /// `related` if any type to that target was rejected (PLAN §6.5).
     pub fn is_blocked(&self, kind: RelationKey, target: Ulid) -> bool {
-        self.rejected
-            .iter()
-            .any(|r| r.target_id == target && (r.kind == kind || kind == RelationKey::Related))
+        self.rejected.iter().any(|r| {
+            r.target_id == target
+                && (r.kind == kind || kind == RelationKey::Note(RelationType::Related))
+        })
     }
 }
 
@@ -177,7 +173,10 @@ mod tests {
         let s = NoteSidecar::from_json(EXAMPLE);
         assert!(s.is_ok(), "{s:?}");
         let s = s.unwrap_or_else(|_| NoteSidecar::new(Ulid::nil()));
-        assert_eq!(s.relations[0].kind, RelationKey::Contradicts);
+        assert_eq!(
+            s.relations[0].kind,
+            RelationKey::Note(RelationType::Contradicts)
+        );
         assert_eq!(s.relations[0].confidence, Some(0.72));
         assert_eq!(s.extra.len(), 1);
         assert_eq!(s.to_json().ok().as_deref(), Some(EXAMPLE));
@@ -191,13 +190,13 @@ mod tests {
     fn rejection_rules() {
         let s = NoteSidecar::from_json(EXAMPLE).unwrap_or_else(|_| NoteSidecar::new(Ulid::nil()));
         let rejected = s.rejected[0].target_id;
-        assert!(s.is_blocked(RelationKey::Related, rejected));
-        assert!(!s.is_blocked(RelationKey::Supports, rejected));
+        assert!(s.is_blocked(RelationKey::Note(RelationType::Related), rejected));
+        assert!(!s.is_blocked(RelationKey::Note(RelationType::Supports), rejected));
         let mut s2 = s.clone();
-        s2.rejected[0].kind = RelationKey::Supports;
-        assert!(s2.is_blocked(RelationKey::Supports, rejected));
-        assert!(s2.is_blocked(RelationKey::Related, rejected));
-        assert!(!s2.is_blocked(RelationKey::Related, s.id));
+        s2.rejected[0].kind = RelationKey::Note(RelationType::Supports);
+        assert!(s2.is_blocked(RelationKey::Note(RelationType::Supports), rejected));
+        assert!(s2.is_blocked(RelationKey::Note(RelationType::Related), rejected));
+        assert!(!s2.is_blocked(RelationKey::Note(RelationType::Related), s.id));
     }
 
     #[test]

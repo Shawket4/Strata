@@ -115,7 +115,7 @@ impl<'a> MoveSet<'a> {
         source: &str,
     ) -> Result<usize, FrontmatterError> {
         let mut changed = 0;
-        for &key in KnownKey::ALL.iter().filter(|k| k.holds_links()) {
+        for key in KnownKey::all().filter(|k| k.holds_links()) {
             let Some(value) = fm.get(key.as_str()).cloned() else {
                 continue;
             };

@@ -2,7 +2,7 @@
 
 use domain::{
     AccountStatus, CUSTODY_CONFIDENCE_THRESHOLD, DedupeKind, DedupeThresholds, EntityRelationType,
-    GraphNodeKind, MatchLevel, NOTE_RELATION_KEYS, NoteKind, Priority,
+    GraphNodeKind, MatchLevel, MentionType, NOTE_RELATION_KEYS, NoteKind, Priority,
     RELATION_CONFIDENCE_THRESHOLD, RelationType, SemanticThresholds,
 };
 
@@ -27,6 +27,16 @@ fn relation_frontmatter_keys() {
     assert_eq!(
         &NOTE_RELATION_KEYS[6..],
         ["concepts", "people", "companies"]
+    );
+    let mentions: Vec<&str> = MentionType::ALL
+        .iter()
+        .map(|t| t.frontmatter_key())
+        .collect();
+    assert_eq!(&NOTE_RELATION_KEYS[6..], mentions.as_slice());
+    let targets: Vec<NoteKind> = MentionType::ALL.iter().map(|t| t.target_kind()).collect();
+    assert_eq!(
+        targets,
+        [NoteKind::Concept, NoteKind::Person, NoteKind::Company]
     );
     assert_eq!(
         RelationType::from_frontmatter_key("follows-up"),

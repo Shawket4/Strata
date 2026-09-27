@@ -57,3 +57,39 @@ string_enum! {
         Digital => "digital",
     }
 }
+
+string_enum! {
+    /// Kind of document (`doc-type:` frontmatter, §6.12). Free text is allowed in the vault;
+    /// values outside this set are kept verbatim by the vault format.
+    pub enum DocType("document type") {
+        /// A contract.
+        Contract => "contract",
+        /// An identity document.
+        Id => "id",
+        /// A licence.
+        Licence => "licence",
+        /// A deed.
+        Deed => "deed",
+        /// An invoice.
+        Invoice => "invoice",
+        /// A certificate.
+        Certificate => "certificate",
+        /// Explicitly "other".
+        Other => "other",
+    }
+}
+
+string_enum! {
+    /// Document-to-document relation (§6.12), a frontmatter wikilink list on the copy.
+    pub enum DocumentRelationType("document relation type") {
+        /// `copy-of`: this note describes a copy of the linked document.
+        CopyOf => "copy-of",
+    }
+}
+
+impl DocumentRelationType {
+    /// The frontmatter key holding this relation's wikilink list.
+    pub const fn frontmatter_key(self) -> &'static str {
+        self.as_str()
+    }
+}

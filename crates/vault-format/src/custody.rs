@@ -11,36 +11,17 @@
 //! type's primary argument without a keyword, others after `at`/`to`/`in` (place), `by`
 //! (person) or `with`/`from` (counterparty).
 
-use std::fmt;
 use std::fmt::Write as _;
 
 use chrono::NaiveDate;
 
-use crate::frontmatter::{DocumentStatus, Frontmatter, FrontmatterError, KnownKey};
+use domain::DocumentStatus;
+
+use crate::frontmatter::{Frontmatter, FrontmatterError, KnownKey};
 use crate::wikilink::{self, WikiLink};
 
-/// The kind of custody event.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum CustodyEventType {
-    /// Put in a place: `stored-at [[Place]]`.
-    StoredAt,
-    /// Moved to a place: `moved-to [[Place]]`.
-    MovedTo,
-    /// Given to a person: `handed-to [[Person]]`.
-    HandedTo,
-    /// Given back by a person: `returned-by [[Person]]`.
-    ReturnedBy,
-    /// Sent to a third party: `sent-to [[Party]]`.
-    SentTo,
-    /// Received from a third party: `received-from [[Party]]`.
-    ReceivedFrom,
-    /// Lost.
-    Lost,
-    /// Found.
-    Found,
-    /// Destroyed.
-    Destroyed,
-}
+/// The kind of custody event (shared vocabulary, PLAN L16).
+pub use domain::CustodyEventType;
 
 /// The role an event argument plays.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -53,54 +34,14 @@ pub enum Role {
     Counterparty,
 }
 
-impl CustodyEventType {
-    /// All types.
-    pub const ALL: [Self; 9] = [
-        Self::StoredAt,
-        Self::MovedTo,
-        Self::HandedTo,
-        Self::ReturnedBy,
-        Self::SentTo,
-        Self::ReceivedFrom,
-        Self::Lost,
-        Self::Found,
-        Self::Destroyed,
-    ];
-
-    /// The spelling in custody lines.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::StoredAt => "stored-at",
-            Self::MovedTo => "moved-to",
-            Self::HandedTo => "handed-to",
-            Self::ReturnedBy => "returned-by",
-            Self::SentTo => "sent-to",
-            Self::ReceivedFrom => "received-from",
-            Self::Lost => "lost",
-            Self::Found => "found",
-            Self::Destroyed => "destroyed",
-        }
-    }
-
-    /// Parses the spelling.
-    pub fn parse(s: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|t| t.as_str() == s)
-    }
-
-    /// The argument written right after the type, if the type takes one (required).
-    pub fn primary(self) -> Option<Role> {
-        match self {
-            Self::StoredAt | Self::MovedTo => Some(Role::Place),
-            Self::HandedTo | Self::ReturnedBy => Some(Role::Person),
-            Self::SentTo | Self::ReceivedFrom => Some(Role::Counterparty),
-            Self::Lost | Self::Found | Self::Destroyed => None,
-        }
-    }
-}
-
-impl fmt::Display for CustodyEventType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
+/// The argument written right after the event type, if the type takes one (required).
+pub fn primary(kind: CustodyEventType) -> Option<Role> {
+    use CustodyEventType as T;
+    match kind {
+        T::StoredAt | T::MovedTo => Some(Role::Place),
+        T::HandedTo | T::ReturnedBy => Some(Role::Person),
+        T::SentTo | T::ReceivedFrom => Some(Role::Counterparty),
+        T::Lost | T::Found | T::Destroyed => None,
     }
 }
 
@@ -172,7 +113,7 @@ impl CustodyEvent {
     /// Renders the canonical line (without line terminator).
     pub fn to_line(&self) -> String {
         let mut out = format!("- {} — {}", self.date.format("%Y-%m-%d"), self.kind);
-        let primary = self.kind.primary();
+        let primary = primary(self.kind);
         if let Some(p) = primary.and_then(|r| self.role(r)) {
             out.push(' ');
             out.push_str(p);
@@ -222,7 +163,9 @@ impl CustodyEvent {
         let citations = parse_citations(cites)?;
         let mut words = event.splitn(2, ' ');
         let kind_text = words.next().unwrap_or("");
-        let kind = CustodyEventType::parse(kind_text)
+        let kind = kind_text
+            .parse::<CustodyEventType>()
+            .ok()
             .ok_or_else(|| CustodyParseError::UnknownType(kind_text.to_owned()))?;
         let mut ev = Self {
             date,
@@ -233,7 +176,7 @@ impl CustodyEvent {
             citations,
         };
         ev.parse_arguments(words.next().unwrap_or(""))?;
-        if let Some(p) = kind.primary()
+        if let Some(p) = primary(kind)
             && ev.role(p).is_none()
         {
             return Err(CustodyParseError::MissingPrimary(kind));
@@ -248,7 +191,7 @@ impl CustodyEvent {
         for link in &links {
             let between = args[pos..link.span.start].trim();
             let role = match between {
-                "" if first => self.kind.primary(),
+                "" if first => primary(self.kind),
                 "at" | "to" | "in" => Some(Role::Place),
                 "by" => Some(Role::Person),
                 "with" | "from" => Some(Role::Counterparty),
@@ -495,7 +438,7 @@ mod tests {
 
     #[test]
     fn every_type_round_trips() {
-        for kind in CustodyEventType::ALL {
+        for &kind in CustodyEventType::ALL {
             let mut e = CustodyEvent {
                 date: d(2026, 1, 2),
                 kind,
@@ -504,7 +447,7 @@ mod tests {
                 counterparty: Some("[[Watanya]]".into()),
                 citations: vec!["[[A#^x]]".into(), "[[B]]".into()],
             };
-            if kind.primary().is_none() {
+            if primary(kind).is_none() {
                 e.counterparty = None;
             }
             let line = e.to_line();

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use yaml_rust2::{Yaml, YamlLoader};
 
 pub use keys::{KnownKey, RelationKey, UnknownRelation, ValueShape};
-pub use typed::{CopyKind, DocType, DocumentStatus, Lang, NoteKind, format_timestamp};
+pub use typed::{Open, Vocabulary, format_timestamp};
 pub use yaml::PropertyValue;
 
 use crate::line::{self, LineEnding};
@@ -390,7 +390,7 @@ fn sort_rank(e: &Entry) -> usize {
     e.key
         .as_deref()
         .and_then(KnownKey::from_name)
-        .map_or(KnownKey::ALL.len(), KnownKey::rank)
+        .map_or(usize::MAX, KnownKey::rank)
 }
 
 /// The canonical value of a known key, or `None` when it has no canonical form (nested).

@@ -21,11 +21,13 @@ mod thresholds;
 
 pub use account::{AccountStatus, Role};
 pub use dedupe::{DedupeKind, MatchLevel};
-pub use document::{CopyKind, CustodyEventType, DocumentStatus};
+pub use document::{CopyKind, CustodyEventType, DocType, DocumentRelationType, DocumentStatus};
 pub use error::ParseError;
 pub use graph::{CustodyEdge, GraphEdgeKind, GraphNodeKind};
 pub use note::{Lang, NoteKind};
-pub use relation::{EntityRelationType, NOTE_RELATION_KEYS, RelationOrigin, RelationType};
+pub use relation::{
+    EntityRelationType, MentionType, NOTE_RELATION_KEYS, RelationOrigin, RelationType,
+};
 pub use task::{Priority, TaskStatus};
 pub use thresholds::{
     CUSTODY_CONFIDENCE_THRESHOLD, DedupeThresholds, RELATION_CONFIDENCE_THRESHOLD,

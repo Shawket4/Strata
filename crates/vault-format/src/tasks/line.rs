@@ -44,48 +44,24 @@ impl TaskStatus {
         }
     }
 
+    /// The task's lifecycle status in the shared vocabulary (custom statuses count as open).
+    pub fn lifecycle(self) -> domain::TaskStatus {
+        match self {
+            Self::Todo | Self::Other(_) => domain::TaskStatus::Open,
+            Self::Done => domain::TaskStatus::Done,
+            Self::Cancelled => domain::TaskStatus::Cancelled,
+        }
+    }
+
     /// Todo or a custom status (not done/cancelled).
     pub fn is_open(self) -> bool {
         matches!(self, Self::Todo | Self::Other(_))
     }
 }
 
-/// Task priority.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum Priority {
-    /// 🔺
-    Highest,
-    /// ⏫
-    High,
-    /// 🔼
-    Medium,
-    /// 🔽
-    Low,
-    /// ⏬
-    Lowest,
-}
-
-impl Priority {
-    /// All priorities, highest first.
-    pub const ALL: [Self; 5] = [
-        Self::Highest,
-        Self::High,
-        Self::Medium,
-        Self::Low,
-        Self::Lowest,
-    ];
-
-    /// The signifier.
-    pub fn emoji(self) -> &'static str {
-        match self {
-            Self::Highest => "🔺",
-            Self::High => "⏫",
-            Self::Medium => "🔼",
-            Self::Low => "🔽",
-            Self::Lowest => "⏬",
-        }
-    }
-}
+/// Task priority (shared vocabulary, PLAN L16). `Normal` has no signifier: a line without
+/// one reports `priority() == None`, and writing `Some(Normal)` removes the signifier.
+pub use domain::Priority;
 
 /// The date fields of a task.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -146,11 +122,6 @@ enum Sig {
 
 /// Recognised signifiers, including the Tasks plugin's alternates (`⌛`, `📆`, `🗓`).
 const SIGNIFIERS: &[(&str, Sig)] = &[
-    ("🔺", Sig::Priority(Priority::Highest)),
-    ("⏫", Sig::Priority(Priority::High)),
-    ("🔼", Sig::Priority(Priority::Medium)),
-    ("🔽", Sig::Priority(Priority::Low)),
-    ("⏬", Sig::Priority(Priority::Lowest)),
     ("🔁", Sig::Recurrence),
     ("➕", Sig::Date(DateKind::Created)),
     ("🛫", Sig::Date(DateKind::Start)),
@@ -164,6 +135,15 @@ const SIGNIFIERS: &[(&str, Sig)] = &[
 ];
 
 const VS16: char = '\u{fe0f}';
+
+/// The signifier `text` starts with; priority emojis come from [`Priority::signifier`].
+fn signifier_at(text: &str) -> Option<(&'static str, Sig)> {
+    Priority::ALL
+        .iter()
+        .filter_map(|&p| p.signifier().map(|e| (e, Sig::Priority(p))))
+        .chain(SIGNIFIERS.iter().copied())
+        .find(|(e, _)| text.starts_with(e))
+}
 
 /// A Reminder-plugin marker `(@YYYY-MM-DD HH:mm)` or `(@YYYY-MM-DD)`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -357,7 +337,7 @@ fn scan_fields(text: &str, start: usize, end: usize) -> Vec<Found> {
                 i = e;
                 continue;
             }
-        } else if let Some(&(emoji, sig)) = SIGNIFIERS.iter().find(|(e, _)| rest.starts_with(e)) {
+        } else if let Some((emoji, sig)) = signifier_at(rest) {
             let mut p = i + emoji.len();
             if text[p..end].starts_with(VS16) {
                 p += VS16.len_utf8();
@@ -726,11 +706,11 @@ impl TaskLine {
     /// Sets, replaces or removes the priority.
     #[must_use]
     pub fn with_priority(&self, priority: Option<Priority>) -> Self {
-        if priority.is_none() {
+        let Some(emoji) = priority.and_then(Priority::signifier) else {
             return self.strip_all(|t| t.priority.as_ref().map(|p| p.span.clone()));
-        }
+        };
         let existing = self.priority.as_ref().map(|p| &p.span);
-        self.set_field(existing, 0, priority.map(|p| p.emoji().to_owned()), |t| {
+        self.set_field(existing, 0, Some(emoji.to_owned()), |t| {
             t.priority() == priority
         })
     }
@@ -889,8 +869,8 @@ impl TaskSpec {
             parts.push(self.description.clone());
         }
         parts.extend(self.reminders.iter().map(ToString::to_string));
-        if let Some(p) = self.priority {
-            parts.push(p.emoji().to_owned());
+        if let Some(emoji) = self.priority.and_then(Priority::signifier) {
+            parts.push(emoji.to_owned());
         }
         if let Some(r) = &self.recurrence {
             parts.push(format!("🔁 {r}"));
@@ -962,6 +942,14 @@ mod tests {
         assert_eq!(p("- [X] a").status(), TaskStatus::Done);
         assert_eq!(p("- [X] a").status_char(), 'X');
         assert_eq!(p("- [/] a").status(), TaskStatus::Other('/'));
+        assert_eq!(TaskStatus::Other('/').lifecycle(), domain::TaskStatus::Open);
+        assert_eq!(TaskStatus::Done.lifecycle(), domain::TaskStatus::Done);
+        assert_eq!(
+            TaskStatus::Cancelled.lifecycle(),
+            domain::TaskStatus::Cancelled
+        );
+        let t = p("- [ ] a 🔺");
+        assert_eq!(t.with_priority(Some(Priority::Normal)).as_str(), "- [ ] a");
     }
 
     #[test]
