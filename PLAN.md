@@ -690,7 +690,9 @@ trait Embedder    { async fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f3
 - A `FakeLlmProvider` (in `testkit`) replays recorded fixture responses keyed by prompt version and input hash; all AI tests use it, never the network.
 
 ### 9.1b Embeddings on the VPS (L19)
-- VPS budget: 4 GB RAM, 1 CPU core. The model is the smallest multilingual option chosen for this reason; use the int8 quantized ONNX weights.
+- VPS budget: 4 GB RAM, 1 CPU core. The model is the smallest multilingual option chosen for this reason. **Full-precision (fp32) ONNX weights** (owner decision 2026-09-27: on the target CPU the int8 export was not faster and separated Arabic/English paraphrases worse).
+- **Note-level vectors are the average of the note's chunk vectors** (chunks of ~300–500 tokens), so each inference processes one small chunk and peak memory stays around 0.5–0.7 GB regardless of note length.
+- **The embedder offloads itself:** the model is loaded on demand and unloaded after a configurable idle period (default 5 minutes), freeing its ~390 MB; reload costs a second or two.
 - Embedding jobs run **one at a time, at low process priority**, and never concurrently with a `claude -p` call; API request handling always has priority.
 - First import of an existing vault runs as a resumable low-priority background job with progress in `/ai/status`.
 - Every vector row stores the embedding model ID. Changing models triggers a full resumable re-embed.

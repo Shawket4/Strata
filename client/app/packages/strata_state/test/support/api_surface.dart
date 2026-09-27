@@ -8,8 +8,8 @@
 /// cannot read fails loudly instead of being skipped.
 library;
 
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 
 /// One function: return type, name and normalised parameter list.
 final class ApiFunction {
@@ -26,8 +26,8 @@ final class ApiFunction {
   /// there are none.
   final String parameters;
 
-  /// Canonical signature, e.g. `Stream<NoteScreen> watchNote({required
-  /// String id})`.
+  /// Canonical signature, e.g.
+  /// `Stream<NoteScreen> watchNote({required String id})`.
   String get signature => '$returnType $name($parameters)';
 
   @override
@@ -111,7 +111,7 @@ Map<String, ApiFunction> parseInterface(
     r'^  ([A-Za-z][\w<>?, ]*?)\s+(\w+)\(([^)]*)\);',
     multiLine: true,
   ).allMatches(body).toList();
-  final starts = RegExp(r'^  [A-Za-z]', multiLine: true).allMatches(body);
+  final starts = RegExp('^  [A-Za-z]', multiLine: true).allMatches(body);
   if (starts.length != matches.length) {
     throw SurfaceParseError(
       '$className: ${starts.length} members but ${matches.length} parsed '
@@ -135,10 +135,12 @@ List<String> diffSurfaces(
       else if (!facade.containsKey(name))
         'not in the facade: ${interface[name]}'
       else if (facade[name]!.signature != interface[name]!.signature)
-        'signature differs: facade ${facade[name]} vs CoreApi '
-            '${interface[name]}',
+        _differs(facade[name]!, interface[name]!),
   ];
 }
+
+String _differs(ApiFunction facade, ApiFunction interface) =>
+    'signature differs: facade $facade vs CoreApi $interface';
 
 /// Checks that every `BridgeCoreApi` method forwards to the generated
 /// function of the same name with each parameter passed through unchanged.

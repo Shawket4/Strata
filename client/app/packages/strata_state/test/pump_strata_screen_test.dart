@@ -10,7 +10,7 @@ import 'package:strata_ui/testing.dart';
 /// A minimal screen in the shape feature screens take: render the home
 /// view-model, forward a capture intent.
 class _ProbeScreen extends ConsumerWidget {
-  const _ProbeScreen();
+  const new();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

@@ -76,6 +76,15 @@ pub struct PushContext<'a> {
     pub merge_history: usize,
 }
 
+impl std::fmt::Debug for PushContext<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PushContext")
+            .field("device", &self.device)
+            .field("merge_history", &self.merge_history)
+            .finish_non_exhaustive()
+    }
+}
+
 /// `MessagePack` of a `conflict` suggestion's payload.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConflictPayload {

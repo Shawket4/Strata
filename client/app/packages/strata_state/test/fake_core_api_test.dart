@@ -420,7 +420,7 @@ void main() {
   test('CoreCall compares method and arguments by value', () {
     expect(
       const CoreCall('watchNote', {'id': 'a'}),
-      CoreCall('watchNote', {'id': 'a'}),
+      CoreCall('watchNote', {'id': 'a'.toLowerCase()}),
     );
     expect(
       const CoreCall('watchNote', {'id': 'a'}),

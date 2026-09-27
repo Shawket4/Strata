@@ -4,6 +4,9 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### Embeddings: fp32, chunk-averaged note vectors, idle offload
+- fp32 ONNX weights (int8 was not faster on the target CPU and separated Arabic/English worse); note vectors are the mean of chunk vectors (~300–500 tokens per chunk) to bound memory; the model unloads after an idle period (default 5 min) and reloads on demand.
+
 ### Implementation decisions (sync-model, graph-algo, dedupe)
 - `tasks/Tasks.md` groups tasks under `## <Month YYYY>` headings (English month name), oldest month first; a task created with a named home note is appended to the end of that note's body.
 - Manual custody events recorded by the user through the API carry `by: user` and need no citation; the citation requirement applies to AI-produced events.

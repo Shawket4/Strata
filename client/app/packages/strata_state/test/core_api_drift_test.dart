@@ -44,8 +44,8 @@ void main() {
       expect(facade, hasLength(53));
       expect(
         facade['watchDirectory']!.signature,
-        'Stream<DirectoryView> watchDirectory('
-        '{required DirectoryTab tab, required String query})',
+        'Stream<DirectoryView> watchDirectory({required DirectoryTab tab, '
+        'required String query})',
       );
       expect(
         facade['editorHints']!.signature,
@@ -122,12 +122,17 @@ Future<String> pinNote({required String id}) =>
             'Stream<NoteScreen> watchNote({required String id});',
             'Stream<NoteScreen> watchNote({required int id});',
           );
+      const capture =
+          'signature differs: '
+          'facade Future<String> capture({required String text}) vs '
+          'CoreApi Future<void> capture({required String text})';
+      const watchNote =
+          'signature differs: '
+          'facade Stream<NoteScreen> watchNote({required String id}) vs '
+          'CoreApi Stream<NoteScreen> watchNote({required int id})';
       expect(diffSurfaces(facade, parseInterface(changed)), [
-        'signature differs: facade Future<String> capture({required String '
-            'text}) vs CoreApi Future<void> capture({required String text})',
-        'signature differs: facade Stream<NoteScreen> watchNote({required '
-            'String id}) vs CoreApi Stream<NoteScreen> watchNote({required int '
-            'id})',
+        capture,
+        watchNote,
       ]);
     });
 
@@ -149,9 +154,11 @@ Future<String> pinNote({required String id}) =>
             'bridge.moveNote(id: id, newPath: newPath)',
             'bridge.moveNote(id: newPath, newPath: id)',
           );
+      const moveNote =
+          'moveNote passes (id: newPath, newPath: id), '
+          'expected (id: id, newPath: newPath)';
       expect(checkDelegation(wrong, facade), [
-        'moveNote passes (id: newPath, newPath: id), expected '
-            '(id: id, newPath: newPath)',
+        moveNote,
         'watchInbox forwards to bridge.watchHome',
       ]);
     });

@@ -442,6 +442,7 @@ impl std::fmt::Debug for EventBus {
 }
 
 /// What a new connection starts with.
+#[derive(Debug)]
 pub struct Subscription {
     /// Frames to send first (replay or `reset`).
     pub replay: Vec<Frame<Event>>,
