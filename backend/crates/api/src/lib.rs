@@ -14,8 +14,10 @@
 #![cfg_attr(test, allow(clippy::expect_used, clippy::float_cmp))]
 
 pub mod app;
+pub mod auth;
 pub mod health;
 pub mod openapi;
+pub mod routes;
 pub mod wire;
 
 #[cfg(feature = "test-support")]

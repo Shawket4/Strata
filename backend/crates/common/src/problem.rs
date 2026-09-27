@@ -4,7 +4,7 @@
 //! This crate stays wire-agnostic: it names every problem a Strata API can answer with (slug,
 //! title, HTTP status) and lets domain error types declare which one they map to
 //! ([`DomainError`]). The wire representation — the `Problem` body encoded as
-//! `application/problem+msgpack`, its typed extension members and the OpenAPI schema — lives in
+//! `application/problem+msgpack`, its typed extension members and the `OpenAPI` schema — lives in
 //! `strata-api` (`strata_api::wire::Problem`), which builds problems from this catalogue only.
 //! There is no second list anywhere.
 
@@ -50,11 +50,11 @@ problem_types! {
     InvalidParameter = ("invalid_parameter", 422, "Request parameter is invalid");
     /// A note or file name is not Obsidian-safe (PLAN §6.2).
     InvalidName = ("invalid_name", 422, "Invalid name");
-    /// The request body is not MessagePack (or is content-encoded).
+    /// The request body is not `MessagePack` (or is content-encoded).
     UnsupportedMediaType = ("unsupported_media_type", 415, "Unsupported media type");
     /// The body exceeds the route's limit.
     PayloadTooLarge = ("payload_too_large", 413, "Request body too large");
-    /// The `Accept` header excludes MessagePack.
+    /// The `Accept` header excludes `MessagePack`.
     NotAcceptable = ("not_acceptable", 406, "Response media type not acceptable");
     /// Nonexistent, or outside the caller's scope (principle 7: never 403 for foreign IDs).
     NotFound = ("not_found", 404, "Not found");

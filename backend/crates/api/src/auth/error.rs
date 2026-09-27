@@ -128,8 +128,7 @@ impl DomainError for AccountError {
 
     fn public_detail(&self) -> Option<Cow<'static, str>> {
         match self {
-            Self::Unauthorized(why) => Some(Cow::Borrowed(why)),
-            Self::StateConflict(why) => Some(Cow::Borrowed(why)),
+            Self::Unauthorized(why) | Self::StateConflict(why) => Some(Cow::Borrowed(why)),
             Self::RateLimited { reason, .. } => Some(Cow::Borrowed(reason)),
             Self::InvalidField { message, .. } => Some(Cow::Owned(message.clone())),
             Self::DeletionPending => Some(Cow::Borrowed(

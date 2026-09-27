@@ -7,8 +7,8 @@
 //! - paths are prefixed with `/api/v1`;
 //! - `application/json` (utoipa's default) becomes `application/vnd.msgpack` for request bodies
 //!   and 2xx responses and `application/problem+msgpack` for error responses;
-//! - standard problem responses are added: `406` and `500` everywhere, `401` on secured
-//!   operations, `404` when there are path parameters, `422 invalid_parameter` when there are
+//! - standard problem responses are added: `406` and `500` everywhere, `401` and `403`
+//!   (export-only session, password change required) on secured operations, `404` when there are path parameters, `422 invalid_parameter` when there are
 //!   query/header parameters, `413`/`415`/`422 invalid_body` when there is a request body;
 //! - bearer security is the default; operations opt out with `security(())`;
 //! - `oneOf` schemas whose members share a single-valued required property (tagged enums, see
@@ -35,7 +35,27 @@ use crate::wire::{
 /// `paths(...)` (and schemas only reachable through streams to `components(...)`).
 #[derive(Debug, OpenApi)]
 #[openapi(
-    paths(crate::health::health),
+    paths(
+        crate::health::health,
+        crate::routes::auth::signup,
+        crate::routes::auth::login,
+        crate::routes::auth::refresh,
+        crate::routes::auth::logout,
+        crate::routes::me::get_me,
+        crate::routes::me::update_me,
+        crate::routes::me::export_me,
+        crate::routes::me::confirm_deletion,
+        crate::routes::devices::list_devices,
+        crate::routes::devices::update_device,
+        crate::routes::devices::delete_device,
+        crate::routes::admin::list_users,
+        crate::routes::admin::create_user,
+        crate::routes::admin::approve_user,
+        crate::routes::admin::reject_user,
+        crate::routes::admin::update_user,
+        crate::routes::admin::delete_user,
+        crate::routes::admin::cancel_deletion,
+    ),
     components(schemas(
         Problem,
         ProblemFieldError,
@@ -44,7 +64,13 @@ use crate::wire::{
         Binary,
         FrameKind
     )),
-    tags((name = "system", description = "Service status."))
+    tags(
+        (name = "system", description = "Service status."),
+        (name = "auth", description = "Sign-up, sign-in and device sessions (PLAN §8)."),
+        (name = "account", description = "The signed-in user's account, settings, export and deletion."),
+        (name = "devices", description = "The signed-in user's devices."),
+        (name = "admin", description = "Account administration (admins only)."),
+    )
 )]
 pub struct ApiDoc;
 
@@ -165,7 +191,8 @@ fn standard_responses() -> Value {
         "PayloadTooLarge": problem_response("`payload_too_large`: the body exceeds the route's limit."),
         "InvalidBody": problem_response("`invalid_body`: the body failed decoding or validation."),
         "InvalidParameter": problem_response("`invalid_parameter`: a query or header parameter is invalid."),
-        "Unauthorized": problem_response("`unauthorized`: missing, invalid or expired access token."),
+        "Unauthorized": problem_response("`unauthorized`: missing, invalid, expired or revoked access token (signed out, device removed, account disabled)."),
+        "Restricted": problem_response("`account_deletion_pending`: the account is scheduled for deletion and this session is export-only; `password_change_required`: the password was reset and must be changed with `PATCH /me` first."),
         "NotFound": problem_response("`not_found`: no such resource in the caller's scope."),
         "Internal": problem_response("`internal`: unexpected server error."),
     })
@@ -220,6 +247,7 @@ fn apply_operation_conventions(op: &mut Value) {
     add("500", "Internal");
     if !public {
         add("401", "Unauthorized");
+        add("403", "Restricted");
     }
     if params.iter().any(|p| p == "path") {
         add("404", "NotFound");

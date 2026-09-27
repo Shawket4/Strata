@@ -1,7 +1,7 @@
 //! Access and refresh tokens (PLAN §8, D6 = b).
 //!
 //! - **Access tokens** are JWS compact tokens signed with Ed25519 (`alg: EdDSA`, RFC 8037) by
-//!   `jsonwebtoken` (RustCrypto backend). They live 15 minutes by default and carry the user,
+//!   `jsonwebtoken` (`RustCrypto` backend). They live 15 minutes by default and carry the user,
 //!   device, session, role, account status, `iat`/`exp` and a claims-format version. The header
 //!   names the signing key (`kid` = first 16 hex digits of SHA-256 of the public key).
 //!   Expiry is checked against the injected [`Clock`], never the system time, so the fake

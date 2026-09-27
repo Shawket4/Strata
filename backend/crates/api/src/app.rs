@@ -21,10 +21,15 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// list the handler in [`crate::openapi::ApiDoc`].
 pub fn routes(cfg: &mut web::ServiceConfig) {
     cfg.route("/health", web::get().to(health::health));
+    crate::routes::auth::configure(cfg);
+    crate::routes::me::configure(cfg);
+    crate::routes::devices::configure(cfg);
+    crate::routes::admin::configure(cfg);
 }
 
 /// The `/api/v1` scope with `routes` mounted and the wire conventions applied:
 /// - `406` unless `Accept` allows MessagePack;
+/// - bearer tokens are authenticated (`crate::auth::middleware::authenticate`);
 /// - every non-problem error response (unknown route, wrong method, ...) becomes problem
 ///   details;
 /// - malformed path segments are `404 not_found`, malformed query strings `422
@@ -65,6 +70,7 @@ pub fn api_v1(
         .default_service(web::to(|| async {
             Problem::new(ProblemType::RouteNotFound)
         }))
+        .wrap(from_fn(crate::auth::middleware::authenticate))
         .wrap(from_fn(require_msgpack))
         .wrap(ErrorHandlers::new().default_handler(problemize))
 }

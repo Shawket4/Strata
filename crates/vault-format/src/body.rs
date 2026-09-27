@@ -171,6 +171,24 @@ fn collect_guarded(body: &str) -> Structure {
     std::panic::catch_unwind(|| Structure::collect(body, &prepared)).unwrap_or_default()
 }
 
+/// Lines as CommonMark sees them: ended by `\r\n`, `\n` or a lone `\r`.
+fn markdown_lines(text: &str) -> impl Iterator<Item = (&str, &str)> {
+    let mut rest = text;
+    std::iter::from_fn(move || {
+        if rest.is_empty() {
+            return None;
+        }
+        let (content, eol_len) = match rest.find(['\r', '\n']) {
+            Some(i) if rest[i..].starts_with("\r\n") => (&rest[..i], 2),
+            Some(i) => (&rest[..i], 1),
+            None => (rest, 0),
+        };
+        let eol = &rest[content.len()..content.len() + eol_len];
+        rest = &rest[content.len() + eol_len..];
+        Some((content, eol))
+    })
+}
+
 /// The text given to the markdown parser and the map back to the original offsets.
 struct Prepared<'a> {
     text: std::borrow::Cow<'a, str>,
@@ -181,21 +199,21 @@ struct Prepared<'a> {
 impl<'a> Prepared<'a> {
     fn new(body: &'a str) -> Self {
         let blank = |l: &str| !l.is_empty() && l.chars().all(|c| matches!(c, ' ' | '\t' | '\u{b}' | '\u{c}'));
-        let needs_work = body.contains(['\u{b}', '\u{c}']) || crate::line::lines(body).any(|l| blank(l.content));
+        let needs_work = body.contains(['\u{b}', '\u{c}']) || markdown_lines(body).any(|(l, _)| blank(l));
         if !needs_work {
             return Self { text: body.into(), removed: Vec::new() };
         }
         let mut text = String::with_capacity(body.len());
         let mut removed = Vec::new();
         let mut total = 0;
-        for l in crate::line::lines(body) {
-            if blank(l.content) {
-                total += l.content.len();
+        for (content, eol) in markdown_lines(body) {
+            if blank(content) {
+                total += content.len();
                 removed.push((text.len(), total));
             } else {
-                text.extend(l.content.chars().map(|c| if matches!(c, '\u{b}' | '\u{c}') { ' ' } else { c }));
+                text.extend(content.chars().map(|c| if matches!(c, '\u{b}' | '\u{c}') { ' ' } else { c }));
             }
-            text.push_str(l.eol);
+            text.push_str(eol);
         }
         Self { text: text.into(), removed }
     }
@@ -650,7 +668,12 @@ mod tests {
     #[test]
     fn whitespace_lines_after_link_definitions() {
         // Fuzz regressions: pulldown-cmark 0.13.4 panics on these unless blank lines are emptied.
-        for body in ["- [a]: b\n        \n[[x]]", "- [\0]::\n\t\t\n[[x]]", "1. [a]:x\n\u{b}\n[[x]]"] {
+        for body in [
+            "- [a]: b\n        \n[[x]]",
+            "- [\0]::\n\t\t\n[[x]]",
+            "1. [a]:x\n\u{b}\n[[x]]",
+            "+ [\0]::\r\t\t\r[[x]]",
+        ] {
             let a = analyze(body);
             assert_eq!(a.links.len(), 1, "{body:?}");
             assert_eq!(a.blocks.len(), 2, "{body:?}");

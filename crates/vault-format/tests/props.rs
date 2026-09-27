@@ -123,8 +123,8 @@ proptest! {
         Just("\u{b}".to_owned()), Just("```".to_owned()), Just("> q".to_owned()),
         Just("# H".to_owned()), Just("| a |\n|---|".to_owned()), Just("text ^id1".to_owned()),
         "[a-z ]{0,6}\\[\\[[a-zء-ي]{1,4}\\]\\][a-z #]{0,6}", "[ \t]{0,5}", any::<String>(),
-    ], 0..12), crlf in any::<bool>()) {
-        let s = parts.join(if crlf { "\r\n" } else { "\n" });
+    ], 0..12), sep in prop::sample::select(vec!["\n", "\r\n", "\r"])) {
+        let s = parts.join(sep);
         let a = analyze(&s);
         let spans = a.links.iter().map(|l| l.span.clone())
             .chain(a.tags.iter().map(|t| t.span.clone()))
