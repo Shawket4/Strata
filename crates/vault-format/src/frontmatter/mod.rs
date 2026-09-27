@@ -112,17 +112,17 @@ impl Frontmatter {
     }
 
     fn load_values(&mut self, inner: &str) -> Result<(), FrontmatterError> {
+        if has_bare_cr(inner) {
+            return Err(FrontmatterError::Unsupported("bare carriage return".into()));
+        }
         let docs = YamlLoader::load_from_str(inner)
             .map_err(|e| FrontmatterError::InvalidYaml(e.to_string()))?;
+        let empty = yaml_rust2::yaml::Hash::new();
         let map = match docs.as_slice() {
-            [] | [Yaml::Null] => yaml_rust2::yaml::Hash::new(),
-            [Yaml::Hash(map)] => map.clone(),
+            [] | [Yaml::Null] => &empty,
+            [Yaml::Hash(map)] => map,
             [_] => return Err(FrontmatterError::NotAMapping),
-            _ => {
-                return Err(FrontmatterError::Unsupported(
-                    "multiple YAML documents".into(),
-                ));
-            }
+            _ => return Err(FrontmatterError::Unsupported("multiple YAML documents".into())),
         };
         if map.len() != self.entries.len() {
             return Err(FrontmatterError::Unsupported(format!(
@@ -135,15 +135,8 @@ impl Frontmatter {
             let Some(key) = entry.key.as_deref() else {
                 return Err(FrontmatterError::Unsupported("complex mapping key".into()));
             };
-            let node = map.get(&Yaml::String(key.to_owned())).or_else(|| {
-                map.iter()
-                    .find(|(k, _)| yaml_key_text(k).as_deref() == Some(key))
-                    .map(|(_, v)| v)
-            });
-            let Some(node) = node else {
-                return Err(FrontmatterError::Unsupported(format!(
-                    "key `{key}` not found"
-                )));
+            let Some(node) = lookup(map, key) else {
+                return Err(FrontmatterError::Unsupported(format!("key `{key}` not found")));
             };
             entry.value = yaml::to_property(node, raw_scalar(&entry.raw));
         }
@@ -206,13 +199,15 @@ impl Frontmatter {
     }
 
     /// Sets `key` to `value`, rendering the entry canonically. Unchanged values leave the
-    /// entry (and the file) untouched.
+    /// entry (and the file) untouched. Fails (and changes nothing) if the edited block would
+    /// not read back as exactly the expected values.
     pub fn set(&mut self, key: &str, value: PropertyValue) -> Result<(), FrontmatterError> {
         self.ensure_editable()?;
         if value == PropertyValue::Other {
             return Err(FrontmatterError::NestedValue(key.to_owned()));
         }
         let raw = render_entry(key, &value, self.eol);
+        let before = self.entries.clone();
         if let Some(entry) = self
             .entries
             .iter_mut()
@@ -233,61 +228,138 @@ impl Frontmatter {
             });
             self.next_order += 1;
         }
-        self.dirty = true;
-        Ok(())
+        self.commit(before)
     }
 
     /// Removes `key` (and comment lines directly above it). Returns whether it existed.
     pub fn remove(&mut self, key: &str) -> Result<bool, FrontmatterError> {
         self.ensure_editable()?;
-        let before = self.entries.len();
+        let before = self.entries.clone();
         self.entries.retain(|e| e.key.as_deref() != Some(key));
-        let removed = self.entries.len() != before;
-        self.dirty |= removed;
-        Ok(removed)
+        if self.entries.len() == before.len() {
+            return Ok(false);
+        }
+        self.commit(before).map(|()| true)
     }
 
-    /// Renders the frontmatter block including both delimiter lines. Untouched → original
-    /// bytes. Modified → entries in canonical order; untouched entries keep their raw text.
+    /// Keeps an edit only if some layout of the edited entries reads back correctly.
+    fn commit(&mut self, before: Vec<Entry>) -> Result<(), FrontmatterError> {
+        if self.valid(&self.layout(false, true)) || self.valid(&self.layout(false, false)) {
+            self.dirty = true;
+            Ok(())
+        } else {
+            self.entries = before;
+            Err(FrontmatterError::Unsupported(
+                "the edit would change how the other properties are read".into(),
+            ))
+        }
+    }
+
+    /// Renders the frontmatter block including both delimiter lines. Untouched (or invalid)
+    /// → original bytes. Modified → entries in canonical order; untouched entries keep their
+    /// raw text. If canonical order would change how the YAML reads (e.g. an alias used
+    /// before its anchor), the original order is kept.
     pub fn render(&self) -> String {
-        self.render_with(false)
+        if !self.dirty || self.error.is_some() {
+            return self.wrap(&self.layout(false, false));
+        }
+        let ordered = self.layout(false, true);
+        if self.valid(&ordered) {
+            return self.wrap(&ordered);
+        }
+        self.wrap(&self.layout(false, false))
     }
 
     /// Like [`Frontmatter::render`] but also re-renders every known key canonically and always
-    /// applies canonical order. Unknown keys keep their raw text and original order.
+    /// applies canonical order. Unknown keys keep their raw text and original order. Invalid
+    /// frontmatter is returned verbatim.
     pub fn render_canonical(&self) -> String {
-        self.render_with(true)
+        if self.error.is_some() {
+            return self.wrap(&self.layout(false, false));
+        }
+        for (canonical, reorder) in [(true, true), (false, true)] {
+            let layout = self.layout(canonical, reorder);
+            if self.valid(&layout) {
+                return self.wrap(&layout);
+            }
+        }
+        self.wrap(&self.layout(false, false))
     }
 
-    fn render_with(&self, canonical: bool) -> String {
+    /// Entries in output order with the raw text each would be written with.
+    fn layout(&self, canonical: bool, reorder: bool) -> Vec<(&Entry, String)> {
+        let mut ordered: Vec<&Entry> = self.entries.iter().collect();
+        if reorder {
+            ordered.sort_by_key(|e| (sort_rank(e), e.order));
+        }
+        ordered
+            .into_iter()
+            .map(|e| {
+                let known = e.key.as_deref().and_then(KnownKey::from_name);
+                let raw = match known.filter(|_| canonical) {
+                    Some(k) => canonical_value(k, &e.value)
+                        .map_or_else(|| e.raw.clone(), |v| render_entry(k.as_str(), &v, self.eol)),
+                    None => e.raw.clone(),
+                };
+                (e, raw)
+            })
+            .collect()
+    }
+
+    fn inner(&self, layout: &[(&Entry, String)]) -> String {
+        let mut out = String::new();
+        for (e, raw) in layout {
+            out.push_str(&e.leading);
+            out.push_str(raw);
+        }
+        out.push_str(&self.trailing);
+        out
+    }
+
+    fn wrap(&self, layout: &[(&Entry, String)]) -> String {
         if self.created && self.entries.is_empty() && self.trailing.is_empty() {
             return String::new();
         }
-        let mut out = String::with_capacity(self.open.len() + self.close.len() + 256);
-        out.push_str(&self.open);
-        if !self.dirty && !canonical {
-            for e in &self.entries {
-                out.push_str(&e.leading);
-                out.push_str(&e.raw);
-            }
-        } else {
-            let mut ordered: Vec<&Entry> = self.entries.iter().collect();
-            ordered.sort_by_key(|e| (sort_rank(e), e.order));
-            for e in ordered {
-                out.push_str(&e.leading);
-                match (canonical, e.key.as_deref().and_then(KnownKey::from_name)) {
-                    (true, Some(k)) if self.error.is_none() => match canonical_value(k, &e.value) {
-                        Some(v) => out.push_str(&render_entry(k.as_str(), &v, self.eol)),
-                        None => out.push_str(&e.raw),
-                    },
-                    _ => out.push_str(&e.raw),
-                }
-            }
-        }
-        out.push_str(&self.trailing);
-        out.push_str(&self.close);
-        out
+        format!("{}{}{}", self.open, self.inner(layout), self.close)
     }
+
+    /// Whether `layout` parses back to exactly the entries' keys and values.
+    fn valid(&self, layout: &[(&Entry, String)]) -> bool {
+        let inner = self.inner(layout);
+        if has_bare_cr(&inner) {
+            return false;
+        }
+        let Ok(docs) = YamlLoader::load_from_str(&inner) else {
+            return false;
+        };
+        let empty = yaml_rust2::yaml::Hash::new();
+        let map = match docs.as_slice() {
+            [] | [Yaml::Null] => &empty,
+            [Yaml::Hash(map)] => map,
+            _ => return false,
+        };
+        map.len() == layout.len()
+            && layout.iter().all(|(e, raw)| {
+                e.key
+                    .as_deref()
+                    .and_then(|k| lookup(map, k))
+                    .is_some_and(|node| yaml::to_property(node, raw_scalar(raw)) == e.value)
+            })
+    }
+}
+
+/// A `\r` not followed by `\n` is a line break to YAML but not to the entry splitter.
+fn has_bare_cr(text: &str) -> bool {
+    text.match_indices('\r')
+        .any(|(i, _)| text.as_bytes().get(i + 1) != Some(&b'\n'))
+}
+
+fn lookup<'a>(map: &'a yaml_rust2::yaml::Hash, key: &str) -> Option<&'a Yaml> {
+    map.get(&Yaml::String(key.to_owned())).or_else(|| {
+        map.iter()
+            .find(|(k, _)| yaml_key_text(k).as_deref() == Some(key))
+            .map(|(_, v)| v)
+    })
 }
 
 fn sort_rank(e: &Entry) -> usize {

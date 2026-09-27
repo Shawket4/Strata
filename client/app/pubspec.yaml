@@ -27,6 +27,7 @@ workspace:
 
 dev_dependencies:
   melos: ^8.9.0
+  meta: ^1.17.0
   test: ^1.26.0
   very_good_analysis: ^11.0.0
   yaml: ^3.1.3
@@ -34,8 +35,11 @@ dev_dependencies:
 melos:
   scripts:
     analyze:
-      description: Analyze every package (very_good_analysis + riverpod_lint), zero issues allowed.
-      run: flutter analyze --fatal-infos --fatal-warnings
+      description: >-
+        Analyze every package, zero issues allowed. `flutter analyze` runs the
+        analyzer with very_good_analysis; `dart analyze` also runs the
+        riverpod_lint analysis_server_plugin, which `flutter analyze` does not.
+      run: flutter analyze --fatal-infos --fatal-warnings && dart analyze --fatal-infos
 
     format-check:
       description: Fail if any Dart file is not formatted.

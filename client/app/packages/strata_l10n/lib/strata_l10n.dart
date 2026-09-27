@@ -2,7 +2,7 @@
 /// `lib/l10n` by `flutter gen-l10n`.
 ///
 /// UI direction follows the UI language (PLAN §11): Arabic is laid out
-/// right-to-left through [GlobalWidgetsLocalizations], which is part of
+/// right-to-left through `GlobalWidgetsLocalizations`, which is part of
 /// [StrataLocalizations.localizationsDelegates].
 library;
 

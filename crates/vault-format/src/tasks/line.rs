@@ -627,7 +627,8 @@ impl TaskLine {
             .filter(|(r, _)| *r < rank)
             .max_by_key(|(_, s)| s.end)
         {
-            return (s.end..s.end, format!(" {field}"));
+            let after = if self.text[s.end..].starts_with(|c: char| !is_ws(c)) { " " } else { "" };
+            return (s.end..s.end, format!(" {field}{after}"));
         }
         self.insert_at_end(field)
     }
@@ -655,19 +656,27 @@ impl TaskLine {
         }
     }
 
+    /// Replaces, removes or inserts a field. `check` says whether the result reads back as
+    /// intended; an insertion that does not (e.g. a recurrence phrase that would swallow the
+    /// description after it) is retried at the end of the content, before the block ID.
     fn set_field(
         &self,
         existing: Option<&Range<usize>>,
         rank: u8,
         new_text: Option<String>,
+        check: impl Fn(&Self) -> bool,
     ) -> Self {
-        let edit = match (existing, new_text) {
-            (Some(span), Some(t)) => (span.clone(), t),
+        let edit = match (existing, &new_text) {
+            (Some(span), Some(t)) => (span.clone(), t.clone()),
             (Some(span), None) => (self.removal(span), String::new()),
-            (None, Some(t)) => self.insertion(rank, &t),
+            (None, Some(t)) => self.insertion(rank, t),
             (None, None) => return self.clone(),
         };
-        self.apply(vec![edit])
+        let out = self.apply(vec![edit]);
+        match (existing, new_text) {
+            (None, Some(t)) if !check(&out) => self.apply(vec![self.insert_at_end(&t)]),
+            _ => out,
+        }
     }
 
     /// Sets the checkbox.
@@ -689,21 +698,25 @@ impl TaskLine {
     pub fn with_date(&self, kind: DateKind, date: Option<NaiveDate>) -> Self {
         let existing = self.dates[kind.index()].as_ref().map(|d| &d.span);
         let text = date.map(|d| format!("{} {}", kind.emoji(), d.format("%Y-%m-%d")));
-        self.set_field(existing, kind.rank(), text)
+        self.set_field(existing, kind.rank(), text, |t| t.date(kind) == date)
     }
 
     /// Sets, replaces or removes the priority.
     #[must_use]
     pub fn with_priority(&self, priority: Option<Priority>) -> Self {
         let existing = self.priority.as_ref().map(|p| &p.span);
-        self.set_field(existing, 0, priority.map(|p| p.emoji().to_owned()))
+        self.set_field(existing, 0, priority.map(|p| p.emoji().to_owned()), |t| {
+            t.priority() == priority
+        })
     }
 
     /// Sets, replaces or removes the recurrence phrase (written verbatim after `🔁 `).
     #[must_use]
     pub fn with_recurrence(&self, phrase: Option<&str>) -> Self {
         let existing = self.recurrence.as_ref().map(|r| &r.span);
-        self.set_field(existing, 1, phrase.map(|p| format!("🔁 {p}")))
+        self.set_field(existing, 1, phrase.map(|p| format!("🔁 {p}")), |t| {
+            t.recurrence_text() == phrase
+        })
     }
 
     /// Sets or replaces the block ID.
@@ -1028,6 +1041,16 @@ mod tests {
             t.with_date(DateKind::Due, Some(d("2026-01-01"))).as_str(),
             "- [ ] 📅 2026-01-01"
         );
+        // Fuzz regression: a date inserted after a field must stay separated from the text.
+        let t = p("- [ ] a 🔁 every blue[moon");
+        let t2 = t.with_date(DateKind::Due, Some(d("2026-01-31")));
+        assert_eq!(t2.as_str(), "- [ ] a 🔁 every blue 📅 2026-01-31 [moon");
+        assert_eq!(t2.date(DateKind::Due), Some(d("2026-01-31")));
+        // A recurrence inserted after a priority would swallow the words after it.
+        let t = p("- [ ] a 🔺 call mom ^t-1");
+        let t2 = t.with_recurrence(Some("every day"));
+        assert_eq!(t2.as_str(), "- [ ] a 🔺 call mom 🔁 every day ^t-1");
+        assert_eq!(t2.recurrence_text(), Some("every day"));
         let t = p("- [ ] ^t-1");
         assert_eq!(t.with_date(DateKind::Due, Some(d("2026-01-01"))).as_str(), "- [ ] 📅 2026-01-01 ^t-1");
         let t = p("- [ ] call");
