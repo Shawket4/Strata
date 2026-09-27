@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_ui/src/theme/strata_theme.dart';
+import 'package:strata_ui/src/tokens/colors.dart';
 
 /// A keyboard shortcut hint (desktop), e.g. `⌘ K`, drawn as key caps in IBM
 /// Plex Mono. Keys always read left-to-right.
@@ -11,7 +12,8 @@ class KeyboardHintChip extends StatelessWidget {
   /// Key labels in press order, e.g. `['⌘', 'K']`.
   final List<String> keys;
 
-  /// Styles the caps for use on an accent-filled button.
+  /// Styles the caps for use on a filled/primary button (drawn in
+  /// [StrataColors.onAccentFill]).
   final bool onAccent;
 
   /// The command key, drawn as an icon (no bundled font has the glyph).
@@ -20,9 +22,9 @@ class KeyboardHintChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.strataColors;
-    final fg = onAccent ? colors.onAccent : colors.text2;
+    final fg = onAccent ? colors.onAccentFill : colors.text2;
     final border = onAccent
-        ? colors.onAccent.withValues(alpha: 0.6)
+        ? colors.onAccentFill.withValues(alpha: 0.6)
         : colors.border;
     final style = context.strataText.monoSmall.copyWith(color: fg, height: 1);
     return Semantics(

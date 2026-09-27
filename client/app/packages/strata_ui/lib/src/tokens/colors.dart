@@ -5,10 +5,14 @@ import 'package:flutter/material.dart';
 /// Widgets never read these directly; they read the role-based
 /// [StrataColors] from the theme so light and dark stay consistent.
 abstract final class StrataPalette {
-  /// Tide: the lead colour (symbol, primary buttons, selected indicator).
+  /// Tide: the lead colour (the mark, icons, focus rings, selected
+  /// indicators and large graphics). Not a fill behind small text: white on
+  /// tide is 4.8:1 at rest and drops below 4.5:1 under the hover and pressed
+  /// overlays, so filled buttons use [tideText] (light) or [surf] (dark).
   static const Color tide = Color(0xFF2477B3);
 
-  /// Tide for text on light grounds (links, small accent text).
+  /// Text-safe tide: links and small accent text on light grounds, and the
+  /// light-theme fill of filled/primary buttons (white on it is 7.1:1).
   static const Color tideText = Color(0xFF1D5C8C);
 
   /// Tide text hover state on light grounds.
@@ -26,7 +30,8 @@ abstract final class StrataPalette {
   /// Harbour for text (the minimum grey for small text on light grounds).
   static const Color harbourText = Color(0xFF52616B);
 
-  /// Surf: small text and links on dark grounds.
+  /// Surf: small text and links on dark grounds, and the dark-theme fill of
+  /// filled/primary buttons (abyss on it is 7.6:1).
   static const Color surf = Color(0xFF6CB4DD);
 
   /// Sand: only the thin seam in the strata bands.
@@ -41,6 +46,23 @@ abstract final class StrataPalette {
 /// Light values come from the design spec; dark semantic values not given by
 /// the spec (dark tints and danger) are derived to keep WCAG AA contrast and
 /// are verified by tests.
+///
+/// Fills that carry text have their own foreground token, and every such
+/// pair is at least 4.5:1 (also under the Material hover, focus and pressed
+/// overlays; `test/tokens/contrast_test.dart`):
+///
+/// - [accentFill] / [onAccentFill]: filled/primary buttons, the FAB and
+///   `ColorScheme.primary`/`onPrimary`. Light `#1D5C8C` / white (7.1:1),
+///   dark `#6CB4DD` / `#0F1B26` (7.6:1).
+/// - [danger] / [onDanger]: destructive buttons and
+///   `ColorScheme.error`/`onError`. Light `#B3412E` / white (5.7:1), dark
+///   `#E07A66` / `#0F1B26` (5.9:1).
+/// - [accent] / [onAccent]: tide `#2477B3` / white (4.8:1 at rest) in both
+///   themes, for icons and text of 18 px and above only.
+///
+/// Destructive buttons use the standard error style:
+/// `FilledButton.styleFrom(backgroundColor: scheme.error,
+/// foregroundColor: scheme.onError)`.
 @immutable
 class StrataColors extends ThemeExtension<StrataColors> {
   /// Creates a colour token set.
@@ -54,6 +76,8 @@ class StrataColors extends ThemeExtension<StrataColors> {
     required this.text3,
     required this.accent,
     required this.onAccent,
+    required this.accentFill,
+    required this.onAccentFill,
     required this.accentText,
     required this.accentTint,
     required this.sand,
@@ -64,6 +88,7 @@ class StrataColors extends ThemeExtension<StrataColors> {
     required this.warningTint,
     required this.warningText,
     required this.danger,
+    required this.onDanger,
     required this.dangerTint,
     required this.dangerText,
     required this.info,
@@ -83,6 +108,8 @@ class StrataColors extends ThemeExtension<StrataColors> {
     text3: StrataPalette.harbour,
     accent: StrataPalette.tide,
     onAccent: StrataPalette.white,
+    accentFill: StrataPalette.tideText,
+    onAccentFill: StrataPalette.white,
     accentText: StrataPalette.tideText,
     accentTint: Color(0xFFDCEAF4),
     sand: StrataPalette.sand,
@@ -93,6 +120,7 @@ class StrataColors extends ThemeExtension<StrataColors> {
     warningTint: Color(0xFFF5ECDA),
     warningText: Color(0xFF6E4B0C),
     danger: Color(0xFFB3412E),
+    onDanger: StrataPalette.white,
     dangerTint: Color(0xFFF6E3DF),
     dangerText: Color(0xFF9A3624),
     info: StrataPalette.tide,
@@ -112,6 +140,8 @@ class StrataColors extends ThemeExtension<StrataColors> {
     text3: StrataPalette.harbour,
     accent: StrataPalette.tide,
     onAccent: StrataPalette.white,
+    accentFill: StrataPalette.surf,
+    onAccentFill: StrataPalette.abyss,
     accentText: StrataPalette.surf,
     accentTint: Color(0xFF1B3A55),
     sand: StrataPalette.sand,
@@ -122,6 +152,7 @@ class StrataColors extends ThemeExtension<StrataColors> {
     warningTint: Color(0xFF3A2E14),
     warningText: Color(0xFFE3BC6E),
     danger: Color(0xFFE07A66),
+    onDanger: StrataPalette.abyss,
     dangerTint: Color(0xFF3F1F1A),
     dangerText: Color(0xFFF0A392),
     info: StrataPalette.surf,
@@ -151,11 +182,20 @@ class StrataColors extends ThemeExtension<StrataColors> {
   /// Tertiary: only for text of 16 px and above, or icons.
   final Color text3;
 
-  /// Accent fill (tide): primary buttons, selected indicator, the mark.
+  /// Accent (tide, both themes): the mark, icons, focus rings, selected
+  /// indicators and large graphics. Filled buttons use [accentFill].
   final Color accent;
 
-  /// Content on [accent].
+  /// Icons and large text (18 px and above) on [accent].
   final Color onAccent;
+
+  /// Fill of filled/primary buttons and the FAB (`ColorScheme.primary`):
+  /// text-safe tide `#1D5C8C` in light, surf `#6CB4DD` in dark.
+  final Color accentFill;
+
+  /// Text and icons on [accentFill] (`ColorScheme.onPrimary`): white in
+  /// light, abyss in dark; at least 4.5:1 in every button state.
+  final Color onAccentFill;
 
   /// Accent for text and links.
   final Color accentText;
@@ -184,8 +224,13 @@ class StrataColors extends ThemeExtension<StrataColors> {
   /// Text on [warningTint].
   final Color warningText;
 
-  /// Danger signal colour.
+  /// Danger signal colour, error text on surfaces and the fill of
+  /// destructive buttons (`ColorScheme.error`).
   final Color danger;
+
+  /// Text and icons on [danger] (`ColorScheme.onError`): white in light,
+  /// abyss in dark (white on the dark danger would be 2.9:1).
+  final Color onDanger;
 
   /// Danger tint background.
   final Color dangerTint;
@@ -216,6 +261,8 @@ class StrataColors extends ThemeExtension<StrataColors> {
     Color? text3,
     Color? accent,
     Color? onAccent,
+    Color? accentFill,
+    Color? onAccentFill,
     Color? accentText,
     Color? accentTint,
     Color? sand,
@@ -226,6 +273,7 @@ class StrataColors extends ThemeExtension<StrataColors> {
     Color? warningTint,
     Color? warningText,
     Color? danger,
+    Color? onDanger,
     Color? dangerTint,
     Color? dangerText,
     Color? info,
@@ -243,6 +291,8 @@ class StrataColors extends ThemeExtension<StrataColors> {
       text3: text3 ?? this.text3,
       accent: accent ?? this.accent,
       onAccent: onAccent ?? this.onAccent,
+      accentFill: accentFill ?? this.accentFill,
+      onAccentFill: onAccentFill ?? this.onAccentFill,
       accentText: accentText ?? this.accentText,
       accentTint: accentTint ?? this.accentTint,
       sand: sand ?? this.sand,
@@ -253,6 +303,7 @@ class StrataColors extends ThemeExtension<StrataColors> {
       warningTint: warningTint ?? this.warningTint,
       warningText: warningText ?? this.warningText,
       danger: danger ?? this.danger,
+      onDanger: onDanger ?? this.onDanger,
       dangerTint: dangerTint ?? this.dangerTint,
       dangerText: dangerText ?? this.dangerText,
       info: info ?? this.info,
@@ -276,6 +327,8 @@ class StrataColors extends ThemeExtension<StrataColors> {
       text3: l(text3, other.text3),
       accent: l(accent, other.accent),
       onAccent: l(onAccent, other.onAccent),
+      accentFill: l(accentFill, other.accentFill),
+      onAccentFill: l(onAccentFill, other.onAccentFill),
       accentText: l(accentText, other.accentText),
       accentTint: l(accentTint, other.accentTint),
       sand: l(sand, other.sand),
@@ -286,6 +339,7 @@ class StrataColors extends ThemeExtension<StrataColors> {
       warningTint: l(warningTint, other.warningTint),
       warningText: l(warningText, other.warningText),
       danger: l(danger, other.danger),
+      onDanger: l(onDanger, other.onDanger),
       dangerTint: l(dangerTint, other.dangerTint),
       dangerText: l(dangerText, other.dangerText),
       info: l(info, other.info),

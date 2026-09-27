@@ -37,8 +37,9 @@ abstract final class StrataTheme {
     final textTheme = styles.toTextTheme();
     final scheme = ColorScheme(
       brightness: brightness,
-      primary: colors.accent,
-      onPrimary: colors.onAccent,
+      // Text-safe fill: Material draws `onPrimary` text on `primary`.
+      primary: colors.accentFill,
+      onPrimary: colors.onAccentFill,
       primaryContainer: colors.accentTint,
       onPrimaryContainer: colors.accentText,
       secondary: colors.text2,
@@ -50,7 +51,7 @@ abstract final class StrataTheme {
       tertiaryContainer: colors.successTint,
       onTertiaryContainer: colors.successText,
       error: colors.danger,
-      onError: colors.onAccent,
+      onError: colors.onDanger,
       errorContainer: colors.dangerTint,
       onErrorContainer: colors.dangerText,
       surface: colors.surface,
@@ -69,7 +70,9 @@ abstract final class StrataTheme {
       scrim: colors.scrim,
       inverseSurface: colors.text,
       onInverseSurface: colors.background,
-      inversePrimary: StrataPalette.surf,
+      inversePrimary: brightness == Brightness.light
+          ? StrataPalette.surf
+          : StrataPalette.tideText,
       surfaceTint: Colors.transparent,
     );
     final hairline = BorderSide(color: colors.border);
@@ -187,8 +190,8 @@ abstract final class StrataTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: colors.accent,
-          foregroundColor: colors.onAccent,
+          backgroundColor: colors.accentFill,
+          foregroundColor: colors.onAccentFill,
           textStyle: styles.label,
           shape: inputShape,
         ),
@@ -209,8 +212,8 @@ abstract final class StrataTheme {
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: colors.accent,
-        foregroundColor: colors.onAccent,
+        backgroundColor: colors.accentFill,
+        foregroundColor: colors.onAccentFill,
         elevation: 0,
         focusElevation: 0,
         hoverElevation: 0,
