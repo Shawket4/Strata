@@ -1,0 +1,277 @@
+{
+  "@@locale": "en",
+  "appTitle": "Strata",
+  "@appTitle": {
+    "description": "Product name (L17). The Latin wordmark is never translated; this is the window/app title."
+  },
+  "navigationLabel": "Main navigation",
+  "@navigationLabel": {
+    "description": "Accessibility label of the main navigation region (bar, rail or sidebar)."
+  },
+  "navHome": "Home",
+  "@navHome": {
+    "description": "Navigation destination: Home / capture."
+  },
+  "navInbox": "Inbox",
+  "@navInbox": {
+    "description": "Navigation destination: Inbox of captures with AI filing suggestions."
+  },
+  "navTasks": "Tasks",
+  "@navTasks": {
+    "description": "Navigation destination: Tasks (rail and sidebar only; on compact tasks live on Home)."
+  },
+  "navNotes": "Notes",
+  "@navNotes": {
+    "description": "Navigation destination: Notes list."
+  },
+  "navMap": "Map",
+  "@navMap": {
+    "description": "Navigation destination: global map (medium and expanded only)."
+  },
+  "navDirectory": "Directory",
+  "@navDirectory": {
+    "description": "Navigation destination: People, Companies, Documents and Places."
+  },
+  "navAsk": "Ask",
+  "@navAsk": {
+    "description": "Navigation destination: Ask (chat over the vault)."
+  },
+  "navSettings": "Settings",
+  "@navSettings": {
+    "description": "Navigation destination: Settings (bottom of rail and sidebar)."
+  },
+  "actionNewCapture": "New capture",
+  "@actionNewCapture": {
+    "description": "Primary button in the sidebar that starts a new capture."
+  },
+  "actionCapture": "Capture",
+  "@actionCapture": {
+    "description": "Short label of the capture button in the navigation rail."
+  },
+  "actionSearch": "Search",
+  "@actionSearch": {
+    "description": "Search action (icon button tooltip and label)."
+  },
+  "actionSave": "Save",
+  "@actionSave": {
+    "description": "Common action: save."
+  },
+  "actionCancel": "Cancel",
+  "@actionCancel": {
+    "description": "Common action: cancel."
+  },
+  "actionAccept": "Accept",
+  "@actionAccept": {
+    "description": "Common action: accept an AI suggestion."
+  },
+  "actionReject": "Reject",
+  "@actionReject": {
+    "description": "Common action: reject an AI suggestion."
+  },
+  "actionEdit": "Edit",
+  "@actionEdit": {
+    "description": "Common action: edit."
+  },
+  "actionDelete": "Delete",
+  "@actionDelete": {
+    "description": "Common action: delete."
+  },
+  "actionOpen": "Open",
+  "@actionOpen": {
+    "description": "Common action: open."
+  },
+  "actionBack": "Back",
+  "@actionBack": {
+    "description": "Common action: go back."
+  },
+  "actionClose": "Close",
+  "@actionClose": {
+    "description": "Common action: close a panel, sheet or dialog."
+  },
+  "actionRetry": "Retry",
+  "@actionRetry": {
+    "description": "Common action: retry."
+  },
+  "actionSyncNow": "Sync now",
+  "@actionSyncNow": {
+    "description": "Common action: start a sync."
+  },
+  "actionSignOut": "Sign out",
+  "@actionSignOut": {
+    "description": "Common action: sign out."
+  },
+  "actionSaveAsNote": "Save as note",
+  "@actionSaveAsNote": {
+    "description": "Ask: save the answer as a note."
+  },
+  "contextPanelLabel": "Context",
+  "@contextPanelLabel": {
+    "description": "Label of the context panel (backlinks, relations, history)."
+  },
+  "syncSynced": "Synced · {time}",
+  "@syncSynced": {
+    "description": "Sync pill: everything is synced; time of the last sync.",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "14:32"
+      }
+    }
+  },
+  "syncOfflineQueued": "{count, plural, =0{Offline} =1{Offline · 1 change queued} other{Offline · {count} changes queued}}",
+  "@syncOfflineQueued": {
+    "description": "Sync pill: device is offline with queued outbox changes.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "syncSyncing": "Syncing {done}/{total}",
+  "@syncSyncing": {
+    "description": "Sync pill: sync in progress.",
+    "placeholders": {
+      "done": {
+        "type": "int",
+        "example": "12"
+      },
+      "total": {
+        "type": "int",
+        "example": "40"
+      }
+    }
+  },
+  "syncConflicts": "{count, plural, =1{1 conflict} other{{count} conflicts}}",
+  "@syncConflicts": {
+    "description": "Sync pill: unresolved sync conflicts.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "syncStatusLabel": "Sync status",
+  "@syncStatusLabel": {
+    "description": "Accessibility hint of the sync pill button."
+  },
+  "relationRelated": "related",
+  "@relationRelated": {
+    "description": "Relation type name shown on typed relation chips and graph legends: related."
+  },
+  "relationPartOf": "part of",
+  "@relationPartOf": {
+    "description": "Relation type name shown on typed relation chips and graph legends: part of."
+  },
+  "relationSupports": "supports",
+  "@relationSupports": {
+    "description": "Relation type name shown on typed relation chips and graph legends: supports."
+  },
+  "relationContradicts": "contradicts",
+  "@relationContradicts": {
+    "description": "Relation type name shown on typed relation chips and graph legends: contradicts."
+  },
+  "relationFollowsUp": "follows up",
+  "@relationFollowsUp": {
+    "description": "Relation type name shown on typed relation chips and graph legends: follows up."
+  },
+  "relationDuplicates": "duplicates",
+  "@relationDuplicates": {
+    "description": "Relation type name shown on typed relation chips and graph legends: duplicates."
+  },
+  "relationSimilarity": "similar",
+  "@relationSimilarity": {
+    "description": "Relation type name shown on typed relation chips and graph legends: similar."
+  },
+  "relationBodyLink": "link",
+  "@relationBodyLink": {
+    "description": "Relation type name shown on typed relation chips and graph legends: link."
+  },
+  "relationMention": "mentions",
+  "@relationMention": {
+    "description": "Relation type name shown on typed relation chips and graph legends: mentions."
+  },
+  "aiTag": "AI",
+  "@aiTag": {
+    "description": "Tag on AI-made relations and suggestions."
+  },
+  "aiConfidenceSemantics": "Suggested by AI, confidence {confidence}",
+  "@aiConfidenceSemantics": {
+    "description": "Accessibility text for an AI-made relation with its confidence.",
+    "placeholders": {
+      "confidence": {
+        "type": "String",
+        "example": "0.82"
+      }
+    }
+  },
+  "nodeKindNote": "Note",
+  "@nodeKindNote": {
+    "description": "Graph node kind name: Note."
+  },
+  "nodeKindConcept": "Concept",
+  "@nodeKindConcept": {
+    "description": "Graph node kind name: Concept."
+  },
+  "nodeKindPerson": "Person",
+  "@nodeKindPerson": {
+    "description": "Graph node kind name: Person."
+  },
+  "nodeKindCompany": "Company",
+  "@nodeKindCompany": {
+    "description": "Graph node kind name: Company."
+  },
+  "nodeKindDocument": "Document",
+  "@nodeKindDocument": {
+    "description": "Graph node kind name: Document."
+  },
+  "nodeKindPlace": "Place",
+  "@nodeKindPlace": {
+    "description": "Graph node kind name: Place."
+  },
+  "citationSemantics": "Source: {label}",
+  "@citationSemantics": {
+    "description": "Accessibility label of a citation chip that opens the cited block.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Call 2026-09-12 — Acme"
+      }
+    }
+  },
+  "shortcutSemantics": "Keyboard shortcut {keys}",
+  "@shortcutSemantics": {
+    "description": "Accessibility label of a keyboard-hint chip.",
+    "placeholders": {
+      "keys": {
+        "type": "String",
+        "example": "⌘ K"
+      }
+    }
+  },
+  "featurePlaceholderMessage": "This screen is being built.",
+  "@featurePlaceholderMessage": {
+    "description": "Message on placeholder feature screens until the Rust core view-models exist."
+  },
+  "featureEditor": "Note editor",
+  "@featureEditor": {
+    "description": "Title of the Note editor screen."
+  },
+  "featureDocuments": "Documents",
+  "@featureDocuments": {
+    "description": "Title of the Documents screen."
+  },
+  "featureSync": "Sync & conflicts",
+  "@featureSync": {
+    "description": "Title of the Sync & conflicts screen."
+  },
+  "featureAccounts": "Sign in",
+  "@featureAccounts": {
+    "description": "Title of the Sign in screen."
+  },
+  "featureAdmin": "Users",
+  "@featureAdmin": {
+    "description": "Title of the Users screen."
+  }
+}
