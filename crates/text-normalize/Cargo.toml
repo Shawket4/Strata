@@ -4,8 +4,13 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Deterministic Arabic/Latin text normalisation for search, alias matching and duplicate detection."
 
 [dependencies]
+unicode-normalization = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
 
 [lints]
 workspace = true

@@ -13,6 +13,12 @@ uuid = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
 toml = { workspace = true }
+serde_json = { workspace = true }
+sqlx = { workspace = true, optional = true }
+
+[features]
+# Lets the ID newtypes bind/decode directly as PostgreSQL `uuid` values.
+sqlx = ["dep:sqlx"]
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

@@ -3,9 +3,24 @@ name = "vault-format"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+rust-version.workspace = true
 publish = false
+description = "Strata vault format: Obsidian-compatible markdown, frontmatter, links, tasks, sidecar and canvas types"
 
 [dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+ulid = { workspace = true }
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+yaml-rust2 = { workspace = true }
+pulldown-cmark = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+insta = { workspace = true }
+pretty_assertions = { workspace = true }
 
 [lints]
 workspace = true

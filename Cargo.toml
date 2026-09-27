@@ -77,6 +77,9 @@ hex = "0.4"
 proptest = "1"
 insta = { version = "1", features = ["yaml"] }
 pretty_assertions = "1"
+# vault-format: YAML frontmatter values and CommonMark structure (code/math/heading/block ranges)
+yaml-rust2 = "0.13"
+pulldown-cmark = { version = "0.13", default-features = false }
 # PostgreSQL (sqlx 0.9: query fns take `impl SqlSafeStr`; no TLS needed for local/unix connections)
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "postgres", "macros", "migrate", "uuid", "chrono", "json"] }
 pgvector = { version = "0.4", features = ["sqlx"] }
