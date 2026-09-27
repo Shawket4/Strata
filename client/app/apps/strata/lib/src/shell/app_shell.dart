@@ -161,7 +161,13 @@ class _AppShellState extends ConsumerState<AppShell> {
     final inbox = ref.watch(homeProvider).value?.inboxCount;
     final destinations = appDestinations(l10n, inboxCount: inbox);
     final pill = ref.watch(syncStatusProvider).value?.pill;
-    final body = KeyedSubtree(key: _bodyKey, child: widget.navigationShell);
+    // A semantics boundary: the branch navigators' routes block the
+    // semantics painted before them (the rail and sidebar) otherwise.
+    final body = Semantics(
+      container: true,
+      explicitChildNodes: true,
+      child: KeyedSubtree(key: _bodyKey, child: widget.navigationShell),
+    );
     final Widget shell;
     if (sizeClass == SizeClass.compact && isDetailLocation(widget.location)) {
       // The detail's own page chrome (app bar, back) fills the window.
