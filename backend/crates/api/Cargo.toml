@@ -5,7 +5,46 @@ edition.workspace = true
 license.workspace = true
 publish = false
 
+[features]
+# Test support for this crate and its consumers: the OpenAPI contract-conformance
+# validator (`contract`), an in-process server spawner and a demo router exercising the
+# wire machinery (`testing`). Never enabled in production builds.
+test-support = ["dep:jsonschema", "dep:base64"]
+
 [dependencies]
+actix-web = { workspace = true }
+actix-ws = { workspace = true }
+actix-rt = { workspace = true }
+utoipa = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_bytes = { workspace = true }
+serde_path_to_error = { workspace = true }
+rmp = { workspace = true }
+rmp-serde = { workspace = true }
+rmpv = { workspace = true }
+mime = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+futures-util = { workspace = true }
+bytes = { workspace = true }
+ulid = { workspace = true }
+chrono = { workspace = true }
+jsonschema = { workspace = true, optional = true }
+base64 = { workspace = true, optional = true }
+
+[dev-dependencies]
+hex = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
+tokio-tungstenite = { workspace = true }
+strata-api = { path = ".", features = ["test-support"] }
+
+[[bin]]
+name = "emit-openapi"
+path = "src/bin/emit_openapi.rs"
 
 [lints]
 workspace = true

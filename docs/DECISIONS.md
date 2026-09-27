@@ -4,6 +4,9 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### D27 revised — reminders: (a) local-first now, server push later
+- The client core computes each device's notification plan and emits schedule/cancel operations; a Dart adapter applies them with flutter_local_notifications; the OS fires them even when the app is closed. Linux fires only while the app runs. Server push (FCM/APNs/WNS) comes later as a backup, de-duplicated by stable reminder IDs (PLAN §12.5b). Replaces the earlier (b) choice.
+
 ### Remaining open decisions resolved by the owner
 - **D2 (b)** rich-text editor package with markdown round-trip · **D3 (a)** CustomPainter, layout in Rust · **D4 (b)** widget-based mind-map canvas · **D6 (b)** signed access + rotating refresh tokens, immediate revocation via a session revocation set · **D7 (a)** public HTTPS + app auth, domain later · **D9 (a)** in-process ONNX (ort) · **D10 (b)** Leiden · **D11 (b)** Riverpod (plus melos and a modern Flutter stack, PLAN §11.1) · **D13 (b)** new entities always suggested, plus the correction loop (repoint, corrections in words, threaded suggestions, disambiguation hints; PLAN §9.8) · **D14** tokens in the account's local database, unencrypted · **D15 (c)** own client generator (typify + template, one MessagePack `send()`) · **D19 (a)** 3-way merge · **D20 (a)** `claude -p` default, Anthropic API provider also built · **D23** `claude -p` serves all accounts for now, provider selectable per user in config · **D24 (a)** WebSocket with binary MessagePack frames.
 

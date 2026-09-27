@@ -1,0 +1,103 @@
+name: strata_workspace
+description: >-
+  Pub workspace root for the Strata Flutter client (UI only; all client logic
+  lives in the Rust client core, PLAN L15). Managed with melos.
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - apps/strata
+  - packages/strata_ui
+  - packages/strata_l10n
+  - packages/features/accounts
+  - packages/features/admin
+  - packages/features/ask
+  - packages/features/directory
+  - packages/features/documents
+  - packages/features/editor
+  - packages/features/home
+  - packages/features/inbox
+  - packages/features/maps
+  - packages/features/notes
+  - packages/features/settings
+  - packages/features/sync
+  - packages/features/tasks
+
+dev_dependencies:
+  melos: ^8.9.0
+  test: ^1.26.0
+  very_good_analysis: ^11.0.0
+  yaml: ^3.1.3
+
+melos:
+  scripts:
+    analyze:
+      description: Analyze every package (very_good_analysis + riverpod_lint), zero issues allowed.
+      run: flutter analyze --fatal-infos --fatal-warnings
+
+    format-check:
+      description: Fail if any Dart file is not formatted.
+      run: dart format --output=none --set-exit-if-changed apps packages tool test
+
+    test:
+      description: Run every package's tests (widget, accessibility and golden tests) and the logic-guard tests.
+      steps:
+        - test:packages
+        - test:tool
+
+    test:packages:
+      description: Run the tests of every package that has a test directory.
+      exec:
+        command: flutter test
+        concurrency: 1
+        failFast: true
+      packageFilters:
+        dirExists: test
+
+    test:tool:
+      description: Run the tests of the workspace tooling (logic guard).
+      run: dart test test
+
+    test:goldens:
+      description: Run only the alchemist golden tests (CI variant, bundled fonts).
+      exec:
+        command: flutter test --tags golden
+        concurrency: 1
+        failFast: true
+      packageFilters:
+        dirExists: test/goldens
+
+    test:goldens:update:
+      description: Regenerate the CI golden files (review every diff before committing).
+      exec:
+        command: flutter test --tags golden --update-goldens
+        concurrency: 1
+      packageFilters:
+        dirExists: test/goldens
+
+    gen:
+      description: Run code generation (gen-l10n, then build_runner for go_router_builder and riverpod_generator).
+      steps:
+        - gen:l10n
+        - gen:build
+
+    gen:l10n:
+      description: Generate the localizations from the ARB files.
+      exec:
+        command: flutter gen-l10n
+      packageFilters:
+        fileExists: l10n.yaml
+
+    gen:build:
+      description: Run build_runner in every package that depends on it.
+      exec:
+        command: dart run build_runner build --delete-conflicting-outputs
+        concurrency: 1
+      packageFilters:
+        dependsOn: build_runner
+
+    logic-guard:
+      description: Enforce PLAN L15 in Dart (dependency allow-list and allowed Dart folders).
+      run: dart run tool/logic_guard.dart

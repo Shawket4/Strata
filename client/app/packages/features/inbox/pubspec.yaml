@@ -1,0 +1,21 @@
+name: strata_inbox
+description: >-
+  Strata "inbox" feature UI (widgets only; view-models come from the Rust core).
+version: 0.1.0
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  strata_l10n: any
+  strata_ui: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: ^11.0.0

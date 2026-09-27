@@ -4,8 +4,4 @@ analyzer:
   exclude:
     - build/**
     - "**/*.g.dart"
-    - android/**
-    - ios/**
-    - windows/**
-    - macos/**
-    - linux/**
+    - lib/src/generated/**

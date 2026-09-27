@@ -1,0 +1,26 @@
+# Shared analyzer configuration for every package in the Strata Flutter
+# workspace. Each package's analysis_options.yaml includes this file.
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/generated/**"
+    - "**/build/**"
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # Surface everything; `flutter analyze --fatal-infos` makes infos fatal.
+    todo: ignore
+
+linter:
+  rules:
+    # The workspace is private; nothing is published to pub.dev.
+    public_member_api_docs: true
+
+# riverpod_lint is an analysis_server_plugin (riverpod_lint 3.x docs:
+# "installed through analysis_options.yaml").
+plugins:
+  riverpod_lint: ^3.1.9

@@ -85,3 +85,28 @@ sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio",
 pgvector = { version = "0.4", features = ["sqlx"] }
 toml = "1"
 tempfile = "3"
+# wire & contract (strata-api, strata-codegen, strata-client)
+actix-web = "4.15"
+actix-ws = "0.4"
+actix-rt = "2"
+utoipa = { version = "6", features = ["chrono", "ulid"] }
+rmp = "0.8"
+rmpv = "1.3"
+serde_bytes = "0.11"
+serde_path_to_error = "0.1"
+mime = "0.3"
+percent-encoding = "2.3"
+base64 = "0.23"
+url = "2.5"
+futures-util = "0.3"
+bytes = "1"
+jsonschema = { version = "0.58", default-features = false }
+typify = { version = "0.8", default-features = false }
+schemars08 = { package = "schemars", version = "0.8" }
+prettyplease = "0.3"
+syn = { version = "3", features = ["full"] }
+quote = "1"
+proc-macro2 = "1"
+regress = "0.12"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2"] }
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
