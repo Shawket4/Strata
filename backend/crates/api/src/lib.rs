@@ -13,6 +13,7 @@
 // Tests assert exact values and may `expect` with a message stating the invariant.
 #![cfg_attr(test, allow(clippy::expect_used, clippy::float_cmp))]
 
+pub mod ai;
 pub mod app;
 pub mod auth;
 pub mod events;

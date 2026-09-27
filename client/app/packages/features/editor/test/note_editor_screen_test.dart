@@ -157,6 +157,37 @@ void main() {
       expect(components[1].textDirection, TextDirection.rtl);
     });
 
+    testWidgets('a line takes the direction of its first strong letter', (
+      tester,
+    ) async {
+      const content =
+          '## الفرضيات\n'
+          '- خصم ولاء 5% على التجديد.\n'
+          '12. Twelfth item\n'
+          '- [ ] مهمة 📅 2026-10-01\n'
+          '> 5% English quote\n'
+          '---\n';
+      await pumpEditor(
+        tester,
+        note: EditorFixtures.noteWith(content: content, hints: const []),
+      );
+      final directions = [
+        for (final c in tester.widgetList<TextComponent>(
+          find.byType(TextComponent),
+        ))
+          c.textDirection,
+      ];
+      expect(directions, [
+        TextDirection.rtl,
+        TextDirection.rtl,
+        TextDirection.ltr,
+        TextDirection.rtl,
+        TextDirection.ltr,
+        TextDirection.ltr,
+        TextDirection.ltr,
+      ]);
+    });
+
     testWidgets('renders task lines with checkboxes in their state', (
       tester,
     ) async {

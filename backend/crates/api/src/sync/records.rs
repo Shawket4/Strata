@@ -27,7 +27,7 @@ use domain::{DedupeKind, NoteKind as DNoteKind, RelationOrigin};
 use strata_common::{NoteId, SuggestionId};
 use strata_index::repo::suggestions::{self as srepo, Suggestion};
 use strata_index::repo::sync as log;
-use strata_index::types::{SuggestionStatus as IStatus, By};
+use strata_index::types::{By, SuggestionStatus as IStatus};
 use strata_index::{AppDb, IndexError, ScopedTx, UserScope};
 use strata_vault::{VaultError, VaultService, fsio};
 use sync_model::changes::{
@@ -88,7 +88,15 @@ fn edge_key(src: Uuid, rel: &str, dst: Uuid) -> String {
     format!("{}:{rel}:{}", ulid(src), ulid(dst))
 }
 
-type RelationRow = (Uuid, String, Uuid, By, Option<f32>, Option<String>, DateTime<Utc>);
+type RelationRow = (
+    Uuid,
+    String,
+    Uuid,
+    By,
+    Option<f32>,
+    Option<String>,
+    DateTime<Utc>,
+);
 
 fn relation_record(r: RelationRow) -> Option<Record> {
     let (src, rel, dst, by, confidence, reason, created) = r;
@@ -509,18 +517,17 @@ fn entity_type(s: &str) -> Option<EntityType> {
 }
 
 /// The current record of one change-log entity; `None` = tombstone.
-async fn current(
-    tx: &mut ScopedTx,
-    ty: EntityType,
-    id: &str,
-) -> Result<Option<Record>, Problem> {
+async fn current(tx: &mut ScopedTx, ty: EntityType, id: &str) -> Result<Option<Record>, Problem> {
     Ok(match ty {
         EntityType::Note => None, // read after the transaction
         EntityType::Suggestion => {
             let Ok(sid) = id.parse::<SuggestionId>() else {
                 return Ok(None);
             };
-            match srepo::get_suggestion(tx, sid).await.map_err(index_problem)? {
+            match srepo::get_suggestion(tx, sid)
+                .await
+                .map_err(index_problem)?
+            {
                 Some(s) => Some(suggestion_record(tx, s).await?),
                 None => None,
             }
@@ -595,10 +602,9 @@ async fn current(
             row.map(|r| device_record(Uuid::from(device), r))
         }
         EntityType::Setting => {
-            let row: Option<Vec<u8>> =
-                strata_index::repo::settings::get_setting(tx, id)
-                    .await
-                    .map_err(index_problem)?;
+            let row: Option<Vec<u8>> = strata_index::repo::settings::get_setting(tx, id)
+                .await
+                .map_err(index_problem)?;
             row.and_then(|v| setting_text(&v)).map(|value| {
                 Record::Setting(SettingRecord {
                     key: id.to_owned(),

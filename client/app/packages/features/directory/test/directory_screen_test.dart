@@ -64,11 +64,21 @@ void main() {
         );
         expect(find.bySemanticsLabel(l10n.tabsLabel), findsOneWidget);
         expect(find.text(l10n.tabDocuments), findsOneWidget);
+        expect(find.text(l10n.whoIs(mention: 'بابا')), findsOneWidget);
+        expect(find.bySemanticsLabel(l10n.filtersLabel), findsOneWidget);
+        final list = find.byType(CustomScrollView);
+        if (list.evaluate().isNotEmpty) {
+          await tester.scrollUntilVisible(
+            find.text('Ahmed Samir'),
+            100,
+            scrollable: find
+                .descendant(of: list, matching: find.byType(Scrollable))
+                .first,
+          );
+        }
         expect(find.text('Ahmed Samir'), findsOneWidget);
         expect(find.text('أحمد سمير'), findsOneWidget);
         expect(find.text('Operations manager, Acme Logistics'), findsOneWidget);
-        expect(find.text(l10n.whoIs(mention: 'بابا')), findsOneWidget);
-        expect(find.bySemanticsLabel(l10n.filtersLabel), findsOneWidget);
         final table = find.bySemanticsLabel(
           l10n.tableCaption(tab: l10n.tabPeople),
         );
@@ -84,6 +94,8 @@ void main() {
             expect(find.text(l10n.newPerson), findsOneWidget);
         }
         if (v.textScale == 1) await expectAccessible(tester);
+        await tester.ensureVisible(find.text('Ahmed Samir'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Ahmed Samir'));
         await tester.pump();
         await tester.pump();
@@ -206,28 +218,24 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Create'));
       await tester.pumpAndSettle();
-      expect(
-        fake.calls.last,
-        const CoreCall('createEntity', {
-          'kind': 'person',
-          'name': 'Ahmed Sameer',
-          'aliases': ['أحمد'],
-          'force': false,
-        }),
-      );
+      expect(fake.calls.last.method, 'createEntity');
+      expect(fake.calls.last.args, {
+        'kind': 'person',
+        'name': 'Ahmed Sameer',
+        'aliases': ['أحمد'],
+        'force': false,
+      });
       expect(find.text('Already exists'), findsOneWidget);
       fake.createEntityAnswer.returns(StrataFixtures.createOutcomeCreated);
       await tester.tap(find.text('Create anyway'));
       await tester.pumpAndSettle();
-      expect(
-        fake.calls.last,
-        const CoreCall('createEntity', {
-          'kind': 'person',
-          'name': 'Ahmed Sameer',
-          'aliases': ['أحمد'],
-          'force': true,
-        }),
-      );
+      expect(fake.calls.last.method, 'createEntity');
+      expect(fake.calls.last.args, {
+        'kind': 'person',
+        'name': 'Ahmed Sameer',
+        'aliases': ['أحمد'],
+        'force': true,
+      });
       expect(opened, [StrataFixtures.createOutcomeCreated.id]);
     });
   });

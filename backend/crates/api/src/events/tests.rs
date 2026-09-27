@@ -38,7 +38,12 @@ fn commit_notices_map_to_events_in_a_fixed_order() {
         op: "merge".into(),
         notes: vec![
             note(a, domain::NoteKind::Person, NoteChange::Deleted, None),
-            note(b, domain::NoteKind::Person, NoteChange::Updated, Some("v-b")),
+            note(
+                b,
+                domain::NoteKind::Person,
+                NoteChange::Updated,
+                Some("v-b"),
+            ),
             note(c, domain::NoteKind::Note, NoteChange::Moved, Some("v-c")),
         ],
         merged: Some((a, b)),
@@ -199,7 +204,10 @@ async fn a_disabled_account_gets_account_disabled_then_a_terminal_error() {
 async fn a_revoked_session_ends_with_unauthorized_and_other_users_are_unaffected() {
     let g = ids();
     let (user, other) = (UserId::from(g.next_ulid()), UserId::from(g.next_ulid()));
-    let (session, other_session) = (SessionId::from(g.next_ulid()), SessionId::from(g.next_ulid()));
+    let (session, other_session) = (
+        SessionId::from(g.next_ulid()),
+        SessionId::from(g.next_ulid()),
+    );
     let clock = FakeClock::at_default_epoch();
     let revocations = Arc::new(RevocationSet::new(
         Duration::minutes(15),

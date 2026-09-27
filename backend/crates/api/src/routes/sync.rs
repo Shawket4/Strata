@@ -10,9 +10,7 @@ use utoipa::IntoParams;
 
 use crate::auth::{AuthState, Authenticated};
 use crate::sync::push::{PushContext, push};
-use crate::sync::wire::{
-    SyncBootstrapPage, SyncChangesPage, SyncPushRequest, SyncPushResponse,
-};
+use crate::sync::wire::{SyncBootstrapPage, SyncChangesPage, SyncPushRequest, SyncPushResponse};
 use crate::sync::{BootstrapCursor, SyncState, records};
 use crate::wire::{MSGPACK, MsgPack, MsgPackConfig, Problem};
 
@@ -70,7 +68,11 @@ pub async fn bootstrap(
     query: web::Query<BootstrapQuery>,
 ) -> Result<MsgPack<BootstrapPage>, Problem> {
     let q = query.into_inner();
-    let cursor = q.cursor.as_deref().map(BootstrapCursor::decode).transpose()?;
+    let cursor = q
+        .cursor
+        .as_deref()
+        .map(BootstrapCursor::decode)
+        .transpose()?;
     let limit = clamp(q.limit, sync.config.bootstrap_page);
     Ok(MsgPack(
         records::bootstrap(&state.app_db, &vault, auth.scope(), cursor, limit).await?,
@@ -129,7 +131,9 @@ pub async fn push_ops(
     };
     let bytes = push(&sync, &ctx, body.into_inner().ops).await?;
     Ok(HttpResponse::Ok()
-        .insert_header(ContentType(MSGPACK.parse().unwrap_or(mime::APPLICATION_OCTET_STREAM)))
+        .insert_header(ContentType(
+            MSGPACK.parse().unwrap_or(mime::APPLICATION_OCTET_STREAM),
+        ))
         .body(bytes))
 }
 

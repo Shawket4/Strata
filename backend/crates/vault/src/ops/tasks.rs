@@ -340,7 +340,9 @@ impl Core {
                 if let Some(n) = &p.next_id
                     && !vault_format::blocks::is_valid_block_id(n)
                 {
-                    return Err(VaultError::invalid("the next task id is not a valid block id"));
+                    return Err(VaultError::invalid(
+                        "the next task id is not a valid block id",
+                    ));
                 }
                 (p.id.as_str(), "task complete")
             }

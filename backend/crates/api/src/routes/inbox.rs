@@ -85,6 +85,17 @@ pub enum SuggestionPayload {
         /// The items it resembles.
         candidates: Vec<DuplicateCandidate>,
     },
+    /// Two stored items the nightly sweep found to be duplicates (`duplicates`, PLAN §9.7);
+    /// rejecting keeps both for good. Never merged automatically.
+    Duplicates {
+        /// The first item.
+        a: DuplicateCandidate,
+        /// The second item.
+        b: DuplicateCandidate,
+        /// Why the model confirmed a borderline pair.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
     /// A kind this version does not describe (MessagePack as stored).
     Opaque {
         /// The raw payload.
@@ -143,6 +154,25 @@ pub struct Suggestion {
     pub decided_at: Option<DateTime<Utc>>,
 }
 
+fn level_of(level: &str) -> MatchLevel {
+    match level {
+        "exact" => MatchLevel::Exact,
+        "semantic" => MatchLevel::Semantic,
+        _ => MatchLevel::Near,
+    }
+}
+
+fn pair_item(c: &strata_vault::ops::notes::DuplicatePayloadItem) -> Option<DuplicateCandidate> {
+    Some(DuplicateCandidate {
+        id: c.id.parse().ok()?,
+        kind: c.kind.clone(),
+        title: c.title.clone(),
+        snippet: c.snippet.clone(),
+        match_level: level_of(&c.match_level),
+        score: c.score,
+    })
+}
+
 impl From<SuggestionView> for Suggestion {
     fn from(v: SuggestionView) -> Self {
         let payload = match v.payload() {
@@ -156,15 +186,21 @@ impl From<SuggestionView> for Suggestion {
                             kind: c.kind.clone(),
                             title: c.title.clone(),
                             snippet: c.snippet.clone(),
-                            match_level: if c.match_level == "exact" {
-                                MatchLevel::Exact
-                            } else {
-                                MatchLevel::Near
-                            },
+                            match_level: level_of(&c.match_level),
                             score: c.score,
                         })
                     })
                     .collect(),
+            },
+            Payload::Duplicates(p) => match (pair_item(&p.a), pair_item(&p.b)) {
+                (Some(a), Some(b)) => SuggestionPayload::Duplicates {
+                    a,
+                    b,
+                    reason: p.reason.clone(),
+                },
+                _ => SuggestionPayload::Opaque {
+                    data: Binary(v.suggestion.payload.clone()),
+                },
             },
             Payload::Opaque(data) => SuggestionPayload::Opaque { data: Binary(data) },
         };

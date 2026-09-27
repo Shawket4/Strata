@@ -162,17 +162,17 @@ class LocalGraphSlot extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    l10n.localGraphTitle,
-                    style: text.caption
-                        .copyWith(color: colors.text2)
-                        .copyWith(fontWeight: FontWeight.w600),
-                  ),
+              Semantics(
+                header: true,
+                child: Text(
+                  l10n.localGraphTitle,
+                  style: text.caption
+                      .copyWith(color: colors.text2)
+                      .copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               TextButton(

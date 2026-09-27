@@ -13,7 +13,7 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
   String get directoryTitle => 'الدليل';
 
   @override
-  String get tabsLabel => 'الدليل';
+  String get tabsLabel => 'أقسام الدليل';
 
   @override
   String get tabPeople => 'الأشخاص';

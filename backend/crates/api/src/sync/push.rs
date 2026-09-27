@@ -185,10 +185,8 @@ pub async fn push(
     ops: Vec<SyncOp>,
 ) -> Result<Vec<u8>, Problem> {
     if ops.len() > state.config.max_ops {
-        return Err(Problem::new(ProblemType::InvalidBody).with_detail(format!(
-            "at most {} ops per push",
-            state.config.max_ops
-        )));
+        return Err(Problem::new(ProblemType::InvalidBody)
+            .with_detail(format!("at most {} ops per push", state.config.max_ops)));
     }
     let lock = state.lock(ctx.scope.user_id());
     let _guard = lock.lock().await;
@@ -207,10 +205,9 @@ pub async fn push(
             let result = apply(ctx, &op, &mut submitted).await?;
             let bytes = crate::wire::encode(&result).map_err(|e| Problem::internal(&e))?;
             let mut tx = ctx.db.begin(ctx.scope).await.map_err(|e| index(&e))?;
-            let rec =
-                log::idempotency_put(&mut tx, op_id, ctx.device, &bytes, ctx.clock.now())
-                    .await
-                    .map_err(|e| index(&e))?;
+            let rec = log::idempotency_put(&mut tx, op_id, ctx.device, &bytes, ctx.clock.now())
+                .await
+                .map_err(|e| index(&e))?;
             tx.commit().await.map_err(|e| index(&e))?;
             rec.result
         };
@@ -322,10 +319,7 @@ async fn apply(
         }
         Op::RelationRetype(p) => {
             let (src, dst) = (NoteId::from_ulid(p.src_id), NoteId::from_ulid(p.dst_id));
-            match v
-                .retype_relation(s, src, dst, p.relation, p.new_type)
-                .await
-            {
+            match v.retype_relation(s, src, dst, p.relation, p.new_type).await {
                 Ok(()) => applied(current_version(ctx, src).await, false),
                 Err(VaultError::NotFound) if live(ctx, src).await && live(ctx, dst).await => {
                     server_kept(
@@ -337,7 +331,10 @@ async fn apply(
             }
         }
         Op::SuggestionAccept(p) => {
-            if p.edits.as_ref().is_some_and(|e| *e != sm_ops::SuggestionEdits::default()) {
+            if p.edits
+                .as_ref()
+                .is_some_and(|e| *e != sm_ops::SuggestionEdits::default())
+            {
                 rejected_kind(
                     ProblemType::InvalidBody,
                     "edits are not supported for this suggestion kind",
@@ -400,16 +397,22 @@ async fn apply(
             if let Some(e) = p.expires {
                 fields.insert("expires".to_owned(), e.format("%Y-%m-%d").to_string());
             }
-            let (Some(copy_of), Some(companies), Some(people)) =
-                (relation("copy-of"), relation("companies"), relation("people"))
-            else {
+            let (Some(copy_of), Some(companies), Some(people)) = (
+                relation("copy-of"),
+                relation("companies"),
+                relation("people"),
+            ) else {
                 return Err(Problem::new(ProblemType::Internal));
             };
             let mut links: Vec<(RelationKey, NoteId)> = Vec::new();
             if let Some(c) = p.copy_of {
                 links.push((copy_of, NoteId::from_ulid(c)));
             }
-            links.extend(p.companies.iter().map(|c| (companies, NoteId::from_ulid(*c))));
+            links.extend(
+                p.companies
+                    .iter()
+                    .map(|c| (companies, NoteId::from_ulid(*c))),
+            );
             links.extend(p.people.iter().map(|c| (people, NoteId::from_ulid(*c))));
             let req = NewEntity {
                 kind: NoteKind::Document,
@@ -529,7 +532,11 @@ async fn task_version(ctx: &PushContext<'_>, id: &str) -> Option<String> {
         .map(|(_, v, _)| v)
 }
 
-async fn note_create(ctx: &PushContext<'_>, p: &sm_ops::NoteCreate, submitted: &mut Submitted) -> OpResult {
+async fn note_create(
+    ctx: &PushContext<'_>,
+    p: &sm_ops::NoteCreate,
+    submitted: &mut Submitted,
+) -> OpResult {
     let id = NoteId::from_ulid(p.id);
     let mut path = p.path.clone();
     // A path taken meanwhile gets a free name next to it: the device's note is never lost.
@@ -542,10 +549,10 @@ async fn note_create(ctx: &PushContext<'_>, p: &sm_ops::NoteCreate, submitted: &
         };
         match ctx.vault.create_note(ctx.scope, req).await {
             Ok(view) => {
-                submitted
-                    .entry(id)
-                    .or_default()
-                    .push((Version::of_text(&p.content).as_str().to_owned(), p.content.clone()));
+                submitted.entry(id).or_default().push((
+                    Version::of_text(&p.content).as_str().to_owned(),
+                    p.content.clone(),
+                ));
                 return applied(Some(view.version), false);
             }
             Err(VaultError::PathTaken) => {
@@ -598,7 +605,10 @@ async fn note_update(
             }
         }
         let Ok(base_version) = base.parse::<Version>() else {
-            return Ok(rejected_kind(ProblemType::InvalidBody, "invalid base_version"));
+            return Ok(rejected_kind(
+                ProblemType::InvalidBody,
+                "invalid base_version",
+            ));
         };
         let from_push = submitted
             .get(&id)
@@ -611,7 +621,12 @@ async fn note_update(
                 .await
                 .map_err(|e| problem(&e))?,
         };
-        match decide_update(&base_version, base_text.as_deref(), &current.content, content) {
+        match decide_update(
+            &base_version,
+            base_text.as_deref(),
+            &current.content,
+            content,
+        ) {
             UpdateDecision::AlreadyApplied => {
                 return Ok(applied(Some(current.version), false));
             }
@@ -841,7 +856,10 @@ async fn patch(
             Err(e) => return from_vault(&e),
         }
     }
-    server_kept(current_version(ctx, id).await, "the entity kept changing on the server; retry")
+    server_kept(
+        current_version(ctx, id).await,
+        "the entity kept changing on the server; retry",
+    )
 }
 
 fn task_id(op: &Op) -> &str {
@@ -864,8 +882,9 @@ fn already_in_effect(op: &Op, line: &str) -> bool {
         Op::TaskComplete(_) => status == domain::TaskStatus::Done,
         Op::TaskCancel(_) => status == domain::TaskStatus::Cancelled,
         Op::TaskReopen(_) => status == domain::TaskStatus::Open,
-        Op::TaskUpdate(_) => sync_model::apply::apply_task_op(line, op)
-            .is_ok_and(|after| after == line),
+        Op::TaskUpdate(_) => {
+            sync_model::apply::apply_task_op(line, op).is_ok_and(|after| after == line)
+        }
         _ => false,
     }
 }
@@ -953,9 +972,13 @@ async fn device_settings(
     }
     tx.commit().await.map_err(|e| index(&e))?;
     if p.reminders_enabled.is_some() {
-        publish(ctx.bus, ctx.scope.user_id(), Event::DeviceSettingsChanged {
-            device_id: p.device_id,
-        });
+        publish(
+            ctx.bus,
+            ctx.scope.user_id(),
+            Event::DeviceSettingsChanged {
+                device_id: p.device_id,
+            },
+        );
     }
     Ok(applied(None, false))
 }

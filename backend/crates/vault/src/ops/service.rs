@@ -187,7 +187,11 @@ impl VaultService {
     }
 
     /// The task line of `id`: (note, line version, line), read on the writer.
-    pub async fn task_line(&self, scope: &UserScope, id: String) -> Result<(NoteId, String, String)> {
+    pub async fn task_line(
+        &self,
+        scope: &UserScope,
+        id: String,
+    ) -> Result<(NoteId, String, String)> {
         self.exec(scope, move |core, s| {
             Box::pin(async move { core.task_line(&s, &id).await })
         })

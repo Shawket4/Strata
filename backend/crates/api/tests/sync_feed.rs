@@ -67,7 +67,11 @@ async fn bootstrap_pages_are_stable_under_concurrent_writes() {
         push_ok(
             &h,
             &alice,
-            vec![op(n, None, create(n, &format!("notes/N{n}.md"), &format!("note {n}\n")))],
+            vec![op(
+                n,
+                None,
+                create(n, &format!("notes/N{n}.md"), &format!("note {n}\n")),
+            )],
         )
         .await;
     }
@@ -161,7 +165,11 @@ async fn bootstrap_pages_are_stable_under_concurrent_writes() {
             .await
             .expect("page");
         assert_eq!((page.epoch, page.seq), (1, seq));
-        keys.extend(page.records.iter().map(|r| (r.entity_type(), r.entity_id())));
+        keys.extend(
+            page.records
+                .iter()
+                .map(|r| (r.entity_type(), r.entity_id())),
+        );
         device.apply_page(&page);
         cursor = page.next_cursor;
         pages += 1;
@@ -171,7 +179,10 @@ async fn bootstrap_pages_are_stable_under_concurrent_writes() {
     let unique: BTreeSet<_> = keys.iter().cloned().collect();
     assert_eq!(unique.len(), keys.len(), "{keys:?}");
     for n in 1..=5 {
-        assert!(unique.contains(&(EntityType::Note, id(n).to_string())), "N{n}");
+        assert!(
+            unique.contains(&(EntityType::Note, id(n).to_string())),
+            "N{n}"
+        );
     }
     // The later pages show the current state of what they cover.
     assert_eq!(
@@ -251,7 +262,11 @@ async fn changes_since_a_seq_are_exact_records_with_tombstones() {
         &h,
         &alice,
         vec![
-            op(6, Some(version(&b)), Op::NoteDelete(o::NoteRef { id: id(2) })),
+            op(
+                6,
+                Some(version(&b)),
+                Op::NoteDelete(o::NoteRef { id: id(2) }),
+            ),
             op(
                 7,
                 None,
@@ -317,10 +332,7 @@ async fn changes_since_a_seq_are_exact_records_with_tombstones() {
         }
     );
     // Nothing new: an empty page at the same position.
-    let empty = h
-        .changes_page(&alice, s + 8, 1, None)
-        .await
-        .expect("empty");
+    let empty = h.changes_page(&alice, s + 8, 1, None).await.expect("empty");
     assert_eq!(
         empty,
         ChangesPage {
@@ -347,18 +359,19 @@ async fn changes_since_a_seq_are_exact_records_with_tombstones() {
 async fn an_epoch_change_answers_410_and_a_new_bootstrap_starts_over() {
     let h = H::new().await;
     let alice = h.user("alice").await;
-    push_ok(&h, &alice, vec![op(1, None, create(1, "notes/A.md", "a\n"))]).await;
-    let first = h
-        .bootstrap_page(&alice, None, Some(1))
-        .await
-        .expect("page");
+    push_ok(
+        &h,
+        &alice,
+        vec![op(1, None, create(1, "notes/A.md", "a\n"))],
+    )
+    .await;
+    let first = h.bootstrap_page(&alice, None, Some(1)).await.expect("page");
     let cursor = first.next_cursor.clone().expect("more pages");
-    let mut tx = h
-        .db
-        .app_db
-        .begin(&h.db.issuer.issue(alice.id))
-        .await
-        .expect("tx");
+    let mut tx =
+        h.db.app_db
+            .begin(&h.db.issuer.issue(alice.id))
+            .await
+            .expect("tx");
     let pos = strata_index::repo::sync::bump_epoch(&mut tx, strata_testkit::default_test_epoch())
         .await
         .expect("bump");
@@ -421,11 +434,20 @@ async fn feeds_never_include_another_users_data() {
         ],
     )
     .await;
-    push_ok(&h, &bob, vec![op(1, None, create(9, "notes/Same title.md", "bob\n"))]).await;
+    push_ok(
+        &h,
+        &bob,
+        vec![op(1, None, create(9, "notes/Same title.md", "bob\n"))],
+    )
+    .await;
     let mut bob_device = bob_start.clone();
     h.pull(&bob, &mut bob_device).await;
     assert_eq!(
-        bob_device.notes().values().map(|n| n.id).collect::<Vec<_>>(),
+        bob_device
+            .notes()
+            .values()
+            .map(|n| n.id)
+            .collect::<Vec<_>>(),
         vec![id(9)]
     );
     let bob_fresh = h.bootstrap(&bob, None).await;
@@ -437,7 +459,10 @@ async fn feeds_never_include_another_users_data() {
     }
     // Bob's feed positions are his own.
     assert_eq!(
-        (bob_start.cursor.expect("c").seq, bob_device.cursor.expect("c").seq),
+        (
+            bob_start.cursor.expect("c").seq,
+            bob_device.cursor.expect("c").seq
+        ),
         (0, 1)
     );
     h.finish().await;

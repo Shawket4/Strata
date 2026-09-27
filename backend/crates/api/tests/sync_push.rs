@@ -81,9 +81,17 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
 
     // note.create: the server stamps id/created/updated; the result is the stored version.
     let before = commits(&h);
-    let r = one(&h, &alice, op(1, None, create(1, "notes/A.md", "# A\n\nline one\n"))).await;
+    let r = one(
+        &h,
+        &alice,
+        op(1, None, create(1, "notes/A.md", "# A\n\nline one\n")),
+    )
+    .await;
     let a = h.read(uid, "notes/A.md");
-    assert_eq!(a, format!("{}# A\n\nline one\n", header(&id(1).to_string())));
+    assert_eq!(
+        a,
+        format!("{}# A\n\nline one\n", header(&id(1).to_string()))
+    );
     assert_eq!(r, applied(&a));
     assert_eq!(commits(&h), before + 1);
     assert_eq!(h.log(uid)[0], "user: create notes/A.md");
@@ -175,7 +183,10 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     )
     .await;
     let a3 = h.read(uid, "notes/A.md");
-    assert!(a3.contains("supports: [\"[[B]]\"]\n") && !a3.contains("related:"), "{a3}");
+    assert!(
+        a3.contains("supports: [\"[[B]]\"]\n") && !a3.contains("related:"),
+        "{a3}"
+    );
     assert_eq!(r, applied(&a3));
     let r = one(
         &h,
@@ -230,7 +241,10 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     .await;
     let sam = h.read(uid, "people/Sam Hany.md");
     assert_eq!(r, applied(&sam));
-    assert!(sam.contains("kind: person\n") && sam.contains("role: Accountant\n"), "{sam}");
+    assert!(
+        sam.contains("kind: person\n") && sam.contains("role: Accountant\n"),
+        "{sam}"
+    );
     let r = one(
         &h,
         &alice,
@@ -252,7 +266,10 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
         sam2.contains("phone: \"0100\"\n") || sam2.contains("phone: '0100'\n"),
         "{sam2}"
     );
-    assert!(!sam2.contains("role:") && sam2.contains("Sammy H"), "{sam2}");
+    assert!(
+        !sam2.contains("role:") && sam2.contains("Sammy H"),
+        "{sam2}"
+    );
     assert_eq!(r, applied(&sam2));
     let r = one(
         &h,
@@ -388,7 +405,10 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     )
     .await;
     let lease3 = h.read(uid, "documents/Lease contract.md");
-    assert!(lease3.contains("location: \"[[Office safe]]\"\n"), "{lease3}");
+    assert!(
+        lease3.contains("location: \"[[Office safe]]\"\n"),
+        "{lease3}"
+    );
     assert!(lease3.contains("## Custody\n"), "{lease3}");
     assert_eq!(r, applied(&lease3));
     assert_eq!(h.log(uid)[0], "user: custody documents/Lease contract.md");
@@ -432,7 +452,10 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     )
     .await;
     let line1 = format!("- [ ] Renew the lease 📅 2026-10-05 ^{tid}");
-    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line1}\n")));
+    assert!(
+        h.read(uid, "tasks/Tasks.md")
+            .contains(&format!("{line1}\n"))
+    );
     assert_eq!(r, applied(&line1));
     let r = one(
         &h,
@@ -450,7 +473,10 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     )
     .await;
     let line2 = format!("- [ ] Renew the office lease ^{tid}");
-    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line2}\n")));
+    assert!(
+        h.read(uid, "tasks/Tasks.md")
+            .contains(&format!("{line2}\n"))
+    );
     assert_eq!(r, applied(&line2));
     let r = one(
         &h,
@@ -467,16 +493,26 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     )
     .await;
     let line3 = format!("- [x] Renew the office lease ✅ 2026-09-25 ^{tid}");
-    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line3}\n")));
+    assert!(
+        h.read(uid, "tasks/Tasks.md")
+            .contains(&format!("{line3}\n"))
+    );
     assert_eq!(r, applied(&line3));
     assert_eq!(h.log(uid)[0], "user: task complete tasks/Tasks.md");
     let r = one(
         &h,
         &alice,
-        op(22, Some(version(&line3)), Op::TaskReopen(o::TaskRef { id: tid.clone() })),
+        op(
+            22,
+            Some(version(&line3)),
+            Op::TaskReopen(o::TaskRef { id: tid.clone() }),
+        ),
     )
     .await;
-    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line2}\n")));
+    assert!(
+        h.read(uid, "tasks/Tasks.md")
+            .contains(&format!("{line2}\n"))
+    );
     assert_eq!(r, applied(&line2));
     let r = one(
         &h,
@@ -492,12 +528,19 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     )
     .await;
     let line4 = format!("- [-] Renew the office lease ❌ 2026-09-26 ^{tid}");
-    assert!(h.read(uid, "tasks/Tasks.md").contains(&format!("{line4}\n")));
+    assert!(
+        h.read(uid, "tasks/Tasks.md")
+            .contains(&format!("{line4}\n"))
+    );
     assert_eq!(r, applied(&line4));
     let r = one(
         &h,
         &alice,
-        op(24, Some(version(&line4)), Op::TaskDelete(o::TaskRef { id: tid.clone() })),
+        op(
+            24,
+            Some(version(&line4)),
+            Op::TaskDelete(o::TaskRef { id: tid.clone() }),
+        ),
     )
     .await;
     assert!(!h.read(uid, "tasks/Tasks.md").contains(&tid));
@@ -524,7 +567,11 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     let r = one(
         &h,
         &alice,
-        op(26, Some(version(&b2)), Op::NoteDelete(o::NoteRef { id: id(2) })),
+        op(
+            26,
+            Some(version(&b2)),
+            Op::NoteDelete(o::NoteRef { id: id(2) }),
+        ),
     )
     .await;
     assert_eq!(r, applied_none());
@@ -533,17 +580,30 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     let r = one(
         &h,
         &alice,
-        op(27, Some(version(&b2)), Op::NoteDelete(o::NoteRef { id: id(2) })),
+        op(
+            27,
+            Some(version(&b2)),
+            Op::NoteDelete(o::NoteRef { id: id(2) }),
+        ),
     )
     .await;
     assert_eq!(r, applied_none());
 
     // relink.request queues a job (no commit).
     let before = commits(&h);
-    let r = one(&h, &alice, op(28, None, Op::RelinkRequest(o::NoteRef { id: id(1) }))).await;
+    let r = one(
+        &h,
+        &alice,
+        op(28, None, Op::RelinkRequest(o::NoteRef { id: id(1) })),
+    )
+    .await;
     assert_eq!(r, applied_none());
     assert_eq!(commits(&h), before);
-    let mut tx = h.db.app_db.begin(&h.db.issuer.issue(uid)).await.expect("tx");
+    let mut tx =
+        h.db.app_db
+            .begin(&h.db.issuer.issue(uid))
+            .await
+            .expect("tx");
     let queued: Vec<(String, uuid::Uuid)> =
         sqlx::query_as("SELECT kind, note_id FROM jobs WHERE kind = 'link'")
             .fetch_all(tx.conn())
@@ -607,7 +667,14 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     let r = one(
         &h,
         &alice,
-        op(33, None, Op::SuggestionAccept(o::SuggestionAccept { id: ids[0], edits: None })),
+        op(
+            33,
+            None,
+            Op::SuggestionAccept(o::SuggestionAccept {
+                id: ids[0],
+                edits: None,
+            }),
+        ),
     )
     .await;
     assert_eq!(r, applied_none());
@@ -629,7 +696,14 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     let r = one(
         &h,
         &alice,
-        op(35, None, Op::SuggestionAccept(o::SuggestionAccept { id: ids[1], edits: None })),
+        op(
+            35,
+            None,
+            Op::SuggestionAccept(o::SuggestionAccept {
+                id: ids[1],
+                edits: None,
+            }),
+        ),
     )
     .await;
     assert_eq!(
@@ -694,7 +768,9 @@ async fn stale_updates_merge_cleanly_or_become_conflict_copies() {
         ),
     )
     .await;
-    let merged = v1.replace("alpha\n", "ALPHA\n").replace("gamma\n", "GAMMA\n");
+    let merged = v1
+        .replace("alpha\n", "ALPHA\n")
+        .replace("gamma\n", "GAMMA\n");
     assert_eq!(h.read(uid, "notes/Plan.md"), merged);
     assert_eq!(
         r,
@@ -746,7 +822,10 @@ async fn stale_updates_merge_cleanly_or_become_conflict_copies() {
         .expect("suggestions");
     assert_eq!(pending.items.len(), 1);
     let s = &pending.items[0];
-    assert_eq!((s.id, s.kind.as_str(), s.note_id), (op_id(4), "conflict", Some(id(1))));
+    assert_eq!(
+        (s.id, s.kind.as_str(), s.note_id),
+        (op_id(4), "conflict", Some(id(1)))
+    );
     let payload: strata_api::sync::push::ConflictPayload = match &s.payload {
         types::SuggestionPayload::Opaque { data } => {
             rmp_serde::from_slice(data).expect("conflict payload")
@@ -790,7 +869,11 @@ async fn duplicate_creates_answer_candidates_then_a_forced_retry_creates_and_kee
     one(
         &h,
         &alice,
-        op(1, None, create(1, "notes/ETA invoice for Watanya.md", "Monthly invoice\n")),
+        op(
+            1,
+            None,
+            create(1, "notes/ETA invoice for Watanya.md", "Monthly invoice\n"),
+        ),
     )
     .await;
     let dup = create(2, "notes/ETA invoice for Watanya.md", "Monthly invoice\n");
@@ -807,7 +890,12 @@ async fn duplicate_creates_answer_candidates_then_a_forced_retry_creates_and_kee
     let c = &candidates[0];
     assert_eq!(
         (c.id.as_str(), c.kind, c.title.as_str(), c.level),
-        (id(1).to_string().as_str(), DedupeKind::Note, "ETA invoice for Watanya", MatchLevel::Exact)
+        (
+            id(1).to_string().as_str(),
+            DedupeKind::Note,
+            "ETA invoice for Watanya",
+            MatchLevel::Exact
+        )
     );
     assert_eq!(c.score, 1.0);
     assert_eq!(h.log(uid).len(), commits, "nothing written");
@@ -822,7 +910,10 @@ async fn duplicate_creates_answer_candidates_then_a_forced_retry_creates_and_kee
     // The pair is never flagged again.
     let again = create(4, "notes/Invoice ETA Watanya.md", "Monthly invoice\n");
     let r = one(&h, &alice, op(4, None, again)).await;
-    assert!(matches!(r, OpResult::Duplicate { .. }), "a third note is still checked: {r:?}");
+    assert!(
+        matches!(r, OpResult::Duplicate { .. }),
+        "a third note is still checked: {r:?}"
+    );
     h.finish().await;
 }
 
@@ -880,7 +971,11 @@ async fn a_replayed_op_returns_the_stored_bytes_and_is_not_applied_again() {
     assert_eq!(h.log(uid)[0], "user: create notes/C.md");
     assert_eq!(h.log(uid)[1], "user: update notes/A.md");
     // Stored as MessagePack under the op ID.
-    let mut tx = h.db.app_db.begin(&h.db.issuer.issue(uid)).await.expect("tx");
+    let mut tx =
+        h.db.app_db
+            .begin(&h.db.issuer.issue(uid))
+            .await
+            .expect("tx");
     let stored = strata_index::repo::sync::idempotency_get(
         &mut tx,
         strata_common::OpId::from_ulid(op_id(4)),
@@ -889,8 +984,15 @@ async fn a_replayed_op_returns_the_stored_bytes_and_is_not_applied_again() {
     .expect("get")
     .expect("stored");
     tx.commit().await.expect("commit");
-    assert_eq!(stored.result, rmp_serde::to_vec_named(&res.results[0].result).expect("enc"));
-    assert!(bytes.windows(stored.result.len()).any(|w| w == stored.result.as_slice()));
+    assert_eq!(
+        stored.result,
+        rmp_serde::to_vec_named(&res.results[0].result).expect("enc")
+    );
+    assert!(
+        bytes
+            .windows(stored.result.len())
+            .any(|w| w == stored.result.as_slice())
+    );
     h.finish().await;
 }
 
@@ -1002,7 +1104,10 @@ async fn invalid_envelopes_are_rejected_per_op() {
         },
     };
     assert_eq!(
-        res.results.into_iter().map(|r| r.result).collect::<Vec<_>>(),
+        res.results
+            .into_iter()
+            .map(|r| r.result)
+            .collect::<Vec<_>>(),
         vec![
             invalid(&format!(
                 "entity_id \"something-else\" does not match the payload (\"{}\")",
@@ -1019,7 +1124,12 @@ async fn another_users_ids_are_rejected_as_not_found_and_never_applied() {
     let h = H::new().await;
     let alice = h.user("alice").await;
     let bob = h.user("bob").await;
-    one(&h, &alice, op(1, None, create(1, "notes/Secret.md", "alice's\n"))).await;
+    one(
+        &h,
+        &alice,
+        op(1, None, create(1, "notes/Secret.md", "alice's\n")),
+    )
+    .await;
     let secret = h.read(alice.id, "notes/Secret.md");
     one(
         &h,
@@ -1059,7 +1169,11 @@ async fn another_users_ids_are_rejected_as_not_found_and_never_applied() {
                 new_path: "notes/Moved.md".into(),
             }),
         ),
-        op(12, Some(version(&secret)), Op::NoteDelete(o::NoteRef { id: id(1) })),
+        op(
+            12,
+            Some(version(&secret)),
+            Op::NoteDelete(o::NoteRef { id: id(1) }),
+        ),
         op(
             13,
             None,
@@ -1177,7 +1291,8 @@ async fn task_edits_use_the_devices_dates_and_ids_and_conflict_per_line() {
         ),
     )
     .await;
-    let done = format!("- [x] Pay rent 🔁 every month on the 1st 📅 2026-10-01 ✅ 2026-09-30 ^{tid}");
+    let done =
+        format!("- [x] Pay rent 🔁 every month on the 1st 📅 2026-10-01 ✅ 2026-09-30 ^{tid}");
     let upcoming = format!("- [ ] Pay rent 🔁 every month on the 1st 📅 2026-11-01 ^{next}");
     assert!(
         h.read(uid, "tasks/Tasks.md")

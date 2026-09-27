@@ -24,7 +24,11 @@ enum Action {
     /// Create a note.
     Create { dev: usize },
     /// Replace line `line` of a note (picked by `pick`) with a marker.
-    Edit { dev: usize, pick: usize, line: usize },
+    Edit {
+        dev: usize,
+        pick: usize,
+        line: usize,
+    },
     /// Append a marker line to a note.
     Append { dev: usize, pick: usize },
     /// Delete a note.
@@ -118,9 +122,10 @@ impl Dev {
         };
         let base = server.version.clone();
         self.local.insert(id, (base.clone(), text.clone()));
-        let existing = self.outbox.iter_mut().find(
-            |op| matches!(&op.op, Op::NoteUpdate(p) if p.id == id),
-        );
+        let existing = self
+            .outbox
+            .iter_mut()
+            .find(|op| matches!(&op.op, Op::NoteUpdate(p) if p.id == id));
         match existing {
             Some(op) => {
                 if let Op::NoteUpdate(p) = &mut op.op {
@@ -202,20 +207,17 @@ async fn run(actions: Vec<Action>) {
                     }),
                 ));
             }
-            Action::Edit { dev, pick, line } | Action::Append { dev, pick, line: _ }
+            Action::Edit { dev, pick, .. } | Action::Append { dev, pick }
                 if !devs[*dev].notes().is_empty() =>
             {
                 let d = &mut devs[*dev];
                 let notes = d.notes();
                 let (id, text) = notes[pick % notes.len()].clone();
                 let mut lines: Vec<String> = text.lines().map(str::to_owned).collect();
-                let body_start = lines
-                    .iter()
-                    .rposition(|l| l == "---")
-                    .map_or(0, |i| i + 1);
+                let body_start = lines.iter().rposition(|l| l == "---").map_or(0, |i| i + 1);
                 let m = marker(*dev, n);
                 match action {
-                    Action::Edit { .. } if lines.len() > body_start => {
+                    Action::Edit { line, .. } if lines.len() > body_start => {
                         let span = lines.len() - body_start;
                         lines[body_start + line % span] = m;
                     }
@@ -303,7 +305,12 @@ async fn run(actions: Vec<Action>) {
         match result {
             OpResult::Applied { .. } => {}
             OpResult::Conflict {
-                resolution: ConflictResolution::ConflictCopy { note_id, path, version },
+                resolution:
+                    ConflictResolution::ConflictCopy {
+                        note_id,
+                        path,
+                        version,
+                    },
                 ..
             } => {
                 let Op::NoteUpdate(p) = &op.op else {
@@ -313,9 +320,12 @@ async fn run(actions: Vec<Action>) {
                     fresh.records.get(&(EntityType::Note, note_id.to_string()))
                 else {
                     // A device deleted the copy later.
-                    assert!(world.ops_seen.iter().any(
-                        |(o, _)| matches!(&o.op, Op::NoteDelete(d) if d.id == *note_id)
-                    ));
+                    assert!(
+                        world
+                            .ops_seen
+                            .iter()
+                            .any(|(o, _)| matches!(&o.op, Op::NoteDelete(d) if d.id == *note_id))
+                    );
                     continue;
                 };
                 assert_eq!((&copy.path, &copy.version), (path, version));

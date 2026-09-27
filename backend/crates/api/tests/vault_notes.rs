@@ -475,7 +475,7 @@ async fn keyword_search_normalises_arabic_and_semantic_needs_ai() {
                 "AI unavailable",
                 503,
                 Some(
-                    "semantic and hybrid search need the AI subsystem, which is not available yet; use mode=keyword",
+                    "semantic and hybrid search need an embedding model, which is not configured; use mode=keyword",
                 ),
             ),
         );

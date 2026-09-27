@@ -127,6 +127,7 @@ class InboxScreen extends HookConsumerWidget {
               onOpenNote: onOpenNote,
               child: bulk
                   ? Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         SizedBox(width: 400, child: list),
                         VerticalDivider(

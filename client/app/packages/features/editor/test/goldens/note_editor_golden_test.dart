@@ -34,7 +34,11 @@ void main() {
             builder: () => goldenFrame(
               v,
               fakeWith(fixture),
-              const NoteEditorScreen(noteId: EditorFixtures.noteId),
+              NoteEditorScreen(
+                noteId: EditorFixtures.noteId,
+                onOpenConflict: (_) {},
+                onOpenLink: (_) {},
+              ),
             ),
           ),
         );

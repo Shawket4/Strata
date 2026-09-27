@@ -64,21 +64,21 @@ abstract final class DirFixtures {
   );
 
   /// Ahmed Samir with unsynced changes (offline edits).
-  static final EntityScreen ahmedPending = EntityScreen(
+  static const EntityScreen ahmedPending = EntityScreen(
     id: 'p-ahmed-samir',
     kind: EntityPageKind.entity,
     entity: EntityView(
       id: 'p-ahmed-samir',
       kind: 'person',
       title: 'Ahmed Samir',
-      aliases: const [],
-      properties: const [],
-      insights: const [],
-      openItems: const [],
-      timeline: const [],
-      mentions: const [],
-      related: const [],
-      documents: const [StrataFixtures.documentBrief],
+      aliases: [],
+      properties: [],
+      insights: [],
+      openItems: [],
+      timeline: [],
+      mentions: [],
+      related: [],
+      documents: [StrataFixtures.documentBrief],
       pendingSync: true,
     ),
   );

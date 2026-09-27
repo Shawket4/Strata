@@ -124,9 +124,7 @@ impl BootstrapCursor {
 
     /// Parses a cursor from `GET /sync/bootstrap?cursor=`.
     pub fn decode(s: &str) -> Result<Self, Problem> {
-        let bytes = URL_SAFE_NO_PAD
-            .decode(s)
-            .map_err(|_| invalid_cursor())?;
+        let bytes = URL_SAFE_NO_PAD.decode(s).map_err(|_| invalid_cursor())?;
         rmp_serde::from_slice(&bytes).map_err(|_| invalid_cursor())
     }
 }
@@ -137,7 +135,6 @@ fn invalid_cursor() -> Problem {
 
 /// `410 epoch_changed`.
 pub fn epoch_changed(current: i32) -> Problem {
-    Problem::new(ProblemType::EpochChanged).with_detail(format!(
-        "the sync epoch is now {current}: bootstrap again"
-    ))
+    Problem::new(ProblemType::EpochChanged)
+        .with_detail(format!("the sync epoch is now {current}: bootstrap again"))
 }

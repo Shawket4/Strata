@@ -327,35 +327,21 @@ class UserStatus extends StatelessWidget {
     final l10n = context.adminL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final deletionAt = user.deletionAt;
     final downloaded = user.exportDownloadedAt;
-    final label = switch (user.status) {
-      'active' => l10n.statusActive,
-      'disabled' => l10n.statusDisabled,
-      'pending' => l10n.statusPending,
-      'rejected' => l10n.statusRejected,
-      'deletion_pending' =>
-        deletionAt == null
-            ? l10n.statusDeletionNoDate
-            : l10n.statusDeletion(date: _date(context, deletionAt)),
-      final other => l10n.statusOther(status: other),
-    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        StatusPill(
-          label: label,
-          tone: statusTone(user.status),
-          icon: statusIcon(user.status),
-        ),
-        if (user.status == 'deletion_pending')
+        _StatusPill(user: user),
+        if (user.status == 'deletion_pending') ...[
+          const SizedBox(height: StrataSpacing.s1),
           Text(
             downloaded == null
                 ? l10n.exportNotDownloaded
                 : l10n.exportDownloaded(date: _date(context, downloaded)),
             style: text.caption.copyWith(color: colors.text2),
           ),
+        ],
       ],
     );
   }
@@ -432,16 +418,9 @@ class UserTile extends StatelessWidget {
     final l10n = context.adminL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      minTileHeight: 64,
-      leading: const _Avatar(),
-      title: Text(user.displayName, style: text.bodyStrong),
-      subtitle: Text(
-        l10n.userSubtitle(username: user.username, role: l10n.role(user.role)),
-        style: text.caption.copyWith(color: colors.text2),
-      ),
-      trailing: UserStatus(user: user),
+    final deletion = user.status == 'deletion_pending';
+    final downloaded = user.exportDownloadedAt;
+    return InkWell(
       onTap: () => showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
@@ -459,7 +438,6 @@ class UserTile extends StatelessWidget {
               children: [
                 Semantics(
                   header: true,
-                  container: true,
                   child: Text(
                     l10n.userActions(name: user.displayName),
                     style: text.titleSmall,
@@ -477,6 +455,69 @@ class UserTile extends StatelessWidget {
           ),
         ),
       ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 64),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s2),
+          child: Row(
+            children: [
+              const _Avatar(),
+              const SizedBox(width: StrataSpacing.s3),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user.displayName, style: text.bodyStrong),
+                    Text(
+                      deletion
+                          ? (downloaded == null
+                                ? l10n.exportNotDownloaded
+                                : l10n.exportDownloaded(
+                                    date: _date(context, downloaded),
+                                  ))
+                          : l10n.userSubtitle(
+                              username: user.username,
+                              role: l10n.role(user.role),
+                            ),
+                      style: text.caption.copyWith(color: colors.text2),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: StrataSpacing.s2),
+              Flexible(child: _StatusPill(user: user)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const new({required this.user});
+
+  final AdminUserItem user;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.adminL10n;
+    final deletionAt = user.deletionAt;
+    final label = switch (user.status) {
+      'active' => l10n.statusActive,
+      'disabled' => l10n.statusDisabled,
+      'pending' => l10n.statusPending,
+      'rejected' => l10n.statusRejected,
+      'deletion_pending' =>
+        deletionAt == null
+            ? l10n.statusDeletionNoDate
+            : l10n.statusDeletion(date: _date(context, deletionAt)),
+      final other => l10n.statusOther(status: other),
+    };
+    return StatusPill(
+      label: label,
+      tone: statusTone(user.status),
+      icon: statusIcon(user.status),
     );
   }
 }

@@ -7,11 +7,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_editor/strata_editor.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
+import 'package:strata_ui/strata_ui.dart';
 import 'package:super_editor/super_editor.dart';
+import 'package:super_editor/super_editor_test.dart';
 
 import '../support/editor_fixtures.dart';
 
@@ -270,5 +273,66 @@ void main() {
     // The new line uses the note's first terminator; `\n` after "two" and
     // `\r\n` after "three" are untouched.
     expect(controller.content, 'one\r\nt\r\nwo\nthree\r\nfour');
+  });
+
+  group('typing through the mounted editor saves exact bytes', () {
+    // File and the body line typed into.
+    for (final (name, index) in [
+      ('vf_mixed_arabic_crlf.md', 3),
+      ('tasks_every_form.md', 14),
+      ('arabic_mixed.md', 2),
+      ('arabic_mixed.md', 13),
+      ('edge_whitespace.md', 4),
+    ]) {
+      testWidgets('$name line $index', (tester) async {
+        final note = corpus.firstWhere((n) => n.name == name);
+        final fake = FakeCoreApi()..editorHintsAnswer.returns(const []);
+        fake.note[EditorFixtures.noteId].add(
+          NoteScreen(id: EditorFixtures.noteId, note: noteOf(note)),
+        );
+        await pumpStrataScreen(
+          tester,
+          const NoteEditorScreen(noteId: EditorFixtures.noteId),
+          fake: fake,
+          sizeClass: SizeClass.expanded,
+        );
+        await tester.pump();
+        final editor = tester
+            .widget<SuperEditor>(find.byType(SuperEditor))
+            .editor;
+        final document = editor.document;
+        final node = document.getNodeAt(index)! as TextNode;
+        final offset = node.text.length ~/ 2;
+        // Focus the editor by tapping, then put the caret at the exact offset
+        // (a tap at a bidi run boundary is visually ambiguous).
+        await tester.placeCaretInParagraph(document.last.id, 0);
+        editor.execute([
+          ChangeSelectionRequest(
+            DocumentSelection.collapsed(position: at(node.id, offset)),
+            SelectionChangeType.placeCaret,
+            SelectionReason.userInteraction,
+          ),
+        ]);
+        await tester.pump();
+        await tester.typeImeText(' نص typed ');
+        await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+        await tester.pump();
+        final start = note.lineStarts[index] + offset;
+        final expected =
+            '${note.content.substring(0, start)} نص typed '
+            '${note.content.substring(start)}';
+        final saves = fake.calls.where((c) => c.method == 'updateNote');
+        expect(saves, [
+          CoreCall('updateNote', {
+            'id': EditorFixtures.noteId,
+            'content': expected,
+          }),
+        ]);
+        expect(
+          utf8.encode(saves.single.args['content']! as String),
+          utf8.encode(expected),
+        );
+      });
+    }
   });
 }

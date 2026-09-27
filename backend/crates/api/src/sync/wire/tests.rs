@@ -4,7 +4,9 @@ use std::collections::BTreeMap;
 
 use chrono::{NaiveDate, TimeZone, Utc};
 use dedupe::{DuplicateCandidate, KeepBoth};
-use domain::{CopyKind, CustodyEventType, DedupeKind, MatchLevel, NoteKind, Priority, RelationOrigin};
+use domain::{
+    CopyKind, CustodyEventType, DedupeKind, MatchLevel, NoteKind, Priority, RelationOrigin,
+};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use sync_model::changes::{
@@ -44,7 +46,11 @@ fn d(y: i32, m: u32, day: u32) -> NaiveDate {
 
 fn every_op() -> Vec<Op> {
     let rel = "related".parse().expect("relation");
-    let at = Utc.timestamp_opt(1_790_000_000, 0).single().expect("ts").fixed_offset();
+    let at = Utc
+        .timestamp_opt(1_790_000_000, 0)
+        .single()
+        .expect("ts")
+        .fixed_offset();
     let reminder = d(2026, 10, 1).and_hms_opt(9, 0, 0).expect("time");
     let patch = o::EntityPatch {
         id: u(9),
@@ -278,7 +284,11 @@ fn every_result_encodes_like_the_mirror() {
 }
 
 fn every_record() -> Vec<Record> {
-    let at = Utc.timestamp_opt(1_790_000_000, 0).single().expect("ts").fixed_offset();
+    let at = Utc
+        .timestamp_opt(1_790_000_000, 0)
+        .single()
+        .expect("ts")
+        .fixed_offset();
     let rel = "works-at".parse().expect("relation");
     vec![
         Record::Note(NoteRecord {
@@ -368,7 +378,12 @@ fn every_record_and_page_encodes_like_the_mirror() {
         .enumerate()
         .map(|(i, r)| ChangeRecord::upsert(i as u64 + 1, 2, r))
         .collect();
-    changes.push(ChangeRecord::delete(99, 2, EntityType::Relation, "a:related:b"));
+    changes.push(ChangeRecord::delete(
+        99,
+        2,
+        EntityType::Relation,
+        "a:related:b",
+    ));
     assert!(matches!(changes[changes.len() - 1].change, Change::Delete));
     same_bytes::<ChangesPage, SyncChangesPage>(&ChangesPage {
         epoch: 2,

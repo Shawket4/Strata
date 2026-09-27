@@ -13,7 +13,7 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
   String get directoryTitle => 'Directory';
 
   @override
-  String get tabsLabel => 'Directory';
+  String get tabsLabel => 'Directory sections';
 
   @override
   String get tabPeople => 'People';

@@ -467,7 +467,6 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
         let synced = Synced {
             changed: changed.into_iter().collect(),
             removed,
-            ..Synced::default()
         };
         core.log_changes(&mut tx, &synced).await?;
     }
@@ -483,7 +482,7 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
     )
     .unwrap_or(u32::MAX)
     .min(u32::try_from(warnings).unwrap_or(u32::MAX));
-    notice.op = "reconcile".to_owned();
+    "reconcile".clone_into(&mut notice.op);
     notice.user = Some(core.user);
     core.inner.notify(core.user, &notice);
     Ok(report)

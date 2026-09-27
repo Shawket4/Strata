@@ -177,11 +177,11 @@ mod tests {
     #[test]
     fn labels_come_from_commit_messages() {
         assert_eq!(op_label("user: create notes/A.md"), "create");
-        assert_eq!(op_label("user: task complete tasks/Tasks.md"), "task complete");
         assert_eq!(
-            op_label("user: merge people/A.md -> people/B.md"),
-            "merge"
+            op_label("user: task complete tasks/Tasks.md"),
+            "task complete"
         );
+        assert_eq!(op_label("user: merge people/A.md -> people/B.md"), "merge");
         assert_eq!(op_label("ai: link notes/a b.md"), "link");
         assert_eq!(op_label("system: recovered changes"), "recovered changes");
     }

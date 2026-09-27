@@ -67,16 +67,19 @@ void main() {
           builder: () => goldenFrame(
             v,
             _fake(),
-            const NotesScreen(
+            NotesScreen(
               folder: 'notes/sales',
               selectedNoteId: NotesFixtures.pricingId,
+              onOpenNote: (_) {},
+              onOpenLocalMap: (_) {},
+              onOpenConflict: (_) {},
             ),
           ),
         ),
       );
     }
 
-    final darkAr = MatrixVariant(
+    const darkAr = MatrixVariant(
       sizeName: 'expanded',
       size: StrataTestSizes.expanded,
       brightness: Brightness.dark,
@@ -90,15 +93,17 @@ void main() {
         builder: () => goldenFrame(
           darkAr,
           _fake(),
-          const NotesScreen(
+          NotesScreen(
             folder: 'notes/sales',
             selectedNoteId: NotesFixtures.arabicId,
+            onOpenNote: (_) {},
+            onOpenLocalMap: (_) {},
           ),
         ),
       ),
     );
 
-    final conflict = MatrixVariant(
+    const conflict = MatrixVariant(
       sizeName: 'expanded',
       size: StrataTestSizes.expanded,
       brightness: Brightness.light,
@@ -124,6 +129,7 @@ void main() {
             folder: 'notes/sales',
             selectedNoteId: NotesFixtures.pricingId,
             onOpenConflict: (_) {},
+            onOpenLocalMap: (_) {},
           ),
         ),
       ),

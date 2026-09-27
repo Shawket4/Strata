@@ -110,7 +110,7 @@ abstract class DirectoryLocalizations {
   /// Tab bar label.
   ///
   /// In en, this message translates to:
-  /// **'Directory'**
+  /// **'Directory sections'**
   String get tabsLabel;
 
   /// Tab.

@@ -151,7 +151,8 @@ impl VaultService {
                 .await?;
                 let replies = srepo::replies(&mut tx, id).await?;
                 tx.commit().await?;
-                core.inner.notify(core.user, &suggestion_notice(&decided, false));
+                core.inner
+                    .notify(core.user, &suggestion_notice(&decided, false));
                 Ok(SuggestionView {
                     suggestion: decided,
                     replies,

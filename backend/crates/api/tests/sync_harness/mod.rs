@@ -116,11 +116,8 @@ impl H {
             )
             .expect("auth state"),
         );
-        let (bus, sync): (web::Data<EventBus>, web::Data<SyncState>) = strata_api::sync::install(
-            &vault,
-            BusConfig::default(),
-            SyncConfig::default(),
-        );
+        let (bus, sync): (web::Data<EventBus>, web::Data<SyncState>) =
+            strata_api::sync::install(&vault, BusConfig::default(), SyncConfig::default());
         let (for_server, vault_data, bus_data) =
             (state.clone(), web::Data::new(vault.clone()), bus.clone());
         let server = TestServer::start(move |cfg| {
@@ -184,7 +181,11 @@ impl H {
             id,
             client,
             token: session.access_token,
-            device: devices.iter().find(|d| d.current).map(|d| d.id).expect("current device"),
+            device: devices
+                .iter()
+                .find(|d| d.current)
+                .map(|d| d.id)
+                .expect("current device"),
         }
     }
 
@@ -336,7 +337,13 @@ impl H {
         }
         let path = format!("/api/v1/sync/bootstrap?{}", q.join("&"));
         let (status, _, bytes) = self
-            .raw(&user.token, reqwest::Method::GET, &path, "sync_bootstrap", None)
+            .raw(
+                &user.token,
+                reqwest::Method::GET,
+                &path,
+                "sync_bootstrap",
+                None,
+            )
             .await;
         if status == 200 {
             Ok(rmp_serde::from_slice(&bytes).expect("decode bootstrap"))
@@ -358,7 +365,13 @@ impl H {
             path.push_str(&format!("&limit={l}"));
         }
         let (status, _, bytes) = self
-            .raw(&user.token, reqwest::Method::GET, &path, "sync_changes", None)
+            .raw(
+                &user.token,
+                reqwest::Method::GET,
+                &path,
+                "sync_changes",
+                None,
+            )
             .await;
         if status == 200 {
             Ok(rmp_serde::from_slice(&bytes).expect("decode changes"))
@@ -433,7 +446,11 @@ impl Device {
         }
         let cursor = SyncCursor::after_bootstrap(page);
         if let Some(c) = self.cursor {
-            assert_eq!((c.epoch, c.seq), (cursor.epoch, cursor.seq), "stable snapshot");
+            assert_eq!(
+                (c.epoch, c.seq),
+                (cursor.epoch, cursor.seq),
+                "stable snapshot"
+            );
         }
         self.cursor = Some(cursor);
     }

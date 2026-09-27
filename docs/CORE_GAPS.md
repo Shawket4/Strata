@@ -46,3 +46,33 @@ View-model fields and intents the Flutter screens need from the Rust core (PLAN 
 - **Failure result:** `NotificationResult` has no generic `failed`; platform errors other than permission map to `platform_limit`.
 - **Stream per session:** `watch_notification_ops` fails when no session is active and the provider is `keepAlive`; the adapter re-subscribes (invalidates) whenever the shell mounts. A session-independent stream (empty while signed out) would remove that.
 - **Launch/tap context:** notification taps carry only the op ID and the task ID payload; if the core wants the Done action to address a task directly (`task_id`) the op should say which one to use.
+
+## Notes and editor (Flutter pass: features/notes, features/editor)
+
+### Save with the view's version
+- **Needed:** `update_note(id, content, base_version)` — the editor saves the full markdown it built on `NoteView.version`; the core should compare it with the note's current base and answer with a conflict (or the D19 merge) instead of silently applying an edit made against a stale view. Today `updateNote(id, content)` has no version, so the UI sends `id` + full markdown only.
+- **Needed:** a display version for the status line ("Saved · v7"): `NoteView.version_label` (or `version_number`) from the history the server keeps. `NoteView.version` is a content hash; the UI shows "Saved" / "Saved on this device · N changes to sync" / "Conflict" from `sync` only.
+- **Needed:** a note-level duplicate state (`NoteSyncState.duplicate_op_id` or `NoteSyncKind::Duplicate`) so the note view can hand an "Already exists" prompt for *this* note to the duplicate sheet; `DuplicatePrompt` has no note ID, so the note view shows nothing.
+
+### Editor hints (`EditorHint` / `editor_hints`)
+- **Needed:** `EditorHint.target_id: Option<String>` (resolved note ID) and `target_anchor` on `WikiLink`/`Embed` spans, so tapping a wikilink opens the note. Today the editor forwards the link's source text (`[[Note|alias]]`) to `onOpenLink`; the host cannot resolve it without logic.
+- **Needed:** `EditorHint.task_id` on `TaskLine` spans. The editor takes the ID from the `BlockId` span inside the task-line span (the span text minus `^`) and looks it up in `NoteView.tasks`.
+- **Needed:** `Heading` spans with the level (`HintKind::Heading { level }` as a field, e.g. `EditorHint.level: u8`); all headings are styled alike today.
+- **Needed:** per-line paragraph direction (`EditorHint` of kind `Direction { rtl }` per line, or `line_directions: Vec<bool>`), from the first strong character. `super_editor` only looks at the first non-space character (wrong for `- خصم`, `## الفرضيات`), so the editor applies the Unicode first-strong rule (P2) itself as a layout step.
+- **Needed:** emphasis spans (`**bold**`, `_italic_`, `~~strike~~`, `==mark==`, inline code already exists) so the editor can style them; markers are shown as typed today.
+- **Needed (`NoteListItem`, `NoteView`, `BacklinkGroup`):** a `lang`/direction hint for titles, snippets and backlink titles (the Arabic note list rows and the Arabic title of NoteExpandedDarkAr); rendered direction-neutral with `TextAlign.start` meanwhile.
+
+### Editor completions
+- **Needed:** `editor_completions(note_id, content, cursor) -> Completions { kind: wikilink | mention | tag | block_ref, replace_start, replace_end, items: [{ label, detail, insert_text, target_id, entity_kind }] }`. The editor detects the token before the caret itself (`[[query`, `@query`, `#query`, `[[Note#^`) and fills the list from `search(query, keyword)` (notes) and `watch_directory(people|companies, query)` (mentions).
+- **Needed:** a tag list for `#` autocomplete (vault tags with counts, filtered by prefix). The tag panel shows "Tag suggestions aren't available yet."
+- **Needed:** the block list of a note for the block reference picker (`[[Note#^`): `blocks(note_id) -> [{ block_id, text }]`. The picker shows "Block references can't be listed yet."
+- **Needed:** `insert_mention(note_id, content, cursor_range, entity_id) -> { content, cursor }` that writes the link (path-disambiguated when titles collide, PLAN §6.3) and adds the entity to `people:`/`companies:` in one op. Meanwhile the editor replaces `@query` with `[[<title>]]` and calls `add_relation(src_id, dst_id, "people"|"companies")`; `[[` completion inserts `<title>]]`.
+
+### Note view (properties, backlinks, history, list)
+- **Needed:** history entries and revert: `NoteView.history` is only an `Availability`. Needed `history: Vec<HistoryEntry { version_label, message, author, at_label, can_revert }>` (online) and `revert_note(id, version)` + a diff view model. The panel renders the four availability states.
+- **Needed:** backlink details: `BacklinkItem.snippet` (the linking sentence), `by`/`confidence` for AI relations, and a total `backlink_count` on `NoteView` (the "Backlinks 6" tab badge; the UI does not sum the groups).
+- **Needed:** `NoteView.created_label` / `edited_label` / `edited_by` ("Created 18 Sep · edited today 14:31 by Shawket") and `word_count`; `NoteListItem.updated_label` ("14:31", "Sat", "21 Sep" — relative to today in the account's time zone). Not shown meanwhile.
+- **Needed:** `NotesListView.breadcrumb: Vec<FolderItem>` (root → current) and the folder's own `note_count`; the list shows "Notes › notes/sales" with the root as the only link.
+- **Needed:** folder-scoped filtering ("Filter notes in sales"): `search` has no folder parameter, so the list search is vault-wide.
+- **Needed (`RelationChip`):** `created_label` and cited evidence (`citations: Vec<Citation>`) for the AI reason card ("confidence 0.72 · 14:05", `^a1b2` quotes), and an intent to add a relation from the Properties panel with an AI-proposed type ("+ Add relation"). The card shows confidence and reason only; add-relation is not offered.
+- **Wiring note (maps feature):** the note's local mini-graph slot shows a placeholder with "Open map" (`NotesScreen.onOpenLocalMap(noteId)`); `strata_maps` exports no embeddable mini-graph widget over `watch_local_graph` yet. When it does, the slot (`LocalGraphSlot`) should host it.

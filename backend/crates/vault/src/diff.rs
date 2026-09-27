@@ -16,6 +16,9 @@ use crate::events::RelationEvent;
 /// Relation value that matters to clients: `by`, confidence, reason.
 type RelationValue = (String, Option<f32>, Option<String>);
 
+/// A relation row: (src, type, dst, by, confidence, reason).
+type RelationRow = (Uuid, String, Uuid, String, Option<f32>, Option<String>);
+
 /// Derived rows around a set of notes.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Snapshot {
@@ -46,22 +49,17 @@ pub struct Diff {
 
 impl Snapshot {
     /// Reads the rows around `ids` (keep-both pairs too when `keep_both`).
-    pub async fn take(
-        tx: &mut ScopedTx,
-        ids: &BTreeSet<NoteId>,
-        keep_both: bool,
-    ) -> Result<Self> {
+    pub async fn take(tx: &mut ScopedTx, ids: &BTreeSet<NoteId>, keep_both: bool) -> Result<Self> {
         let ids: Vec<Uuid> = ids.iter().map(NoteId::as_uuid).collect();
         let mut out = Self::default();
         if !ids.is_empty() {
-            let rows: Vec<(Uuid, String, Uuid, String, Option<f32>, Option<String>)> =
-                sqlx::query_as(
-                    "SELECT src_id, type, dst_id, by, confidence, reason FROM relations \
+            let rows: Vec<RelationRow> = sqlx::query_as(
+                "SELECT src_id, type, dst_id, by, confidence, reason FROM relations \
                      WHERE src_id = ANY($1) OR dst_id = ANY($1)",
-                )
-                .bind(&ids)
-                .fetch_all(tx.conn())
-                .await?;
+            )
+            .bind(&ids)
+            .fetch_all(tx.conn())
+            .await?;
             for (s, t, d, by, c, r) in rows {
                 out.relations.insert((s, t, d), (by, c, r));
             }
@@ -168,11 +166,16 @@ pub fn diff(before: &Snapshot, after: &Snapshot) -> Diff {
             kb.push((format!("{k}:{x}:{y}"), ChangeOp::Delete));
         }
         kb.sort();
-        out.log.extend(kb.into_iter().map(|(k, op)| ("keep_both", k, op)));
+        out.log
+            .extend(kb.into_iter().map(|(k, op)| ("keep_both", k, op)));
     }
 
     for (id, (note, hash)) in &after.tasks {
-        if before.tasks.get(id).is_none_or(|(n, h)| n != note || h != hash) {
+        if before
+            .tasks
+            .get(id)
+            .is_none_or(|(n, h)| n != note || h != hash)
+        {
             out.tasks.push((id.clone(), Some(NoteId::from_uuid(*note))));
         }
     }

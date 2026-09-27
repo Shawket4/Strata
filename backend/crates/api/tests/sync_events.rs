@@ -41,7 +41,11 @@ fn create(n: u128, path: &str, body: &str) -> Op {
 async fn push_ok(h: &H, user: &User, ops_: Vec<SyncOp>) {
     let (res, _) = h.push(user, ops_).await;
     for r in res.results {
-        assert!(matches!(r.result, OpResult::Applied { .. }), "{:?}", r.result);
+        assert!(
+            matches!(r.result, OpResult::Applied { .. }),
+            "{:?}",
+            r.result
+        );
     }
 }
 
@@ -83,9 +87,19 @@ async fn writes_produce_the_exact_event_sequence() {
     let uid = alice.id;
     let mut sub = streams::events(&alice.client, options(Some(0))).expect("subscription");
 
-    push_ok(&h, &alice, vec![op(1, None, create(1, "notes/A.md", "a\n"))]).await;
+    push_ok(
+        &h,
+        &alice,
+        vec![op(1, None, create(1, "notes/A.md", "a\n"))],
+    )
+    .await;
     let a1 = h.read(uid, "notes/A.md");
-    push_ok(&h, &alice, vec![op(2, None, create(2, "notes/B.md", "b\n"))]).await;
+    push_ok(
+        &h,
+        &alice,
+        vec![op(2, None, create(2, "notes/B.md", "b\n"))],
+    )
+    .await;
     let b = h.read(uid, "notes/B.md");
     push_ok(
         &h,
@@ -179,13 +193,18 @@ async fn writes_produce_the_exact_event_sequence() {
     push_ok(
         &h,
         &alice,
-        vec![op(9, Some(version(&a3)), Op::NoteDelete(o::NoteRef { id: id(1) }))],
+        vec![op(
+            9,
+            Some(version(&a3)),
+            Op::NoteDelete(o::NoteRef { id: id(1) }),
+        )],
     )
     .await;
 
-    let events = take(&mut sub, 15).await;
+    assert_eq!(a3, a2);
+    let events = take(&mut sub, 14).await;
     let seqs: Vec<u64> = events.iter().map(|(s, _)| *s).collect();
-    assert_eq!(seqs, (1..=15).collect::<Vec<_>>());
+    assert_eq!(seqs, (1..=14).collect::<Vec<_>>());
     let payloads: Vec<types::Event> = events.into_iter().map(|(_, e)| e).collect();
     let pending = ops::list_suggestions(&alice.client, None)
         .await
@@ -246,13 +265,7 @@ async fn writes_produce_the_exact_event_sequence() {
                 note_id: id(2),
                 version: Some(version(&line).to_string()),
             },
-            // The move rewrote the link in A (A was re-derived; its bytes changed too).
-            types::Event::NoteUpdated {
-                id: id(1),
-                kind: kind("note"),
-                path: "notes/A.md".into(),
-                version: version(&a3).to_string(),
-            },
+            // `[[B]]` in A still resolves by name after the move: A is unchanged.
             types::Event::NoteMoved {
                 id: id(2),
                 kind: kind("note"),
@@ -297,8 +310,9 @@ async fn writes_produce_the_exact_event_sequence() {
 async fn frames_conform_to_the_contract_and_resume_after_a_reconnect() {
     let h = H::new().await;
     let alice = h.user("alice").await;
-    let mut sub = streams::events(&alice.client, options(None)).expect("subscription");
-    // Connect first (a fresh subscription starts at the head), with a raw socket as well.
+    // The generated subscription resumes from the start; a raw socket connects fresh (at the
+    // head) before the write.
+    let mut sub = streams::events(&alice.client, options(Some(0))).expect("subscription");
     let url = format!("ws://{}/api/v1/events", h.addr());
     let mut request = url.into_client_request().expect("request");
     request.headers_mut().insert(
@@ -308,7 +322,12 @@ async fn frames_conform_to_the_contract_and_resume_after_a_reconnect() {
     let (mut raw, _) = tokio_tungstenite::connect_async(request)
         .await
         .expect("raw socket");
-    push_ok(&h, &alice, vec![op(1, None, create(1, "notes/A.md", "a\n"))]).await;
+    push_ok(
+        &h,
+        &alice,
+        vec![op(1, None, create(1, "notes/A.md", "a\n"))],
+    )
+    .await;
     let first = take(&mut sub, 1).await;
     assert_eq!(first[0].0, 1);
     for expected_seq in [1_u64] {
@@ -345,8 +364,7 @@ async fn frames_conform_to_the_contract_and_resume_after_a_reconnect() {
         ],
     )
     .await;
-    let mut resumed =
-        streams::events(&alice.client, options(Some(last))).expect("subscription");
+    let mut resumed = streams::events(&alice.client, options(Some(last))).expect("subscription");
     let events = take(&mut resumed, 2).await;
     assert_eq!(
         events,
@@ -402,8 +420,18 @@ async fn streams_are_isolated_and_upgrades_need_a_token() {
     let alice = h.user("alice").await;
     let bob = h.user("bob").await;
     let mut bob_sub = streams::events(&bob.client, options(Some(0))).expect("subscription");
-    push_ok(&h, &alice, vec![op(1, None, create(1, "notes/Same.md", "alice\n"))]).await;
-    push_ok(&h, &bob, vec![op(1, None, create(2, "notes/Same.md", "bob\n"))]).await;
+    push_ok(
+        &h,
+        &alice,
+        vec![op(1, None, create(1, "notes/Same.md", "alice\n"))],
+    )
+    .await;
+    push_ok(
+        &h,
+        &bob,
+        vec![op(1, None, create(2, "notes/Same.md", "bob\n"))],
+    )
+    .await;
     let events = take(&mut bob_sub, 1).await;
     assert_eq!(
         events,
@@ -439,7 +467,12 @@ async fn disabling_the_account_sends_account_disabled_then_closes() {
     let admin = h.admin("root").await;
     let alice = h.user("alice").await;
     let mut sub = streams::events(&alice.client, options(Some(0))).expect("subscription");
-    push_ok(&h, &alice, vec![op(1, None, create(1, "notes/A.md", "a\n"))]).await;
+    push_ok(
+        &h,
+        &alice,
+        vec![op(1, None, create(1, "notes/A.md", "a\n"))],
+    )
+    .await;
     assert_eq!(take(&mut sub, 1).await[0].0, 1);
     ops::admin_update_user(
         &admin.client,

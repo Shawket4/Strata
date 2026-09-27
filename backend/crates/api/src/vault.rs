@@ -43,6 +43,7 @@ pub fn candidate(c: &Candidate) -> DuplicateCandidate {
         snippet: c.snippet.clone(),
         match_level: match c.level {
             VMatch::Exact => MatchLevel::Exact,
+            VMatch::Near if c.semantic => MatchLevel::Semantic,
             VMatch::Near => MatchLevel::Near,
         },
         score: c.score,
@@ -57,7 +58,7 @@ pub fn problem(err: &VaultError) -> Problem {
             Problem::duplicate_candidates(candidates.iter().map(candidate).collect())
         }
         VaultError::AiUnavailable => Problem::new(ProblemType::AiUnavailable).with_detail(
-            "semantic and hybrid search need the AI subsystem, which is not available yet; use mode=keyword",
+            "semantic and hybrid search need an embedding model, which is not configured; use mode=keyword",
         ),
         other => Problem::from_domain(other),
     }

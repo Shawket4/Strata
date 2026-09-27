@@ -206,6 +206,436 @@
         ],
         "type": "object"
       },
+      "AiEmbeddingsDto": {
+        "description": "The local embedding model.",
+        "properties": {
+          "dims": {
+            "description": "Dimensions.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "embedded": {
+            "description": "The caller's live notes with current vectors.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "loaded": {
+            "description": "In memory now (it loads on demand and unloads when idle).",
+            "type": "boolean"
+          },
+          "model_id": {
+            "description": "Model ID stored with every vector.",
+            "type": "string"
+          },
+          "total": {
+            "description": "The caller's live notes.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "model_id",
+          "dims",
+          "loaded",
+          "embedded",
+          "total"
+        ],
+        "type": "object"
+      },
+      "AiLimitsDto": {
+        "description": "Daily caps (0 = unlimited).",
+        "properties": {
+          "global_daily_cost_micros": {
+            "description": "Micro-USD per day, all users.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "global_daily_tokens": {
+            "description": "Tokens per day, all users.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "per_user_daily_cost_micros": {
+            "description": "Micro-USD per user per day.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "per_user_daily_tokens": {
+            "description": "Tokens per user per day.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "per_user_daily_tokens",
+          "per_user_daily_cost_micros",
+          "global_daily_tokens",
+          "global_daily_cost_micros"
+        ],
+        "type": "object"
+      },
+      "AiPauseDto": {
+        "description": "A pause of AI work.",
+        "properties": {
+          "reason": {
+            "description": "`user_budget`, `global_budget`, `provider_usage_limit`, `provider_rate_limit`.",
+            "type": "string"
+          },
+          "until": {
+            "description": "When it ends, if known.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "type": "object"
+      },
+      "AiProviderDto": {
+        "description": "The provider serving the caller.",
+        "properties": {
+          "last_error": {
+            "description": "Kind of the last failure (content-free).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "description": "Model.",
+            "type": "string"
+          },
+          "name": {
+            "description": "`claude_cli` or `anthropic_api`.",
+            "type": "string"
+          },
+          "state": {
+            "description": "`ready`, `paused` or `degraded`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "model",
+          "state"
+        ],
+        "type": "object"
+      },
+      "AiStatusDto": {
+        "description": "`GET /ai/status`.",
+        "properties": {
+          "day": {
+            "description": "Budget day.",
+            "format": "date",
+            "type": "string"
+          },
+          "embeddings": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AiEmbeddingsDto",
+                "description": "The embedding model and the caller's embedding progress, when configured."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enabled": {
+            "description": "AI is enabled for the caller.",
+            "type": "boolean"
+          },
+          "global_usage": {
+            "$ref": "#/components/schemas/AiUsageDto",
+            "description": "Everyone's usage today."
+          },
+          "limits": {
+            "$ref": "#/components/schemas/AiLimitsDto",
+            "description": "Daily caps."
+          },
+          "paused": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AiPauseDto",
+                "description": "The pause in effect (budget first, then provider)."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AiProviderDto",
+                "description": "The provider serving the caller."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "queue_depth": {
+            "description": "The caller's queued and running background jobs.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/AiUsageDto",
+            "description": "The caller's usage today."
+          }
+        },
+        "required": [
+          "enabled",
+          "queue_depth",
+          "day",
+          "usage",
+          "global_usage",
+          "limits"
+        ],
+        "type": "object"
+      },
+      "AiUsageDto": {
+        "description": "Usage totals of one day.",
+        "properties": {
+          "calls": {
+            "description": "Calls.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "cost_micros": {
+            "description": "Estimated cost in micro-USD.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "input_tokens": {
+            "description": "Input tokens.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "output_tokens": {
+            "description": "Output tokens.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "calls",
+          "input_tokens",
+          "output_tokens",
+          "cost_micros"
+        ],
+        "type": "object"
+      },
+      "AskFrame": {
+        "description": "One frame of an Ask answer. Internally tagged by `type`.",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "description": "The next batch of answer text.",
+            "properties": {
+              "text": {
+                "description": "Text.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "tokens"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "text",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A citation of the answer, resolved for navigation.",
+            "properties": {
+              "block_id": {
+                "description": "The cited block's ID (absent: the note as a whole).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "index": {
+                "description": "1-based order of first appearance in the answer.",
+                "format": "int32",
+                "minimum": 1,
+                "type": "integer"
+              },
+              "note_id": {
+                "description": "The cited note.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "path": {
+                "description": "Its path.",
+                "type": "string"
+              },
+              "ref": {
+                "description": "The citation as written in the answer (`Note#^block`).",
+                "type": "string"
+              },
+              "target": {
+                "description": "The wikilink target that resolves in the vault (`Note#^block` or `Note`).",
+                "type": "string"
+              },
+              "title": {
+                "description": "Its title.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "index",
+              "ref",
+              "note_id",
+              "path",
+              "title",
+              "target",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The answer is complete.",
+            "properties": {
+              "answer": {
+                "description": "The final answer: markdown with `[[target]]` citations.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "done"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "answer",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "AskFrameDataFrame": {
+        "description": "A stream item.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "data"
+            ],
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/AskFrame"
+          },
+          "seq": {
+            "description": "Sequence number; see docs/WIRE_FORMAT.md.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "v": {
+            "description": "Envelope version.",
+            "format": "int32",
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "v",
+          "kind",
+          "seq",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "AskFrameFrame": {
+        "description": "A frame of a `AskFrame` stream (binary WebSocket message).",
+        "discriminator": {
+          "mapping": {
+            "data": "#/components/schemas/AskFrameDataFrame",
+            "end": "#/components/schemas/ControlFrame",
+            "error": "#/components/schemas/ErrorFrame",
+            "reset": "#/components/schemas/ControlFrame"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AskFrameDataFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ErrorFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ControlFrame"
+          }
+        ]
+      },
+      "AskRequest": {
+        "description": "`POST /ask`.",
+        "properties": {
+          "question": {
+            "description": "The question (Arabic, English or mixed).",
+            "type": "string"
+          },
+          "scope": {
+            "description": "Only use notes under this folder (vault path prefix, e.g. `notes/clients`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "type": "object"
+      },
+      "AskStarted": {
+        "description": "An Ask that started.",
+        "properties": {
+          "id": {
+            "description": "Answer ID: stream it from `GET /ask/{id}`.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
       "AuthSession": {
         "description": "Tokens of a device session.",
         "properties": {
@@ -3413,6 +3843,23 @@
         ],
         "type": "string"
       },
+      "SaveAskRequest": {
+        "description": "`POST /ask/{id}/save`.",
+        "properties": {
+          "force": {
+            "description": "Create even if it looks like a duplicate.",
+            "type": "boolean"
+          },
+          "title": {
+            "description": "Note title (file name in `notes/`); default: the question.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "SearchHit": {
         "description": "One hit.",
         "properties": {
@@ -3611,6 +4058,38 @@
             },
             "required": [
               "candidates",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Two stored items the nightly sweep found to be duplicates (`duplicates`, PLAN §9.7);\nrejecting keeps both for good. Never merged automatically.",
+            "properties": {
+              "a": {
+                "$ref": "#/components/schemas/DuplicateCandidate",
+                "description": "The first item."
+              },
+              "b": {
+                "$ref": "#/components/schemas/DuplicateCandidate",
+                "description": "The second item."
+              },
+              "reason": {
+                "description": "Why the model confirmed a borderline pair.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "duplicates"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "a",
+              "b",
               "type"
             ],
             "type": "object"
@@ -7014,6 +7493,250 @@
         ]
       }
     },
+    "/api/v1/ai/status": {
+      "get": {
+        "operationId": "ai_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStatusDto"
+                }
+              }
+            },
+            "description": "The caller's AI status."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable`: the AI subsystem is not configured on this server."
+          }
+        },
+        "summary": "AI status for the caller: provider health, pause, queue depth, usage vs budget,\nembedding model and progress.",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/v1/ask": {
+      "post": {
+        "operationId": "ask",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskStarted"
+                }
+              }
+            },
+            "description": "Started; stream the answer from `GET /ask/{id}`."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable` (AI disabled or not configured) or `ai_paused` (budget reached, provider usage limit; `detail` says until when)."
+          }
+        },
+        "summary": "Ask a question about your notes (hybrid retrieval, cited answer).",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/v1/ask/{id}": {
+      "get": {
+        "operationId": "ask_stream",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last seq received; frames after it are replayed (or `reset` is sent).",
+            "in": "query",
+            "name": "resume_from",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "WebSocket upgrade; the server then sends binary `AskFrameFrame` messages."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The answer of an Ask started with `POST /ask`: token batches, then citations resolved to notes and blocks, then `done`; resumable with `resume_from`.",
+        "tags": [
+          "ai"
+        ],
+        "x-strata-stream": {
+          "frame": "AskFrameFrame",
+          "payload": "AskFrame"
+        }
+      }
+    },
+    "/api/v1/ask/{id}/save": {
+      "post": {
+        "operationId": "save_ask",
+        "parameters": [
+          {
+            "description": "Answer ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Note"
+                }
+              }
+            },
+            "description": "Created (waits for the answer to finish); one `user: create <path>` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`duplicate_candidates` (resend with `force`) or `path_taken`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_name` (title) or `invalid_body`."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Saves an answer as a note in `notes/` with its citations as links.",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "operationId": "login",
@@ -9800,7 +10523,7 @@
                 }
               }
             },
-            "description": "`ai_unavailable`: semantic and hybrid need the AI subsystem."
+            "description": "`ai_unavailable`: semantic and hybrid need an embedding model, which is not configured (or failed to load)."
           }
         },
         "summary": "Search the vault.",
@@ -10855,6 +11578,10 @@
     {
       "description": "Export, import and integrity.",
       "name": "vault"
+    },
+    {
+      "description": "Ask (RAG with citations) and AI status (PLAN §7.5 AI, §9.5).",
+      "name": "ai"
     }
   ]
 }

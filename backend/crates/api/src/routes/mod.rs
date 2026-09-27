@@ -2,6 +2,7 @@
 //! [`crate::app::routes`], and its handlers are listed in [`crate::openapi::ApiDoc`].
 
 pub mod admin;
+pub mod ai;
 pub mod auth;
 pub mod devices;
 pub mod events;

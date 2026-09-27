@@ -185,6 +185,7 @@ class TasksScreen extends HookConsumerWidget {
                   onNewTask: newTask,
                   onOpenNote: onOpenNote,
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
                         child: _TaskTable(

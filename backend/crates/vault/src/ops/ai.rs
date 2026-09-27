@@ -162,7 +162,12 @@ impl Core {
                 continue;
             }
             // Append from the end so earlier spans stay valid.
-            appends.sort_by(|x, y| analysis.blocks[y.0].span.start.cmp(&analysis.blocks[x.0].span.start));
+            appends.sort_by(|x, y| {
+                analysis.blocks[y.0]
+                    .span
+                    .start
+                    .cmp(&analysis.blocks[x.0].span.start)
+            });
             let mut body_text = original.clone();
             for &(bi, i) in &appends {
                 let appended = vault_format::blocks::append_to(

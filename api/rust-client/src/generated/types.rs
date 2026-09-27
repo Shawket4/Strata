@@ -154,6 +154,220 @@ pub struct AdminUser {
     ///Username as entered.
     pub username: ::std::string::String,
 }
+///The local embedding model.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AiEmbeddingsDto {
+    ///Dimensions.
+    pub dims: u32,
+    ///The caller's live notes with current vectors.
+    pub embedded: u64,
+    ///In memory now (it loads on demand and unloads when idle).
+    pub loaded: bool,
+    ///Model ID stored with every vector.
+    pub model_id: ::std::string::String,
+    ///The caller's live notes.
+    pub total: u64,
+}
+///Daily caps (0 = unlimited).
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AiLimitsDto {
+    ///Micro-USD per day, all users.
+    pub global_daily_cost_micros: u64,
+    ///Tokens per day, all users.
+    pub global_daily_tokens: u64,
+    ///Micro-USD per user per day.
+    pub per_user_daily_cost_micros: u64,
+    ///Tokens per user per day.
+    pub per_user_daily_tokens: u64,
+}
+///A pause of AI work.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AiPauseDto {
+    ///`user_budget`, `global_budget`, `provider_usage_limit`, `provider_rate_limit`.
+    pub reason: ::std::string::String,
+    ///When it ends, if known.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub until: ::std::option::Option<::chrono::DateTime<::chrono::offset::Utc>>,
+}
+///The provider serving the caller.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AiProviderDto {
+    ///Kind of the last failure (content-free).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub last_error: ::std::option::Option<::std::string::String>,
+    ///Model.
+    pub model: ::std::string::String,
+    ///`claude_cli` or `anthropic_api`.
+    pub name: ::std::string::String,
+    ///`ready`, `paused` or `degraded`.
+    pub state: ::std::string::String,
+}
+///`GET /ai/status`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AiStatusDto {
+    ///Budget day.
+    pub day: ::chrono::naive::NaiveDate,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub embeddings: ::std::option::Option<AiEmbeddingsDto>,
+    ///AI is enabled for the caller.
+    pub enabled: bool,
+    ///Everyone's usage today.
+    pub global_usage: AiUsageDto,
+    ///Daily caps.
+    pub limits: AiLimitsDto,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub paused: ::std::option::Option<AiPauseDto>,
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub provider: ::std::option::Option<AiProviderDto>,
+    ///The caller's queued and running background jobs.
+    pub queue_depth: u64,
+    ///The caller's usage today.
+    pub usage: AiUsageDto,
+}
+///Usage totals of one day.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AiUsageDto {
+    ///Calls.
+    pub calls: u64,
+    ///Estimated cost in micro-USD.
+    pub cost_micros: u64,
+    ///Input tokens.
+    pub input_tokens: u64,
+    ///Output tokens.
+    pub output_tokens: u64,
+}
+///One frame of an Ask answer. Internally tagged by `type`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(tag = "type")]
+pub enum AskFrame {
+    ///The next batch of answer text.
+    #[serde(rename = "tokens")]
+    Tokens {
+        ///Text.
+        text: ::std::string::String,
+    },
+    ///A citation of the answer, resolved for navigation.
+    #[serde(rename = "citation")]
+    Citation {
+        ///The cited block's ID (absent: the note as a whole).
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        block_id: ::std::option::Option<::std::string::String>,
+        ///1-based order of first appearance in the answer.
+        index: ::std::num::NonZeroU32,
+        ///The cited note.
+        note_id: ::ulid::Ulid,
+        ///Its path.
+        path: ::std::string::String,
+        ///The citation as written in the answer (`Note#^block`).
+        #[serde(rename = "ref")]
+        ref_: ::std::string::String,
+        ///The wikilink target that resolves in the vault (`Note#^block` or `Note`).
+        target: ::std::string::String,
+        ///Its title.
+        title: ::std::string::String,
+    },
+    ///The answer is complete.
+    #[serde(rename = "done")]
+    Done {
+        ///The final answer: markdown with `[[target]]` citations.
+        answer: ::std::string::String,
+    },
+}
+///A stream item.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AskFrameDataFrame {
+    pub kind: AskFrameDataFrameKind,
+    pub payload: AskFrame,
+    ///Sequence number; see docs/WIRE_FORMAT.md.
+    pub seq: u64,
+    ///Envelope version.
+    pub v: ::std::num::NonZeroU32,
+}
+///`AskFrameDataFrameKind`
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum AskFrameDataFrameKind {
+    #[serde(rename = "data")]
+    Data,
+}
+impl ::std::fmt::Display for AskFrameDataFrameKind {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Data => f.write_str("data"),
+        }
+    }
+}
+impl ::std::str::FromStr for AskFrameDataFrameKind {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "data" => Ok(Self::Data),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for AskFrameDataFrameKind {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for AskFrameDataFrameKind {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+///A frame of a `AskFrame` stream (binary WebSocket message).
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+#[serde(untagged)]
+pub enum AskFrameFrame {
+    AskFrameDataFrame(AskFrameDataFrame),
+    ErrorFrame(ErrorFrame),
+    ControlFrame(ControlFrame),
+}
+impl ::std::convert::From<AskFrameDataFrame> for AskFrameFrame {
+    fn from(value: AskFrameDataFrame) -> Self {
+        Self::AskFrameDataFrame(value)
+    }
+}
+impl ::std::convert::From<ErrorFrame> for AskFrameFrame {
+    fn from(value: ErrorFrame) -> Self {
+        Self::ErrorFrame(value)
+    }
+}
+impl ::std::convert::From<ControlFrame> for AskFrameFrame {
+    fn from(value: ControlFrame) -> Self {
+        Self::ControlFrame(value)
+    }
+}
+///`POST /ask`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AskRequest {
+    ///The question (Arabic, English or mixed).
+    pub question: ::std::string::String,
+    ///Only use notes under this folder (vault path prefix, e.g. `notes/clients`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub scope: ::std::option::Option<::std::string::String>,
+}
+///An Ask that started.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AskStarted {
+    ///Answer ID: stream it from `GET /ask/{id}`.
+    pub id: ::ulid::Ulid,
+}
 ///Tokens of a device session.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct AuthSession {
@@ -2241,6 +2455,16 @@ impl ::std::convert::TryFrom<::std::string::String> for Role {
         value.parse()
     }
 }
+///`POST /ask/{id}/save`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default, PartialEq)]
+pub struct SaveAskRequest {
+    ///Create even if it looks like a duplicate.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub force: ::std::option::Option<bool>,
+    ///Note title (file name in `notes/`); default: the question.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub title: ::std::option::Option<::std::string::String>,
+}
 ///One hit.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SearchHit {
@@ -2473,6 +2697,18 @@ pub enum SuggestionPayload {
     Duplicate {
         ///The items it resembles.
         candidates: ::std::vec::Vec<DuplicateCandidate>,
+    },
+    /**Two stored items the nightly sweep found to be duplicates (`duplicates`, PLAN §9.7);
+    rejecting keeps both for good. Never merged automatically.*/
+    #[serde(rename = "duplicates")]
+    Duplicates {
+        ///The first item.
+        a: DuplicateCandidate,
+        ///The second item.
+        b: DuplicateCandidate,
+        ///Why the model confirmed a borderline pair.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        reason: ::std::option::Option<::std::string::String>,
     },
     ///A kind this version does not describe (MessagePack as stored).
     #[serde(rename = "opaque")]

@@ -144,6 +144,60 @@ pub async fn admin_reject_user(
     let request = request.authenticated();
     client.send(request).await
 }
+/** AI status for the caller: provider health, pause, queue depth, usage vs budget,
+embedding model and progress.*/
+///
+/// `GET /api/v1/ai/status`
+pub async fn ai_status(
+    client: &crate::Client,
+) -> ::std::result::Result<types::AiStatusDto, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/ai/status"),
+        "ai_status",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Ask a question about your notes (hybrid retrieval, cited answer).
+///
+/// `POST /api/v1/ask`
+pub async fn ask(
+    client: &crate::Client,
+    body: &types::AskRequest,
+) -> ::std::result::Result<types::AskStarted, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/ask"),
+        "ask",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Saves an answer as a note in `notes/` with its citations as links.
+///
+/// `POST /api/v1/ask/{id}/save`
+pub async fn save_ask(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::SaveAskRequest,
+) -> ::std::result::Result<types::Note, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/ask/{}/save",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "save_ask",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
 /// Sign in as a new device.
 ///
 /// `POST /api/v1/auth/login`

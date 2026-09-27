@@ -21,23 +21,26 @@ class TaskCheckbox extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.tasksL10n;
     final open = task.state == TaskState.open;
-    return Checkbox(
-      value: !open,
-      semanticLabel: open
-          ? l10n.tasksMarkDoneSemantics(title: task.description)
-          : l10n.tasksReopenSemantics(title: task.description),
-      shape: const CircleBorder(),
-      onChanged: (_) {
-        final api = ref.read(coreApiProvider);
-        unawaited(
-          forwardIntent(
-            context,
-            open
-                ? api.completeTask(taskId: task.id)
-                : api.reopenTask(taskId: task.id),
-          ),
-        );
-      },
+    return Semantics(
+      container: true,
+      child: Checkbox(
+        value: !open,
+        semanticLabel: open
+            ? l10n.tasksMarkDoneSemantics(title: task.description)
+            : l10n.tasksReopenSemantics(title: task.description),
+        shape: const CircleBorder(),
+        onChanged: (_) {
+          final api = ref.read(coreApiProvider);
+          unawaited(
+            forwardIntent(
+              context,
+              open
+                  ? api.completeTask(taskId: task.id)
+                  : api.reopenTask(taskId: task.id),
+            ),
+          );
+        },
+      ),
     );
   }
 }

@@ -185,6 +185,16 @@ void main() {
         await revealInScroll(tester, find.byType(NoteConflictBanner));
         expect(find.byType(NoteConflictBanner), findsOneWidget);
         if (v.sizeClass == SizeClass.expanded) {
+          final historyTab = find
+              .descendant(
+                of: find.byType(NoteContextPanel),
+                matching: find.text(v.rtl ? 'السجل' : 'History'),
+              )
+              .first;
+          await tester.ensureVisible(historyTab);
+          await tester.pump();
+          await tester.tap(historyTab);
+          await tester.pump();
           expect(
             find.text(
               v.rtl
@@ -355,7 +365,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('AI · 0.81'), findsOneWidget);
-      expect(find.text('⁨#pricing⁩'), findsOneWidget);
+      expect(find.text('\u2068#pricing\u2069'), findsOneWidget);
     });
 
     testWidgets('tapping a chip opens its target', (tester) async {

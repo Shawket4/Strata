@@ -37,6 +37,9 @@ base64 = { workspace = true }
 strata-common = { workspace = true, features = ["sqlx"] }
 strata-index = { workspace = true }
 strata-vault = { workspace = true }
+# AI pipelines: semantic/hybrid search, Ask, AI status (PLAN §9.5, §7.5 Search/AI)
+strata-jobs = { workspace = true }
+strata-ai = { workspace = true }
 vault-format = { workspace = true }
 domain = { workspace = true }
 sync-model = { workspace = true }
@@ -55,6 +58,7 @@ chrono-tz = { workspace = true }
 zip = { workspace = true }
 
 [dev-dependencies]
+proptest = { workspace = true }
 hex = { workspace = true }
 pretty_assertions = { workspace = true }
 tempfile = { workspace = true }
@@ -63,6 +67,8 @@ tokio-tungstenite = { workspace = true }
 strata-api = { path = ".", features = ["test-support"] }
 strata-testkit = { workspace = true }
 strata-client = { workspace = true }
+strata-jobs = { workspace = true, features = ["test-support"] }
+strata-ai = { workspace = true, features = ["test-support"] }
 reqwest = { workspace = true }
 zip = { workspace = true }
 

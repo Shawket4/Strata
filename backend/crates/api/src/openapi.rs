@@ -99,12 +99,14 @@ pub struct StreamOperation {
 }
 
 /// Production stream endpoints.
-pub const STREAMS: &[StreamOperation] = &[crate::routes::events::STREAM];
+pub const STREAMS: &[StreamOperation] =
+    &[crate::routes::events::STREAM, crate::routes::ai::ASK_STREAM];
 
 /// The production contract.
 pub fn document() -> Value {
     let mut api = ApiDoc::openapi();
     api.merge(<crate::vault::VaultApiDoc as OpenApi>::openapi());
+    api.merge(<crate::routes::ai::AiApiDoc as OpenApi>::openapi());
     build(&api, STREAMS)
 }
 
@@ -345,17 +347,35 @@ fn stream_operation(stream: &StreamOperation) -> Value {
         "422": response_ref("InvalidParameter"),
         "500": response_ref("Internal"),
     });
+    // `{name}` segments of the path are required string path parameters (ULIDs).
+    let mut parameters: Vec<Value> = stream
+        .path
+        .split('/')
+        .filter_map(|seg| seg.strip_prefix('{').and_then(|s| s.strip_suffix('}')))
+        .map(|name| {
+            json!({
+                "name": name,
+                "in": "path",
+                "required": true,
+                "schema": { "type": "string", "format": "ulid" },
+            })
+        })
+        .collect();
+    if !parameters.is_empty() {
+        responses["404"] = response_ref("NotFound");
+    }
+    parameters.push(json!({
+        "name": RESUME_PARAM,
+        "in": "query",
+        "required": false,
+        "description": "Last seq received; frames after it are replayed (or `reset` is sent).",
+        "schema": { "type": "integer", "format": "int64", "minimum": 0 },
+    }));
     let mut op = json!({
         "operationId": stream.operation_id,
         "tags": [stream.tag],
         "summary": stream.summary,
-        "parameters": [{
-            "name": RESUME_PARAM,
-            "in": "query",
-            "required": false,
-            "description": "Last seq received; frames after it are replayed (or `reset` is sent).",
-            "schema": { "type": "integer", "format": "int64", "minimum": 0 },
-        }],
+        "parameters": parameters,
         STREAM_EXTENSION: {
             "payload": stream.payload,
             "frame": format!("{}Frame", stream.payload),

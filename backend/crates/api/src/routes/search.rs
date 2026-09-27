@@ -1,6 +1,8 @@
 //! `GET /search` (PLAN §7.5 Search): keyword search over Arabic/Latin-normalised text
-//! (Postgres full-text); `semantic` and `hybrid` need the AI subsystem (Phase 4) and answer
-//! `503 ai_unavailable`.
+//! (Postgres full-text, always available); `semantic` (embedding similarity of the best
+//! chunk) and `hybrid` (reciprocal-rank fusion of keyword and semantic rankings) run on the
+//! AI subsystem's embeddings ([`crate::ai::AiApi`]) and answer `503 ai_unavailable` when no
+//! embedding model is configured.
 
 use actix_web::web;
 use serde::{Deserialize, Serialize};
@@ -73,12 +75,13 @@ pub struct SearchResults {
     params(SearchQuery),
     responses(
         (status = 200, description = "Hits, best first.", body = SearchResults),
-        (status = 503, description = "`ai_unavailable`: semantic and hybrid need the AI subsystem.", body = Problem),
+        (status = 503, description = "`ai_unavailable`: semantic and hybrid need an embedding model, which is not configured (or failed to load).", body = Problem),
     ),
 )]
 pub async fn search(
     auth: Authenticated,
     vault: web::Data<VaultService>,
+    ai: Option<web::Data<crate::ai::AiApi>>,
     q: web::Query<SearchQuery>,
 ) -> Result<MsgPack<SearchResults>, Problem> {
     let mode = match q.mode.unwrap_or_default() {
@@ -86,6 +89,11 @@ pub async fn search(
         SearchMode::Semantic => VMode::Semantic,
         SearchMode::Hybrid => VMode::Hybrid,
     };
+    if mode != VMode::Keyword
+        && let Some(retriever) = ai.as_ref().and_then(|a| a.retriever.as_ref())
+    {
+        return semantic(&auth, retriever, &q, mode).await;
+    }
     let hits = vault
         .search(auth.scope(), &q.q, mode, q.limit.unwrap_or(20))
         .await
@@ -113,4 +121,55 @@ pub async fn search(
 /// Mounts the search route.
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/search", web::get().to(search));
+}
+
+/// Semantic or hybrid search through the AI subsystem's retriever.
+async fn semantic(
+    auth: &Authenticated,
+    retriever: &strata_jobs::retrieval::Retriever,
+    q: &SearchQuery,
+    mode: VMode,
+) -> Result<MsgPack<SearchResults>, Problem> {
+    use strata_jobs::retrieval::{Mode, RetrievalError};
+    let mode = if mode == VMode::Semantic {
+        Mode::Semantic
+    } else {
+        Mode::Hybrid
+    };
+    let hits = retriever
+        .search(auth.scope(), &q.q, mode, q.limit.unwrap_or(20))
+        .await
+        .map_err(|e| match e {
+            RetrievalError::EmptyQuery => {
+                crate::vault::invalid_parameter("q", "empty_query", "the query is empty")
+            }
+            RetrievalError::Unavailable(err) => {
+                tracing::warn!(error = %err, "semantic search: embeddings unavailable");
+                Problem::new(crate::wire::ProblemType::AiUnavailable)
+                    .with_detail("the embedding model could not run; use mode=keyword")
+            }
+            RetrievalError::Store(err) => {
+                tracing::error!(error = %err, "semantic search failed");
+                Problem::new(crate::wire::ProblemType::Internal)
+            }
+        })?;
+    Ok(MsgPack(SearchResults {
+        hits: hits
+            .into_iter()
+            .map(|h| SearchHit {
+                id: h.note.id.as_ulid(),
+                path: h.note.path,
+                title: h.note.title,
+                kind: h
+                    .note
+                    .kind
+                    .as_str()
+                    .parse::<domain::NoteKind>()
+                    .unwrap_or(domain::NoteKind::Note)
+                    .into(),
+                score: h.score,
+                snippet: h.snippet,
+            })
+            .collect(),
+    }))
 }

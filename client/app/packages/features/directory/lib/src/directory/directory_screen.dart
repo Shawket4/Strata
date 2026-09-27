@@ -88,6 +88,7 @@ class _Directory extends HookConsumerWidget {
     void selectTab(DirectoryTab next) {
       if (next == tab.value) return;
       tab.value = next;
+      query.value = '';
       selected.value = null;
     }
 
@@ -487,17 +488,36 @@ class _Filters extends StatelessWidget {
             runSpacing: StrataSpacing.s1,
             children: [
               for (final name in names)
-                InputChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(name),
-                      Icon(Icons.expand_more, size: 16, color: colors.text2),
-                    ],
-                  ),
-                  isEnabled: false,
-                  labelStyle: context.strataText.bodySmall.copyWith(
-                    color: colors.text2,
+                Semantics(
+                  button: true,
+                  enabled: false,
+                  label: name,
+                  excludeSemantics: true,
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 32),
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      StrataSpacing.s3,
+                      0,
+                      StrataSpacing.s2,
+                      0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      border: Border.all(color: colors.border),
+                      borderRadius: StrataRadii.pillRadius,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          name,
+                          style: context.strataText.bodySmall.copyWith(
+                            color: colors.text2,
+                          ),
+                        ),
+                        Icon(Icons.expand_more, size: 16, color: colors.text2),
+                      ],
+                    ),
                   ),
                 ),
             ],
@@ -706,6 +726,7 @@ class _EntityTable extends HookWidget {
     if (items.isEmpty) {
       return _RowList(view: view, selected: null, onTap: onSelect);
     }
+    final focus = useFocusNode(debugLabel: 'directory table');
     final index = items.indexWhere((item) => item.id == selected);
     void move(int delta) {
       final next = (index + delta).clamp(0, items.length - 1);
@@ -731,7 +752,7 @@ class _EntityTable extends HookWidget {
         },
       },
       child: Focus(
-        autofocus: true,
+        focusNode: focus,
         child: Semantics(
           label: l10n.tableCaption(tab: _tabLabel(l10n, view.tab)),
           container: true,
@@ -767,10 +788,10 @@ class _EntityTable extends HookWidget {
                       child: Material(
                         color: isSelected ? colors.accentTint : colors.surface,
                         child: InkWell(
-                          onTap: () => onSelect(item.id),
-                          onDoubleTap: open == null
-                              ? null
-                              : () => open(item.id),
+                          onTap: () {
+                            focus.requestFocus();
+                            onSelect(item.id);
+                          },
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: StrataSpacing.s6,
@@ -825,7 +846,7 @@ class _EntityTable extends HookWidget {
                   children: [
                     const KeyboardHintChip(keys: ['↑', '↓']),
                     const SizedBox(width: StrataSpacing.s1),
-                    const KeyboardHintChip(keys: ['↵']),
+                    const KeyboardHintChip(keys: ['Enter']),
                     const SizedBox(width: StrataSpacing.s2),
                     Flexible(
                       child: Text(
