@@ -41,7 +41,9 @@ impl EdgeWeights {
         }
         Some(match e.by {
             RelationOrigin::User => self.user,
-            RelationOrigin::Ai if e.confidence.unwrap_or(0.0) >= self.high_confidence => self.ai_high,
+            RelationOrigin::Ai if e.confidence.unwrap_or(0.0) >= self.high_confidence => {
+                self.ai_high
+            }
             RelationOrigin::Ai => self.ai_low,
         })
     }
@@ -139,7 +141,9 @@ impl WeightedGraph {
     pub fn edges(&self) -> impl Iterator<Item = (u32, u32, f64)> + '_ {
         (0..self.node_count()).flat_map(move |u| {
             let u = u32::try_from(u).unwrap_or(u32::MAX);
-            self.neighbors(u).filter(move |&(v, _)| u < v).map(move |(v, w)| (u, v, w))
+            self.neighbors(u)
+                .filter(move |&(v, _)| u < v)
+                .map(move |(v, w)| (u, v, w))
         })
     }
 }

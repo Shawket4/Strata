@@ -12,6 +12,8 @@
 //! ([`ForceLayout::warm`]) keeps previous positions, places new nodes next to their placed
 //! neighbours, and starts cooler, so an incremental update barely moves the map.
 
+#![allow(clippy::many_single_char_names, clippy::similar_names)] // notation of the formulas (k, n, r, t, dx/dy)
+
 use serde::{Deserialize, Serialize};
 
 use crate::rng::Rng;
@@ -47,10 +49,10 @@ impl Default for ForceConfig {
             seed: 0,
             ideal_length: 30.0,
             theta: 0.9,
-            gravity: 0.01,
+            gravity: 0.1,
             initial_temperature: 10.0,
-            warm_temperature: 1.0,
-            cooling: 0.95,
+            warm_temperature: 0.25,
+            cooling: 0.97,
             min_temperature: 0.01,
         }
     }
@@ -106,21 +108,27 @@ impl ForceLayout {
         let k = config.ideal_length;
         let r = Self::radius(n, k);
         let mut rng = Rng::new(config.seed);
-        let mut pos: Vec<Option<Point>> = (0..n).map(|i| previous.get(i).copied().flatten()).collect();
+        let mut pos: Vec<Option<Point>> =
+            (0..n).map(|i| previous.get(i).copied().flatten()).collect();
         // Place new nodes in index order so that chains of new nodes still land together.
         for i in 0..n {
             if pos[i].is_some() {
                 continue;
             }
             let u = u32::try_from(i).unwrap_or(u32::MAX);
-            let placed: Vec<Point> = graph.neighbors(u).filter_map(|(v, _)| pos[v as usize]).collect();
+            let placed: Vec<Point> = graph
+                .neighbors(u)
+                .filter_map(|(v, _)| pos[v as usize])
+                .collect();
             let a = rng.next_f64() * std::f64::consts::TAU;
             pos[i] = Some(if placed.is_empty() {
                 let d = r * rng.next_f64().sqrt();
                 [d * a.cos(), d * a.sin()]
             } else {
                 let c = index_f64(placed.len());
-                let (sx, sy) = placed.iter().fold((0.0, 0.0), |(x, y), p| (x + p[0], y + p[1]));
+                let (sx, sy) = placed
+                    .iter()
+                    .fold((0.0, 0.0), |(x, y), p| (x + p[0], y + p[1]));
                 [sx / c + 0.5 * k * a.cos(), sy / c + 0.5 * k * a.sin()]
             });
         }
@@ -128,7 +136,12 @@ impl ForceLayout {
         Self::with_positions(graph, config, pos, config.warm_temperature * k)
     }
 
-    fn with_positions(graph: WeightedGraph, config: ForceConfig, pos: Vec<Point>, temperature: f64) -> Self {
+    fn with_positions(
+        graph: WeightedGraph,
+        config: ForceConfig,
+        pos: Vec<Point>,
+        temperature: f64,
+    ) -> Self {
         let n = graph.node_count();
         let k = config.ideal_length;
         let bound = 10.0 * Self::radius(n, k) + 10.0 * k;
@@ -216,15 +229,17 @@ impl ForceLayout {
         }
         let t = self.temperature;
         let mut max_move: f64 = 0.0;
-        for i in 0..n {
-            let [fx, fy] = disp[i];
+        for (i, &[fx, fy]) in disp.iter().enumerate() {
             let len = fx.hypot(fy);
             if len <= 0.0 || !len.is_finite() {
                 continue;
             }
             let step = len.min(t);
             max_move = max_move.max(step);
-            let p = [self.pos[i][0] + fx / len * step, self.pos[i][1] + fy / len * step];
+            let p = [
+                self.pos[i][0] + fx / len * step,
+                self.pos[i][1] + fy / len * step,
+            ];
             self.pos[i] = self.clamp(p);
         }
         self.last_max_move = max_move;
@@ -273,6 +288,7 @@ struct Cell {
     cy: f64,
     half: f64,
     mass: f64,
+    count: u32,
     sx: f64,
     sy: f64,
     children: [u32; 4],
@@ -289,6 +305,7 @@ impl Cell {
             cy,
             half,
             mass: 0.0,
+            count: 0,
             sx: 0.0,
             sy: 0.0,
             children: [NONE; 4],
@@ -313,7 +330,11 @@ impl QuadTree {
         }
         let half = ((maxx - minx).max(maxy - miny) / 2.0).max(1e-6) * 1.000_001;
         let mut tree = Self {
-            cells: vec![Cell::new((minx + maxx) / 2.0, (miny + maxy) / 2.0, half)],
+            cells: vec![Cell::new(
+                f64::midpoint(minx, maxx),
+                f64::midpoint(miny, maxy),
+                half,
+            )],
         };
         if pos.is_empty() {
             return tree;
@@ -345,10 +366,11 @@ impl QuadTree {
         loop {
             let c = &mut self.cells[cell];
             c.mass += 1.0;
+            c.count += 1;
             c.sx += p[0];
             c.sy += p[1];
             if c.leaf {
-                if c.body == NONE && c.mass == 1.0 {
+                if c.body == NONE && c.count == 1 {
                     c.body = body;
                     return;
                 }
@@ -365,6 +387,7 @@ impl QuadTree {
                     let ch = self.child(cell, q);
                     let rc = &mut self.cells[ch];
                     rc.mass += 1.0;
+                    rc.count += 1;
                     rc.sx += rp[0];
                     rc.sy += rp[1];
                     rc.body = resident;
@@ -376,7 +399,7 @@ impl QuadTree {
         }
     }
 
-    /// Repulsive displacement on body `i`: Σ k² m (p_i − c) / d².
+    /// Repulsive displacement on body `i`: `Σ k² m (p_i − c) / d²`.
     fn repulsion(&self, i: usize, pos: &[Point], k2: f64, theta: f64) -> Point {
         let p = pos[i];
         let me = u32::try_from(i).unwrap_or(NONE);

@@ -26,5 +26,7 @@ pub mod weighted;
 pub use graph::{Edge, EdgeInput, Graph, GraphBuilder, GraphError, Node, NodeIx};
 pub use leiden::{LeidenConfig, Partition, leiden, leiden_from, modularity};
 pub use matching::{ClusterMatching, MatchConfig, MatchedCluster, PreviousCluster, match_clusters};
-pub use neighbourhood::{CoMention, Filter, Neighbourhood, NeighbourhoodError, co_mentions, neighbourhood};
+pub use neighbourhood::{
+    CoMention, Filter, Neighbourhood, NeighbourhoodError, co_mentions, neighbourhood,
+};
 pub use weighted::{EdgeWeights, WeightedGraph};

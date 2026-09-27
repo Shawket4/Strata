@@ -70,11 +70,20 @@ pub fn neighbourhood(
         if d == depth {
             continue;
         }
-        let out = graph.out_edges(u).iter().map(|&e| (e, graph.edges()[e as usize].target));
-        let inn = graph.in_edges(u).iter().map(|&e| (e, graph.edges()[e as usize].source));
+        let out = graph
+            .out_edges(u)
+            .iter()
+            .map(|&e| (e, graph.edges()[e as usize].target));
+        let inn = graph
+            .in_edges(u)
+            .iter()
+            .map(|&e| (e, graph.edges()[e as usize].source));
         for (e, v) in out.chain(inn) {
             let edge = &graph.edges()[e as usize];
-            if !filter.edge_ok(edge.kind) || !filter.node_ok(graph.node(v).kind) || seen.contains_key(&v) {
+            if !filter.edge_ok(edge.kind)
+                || !filter.node_ok(graph.node(v).kind)
+                || seen.contains_key(&v)
+            {
                 continue;
             }
             seen.insert(v, d + 1);
@@ -87,10 +96,16 @@ pub fn neighbourhood(
         .edges()
         .iter()
         .enumerate()
-        .filter(|(_, e)| filter.edge_ok(e.kind) && seen.contains_key(&e.source) && seen.contains_key(&e.target))
+        .filter(|(_, e)| {
+            filter.edge_ok(e.kind) && seen.contains_key(&e.source) && seen.contains_key(&e.target)
+        })
         .map(|(i, _)| u32::try_from(i).unwrap_or(u32::MAX))
         .collect();
-    Ok(Neighbourhood { focus, nodes, edges })
+    Ok(Neighbourhood {
+        focus,
+        nodes,
+        edges,
+    })
 }
 
 /// Co-mention of two entities.
@@ -117,7 +132,9 @@ pub fn co_mentions(graph: &Graph, kinds: &[GraphNodeKind]) -> Vec<CoMention> {
             .out_edges(n)
             .iter()
             .map(|&e| &graph.edges()[e as usize])
-            .filter(|e| e.kind == GraphEdgeKind::Mention && kinds.contains(&graph.node(e.target).kind))
+            .filter(|e| {
+                e.kind == GraphEdgeKind::Mention && kinds.contains(&graph.node(e.target).kind)
+            })
             .map(|e| e.target)
             .collect();
         mentioned.sort_unstable();
@@ -137,8 +154,17 @@ pub fn co_mentions(graph: &Graph, kinds: &[GraphNodeKind]) -> Vec<CoMention> {
     }
     let mut out: Vec<CoMention> = pairs
         .into_iter()
-        .map(|((a, b), (notes, strength))| CoMention { a, b, notes, strength })
+        .map(|((a, b), (notes, strength))| CoMention {
+            a,
+            b,
+            notes,
+            strength,
+        })
         .collect();
-    out.sort_by(|x, y| y.strength.total_cmp(&x.strength).then((x.a, x.b).cmp(&(y.a, y.b))));
+    out.sort_by(|x, y| {
+        y.strength
+            .total_cmp(&x.strength)
+            .then((x.a, x.b).cmp(&(y.a, y.b)))
+    });
     out
 }

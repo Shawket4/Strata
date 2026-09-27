@@ -4574,6 +4574,7 @@ dependencies = [
  "pretty_assertions",
  "sha2 0.10.9",
  "sqlx",
+ "strata-ai",
  "strata-common",
  "strata-index",
  "tempfile",

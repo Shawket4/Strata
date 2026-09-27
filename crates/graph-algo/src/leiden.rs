@@ -77,7 +77,11 @@ pub fn modularity(graph: &WeightedGraph, membership: &[u32], gamma: f64) -> f64 
     if m <= 0.0 {
         return 0.0;
     }
-    let count = membership.iter().map(|&c| c as usize + 1).max().unwrap_or(0);
+    let count = membership
+        .iter()
+        .map(|&c| c as usize + 1)
+        .max()
+        .unwrap_or(0);
     let mut internal = vec![0.0; count];
     let mut total = vec![0.0; count];
     for u in 0..graph.node_count() {
@@ -287,8 +291,14 @@ fn refine(level: &Level, comm: &[u32], gamma_2m: f64, theta: f64, rng: &mut Rng)
                     candidates.push((t, g));
                 }
             }
-            let max = candidates.iter().map(|c| c.1).fold(f64::NEG_INFINITY, f64::max);
-            let weights: Vec<f64> = candidates.iter().map(|c| ((c.1 - max) / theta).exp()).collect();
+            let max = candidates
+                .iter()
+                .map(|c| c.1)
+                .fold(f64::NEG_INFINITY, f64::max);
+            let weights: Vec<f64> = candidates
+                .iter()
+                .map(|c| ((c.1 - max) / theta).exp())
+                .collect();
             let sum: f64 = weights.iter().sum();
             let mut r = rng.next_f64() * sum;
             let mut chosen = candidates[candidates.len() - 1].0;
@@ -337,7 +347,8 @@ fn compact(labels: &mut [u32]) -> usize {
 fn aggregate(level: &Level, refined: &[u32], count: usize) -> Level {
     let mut k = vec![0.0; count];
     let mut self_loop = vec![0.0; count];
-    let mut maps: Vec<std::collections::BTreeMap<u32, f64>> = vec![std::collections::BTreeMap::new(); count];
+    let mut maps: Vec<std::collections::BTreeMap<u32, f64>> =
+        vec![std::collections::BTreeMap::new(); count];
     for v in 0..level.len() {
         let a = refined[v];
         k[a as usize] += level.k[v];
@@ -359,7 +370,12 @@ fn aggregate(level: &Level, refined: &[u32], count: usize) -> Level {
     }
 }
 
-fn run_once(graph: &WeightedGraph, initial: &[u32], config: &LeidenConfig, rng: &mut Rng) -> Vec<u32> {
+fn run_once(
+    graph: &WeightedGraph,
+    initial: &[u32],
+    config: &LeidenConfig,
+    rng: &mut Rng,
+) -> Vec<u32> {
     let n = graph.node_count();
     let m = graph.total_weight();
     let gamma_2m = config.resolution / (2.0 * m);
@@ -405,7 +421,11 @@ pub fn leiden(graph: &WeightedGraph, config: &LeidenConfig) -> Partition {
 
 /// Runs Leiden starting from `initial` (e.g. yesterday's clusters, for stability); `None`
 /// starts from singletons.
-pub fn leiden_from(graph: &WeightedGraph, initial: Option<&[u32]>, config: &LeidenConfig) -> Partition {
+pub fn leiden_from(
+    graph: &WeightedGraph,
+    initial: Option<&[u32]>,
+    config: &LeidenConfig,
+) -> Partition {
     let n = graph.node_count();
     let mut rng = Rng::new(config.seed);
     let mut membership: Vec<u32> = match initial {

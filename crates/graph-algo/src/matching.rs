@@ -90,7 +90,10 @@ pub fn match_clusters(
         for i in candidates {
             let common = old_sets[i].intersection(set).count();
             let union = old_sets[i].len() + set.len() - common;
-            #[expect(clippy::cast_precision_loss, reason = "cluster sizes are far below 2^52")]
+            #[expect(
+                clippy::cast_precision_loss,
+                reason = "cluster sizes are far below 2^52"
+            )]
             let jac = common as f64 / union as f64;
             pairs.push((jac, common, i, j));
         }

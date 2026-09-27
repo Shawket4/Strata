@@ -1,11 +1,18 @@
 //! Leiden on known graphs, the connectivity guarantee, determinism.
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::float_cmp)] // test helpers; exact values
+#![allow(
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)] // test helpers; exact values
 
 use std::collections::VecDeque;
 
 use domain::{GraphEdgeKind, GraphNodeKind, RelationType};
 use graph_algo::rng::Rng;
-use graph_algo::{EdgeInput, EdgeWeights, Graph, LeidenConfig, WeightedGraph, leiden, leiden_from, modularity};
+use graph_algo::{
+    EdgeInput, EdgeWeights, Graph, LeidenConfig, WeightedGraph, leiden, leiden_from, modularity,
+};
 use pretty_assertions::assert_eq;
 use proptest::prelude::*;
 
@@ -109,10 +116,20 @@ fn two_cliques_joined_by_a_bridge() {
 fn karate_club_modularity_above_bound_and_connected() {
     let g = karate();
     for seed in 0..20 {
-        let p = leiden(&g, &LeidenConfig { seed, ..LeidenConfig::default() });
+        let p = leiden(
+            &g,
+            &LeidenConfig {
+                seed,
+                ..LeidenConfig::default()
+            },
+        );
         // The optimum is 0.4198 (4 communities); Louvain typically finds ≈ 0.4188.
         assert!(p.quality > 0.415, "seed {seed}: Q = {}", p.quality);
-        assert!((3..=5).contains(&p.count), "seed {seed}: {} communities", p.count);
+        assert!(
+            (3..=5).contains(&p.count),
+            "seed {seed}: {} communities",
+            p.count
+        );
         assert!(communities_connected(&g, &p.membership), "seed {seed}");
     }
 }
@@ -120,7 +137,10 @@ fn karate_club_modularity_above_bound_and_connected() {
 #[test]
 fn same_seed_same_partition() {
     let g = karate();
-    let cfg = LeidenConfig { seed: 7, ..LeidenConfig::default() };
+    let cfg = LeidenConfig {
+        seed: 7,
+        ..LeidenConfig::default()
+    };
     let a = leiden(&g, &cfg);
     let b = leiden(&g, &cfg);
     assert_eq!(a, b);
@@ -139,11 +159,23 @@ fn ring_of_cliques_and_resolution() {
     let expected: Vec<u32> = (0..50).map(|i| i / 5).collect();
     assert_eq!(p.membership, expected);
     // Low resolution merges neighbouring cliques.
-    let coarse = leiden(&g, &LeidenConfig { resolution: 0.05, ..LeidenConfig::default() });
+    let coarse = leiden(
+        &g,
+        &LeidenConfig {
+            resolution: 0.05,
+            ..LeidenConfig::default()
+        },
+    );
     assert!(coarse.count < 10, "{}", coarse.count);
     assert!(communities_connected(&g, &coarse.membership));
     // Very high resolution splits cliques.
-    let fine = leiden(&g, &LeidenConfig { resolution: 20.0, ..LeidenConfig::default() });
+    let fine = leiden(
+        &g,
+        &LeidenConfig {
+            resolution: 20.0,
+            ..LeidenConfig::default()
+        },
+    );
     assert!(fine.count > 10, "{}", fine.count);
     assert!(communities_connected(&g, &fine.membership));
 }
@@ -159,7 +191,10 @@ fn edgeless_and_empty_graphs() {
 #[test]
 fn starting_from_a_previous_partition_is_stable() {
     let g = karate();
-    let cfg = LeidenConfig { seed: 3, ..LeidenConfig::default() };
+    let cfg = LeidenConfig {
+        seed: 3,
+        ..LeidenConfig::default()
+    };
     let first = leiden(&g, &cfg);
     let again = leiden_from(&g, Some(&first.membership), &cfg);
     assert!(again.quality >= first.quality - 1e-12);
@@ -169,7 +204,12 @@ fn starting_from_a_previous_partition_is_stable() {
 #[test]
 fn projection_weights_user_links_over_ai_relations() {
     // a–b by user link, b–c by a low-confidence AI relation, c–d by user link.
-    let nodes = [("a", GraphNodeKind::Note), ("b", GraphNodeKind::Note), ("c", GraphNodeKind::Note), ("d", GraphNodeKind::Note)];
+    let nodes = [
+        ("a", GraphNodeKind::Note),
+        ("b", GraphNodeKind::Note),
+        ("c", GraphNodeKind::Note),
+        ("d", GraphNodeKind::Note),
+    ];
     let rel = GraphEdgeKind::Relation(RelationType::Related);
     let edges = vec![
         EdgeInput::user("a", "b", GraphEdgeKind::Link),
@@ -183,7 +223,13 @@ fn projection_weights_user_links_over_ai_relations() {
     let got: Vec<(u32, u32, f64)> = w.edges().collect();
     assert_eq!(got, [(0, 1, 3.0), (1, 2, 1.0), (2, 3, 5.0)]);
     assert_eq!(w.total_weight(), 9.0);
-    let with_sim = WeightedGraph::project(&g, &EdgeWeights { include_similarity: true, ..EdgeWeights::default() });
+    let with_sim = WeightedGraph::project(
+        &g,
+        &EdgeWeights {
+            include_similarity: true,
+            ..EdgeWeights::default()
+        },
+    );
     assert_eq!(with_sim.edges().count(), 4);
 }
 
@@ -220,4 +266,27 @@ proptest! {
         let singletons: Vec<u32> = (0..u32::try_from(n).unwrap()).collect();
         prop_assert!(p.quality >= modularity(&g, &singletons, gamma) - 1e-9);
     }
+}
+
+#[test]
+fn recovers_a_planted_partition() {
+    // 10 blocks of 30 nodes, 1500 edges, 90% inside a block.
+    let mut rng = Rng::new(99);
+    let edges: Vec<(u32, u32, f64)> = (0..1500)
+        .map(|_| {
+            let u = rng.below(300);
+            let v = if rng.next_f64() < 0.9 {
+                (u / 30) * 30 + rng.below(30)
+            } else {
+                rng.below(300)
+            };
+            (u32::try_from(u).unwrap(), u32::try_from(v).unwrap(), 1.0)
+        })
+        .collect();
+    let g = WeightedGraph::from_edges(300, edges);
+    let p = leiden(&g, &LeidenConfig::default());
+    let expected: Vec<u32> = (0..300).map(|i| i / 30).collect();
+    assert!(p.quality >= modularity(&g, &expected, 1.0) - 1e-12);
+    assert_eq!(p.count, 10);
+    assert_eq!(p.membership, expected);
 }

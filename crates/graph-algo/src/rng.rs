@@ -1,4 +1,4 @@
-//! A small seedable PRNG (xoshiro256** seeded through SplitMix64).
+//! A small seedable PRNG (`xoshiro256**` seeded through `SplitMix64`).
 //!
 //! Implemented here rather than taken from `rand` so the sequence for a seed is fixed forever
 //! and identical on every platform: cluster assignments and layouts must not change when a
