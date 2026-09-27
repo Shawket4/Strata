@@ -326,6 +326,10 @@ fn operation_fn(
         }
     };
     let (ret, send) = match &op.response {
+        _ if op.zip_response => (
+            quote! { ::bytes::Bytes },
+            quote! { client.send_zip(request).await },
+        ),
         Some(schema) => (
             type_tokens(space, schema, format!("{}Response", pascal(&op.id)))?,
             quote! { client.send(request).await },

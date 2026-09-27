@@ -54,6 +54,7 @@ pub struct Request {
     pub(crate) query: Vec<(&'static str, String)>,
     pub(crate) headers: Vec<(&'static str, String)>,
     pub(crate) body: Option<Vec<u8>>,
+    pub(crate) accept: Option<&'static str>,
 }
 
 impl Request {
@@ -67,7 +68,15 @@ impl Request {
             query: Vec::new(),
             headers: Vec::new(),
             body: None,
+            accept: None,
         }
+    }
+
+    /// Overrides the `Accept` header (default: MessagePack).
+    #[must_use]
+    pub fn accept(mut self, accept: &'static str) -> Self {
+        self.accept = Some(accept);
+        self
     }
 
     /// Sends the bearer token from the client's [`crate::TokenProvider`].

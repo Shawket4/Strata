@@ -133,12 +133,13 @@ mod tests {
 
     #[test]
     fn accept_header_matrix() {
-        let cases: [(&[&str], bool); 12] = [
+        let cases: [(&[&str], bool); 13] = [
             (&[], true),
             (&["*/*"], true),
             (&["application/*"], true),
             (&["application/vnd.msgpack"], true),
-            (&["Application/MsgPack"], true),
+            (&["Application/VND.MsgPack"], true),
+            (&["application/msgpack"], false),
             (&["application/json"], false),
             (&["text/html, application/json;q=0.9"], false),
             (&["application/json", "application/vnd.msgpack;q=0.1"], true),

@@ -98,10 +98,11 @@ fn body_operations_get_body_problem_responses_and_secured_ones_401() {
     assert_eq!(
         keys,
         [
-            "201", "401", "404", "406", "409", "413", "415", "422", "500"
+            "201", "401", "403", "404", "406", "409", "413", "415", "422", "500"
         ]
     );
     assert_eq!(op["responses"]["422"], response_ref("InvalidBody"));
+    assert_eq!(op["responses"]["403"], response_ref("Restricted"));
     assert!(op["requestBody"]["content"].get(MSGPACK).is_some());
     assert!(op["responses"]["201"]["content"].get(MSGPACK).is_some());
     assert!(

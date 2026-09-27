@@ -9,7 +9,7 @@ use reqwest::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use serde::de::DeserializeOwned;
 
 use crate::types::Problem;
-use crate::{ApiError, Error, MSGPACK, PROBLEM_MSGPACK, Request, TokenProvider};
+use crate::{ApiError, Error, MSGPACK, PROBLEM_MSGPACK, Request, TokenProvider, ZIP};
 
 /// A raw response as seen by a [`ResponseObserver`].
 #[derive(Debug, Clone, Copy)]
@@ -111,6 +111,9 @@ impl ClientBuilder {
     }
 }
 
+/// `Accept` of zip downloads: the archive, or MessagePack problem details.
+const ZIP_ACCEPT: &str = "application/zip, application/vnd.msgpack;q=0.5";
+
 /// A buffered HTTP response.
 struct Raw {
     status: u16,
@@ -158,6 +161,21 @@ impl Client {
             operation: request.operation_id,
             message,
         })
+    }
+
+    /// Sends `request` whose success response is an `application/zip` download and returns
+    /// its bytes.
+    pub async fn send_zip(&self, request: Request) -> Result<bytes::Bytes, Error> {
+        let request = request.accept(ZIP_ACCEPT);
+        let raw = self.execute(&request).await?;
+        if !is_media(raw.content_type.as_deref(), ZIP) {
+            return Err(Error::UnexpectedResponse {
+                operation: request.operation_id,
+                status: raw.status,
+                content_type: raw.content_type,
+            });
+        }
+        Ok(raw.body)
     }
 
     /// Sends `request` whose success response has no body.
@@ -217,7 +235,7 @@ impl Client {
             .inner
             .http
             .request(request.method.clone(), url)
-            .header(ACCEPT, MSGPACK);
+            .header(ACCEPT, request.accept.unwrap_or(MSGPACK));
         for (name, value) in &request.headers {
             builder = builder.header(*name, value);
         }

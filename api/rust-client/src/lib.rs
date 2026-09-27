@@ -37,3 +37,6 @@ pub const MSGPACK: &str = "application/vnd.msgpack";
 
 /// Media type of problem details.
 pub const PROBLEM_MSGPACK: &str = "application/problem+msgpack";
+
+/// Media type of binary downloads (vault export).
+pub const ZIP: &str = "application/zip";

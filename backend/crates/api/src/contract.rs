@@ -153,6 +153,10 @@ impl Contract {
             .as_deref()
             .and_then(|a| content.get(a))
             .ok_or_else(mismatch)?;
+        if actual.as_deref() == Some(crate::wire::ZIP) {
+            // Binary downloads have no MessagePack schema; the media type is the contract.
+            return Ok(Value::Null);
+        }
         let json = msgpack_to_json(body)?;
         if let Some(schema) = media.get("schema") {
             self.validate(schema, &json, &format!("{operation_id} {status}"))?;

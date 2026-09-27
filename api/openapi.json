@@ -39,7 +39,7 @@
             }
           }
         },
-        "description": "`not_acceptable`: `Accept` excludes application/msgpack."
+        "description": "`not_acceptable`: `Accept` excludes application/vnd.msgpack."
       },
       "NotFound": {
         "content": {
@@ -61,6 +61,16 @@
         },
         "description": "`payload_too_large`: the body exceeds the route's limit."
       },
+      "Restricted": {
+        "content": {
+          "application/problem+msgpack": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        },
+        "description": "`account_deletion_pending`: the account is scheduled for deletion and this session is export-only; `password_change_required`: the password was reset and must be changed with `PATCH /me` first."
+      },
       "Unauthorized": {
         "content": {
           "application/problem+msgpack": {
@@ -69,7 +79,7 @@
             }
           }
         },
-        "description": "`unauthorized`: missing, invalid or expired access token."
+        "description": "`unauthorized`: missing, invalid, expired or revoked access token (signed out, device removed, account disabled)."
       },
       "UnsupportedMediaType": {
         "content": {
@@ -79,10 +89,172 @@
             }
           }
         },
-        "description": "`unsupported_media_type`: the body is not application/msgpack."
+        "description": "`unsupported_media_type`: the body is not application/vnd.msgpack."
       }
     },
     "schemas": {
+      "AccountStatus": {
+        "description": "Account lifecycle status (D22, D25).",
+        "enum": [
+          "pending",
+          "active",
+          "disabled",
+          "rejected",
+          "deletion_pending"
+        ],
+        "type": "string"
+      },
+      "AdminUser": {
+        "description": "An account as admins see it: status and dates, never content.",
+        "properties": {
+          "approved_at": {
+            "description": "Approved (or admin-created) at.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created": {
+            "description": "Created at.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletion_at": {
+            "description": "When the account will be purged.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deletion_requested_at": {
+            "description": "When deletion was scheduled.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "disabled_at": {
+            "description": "Disabled at.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "description": "Display name.",
+            "type": "string"
+          },
+          "export_downloaded_at": {
+            "description": "When the user downloaded their export (admins never see the export itself).",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Account ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "password_change_required": {
+            "description": "The account is on a temporary password.",
+            "type": "boolean"
+          },
+          "rejected_at": {
+            "description": "Rejected at.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "description": "Role."
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus",
+            "description": "Status."
+          },
+          "username": {
+            "description": "Username as entered.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "display_name",
+          "role",
+          "status",
+          "created",
+          "password_change_required"
+        ],
+        "type": "object"
+      },
+      "AuthSession": {
+        "description": "Tokens of a device session.",
+        "properties": {
+          "access_token": {
+            "description": "Bearer token for API calls (EdDSA-signed, short-lived).",
+            "type": "string"
+          },
+          "access_token_expires_at": {
+            "description": "When the access token expires.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "device_id": {
+            "description": "The device created at login.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "export_only": {
+            "description": "The account is scheduled for deletion: only `GET /me`, `GET /me/export`,\n`POST /me/confirm-deletion` and logout work.",
+            "type": "boolean"
+          },
+          "password_change_required": {
+            "description": "The password was reset by an admin: change it with `PATCH /me` first.",
+            "type": "boolean"
+          },
+          "refresh_token": {
+            "description": "Single-use refresh token; `POST /auth/refresh` returns the next one.",
+            "type": "string"
+          },
+          "refresh_token_expires_at": {
+            "description": "When the refresh token (and the session) expires.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "session_id": {
+            "description": "The session (revocable individually).",
+            "format": "ulid",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "The user.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "device_id",
+          "session_id",
+          "access_token",
+          "access_token_expires_at",
+          "refresh_token",
+          "refresh_token_expires_at",
+          "export_only",
+          "password_change_required"
+        ],
+        "type": "object"
+      },
       "Binary": {
         "description": "Raw bytes, carried as MessagePack `bin`.",
         "format": "binary",
@@ -122,6 +294,91 @@
           "payload"
         ],
         "type": "object"
+      },
+      "CreateUser": {
+        "description": "`POST /admin/users` body: an active account, created by an admin.",
+        "properties": {
+          "display_name": {
+            "description": "Display name.",
+            "type": "string"
+          },
+          "password": {
+            "description": "Initial password.",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "description": "Role."
+          },
+          "username": {
+            "description": "Username (same rules as sign-up).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "display_name",
+          "role"
+        ],
+        "type": "object"
+      },
+      "Device": {
+        "description": "A signed-in device of the caller.",
+        "properties": {
+          "created": {
+            "description": "First login.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "current": {
+            "description": "This is the device making the request.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Device ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "last_seen": {
+            "description": "Last token refresh.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name given at login or by `PATCH`.",
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/DevicePlatform",
+            "description": "Platform."
+          },
+          "reminders_enabled": {
+            "description": "Whether this device schedules local reminder notifications (D27).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "platform",
+          "created",
+          "last_seen",
+          "current",
+          "reminders_enabled"
+        ],
+        "type": "object"
+      },
+      "DevicePlatform": {
+        "description": "The app platform a device runs on.",
+        "enum": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "type": "string"
       },
       "DuplicateCandidate": {
         "description": "An existing item a create request resembles (`409 duplicate_candidates`, §7.5).",
@@ -221,6 +478,34 @@
         ],
         "type": "string"
       },
+      "LoginRequest": {
+        "description": "`POST /auth/login` body.",
+        "properties": {
+          "device_name": {
+            "description": "Name of this device, shown in the device list (1–100 characters).",
+            "type": "string"
+          },
+          "password": {
+            "description": "Password.",
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/DevicePlatform",
+            "description": "Platform of this device."
+          },
+          "username": {
+            "description": "Username (case- and confusable-insensitive).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "device_name",
+          "platform"
+        ],
+        "type": "object"
+      },
       "MatchLevel": {
         "description": "How a duplicate candidate matched (§9.7).",
         "enum": [
@@ -229,6 +514,114 @@
           "semantic"
         ],
         "type": "string"
+      },
+      "Me": {
+        "description": "The signed-in user.",
+        "properties": {
+          "created": {
+            "description": "When the account was created.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "deletion_at": {
+            "description": "When a scheduled deletion will be purged.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "description": "Display name.",
+            "type": "string"
+          },
+          "export_only": {
+            "description": "This session is export-only (account scheduled for deletion).",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Account ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "password_change_required": {
+            "description": "The password was reset by an admin and must be changed with `PATCH /me`.",
+            "type": "boolean"
+          },
+          "preferences": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Free-form client preferences.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role",
+            "description": "Role."
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus",
+            "description": "Account status."
+          },
+          "timezone": {
+            "description": "IANA timezone for dates, tasks and reminders (default: the server's).",
+            "type": "string"
+          },
+          "ui_language": {
+            "$ref": "#/components/schemas/UiLanguage",
+            "description": "UI language (default `en`)."
+          },
+          "username": {
+            "description": "Username as entered at sign-up.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "display_name",
+          "role",
+          "status",
+          "created",
+          "ui_language",
+          "timezone",
+          "preferences",
+          "password_change_required",
+          "export_only"
+        ],
+        "type": "object"
+      },
+      "PendingAccount": {
+        "description": "An account awaiting approval.",
+        "properties": {
+          "display_name": {
+            "description": "Display name.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Account ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AccountStatus",
+            "description": "Always `pending`."
+          },
+          "username": {
+            "description": "Username as entered.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "display_name",
+          "status"
+        ],
+        "type": "object"
       },
       "Problem": {
         "description": "RFC 7807 problem details, encoded as `application/problem+msgpack`. `type` is a problem slug (e.g. `not_found`, `duplicate_candidates`); clients treat unknown slugs by `status`.",
@@ -316,6 +709,58 @@
         ],
         "type": "object"
       },
+      "RefreshRequest": {
+        "description": "`POST /auth/refresh` body.",
+        "properties": {
+          "refresh_token": {
+            "description": "The current refresh token (single use).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
+        ],
+        "type": "object"
+      },
+      "Role": {
+        "description": "Account role.",
+        "enum": [
+          "admin",
+          "member"
+        ],
+        "type": "string"
+      },
+      "SettableStatus": {
+        "description": "Status an admin can set directly.",
+        "enum": [
+          "active",
+          "disabled"
+        ],
+        "type": "string"
+      },
+      "SignupRequest": {
+        "description": "`POST /auth/signup` body.",
+        "properties": {
+          "display_name": {
+            "description": "1–100 characters.",
+            "type": "string"
+          },
+          "password": {
+            "description": "At least the configured minimum length.",
+            "type": "string"
+          },
+          "username": {
+            "description": "3–32 letters, digits, `.`, `_`, `-` (any script); compared case- and\nconfusable-insensitively.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "display_name"
+        ],
+        "type": "object"
+      },
       "StreamFrameKind": {
         "description": "Envelope `kind`.",
         "enum": [
@@ -325,6 +770,147 @@
           "end"
         ],
         "type": "string"
+      },
+      "UiLanguage": {
+        "description": "UI language of the app.",
+        "enum": [
+          "en",
+          "ar"
+        ],
+        "type": "string"
+      },
+      "UpdateDevice": {
+        "description": "`PATCH /devices/{id}` body; absent fields are unchanged.",
+        "properties": {
+          "name": {
+            "description": "New name (1–100 characters).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reminders_enabled": {
+            "description": "Turn local reminder notifications on this device on or off.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "UpdateMe": {
+        "description": "`PATCH /me` body: every field is optional; absent fields are unchanged.",
+        "properties": {
+          "current_password": {
+            "description": "The current password (required with `new_password`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_name": {
+            "description": "New display name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "new_password": {
+            "description": "New password; requires `current_password`. Other sessions are signed out.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "preferences": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Replaces all preferences (at most 64 entries; keys ≤ 64 bytes, values ≤ 1024).",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "timezone": {
+            "description": "IANA timezone, e.g. `Africa/Cairo`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ui_language": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UiLanguage",
+                "description": "UI language."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "UpdateUser": {
+        "description": "`PATCH /admin/users/{id}` body; absent fields are unchanged.",
+        "properties": {
+          "reset_password": {
+            "description": "Replace the password with a one-time temporary password (returned once); the user must\nchange it at next sign-in, and every session ends.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "role": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Role",
+                "description": "New role."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SettableStatus",
+                "description": "Disable or re-enable."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "UpdateUserResult": {
+        "description": "Result of `PATCH /admin/users/{id}`.",
+        "properties": {
+          "temporary_password": {
+            "description": "The temporary password, present only when `reset_password` was set. Shown once.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminUser",
+            "description": "The account after the change."
+          }
+        },
+        "required": [
+          "user"
+        ],
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -336,19 +922,881 @@
     }
   },
   "info": {
-    "description": "Strata HTTP API. Every body is MessagePack (application/msgpack); errors are RFC 7807 problem details (application/problem+msgpack). See docs/WIRE_FORMAT.md.",
+    "description": "Strata HTTP API. Every body is MessagePack (application/vnd.msgpack); errors are RFC 7807 problem details (application/problem+msgpack). See docs/WIRE_FORMAT.md.",
     "title": "Strata API",
     "version": "1"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/users": {
+      "get": {
+        "operationId": "admin_list_users",
+        "parameters": [
+          {
+            "description": "Only accounts with this status.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/AccountStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminUser"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Accounts, oldest first."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "List accounts, optionally by status.",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "operationId": "admin_create_user",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            },
+            "description": "Created, active, vault provisioned."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`username_taken`."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: codes `invalid_username`, `invalid_display_name`, `invalid_password`, or a decoding error."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Create an active account (with its vault).",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}": {
+      "delete": {
+        "operationId": "admin_delete_user",
+        "parameters": [
+          {
+            "description": "Account ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            },
+            "description": "Scheduled: `deletion_pending` with the purge time in `deletion_at`."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`account_state_conflict`: the account is not active or disabled, or is the caller's own."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Schedule the account's deletion (D25): sessions end now; the user can still sign in to an\nexport-only session until the purge.",
+        "tags": [
+          "admin"
+        ]
+      },
+      "patch": {
+        "operationId": "admin_update_user",
+        "parameters": [
+          {
+            "description": "Account ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUser"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserResult"
+                }
+              }
+            },
+            "description": "Updated. Disabling or resetting the password ends every session of the account immediately."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`account_state_conflict`: the status change does not apply to the account's state, or an admin tried to disable or demote themselves."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Disable or enable an account, change its role, or reset its password.",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/approve": {
+      "post": {
+        "operationId": "admin_approve_user",
+        "parameters": [
+          {
+            "description": "Account ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            },
+            "description": "Approved."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`account_state_conflict`: the account is not pending."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Approve a pending sign-up: the account becomes active and its vault is created.",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/cancel-deletion": {
+      "post": {
+        "operationId": "admin_cancel_deletion",
+        "parameters": [
+          {
+            "description": "Account ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            },
+            "description": "Active again; export-only sessions end (the user signs in normally)."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`account_state_conflict`: no deletion is scheduled."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Cancel a scheduled deletion: the account is active again.",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{id}/reject": {
+      "post": {
+        "operationId": "admin_reject_user",
+        "parameters": [
+          {
+            "description": "Account ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUser"
+                }
+              }
+            },
+            "description": "Rejected; the account can never sign in."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation."
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`account_state_conflict`: the account is not pending."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Reject a pending sign-up.",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            },
+            "description": "A new device session. For an account scheduled for deletion the session is export-only."
+          },
+          "401": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_credentials`: unknown username or wrong password."
+          },
+          "403": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "After a correct password: `account_pending` (awaiting approval), `account_rejected` or `account_disabled`."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: code `invalid_device_name`, or a decoding error."
+          },
+          "429": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`: too many attempts from this address or for this username. See `Retry-After`."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Sign in as a new device.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "responses": {
+          "204": {
+            "description": "The session is revoked; its tokens stop working immediately."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Sign out: revoke this device session.",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "refresh",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            },
+            "description": "New access and refresh tokens; the presented refresh token is spent."
+          },
+          "401": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`unauthorized`: unknown, expired or revoked refresh token. Presenting a spent token again revokes the whole device session."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Exchange a refresh token for new tokens (rotation).",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "operationId": "signup",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingAccount"
+                }
+              }
+            },
+            "description": "Created in `pending` state: no vault and no session until an admin approves it."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`username_taken`: the name (or a confusable spelling of it) is in use."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: codes `invalid_username`, `invalid_display_name`, `invalid_password`, or a decoding error."
+          },
+          "429": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`: too many sign-ups from this address or overall, or too many accounts awaiting approval. See `Retry-After`."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "security": [
+          {}
+        ],
+        "summary": "Register an account; it waits for admin approval (D22).",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/devices": {
+      "get": {
+        "operationId": "list_devices",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Device"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Every device signed in to the caller's account."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The caller's devices, most recently seen first.",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/v1/devices/{id}": {
+      "delete": {
+        "operationId": "delete_device",
+        "parameters": [
+          {
+            "description": "Device ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removed; its tokens stop working immediately."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Remove a device: its sessions end immediately (removing the current device signs out).",
+        "tags": [
+          "devices"
+        ]
+      },
+      "patch": {
+        "operationId": "update_device",
+        "parameters": [
+          {
+            "description": "Device ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDevice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Device"
+                }
+              }
+            },
+            "description": "The updated device."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: code `invalid_device_name`, or a decoding error."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Rename a device or switch its reminders.",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health",
         "responses": {
           "200": {
             "content": {
-              "application/msgpack": {
+              "application/vnd.msgpack": {
                 "schema": {
                   "$ref": "#/components/schemas/Health"
                 }
@@ -371,6 +1819,167 @@
           "system"
         ]
       }
+    },
+    "/api/v1/me": {
+      "get": {
+        "operationId": "get_me",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "The caller's account and settings."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The signed-in user, role and settings.",
+        "tags": [
+          "account"
+        ]
+      },
+      "patch": {
+        "operationId": "update_me",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMe"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Me"
+                }
+              }
+            },
+            "description": "The updated account. A password change signs out every other session."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: codes `current_password_required`, `current_password_mismatch`, `invalid_password`, `invalid_display_name`, `invalid_timezone`, `invalid_preferences`, or a decoding error."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Change the password, display name, UI language, timezone or preferences.",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/api/v1/me/confirm-deletion": {
+      "post": {
+        "operationId": "confirm_deletion",
+        "responses": {
+          "204": {
+            "description": "The account, its vault and all its data were deleted; every token stops working."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`account_state_conflict`: the account is not scheduled for deletion."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "End the deletion grace period now: the account and its vault are purged.",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/api/v1/me/export": {
+      "get": {
+        "operationId": "export_me",
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "description": "A zip archive.",
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The caller's vault (notes, attachments, `.meta/`; no git history), streamed as a zip. Available to export-only sessions."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Download the caller's own vault as a zip.",
+        "tags": [
+          "account"
+        ]
+      }
     }
   },
   "security": [
@@ -382,6 +1991,22 @@
     {
       "description": "Service status.",
       "name": "system"
+    },
+    {
+      "description": "Sign-up, sign-in and device sessions (PLAN §8).",
+      "name": "auth"
+    },
+    {
+      "description": "The signed-in user's account, settings, export and deletion.",
+      "name": "account"
+    },
+    {
+      "description": "The signed-in user's devices.",
+      "name": "devices"
+    },
+    {
+      "description": "Account administration (admins only).",
+      "name": "admin"
     }
   ]
 }

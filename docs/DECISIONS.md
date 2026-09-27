@@ -4,6 +4,9 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### L16 widened — shared crates for all shared logic
+- New shared crates `sync-model` (ops, change records, 3-way merge), `graph-algo` (neighbourhoods, Leiden, layouts), `dedupe` (exact/near detection, ranking). Rule: anything both the backend and the client core need goes into a shared crate.
+
 ### D27 revised — reminders: (a) local-first now, server push later
 - The client core computes each device's notification plan and emits schedule/cancel operations; a Dart adapter applies them with flutter_local_notifications; the OS fires them even when the app is closed. Linux fires only while the app runs. Server push (FCM/APNs/WNS) comes later as a backup, de-duplicated by stable reminder IDs (PLAN §12.5b). Replaces the earlier (b) choice.
 

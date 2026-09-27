@@ -7,6 +7,8 @@ use serde_json::Value;
 use crate::Error;
 
 const MSGPACK: &str = "application/vnd.msgpack";
+/// Binary download responses (`GET /me/export`, `GET /export`): returned as raw bytes.
+const ZIP: &str = "application/zip";
 const STREAM_EXTENSION: &str = "x-strata-stream";
 const METHODS: [&str; 8] = [
     "get", "put", "post", "delete", "patch", "head", "options", "trace",
@@ -40,6 +42,8 @@ pub(crate) struct Operation {
     pub body: Option<(Value, bool)>,
     /// Success response schema; `None` for empty success responses.
     pub response: Option<Value>,
+    /// The success response is an `application/zip` download, returned as raw bytes.
+    pub zip_response: bool,
     pub auth: bool,
     /// Payload component of a stream operation.
     pub stream: Option<String>,
@@ -132,6 +136,7 @@ fn parse_operation(
         params,
         body: None,
         response: None,
+        zip_response: false,
         auth,
         stream: None,
     };
@@ -146,7 +151,10 @@ fn parse_operation(
         return Ok(operation);
     }
     operation.body = parse_body(doc, op, &at)?;
-    operation.response = parse_response(doc, op, &at)?;
+    match parse_response(doc, op, &at)? {
+        Success::Zip => operation.zip_response = true,
+        Success::MsgPack(schema) => operation.response = schema,
+    }
     Ok(operation)
 }
 
@@ -220,10 +228,19 @@ fn parse_body(doc: &Value, op: &Value, at: &str) -> Result<Option<(Value, bool)>
     Ok(Some((schema, required)))
 }
 
-/// The success response schema (`None` for empty success responses). All 2xx responses must
+/// What a successful response carries.
+#[derive(Debug, Clone, PartialEq)]
+enum Success {
+    /// A MessagePack body with this schema, or no body (`None`).
+    MsgPack(Option<Value>),
+    /// An `application/zip` download.
+    Zip,
+}
+
+/// The success response (`MsgPack(None)` for empty success responses). All 2xx responses must
 /// agree.
-fn parse_response(doc: &Value, op: &Value, at: &str) -> Result<Option<Value>, Error> {
-    let mut success: Vec<Option<Value>> = Vec::new();
+fn parse_response(doc: &Value, op: &Value, at: &str) -> Result<Success, Error> {
+    let mut success: Vec<Success> = Vec::new();
     let responses = op.get("responses").and_then(Value::as_object);
     for (status, response) in responses.into_iter().flatten() {
         if !status.starts_with('2') {
@@ -233,7 +250,8 @@ fn parse_response(doc: &Value, op: &Value, at: &str) -> Result<Option<Value>, Er
             .get("content")
             .and_then(Value::as_object)
         {
-            None => None,
+            None => Success::MsgPack(None),
+            Some(content) if content.len() == 1 && content.contains_key(ZIP) => Success::Zip,
             Some(content) => {
                 let media = content.get(MSGPACK).ok_or_else(|| {
                     Error::Unsupported(format!(
@@ -241,7 +259,9 @@ fn parse_response(doc: &Value, op: &Value, at: &str) -> Result<Option<Value>, Er
                         content.keys().collect::<Vec<_>>()
                     ))
                 })?;
-                Some(media.get("schema").cloned().unwrap_or(Value::Bool(true)))
+                Success::MsgPack(Some(
+                    media.get("schema").cloned().unwrap_or(Value::Bool(true)),
+                ))
             }
         };
         if !success.contains(&schema) {
