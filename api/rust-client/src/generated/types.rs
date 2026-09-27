@@ -618,7 +618,7 @@ pub struct CustodyEventRequest {
     ///Place (required for `stored-at`, `moved-to`).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub place_id: ::std::option::Option<::ulid::Ulid>,
-    ///The note stating the event (cited); the document itself when absent.
+    ///The note stating the event (cited on the line); when absent the line has no citation.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub source_note_id: ::std::option::Option<::ulid::Ulid>,
     ///Type.

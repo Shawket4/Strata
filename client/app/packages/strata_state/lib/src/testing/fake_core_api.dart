@@ -56,12 +56,16 @@ final class CoreCall {
 
   @override
   bool operator ==(Object other) =>
-      other is CoreCall && other.method == method && mapEquals(other.args, args);
+      other is CoreCall &&
+      other.method == method &&
+      mapEquals(other.args, args);
 
   @override
   int get hashCode => Object.hash(
     method,
-    Object.hashAllUnordered(args.entries.map((e) => Object.hash(e.key, e.value))),
+    Object.hashAllUnordered(
+      args.entries.map((e) => Object.hash(e.key, e.value)),
+    ),
   );
 
   @override
@@ -136,23 +140,30 @@ final class FakeStreamFamily<K, T> {
 /// The canned answer of a one-shot or intent: a value, or an error to throw.
 final class FakeAnswer<T> {
   /// Creates an answer that returns [value].
-  FakeAnswer(T value) : _value = value;
+  new(T value) : _value = value;
 
   T _value;
   Object? _error;
+  StackTrace? _stackTrace;
 
   /// Answers with [value] from now on.
   void returns(T value) {
     _value = value;
     _error = null;
+    _stackTrace = null;
   }
 
   /// Throws [error] (e.g. a `CoreFailure`) from now on.
-  void throws(Object error) => _error = error;
+  void throws(Object error, [StackTrace? stackTrace]) {
+    _error = error;
+    _stackTrace = stackTrace;
+  }
 
   Future<T> _answer() {
     final error = _error;
-    return error == null ? Future.value(_value) : Future.error(error);
+    return error == null
+        ? Future.value(_value)
+        : Future.error(error, _stackTrace);
   }
 }
 
@@ -167,7 +178,7 @@ final class FakeAnswer<T> {
 /// - **Calls:** every call is appended to [calls] with its exact arguments.
 final class FakeCoreApi implements CoreApi {
   /// Creates a fake with empty streams and fixture answers.
-  FakeCoreApi();
+  new();
 
   /// Every call made, in order.
   final List<CoreCall> calls = [];
@@ -263,9 +274,7 @@ final class FakeCoreApi implements CoreApi {
   final FakeAnswer<void> syncNowAnswer = FakeAnswer(null);
 
   /// `capture` (the new capture's note ID).
-  final FakeAnswer<String> captureAnswer = FakeAnswer(
-    StrataFixtures.opId,
-  );
+  final FakeAnswer<String> captureAnswer = FakeAnswer(StrataFixtures.opId);
 
   /// `createNote`.
   final FakeAnswer<CreateOutcome> createNoteAnswer = FakeAnswer(
@@ -323,9 +332,7 @@ final class FakeCoreApi implements CoreApi {
   final FakeAnswer<String> updateTaskAnswer = FakeAnswer(StrataFixtures.opId);
 
   /// `completeTask`.
-  final FakeAnswer<String> completeTaskAnswer = FakeAnswer(
-    StrataFixtures.opId,
-  );
+  final FakeAnswer<String> completeTaskAnswer = FakeAnswer(StrataFixtures.opId);
 
   /// `cancelTask`.
   final FakeAnswer<String> cancelTaskAnswer = FakeAnswer(StrataFixtures.opId);
@@ -450,10 +457,8 @@ final class FakeCoreApi implements CoreApi {
       _call(switchAccountAnswer, 'switchAccount', {'userId': userId});
 
   @override
-  Future<SessionState> acknowledgeAccountDisabled() => _call(
-    acknowledgeAccountDisabledAnswer,
-    'acknowledgeAccountDisabled',
-  );
+  Future<SessionState> acknowledgeAccountDisabled() =>
+      _call(acknowledgeAccountDisabledAnswer, 'acknowledgeAccountDisabled');
 
   @override
   Future<void> refreshAccount() =>
@@ -565,10 +570,8 @@ final class FakeCoreApi implements CoreApi {
   Future<String> updateTask({
     required String taskId,
     required TaskPatch patch,
-  }) => _call(updateTaskAnswer, 'updateTask', {
-    'taskId': taskId,
-    'patch': patch,
-  });
+  }) =>
+      _call(updateTaskAnswer, 'updateTask', {'taskId': taskId, 'patch': patch});
 
   @override
   Future<String> completeTask({required String taskId}) =>

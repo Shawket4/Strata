@@ -1236,6 +1236,77 @@ mod tests {
         );
     }
 
+    /// `deploy/stratad.example.toml` loads to the defaults and documents every key, set or
+    /// commented out, under its section.
+    #[test]
+    fn example_file_documents_every_key_with_its_default() {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../../deploy/stratad.example.toml"
+        );
+        let text = std::fs::read_to_string(path).expect("example file");
+        assert_eq!(
+            Config::from_sources(&text, env(&[])).expect("example is valid"),
+            Config::default()
+        );
+        // (section, key) of every line `key = …` or `# key = …`.
+        let mut documented = std::collections::BTreeSet::new();
+        let mut section = String::new();
+        for line in text.lines() {
+            let line = line.trim();
+            if let Some(name) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
+                section = name.to_owned();
+            } else if let Some((key, _)) = line.trim_start_matches("# ").split_once(" = ")
+                && !key.contains(' ')
+            {
+                documented.insert((section.clone(), key.to_owned()));
+            }
+        }
+        fn leaves(prefix: &str, table: &toml::Table, out: &mut Vec<(String, String)>) {
+            for (key, value) in table {
+                match value {
+                    toml::Value::Table(t) => {
+                        let p = if prefix.is_empty() {
+                            key.clone()
+                        } else {
+                            format!("{prefix}.{key}")
+                        };
+                        leaves(&p, t, out);
+                    }
+                    _ => out.push((prefix.to_owned(), key.clone())),
+                }
+            }
+        }
+        let mut expected = Vec::new();
+        leaves(
+            "",
+            &toml::Table::try_from(Config::default()).expect("serialise"),
+            &mut expected,
+        );
+        // Keys that are unset by default (not serialised).
+        for (section, key) in [
+            ("ai.claude_cli", "model"),
+            ("ai.anthropic_api", "api_key_file"),
+            ("ai.anthropic_api", "effort"),
+            ("ai.embedding", "model_dir"),
+            ("ai.embedding", "onnxruntime_lib"),
+            ("budgets", "timezone"),
+            ("push", "fcm_service_account_path"),
+            ("push", "apns_key_path"),
+            ("push", "apns_key_id"),
+            ("push", "apns_team_id"),
+            ("push", "apns_topic"),
+            ("push", "wns_credentials_path"),
+        ] {
+            expected.push((section.to_owned(), key.to_owned()));
+        }
+        let missing: Vec<_> = expected
+            .into_iter()
+            .filter(|k| !documented.contains(k))
+            .collect();
+        assert_eq!(missing, Vec::<(String, String)>::new());
+    }
+
     #[test]
     fn load_reads_a_file() {
         let dir = tempfile::tempdir().expect("tempdir");

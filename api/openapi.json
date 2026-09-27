@@ -906,7 +906,7 @@
             ]
           },
           "source_note_id": {
-            "description": "The note stating the event (cited); the document itself when absent.",
+            "description": "The note stating the event (cited on the line); when absent the line has no citation.",
             "format": "ulid",
             "type": [
               "string",

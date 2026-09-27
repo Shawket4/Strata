@@ -358,7 +358,7 @@ move lists each file):
   one non-embed wikilink citation: `- Prefers weekly invoicing [[Call 2026-09-12#^a1b2]]`.
 - Timeline and Custody bullets start with a `YYYY-MM-DD` date and are newest first:
   `- 2026-09-12 — call about invoicing [[Call 2026-09-12]]`.
-- Custody bullets must parse as custody events (§8).
+- Custody bullets must parse as custody events (§8) and carry their own citation part.
 - Summary is prose; citations are not required.
 
 ---
@@ -368,8 +368,12 @@ move lists each file):
 One bullet per event in `## Custody`, newest first:
 
 ```text
-- <YYYY-MM-DD> — <type>[ <primary>][ at|to|in <place>][ by <person>][ with|from <party>] — <citation> [<citation> …]
+- <YYYY-MM-DD> — <type>[ <primary>][ at|to|in <place>][ by <person>][ with|from <party>][ — <citation> [<citation> …]]
 ```
+
+The citation part is optional only for events the user recorded (`by: user`, e.g. through the
+API without a source note): `- 2026-09-21 — handed-to [[Shady]]`. AI-written custody content must
+cite (`validate_content` reports an uncited event as `Uncited`; argument links do not count).
 
 ```markdown
 - 2026-09-20 — returned-by [[Shady]] to [[Safe — Nasr City office]] — [[Capture 2026-09-20#^c1d2]]

@@ -1,6 +1,6 @@
 /// Riverpod plumbing between the Rust client core and the feature UIs
-/// (PLAN §11.1, L15): the [CoreApi] seam over the `strata_bridge` facade, its
-/// production implementation [BridgeCoreApi], and one provider per view-model
+/// (PLAN §11.1, L15): the `CoreApi` seam over the `strata_bridge` facade, its
+/// production implementation `BridgeCoreApi`, and one provider per view-model
 /// stream or one-shot. Providers only adapt; nothing is filtered, sorted or
 /// derived in Dart.
 ///

@@ -128,7 +128,7 @@ pub fn check_secret_file(path: &Path) -> Result<(), StartupError> {
 /// Every secret file the configuration names (the signing key always; the others if set).
 pub fn secret_files(config: &strata_common::Config) -> Vec<PathBuf> {
     let mut out = vec![config.auth.signing_key_file.clone()];
-    out.extend(config.ai.api_key_file.iter().cloned());
+    out.extend(config.ai.anthropic_api.api_key_file.iter().cloned());
     out.extend(config.push.fcm_service_account_path.iter().cloned());
     out.extend(config.push.apns_key_path.iter().cloned());
     out.extend(config.push.wns_credentials_path.iter().cloned());
@@ -203,7 +203,7 @@ mod tests {
             secret_files(&config),
             vec![PathBuf::from("/etc/strata/token-signing-key.pem")]
         );
-        config.ai.api_key_file = Some("/etc/strata/anthropic.key".into());
+        config.ai.anthropic_api.api_key_file = Some("/etc/strata/anthropic.key".into());
         config.push.apns_key_path = Some("/etc/strata/apns.p8".into());
         assert_eq!(
             secret_files(&config),

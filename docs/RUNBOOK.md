@@ -31,9 +31,8 @@ reports, so nginx must **overwrite** the header rather than append to what the c
 `proxy_set_header X-Forwarded-For $remote_addr;` (not `$proxy_add_x_forwarded_for`) and no
 `Forwarded` header passed through.
 
-Defaults for everything else (token lifetimes, Argon2 cost, rate limits, deletion grace
-period, purge and revocation-reload intervals) are in `strata_common::Config::default` and
-`docs/ARCHITECTURE.md` "Auth".
+Every key, with its default and a comment, is in `deploy/stratad.example.toml` (a test keeps it
+in step with `strata_common::Config::default`); start from it and change what differs.
 
 The data root must exist and belong to the service user only:
 
@@ -102,7 +101,7 @@ sudo -u strata stratad -c /etc/strata/stratad.toml keygen
 ```
 
 The file is written with mode `0600`; `keygen` refuses to overwrite an existing key. Every
-secret file (`auth.signing_key_file`, `ai.api_key_file`, push credentials) must be a regular
+secret file (`auth.signing_key_file`, `ai.anthropic_api.api_key_file`, push credentials) must be a regular
 file with no group/other permissions, or `serve` refuses to start.
 
 **Rotation.** `stratad keygen --force` replaces the key. Access tokens signed with the old key
@@ -234,11 +233,19 @@ exec /usr/bin/env -i \
 strata ALL=(strata-ai) NOPASSWD: /usr/local/lib/strata/claude-ai
 ```
 
-Launcher for `stratad` (`ClaudeCliConfig.command`):
-`["sudo", "-n", "-u", "strata-ai", "/usr/local/lib/strata/claude-ai"]`, working directory
-`/var/lib/strata-ai/scratch`. On timeout `stratad` sends SIGTERM to the process group (sudo relays
-it to `claude`), then SIGKILL after the grace period. (The `stratad.toml` keys for these settings
-are added when the AI jobs are wired into `stratad`.)
+Configure the launcher in `stratad.toml`:
+
+```toml
+[ai.claude_cli]
+command = ["sudo", "-n", "-u", "strata-ai", "/usr/local/lib/strata/claude-ai"]
+scratch_dir = "/var/lib/strata-ai/scratch"
+max_concurrency = 1
+timeout_secs = 300
+```
+
+On timeout `stratad` sends SIGTERM to the process group (sudo relays it to `claude`), then
+SIGKILL after `kill_grace_secs`. By default every account uses this provider (D23); see §11
+for per-user overrides.
 
 Check the whole chain as `strata` (spends a tiny amount of subscription usage):
 
@@ -285,6 +292,15 @@ ONNX Runtime is loaded at run time (the `ort` crate's `load-dynamic`; ≥ 1.22, 
 (`onnxruntime/capi/`), install it as e.g. `/opt/onnxruntime/lib/libonnxruntime.so.1.30.0`, and
 delete the downloaded archive.
 
+Point `stratad` at the files (restart to apply); until both paths exist, embeddings are off and
+startup logs `embeddings disabled` with the reason:
+
+```toml
+[ai.embedding]
+model_dir = "/opt/models/granite-embedding-97m-multilingual-r2"
+onnxruntime_lib = "/opt/onnxruntime/lib/libonnxruntime.so.1.30.0"
+```
+
 Runtime behaviour: one worker thread at nice 19, ONNX Runtime with one intra-op and one inter-op
 thread, one embedding call at a time and never while a `claude -p` process runs; texts are
 truncated to 2048 tokens (default). Measured on the dev container with the quint8 export and one
@@ -306,14 +322,17 @@ STRATA_ONNXRUNTIME_LIB=/opt/onnxruntime/lib/libonnxruntime.so.1.30.0 \
 
 ## 11. AI: Anthropic API provider (D20, D23)
 
-Selectable per user (`ai.user_providers.<username> = "anthropic_api"`) or as the default. The key
-lives in a file (`ai.api_key_file`, e.g. `/etc/strata/anthropic.key`), owner `strata`, mode
-`0600`; `stratad` refuses a key file readable by group or others and never logs the key. Default
-model `claude-opus-5`; transient errors (408/409/429/5xx/529) are retried with exponential
+Selectable per user (`[ai.user_providers]`, `<username> = "anthropic_api"`, the username exactly
+as stored) or as the default (`ai.default_provider`). The key lives in a file
+(`ai.anthropic_api.api_key_file`, e.g. `/etc/strata/anthropic.key`), owner `strata`, mode `0600`;
+`stratad` refuses to start when a user is routed to the API without a key file, or when the file
+is readable by group or others, and never logs the key. Default model `claude-opus-5-5`
+(`ai.anthropic_api.model`, with its prices in `input_micros_per_mtok` / `output_micros_per_mtok`
+for cost caps); transient errors (408/409/429/5xx/529) are retried with exponential
 backoff honouring `retry-after`; a 429 that outlasts the retries pauses that user's AI work.
 
-Budgets (`[budgets]`): per-user and global daily token caps (and a per-user cost cap) in the
-budget timezone; totals are in `strata.ai_usage` (per user) and `strata.ai_usage_global` (per
+Budgets (`[budgets]`): per-user and global daily token and cost caps, counted in calendar days
+of `budgets.timezone` (default `default_timezone`); totals are in `strata.ai_usage` (per user) and `strata.ai_usage_global` (per
 day). A reached cap pauses AI work until the next day starts; nothing fails.
 
 ```sql

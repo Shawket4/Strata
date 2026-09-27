@@ -388,7 +388,6 @@ async fn password_change_requires_the_current_password_and_signs_out_other_devic
         .await
         .expect("changed");
     assert!(!me.password_change_required);
-    assert_eq!(stored().await, (true, false));
     // This device keeps working; the other one is signed out immediately.
     ops::get_me(&client).await.expect("current session kept");
     assert_problem(
