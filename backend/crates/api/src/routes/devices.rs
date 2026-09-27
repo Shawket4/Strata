@@ -4,7 +4,9 @@
 //! device ID indistinguishable from a missing one (`404`, principle 7).
 //!
 //! `reminders_enabled` (D27: whether this device schedules local reminder notifications) is
-//! the `devices.reminders_enabled` column (default `true`).
+//! the `devices.reminders_enabled` column (default `true`). A change appends the
+//! `device_setting` change-log row `<device>:reminders_enabled` (removing a device, its
+//! tombstone), so every device of the user pulls it from `/sync/changes`.
 
 use actix_web::{HttpResponse, web};
 use chrono::{DateTime, Utc};
@@ -113,7 +115,8 @@ pub async fn update_device(
         devices::rename_device(&mut tx, id, &name).await?;
     }
     if let Some(enabled) = body.reminders_enabled {
-        devices::set_reminders_enabled(&mut tx, id, enabled).await?;
+        // Logged as the `device_setting` record every device pulls (like `device.settings`).
+        crate::sync::push::set_device_reminders(&mut tx, id, enabled, state.clock.now()).await?;
     }
     let row = devices::get_device(&mut tx, id)
         .await?
@@ -149,6 +152,19 @@ pub async fn delete_device(
         .await?
         .ok_or(AccountError::NotFound)?;
     state.revocations.revoke_sessions(removed);
+    // Its device setting record is gone: a tombstone for the other devices.
+    let entity = format!("{}:reminders_enabled", id.as_ulid());
+    strata_index::repo::sync::append_change(
+        &mut tx,
+        &strata_index::repo::sync::NewChange {
+            entity_type: "device_setting",
+            entity_id: &entity,
+            op: strata_index::types::ChangeOp::Delete,
+            version: None,
+            at: state.clock.now(),
+        },
+    )
+    .await?;
     tx.commit().await?;
     Ok(HttpResponse::NoContent().finish())
 }

@@ -6,12 +6,19 @@
 //! by [`SyncState::lock`], so the idempotency check and the store of one op never race with
 //! another push of the same op.
 //!
-//! **Idempotency.** Every result is encoded once (`MessagePack`, named maps) and stored under
-//! the op's `op_id` in `idempotency` before the next op runs; a replayed op (same `op_id`, in
-//! the same or a later push) is not applied again and its stored bytes are copied into the
-//! response unchanged, so replays are byte-identical. (A crash between the vault commit and
-//! the store would apply the op again on replay; creates then answer with the client ID
-//! taken — documented in `docs/ARCHITECTURE.md`.)
+//! **Idempotency, exactly once.** Every result is encoded once (`MessagePack`, named maps) and
+//! stored under the op's `op_id` in `idempotency`; a replayed op (same `op_id`, in the same or
+//! a later push) is not applied again and its stored bytes are copied into the response
+//! unchanged, so replays are byte-identical. The result of an op that writes is stored **by
+//! that write**: each op runs in a [`strata_vault::OpReceipt`] scope, armed with a hook that
+//! builds the result from the vault as the write left it, right before the vault call that
+//! completes the op; the writer runs it inside the write's own scoped transaction (with the
+//! index update and change log) and records it as trailers of the write's git commit.
+//! Database-only ops (`relink.request`, `device.settings`) store it in their own transaction.
+//! A push first lets the vault recover ([`strata_vault::VaultService::recover`]): a write
+//! interrupted before its git commit is rolled back (the replay applies it once), one
+//! interrupted after it has its result re-inserted from the commit (the replay answers it).
+//! Server failures (`5xx`) abort the push without storing anything for the failing op.
 //!
 //! **Updates (D19).** `note.update` with the current version is written as is. With a stale
 //! base, the base content is looked up in the note's git history (or among contents this push
@@ -43,7 +50,9 @@ use strata_index::{AppDb, UserScope};
 use strata_vault::ops::entities::{EntityPatch as VPatch, NewCustodyEvent, NewEntity};
 use strata_vault::ops::notes::CreateNote;
 use strata_vault::ops::tasks::NewTask;
-use strata_vault::{Candidate, MatchLevel as VMatch, VaultError, VaultService};
+use strata_vault::{
+    AfterWrite, Candidate, MatchLevel as VMatch, OpReceipt, ResultHook, VaultError, VaultService,
+};
 use sync_model::ops::{self as sm_ops, Op};
 use sync_model::{
     ConflictResolution, OpResult, Problem as OpProblem, SyncOp, UpdateDecision, Version,
@@ -152,6 +161,7 @@ fn duplicate(candidates: &[Candidate]) -> OpResult {
                 snippet: c.snippet.clone(),
                 level: match c.level {
                     VMatch::Exact => MatchLevel::Exact,
+                    VMatch::Near if c.semantic => MatchLevel::Semantic,
                     VMatch::Near => MatchLevel::Near,
                 },
                 #[allow(clippy::cast_possible_truncation)] // scores are in [0, 1]
@@ -161,15 +171,37 @@ fn duplicate(candidates: &[Candidate]) -> OpResult {
     }
 }
 
-/// The result for a vault error that has no op-specific meaning.
-fn from_vault(e: &VaultError) -> OpResult {
-    match e {
+/// The result for a vault error that has no op-specific meaning; a server failure (`5xx`)
+/// is an `Err` (the push fails and nothing is stored for the op).
+fn from_vault(e: &VaultError) -> Result<OpResult, Problem> {
+    Ok(match e {
         VaultError::Duplicate(c) => duplicate(c),
         VaultError::VersionConflict { current } => {
             server_kept(Some(current.clone()), "the entity changed on the server")
         }
-        other => rejected(&problem(other)),
-    }
+        other => {
+            let p = problem(other);
+            if p.status >= 500 {
+                return Err(p);
+            }
+            rejected(&p)
+        }
+    })
+}
+
+/// A result hook: `f` builds the result from the vault as the write left it.
+fn hook(f: impl FnOnce(&AfterWrite<'_>) -> OpResult + Send + 'static) -> ResultHook {
+    Box::new(move |w| crate::wire::encode(&f(w)).map_err(|e| e.to_string()))
+}
+
+/// The hook of an op answered `applied` with the live version of `id` after the write.
+fn applied_note(id: NoteId, merged: bool) -> ResultHook {
+    hook(move |w| applied(w.note_version(id), merged))
+}
+
+/// The hook of an op answered `applied` without a version.
+fn applied_plain() -> ResultHook {
+    hook(|_| applied(None, false))
 }
 
 /// Contents this push submitted, by note: (version of the submitted text, text). A later op
@@ -190,6 +222,11 @@ pub async fn push(
     }
     let lock = state.lock(ctx.scope.user_id());
     let _guard = lock.lock().await;
+    // Roll back or recover an interrupted write before looking up any op.
+    match ctx.vault.recover(ctx.scope).await {
+        Ok(()) | Err(VaultError::NotFound) => {}
+        Err(e) => return Err(problem(&e)),
+    }
     let mut submitted = Submitted::new();
     let mut results: Vec<(OpId, Vec<u8>)> = Vec::with_capacity(ops.len());
     for op in ops {
@@ -202,14 +239,22 @@ pub async fn push(
         let bytes = if let Some(rec) = stored {
             rec.result
         } else {
-            let result = apply(ctx, &op, &mut submitted).await?;
-            let bytes = crate::wire::encode(&result).map_err(|e| Problem::internal(&e))?;
-            let mut tx = ctx.db.begin(ctx.scope).await.map_err(|e| index(&e))?;
-            let rec = log::idempotency_put(&mut tx, op_id, ctx.device, &bytes, ctx.clock.now())
-                .await
-                .map_err(|e| index(&e))?;
-            tx.commit().await.map_err(|e| index(&e))?;
-            rec.result
+            let rc = OpReceipt::new(op_id, ctx.device);
+            let outcome = rc.scope(apply(ctx, &rc, &op, &mut submitted)).await;
+            // A write that stored the result committed it: those bytes are the answer.
+            if let Some(bytes) = rc.settled() {
+                bytes
+            } else {
+                let result = outcome?;
+                let bytes = crate::wire::encode(&result).map_err(|e| Problem::internal(&e))?;
+                let mut tx = ctx.db.begin(ctx.scope).await.map_err(|e| index(&e))?;
+                let rec =
+                    log::idempotency_put(&mut tx, op_id, ctx.device, &bytes, ctx.clock.now())
+                        .await
+                        .map_err(|e| index(&e))?;
+                tx.commit().await.map_err(|e| index(&e))?;
+                rec.result
+            }
         };
         results.push((op_id, bytes));
     }
@@ -237,10 +282,12 @@ fn encode_response(results: &[(OpId, Vec<u8>)]) -> Vec<u8> {
     out
 }
 
-/// Applies one op (never an `Err` for anything the client caused).
+/// Applies one op (an `Err` only for server failures). The vault call that completes the op
+/// runs armed with its result hook (see the module docs).
 #[allow(clippy::too_many_lines)] // one arm per op kind
 async fn apply(
     ctx: &PushContext<'_>,
+    rc: &OpReceipt,
     op: &SyncOp,
     submitted: &mut Submitted,
 ) -> Result<OpResult, Problem> {
@@ -250,10 +297,11 @@ async fn apply(
     let base = op.base_version.as_ref().map(|v| v.as_str().to_owned());
     let (v, s) = (ctx.vault, ctx.scope);
     Ok(match &op.op {
-        Op::NoteCreate(p) => note_create(ctx, p, submitted).await,
+        Op::NoteCreate(p) => note_create(ctx, rc, p, submitted).await?,
         Op::NoteUpdate(p) => {
             note_update(
                 ctx,
+                rc,
                 op.op_id,
                 NoteId::from_ulid(p.id),
                 base.unwrap_or_default(),
@@ -264,14 +312,20 @@ async fn apply(
         }
         Op::NoteMove(p) => {
             let id = NoteId::from_ulid(p.id);
-            match v.move_note(s, id, p.new_path.clone(), None).await {
+            let moved = rc
+                .armed(
+                    applied_note(id, false),
+                    v.move_note(s, id, p.new_path.clone(), None),
+                )
+                .await;
+            match moved {
                 Ok(view) => applied(Some(view.version), false),
                 Err(VaultError::PathTaken) => server_kept(
                     current_version(ctx, id).await,
                     "a note already exists at the target path",
                 ),
                 Err(VaultError::NotFound) => deleted_or_missing(ctx, id).await,
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::NoteDelete(p) => {
@@ -282,44 +336,66 @@ async fn apply(
                     Some(n.version),
                     "the note changed on the server since this version; it was not deleted",
                 ),
-                Ok(_) => match v.delete_note(s, id).await {
+                Ok(_) => match rc.armed(applied_plain(), v.delete_note(s, id)).await {
                     Ok(_) => applied(None, false),
-                    Err(e) => from_vault(&e),
+                    Err(e) => from_vault(&e)?,
                 },
                 Err(VaultError::NotFound) => not_found(),
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::Capture(p) => {
-            match v
-                .capture_as(s, p.text.clone(), NoteId::from_ulid(p.id), p.created)
+            let id = NoteId::from_ulid(p.id);
+            match rc
+                .armed(
+                    applied_note(id, false),
+                    v.capture_as(s, p.text.clone(), id, p.created),
+                )
                 .await
             {
                 Ok(c) => applied(Some(c.note.version), false),
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::RelationAdd(p) => {
             let (src, dst) = (NoteId::from_ulid(p.src_id), NoteId::from_ulid(p.dst_id));
-            match v.add_relation(s, src, dst, p.relation).await {
+            match rc
+                .armed(
+                    applied_note(src, false),
+                    v.add_relation(s, src, dst, p.relation),
+                )
+                .await
+            {
                 Ok(_) => applied(current_version(ctx, src).await, false),
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::RelationRemove(p) => {
             let (src, dst) = (NoteId::from_ulid(p.src_id), NoteId::from_ulid(p.dst_id));
-            match v.remove_relation(s, src, dst, p.relation).await {
+            match rc
+                .armed(
+                    applied_note(src, false),
+                    v.remove_relation(s, src, dst, p.relation),
+                )
+                .await
+            {
                 Ok(_) => applied(current_version(ctx, src).await, false),
                 // Both notes exist but the edge does not: already removed elsewhere.
                 Err(VaultError::NotFound) if live(ctx, src).await && live(ctx, dst).await => {
                     applied(current_version(ctx, src).await, false)
                 }
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::RelationRetype(p) => {
             let (src, dst) = (NoteId::from_ulid(p.src_id), NoteId::from_ulid(p.dst_id));
-            match v.retype_relation(s, src, dst, p.relation, p.new_type).await {
+            match rc
+                .armed(
+                    applied_note(src, false),
+                    v.retype_relation(s, src, dst, p.relation, p.new_type),
+                )
+                .await
+            {
                 Ok(()) => applied(current_version(ctx, src).await, false),
                 Err(VaultError::NotFound) if live(ctx, src).await && live(ctx, dst).await => {
                     server_kept(
@@ -327,7 +403,7 @@ async fn apply(
                         "the relation no longer exists",
                     )
                 }
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::SuggestionAccept(p) => {
@@ -340,17 +416,20 @@ async fn apply(
                     "edits are not supported for this suggestion kind",
                 )
             } else {
-                decide(ctx, p.id, true).await
+                decide(ctx, rc, p.id, true).await?
             }
         }
-        Op::SuggestionReject(p) => decide(ctx, p.id, false).await,
+        Op::SuggestionReject(p) => decide(ctx, rc, p.id, false).await?,
         Op::SuggestionReply(p) => {
-            match v
-                .reply_suggestion_as(
-                    s,
-                    SuggestionId::from_ulid(p.id),
-                    ReplyId::from_ulid(p.reply_id),
-                    p.text.clone(),
+            match rc
+                .armed(
+                    applied_plain(),
+                    v.reply_suggestion_as(
+                        s,
+                        SuggestionId::from_ulid(p.id),
+                        ReplyId::from_ulid(p.reply_id),
+                        p.text.clone(),
+                    ),
                 )
                 .await
             {
@@ -358,7 +437,7 @@ async fn apply(
                 Err(VaultError::Invalid(r)) if r.contains("already decided") => {
                     server_kept(None, "the suggestion was already decided")
                 }
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::EntityCreate(p) => {
@@ -372,18 +451,22 @@ async fn apply(
                 id: Some(NoteId::from_ulid(p.id)),
                 force: p.force,
             };
-            create_entity(ctx, req, &[]).await
+            create_entity(ctx, rc, req, Vec::new()).await?
         }
-        Op::EntityPatch(p) => patch(ctx, p, base, None).await,
-        Op::DocumentPatch(p) => patch(ctx, p, base, Some(NoteKind::Document)).await,
-        Op::PlacePatch(p) => patch(ctx, p, base, Some(NoteKind::Place)).await,
+        Op::EntityPatch(p) => patch(ctx, rc, p, base, None).await?,
+        Op::DocumentPatch(p) => patch(ctx, rc, p, base, Some(NoteKind::Document)).await?,
+        Op::PlacePatch(p) => patch(ctx, rc, p, base, Some(NoteKind::Place)).await?,
         Op::EntityMerge(p) => {
-            match v
-                .merge_entities(s, NoteId::from_ulid(p.id), NoteId::from_ulid(p.into_id))
+            let into = NoteId::from_ulid(p.into_id);
+            match rc
+                .armed(
+                    applied_note(into, false),
+                    v.merge_entities(s, NoteId::from_ulid(p.id), into),
+                )
                 .await
             {
                 Ok(view) => applied(Some(view.version), false),
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::DocumentCreate(p) => {
@@ -424,27 +507,24 @@ async fn apply(
                 id: Some(NoteId::from_ulid(p.id)),
                 force: p.force,
             };
-            create_entity(ctx, req, &links).await
+            create_entity(ctx, rc, req, links).await?
         }
         Op::DocumentCustody(p) => {
             let doc = NoteId::from_ulid(p.document_id);
-            match v
-                .add_custody_event(
-                    s,
-                    doc,
-                    NewCustodyEvent {
-                        kind: p.event,
-                        date: p.at,
-                        place: p.place_id.map(NoteId::from_ulid),
-                        person: p.person_id.map(NoteId::from_ulid),
-                        counterparty: p.counterparty_id.map(NoteId::from_ulid),
-                        source: None,
-                    },
-                )
+            let event = NewCustodyEvent {
+                kind: p.event,
+                date: p.at,
+                place: p.place_id.map(NoteId::from_ulid),
+                person: p.person_id.map(NoteId::from_ulid),
+                counterparty: p.counterparty_id.map(NoteId::from_ulid),
+                source: None,
+            };
+            match rc
+                .armed(applied_note(doc, false), v.add_custody_event(s, doc, event))
                 .await
             {
                 Ok(view) => applied(Some(view.version), false),
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::PlaceCreate(p) => {
@@ -462,7 +542,7 @@ async fn apply(
                 id: Some(NoteId::from_ulid(p.id)),
                 force: p.force,
             };
-            create_entity(ctx, req, &[]).await
+            create_entity(ctx, rc, req, Vec::new()).await?
         }
         Op::TaskCreate(p) => {
             let req = NewTask {
@@ -477,26 +557,28 @@ async fn apply(
                 id: Some(p.id.clone()),
                 force: p.force,
             };
-            match v.create_task(s, req).await {
+            let block = p.id.clone();
+            let task_hook = hook(move |w| applied(w.task_line_version(&block), false));
+            match rc.armed(task_hook, v.create_task(s, req)).await {
                 Ok(id) => applied(task_version(ctx, &id).await, false),
-                Err(e) => from_vault(&e),
+                Err(e) => from_vault(&e)?,
             }
         }
         Op::TaskUpdate(_)
         | Op::TaskComplete(_)
         | Op::TaskCancel(_)
         | Op::TaskReopen(_)
-        | Op::TaskDelete(_) => task_edit(ctx, &op.op, base).await,
+        | Op::TaskDelete(_) => task_edit(ctx, rc, &op.op, base).await?,
         Op::RelinkRequest(p) => {
             let id = NoteId::from_ulid(p.id);
             if live(ctx, id).await {
-                relink(ctx, id).await?;
+                relink(ctx, rc, id).await?;
                 applied(None, false)
             } else {
                 not_found()
             }
         }
-        Op::DeviceSettings(p) => device_settings(ctx, p).await?,
+        Op::DeviceSettings(p) => device_settings(ctx, rc, p).await?,
     })
 }
 
@@ -534,9 +616,10 @@ async fn task_version(ctx: &PushContext<'_>, id: &str) -> Option<String> {
 
 async fn note_create(
     ctx: &PushContext<'_>,
+    rc: &OpReceipt,
     p: &sm_ops::NoteCreate,
     submitted: &mut Submitted,
-) -> OpResult {
+) -> Result<OpResult, Problem> {
     let id = NoteId::from_ulid(p.id);
     let mut path = p.path.clone();
     // A path taken meanwhile gets a free name next to it: the device's note is never lost.
@@ -547,13 +630,16 @@ async fn note_create(
             id: Some(id),
             force: p.force,
         };
-        match ctx.vault.create_note(ctx.scope, req).await {
+        match rc
+            .armed(applied_note(id, false), ctx.vault.create_note(ctx.scope, req))
+            .await
+        {
             Ok(view) => {
                 submitted.entry(id).or_default().push((
                     Version::of_text(&p.content).as_str().to_owned(),
                     p.content.clone(),
                 ));
-                return applied(Some(view.version), false);
+                return Ok(applied(Some(view.version), false));
             }
             Err(VaultError::PathTaken) => {
                 let stem = p.path.strip_suffix(".md").unwrap_or(&p.path);
@@ -562,12 +648,14 @@ async fn note_create(
             Err(e) => return from_vault(&e),
         }
     }
-    rejected(&Problem::new(ProblemType::PathTaken))
+    Ok(rejected(&Problem::new(ProblemType::PathTaken)))
 }
 
 /// `note.update` (D19; see the module docs).
+#[allow(clippy::too_many_lines)] // the D19 decision, one arm per outcome
 async fn note_update(
     ctx: &PushContext<'_>,
+    rc: &OpReceipt,
     op_id: ulid::Ulid,
     id: NoteId,
     base: String,
@@ -582,7 +670,7 @@ async fn note_update(
             }
             Ok(n) => n,
             Err(VaultError::NotFound) => return Ok(not_found()),
-            Err(e) => return Ok(from_vault(&e)),
+            Err(e) => return from_vault(&e),
         };
         let record = |submitted: &mut Submitted| {
             submitted.entry(id).or_default().push((
@@ -590,18 +678,21 @@ async fn note_update(
                 content.to_owned(),
             ));
         };
-        let write = |text: String| {
+        let write = |text: String, merged: bool| {
             let version = current.version.clone();
-            async move { v.update_note(s, id, text, version).await }
+            rc.armed(
+                applied_note(id, merged),
+                v.update_note(s, id, text, version),
+            )
         };
         if current.version == base {
-            match write(content.to_owned()).await {
+            match write(content.to_owned(), false).await {
                 Ok(view) => {
                     record(submitted);
                     return Ok(applied(Some(view.version), false));
                 }
                 Err(VaultError::VersionConflict { .. }) => continue,
-                Err(e) => return Ok(from_vault(&e)),
+                Err(e) => return from_vault(&e),
             }
         }
         let Ok(base_version) = base.parse::<Version>() else {
@@ -630,25 +721,26 @@ async fn note_update(
             UpdateDecision::AlreadyApplied => {
                 return Ok(applied(Some(current.version), false));
             }
-            UpdateDecision::FastForward => match write(content.to_owned()).await {
+            UpdateDecision::FastForward => match write(content.to_owned(), false).await {
                 Ok(view) => {
                     record(submitted);
                     return Ok(applied(Some(view.version), false));
                 }
                 Err(VaultError::VersionConflict { .. }) => {}
-                Err(e) => return Ok(from_vault(&e)),
+                Err(e) => return from_vault(&e),
             },
-            UpdateDecision::Merged(text) => match write(text).await {
+            UpdateDecision::Merged(text) => match write(text, true).await {
                 Ok(view) => {
                     record(submitted);
                     return Ok(applied(Some(view.version), true));
                 }
                 Err(VaultError::VersionConflict { .. }) => {}
-                Err(e) => return Ok(from_vault(&e)),
+                Err(e) => return from_vault(&e),
             },
             UpdateDecision::Conflict(c) => {
                 return conflict_copy(
                     ctx,
+                    rc,
                     op_id,
                     id,
                     &current.path,
@@ -678,9 +770,13 @@ pub fn conflict_path(path: &str, at: DateTime<Utc>, n: u32) -> String {
     }
 }
 
+/// Saves the device's content as a conflict copy, then records the `conflict` suggestion:
+/// the suggestion's transaction stores the op result (the copy alone is not the whole op; a
+/// replay after a crash in between finds the copy and records the suggestion).
 #[allow(clippy::too_many_arguments)] // the parts of one conflict record
 async fn conflict_copy(
     ctx: &PushContext<'_>,
+    rc: &OpReceipt,
     op_id: ulid::Ulid,
     id: NoteId,
     path: &str,
@@ -714,7 +810,7 @@ async fn conflict_copy(
                 }
                 break;
             }
-            Err(e) => return Ok(from_vault(&e)),
+            Err(e) => return from_vault(&e),
         }
     }
     let Some(copy) = made else {
@@ -729,17 +825,7 @@ async fn conflict_copy(
         hunks,
     })
     .map_err(|e| Problem::internal(&e))?;
-    ctx.vault
-        .create_suggestion(
-            ctx.scope,
-            SuggestionId::from_ulid(op_id),
-            Some(id),
-            "conflict",
-            &payload,
-        )
-        .await
-        .map_err(|e| problem(&e))?;
-    Ok(OpResult::Conflict {
+    let result = OpResult::Conflict {
         server_version: server_version.parse().ok(),
         resolution: ConflictResolution::ConflictCopy {
             note_id: copy_id.as_ulid(),
@@ -749,47 +835,64 @@ async fn conflict_copy(
                 .parse()
                 .map_err(|_| Problem::new(ProblemType::Internal))?,
         },
-    })
+    };
+    let answer = result.clone();
+    rc.armed(
+        hook(move |_| answer),
+        ctx.vault.create_suggestion(
+            ctx.scope,
+            SuggestionId::from_ulid(op_id),
+            Some(id),
+            "conflict",
+            &payload,
+        ),
+    )
+    .await
+    .map_err(|e| problem(&e))?;
+    Ok(result)
 }
 
-async fn decide(ctx: &PushContext<'_>, id: ulid::Ulid, accept: bool) -> OpResult {
-    match ctx
-        .vault
-        .decide_suggestion(ctx.scope, SuggestionId::from_ulid(id), accept)
+async fn decide(
+    ctx: &PushContext<'_>,
+    rc: &OpReceipt,
+    id: ulid::Ulid,
+    accept: bool,
+) -> Result<OpResult, Problem> {
+    match rc
+        .armed(
+            applied_plain(),
+            ctx.vault
+                .decide_suggestion(ctx.scope, SuggestionId::from_ulid(id), accept),
+        )
         .await
     {
-        Ok(_) => applied(None, false),
-        Err(VaultError::Invalid(r)) if r.contains("already decided") => {
-            server_kept(None, "the suggestion was already decided")
-        }
+        Ok(_) => Ok(applied(None, false)),
+        Err(VaultError::Invalid(r)) if r.contains("already decided") => Ok(server_kept(
+            None,
+            "the suggestion was already decided",
+        )),
         Err(e) => from_vault(&e),
     }
 }
 
+/// Entity, document and place creates; a document's links are written in the same commit.
 async fn create_entity(
     ctx: &PushContext<'_>,
+    rc: &OpReceipt,
     req: NewEntity,
-    links: &[(RelationKey, NoteId)],
-) -> OpResult {
-    let id = req.id;
-    match ctx.vault.create_entity(ctx.scope, req).await {
-        Ok(mut view) => {
-            for (key, dst) in links {
-                if let Some(id) = id
-                    && let Err(e) = ctx.vault.add_relation(ctx.scope, id, *dst, *key).await
-                {
-                    // The entity exists; report the link that failed.
-                    return from_vault(&e);
-                }
-            }
-            if !links.is_empty()
-                && let Some(id) = id
-                && let Ok(v) = ctx.vault.note(ctx.scope, id).await
-            {
-                view = v;
-            }
-            applied(Some(view.version), false)
-        }
+    links: Vec<(RelationKey, NoteId)>,
+) -> Result<OpResult, Problem> {
+    let Some(id) = req.id else {
+        return Err(Problem::new(ProblemType::Internal));
+    };
+    match rc
+        .armed(
+            applied_note(id, false),
+            ctx.vault.create_entity_linked(ctx.scope, req, links),
+        )
+        .await
+    {
+        Ok(view) => Ok(applied(Some(view.version), false)),
         Err(e) => from_vault(&e),
     }
 }
@@ -798,25 +901,28 @@ async fn create_entity(
 /// base is stale.
 async fn patch(
     ctx: &PushContext<'_>,
+    rc: &OpReceipt,
     p: &sm_ops::EntityPatch,
     base: Option<String>,
     kind: Option<NoteKind>,
-) -> OpResult {
+) -> Result<OpResult, Problem> {
     let id = NoteId::from_ulid(p.id);
     for attempt in 0..5 {
         let current = match ctx.vault.note(ctx.scope, id).await {
-            Ok(n) if n.trashed => return server_kept(None, "the entity was deleted on the server"),
+            Ok(n) if n.trashed => {
+                return Ok(server_kept(None, "the entity was deleted on the server"));
+            }
             Ok(n)
                 if kind.is_some_and(|k| k != n.kind)
                     || (!n.kind.is_entity() && n.kind != NoteKind::Concept) =>
             {
-                return not_found();
+                return Ok(not_found());
             }
             Ok(n) => n,
-            Err(VaultError::NotFound) => return not_found(),
+            Err(VaultError::NotFound) => return Ok(not_found()),
             Err(e) => return from_vault(&e),
         };
-        let merged = base.as_deref() != Some(current.version.as_str());
+        let merged = base.as_deref() != Some(current.version.as_str()) || attempt > 0;
         let aliases = if p.add_aliases.is_empty() && p.remove_aliases.is_empty() {
             None
         } else {
@@ -850,16 +956,22 @@ async fn patch(
             if_match: Some(current.version.clone()),
             force: true,
         };
-        match ctx.vault.patch_entity(ctx.scope, id, req).await {
-            Ok(view) => return applied(Some(view.version), merged || attempt > 0),
+        match rc
+            .armed(
+                applied_note(id, merged),
+                ctx.vault.patch_entity(ctx.scope, id, req),
+            )
+            .await
+        {
+            Ok(view) => return Ok(applied(Some(view.version), merged)),
             Err(VaultError::VersionConflict { .. }) => {}
             Err(e) => return from_vault(&e),
         }
     }
-    server_kept(
+    Ok(server_kept(
         current_version(ctx, id).await,
         "the entity kept changing on the server; retry",
-    )
+    ))
 }
 
 fn task_id(op: &Op) -> &str {
@@ -889,17 +1001,30 @@ fn already_in_effect(op: &Op, line: &str) -> bool {
     }
 }
 
-async fn task_edit(ctx: &PushContext<'_>, op: &Op, base: Option<String>) -> OpResult {
+async fn task_edit(
+    ctx: &PushContext<'_>,
+    rc: &OpReceipt,
+    op: &Op,
+    base: Option<String>,
+) -> Result<OpResult, Problem> {
     let id = task_id(op).to_owned();
-    match ctx
-        .vault
-        .apply_task_sync_op(ctx.scope, op.clone(), base)
+    let result_hook = if matches!(op, Op::TaskDelete(_)) {
+        applied_plain()
+    } else {
+        let block = id.clone();
+        hook(move |w| applied(w.task_line_version(&block), false))
+    };
+    match rc
+        .armed(
+            result_hook,
+            ctx.vault.apply_task_sync_op(ctx.scope, op.clone(), base),
+        )
         .await
     {
-        Ok(()) => match op {
+        Ok(()) => Ok(match op {
             Op::TaskDelete(_) => applied(None, false),
             _ => applied(task_version(ctx, &id).await, false),
-        },
+        }),
         Err(VaultError::VersionConflict { current }) => {
             let line = ctx
                 .vault
@@ -907,17 +1032,32 @@ async fn task_edit(ctx: &PushContext<'_>, op: &Op, base: Option<String>) -> OpRe
                 .await
                 .ok()
                 .map(|(_, _, l)| l);
-            if line.as_deref().is_some_and(|l| already_in_effect(op, l)) {
+            Ok(if line.as_deref().is_some_and(|l| already_in_effect(op, l)) {
                 applied(Some(current), false)
             } else {
                 server_kept(Some(current), "the task line changed on the server")
-            }
+            })
         }
         Err(e) => from_vault(&e),
     }
 }
 
-async fn relink(ctx: &PushContext<'_>, id: NoteId) -> Result<(), Problem> {
+/// Stores `result` as the op's result in `tx` (a database-only op); returns what to hand to
+/// the receipt once `tx` committed.
+async fn store_result(
+    ctx: &PushContext<'_>,
+    rc: &OpReceipt,
+    tx: &mut strata_index::ScopedTx,
+    result: &OpResult,
+) -> Result<Vec<u8>, Problem> {
+    let bytes = crate::wire::encode(result).map_err(|e| Problem::internal(&e))?;
+    let rec = log::idempotency_put(tx, rc.op_id(), rc.device(), &bytes, ctx.clock.now())
+        .await
+        .map_err(|e| index(&e))?;
+    Ok(rec.result)
+}
+
+async fn relink(ctx: &PushContext<'_>, rc: &OpReceipt, id: NoteId) -> Result<(), Problem> {
     let now = ctx.clock.now();
     let mut tx = ctx.db.begin(ctx.scope).await.map_err(|e| index(&e))?;
     jobs::enqueue(
@@ -935,12 +1075,15 @@ async fn relink(ctx: &PushContext<'_>, id: NoteId) -> Result<(), Problem> {
     )
     .await
     .map_err(|e| index(&e))?;
+    let stored = store_result(ctx, rc, &mut tx, &applied(None, false)).await?;
     tx.commit().await.map_err(|e| index(&e))?;
+    rc.mark_settled(stored);
     Ok(())
 }
 
 async fn device_settings(
     ctx: &PushContext<'_>,
+    rc: &OpReceipt,
     p: &sm_ops::DeviceSettings,
 ) -> Result<OpResult, Problem> {
     let device = DeviceId::from_ulid(p.device_id);
@@ -952,26 +1095,17 @@ async fn device_settings(
     {
         return Ok(not_found());
     }
-    if let Some(enabled) = p.reminders_enabled {
-        devices::set_reminders_enabled(&mut tx, device, enabled)
+    let changed = match p.reminders_enabled {
+        Some(enabled) => set_device_reminders(&mut tx, device, enabled, ctx.clock.now())
             .await
-            .map_err(|e| index(&e))?;
-        let entity = format!("{}:reminders_enabled", p.device_id);
-        log::append_change(
-            &mut tx,
-            &log::NewChange {
-                entity_type: "device_setting",
-                entity_id: &entity,
-                op: ChangeOp::Upsert,
-                version: None,
-                at: ctx.clock.now(),
-            },
-        )
-        .await
-        .map_err(|e| index(&e))?;
-    }
+            .map_err(|e| index(&e))?,
+        None => false,
+    };
+    let result = applied(None, false);
+    let stored = store_result(ctx, rc, &mut tx, &result).await?;
     tx.commit().await.map_err(|e| index(&e))?;
-    if p.reminders_enabled.is_some() {
+    rc.mark_settled(stored);
+    if changed {
         publish(
             ctx.bus,
             ctx.scope.user_id(),
@@ -980,7 +1114,38 @@ async fn device_settings(
             },
         );
     }
-    Ok(applied(None, false))
+    Ok(result)
+}
+
+/// Sets a device's `reminders_enabled` and, when it changed, appends its `device_setting`
+/// change-log row (`<device>:reminders_enabled`) in `tx`, so every device pulls it. Shared by
+/// `device.settings` and `PATCH /devices/{id}`. Returns whether the value changed.
+pub async fn set_device_reminders(
+    tx: &mut strata_index::ScopedTx,
+    device: DeviceId,
+    enabled: bool,
+    now: DateTime<Utc>,
+) -> Result<bool, strata_index::IndexError> {
+    let before = devices::get_device(tx, device)
+        .await?
+        .map(|d| d.reminders_enabled);
+    if before.is_none() || before == Some(enabled) {
+        return Ok(false);
+    }
+    devices::set_reminders_enabled(tx, device, enabled).await?;
+    let entity = format!("{}:reminders_enabled", device.as_ulid());
+    log::append_change(
+        tx,
+        &log::NewChange {
+            entity_type: "device_setting",
+            entity_id: &entity,
+            op: ChangeOp::Upsert,
+            version: None,
+            at: now,
+        },
+    )
+    .await?;
+    Ok(true)
 }
 
 fn publish(bus: &EventBus, user: UserId, event: Event) {

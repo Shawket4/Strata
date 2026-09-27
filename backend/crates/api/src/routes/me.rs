@@ -2,7 +2,8 @@
 //! "Account & admin", D25).
 //!
 //! Per-user settings (UI language, timezone, preferences) live in the user-owned `settings`
-//! table, read and written through the caller's `UserScope`. Account fields (display name,
+//! table, read and written through the caller's `UserScope`; every change appends `setting`
+//! change-log rows (one per synced record, `sync_model::settings`) so devices pull it. Account fields (display name,
 //! password) live in `users`, reached through the `strata_accounts` role.
 
 use std::collections::BTreeMap;
@@ -21,6 +22,7 @@ use utoipa::ToSchema;
 
 use crate::auth::service::{self, check_password};
 use crate::auth::{AccountError, AuthState, Authenticated, export, username};
+use crate::sync::records::put_setting_logged;
 use crate::wire::{MsgPack, MsgPackConfig, Problem, ZIP};
 
 /// Setting key of the UI language.
@@ -377,15 +379,16 @@ pub async fn update_me(
         user = updated;
     }
 
+    // Each changed setting record gets a change-log row, so the user's devices pull it.
     let mut tx = state.app_db.begin(auth.scope()).await?;
     if let Some(lang) = body.ui_language {
-        settings::put_setting(&mut tx, SETTING_UI_LANGUAGE, &encode_setting(&lang)?, now).await?;
+        put_setting_logged(&mut tx, SETTING_UI_LANGUAGE, &encode_setting(&lang)?, now).await?;
     }
     if let Some(tz) = &body.timezone {
-        settings::put_setting(&mut tx, SETTING_TIMEZONE, &encode_setting(tz)?, now).await?;
+        put_setting_logged(&mut tx, SETTING_TIMEZONE, &encode_setting(tz)?, now).await?;
     }
     if let Some(prefs) = &body.preferences {
-        settings::put_setting(&mut tx, SETTING_PREFERENCES, &encode_setting(prefs)?, now).await?;
+        put_setting_logged(&mut tx, SETTING_PREFERENCES, &encode_setting(prefs)?, now).await?;
     }
     let mut auth = auth;
     auth.0.must_change_password = false;

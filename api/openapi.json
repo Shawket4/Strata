@@ -2603,6 +2603,204 @@
         ],
         "type": "string"
       },
+      "Graph": {
+        "description": "A graph (no positions).",
+        "properties": {
+          "clusters": {
+            "description": "Clusters of the returned nodes, by ID.",
+            "items": {
+              "$ref": "#/components/schemas/GraphCluster"
+            },
+            "type": "array"
+          },
+          "edges": {
+            "description": "Edges, by source, target, kind.",
+            "items": {
+              "$ref": "#/components/schemas/GraphEdge"
+            },
+            "type": "array"
+          },
+          "nodes": {
+            "description": "Nodes, by ID.",
+            "items": {
+              "$ref": "#/components/schemas/GraphNode"
+            },
+            "type": "array"
+          },
+          "similarity": {
+            "$ref": "#/components/schemas/SimilarityStatus",
+            "description": "Similarity edges."
+          }
+        },
+        "required": [
+          "nodes",
+          "edges",
+          "clusters",
+          "similarity"
+        ],
+        "type": "object"
+      },
+      "GraphCluster": {
+        "description": "A cluster of the returned nodes.",
+        "properties": {
+          "id": {
+            "description": "Stable ID.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "size": {
+            "description": "Members among the returned nodes.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "size"
+        ],
+        "type": "object"
+      },
+      "GraphEdge": {
+        "description": "An edge.",
+        "properties": {
+          "by": {
+            "description": "Provenance (`user` / `ai`); absent on co-mention edges.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "description": "AI confidence.",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "kind": {
+            "description": "`link`, `embed`, `relation:<type>`, `similarity`, `concept`, `mention`,\n`entity:<type>`, `custody:<location|holder|last-holder>`, `part-of-place`, or\n`co-mention` (entity lens).",
+            "type": "string"
+          },
+          "notes": {
+            "description": "Notes mentioning both entities (`co-mention`).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "reason": {
+            "description": "AI one-line reason (relations).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "description": "Source note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "target": {
+            "description": "Target note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "weight": {
+            "description": "Cosine similarity (`similarity`) or co-mention strength (`co-mention`).",
+            "format": "double",
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "GraphNode": {
+        "description": "A node (a live note).",
+        "properties": {
+          "cluster_id": {
+            "description": "Stable cluster ID, if clustered.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "degree": {
+            "description": "Edges of this response touching the node (in + out).",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "depth": {
+            "description": "Hops from the focus (local graphs only; the focus is 0).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Note ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NoteKind",
+            "description": "Kind."
+          },
+          "lang": {
+            "description": "Dominant language (`ar`, `en`, `mixed`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "description": "Vault path.",
+            "type": "string"
+          },
+          "summary": {
+            "description": "Short AI summary (hover), at most 200 characters.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Title.",
+            "type": "string"
+          },
+          "updated": {
+            "description": "Last update.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "path",
+          "degree",
+          "updated"
+        ],
+        "type": "object"
+      },
       "Health": {
         "description": "Liveness response.",
         "properties": {
@@ -2793,6 +2991,125 @@
           "password",
           "device_name",
           "platform"
+        ],
+        "type": "object"
+      },
+      "Map": {
+        "description": "A saved map.",
+        "properties": {
+          "content": {
+            "description": "The `.canvas` file: JSON Canvas 1.0 text as stored (Obsidian's layout).",
+            "type": "string"
+          },
+          "files": {
+            "description": "File nodes in canvas order, resolved to notes.",
+            "items": {
+              "$ref": "#/components/schemas/MapFile"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "ID.",
+            "type": "string"
+          },
+          "path": {
+            "description": "Vault path.",
+            "type": "string"
+          },
+          "version": {
+            "description": "Version (the value for `If-Match`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "version",
+          "content",
+          "files"
+        ],
+        "type": "object"
+      },
+      "MapFile": {
+        "description": "A file node of a map.",
+        "properties": {
+          "node_id": {
+            "description": "Canvas node ID.",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "The note at that path, when it is a live note.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "path": {
+            "description": "Referenced vault path.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "path"
+        ],
+        "type": "object"
+      },
+      "MapList": {
+        "description": "The saved maps.",
+        "properties": {
+          "maps": {
+            "description": "Maps, by ID.",
+            "items": {
+              "$ref": "#/components/schemas/MapSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "maps"
+        ],
+        "type": "object"
+      },
+      "MapSummary": {
+        "description": "A saved map in a listing.",
+        "properties": {
+          "edges": {
+            "description": "Edge count (absent when the file is not a valid canvas).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "ID (the file name without `.canvas`).",
+            "type": "string"
+          },
+          "nodes": {
+            "description": "Node count (absent when the file is not a valid canvas).",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "path": {
+            "description": "Vault path (`maps/<id>.canvas`).",
+            "type": "string"
+          },
+          "version": {
+            "description": "Version (the value for `If-Match`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "version"
         ],
         "type": "object"
       },
@@ -3645,6 +3962,39 @@
           }
         ]
       },
+      "PutMapRequest": {
+        "description": "`PUT /maps/{id}` body.",
+        "properties": {
+          "content": {
+            "description": "JSON Canvas 1.0 text. File nodes must reference files of the caller's vault.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "type": "object"
+      },
+      "ReclusterAccepted": {
+        "description": "A queued re-clustering.",
+        "properties": {
+          "job_id": {
+            "description": "The queued `cluster` job.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "run_after": {
+            "description": "When it may run.",
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "run_after"
+        ],
+        "type": "object"
+      },
       "RefreshRequest": {
         "description": "`POST /auth/refresh` body.",
         "properties": {
@@ -3957,6 +4307,16 @@
           "display_name"
         ],
         "type": "object"
+      },
+      "SimilarityStatus": {
+        "description": "What happened to similarity edges.",
+        "enum": [
+          "off",
+          "complete",
+          "truncated",
+          "unavailable"
+        ],
+        "type": "string"
       },
       "StreamFrameKind": {
         "description": "Envelope `kind`.",
@@ -9097,6 +9457,213 @@
         ]
       }
     },
+    "/api/v1/graph": {
+      "get": {
+        "operationId": "get_graph",
+        "parameters": [
+          {
+            "description": "Edge kinds, comma-separated: `link`, `embed`, `relation` or `relation:<type>`,\n`similarity`, `concept`, `mention`, `entity` or `entity:<type>`, `custody` or\n`custody:<location|holder|last-holder>`, `part-of-place`, `co-mention` (lens). Empty:\nall.",
+            "in": "query",
+            "name": "types",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Node kinds, comma-separated (`note`, `concept`, `person`, `company`, `document`,\n`place`). Empty: all. Ignored with a lens.",
+            "in": "query",
+            "name": "kinds",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Add similarity edges (top-n per note above a floor, never stored).",
+            "in": "query",
+            "name": "include_similarity",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Entity-centred graph: `people` or `companies`.",
+            "in": "query",
+            "name": "lens",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Graph"
+                }
+              }
+            },
+            "description": "Nodes, edges and clusters (no positions)."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The caller's graph.",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/api/v1/graph/local/{id}": {
+      "get": {
+        "operationId": "get_local_graph",
+        "parameters": [
+          {
+            "description": "Focus note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Hops from the focus, 1–3 (default 1).",
+            "in": "query",
+            "name": "depth",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "maximum": 3,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Edge kinds (as for `GET /graph`).",
+            "in": "query",
+            "name": "types",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Node kinds (as for `GET /graph`); the focus is always included.",
+            "in": "query",
+            "name": "kinds",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Add the focus's similarity edges.",
+            "in": "query",
+            "name": "include_similarity",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Graph"
+                }
+              }
+            },
+            "description": "The focus and everything within `depth` hops over the allowed edges."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The neighbourhood of a note.",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/api/v1/graph/recluster": {
+      "post": {
+        "operationId": "recluster_graph",
+        "responses": {
+          "202": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReclusterAccepted"
+                }
+              }
+            },
+            "description": "A `cluster` job is queued (a queued one is reused); `cluster.updated` follows on `/events` when clusters change."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "429": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`: at most 3 re-clusterings per hour. See `Retry-After`."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Re-cluster the caller's graph now (the `cluster` job also runs nightly).",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
     "/api/v1/health": {
       "get": {
         "operationId": "health",
@@ -9259,6 +9826,179 @@
         "summary": "Integrity warnings raised by reconciliation, newest first.",
         "tags": [
           "vault"
+        ]
+      }
+    },
+    "/api/v1/maps": {
+      "get": {
+        "operationId": "list_maps",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapList"
+                }
+              }
+            },
+            "description": "Every `maps/*.canvas`, by ID."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The caller's saved maps.",
+        "tags": [
+          "maps"
+        ]
+      }
+    },
+    "/api/v1/maps/{id}": {
+      "get": {
+        "operationId": "get_map",
+        "parameters": [
+          {
+            "description": "Map ID (file name without `.canvas`).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Map"
+                }
+              }
+            },
+            "description": "The map."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "One saved map.",
+        "tags": [
+          "maps"
+        ]
+      },
+      "put": {
+        "operationId": "put_map",
+        "parameters": [
+          {
+            "description": "Map ID (file name without `.canvas`).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The map's current version; required to replace an existing map, absent to create one.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/PutMapRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Map"
+                }
+              }
+            },
+            "description": "Replaced; one `user: save map maps/<id>.canvas` commit."
+          },
+          "201": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Map"
+                }
+              }
+            },
+            "description": "Created; one `user: save map maps/<id>.canvas` commit."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "409": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`version_conflict` with `current_version`: the map exists (send `If-Match`) or changed."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Save a map: create it (no `If-Match`) or replace it (`If-Match`: its current version).",
+        "tags": [
+          "maps"
         ]
       }
     },
@@ -11582,6 +12322,14 @@
     {
       "description": "Ask (RAG with citations) and AI status (PLAN §7.5 AI, §9.5).",
       "name": "ai"
+    },
+    {
+      "description": "The knowledge graph, neighbourhoods and clustering (PLAN §10).",
+      "name": "graph"
+    },
+    {
+      "description": "Saved mind-map layouts (JSON Canvas in `maps/`, §6.8).",
+      "name": "maps"
     }
   ]
 }

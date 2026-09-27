@@ -1,0 +1,69 @@
+{
+  "title": "عقد وطنية — ETA invoice",
+  "tags": [
+    "watanya",
+    "invoices"
+  ],
+  "destination_folder": "notes/Clients",
+  "lang": "mixed",
+  "is_correction": false,
+  "relations": [
+    {
+      "target_id": "01J8ZK9A000000000000000001",
+      "type": "follows-up",
+      "confidence": 0.82,
+      "reason": "Continues the Watanya invoicing discussion from the September call."
+    }
+  ],
+  "concepts": [
+    {
+      "name": "Invoicing",
+      "existing_id": "01J8ZKC0000000000000000001",
+      "confidence": 0.9,
+      "summary": null
+    },
+    {
+      "name": "ETA e-invoicing",
+      "existing_id": null,
+      "confidence": 0.8,
+      "summary": "Egypt's electronic invoice system that Watanya's invoices go through."
+    }
+  ],
+  "people": [
+    {
+      "name": "بابا",
+      "existing_id": null,
+      "candidate_ids": [],
+      "is_nickname": true,
+      "confidence": 0.2,
+      "evidence_block_id": "b-0a1b2c"
+    }
+  ],
+  "companies": [
+    {
+      "name": "Watanya",
+      "existing_id": "01J8ZKW0000000000000000001",
+      "candidate_ids": [],
+      "is_nickname": false,
+      "confidence": 0.95,
+      "evidence_block_id": "b-0a1b2c"
+    }
+  ],
+  "custody": [],
+  "tasks": [
+    {
+      "title": "Make Watanya's ETA invoice",
+      "due": "2026-10-01",
+      "date_source": "explicit",
+      "recurrence": "every month on the 1st",
+      "reminders": [
+        "2026-10-01 09:00"
+      ],
+      "entities": [
+        "Watanya"
+      ],
+      "confidence": 0.9,
+      "evidence_block_id": "b-0a1b2c"
+    }
+  ]
+}

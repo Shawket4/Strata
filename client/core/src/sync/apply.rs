@@ -88,42 +88,51 @@ pub fn apply_record(
             };
             if base.as_ref() != Some(&next) {
                 notes::set_base(conn, &id, Some(&next), now)?;
+                crate::sync::rebase::rebase_note(conn, &id, Some(&next))?;
                 write::rebuild_note(conn, &id, now, re)?;
                 if refresh_conflicts(conn, &id, &next)? {
                     re.topics(Topics::SYNC);
                 }
             }
+            conn.execute(
+                "UPDATE notes SET summary = ?2 WHERE id = ?1 AND summary IS NOT ?2",
+                params![id, n.summary],
+            )?;
         }
         Record::Suggestion(s) => {
             let status = serde_plain(&s.status);
             conn.execute(
-                "INSERT INTO suggestions (id, note_id, kind, payload, status, base_status, created)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?5, ?6)
+                "INSERT INTO suggestions (id, note_id, kind, payload, status, base_status, created,
+                                          replies)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?5, ?6, ?7)
                  ON CONFLICT (id) DO UPDATE SET note_id = excluded.note_id, kind = excluded.kind,
                     payload = excluded.payload, base_status = excluded.base_status,
-                    created = excluded.created",
+                    created = excluded.created, replies = excluded.replies",
                 params![
                     s.id.to_string(),
                     s.note_id.map(|n| n.to_string()),
                     s.kind,
                     s.payload,
                     status,
-                    s.created.to_rfc3339()
+                    s.created.with_timezone(&chrono::Utc).to_rfc3339(),
+                    crate::store::to_msgpack(&s.replies)?
                 ],
             )?;
             write::rebuild_suggestion(conn, &s.id.to_string(), re)?;
         }
         Record::Relation(r) => {
             conn.execute(
-                "INSERT OR REPLACE INTO relation_meta (src_id, dst_id, rel_type, by, confidence, reason)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                "INSERT OR REPLACE INTO relation_meta (src_id, dst_id, rel_type, by, confidence, reason,
+                                                   created)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
                 params![
                     r.src_id.to_string(),
                     r.dst_id.to_string(),
                     r.relation.as_str(),
                     r.by.as_str(),
                     r.confidence.map(f64::from),
-                    r.reason
+                    r.reason,
+                    r.created.map(|c| c.with_timezone(&chrono::Utc).to_rfc3339())
                 ],
             )?;
             re.topics(Topics::NOTES | Topics::ENTITIES);
@@ -448,6 +457,7 @@ pub fn resolve_conflict(
                     content,
                 }),
                 created: now,
+                base_content: current.as_deref(),
             },
         )?;
         write::rebuild(conn, &local, now, re)?;

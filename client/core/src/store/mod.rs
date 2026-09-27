@@ -10,6 +10,7 @@
 //!   one transaction.
 
 pub mod account;
+pub mod cache;
 pub mod conflicts;
 pub mod index;
 pub mod migrations;

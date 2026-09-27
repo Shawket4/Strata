@@ -138,15 +138,27 @@ mod tests {
         ids::SUMMARY,
     ];
 
+    /// Prompts bumped to version 2 (the AI pipelines: concept summaries, filing with custody,
+    /// tasks and correction detection, one-line captures in entity insights).
+    const V2: [&str; 3] = [ids::ENTITY_INSIGHTS, ids::INBOX_FILING, ids::LINKING];
+
     #[test]
-    fn every_prompt_is_registered_once_sorted_with_version_1() {
+    fn every_prompt_is_registered_sorted_and_latest_is_the_highest_version() {
         let listed: Vec<(&str, u32)> = PROMPTS.iter().map(|p| (p.id, p.version)).collect();
-        assert_eq!(listed, ALL.iter().map(|id| (*id, 1)).collect::<Vec<_>>());
+        let expected: Vec<(&str, u32)> = ALL
+            .iter()
+            .flat_map(|id| {
+                let top = if V2.contains(id) { 2 } else { 1 };
+                (1..=top).map(move |v| (*id, v))
+            })
+            .collect();
+        assert_eq!(listed, expected);
         for id in ALL {
-            assert_eq!(latest(id).map(|p| p.version), Some(1), "{id}");
+            let top = if V2.contains(&id) { 2 } else { 1 };
+            assert_eq!(latest(id).map(|p| p.version), Some(top), "{id}");
             assert_eq!(get(id, 1).map(|p| p.id), Some(id));
         }
-        assert_eq!(get(ids::LINKING, 2), None);
+        assert_eq!(get(ids::LINKING, 3), None);
         assert_eq!(latest("nope"), None);
     }
 
@@ -199,14 +211,29 @@ mod tests {
             "ca5eb04464f4485661d185789fb64053d00872660bde52836f1662022b5ac356",
         ),
         (
+            "entity_insights",
+            2,
+            "34b992d05fcc6ccb691fcf5da03ad43ac55ffbf422ecdf066e391f7425f72748",
+        ),
+        (
             "inbox_filing",
             1,
             "7e0bece88d09c5d7e16ee88eabd978b9b70b483775e0b1d5a5ddac82c3e16622",
         ),
         (
+            "inbox_filing",
+            2,
+            "77e343c8ef88bfdabedadc0a6c3b4eb65fc436f27a95524af0b675c67398f456",
+        ),
+        (
             "linking",
             1,
             "6efb5ab1bf13e9557cb866826d949c1e331e2a366f765d185a2f9557c0ca4dcc",
+        ),
+        (
+            "linking",
+            2,
+            "44a0ac9b183c7f37095f964dbb10674a97f8b14415e9e73c90cb7f08146e01e1",
         ),
         (
             "summary",

@@ -3,8 +3,14 @@
 //! disagree (L16). This module only shapes the crate's results for the local index, the
 //! write path and the editor.
 
+pub mod completions;
+pub mod diff;
+pub mod direction;
 pub mod edit;
 pub mod hints;
+pub mod labels;
+pub mod recurrence;
+pub mod task_text;
 
 use chrono::NaiveDate;
 use vault_format::custody::{self, CustodyEvent};

@@ -761,7 +761,7 @@ pub fn section_text(body: &str, title: &str) -> Option<String> {
 
 /// Points every link (body and link-holding frontmatter) that resolves to `from` at `to`.
 /// Returns whether anything changed.
-fn retarget_links(
+pub(crate) fn retarget_links(
     doc: &mut Document,
     source: &str,
     from: &str,

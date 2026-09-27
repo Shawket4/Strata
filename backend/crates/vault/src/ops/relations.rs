@@ -36,7 +36,7 @@ fn resolves_to(item: &str, dst_path: &str, index: &PathIndex, src_path: &str) ->
 /// Removes every link to `dst_path` from relation `rel` (and the key once empty): first the
 /// shared `sync-model` rule on the link text a device would write, then any other spelling
 /// that resolves there. Returns how many were removed.
-fn remove_links(
+pub(crate) fn remove_links(
     doc: &mut Document,
     rel: RelationKey,
     dst_path: &str,

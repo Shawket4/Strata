@@ -119,10 +119,13 @@ async fn scheduled_deletion_export_only_session_and_purge_after_the_grace_period
     assert_eq!(
         bob_rows,
         BTreeMap::from([
+            // The timezone change is logged for bob's devices (`setting` row + counter).
+            ("change_log".to_owned(), 1),
             ("devices".to_owned(), 1),
             ("refresh_tokens".to_owned(), 1),
             ("sessions".to_owned(), 1),
             ("settings".to_owned(), 1),
+            ("sync_epochs".to_owned(), 1),
             ("users".to_owned(), 1),
         ])
     );

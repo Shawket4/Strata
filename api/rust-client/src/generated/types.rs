@@ -1703,6 +1703,83 @@ impl ::std::convert::TryFrom<::std::string::String> for FileChange {
         value.parse()
     }
 }
+///A graph (no positions).
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Graph {
+    ///Clusters of the returned nodes, by ID.
+    pub clusters: ::std::vec::Vec<GraphCluster>,
+    ///Edges, by source, target, kind.
+    pub edges: ::std::vec::Vec<GraphEdge>,
+    ///Nodes, by ID.
+    pub nodes: ::std::vec::Vec<GraphNode>,
+    ///Similarity edges.
+    pub similarity: SimilarityStatus,
+}
+///A cluster of the returned nodes.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct GraphCluster {
+    ///Stable ID.
+    pub id: ::std::string::String,
+    ///Name.
+    pub name: ::std::string::String,
+    ///Members among the returned nodes.
+    pub size: u32,
+}
+///An edge.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct GraphEdge {
+    ///Provenance (`user` / `ai`); absent on co-mention edges.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub by: ::std::option::Option<::std::string::String>,
+    ///AI confidence.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub confidence: ::std::option::Option<f64>,
+    /**`link`, `embed`, `relation:<type>`, `similarity`, `concept`, `mention`,
+    `entity:<type>`, `custody:<location|holder|last-holder>`, `part-of-place`, or
+    `co-mention` (entity lens).*/
+    pub kind: ::std::string::String,
+    ///Notes mentioning both entities (`co-mention`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub notes: ::std::option::Option<i32>,
+    ///AI one-line reason (relations).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub reason: ::std::option::Option<::std::string::String>,
+    ///Source note.
+    pub source: ::ulid::Ulid,
+    ///Target note.
+    pub target: ::ulid::Ulid,
+    ///Cosine similarity (`similarity`) or co-mention strength (`co-mention`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub weight: ::std::option::Option<f64>,
+}
+///A node (a live note).
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct GraphNode {
+    ///Stable cluster ID, if clustered.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub cluster_id: ::std::option::Option<::std::string::String>,
+    ///Edges of this response touching the node (in + out).
+    pub degree: u32,
+    ///Hops from the focus (local graphs only; the focus is 0).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub depth: ::std::option::Option<i32>,
+    ///Note ID.
+    pub id: ::ulid::Ulid,
+    ///Kind.
+    pub kind: NoteKind,
+    ///Dominant language (`ar`, `en`, `mixed`).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub lang: ::std::option::Option<::std::string::String>,
+    ///Vault path.
+    pub path: ::std::string::String,
+    ///Short AI summary (hover), at most 200 characters.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub summary: ::std::option::Option<::std::string::String>,
+    ///Title.
+    pub title: ::std::string::String,
+    ///Last update.
+    pub updated: ::chrono::DateTime<::chrono::offset::Utc>,
+}
 ///Liveness response.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct Health {
@@ -1823,6 +1900,53 @@ pub struct LoginRequest {
     pub platform: DevicePlatform,
     ///Username (case- and confusable-insensitive).
     pub username: ::std::string::String,
+}
+///A saved map.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct Map {
+    ///The `.canvas` file: JSON Canvas 1.0 text as stored (Obsidian's layout).
+    pub content: ::std::string::String,
+    ///File nodes in canvas order, resolved to notes.
+    pub files: ::std::vec::Vec<MapFile>,
+    ///ID.
+    pub id: ::std::string::String,
+    ///Vault path.
+    pub path: ::std::string::String,
+    ///Version (the value for `If-Match`).
+    pub version: ::std::string::String,
+}
+///A file node of a map.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct MapFile {
+    ///Canvas node ID.
+    pub node_id: ::std::string::String,
+    ///The note at that path, when it is a live note.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub note_id: ::std::option::Option<::ulid::Ulid>,
+    ///Referenced vault path.
+    pub path: ::std::string::String,
+}
+///The saved maps.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct MapList {
+    ///Maps, by ID.
+    pub maps: ::std::vec::Vec<MapSummary>,
+}
+///A saved map in a listing.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct MapSummary {
+    ///Edge count (absent when the file is not a valid canvas).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub edges: ::std::option::Option<i32>,
+    ///ID (the file name without `.canvas`).
+    pub id: ::std::string::String,
+    ///Node count (absent when the file is not a valid canvas).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub nodes: ::std::option::Option<i32>,
+    ///Vault path (`maps/<id>.canvas`).
+    pub path: ::std::string::String,
+    ///Version (the value for `If-Match`).
+    pub version: ::std::string::String,
 }
 ///How a duplicate candidate matched (§9.7).
 #[derive(
@@ -2271,6 +2395,20 @@ pub enum PropertyValueDto {
     #[serde(rename = "other")]
     Other,
 }
+///`PUT /maps/{id}` body.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct PutMapRequest {
+    ///JSON Canvas 1.0 text. File nodes must reference files of the caller's vault.
+    pub content: ::std::string::String,
+}
+///A queued re-clustering.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct ReclusterAccepted {
+    ///The queued `cluster` job.
+    pub job_id: ::ulid::Ulid,
+    ///When it may run.
+    pub run_after: ::chrono::DateTime<::chrono::offset::Utc>,
+}
 ///`POST /auth/refresh` body.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct RefreshRequest {
@@ -2604,6 +2742,65 @@ pub struct SignupRequest {
     /**3–32 letters, digits, `.`, `_`, `-` (any script); compared case- and
     confusable-insensitively.*/
     pub username: ::std::string::String,
+}
+///What happened to similarity edges.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum SimilarityStatus {
+    #[serde(rename = "off")]
+    Off,
+    #[serde(rename = "complete")]
+    Complete,
+    #[serde(rename = "truncated")]
+    Truncated,
+    #[serde(rename = "unavailable")]
+    Unavailable,
+}
+impl ::std::fmt::Display for SimilarityStatus {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Off => f.write_str("off"),
+            Self::Complete => f.write_str("complete"),
+            Self::Truncated => f.write_str("truncated"),
+            Self::Unavailable => f.write_str("unavailable"),
+        }
+    }
+}
+impl ::std::str::FromStr for SimilarityStatus {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "off" => Ok(Self::Off),
+            "complete" => Ok(Self::Complete),
+            "truncated" => Ok(Self::Truncated),
+            "unavailable" => Ok(Self::Unavailable),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for SimilarityStatus {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for SimilarityStatus {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
 }
 ///Envelope `kind`.
 #[derive(

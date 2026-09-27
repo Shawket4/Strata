@@ -125,6 +125,22 @@ impl OpReceipt {
         out
     }
 
+    /// Records that the caller stored `bytes` for this op in a database-only transaction of
+    /// its own that committed (ops that never reach the vault writer).
+    pub fn mark_settled(&self, bytes: Vec<u8>) {
+        self.slot.mark_settled(bytes);
+    }
+
+    /// The op ID.
+    pub fn op_id(&self) -> OpId {
+        self.slot.op_id
+    }
+
+    /// The pushing device.
+    pub fn device(&self) -> DeviceId {
+        self.slot.device
+    }
+
     /// The result bytes a committed write stored for this op, if one did.
     pub fn settled(&self) -> Option<Vec<u8>> {
         self.slot.state().settled.clone()

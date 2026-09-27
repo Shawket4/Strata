@@ -25,6 +25,10 @@ pub struct SyncState {
     pub consecutive_failures: u32,
     /// Last error message key.
     pub last_error: Option<String>,
+    /// Last `/events` seq received (resume point).
+    pub events_seq: Option<u64>,
+    /// The user paused sync.
+    pub paused: bool,
 }
 
 fn to_u64(v: Option<i64>) -> Option<u64> {
@@ -39,7 +43,7 @@ fn to_i64(v: u64) -> i64 {
 pub fn get(conn: &Connection) -> CoreResult<SyncState> {
     Ok(conn.query_row(
         "SELECT epoch, cursor_seq, bootstrap_cursor, bootstrap_complete, bootstrap_pages,
-                last_pull_at, last_push_at, consecutive_failures, last_error
+                last_pull_at, last_push_at, consecutive_failures, last_error, events_seq, paused
          FROM sync_state WHERE singleton = 1",
         [],
         |r| {
@@ -53,6 +57,8 @@ pub fn get(conn: &Connection) -> CoreResult<SyncState> {
                 last_push_at: r.get(6)?,
                 consecutive_failures: r.get(7)?,
                 last_error: r.get(8)?,
+                events_seq: to_u64(r.get(9)?),
+                paused: r.get(10)?,
             })
         },
     )?)
@@ -63,7 +69,8 @@ pub fn put(conn: &Connection, s: &SyncState) -> CoreResult<()> {
     conn.execute(
         "UPDATE sync_state SET epoch = ?1, cursor_seq = ?2, bootstrap_cursor = ?3,
                 bootstrap_complete = ?4, bootstrap_pages = ?5, last_pull_at = ?6,
-                last_push_at = ?7, consecutive_failures = ?8, last_error = ?9
+                last_push_at = ?7, consecutive_failures = ?8, last_error = ?9, events_seq = ?10,
+                paused = ?11
          WHERE singleton = 1",
         params![
             s.epoch.map(to_i64),
@@ -74,7 +81,9 @@ pub fn put(conn: &Connection, s: &SyncState) -> CoreResult<()> {
             s.last_pull_at,
             s.last_push_at,
             s.consecutive_failures,
-            s.last_error
+            s.last_error,
+            s.events_seq.map(to_i64),
+            s.paused
         ],
     )?;
     Ok(())

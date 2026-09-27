@@ -32,8 +32,9 @@ use strata_index::{AppDb, IndexError, ScopedTx, UserScope};
 use strata_vault::{VaultError, VaultService, fsio};
 use sync_model::changes::{
     ClusterAssignmentRecord, ClusterNameRecord, DeviceSettingRecord, NoteRecord, RejectedRecord,
-    RelationRecord, SettingRecord, SuggestionRecord, SuggestionReplyRecord, SuggestionStatus,
+    RelationRecord, SuggestionRecord, SuggestionReplyRecord, SuggestionStatus,
 };
+use sync_model::settings::{self, SettingValue};
 use sync_model::{BootstrapPage, ChangeRecord, ChangesPage, EntityType, Record, Version};
 use ulid::Ulid;
 use uuid::Uuid;
@@ -149,14 +150,90 @@ async fn suggestion_record(tx: &mut ScopedTx, s: Suggestion) -> Result<Record, P
     }))
 }
 
-/// A setting value as text (strings, booleans and integers; other values are not synced).
-fn setting_text(bytes: &[u8]) -> Option<String> {
-    match rmpv::decode::read_value(&mut &bytes[..]).ok()? {
-        rmpv::Value::String(s) => s.into_str(),
-        rmpv::Value::Boolean(b) => Some(b.to_string()),
-        rmpv::Value::Integer(i) => Some(i.to_string()),
-        _ => None,
+/// A stored setting value (`MessagePack`) as the `sync-model` [`SettingValue`] its records are
+/// built from (see [`sync_model::settings`]).
+pub fn setting_value(bytes: &[u8]) -> SettingValue {
+    rmpv::decode::read_value(&mut &bytes[..]).map_or(SettingValue::Other, |v| value_of(&v, true))
+}
+
+fn value_of(v: &rmpv::Value, top: bool) -> SettingValue {
+    match v {
+        rmpv::Value::String(s) => s
+            .as_str()
+            .map_or(SettingValue::Other, |t| SettingValue::Text(t.to_owned())),
+        rmpv::Value::Boolean(b) => SettingValue::Bool(*b),
+        rmpv::Value::Integer(i) => i
+            .as_i64()
+            .map(i128::from)
+            .or_else(|| i.as_u64().map(i128::from))
+            .map_or(SettingValue::Other, SettingValue::Integer),
+        rmpv::Value::F32(f) => SettingValue::Float(f64::from(*f)),
+        rmpv::Value::F64(f) => SettingValue::Float(*f),
+        rmpv::Value::Map(entries) if top => {
+            let mut out = BTreeMap::new();
+            for (k, v) in entries {
+                if let Some(k) = k.as_str() {
+                    out.insert(k.to_owned(), value_of(v, false));
+                }
+            }
+            SettingValue::Map(out)
+        }
+        _ => SettingValue::Other,
     }
+}
+
+/// Stores setting `key` = `value` (`MessagePack`) and appends a `setting` change-log row for
+/// every record that changed (upserts, and tombstones for removed map entries), so devices
+/// pull it (`PATCH /me`). Runs in the caller's transaction.
+pub async fn put_setting_logged(
+    tx: &mut ScopedTx,
+    key: &str,
+    value: &[u8],
+    now: DateTime<Utc>,
+) -> Result<(), IndexError> {
+    let before = strata_index::repo::settings::get_setting(tx, key).await?;
+    strata_index::repo::settings::put_setting(tx, key, value, now).await?;
+    let before = before.map(|b| setting_value(&b));
+    let after = setting_value(value);
+    for change in settings::changes(key, before.as_ref(), Some(&after)) {
+        let (op, entity_id) = match &change {
+            settings::RecordChange::Upsert(k) => (strata_index::types::ChangeOp::Upsert, k),
+            settings::RecordChange::Delete(k) => (strata_index::types::ChangeOp::Delete, k),
+        };
+        log::append_change(
+            tx,
+            &log::NewChange {
+                entity_type: EntityType::Setting.as_str(),
+                entity_id,
+                op,
+                version: None,
+                at: now,
+            },
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+/// The record `record_key` of the user's settings: a setting's own record, or an entry of a
+/// map setting (`<setting>.<entry>`).
+async fn setting_record(
+    tx: &mut ScopedTx,
+    record_key: &str,
+) -> Result<Option<Record>, Problem> {
+    let get = strata_index::repo::settings::get_setting;
+    if let Some(bytes) = get(tx, record_key).await.map_err(index_problem)? {
+        return Ok(settings::record(record_key, &setting_value(&bytes), record_key)
+            .map(Record::Setting));
+    }
+    let Some((setting, _)) = settings::split_entry_key(record_key) else {
+        return Ok(None);
+    };
+    Ok(get(tx, setting)
+        .await
+        .map_err(index_problem)?
+        .and_then(|bytes| settings::record(setting, &setting_value(&bytes), record_key))
+        .map(Record::Setting))
 }
 
 fn keep_both_record(kind: &str, a: String, b: String) -> Option<Record> {
@@ -341,8 +418,8 @@ async fn fetch(
                 if key.starts_with("device.") {
                     continue;
                 }
-                if let Some(value) = setting_text(&value) {
-                    items.push(Item::Ready(Record::Setting(SettingRecord { key, value })));
+                for record in settings::records(&key, &setting_value(&value)).into_values() {
+                    items.push(Item::Ready(Record::Setting(record)));
                 }
             }
         }
@@ -601,17 +678,7 @@ async fn current(tx: &mut ScopedTx, ty: EntityType, id: &str) -> Result<Option<R
                     .map_err(sqlx_problem)?;
             row.map(|r| device_record(Uuid::from(device), r))
         }
-        EntityType::Setting => {
-            let row: Option<Vec<u8>> = strata_index::repo::settings::get_setting(tx, id)
-                .await
-                .map_err(index_problem)?;
-            row.and_then(|v| setting_text(&v)).map(|value| {
-                Record::Setting(SettingRecord {
-                    key: id.to_owned(),
-                    value,
-                })
-            })
-        }
+        EntityType::Setting => setting_record(tx, id).await?,
         EntityType::ClusterAssignment => {
             let Ok(note) = Ulid::from_string(id) else {
                 return Ok(None);

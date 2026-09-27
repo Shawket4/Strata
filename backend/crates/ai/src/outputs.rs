@@ -1,5 +1,6 @@
-//! Typed outputs of the structured prompts. Each type mirrors `prompts/<id>.v1.schema.json`
-//! (the schema is authoritative and validated first; these types are what jobs consume).
+//! Typed outputs of the structured prompts. Each type mirrors the latest
+//! `prompts/<id>.v<N>.schema.json` (the schema is authoritative and validated first; these
+//! types are what jobs consume).
 
 use serde::{Deserialize, Serialize};
 
@@ -56,9 +57,13 @@ pub struct ConceptProposal {
     pub existing_id: Option<String>,
     /// 0..1.
     pub confidence: f64,
+    /// For a new concept: one or two sentences defining it from the note (v2; the AI-owned
+    /// `## Summary` of the concept note).
+    #[serde(default)]
+    pub summary: Option<String>,
 }
 
-/// `inbox_filing.v1` (§9.3).
+/// `inbox_filing.v2` (§9.3): the filing proposal plus everything linking extracts.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InboxFiling {
     /// Proposed title (file name).
@@ -69,38 +74,52 @@ pub struct InboxFiling {
     pub destination_folder: String,
     /// Dominant language.
     pub lang: Lang,
+    /// The capture corrects an earlier AI decision (§9.8).
+    pub is_correction: bool,
     /// Relations to candidates.
     pub relations: Vec<RelationProposal>,
     /// Concepts.
     pub concepts: Vec<ConceptProposal>,
     /// People the capture involves.
-    pub people: Vec<PersonProposal>,
+    pub people: Vec<NamedMention>,
     /// Companies the capture involves.
-    pub companies: Vec<CompanyProposal>,
+    pub companies: Vec<NamedMention>,
+    /// Custody events.
+    pub custody: Vec<CustodyEvent>,
+    /// Task suggestions.
+    pub tasks: Vec<TaskProposal>,
 }
 
-/// A person mention in filing output.
+/// A person or company mention in filing output.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct PersonProposal {
+pub struct NamedMention {
     /// Name as written.
     pub name: String,
     /// Existing entity, if exactly one matched.
     pub existing_id: Option<String>,
+    /// Several plausible entities (ambiguous → suggestion).
+    pub candidate_ids: Vec<String>,
     /// Nickname or kinship term (never auto-created, §6.7).
     pub is_nickname: bool,
     /// 0..1.
     pub confidence: f64,
+    /// Block stating it.
+    pub evidence_block_id: Option<String>,
 }
 
-/// A company mention in filing output.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CompanyProposal {
-    /// Name as written.
-    pub name: String,
-    /// Existing entity, if exactly one matched.
-    pub existing_id: Option<String>,
-    /// 0..1.
-    pub confidence: f64,
+impl NamedMention {
+    /// The equivalent linking mention of `kind`.
+    pub fn to_mention(&self, kind: MentionKind) -> Mention {
+        Mention {
+            text: self.name.clone(),
+            kind,
+            existing_id: self.existing_id.clone(),
+            candidate_ids: self.candidate_ids.clone(),
+            is_nickname: self.is_nickname,
+            confidence: self.confidence,
+            evidence_block_id: self.evidence_block_id.clone(),
+        }
+    }
 }
 
 /// Entity kinds a mention can resolve to.
@@ -271,7 +290,7 @@ pub struct TaskProposal {
     pub evidence_block_id: Option<String>,
 }
 
-/// `linking.v1` (§9.4, plus concepts, entities, custody and task suggestions).
+/// `linking.v2` (§9.4, plus concepts, entities, custody and task suggestions).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Linking {
     /// Relations to candidates.
@@ -326,7 +345,7 @@ pub struct TimelineEntry {
     pub citations: Vec<Citation>,
 }
 
-/// `entity_insights.v1` (§6.7 AI sections).
+/// `entity_insights.v2` (§6.7 AI sections).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EntityInsights {
     /// 2–4 sentences.
@@ -498,14 +517,30 @@ mod tests {
     fn sample_outputs_validate_and_round_trip_through_the_types() {
         let f: InboxFiling = check(
             ids::INBOX_FILING,
-            include_str!("../tests/fixtures/outputs/inbox_filing.v1.json"),
+            include_str!("../tests/fixtures/outputs/inbox_filing.v2.json"),
         );
-        assert_eq!(f.lang, Lang::Mixed);
+        assert_eq!((f.lang, f.is_correction), (Lang::Mixed, false));
+        assert_eq!(
+            f.people[0].to_mention(MentionKind::Person),
+            Mention {
+                text: "بابا".into(),
+                kind: MentionKind::Person,
+                existing_id: None,
+                candidate_ids: vec![],
+                is_nickname: true,
+                confidence: 0.2,
+                evidence_block_id: Some("b-0a1b2c".into()),
+            }
+        );
         let l: Linking = check(
             ids::LINKING,
-            include_str!("../tests/fixtures/outputs/linking.v1.json"),
+            include_str!("../tests/fixtures/outputs/linking.v2.json"),
         );
         assert_eq!(l.custody[1].kind, CustodyEventType::StoredAt);
+        assert_eq!(
+            l.concepts[0].summary.as_deref(),
+            Some("How prices are set and changed for customers.")
+        );
         let s: Summary = check(
             ids::SUMMARY,
             include_str!("../tests/fixtures/outputs/summary.v1.json"),
@@ -513,7 +548,7 @@ mod tests {
         assert_eq!(s.lang, Lang::Ar);
         let e: EntityInsights = check(
             ids::ENTITY_INSIGHTS,
-            include_str!("../tests/fixtures/outputs/entity_insights.v1.json"),
+            include_str!("../tests/fixtures/outputs/entity_insights.v2.json"),
         );
         assert_eq!(e.timeline[0].date, "2026-09-28");
         let c: CustodyExtraction = check(
@@ -541,6 +576,37 @@ mod tests {
             include_str!("../tests/fixtures/outputs/digest.v1.json"),
         );
         assert_eq!(g.title, "Weekly digest 2026-W39");
+    }
+
+    /// Superseded versions stay registered while fixtures reference them; their samples
+    /// still match their own schemas.
+    #[test]
+    fn superseded_prompt_samples_match_their_schemas() {
+        for (id, sample) in [
+            (
+                ids::INBOX_FILING,
+                include_str!("../tests/fixtures/outputs/inbox_filing.v1.json"),
+            ),
+            (
+                ids::LINKING,
+                include_str!("../tests/fixtures/outputs/linking.v1.json"),
+            ),
+            (
+                ids::ENTITY_INSIGHTS,
+                include_str!("../tests/fixtures/outputs/entity_insights.v1.json"),
+            ),
+        ] {
+            let p = prompts::get(id, 1).expect("v1 registered");
+            let v = crate::schema::compile(&p.schema_value().expect("schema")).expect("compiles");
+            let value: serde_json::Value = serde_json::from_str(sample).expect("JSON");
+            crate::schema::validate(&v, &value).expect("v1 sample matches v1");
+        }
+        // A v1 linking reply still reads as the current type (concepts without summaries).
+        let l: Linking = serde_json::from_str(include_str!(
+            "../tests/fixtures/outputs/linking.v1.json"
+        ))
+        .expect("v1 fits");
+        assert_eq!(l.concepts[0].summary, None);
     }
 
     #[test]

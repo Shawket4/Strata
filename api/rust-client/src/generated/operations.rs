@@ -656,6 +656,99 @@ pub async fn export_vault(
     let request = request.authenticated();
     client.send_zip(request).await
 }
+/// The caller's graph.
+///
+/// `GET /api/v1/graph`
+pub async fn get_graph(
+    client: &crate::Client,
+    types: ::std::option::Option<&str>,
+    kinds: ::std::option::Option<&str>,
+    include_similarity: ::std::option::Option<bool>,
+    lens: ::std::option::Option<&str>,
+) -> ::std::result::Result<types::Graph, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/graph"),
+        "get_graph",
+    );
+    let request = request.authenticated();
+    let request = match &types {
+        ::std::option::Option::Some(value) => request.query("types", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &kinds {
+        ::std::option::Option::Some(value) => request.query("kinds", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &include_similarity {
+        ::std::option::Option::Some(value) => {
+            request.query("include_similarity", value.to_string())
+        }
+        ::std::option::Option::None => request,
+    };
+    let request = match &lens {
+        ::std::option::Option::Some(value) => request.query("lens", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// The neighbourhood of a note.
+///
+/// `GET /api/v1/graph/local/{id}`
+pub async fn get_local_graph(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    depth: ::std::option::Option<u64>,
+    types: ::std::option::Option<&str>,
+    kinds: ::std::option::Option<&str>,
+    include_similarity: ::std::option::Option<bool>,
+) -> ::std::result::Result<types::Graph, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/graph/local/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "get_local_graph",
+    );
+    let request = request.authenticated();
+    let request = match &depth {
+        ::std::option::Option::Some(value) => request.query("depth", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &types {
+        ::std::option::Option::Some(value) => request.query("types", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &kinds {
+        ::std::option::Option::Some(value) => request.query("kinds", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &include_similarity {
+        ::std::option::Option::Some(value) => {
+            request.query("include_similarity", value.to_string())
+        }
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Re-cluster the caller's graph now (the `cluster` job also runs nightly).
+///
+/// `POST /api/v1/graph/recluster`
+pub async fn recluster_graph(
+    client: &crate::Client,
+) -> ::std::result::Result<types::ReclusterAccepted, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/graph/recluster"),
+        "recluster_graph",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
 /// Liveness probe.
 ///
 /// `GET /api/v1/health`
@@ -709,6 +802,69 @@ pub async fn get_integrity(
         "get_integrity",
     );
     let request = request.authenticated();
+    client.send(request).await
+}
+/// The caller's saved maps.
+///
+/// `GET /api/v1/maps`
+pub async fn list_maps(
+    client: &crate::Client,
+) -> ::std::result::Result<types::MapList, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/maps"),
+        "list_maps",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// One saved map.
+///
+/// `GET /api/v1/maps/{id}`
+pub async fn get_map(
+    client: &crate::Client,
+    id: &str,
+) -> ::std::result::Result<types::Map, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::format!(
+            "/api/v1/maps/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                (*value).to_owned()
+            })?
+        ),
+        "get_map",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Save a map: create it (no `If-Match`) or replace it (`If-Match`: its current version).
+///
+/// `PUT /api/v1/maps/{id}`
+pub async fn put_map(
+    client: &crate::Client,
+    id: &str,
+    if_match: ::std::option::Option<&str>,
+    body: &types::PutMapRequest,
+) -> ::std::result::Result<types::Map, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PUT,
+        ::std::format!(
+            "/api/v1/maps/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                (*value).to_owned()
+            })?
+        ),
+        "put_map",
+    );
+    let request = request.authenticated();
+    let request = match &if_match {
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = request.body(body)?;
     client.send(request).await
 }
 /// The signed-in user, role and settings.

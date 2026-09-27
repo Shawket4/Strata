@@ -622,6 +622,196 @@ fn nth_weekday(y: i32, m: u32, n: NthWeekday) -> Option<NaiveDate> {
     days.get(idx).copied()
 }
 
+/// `1st`, `2nd`, `3rd`, `11th`, `21st`.
+fn ordinal_text(n: u32) -> String {
+    let suffix = match (n % 100, n % 10) {
+        (11..=13, _) => "th",
+        (_, 1) => "st",
+        (_, 2) => "nd",
+        (_, 3) => "rd",
+        _ => "th",
+    };
+    format!("{n}{suffix}")
+}
+
+fn weekday_name(w: Weekday) -> &'static str {
+    match w {
+        Weekday::Mon => "Monday",
+        Weekday::Tue => "Tuesday",
+        Weekday::Wed => "Wednesday",
+        Weekday::Thu => "Thursday",
+        Weekday::Fri => "Friday",
+        Weekday::Sat => "Saturday",
+        Weekday::Sun => "Sunday",
+    }
+}
+
+fn month_name(m: u32) -> &'static str {
+    match m {
+        1 => "January",
+        2 => "February",
+        3 => "March",
+        4 => "April",
+        5 => "May",
+        6 => "June",
+        7 => "July",
+        8 => "August",
+        9 => "September",
+        10 => "October",
+        11 => "November",
+        _ => "December",
+    }
+}
+
+/// `a`, `a and b`, `a, b and c`.
+fn list_phrase(items: &[String]) -> String {
+    match items {
+        [] => String::new(),
+        [one] => one.clone(),
+        [init @ .., last] => format!("{} and {last}", init.join(", ")),
+    }
+}
+
+impl RecurrenceRule {
+    /// The canonical Tasks-plugin phrase of the rule (`every month on the 1st`,
+    /// `every 2 weeks on Monday and Thursday`, `every March on the 2nd Wednesday when done`).
+    /// [`parse_recurrence`] reads it back to the same rule for every rule the grammar can
+    /// express (yearly rules with an interval keep one month and day, as the grammar has no
+    /// longer form for them).
+    pub fn to_phrase(&self) -> String {
+        let n = self.interval.max(1);
+        let every = |one: &str, many: &str| {
+            if n == 1 {
+                format!("every {one}")
+            } else {
+                format!("every {n} {many}")
+            }
+        };
+        let weekdays: Vec<String> = self
+            .weekdays
+            .iter()
+            .map(|w| weekday_name(*w).to_owned())
+            .collect();
+        let on_part = || -> String {
+            if let Some(nw) = self.nth_weekday {
+                let pos = match nw.nth {
+                    -1 => "last".to_owned(),
+                    k if k < 0 => format!("{} last", ordinal_text(u32::from(k.unsigned_abs()))),
+                    k => ordinal_text(u32::from(k.unsigned_abs())),
+                };
+                format!(" on the {pos} {}", weekday_name(nw.weekday))
+            } else if self.month_days.is_empty() {
+                String::new()
+            } else {
+                let days: Vec<String> = self
+                    .month_days
+                    .iter()
+                    .map(|d| match d {
+                        MonthDay::Day(d) => ordinal_text(u32::from(*d)),
+                        MonthDay::Last => "last".to_owned(),
+                    })
+                    .collect();
+                format!(" on the {}", list_phrase(&days))
+            }
+        };
+        let mut phrase = match self.freq {
+            Frequency::Daily => every("day", "days"),
+            Frequency::Weekly => {
+                let workdays = [
+                    Weekday::Mon,
+                    Weekday::Tue,
+                    Weekday::Wed,
+                    Weekday::Thu,
+                    Weekday::Fri,
+                ];
+                if n == 1 && self.weekdays == workdays {
+                    "every weekday".to_owned()
+                } else if n == 1 && !weekdays.is_empty() {
+                    format!("every {}", list_phrase(&weekdays))
+                } else if weekdays.is_empty() {
+                    every("week", "weeks")
+                } else {
+                    format!("{} on {}", every("week", "weeks"), list_phrase(&weekdays))
+                }
+            }
+            Frequency::Monthly => format!("{}{}", every("month", "months"), on_part()),
+            Frequency::Yearly => match (self.months.as_slice(), self.month_days.as_slice()) {
+                ([m], [MonthDay::Day(d)]) if self.nth_weekday.is_none() => format!(
+                    "{} on {} {}",
+                    every("year", "years"),
+                    month_name(*m),
+                    ordinal_text(u32::from(*d))
+                ),
+                ([], _) => every("year", "years"),
+                (months, _) if n == 1 => {
+                    let names: Vec<String> =
+                        months.iter().map(|m| month_name(*m).to_owned()).collect();
+                    format!("every {}{}", list_phrase(&names), on_part())
+                }
+                _ => every("year", "years"),
+            },
+        };
+        if self.when_done {
+            phrase.push_str(" when done");
+        }
+        phrase
+    }
+}
+
+#[cfg(test)]
+mod phrase_tests {
+    use super::*;
+
+    #[test]
+    fn phrases_round_trip() {
+        for phrase in [
+            "every day",
+            "every 3 days",
+            "every weekday",
+            "every week",
+            "every 2 weeks",
+            "every Monday",
+            "every Monday and Thursday",
+            "every Monday, Wednesday and Friday",
+            "every 2 weeks on Tuesday",
+            "every month",
+            "every month on the 1st",
+            "every month on the 1st, 15th and last",
+            "every month on the last",
+            "every 3 months on the 2nd Wednesday",
+            "every month on the last Friday",
+            "every month on the 2nd last Friday",
+            "every year",
+            "every year on March 5th",
+            "every 2 years on February 29th",
+            "every January and July on the 15th",
+            "every March on the 2nd Wednesday",
+            "every December",
+            "every month on the 1st when done",
+        ] {
+            let rule = parse_recurrence(phrase).expect(phrase);
+            assert_eq!(rule.to_phrase(), phrase, "canonical form of {phrase}");
+            assert_eq!(parse_recurrence(&rule.to_phrase()).expect("reparses"), rule);
+        }
+    }
+
+    #[test]
+    fn non_canonical_phrases_normalise() {
+        let cases = [
+            ("Every other day", "every 2 days"),
+            ("every mon, thu", "every Monday and Thursday"),
+            ("every month on the first", "every month on the 1st"),
+            ("every year on the 5th of march", "every year on March 5th"),
+            ("every month on the last day", "every month on the last"),
+        ];
+        for (input, canonical) in cases {
+            let rule = parse_recurrence(input).expect(input);
+            assert_eq!(rule.to_phrase(), canonical);
+            assert_eq!(parse_recurrence(canonical).expect("reparses"), rule);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

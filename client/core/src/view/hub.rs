@@ -33,6 +33,15 @@ pub struct ViewCtx {
     pub activity: SyncActivity,
     /// How reminders are delivered on this platform.
     pub notification_mode: NotificationMode,
+    /// The account's UI language.
+    pub lang: crate::format::labels::Lang,
+}
+
+impl ViewCtx {
+    /// Label maker for this build (now, the account's time zone and language).
+    pub fn labels(&self) -> crate::format::labels::Labels {
+        crate::format::labels::Labels::new(self.now, self.tz, self.lang)
+    }
 }
 
 type Refresh = Box<dyn FnMut(&Connection, &ViewCtx) -> CoreResult<bool> + Send>;

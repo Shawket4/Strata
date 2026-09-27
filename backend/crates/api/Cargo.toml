@@ -71,6 +71,8 @@ strata-testkit = { workspace = true }
 strata-client = { workspace = true }
 strata-jobs = { workspace = true, features = ["test-support"] }
 strata-ai = { workspace = true, features = ["test-support"] }
+# Crash injection inside vault writes (sync push exactly-once tests).
+strata-vault = { workspace = true, features = ["fault-injection"] }
 reqwest = { workspace = true }
 zip = { workspace = true }
 

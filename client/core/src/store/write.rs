@@ -511,11 +511,15 @@ pub fn base_version_for(current: Option<&NoteState>, op: &Op) -> CoreResult<Opti
 pub fn execute(conn: &mut Connection, intent: &Intent, now: &str) -> CoreResult<Topics> {
     let tx = conn.transaction()?;
     let mut re = Reindex::new();
+    let mut base_content = None;
     let base_version = match &intent.local {
         LocalEntity::Note(id) => {
             let links = DbLinks::load(&tx)?;
             let current = notes::current(&tx, id)?;
             let base_version = base_version_for(current.as_ref(), &intent.op)?;
+            if matches!(intent.op, Op::NoteUpdate(_)) {
+                base_content = current.as_ref().map(|c| c.content.clone());
+            }
             let next = apply_to_note(current, &intent.op, &links)?;
             let changed = notes::write_current(&tx, id, next.as_ref(), now)?;
             if next.is_none() {
@@ -550,6 +554,7 @@ pub fn execute(conn: &mut Connection, intent: &Intent, now: &str) -> CoreResult<
             base_version: base_version.as_ref(),
             op: &intent.op,
             created: now,
+            base_content: base_content.as_deref(),
         },
     )?;
     re.topics(Topics::SYNC);

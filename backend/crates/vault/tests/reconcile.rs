@@ -137,6 +137,7 @@ async fn reconciliation_repairs_out_of_band_edits_uncommitted_state_and_sidecar_
         dry,
         Report {
             temp_files_removed: vec![],
+            rolled_back: vec![],
             recovered: vec![
                 sidecar.clone(),
                 "notes/A.md".into(),
@@ -149,6 +150,7 @@ async fn reconciliation_repairs_out_of_band_edits_uncommitted_state_and_sidecar_
             out_of_band: vec!["notes/A.md".into()],
             missing: vec!["notes/B.md".into()],
             reindexed: 0,
+            ops_recovered: vec![],
         }
     );
     assert_eq!(w.log(u), log_before);
@@ -163,6 +165,7 @@ async fn reconciliation_repairs_out_of_band_edits_uncommitted_state_and_sidecar_
         report,
         Report {
             temp_files_removed: vec![],
+            rolled_back: vec![],
             recovered: vec![
                 sidecar.clone(),
                 "notes/A.md".into(),
@@ -175,6 +178,7 @@ async fn reconciliation_repairs_out_of_band_edits_uncommitted_state_and_sidecar_
             out_of_band: vec!["notes/A.md".into()],
             missing: vec!["notes/B.md".into()],
             reindexed: 2,
+            ops_recovered: vec![],
         }
     );
     assert!(report.recovery_commit.is_some());

@@ -5,3 +5,4 @@
 pub mod apply;
 pub mod engine;
 pub mod model;
+pub mod rebase;

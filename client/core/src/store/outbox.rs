@@ -84,6 +84,8 @@ pub struct OutboxOp {
     pub attempts: u32,
     /// Created at (RFC 3339 UTC).
     pub created: String,
+    /// `note.update`: the content the edit was made against (rebase input).
+    pub base_content: Option<String>,
 }
 
 impl OutboxOp {
@@ -103,8 +105,8 @@ impl OutboxOp {
     }
 }
 
-const COLUMNS: &str =
-    "op_id, ord, entity_id, local_entity, base_version, kind, payload, status, attempts, created";
+const COLUMNS: &str = "op_id, ord, entity_id, local_entity, base_version, kind, payload, status, \
+                       attempts, created, base_content";
 
 struct RawRow {
     op_id: String,
@@ -117,6 +119,7 @@ struct RawRow {
     status: String,
     attempts: u32,
     created: String,
+    base_content: Option<String>,
 }
 
 fn row(r: &rusqlite::Row<'_>) -> rusqlite::Result<RawRow> {
@@ -131,6 +134,7 @@ fn row(r: &rusqlite::Row<'_>) -> rusqlite::Result<RawRow> {
         status: r.get(7)?,
         attempts: r.get(8)?,
         created: r.get(9)?,
+        base_content: r.get(10)?,
     })
 }
 
@@ -157,6 +161,7 @@ fn finish(raw: RawRow) -> CoreResult<OutboxOp> {
         op,
         attempts: raw.attempts,
         created: raw.created,
+        base_content: raw.base_content,
     })
 }
 
@@ -183,6 +188,8 @@ pub struct NewOp<'a> {
     pub op: &'a Op,
     /// Now (RFC 3339 UTC).
     pub created: &'a str,
+    /// `note.update`: the content it was made against.
+    pub base_content: Option<&'a str>,
 }
 
 /// Appends a `pending` op after every existing op.
@@ -192,8 +199,8 @@ pub fn append(conn: &Connection, op: &NewOp<'_>) -> CoreResult<i64> {
     })?;
     conn.execute(
         "INSERT INTO outbox (op_id, ord, kind, entity_id, local_entity, base_version, payload,
-                             status, created)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'pending', ?8)",
+                             status, created, base_content)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'pending', ?8, ?9)",
         params![
             op.op_id,
             ord,
@@ -202,7 +209,8 @@ pub fn append(conn: &Connection, op: &NewOp<'_>) -> CoreResult<i64> {
             op.local_entity,
             op.base_version.map(Version::as_str),
             op.op.payload_bytes()?,
-            op.created
+            op.created,
+            op.base_content
         ],
     )?;
     Ok(ord)
@@ -299,5 +307,25 @@ pub fn compact(conn: &Connection) -> CoreResult<usize> {
 /// Deletes an op.
 pub fn delete(conn: &Connection, op_id: &str) -> CoreResult<()> {
     conn.execute("DELETE FROM outbox WHERE op_id = ?1", [op_id])?;
+    Ok(())
+}
+
+/// Rewrites a queued op after a rebase: new payload, base version and base content.
+pub fn rebase(
+    conn: &Connection,
+    op_id: &str,
+    op: &Op,
+    base_version: Option<&Version>,
+    base_content: Option<&str>,
+) -> CoreResult<()> {
+    conn.execute(
+        "UPDATE outbox SET payload = ?2, base_version = ?3, base_content = ?4 WHERE op_id = ?1",
+        params![
+            op_id,
+            op.payload_bytes()?,
+            base_version.map(Version::as_str),
+            base_content
+        ],
+    )?;
     Ok(())
 }

@@ -3,6 +3,8 @@
 //! [`read`].
 
 pub mod ai;
+pub mod ai_apply;
+pub mod ai_decide;
 pub mod entities;
 pub mod files;
 pub mod notes;
