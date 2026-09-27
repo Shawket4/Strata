@@ -96,16 +96,25 @@ fn ahmed_sameer_matches_ahmed_samir_alias_as_near() {
         "Ahmed Samir",
         &["أحمد سمير", "A. Samir"],
     );
-    // A new person.
+    // A new person: trigrams already pass (0.5625 ≥ 0.5); the phonetic score is higher.
     let new = Item::entity(DedupeKind::Person, Some("01NEWP"), "Ahmed Sameer", &[]);
     let out = run(&new, std::slice::from_ref(&existing));
-    assert_eq!(out.candidates.len(), 1);
-    assert_eq!(out.candidates[0].level, MatchLevel::Near);
-    assert_eq!(out.candidates[0].score, 1.0 - 2.0 / 12.0);
-    // Trigrams alone would not have matched (0.316 < 0.5): the phonetic path decided.
+    assert_eq!(
+        out.candidates,
+        [candidate("01AHMED", DedupeKind::Person, "Ahmed Samir", MatchLevel::Near, 1.0 - 2.0 / 12.0)]
+    );
     let pair = score_pair(&new, &existing);
-    assert!(pair.trigram < 0.5);
-    assert_eq!(pair.phonetic, Some(1.0 - 2.0 / 12.0));
+    assert_eq!((pair.exact, pair.trigram, pair.phonetic), (false, 0.5625, Some(1.0 - 2.0 / 12.0)));
+
+    // "Ahmad Sameer": trigrams alone would not match (0.316 < 0.5); the equal
+    // transliteration key plus spelling similarity 0.75 decides.
+    let new = Item::entity(DedupeKind::Person, Some("01NEWP"), "Ahmad Sameer", &[]);
+    let pair = score_pair(&new, &existing);
+    assert_eq!((pair.exact, pair.trigram, pair.phonetic), (false, 0.315_789_46, Some(0.75)));
+    assert_eq!(
+        run(&new, std::slice::from_ref(&existing)).candidates,
+        [candidate("01AHMED", DedupeKind::Person, "Ahmed Samir", MatchLevel::Near, 0.75)]
+    );
 
     // A new alias on another entity.
     let alias = Item::alias(Some("01OTHER"), "Ahmed Sameer");
@@ -126,7 +135,7 @@ fn arabic_spelling_of_a_person_matches_cross_script() {
 #[test]
 fn distinct_people_do_not_match() {
     let existing = Item::entity(DedupeKind::Person, Some("01AHMED"), "Ahmed Samir", &["أحمد سمير"]);
-    for name in ["Ahmed Fathy", "أحمد فتحي", "Samir", "Ali"] {
+    for name in ["Ahmed Fathy", "أحمد فتحي", "Ali", "Ahmad Samar Hassan"] {
         let new = Item::entity(DedupeKind::Person, Some("01NEWP"), name, &[]);
         assert_eq!(run(&new, std::slice::from_ref(&existing)).candidates, [], "{name}");
     }
@@ -154,8 +163,11 @@ fn place_spelling_variant_is_a_duplicate() {
 #[test]
 fn documents_are_stricter_than_notes() {
     let existing = Item::entity(DedupeKind::Document, Some("01DOC"), "Watanya contract", &["عقد وطنية"]);
-    let copy = Item::entity(DedupeKind::Document, Some("01COPY"), "Watanya contract copy", &[]);
-    assert_eq!(run(&copy, std::slice::from_ref(&existing)).candidates, []);
+    // 0.74 would be a near duplicate between notes (0.6) but not between documents (0.8).
+    let lease = Item::entity(DedupeKind::Document, Some("01LEASE"), "Watanya lease contract", &[]);
+    assert_eq!(run(&lease, std::slice::from_ref(&existing)).candidates, []);
+    let as_notes = Item::note(Some("01LEASE"), "Watanya lease contract");
+    assert_eq!(run(&as_notes, &[Item::note(Some("01DOC"), "Watanya contract")]).candidates[0].level, MatchLevel::Near);
     let arabic = Item::entity(DedupeKind::Document, Some("01NEW"), "عقد وطنيه", &[]);
     assert_eq!(run(&arabic, &[existing]).candidates[0].level, MatchLevel::Exact);
 }
@@ -231,7 +243,7 @@ fn ranking_orders_by_level_then_score_then_id() {
         Existing::from(Item::note(Some("01D"), "Churn note")),            // exact (plural)
         Existing::from(Item::note(Some("01C"), "Churn noted")),           // near
         Existing::from(Item::note(Some("01B"), "notes on churn")),        // exact (stopword, order)
-        Existing::from(Item::note(Some("01A"), "Churn notebook")),        // near, lower
+        Existing::from(Item::note(Some("01A"), "Churn notes draft")),     // near, lower
         Existing {
             item: Item::note(Some("01E"), "Why customers leave"),
             semantic: Some(SemanticEvidence { cosine: 0.97, llm_confirmed: None }),
@@ -301,7 +313,8 @@ fn candidate_query_lists_keys_and_floor() {
     );
     let alias = Item::alias(None, "Ahmed Sameer");
     let q = CandidateQuery::for_item(&alias, &Thresholds::default());
-    assert_eq!(q.trigram_floor, 0.5);
+    // Alias (0.6) against people/companies (0.5): the stricter bound, 0.6.
+    assert_eq!(q.trigram_floor, 0.6);
     assert_eq!(q.phonetic_keys, ["hmdsmr"]);
 }
 
