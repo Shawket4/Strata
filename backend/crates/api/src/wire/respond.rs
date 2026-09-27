@@ -10,7 +10,7 @@ use super::{MSGPACK, MsgPack, Problem, ProblemType, encode};
 impl<T: Serialize> Responder for MsgPack<T> {
     type Body = BoxBody;
 
-    /// `200 OK` with `Content-Type: application/msgpack`. Use
+    /// `200 OK` with `Content-Type: application/vnd.msgpack`. Use
     /// `.customize().with_status(StatusCode::CREATED)` for other success statuses.
     fn respond_to(self, _req: &HttpRequest) -> HttpResponse {
         match encode(&self.0) {

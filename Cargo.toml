@@ -110,3 +110,14 @@ proc-macro2 = "1"
 regress = "0.12"
 reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2"] }
 tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
+# auth (strata-api, stratad): EdDSA JWTs (RustCrypto backend), the Ed25519 key file (PKCS#8
+# PEM), Argon2id, UTS #39 confusable skeletons + Unicode case folding for usernames, streamed
+# export zips, the stratad CLI
+jsonwebtoken = { version = "11.1", default-features = false, features = ["rust_crypto", "use_pem"] }
+ed25519-dalek = { version = "2.2", features = ["pkcs8", "pem", "zeroize"] }
+argon2 = { version = "0.6", default-features = false, features = ["alloc", "password-hash", "getrandom"] }
+getrandom = "0.3"
+unicode-security = "0.1.2"
+caseless = "0.2.2"
+zip = { version = "8.6", default-features = false, features = ["deflate-flate2-zlib-rs"] }
+clap = { version = "4.6", features = ["derive"] }

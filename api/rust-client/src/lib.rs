@@ -33,7 +33,7 @@ pub use generated::{operations, streams, types};
 pub use request::{Method, Request, encode_path_segment, param_string};
 
 /// Media type of request and response bodies.
-pub const MSGPACK: &str = "application/msgpack";
+pub const MSGPACK: &str = "application/vnd.msgpack";
 
 /// Media type of problem details.
 pub const PROBLEM_MSGPACK: &str = "application/problem+msgpack";

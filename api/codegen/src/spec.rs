@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::Error;
 
-const MSGPACK: &str = "application/msgpack";
+const MSGPACK: &str = "application/vnd.msgpack";
 const STREAM_EXTENSION: &str = "x-strata-stream";
 const METHODS: [&str; 8] = [
     "get", "put", "post", "delete", "patch", "head", "options", "trace",

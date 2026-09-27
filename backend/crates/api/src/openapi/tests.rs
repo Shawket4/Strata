@@ -66,7 +66,7 @@ fn health_operation_is_public_msgpack_and_carries_standard_responses() {
             "responses": {
                 "200": {
                     "description": "The server is alive.",
-                    "content": { "application/msgpack": { "schema": { "$ref": "#/components/schemas/Health" } } },
+                    "content": { "application/vnd.msgpack": { "schema": { "$ref": "#/components/schemas/Health" } } },
                 },
                 "406": { "$ref": "#/components/responses/NotAcceptable" },
                 "500": { "$ref": "#/components/responses/Internal" },
@@ -119,7 +119,7 @@ fn lint_reports_each_violation() {
             "/api/v1/x": {
                 "get": { "operationId": "a", "responses": {
                     "200": { "content": { "application/json": {} } },
-                    "404": { "content": { "application/msgpack": {} } },
+                    "404": { "content": { "application/vnd.msgpack": {} } },
                 } },
                 "post": { "tags": ["t"],
                     "requestBody": { "content": { "text/plain": {} } },
@@ -132,7 +132,7 @@ fn lint_reports_each_violation() {
         vec![
             "/other: not under /api/v1".to_owned(),
             "GET /api/v1/x: 200 response media type `application/json`".to_owned(),
-            "GET /api/v1/x: 404 response media type `application/msgpack`".to_owned(),
+            "GET /api/v1/x: 404 response media type `application/vnd.msgpack`".to_owned(),
             "GET /api/v1/x: missing tags".to_owned(),
             "POST /api/v1/x: body without a 413 response".to_owned(),
             "POST /api/v1/x: body without a 415 response".to_owned(),

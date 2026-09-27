@@ -25,4 +25,4 @@ pub use id::{
     InviteId, JobId, NoteId, NotificationId, OpId, ReplyId, SequentialIdGenerator, SessionId,
     SuggestionId, SystemIdGenerator, UserId,
 };
-pub use problem::{Problem, ProblemType};
+pub use problem::{DomainError, ProblemType};

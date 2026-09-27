@@ -77,3 +77,25 @@ fn inserted_fields_stay_separated() {
         "- [ ] Odd recurrence 🔁 Every blue 📅 2026-01-31 [moon 📅 9248-1on the 1st "
     );
 }
+
+/// fuzz/task_line: removing a field exposed an earlier duplicate of the same signifier.
+#[test]
+fn removing_a_field_removes_its_duplicates() {
+    let line = "- [/] In progress ⏫ 🛫 2052-09-20 ⏳🛫 2052-09-20 ⏳ 2026-09-22";
+    let t = TaskLine::parse(line).unwrap();
+    assert_eq!(t.date(DateKind::Start), NaiveDate::from_ymd_opt(2052, 9, 20));
+    let removed = t.with_date(DateKind::Start, None);
+    assert_eq!(removed.date(DateKind::Start), None);
+    assert_eq!(removed.as_str(), "- [/] In progress ⏫ ⏳⏳ 2026-09-22");
+    assert_eq!(removed.date(DateKind::Scheduled), NaiveDate::from_ymd_opt(2026, 9, 22));
+}
+
+/// fuzz/body: pulldown-cmark 0.13.4 panics on this input; analysis must survive it.
+#[test]
+fn markdown_parser_panic_is_contained() {
+    let body = "- [n]:`\n\u{b}";
+    let doc = Document::parse(body);
+    assert_eq!(doc.render(), body);
+    let a = doc.analyze_body();
+    assert_eq!(a.blocks.len(), 1);
+}

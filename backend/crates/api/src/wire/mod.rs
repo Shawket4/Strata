@@ -24,19 +24,19 @@ pub use extract::{MsgPack, MsgPackConfig};
 pub use limits::DecodeLimits;
 pub use problem::{
     DuplicateCandidate, MatchLevel, Problem, ProblemDetails, ProblemExtensions, ProblemFieldError,
-    ProblemType, decode_error_codes,
+    ProblemType, decode_error_codes, status_code,
 };
 pub use scan::{Violation, scan};
 
-/// Media type of every request and response body.
-///
-/// PLAN §7.7 names `application/msgpack`; the IANA-registered type is `application/vnd.msgpack`.
-/// Which one Strata uses is an open owner decision (see `docs/WIRE_FORMAT.md`); every use in
-/// the server, contract, generator and client goes through this constant (and
-/// [`PROBLEM_MSGPACK`]) so switching is a one-line change plus regeneration.
-pub const MSGPACK: &str = "application/msgpack";
+/// Media type of every request and response body: `application/vnd.msgpack`, the type IANA
+/// registered for MessagePack (PLAN §7.7 asks for the registered type; see
+/// `docs/WIRE_FORMAT.md` §1). Every use in the server, contract, generator and client goes
+/// through this constant (and [`PROBLEM_MSGPACK`]).
+pub const MSGPACK: &str = "application/vnd.msgpack";
 
-/// Media type of error bodies: RFC 7807 problem details encoded as MessagePack.
+/// Media type of error bodies: RFC 7807 problem details encoded as MessagePack. IANA registers
+/// no MessagePack problem type; this follows RFC 7807's `+json`/`+xml` pattern with the
+/// MessagePack structured-syntax suffix convention (see `docs/WIRE_FORMAT.md` §1).
 pub const PROBLEM_MSGPACK: &str = "application/problem+msgpack";
 
 /// Media type of vault export/import bodies (§7.6).

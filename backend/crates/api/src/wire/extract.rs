@@ -14,7 +14,7 @@ use super::{DecodeLimits, MSGPACK, Problem, ProblemFieldError, ProblemType, deco
 
 /// A MessagePack body (request extractor) or response (see the `Responder` impl).
 ///
-/// As an extractor it requires `Content-Type: application/msgpack` (else `415`), no
+/// As an extractor it requires `Content-Type: application/vnd.msgpack` (else `415`), no
 /// `Content-Encoding` (else `415`), a body within the route's [`MsgPackConfig::body_limit`]
 /// (else `413`), and a body that decodes within [`DecodeLimits`] into `T` (else `422
 /// invalid_body`). Every failure is `application/problem+msgpack`.

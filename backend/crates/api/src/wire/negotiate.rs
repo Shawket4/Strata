@@ -1,7 +1,7 @@
 //! Content negotiation and the problem catch-all.
 //!
 //! - [`require_msgpack`] (middleware, via `actix_web::middleware::from_fn`): `406
-//!   not_acceptable` when `Accept` excludes `application/msgpack`.
+//!   not_acceptable` when `Accept` excludes `application/vnd.msgpack`.
 //! - [`problemize`] (an `ErrorHandlers` default handler): turns any error response that is not
 //!   already problem details (actix routing 404/405, handshake errors, ...) into one, so
 //!   nothing but MessagePack ever leaves the API (L21).
@@ -15,9 +15,9 @@ use actix_web::{Error, ResponseError};
 
 use super::{MSGPACK, PROBLEM_MSGPACK, Problem, ProblemType};
 
-/// Whether an `Accept` header (absent = anything) allows `application/msgpack`.
+/// Whether an `Accept` header (absent = anything) allows `application/vnd.msgpack`.
 ///
-/// The most specific matching media range decides (`application/msgpack` over
+/// The most specific matching media range decides (`application/vnd.msgpack` over
 /// `application/*` over `*/*`); `q=0` excludes. Unparseable ranges are ignored.
 pub fn accepts_msgpack(headers: &HeaderMap) -> bool {
     let mut values = headers.get_all(ACCEPT).peekable();
@@ -137,14 +137,14 @@ mod tests {
             (&[], true),
             (&["*/*"], true),
             (&["application/*"], true),
-            (&["application/msgpack"], true),
+            (&["application/vnd.msgpack"], true),
             (&["Application/MsgPack"], true),
             (&["application/json"], false),
             (&["text/html, application/json;q=0.9"], false),
-            (&["application/json", "application/msgpack;q=0.1"], true),
-            (&["*/*, application/msgpack;q=0"], false),
-            (&["application/msgpack;q=0, */*"], false),
-            (&["application/*;q=0, application/msgpack"], true),
+            (&["application/json", "application/vnd.msgpack;q=0.1"], true),
+            (&["*/*, application/vnd.msgpack;q=0"], false),
+            (&["application/vnd.msgpack;q=0, */*"], false),
+            (&["application/*;q=0, application/vnd.msgpack"], true),
             (&["garbage"], false),
         ];
         for (values, expected) in cases {

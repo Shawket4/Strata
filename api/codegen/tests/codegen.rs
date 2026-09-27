@@ -57,9 +57,9 @@ fn sample_doc() -> Value {
                         { "name": "kind", "in": "query", "schema": { "$ref": "#/components/schemas/Kind" } },
                         { "name": "limit", "in": "query", "required": true, "schema": { "type": "integer", "minimum": 0 } },
                     ],
-                    "requestBody": { "required": true, "content": { "application/msgpack": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+                    "requestBody": { "required": true, "content": { "application/vnd.msgpack": { "schema": { "$ref": "#/components/schemas/Item" } } } },
                     "responses": {
-                        "200": { "description": "ok", "content": { "application/msgpack": { "schema": { "$ref": "#/components/schemas/Item" } } } },
+                        "200": { "description": "ok", "content": { "application/vnd.msgpack": { "schema": { "$ref": "#/components/schemas/Item" } } } },
                         "409": problem,
                     },
                 },
@@ -146,13 +146,13 @@ pub async fn put_item(
 #[test]
 fn unsupported_or_broken_documents_are_errors_not_panics() {
     let mut unresolved = sample_doc();
-    unresolved["paths"]["/api/v1/items/{id}"]["put"]["requestBody"]["content"]["application/msgpack"]
+    unresolved["paths"]["/api/v1/items/{id}"]["put"]["requestBody"]["content"]["application/vnd.msgpack"]
         ["schema"] = json!({ "$ref": "#/components/schemas/Missing" });
     let mut json_body = sample_doc();
     let body = json_body["paths"]["/api/v1/items/{id}"]["put"]["requestBody"]["content"]
         .as_object_mut()
         .expect("content");
-    let media = body.remove("application/msgpack").expect("media");
+    let media = body.remove("application/vnd.msgpack").expect("media");
     body.insert("application/json".to_owned(), media);
     let mut duplicate = sample_doc();
     duplicate["paths"]["/api/v1/items/{id}"]["delete"]["operationId"] = json!("put_item");

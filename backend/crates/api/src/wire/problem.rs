@@ -1,7 +1,8 @@
 //! RFC 7807 problem details carried as `application/problem+msgpack` (PLAN §7.5).
 //!
-//! This is the wire representation. When `strata-common::problem` lands, domain errors map
-//! into [`Problem`]; the wire shape stays defined here, next to the codec and the contract.
+//! This is the wire representation. The catalogue of problem types (slug, title, status) is
+//! `strata_common::ProblemType` — the only list — and domain errors reach the wire through
+//! `strata_common::DomainError` and [`Problem::from_domain`].
 
 use std::fmt;
 
@@ -12,153 +13,15 @@ use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use utoipa::ToSchema;
 
+use strata_common::DomainError;
+
 use super::{DecodeError, PROBLEM_MSGPACK, encode};
 
-/// Problem types known to the API. The wire field `type` carries [`ProblemType::slug`];
-/// clients must treat unknown slugs as generic problems of the given `status`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[non_exhaustive]
-pub enum ProblemType {
-    /// 422: the body failed decoding or validation; see `errors`.
-    InvalidBody,
-    /// 422: a query or header parameter is invalid.
-    InvalidParameter,
-    /// 415: the request body is not `application/msgpack` (or is content-encoded).
-    UnsupportedMediaType,
-    /// 413: the body exceeds the route's limit.
-    PayloadTooLarge,
-    /// 406: the `Accept` header excludes MessagePack.
-    NotAcceptable,
-    /// 404: the resource does not exist in the caller's scope.
-    NotFound,
-    /// 404: no route matches the path.
-    RouteNotFound,
-    /// 405: the route exists but not for this method.
-    MethodNotAllowed,
-    /// 400: the request is malformed at the HTTP level.
-    BadRequest,
-    /// 401: missing, invalid or expired access token.
-    Unauthorized,
-    /// 403: authenticated but not allowed.
-    Forbidden,
-    /// 409: `If-Match` does not match; `current_version` carries the server's version.
-    VersionConflict,
-    /// 409: a create looks like a duplicate; `candidates` lists the matches (§9.7).
-    DuplicateCandidates,
-    /// 403: the account awaits admin approval.
-    AccountPending,
-    /// 403: the account is disabled.
-    AccountDisabled,
-    /// 403: the account is scheduled for deletion (export-only session).
-    AccountDeletionPending,
-    /// 410: the sync epoch changed; the client must re-bootstrap.
-    EpochChanged,
-    /// 429: rate limited.
-    RateLimited,
-    /// 500: unexpected server error (details are logged, never returned).
-    Internal,
-}
+pub use strata_common::ProblemType;
 
-impl ProblemType {
-    /// Every known type, for exhaustive tests and documentation.
-    pub const ALL: [Self; 19] = [
-        Self::InvalidBody,
-        Self::InvalidParameter,
-        Self::UnsupportedMediaType,
-        Self::PayloadTooLarge,
-        Self::NotAcceptable,
-        Self::NotFound,
-        Self::RouteNotFound,
-        Self::MethodNotAllowed,
-        Self::BadRequest,
-        Self::Unauthorized,
-        Self::Forbidden,
-        Self::VersionConflict,
-        Self::DuplicateCandidates,
-        Self::AccountPending,
-        Self::AccountDisabled,
-        Self::AccountDeletionPending,
-        Self::EpochChanged,
-        Self::RateLimited,
-        Self::Internal,
-    ];
-
-    /// The value of the wire field `type`.
-    pub fn slug(self) -> &'static str {
-        match self {
-            Self::InvalidBody => "invalid_body",
-            Self::InvalidParameter => "invalid_parameter",
-            Self::UnsupportedMediaType => "unsupported_media_type",
-            Self::PayloadTooLarge => "payload_too_large",
-            Self::NotAcceptable => "not_acceptable",
-            Self::NotFound => "not_found",
-            Self::RouteNotFound => "route_not_found",
-            Self::MethodNotAllowed => "method_not_allowed",
-            Self::BadRequest => "bad_request",
-            Self::Unauthorized => "unauthorized",
-            Self::Forbidden => "forbidden",
-            Self::VersionConflict => "version_conflict",
-            Self::DuplicateCandidates => "duplicate_candidates",
-            Self::AccountPending => "account_pending",
-            Self::AccountDisabled => "account_disabled",
-            Self::AccountDeletionPending => "account_deletion_pending",
-            Self::EpochChanged => "epoch_changed",
-            Self::RateLimited => "rate_limited",
-            Self::Internal => "internal",
-        }
-    }
-
-    /// HTTP status of this problem type.
-    pub fn status(self) -> StatusCode {
-        match self {
-            Self::InvalidBody | Self::InvalidParameter => StatusCode::UNPROCESSABLE_ENTITY,
-            Self::UnsupportedMediaType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
-            Self::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
-            Self::NotAcceptable => StatusCode::NOT_ACCEPTABLE,
-            Self::NotFound | Self::RouteNotFound => StatusCode::NOT_FOUND,
-            Self::MethodNotAllowed => StatusCode::METHOD_NOT_ALLOWED,
-            Self::BadRequest => StatusCode::BAD_REQUEST,
-            Self::Unauthorized => StatusCode::UNAUTHORIZED,
-            Self::Forbidden
-            | Self::AccountPending
-            | Self::AccountDisabled
-            | Self::AccountDeletionPending => StatusCode::FORBIDDEN,
-            Self::VersionConflict | Self::DuplicateCandidates => StatusCode::CONFLICT,
-            Self::EpochChanged => StatusCode::GONE,
-            Self::RateLimited => StatusCode::TOO_MANY_REQUESTS,
-            Self::Internal => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-
-    /// Short, fixed, human-readable summary (RFC 7807 `title`).
-    pub fn title(self) -> &'static str {
-        match self {
-            Self::InvalidBody => "Request body is invalid",
-            Self::InvalidParameter => "Request parameter is invalid",
-            Self::UnsupportedMediaType => "Unsupported media type",
-            Self::PayloadTooLarge => "Request body too large",
-            Self::NotAcceptable => "Response media type not acceptable",
-            Self::NotFound => "Not found",
-            Self::RouteNotFound => "No such route",
-            Self::MethodNotAllowed => "Method not allowed",
-            Self::BadRequest => "Bad request",
-            Self::Unauthorized => "Authentication required",
-            Self::Forbidden => "Forbidden",
-            Self::VersionConflict => "Version conflict",
-            Self::DuplicateCandidates => "Possible duplicate",
-            Self::AccountPending => "Account awaiting approval",
-            Self::AccountDisabled => "Account disabled",
-            Self::AccountDeletionPending => "Account scheduled for deletion",
-            Self::EpochChanged => "Sync epoch changed",
-            Self::RateLimited => "Too many requests",
-            Self::Internal => "Internal server error",
-        }
-    }
-
-    /// Looks a slug up.
-    pub fn from_slug(slug: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|t| t.slug() == slug)
-    }
+/// The HTTP status of a problem type.
+pub fn status_code(kind: ProblemType) -> StatusCode {
+    StatusCode::from_u16(kind.status()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
 }
 
 /// RFC 7807 problem details: the error type of every handler.
@@ -331,7 +194,7 @@ impl Problem {
         Self {
             problem_type: kind.slug().to_owned(),
             title: kind.title().to_owned(),
-            status: kind.status().as_u16(),
+            status: kind.status(),
             detail: None,
             extensions: None,
         }
@@ -412,6 +275,28 @@ impl Problem {
         let mut p = Self::new(ProblemType::VersionConflict);
         p.extensions_mut().current_version = Some(current_version.into());
         p
+    }
+
+    /// The problem for a domain error. Server errors (`5xx`) are logged here with their cause
+    /// and answered without any detail; other errors carry only their content-free
+    /// [`DomainError::public_detail`].
+    pub fn from_domain<E: DomainError + ?Sized>(err: &E) -> Self {
+        let kind = err.problem_type();
+        if kind.is_server_error() {
+            tracing::error!(error = %err, problem = kind.slug(), "request failed");
+            return Self::new(kind);
+        }
+        let problem = Self::new(kind);
+        match err.public_detail() {
+            Some(detail) => problem.with_detail(detail),
+            None => problem,
+        }
+    }
+
+    /// `500 internal` for an unexpected error; the cause is logged, never returned.
+    pub fn internal(cause: &dyn std::fmt::Display) -> Self {
+        tracing::error!(error = %cause, "internal error");
+        Self::new(ProblemType::Internal)
     }
 
     /// The known type of this problem, if its slug is known.
@@ -495,14 +380,48 @@ mod tests {
     use super::*;
 
     #[test]
-    fn slugs_round_trip_and_are_unique() {
-        let mut seen = std::collections::BTreeSet::new();
-        for kind in ProblemType::ALL {
-            assert_eq!(ProblemType::from_slug(kind.slug()), Some(kind));
-            assert!(seen.insert(kind.slug()), "duplicate slug {}", kind.slug());
-            assert_eq!(Problem::new(kind).status, kind.status().as_u16());
+    fn every_catalogue_type_builds_a_problem_with_its_status() {
+        for kind in ProblemType::ALL.iter().copied() {
+            let problem = Problem::new(kind);
+            assert_eq!(problem.status, kind.status());
+            assert_eq!(problem.problem_type, kind.slug());
+            assert_eq!(problem.title, kind.title());
+            assert_eq!(problem.kind(), Some(kind));
+            assert_eq!(status_code(kind).as_u16(), kind.status());
         }
-        assert_eq!(ProblemType::from_slug("nope"), None);
+    }
+
+    #[derive(Debug, thiserror::Error)]
+    enum Sample {
+        #[error("taken")]
+        Taken,
+        #[error("database exploded: secret")]
+        Db,
+    }
+
+    impl DomainError for Sample {
+        fn problem_type(&self) -> ProblemType {
+            match self {
+                Self::Taken => ProblemType::UsernameTaken,
+                Self::Db => ProblemType::Internal,
+            }
+        }
+
+        fn public_detail(&self) -> Option<std::borrow::Cow<'static, str>> {
+            Some("detail".into())
+        }
+    }
+
+    #[test]
+    fn domain_errors_map_to_problems_without_leaking_server_causes() {
+        assert_eq!(
+            Problem::from_domain(&Sample::Taken),
+            Problem::new(ProblemType::UsernameTaken).with_detail("detail")
+        );
+        assert_eq!(
+            Problem::from_domain(&Sample::Db),
+            Problem::new(ProblemType::Internal)
+        );
     }
 
     #[test]

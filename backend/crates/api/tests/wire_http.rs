@@ -136,7 +136,7 @@ async fn media_type_parameters_are_ignored() {
 #[actix_web::test]
 async fn missing_or_wrong_content_type_is_415() {
     let expected = Problem::new(ProblemType::UnsupportedMediaType)
-        .with_detail("request bodies must be application/msgpack");
+        .with_detail("request bodies must be application/vnd.msgpack");
     let body = encode(&echo_value()).expect("encodes");
     let none = test::TestRequest::post()
         .uri("/api/v1/echo")
@@ -311,7 +311,7 @@ async fn accept_excluding_msgpack_is_406() {
     assert_eq!(reply.status, StatusCode::NOT_ACCEPTABLE);
     assert_eq!(
         reply.problem(),
-        Problem::new(ProblemType::NotAcceptable).with_detail("responses are application/msgpack")
+        Problem::new(ProblemType::NotAcceptable).with_detail("responses are application/vnd.msgpack")
     );
 }
 

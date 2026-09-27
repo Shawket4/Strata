@@ -147,3 +147,27 @@ Screens page:
 - Ask (chat with streaming answer + citations `[[Note#^block]]` as chips, "save as note"): `AskCompact` 390×844, `AskExpandedDark` 1440×900 (dark)
 - Accounts (multi-user, self-signup with admin approval): `LoginCompact` 390×844 (server URL, username, password, device name; link to sign up), `LoginExpanded` 1440×900 (split: brand panel with strata bands + form), `SignupCompact` 390×844, `PendingApprovalCompact` 390×844 ("Waiting for approval" state after signup; also the "not approved" variant as a note), `AccountSheetCompact` 390×844 (account sheet over Settings: user, role, device, Sign out; the sign-out warning dialog shown: "3 changes haven't synced yet — Sync now / Sign out anyway / Cancel"), `AccountDisabledCompact` 390×844 and `AccountDisabledExpanded` 1440×900 ("This account was disabled by an administrator"; local data will be removed; export of unsynced changes offered), `AdminUsersExpanded` 1440×900 (Admin → Users: pending approvals queue at top with Approve / Reject, then users table with role, status, devices, last active, actions: disable, reset password, delete with export), `AdminUsersCompact` 390×844.
 - Sync & conflicts: `SyncCompact` 390×844 (sync status sheet: offline, 3 queued ops, last sync, 1 conflict), `ConflictExpanded` 1440×900 (side-by-side 3-way conflict resolution for a note body), `SyncMedium` 1024×768 (sync status as the context drawer over the notes list: syncing 12/40 progress, queued ops, last sync), `SyncExpanded` 1440×900 (desktop: sidebar sync block expanded into a popover with outbox list and conflict row; "Offline · 3 queued")
+
+## Additions (tasks, reminders, duplicates, documents & places)
+
+Navigation update:
+- Compact bottom bar stays at 5: Home, Inbox, Notes, Directory (was "People"; holds People / Companies / Documents / Places tabs), Ask. Tasks live on **Home** as Today / Upcoming / Recurring sections.
+- Medium rail and expanded sidebar add **Tasks** (after Inbox) and rename People to **Directory**. Rail and sidebar scroll when short.
+
+Node kinds (add): document = page shape with folded corner, fill `#3F4C55` (dark `#B9C8D0`); place = map-pin outline, stroke `#1D5C8C` (dark `#6CB4DD`).
+Dark-theme entity colours: person `#6CC495`, company `#C99A3E`.
+Tints: success `#EAF4EE`, warning `#F5ECDA` (text `#6E4B0C`), danger `#F6E3DF` (text `#9A3624`), info = accent tint `#DCEAF4`.
+
+Tasks (Obsidian Tasks lines; the UI never shows the raw emoji syntax except in the markdown editor):
+- "Make Watanya's ETA invoice" — every month on the 1st, due Thu 1 Oct 2026, reminder 09:00, linked company Watanya; history: done 1 Sep, done 1 Aug (late, 3 Aug).
+- "Petrol Arrows invoice" — every week on Sunday, due today Sun 27 Sep 10:00, linked company Petrol Arrows.
+- "Send weekly invoicing proposal to Ahmed" — one-off, due Tue 29 Sep, linked Ahmed Samir / Acme Logistics.
+- "Renew Watanya contract" — due 31 Mar 2027 (from document expiry), reminder 30 days before.
+- Overdue: "Pay Nile Freight September invoice" — due Thu 24 Sep.
+Reminder notification copy: "Petrol Arrows invoice · due today 10:00" with actions Done / Snooze.
+Duplicate example: capture/create "remind me to make watanya's invoice" → "Already exists: Make Watanya's ETA invoice · monthly on the 1st · next Thu 1 Oct" (match: near, 0.91) → Open existing / Create anyway / Cancel. Notes example: new note "Pricing experiment" → matches "Pricing experiments" (exact after normalisation). People example: "Ahmed Sameer" → matches Ahmed Samir (alias near match).
+
+Documents & places:
+- Places: Nasr City office (مكتب مدينة نصر) › Safe — Nasr City office; Nasr City office › Cabinet B; Home › Desk drawer; Accountant's office (Hany Youssef).
+- Documents: "Watanya contract" (original, contract, company Watanya) — location Safe — Nasr City office, holder none, last holder Shady (شادي), status stored, expires 31 Mar 2027; custody: 20 Sep 2026 returned to the safe by Shady (cited capture), 14 Sep 2026 handed to Shady for signing (cited), 2 Mar 2026 stored at Safe (cited). "Watanya contract — copy" (copy, with Accountant's office). "Petrol Arrows commercial register" (original, Cabinet B, expires 15 Jan 2027). "Car licence" (original, holder Shawket, status checked-out).
+- AI custody examples: capture "عقد وطنية في الخزنة في مكتب مدينة نصر، آخر واحد كان معاه شادي" → applied automatically (confidence 0.93) with an "AI · undo" affordance in the activity feed; capture "gave the contract to Shady" → suggestion (ambiguous: which contract? Watanya contract / Petrol Arrows contract).

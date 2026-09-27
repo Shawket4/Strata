@@ -5,7 +5,7 @@
 //! operation is described the same way:
 //!
 //! - paths are prefixed with `/api/v1`;
-//! - `application/json` (utoipa's default) becomes `application/msgpack` for request bodies
+//! - `application/json` (utoipa's default) becomes `application/vnd.msgpack` for request bodies
 //!   and 2xx responses and `application/problem+msgpack` for error responses;
 //! - standard problem responses are added: `406` and `500` everywhere, `401` on secured
 //!   operations, `404` when there are path parameters, `422 invalid_parameter` when there are
@@ -92,7 +92,7 @@ pub fn build(api: &utoipa::openapi::OpenApi, streams: &[StreamOperation]) -> Val
     doc["info"] = json!({
         "title": "Strata API",
         "version": "1",
-        "description": "Strata HTTP API. Every body is MessagePack (application/msgpack); \
+        "description": "Strata HTTP API. Every body is MessagePack (application/vnd.msgpack); \
                         errors are RFC 7807 problem details (application/problem+msgpack). \
                         See docs/WIRE_FORMAT.md.",
     });
@@ -160,8 +160,8 @@ fn problem_response(description: &str) -> Value {
 
 fn standard_responses() -> Value {
     json!({
-        "NotAcceptable": problem_response("`not_acceptable`: `Accept` excludes application/msgpack."),
-        "UnsupportedMediaType": problem_response("`unsupported_media_type`: the body is not application/msgpack."),
+        "NotAcceptable": problem_response("`not_acceptable`: `Accept` excludes application/vnd.msgpack."),
+        "UnsupportedMediaType": problem_response("`unsupported_media_type`: the body is not application/vnd.msgpack."),
         "PayloadTooLarge": problem_response("`payload_too_large`: the body exceeds the route's limit."),
         "InvalidBody": problem_response("`invalid_body`: the body failed decoding or validation."),
         "InvalidParameter": problem_response("`invalid_parameter`: a query or header parameter is invalid."),

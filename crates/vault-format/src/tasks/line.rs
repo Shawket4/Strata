@@ -679,6 +679,17 @@ impl TaskLine {
         }
     }
 
+    /// Removes every occurrence of a field, including earlier duplicates that the
+    /// last-one-wins rule had left in the description (they surface once the last is gone).
+    fn strip_all(&self, span_of: impl Fn(&Self) -> Option<Range<usize>>) -> Self {
+        let mut line = self.clone();
+        while let Some(span) = span_of(&line) {
+            let r = line.removal(&span);
+            line = line.apply(vec![(r, String::new())]);
+        }
+        line
+    }
+
     /// Sets the checkbox.
     #[must_use]
     pub fn with_status(&self, status: TaskStatus) -> Self {
@@ -696,6 +707,9 @@ impl TaskLine {
     /// Sets, replaces or removes a date field.
     #[must_use]
     pub fn with_date(&self, kind: DateKind, date: Option<NaiveDate>) -> Self {
+        if date.is_none() {
+            return self.strip_all(|t| t.dates[kind.index()].as_ref().map(|d| d.span.clone()));
+        }
         let existing = self.dates[kind.index()].as_ref().map(|d| &d.span);
         let text = date.map(|d| format!("{} {}", kind.emoji(), d.format("%Y-%m-%d")));
         self.set_field(existing, kind.rank(), text, |t| t.date(kind) == date)
@@ -704,6 +718,9 @@ impl TaskLine {
     /// Sets, replaces or removes the priority.
     #[must_use]
     pub fn with_priority(&self, priority: Option<Priority>) -> Self {
+        if priority.is_none() {
+            return self.strip_all(|t| t.priority.as_ref().map(|p| p.span.clone()));
+        }
         let existing = self.priority.as_ref().map(|p| &p.span);
         self.set_field(existing, 0, priority.map(|p| p.emoji().to_owned()), |t| {
             t.priority() == priority
@@ -713,6 +730,9 @@ impl TaskLine {
     /// Sets, replaces or removes the recurrence phrase (written verbatim after `🔁 `).
     #[must_use]
     pub fn with_recurrence(&self, phrase: Option<&str>) -> Self {
+        if phrase.is_none() {
+            return self.strip_all(|t| t.recurrence.as_ref().map(|r| r.span.clone()));
+        }
         let existing = self.recurrence.as_ref().map(|r| &r.span);
         self.set_field(existing, 1, phrase.map(|p| format!("🔁 {p}")), |t| {
             t.recurrence_text() == phrase

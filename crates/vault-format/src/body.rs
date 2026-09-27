@@ -130,7 +130,7 @@ pub(crate) fn markdown_options() -> Options {
 
 /// Analyses a note body (the text after the frontmatter).
 pub fn analyze(body: &str) -> BodyAnalysis {
-    let mut s = Structure::collect(body);
+    let mut s = collect_guarded(body);
     s.code_spans.sort_by_key(|r| r.start);
     let code_spans = merge(s.code_spans);
     let links = wikilink::scan(body, &code_spans);
@@ -155,6 +155,22 @@ pub fn links(body: &str) -> Vec<WikiLink> {
 /// Inline tags outside code.
 pub fn tags(body: &str) -> Vec<InlineTag> {
     analyze(body).tags
+}
+
+/// Runs the CommonMark parser defensively.
+///
+/// pulldown-cmark 0.13.4 panics on some inputs containing a vertical tab (found by fuzzing:
+/// `"- [n]:`\n\u{b}"`). Vertical tab and form feed are whitespace to CommonMark, so they are
+/// mapped to spaces (same byte length, so every offset stays valid). Should the parser still
+/// panic on some other input, the body is treated as plain text (no code spans, headings or
+/// blocks) instead of taking the caller down.
+fn collect_guarded(body: &str) -> Structure {
+    let text: std::borrow::Cow<'_, str> = if body.contains(['\u{b}', '\u{c}']) {
+        body.replace(['\u{b}', '\u{c}'], " ").into()
+    } else {
+        body.into()
+    };
+    std::panic::catch_unwind(|| Structure::collect(&text)).unwrap_or_default()
 }
 
 fn merge(ranges: Vec<Range<usize>>) -> Vec<Range<usize>> {
@@ -573,6 +589,15 @@ mod tests {
         assert!(a.tags.is_empty());
         assert!(a.in_code(8));
         assert!(!a.in_code(body.find("real").unwrap_or(0)));
+    }
+
+    #[test]
+    fn parser_panic_inputs_are_survived() {
+        // Fuzz regression: pulldown-cmark 0.13.4 panics on this input.
+        let a = analyze("- [n]:`\n\u{b}");
+        assert_eq!(a.blocks.len(), 1);
+        let a = analyze("- [n]: `\n\u{c}[[x]]");
+        assert_eq!(a.links.len(), 1);
     }
 
     #[test]
