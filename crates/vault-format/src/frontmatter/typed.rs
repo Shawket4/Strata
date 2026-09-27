@@ -335,7 +335,7 @@ mod tests {
     #[test]
     fn typed_getters() {
         let f = fm(concat!(
-            "id: 01J8ZK3M4X7Q9W2E5R6T8Y0U1I\n",
+            "id: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\n",
             "kind: person\n",
             "tags: \"#a, b\"\n",
             "created: 2026-09-27T14:32:00+03:00\n",
@@ -349,7 +349,7 @@ mod tests {
             "people: [\"[[Ahmed Samir]]\", plain]\n",
         ));
         assert_eq!(f.error(), None);
-        assert_eq!(f.id().ok().flatten().map(|u| u.to_string()), Some("01J8ZK3M4X7Q9W2E5R6T8Y0U1I".into()));
+        assert_eq!(f.id().ok().flatten().map(|u| u.to_string()), Some("01J8ZK3M4X7Q9W2E5R6T8Y0V1H".into()));
         assert_eq!(f.kind(), Some(NoteKind::Person));
         assert_eq!(f.tags(), vec!["a".to_owned(), "b".to_owned()]);
         assert_eq!(

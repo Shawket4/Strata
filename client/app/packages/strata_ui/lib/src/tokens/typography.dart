@@ -224,10 +224,7 @@ class StrataTextStyles extends ThemeExtension<StrataTextStyles> {
       bodySmall: caption,
       labelLarge: label,
       labelMedium: label.copyWith(fontSize: StrataTypeScale.caption),
-      labelSmall: caption.copyWith(
-        fontWeight: FontWeight.w500,
-        fontVariations: const [FontVariation.weight(500)],
-      ),
+      labelSmall: caption.withWeight(FontWeight.w500),
     );
   }
 
@@ -278,4 +275,14 @@ class StrataTextStyles extends ThemeExtension<StrataTextStyles> {
       wordmark: l(wordmark, other.wordmark),
     );
   }
+}
+
+/// Weight changes that keep the variable-font `wght` axis in sync.
+extension StrataTextStyleWeight on TextStyle {
+  /// This style at [weight], applied to both [TextStyle.fontWeight] and the
+  /// `wght` font variation.
+  TextStyle withWeight(FontWeight weight) => copyWith(
+    fontWeight: weight,
+    fontVariations: [FontVariation.weight(weight.value.toDouble())],
+  );
 }

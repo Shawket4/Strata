@@ -99,8 +99,12 @@ struct EnvelopeIn {
     v: u16,
     kind: FrameKind,
     seq: u64,
-    #[serde(default)]
+    #[serde(default = "nil")]
     payload: rmpv::Value,
+}
+
+fn nil() -> rmpv::Value {
+    rmpv::Value::Nil
 }
 
 impl<P> Frame<P> {

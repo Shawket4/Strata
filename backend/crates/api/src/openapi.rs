@@ -33,7 +33,7 @@ use crate::wire::{
 
 /// Every production operation and shared component. Endpoint authors add their handlers to
 /// `paths(...)` (and schemas only reachable through streams to `components(...)`).
-#[derive(OpenApi)]
+#[derive(Debug, OpenApi)]
 #[openapi(
     paths(crate::health::health),
     components(schemas(

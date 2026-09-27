@@ -27,7 +27,7 @@ pub struct PathIndex {
 }
 
 fn is_markdown(path: &str) -> bool {
-    path.len() > 3 && path[path.len() - 3..].eq_ignore_ascii_case(".md")
+    path.len() > 3 && path.as_bytes()[path.len() - 3..].eq_ignore_ascii_case(b".md")
 }
 
 /// The path as it appears in a link: `.md` removed, other extensions kept.

@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use yaml_rust2::{Yaml, YamlLoader};
 
 pub use keys::{KnownKey, RelationKey, UnknownRelation, ValueShape};
-pub use typed::{CopyKind, DocType, DocumentStatus, Lang, NoteKind};
+pub use typed::{CopyKind, DocType, DocumentStatus, Lang, NoteKind, format_timestamp};
 pub use yaml::PropertyValue;
 
 use crate::line::{self, LineEnding};
@@ -491,7 +491,7 @@ mod tests {
     #[test]
     fn non_mapping_is_rejected() {
         let f = fm("- a\n- b\n");
-        assert_eq!(f.error(), Some(&FrontmatterError::Unsupported("complex mapping key".into())));
+        assert_eq!(f.error(), Some(&FrontmatterError::NotAMapping));
         let f = fm("just text\n");
         assert_eq!(f.error(), Some(&FrontmatterError::NotAMapping));
     }

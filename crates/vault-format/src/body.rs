@@ -218,12 +218,11 @@ impl Structure {
         stack: &mut Vec<Container>,
         path: &mut Vec<(u8, String)>,
     ) {
-        let heading_path = || path.iter().map(|(_, t)| t.clone()).collect::<Vec<_>>();
         match tag {
             Tag::CodeBlock(_) => {
                 self.code_spans.push(range.clone());
                 if !nested {
-                    self.push_block(body, BlockKind::CodeBlock, range, heading_path());
+                    self.push_block(body, BlockKind::CodeBlock, range, names(path));
                 }
             }
             Tag::Heading { level, .. } => {
@@ -234,7 +233,7 @@ impl Structure {
                     while path.last().is_some_and(|(l, _)| *l >= level) {
                         path.pop();
                     }
-                    let parent = heading_path();
+                    let parent = names(path);
                     path.push((level, text.clone()));
                     let mut full = parent.clone();
                     full.push(text.clone());
@@ -249,7 +248,7 @@ impl Structure {
             }
             Tag::Paragraph => {
                 if !nested {
-                    self.paragraph(body, range, heading_path());
+                    self.paragraph(body, range, names(path));
                 }
             }
             Tag::Item => {
@@ -257,7 +256,7 @@ impl Structure {
                     .iter()
                     .any(|c| matches!(c, Container::Quote | Container::Footnote));
                 let block = (!quoted).then(|| {
-                    self.push_block(body, BlockKind::ListItem, range, heading_path());
+                    self.push_block(body, BlockKind::ListItem, range, names(path));
                     self.blocks.len() - 1
                 });
                 stack.push(Container::Item { block });
@@ -271,21 +270,21 @@ impl Structure {
             }
             Tag::BlockQuote(_) => {
                 if !nested {
-                    self.push_block(body, BlockKind::BlockQuote, range, heading_path());
+                    self.push_block(body, BlockKind::BlockQuote, range, names(path));
                 }
                 stack.push(Container::Quote);
             }
             Tag::FootnoteDefinition(_) => {
                 if !nested {
-                    self.push_block(body, BlockKind::Footnote, range, heading_path());
+                    self.push_block(body, BlockKind::Footnote, range, names(path));
                 }
                 stack.push(Container::Footnote);
             }
             Tag::Table(_) if !nested => {
-                self.push_block(body, BlockKind::Table, range, heading_path());
+                self.push_block(body, BlockKind::Table, range, names(path));
             }
             Tag::HtmlBlock if !nested => {
-                self.push_block(body, BlockKind::Html, range, heading_path());
+                self.push_block(body, BlockKind::Html, range, names(path));
             }
             _ => {}
         }
@@ -333,6 +332,10 @@ impl Structure {
             block.id = trailing_block_id(body, &block.span);
         }
     }
+}
+
+fn names(path: &[(u8, String)]) -> Vec<String> {
+    path.iter().map(|(_, t)| t.clone()).collect()
 }
 
 fn is_block_id_char(c: char) -> bool {

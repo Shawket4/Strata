@@ -65,7 +65,7 @@ impl MsgPackConfig {
     fn from_req(req: &HttpRequest) -> Self {
         req.app_data::<Self>()
             .copied()
-            .or_else(|| req.app_data::<web::Data<Self>>().map(|d| **d))
+            .or_else(|| req.app_data::<web::Data<Self>>().map(|d| *d.get_ref()))
             .unwrap_or_default()
     }
 }

@@ -112,12 +112,13 @@ abstract final class StrataTheme {
         elevation: 0,
         height: 72,
         labelTextStyle: WidgetStateProperty.resolveWith(
-          (states) => styles.caption.copyWith(
-            color: states.contains(WidgetState.selected)
-                ? colors.accentText
-                : colors.text2,
-            fontWeight: FontWeight.w600,
-          ),
+          (states) => styles.caption
+              .withWeight(FontWeight.w600)
+              .copyWith(
+                color: states.contains(WidgetState.selected)
+                    ? colors.accentText
+                    : colors.text2,
+              ),
         ),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
@@ -134,10 +135,9 @@ abstract final class StrataTheme {
         minWidth: StrataLayout.railWidth,
         selectedIconTheme: IconThemeData(color: colors.accentText, size: 22),
         unselectedIconTheme: IconThemeData(color: colors.text2, size: 22),
-        selectedLabelTextStyle: styles.caption.copyWith(
-          color: colors.accentText,
-          fontWeight: FontWeight.w600,
-        ),
+        selectedLabelTextStyle: styles.caption
+            .withWeight(FontWeight.w600)
+            .copyWith(color: colors.accentText),
         unselectedLabelTextStyle: styles.caption.copyWith(color: colors.text2),
         labelType: NavigationRailLabelType.all,
       ),
