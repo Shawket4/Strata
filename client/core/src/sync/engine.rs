@@ -376,6 +376,18 @@ impl SyncEngine {
             if let Flow::Stop(o) = self.crash(Step::BootstrapFetched, ()) {
                 return Ok(Flow::Stop(o));
             }
+            if state.bootstrap_pages > 0 && state.epoch != Some(page.epoch) {
+                // The server rebuilt while we were paging: the saved cursor belongs to the old
+                // snapshot. Start over.
+                host.db(|c, _| {
+                    sync_state::update(c, |s| {
+                        s.bootstrap_cursor = None;
+                        s.bootstrap_pages = 0;
+                    })?;
+                    Ok(((), Topics::NONE))
+                })?;
+                continue;
+            }
             let n = u32::try_from(page.records.len()).unwrap_or(u32::MAX);
             let done = host.db(|c, now| {
                 let mut re = Reindex::new();
@@ -387,13 +399,22 @@ impl SyncEngine {
                     apply::finish_bootstrap(c, now, &mut re)?;
                 }
                 sync_state::update(c, |s| {
+                    // Pull changes after the *oldest* page's position: records that changed
+                    // while later pages were fetched (or while a crash interrupted paging) are
+                    // replayed by `/sync/changes` instead of being skipped. Replays are
+                    // idempotent (versions are content hashes).
+                    let seq = SyncCursor::after_bootstrap(&page).seq;
+                    s.cursor_seq = if s.bootstrap_pages == 0 {
+                        seq
+                    } else {
+                        s.cursor_seq.min(seq)
+                    };
                     s.epoch = Some(page.epoch);
                     s.bootstrap_pages += 1;
                     s.bootstrap_cursor.clone_from(&page.next_cursor);
                     if last {
                         s.bootstrap_complete = true;
                         s.bootstrap_pages = 0;
-                        s.cursor_seq = SyncCursor::after_bootstrap(&page).seq;
                     }
                 })?;
                 re.topics(Topics::SYNC);

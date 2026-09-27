@@ -6,6 +6,8 @@
 
 mod common;
 
+use std::fmt::Write as _;
+
 use chrono::{DateTime, Duration, Utc};
 use common::Harness;
 use pretty_assertions::assert_eq;
@@ -260,12 +262,11 @@ async fn cairo_dst_gap_and_fold() {
 async fn rolling_window_of_60_refills_without_cancelling_fired_ones() {
     let h = Harness::new();
     let start = chrono::NaiveDate::from_ymd_opt(2026, 10, 1).expect("date");
-    let body: String = (0..70)
-        .map(|i| {
-            let d = start + Duration::days(i);
-            format!("- [ ] Daily {i} (@{d} 09:00) ^t-d{i}\n")
-        })
-        .collect();
+    let body: String = (0..70).fold(String::new(), |mut body, i| {
+        let d = start + Duration::days(i);
+        let _ = writeln!(body, "- [ ] Daily {i} (@{d} 09:00) ^t-d{i}");
+        body
+    });
     let (s, rec) = setup(&h, &body).await;
     s.sync(Trigger::Start).await.expect("sync");
     let first = rec.take();

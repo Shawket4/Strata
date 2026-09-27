@@ -612,7 +612,7 @@ fn step() -> impl Strategy<Value = Step> {
     ]
 }
 
-async fn apply(h: &Harness, s: &Session, a: &Action) {
+fn apply(h: &Harness, s: &Session, a: &Action) {
     match a {
         Action::Capture(n) => {
             s.capture(&format!("capture {n}")).expect("capture");
@@ -656,7 +656,7 @@ async fn run(
     s.sync(Trigger::Start).await.expect("bootstrap");
     let mut crashed = false;
     for a in actions {
-        apply(&h, &s, a).await;
+        apply(&h, &s, a);
         let mut engine = s.engine().clone();
         if !crashed {
             engine.crash_after = crash;
@@ -727,4 +727,31 @@ async fn a_crash_mid_bootstrap_resumes_from_the_saved_cursor() {
         let state = s.read(|c, _| sync_state::get(c)).expect("state");
         assert_eq!((state.bootstrap_complete, state.cursor_seq), (true, 4));
     }
+}
+
+#[tokio::test]
+async fn an_edit_made_while_bootstrap_paging_was_interrupted_is_pulled_afterwards() {
+    let mut h = Harness::new();
+    seed(&h);
+    let s = h.sign_in_a().await;
+    let mut engine = s.engine().clone();
+    engine.crash_after = Some(Step::BootstrapApplied);
+    let report = s.sync_with(&engine, Trigger::Start).await.expect("sync");
+    assert_eq!(report.outcome, CycleOutcome::Crashed(Step::BootstrapApplied));
+    drop(s);
+    // N1 was on the first page; it changes before the second page is fetched.
+    h.server.remote_upsert(
+        N1,
+        "notes/Churn notes.md",
+        &format!("---\nid: {N1}\n---\nChanged mid-bootstrap.\n"),
+    );
+    h.restart();
+    let s = h.core.session().expect("session");
+    s.sync(Trigger::Start).await.expect("sync");
+    assert_eq!(local_notes(&s), server_view(&h));
+    assert_eq!(
+        s.read(|c, _| Ok(notes::current(c, N1)?.expect("note").content))
+            .expect("content"),
+        format!("---\nid: {N1}\n---\nChanged mid-bootstrap.\n")
+    );
 }

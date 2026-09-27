@@ -5,3 +5,4 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc 7c7e85cf1c5d1f73ea647049549d405976bb8817aab448ff66a3ed6f94d976cc # shrinks to actions = [Create(0), EditFirst(0)], crash = MarkedInflight
+cc 8783c8130c4e57552840aeeda76515e79f765871fb0501d0aca20dd302be2074 # shrinks to actions = [Rebuild, RemoteEdit(0)], crash = BootstrapApplied
