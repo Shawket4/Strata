@@ -89,33 +89,33 @@ Client:
 
 ---
 
-## 4. Open decisions (present options to the owner; do not choose)
+## 4. Decisions (all resolved 2026-09-27; new ones must be presented to the owner neutrally)
 
 | # | Topic | Options | Needed by |
 |---|-------|---------|-----------|
-| D2 | Note editor (Flutter) | (a) Raw markdown in a Flutter text field with live styling from highlight spans computed in the Rust core; zero format drift; per-line RTL. (b) Rich-text editor package (e.g. super_editor, appflowy_editor, fleather — verify maintenance and desktop support) with a markdown round-trip; richer editing, risk of formatting drift. | Phase 0 |
-| D3 | Global graph rendering (Flutter) | (a) Custom `CustomPainter` renderer; layout (force-directed) computed in the Rust core and streamed as positions; scales furthest, most work. (b) An existing Flutter graph package (e.g. graphview — verify maintenance and performance at 10k nodes) with layout in Dart widgets; faster to build, layout logic sits in Dart (conflicts with L15 unless layout still comes from the core). (c) Hybrid: package for interaction, positions from the core. | Phase 0 |
-| D4 | Local mind-map rendering (Flutter) | (a) Same renderer as D3 with a radial layout; one code path, simpler nodes. (b) Widget-based canvas (each node a Flutter widget card, edges painted beneath); richer cards and editing, heavier at scale. | Phase 0 |
-| D6 | Session model | (a) Opaque DB-backed session tokens: trivial revocation, per-device list. (b) Short-lived signed access tokens + refresh tokens: stateless requests, still needs a refresh-token table. | Phase 1 |
-| D7 | Network exposure | (a) Public HTTPS with app auth only. (b) Behind Tailscale (all clients run Tailscale). (c) Cloudflare Access (awkward for native apps: needs service tokens). | Phase 1 |
-| D9 | Embedding runtime (model is locked, L19) | (a) In-process in `stratad`: ONNX model via the `ort` crate + `tokenizers`, int8 quantized; no extra service. (b) Separate local service (e.g. Ollama or a small ONNX server) called over HTTP; verify the model is available there. | Phase 4 |
-| D10 | Clustering algorithm | (a) Louvain. (b) Leiden. Both over petgraph data in Rust. | Phase 5 |
-| D11 | Flutter UI binding | Binding (logic-free either way): (a) `StreamBuilder`/`ValueListenableBuilder` directly on frb view-model streams; (b) a thin reactive package used purely for rebuilds. | Phase 3 |
-| D13 | New entity creation | (a) AI auto-creates a person/company when confident; ambiguous matches become merge suggestions. (b) AI always proposes new entities as suggestions; only links to existing entities apply automatically. | Phase 4 |
-| D14 | Client token storage | (a) Rust keychain/keystore crate called from the core (verify Android, iOS, macOS, Windows, Linux support). (b) Platform secure storage via a minimal plugin the core invokes through an frb callback (plumbing only). (c) Token encrypted in local SQLite with a key held in the platform keystore. | Phase 2 |
-| D15 | Rust client generation (must emit MessagePack, L21) | (a) progenitor for types and endpoints, with its JSON body handling replaced by an `rmp-serde` codec layer (verify it can be swapped cleanly). (b) openapi-generator `rust` with custom templates for the MessagePack codec. (c) Own build-time generator: `typify` for types from the schema + a small template for endpoint functions using `rmp-serde`. Check OpenAPI 3.1 support against utoipa's output for each. | Phase 1 |
-| D19 | Sync conflict resolution for note bodies | (a) 3-way merge against the base version (from git) when edits don't overlap, conflict copy otherwise. (b) Always keep server version and save the client edit as a conflict copy for manual resolution. | Phase 1 |
-| D20 | Final LLM transport (replaces provisional L18) | (a) Claude Code `claude -p` on the Strata VPS (current). (b) Direct Messages API from `stratad` with an API key (lightweight, pay per token). (c) Relay service on another server that runs `claude -p` and returns JSON. All sit behind the same `LlmProvider` trait. Measure `claude -p` RAM/CPU on the VPS (`/usr/bin/time -v`) before deciding. | Phase 4 |
+| D2 | Note editor (Flutter) | (a) Raw markdown in a Flutter text field with live styling from highlight spans computed in the Rust core; zero format drift; per-line RTL. (b) Rich-text editor package (e.g. super_editor, appflowy_editor, fleather — verify maintenance and desktop support) with a markdown round-trip; richer editing, risk of formatting drift. **Decided 2026-09-27: (b)** — rich-text editor package with a markdown round-trip; round-trip fidelity is guarded by golden tests (§16.5). | Phase 0 |
+| D3 | Global graph rendering (Flutter) | (a) Custom `CustomPainter` renderer; layout (force-directed) computed in the Rust core and streamed as positions; scales furthest, most work. (b) An existing Flutter graph package (e.g. graphview — verify maintenance and performance at 10k nodes) with layout in Dart widgets; faster to build, layout logic sits in Dart (conflicts with L15 unless layout still comes from the core). (c) Hybrid: package for interaction, positions from the core. **Decided 2026-09-27: (a).** | Phase 0 |
+| D4 | Local mind-map rendering (Flutter) | (a) Same renderer as D3 with a radial layout; one code path, simpler nodes. (b) Widget-based canvas (each node a Flutter widget card, edges painted beneath); richer cards and editing, heavier at scale. **Decided 2026-09-27: (b).** | Phase 0 |
+| D6 | Session model | (a) Opaque DB-backed session tokens: trivial revocation, per-device list. (b) Short-lived signed access tokens + refresh tokens: stateless requests, still needs a refresh-token table. **Decided 2026-09-27: (b)** — see §8 for revocation. | Phase 1 |
+| D7 | Network exposure | (a) Public HTTPS with app auth only. (b) Behind Tailscale (all clients run Tailscale). (c) Cloudflare Access (awkward for native apps: needs service tokens). **Decided 2026-09-27: (a)**; a domain will be added later. | Phase 1 |
+| D9 | Embedding runtime (model is locked, L19) | (a) In-process in `stratad`: ONNX model via the `ort` crate + `tokenizers`, int8 quantized; no extra service. (b) Separate local service (e.g. Ollama or a small ONNX server) called over HTTP; verify the model is available there. **Decided 2026-09-27: (a).** | Phase 4 |
+| D10 | Clustering algorithm | (a) Louvain. (b) Leiden. Both over petgraph data in Rust. **Decided 2026-09-27: (b) Leiden.** | Phase 5 |
+| D11 | Flutter UI binding | Binding (logic-free either way): (a) `StreamBuilder`/`ValueListenableBuilder` directly on frb view-model streams; (b) a thin reactive package used purely for rebuilds. **Decided 2026-09-27: (b) Riverpod** (rebuilds and dependency injection only; §11.1). | Phase 3 |
+| D13 | New entity creation | (a) AI auto-creates a person/company when confident; ambiguous matches become merge suggestions. (b) AI always proposes new entities as suggestions; only links to existing entities apply automatically. **Decided 2026-09-27: (b)**, plus the correction loop in §9.8. | Phase 4 |
+| D14 | Client token storage | (a) Rust keychain/keystore crate called from the core (verify Android, iOS, macOS, Windows, Linux support). (b) Platform secure storage via a minimal plugin the core invokes through an frb callback (plumbing only). (c) Token encrypted in local SQLite with a key held in the platform keystore. **Decided 2026-09-27: tokens stored in the account's local database, unencrypted** (owner's choice; relies on OS app sandboxing and device security). | Phase 2 |
+| D15 | Rust client generation (must emit MessagePack, L21) | (a) progenitor for types and endpoints, with its JSON body handling replaced by an `rmp-serde` codec layer (verify it can be swapped cleanly). (b) openapi-generator `rust` with custom templates for the MessagePack codec. (c) Own build-time generator: `typify` for types from the schema + a small template for endpoint functions using `rmp-serde`. Check OpenAPI 3.1 support against utoipa's output for each. **Decided 2026-09-27: (c) own generator.** | Phase 1 |
+| D19 | Sync conflict resolution for note bodies | (a) 3-way merge against the base version (from git) when edits don't overlap, conflict copy otherwise. (b) Always keep server version and save the client edit as a conflict copy for manual resolution. **Decided 2026-09-27: (a).** | Phase 1 |
+| D20 | Final LLM transport (replaces provisional L18) | (a) Claude Code `claude -p` on the Strata VPS (current). (b) Direct Messages API from `stratad` with an API key (lightweight, pay per token). (c) Relay service on another server that runs `claude -p` and returns JSON. All sit behind the same `LlmProvider` trait. Measure `claude -p` RAM/CPU on the VPS (`/usr/bin/time -v`) before deciding. **Decided 2026-09-27: (a) `claude -p` as default, with the Anthropic API provider also built and selectable by config.** | Phase 4 |
 | D21 | Per-user storage isolation | (a) Per-user directory holding that user's vault + git + its own index database; a separate system database for users, sessions, devices. (b) Per-user vault directories + one shared database with `user_id` on every table and enforced scoping. **Decided 2026-09-27: (b) with database-enforced row-level security, on PostgreSQL (L22).** | Phase 1 |
 | D22 | Account creation | (a) Admin creates accounts / sends invite links only. (b) Open self-signup with admin approval. **Decided 2026-09-27: (b).** | Phase 1 |
-| D23 | AI for users other than the owner | The owner's `claude -p` subscription must serve only the owner. For other users: (a) direct API backend with the server's API key and a per-user budget; (b) each user supplies their own API key (stored encrypted, server-side only); (c) AI disabled for non-owner accounts. | Phase 4 |
+| D23 | AI for users other than the owner | The owner's `claude -p` subscription must serve only the owner. For other users: (a) direct API backend with the server's API key and a per-user budget; (b) each user supplies their own API key (stored encrypted, server-side only); (c) AI disabled for non-owner accounts. **Decided 2026-09-27:** for now `claude -p` serves every account (two users); the provider is chosen per user in config so the API provider can take over later without code changes. Per-user budgets still apply. | Phase 4 |
 | D25 | How a deleted user receives their export | (a) In-app pickup during a grace period (restricted export-only sign-in). (b) Emailed single-use link. (c) Either, with the export encrypted by a key derived from the user's password. **Decided 2026-09-27: (a).** | Phase 1 |
 | D26 | Task storage format | (a) One note per task in `tasks/`. (b) Obsidian Tasks checklist lines inside notes. (c) Both. **Decided 2026-09-27: (b)** (§6.11). | Phase 1 |
 | D27 | Reminder delivery | (a) Local notifications scheduled by each device. (b) Server push (FCM / APNs / WNS; event stream on Linux). (c) Both. **Decided 2026-09-27: (b), extending to (c) later** (§12.5b). | Phase 1 |
 | D28 | Tasks in navigation | (a) Replace Notes in the bottom bar. (b) "More" tab. (c) On Home only on compact. **Decided 2026-09-27: (c), plus a Tasks destination in the rail and sidebar.** | Phase 0 |
 | D29 | Documents model | (a) Documents as an entity kind with free-text location. (b) Documents plus places as entity kinds. **Decided 2026-09-27: (b), with nested places, separate location / holder / last-holder, copies, and a custody history** (§6.12). | Phase 1 |
 | D30 | Who updates document location/holder | (a) AI automatically from notes. (b) AI suggestion, user accepts. **Decided 2026-09-27: (a), falling back to (b) below the custody confidence threshold or on ambiguity/conflict** (§6.12). | Phase 4 |
-| D24 | Streaming transport for `/events` and `/ask` (MessagePack frames) | (a) WebSocket with one binary MessagePack frame per event/token batch. (b) Long-lived HTTP response streaming length-prefixed MessagePack frames. (c) Server-Sent Events carrying base64-encoded MessagePack (keeps SSE semantics and reconnection behaviour; ~33% size overhead from base64). | Phase 1 |
+| D24 | Streaming transport for `/events` and `/ask` (MessagePack frames) | (a) WebSocket with one binary MessagePack frame per event/token batch. (b) Long-lived HTTP response streaming length-prefixed MessagePack frames. (c) Server-Sent Events carrying base64-encoded MessagePack (keeps SSE semantics and reconnection behaviour; ~33% size overhead from base64). **Decided 2026-09-27: (a) WebSocket.** | Phase 1 |
 
 Withdrawn with the Angular PWA (2026-09-27): D5 (nginx `/api` proxy vs subdomain — no browser client, CORS no longer applies), D16 (TypeScript client generator), D17 (Angular toolchain), D18 (Angular data layer). The old D2–D4 (web editor and web graph libraries) are replaced by the Flutter versions above.
 
@@ -652,7 +652,7 @@ Errors: RFC 7807 problem details encoded as MessagePack (`application/problem+ms
 - Disabling a user revokes all their sessions immediately.
 - Passwords hashed with Argon2id. Login rate-limited per IP and per username; capture/ask rate limits are per user.
 - Every login creates a **device** row; sessions belong to devices and are revocable individually.
-- Token model per D6, sent as a bearer token by the client core; stored per D14. No cookies (no browser client).
+- Tokens (D6 = b): short-lived access tokens (15 min, EdDSA-signed, carrying user id, device id, session id, role) + rotating one-time refresh tokens stored hashed in PostgreSQL with reuse detection (a replayed refresh token revokes the whole device session). Immediate revocation: every request checks the session id against an in-memory revocation set kept current from the database (disable user, sign out, device removal, deletion scheduling), so "disabling revokes immediately" holds within one request. Sent as a bearer token by the client core; stored per D14. No cookies (no browser client).
 - AI provider keys live only in backend env/secret file (0600), never logged, never sent to clients.
 - Request logging redacts note content by default.
 - Network exposure per D7. TLS terminated by nginx.
@@ -756,7 +756,14 @@ One engine checks every kind of item: notes, captures, tasks, people, companies,
 - **Keep both** is remembered per pair (`dedupe_keep_both` + `.meta/`), so the same pair is never flagged again by the create check or the nightly sweep.
 - Thresholds are per-kind settings with tested defaults.
 
-## 10. Graph model
+### 9.8 Correcting the AI (D13 loop)
+- Every AI decision (link, entity mention, relation, custody event, task suggestion, filing) has an ID and appears in the activity feed with its source.
+- **Repoint in place:** any AI link can be repointed ("this Ahmed is Ahmed Fathy"), retyped, or rejected from the note, entity page, inbox, or activity feed.
+- **Correct in words:** a capture or an Ask message like "the Ahmed in yesterday's Acme call is Ahmed Fathy" is recognised as a correction. The model receives the user's recent AI decisions (last ~50, with IDs, sources, and targets) and the candidate entities, resolves the reference to a specific decision, and proposes the fix as a suggestion (applied automatically only when confidence ≥ the relation threshold and the reference is unambiguous).
+- **Threaded suggestions:** the user can reply to a suggestion ("no, the Petrol Arrows one"); the AI re-proposes with the reply in context.
+- **Memory:** a correction records the rejected link (never re-added, §6.5) and a **disambiguation hint** on the entities involved ("Ahmed at Acme = Ahmed Samir; Ahmed at Petrol Arrows = Ahmed Fathy"), stored in `.meta/` and fed to future resolution prompts.
+
+
 
 - **Node kinds:** `note`, `concept`, `person`, `company`, `document`, `place`, `attachment` (deferred), `tag` (optional toggle), `cluster` (virtual, for region labels).
 - **Edge kinds:** `link` (body wikilink), `embed`, `relation:<type>` (with `by`, confidence, reason), `similarity` (ephemeral), `concept` (note→concept), `mention` (note→person/company), `entity:<type>` (works-at, client-of, …), `custody:<location|holder|last-holder>` (document→place/person), `part-of-place` (place→place).
@@ -770,6 +777,18 @@ One engine checks every kind of item: notes, captures, tasks, people, companies,
 ## 11. Strata app (Flutter, all platforms, adaptive)
 
 **Stack:** Flutter (stable channel) targeting Android, iOS, macOS, Windows, Linux; Material 3 base themed with the Strata tokens (`/design`); UI binding per D11; editor per D2; graph renderers per D3/D4 — each wrapped behind its own widget so the implementation can be swapped. Dart holds no logic (L15).
+
+### 11.1 Flutter stack
+- **Workspace:** Dart pub workspaces managed with **melos** (bootstrap, scripts, versioning, per-package CI filters).
+- **Packages:** `apps/strata` (app shell, routing, platform setup) · `packages/strata_bridge` (flutter_rust_bridge v2 bindings, built per platform with cargokit) · `packages/strata_ui` (design tokens as `ThemeExtension`s, typography with bundled fonts, adaptive scaffold, shared widgets) · `packages/strata_l10n` (ARB files, `gen-l10n`, English + Arabic) · one package per feature under `packages/features/` (home, inbox, notes, editor, tasks, directory, documents, maps, ask, sync, settings, accounts, admin) — each UI only.
+- **State & DI:** **Riverpod 3** with `riverpod_annotation` + `riverpod_generator` + `riverpod_lint`, and `hooks_riverpod`/`flutter_hooks` for ephemeral widget state (text controllers, animations). Providers only adapt frb streams and futures into rebuilds and inject the bridge (overridden with a fake bridge in tests); they hold no logic (L15).
+- **Pattern:** MVVM where the view-model lives in the Rust core; feature-first packages; unidirectional flow (widget → intent → core → view-model stream → widget); sealed classes and pattern matching for view states; immutable frb-generated types (with `freezed`-style equality from frb).
+- **Navigation:** **go_router** with typed routes (`go_router_builder`), `StatefulShellRoute` for the adaptive shells (bottom bar / rail / sidebar chosen by size class), deep links for notifications.
+- **Adaptive layout:** own size-class breakpoints and shells in `strata_ui` (no discontinued scaffold packages); keyboard shortcuts via `Shortcuts`/`Actions`, context menus, hover and focus handling on desktop.
+- **Editor (D2 = b):** a maintained rich-text editor package with markdown serialisation (candidate: `super_editor` + its markdown package; verified for desktop, mobile, RTL, and round-trip fidelity before adoption), with custom components for wikilinks, @mentions, tags, block IDs, and task lines.
+- **Graphs:** global map on a single `CustomPainter` with positions streamed from the Rust core (D3 = a); local mind map as a widget-based canvas inside `InteractiveViewer` (D4 = b).
+- **Notifications (D27):** `firebase_messaging` (FCM on Android, APNs on iOS/macOS), Windows push via WNS (plugin verified before adoption), `flutter_local_notifications` to display event-stream reminders on Linux and desktop.
+- **Quality:** `very_good_analysis` + `riverpod_lint` + `custom_lint`, strict analyzer settings, `dart format` enforced; tests with `flutter_test`, **alchemist** golden tests, `mocktail`, `integration_test` (+ `patrol` where native dialogs/notifications are involved).
 
 **Adaptive layouts (not just responsive):** the app picks a distinct layout per window size class, re-evaluated live on resize:
 
@@ -831,7 +850,7 @@ Rust client core (/client/core)
   sync/     outbox, push, pull, bootstrap, conflicts, retry/backoff, connectivity
   search/   local FTS with /crates/text-normalize
   graph/    local neighbourhood from cached relations
-  auth/     login, refresh, device, token storage (D14)
+  auth/     login, refresh, device, token storage (D14: in the account's local DB)
   format/   uses /crates/vault-format (parse, render hints, highlight spans for the editor)
   net/      depends on /api/rust-client (generated) + its streaming module
 ```

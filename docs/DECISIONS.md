@@ -4,6 +4,9 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### Remaining open decisions resolved by the owner
+- **D2 (b)** rich-text editor package with markdown round-trip · **D3 (a)** CustomPainter, layout in Rust · **D4 (b)** widget-based mind-map canvas · **D6 (b)** signed access + rotating refresh tokens, immediate revocation via a session revocation set · **D7 (a)** public HTTPS + app auth, domain later · **D9 (a)** in-process ONNX (ort) · **D10 (b)** Leiden · **D11 (b)** Riverpod (plus melos and a modern Flutter stack, PLAN §11.1) · **D13 (b)** new entities always suggested, plus the correction loop (repoint, corrections in words, threaded suggestions, disambiguation hints; PLAN §9.8) · **D14** tokens in the account's local database, unencrypted · **D15 (c)** own client generator (typify + template, one MessagePack `send()`) · **D19 (a)** 3-way merge · **D20 (a)** `claude -p` default, Anthropic API provider also built · **D23** `claude -p` serves all accounts for now, provider selectable per user in config · **D24 (a)** WebSocket with binary MessagePack frames.
+
 ### D29 — Documents and places: (b), extended
 - New entity kinds `document` and `place`. Places nest (`part-of`), so "the safe at the Nasr City office" is two places. Documents track `location` (a place), `holder` (who has it now), `last-holder` (derived), `status`, copies (`copy-of`), expiry, and a cited **Custody** history; frontmatter always reflects the newest custody event (PLAN §6.12).
 ### D30 — Custody updates: (a) automatic, with (b) as fallback
