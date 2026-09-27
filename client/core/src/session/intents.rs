@@ -18,6 +18,7 @@ use crate::sync::model::Op;
 use crate::view::Topics;
 use crate::view::model::{
     CandidateItem, ConflictResolution, CreateOutcome, DuplicateChoice, NotificationAction,
+    NotificationActionKind, ResolutionKind,
 };
 
 /// A task to create.
@@ -108,11 +109,17 @@ impl Session {
         if !force && let Some(item) = item {
             let candidates = self.duplicates(&item)?;
             if !candidates.is_empty() {
-                return Ok(CreateOutcome::Duplicate { candidates });
+                return Ok(CreateOutcome {
+                    id: None,
+                    candidates,
+                });
             }
         }
         self.run(local, op)?;
-        Ok(CreateOutcome::Created { id: id.to_owned() })
+        Ok(CreateOutcome {
+            id: Some(id.to_owned()),
+            candidates: Vec::new(),
+        })
     }
 
     /// Captures text into the inbox; returns the new note ID. Never refused (§9.7): the
@@ -442,9 +449,10 @@ impl Session {
         let (task_id, remind_at) = self
             .read(|c, _| crate::notify::lookup(c, id))?
             .ok_or_else(|| CoreError::not_found("notification"))?;
-        match action {
-            NotificationAction::Done => self.complete_task(&task_id),
-            NotificationAction::Snooze { minutes } => {
+        let minutes = action.minutes;
+        match action.kind {
+            NotificationActionKind::Done => self.complete_task(&task_id),
+            NotificationActionKind::Snooze => {
                 let (rows, default_time) = self.read(|c, _| {
                     let mut st = c.prepare(
                         "SELECT remind_date, remind_time FROM task_reminders WHERE task_id = ?1
@@ -490,21 +498,26 @@ impl Session {
         let conflict = self
             .read(|c, _| conflicts::conflict(c, op_id))?
             .ok_or_else(|| CoreError::not_found("conflict"))?;
-        let keep = match resolution {
-            ConflictResolution::KeepServer => None,
-            ConflictResolution::Merged { content } => Some(content),
-            ConflictResolution::KeepMine => Some(
+        let keep = match resolution.kind {
+            ResolutionKind::KeepServer => None,
+            ResolutionKind::Merged => Some(
+                resolution
+                    .content
+                    .ok_or_else(|| CoreError::invalid("content", "missing"))?,
+            ),
+            ResolutionKind::KeepMine => Some(
                 conflict
                     .local_content
                     .ok_or_else(|| CoreError::not_found("conflict"))?,
             ),
-            ConflictResolution::Hunks { choices } => {
+            ResolutionKind::Hunks => {
                 let Some(sync_model::MergeOutcome::Conflicted(c)) = conflict.merge_outcome else {
                     return Err(CoreError::invalid("resolution", "no_hunks"));
                 };
-                let choices: Vec<(u32, sync_model::Choice)> = choices
+                let choices: Vec<(u32, sync_model::Choice)> = resolution
+                    .choices
                     .into_iter()
-                    .map(|h| (h.hunk, crate::view::build::hunk_choice(h.choice)))
+                    .map(|h| (h.hunk, crate::view::build::hunk_choice(h.choice, h.text)))
                     .collect();
                 Some(
                     c.resolve(&choices)

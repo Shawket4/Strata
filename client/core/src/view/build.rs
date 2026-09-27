@@ -176,7 +176,7 @@ pub fn sync_pill(conn: &Connection, ctx: &ViewCtx) -> CoreResult<SyncPill> {
     };
     Ok(SyncPill {
         connectivity: ctx.connectivity,
-        phase: ctx.phase.clone(),
+        activity: ctx.activity.clone(),
         pending_ops: outbox::unsynced_count(conn)?,
         conflicts: count("SELECT COUNT(*) FROM conflicts")?,
         duplicates: count("SELECT COUNT(*) FROM duplicates")?,
@@ -245,8 +245,9 @@ pub fn sync_status(conn: &Connection, ctx: &ViewCtx) -> CoreResult<SyncStatusVie
 /// One conflict.
 pub fn conflict_screen(conn: &Connection, op_id: &str) -> CoreResult<ConflictScreen> {
     let Some(c) = conflicts::conflict(conn, op_id)? else {
-        return Ok(ConflictScreen::NotFound {
+        return Ok(ConflictScreen {
             op_id: op_id.to_owned(),
+            conflict: None,
         });
     };
     let hunks = match &c.merge_outcome {
@@ -269,28 +270,30 @@ pub fn conflict_screen(conn: &Connection, op_id: &str) -> CoreResult<ConflictScr
             .collect(),
         _ => Vec::new(),
     };
-    Ok(ConflictScreen::Ready {
-        title: note_title(conn, &c.entity_id)?.unwrap_or_default(),
+    Ok(ConflictScreen {
         op_id: c.op_id,
-        note_id: c.entity_id,
-        base: c.base_content,
-        local: c.local_content,
-        server: c.server_content,
-        merged_preview: c.merged_preview,
-        merge_clean: c.merge_clean,
-        hunks,
+        conflict: Some(ConflictDetail {
+            title: note_title(conn, &c.entity_id)?.unwrap_or_default(),
+            note_id: c.entity_id,
+            base: c.base_content,
+            local: c.local_content,
+            server: c.server_content,
+            merged_preview: c.merged_preview,
+            merge_clean: c.merge_clean,
+            hunks,
+        }),
     })
 }
 
 /// The `sync-model` choice for a hunk choice of the conflict screen.
-pub fn hunk_choice(c: HunkChoiceKind) -> sync_model::Choice {
+pub fn hunk_choice(c: HunkChoiceKind, text: Option<String>) -> sync_model::Choice {
     match c {
         HunkChoiceKind::Ours => sync_model::Choice::Ours,
         HunkChoiceKind::Theirs => sync_model::Choice::Theirs,
         HunkChoiceKind::Base => sync_model::Choice::Base,
         HunkChoiceKind::OursThenTheirs => sync_model::Choice::OursThenTheirs,
         HunkChoiceKind::TheirsThenOurs => sync_model::Choice::TheirsThenOurs,
-        HunkChoiceKind::Text { text } => sync_model::Choice::Text(text),
+        HunkChoiceKind::Text => sync_model::Choice::Text(text.unwrap_or_default()),
     }
 }
 
@@ -485,7 +488,12 @@ pub fn task_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Tas
         .into_iter()
         .next()
     else {
-        return Ok(TaskScreen::NotFound { id: id.to_owned() });
+        return Ok(TaskScreen {
+            id: id.to_owned(),
+            task: None,
+            line: String::new(),
+            history: Vec::new(),
+        });
     };
     let line = row.line.clone();
     let history_rows = match &row.recurrence_raw {
@@ -503,8 +511,9 @@ pub fn task_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Tas
     for h in history_rows {
         history.push(task_item(conn, ctx, h, &pending, default_time)?);
     }
-    Ok(TaskScreen::Ready {
-        task,
+    Ok(TaskScreen {
+        id: id.to_owned(),
+        task: Some(task),
         line,
         history,
     })
@@ -539,55 +548,63 @@ fn candidate_item(c: dedupe::DuplicateCandidate) -> CandidateItem {
     crate::session::candidate_item(c)
 }
 
-fn suggestion_kind(conn: &Connection, p: SuggestionPayload) -> CoreResult<SuggestionKindView> {
+fn suggestion_detail(conn: &Connection, p: SuggestionPayload) -> CoreResult<SuggestionDetail> {
     Ok(match p {
         SuggestionPayload::Filing {
             title,
             folder,
             tags,
-        } => SuggestionKindView::Filing {
+        } => SuggestionDetail {
             title,
             folder,
             tags,
+            ..SuggestionDetail::of(SuggestionKind::Filing)
         },
         SuggestionPayload::EntityLinkOrCreate {
             mention,
             candidates,
-        } => SuggestionKindView::EntityLinkOrCreate {
+        } => SuggestionDetail {
             mention,
             candidates: candidates
                 .into_iter()
                 .map(|(id, title)| EntityRef { id: Some(id), title })
                 .collect(),
+            ..SuggestionDetail::of(SuggestionKind::EntityLinkOrCreate)
         },
         SuggestionPayload::Custody {
             document_id,
             line,
             confidence,
-        } => SuggestionKindView::Custody {
+        } => SuggestionDetail {
             document: entity_ref(conn, document_id, None)?,
             line,
-            confidence,
+            confidence: Some(confidence),
+            ..SuggestionDetail::of(SuggestionKind::Custody)
         },
-        SuggestionPayload::Duplicate { candidates } => SuggestionKindView::Duplicate {
-            candidates: candidates.into_iter().map(candidate_item).collect(),
+        SuggestionPayload::Duplicate { candidates } => SuggestionDetail {
+            duplicates: candidates.into_iter().map(candidate_item).collect(),
+            ..SuggestionDetail::of(SuggestionKind::Duplicate)
         },
         SuggestionPayload::Relation {
             dst_id,
             rel_type,
             confidence,
             reason,
-        } => SuggestionKindView::Relation {
-            target: entity_ref(conn, Some(dst_id), None)?.unwrap_or(EntityRef {
-                id: None,
-                title: String::new(),
-            }),
+        } => SuggestionDetail {
+            target: entity_ref(conn, Some(dst_id), None)?,
             rel_type,
-            confidence,
+            confidence: Some(confidence),
             reason,
+            ..SuggestionDetail::of(SuggestionKind::Relation)
         },
-        SuggestionPayload::Task { line } => SuggestionKindView::Task { line },
-        SuggestionPayload::Other { kind } => SuggestionKindView::Unsupported { kind },
+        SuggestionPayload::Task { line } => SuggestionDetail {
+            line,
+            ..SuggestionDetail::of(SuggestionKind::Task)
+        },
+        SuggestionPayload::Other { kind } => SuggestionDetail {
+            server_kind: kind,
+            ..SuggestionDetail::of(SuggestionKind::Unsupported)
+        },
     })
 }
 
@@ -612,7 +629,7 @@ fn suggestions(conn: &Connection, only_pending: bool) -> CoreResult<Vec<Suggesti
         let payload = SuggestionPayload::decode(&kind, &payload);
         out.push(SuggestionItem {
             pending_sync: pending.contains_key(&format!("suggestion:{id}")),
-            kind: suggestion_kind(conn, payload)?,
+            detail: suggestion_detail(conn, payload)?,
             id,
             note_id,
             status,
@@ -748,16 +765,16 @@ fn backlinks(conn: &Connection, id: &str) -> CoreResult<Vec<BacklinkGroup>> {
     Ok(groups)
 }
 
-fn hint_kind(k: hints::HintKind) -> HintKind {
+fn hint_kind(k: hints::SpanKind) -> HintKind {
     match k {
-        hints::HintKind::Frontmatter => HintKind::Frontmatter,
-        hints::HintKind::Heading => HintKind::Heading,
-        hints::HintKind::WikiLink => HintKind::WikiLink,
-        hints::HintKind::Embed => HintKind::Embed,
-        hints::HintKind::Tag => HintKind::Tag,
-        hints::HintKind::BlockId => HintKind::BlockId,
-        hints::HintKind::TaskLine => HintKind::TaskLine,
-        hints::HintKind::Code => HintKind::Code,
+        hints::SpanKind::Frontmatter => HintKind::Frontmatter,
+        hints::SpanKind::Heading => HintKind::Heading,
+        hints::SpanKind::WikiLink => HintKind::WikiLink,
+        hints::SpanKind::Embed => HintKind::Embed,
+        hints::SpanKind::Tag => HintKind::Tag,
+        hints::SpanKind::BlockId => HintKind::BlockId,
+        hints::SpanKind::TaskLine => HintKind::TaskLine,
+        hints::SpanKind::Code => HintKind::Code,
     }
 }
 
@@ -768,7 +785,10 @@ fn is_relation_key(key: &str) -> bool {
 /// The note screen.
 pub fn note_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<NoteScreen> {
     let Some(n) = crate::store::notes::get(conn, id)?.filter(|n| !n.deleted) else {
-        return Ok(NoteScreen::NotFound { id: id.to_owned() });
+        return Ok(NoteScreen {
+            id: id.to_owned(),
+            note: None,
+        });
     };
     let parsed = format::parse_note(&n.path, &n.content);
     let pending = pending_entities(conn)?;
@@ -780,17 +800,24 @@ pub fn note_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Not
             |r| r.get(0),
         )
         .optional()?;
-    let sync = match (conflict_op, pending.get(&format!("note:{id}"))) {
-        (Some(op_id), _) => NoteSyncState::Conflict { op_id },
-        (None, Some(ops)) => NoteSyncState::Pending { ops: *ops },
-        (None, None) => NoteSyncState::Synced,
+    let pending_ops = pending.get(&format!("note:{id}")).copied().unwrap_or(0);
+    let sync = NoteSyncState {
+        kind: match (&conflict_op, pending_ops) {
+            (Some(_), _) => NoteSyncKind::Conflict,
+            (None, 0) => NoteSyncKind::Synced,
+            (None, _) => NoteSyncKind::Pending,
+        },
+        pending_ops,
+        conflict_op_id: conflict_op,
     };
     let default_time = default_reminder_time(conn)?;
     let mut tasks = Vec::new();
     for row in task_rows(conn, "WHERE t.note_id = ?1 ORDER BY t.line_no", [id])? {
         tasks.push(task_item(conn, ctx, row, &pending, default_time)?);
     }
-    Ok(NoteScreen::Ready(NoteView {
+    Ok(NoteScreen {
+        id: id.to_owned(),
+        note: Some(NoteView {
         id: n.id.clone(),
         path: n.path,
         title: parsed.display_title.clone(),
@@ -809,28 +836,48 @@ pub fn note_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Not
         backlinks: backlinks(conn, id)?,
         tags: parsed.tags,
         tasks,
-        hints: hints::editor_hints(&n.content)
-            .into_iter()
-            .map(|h| EditorHint {
-                kind: hint_kind(h.kind),
-                start: h.start,
-                end: h.end,
-            })
-            .collect(),
+        hints: hints_of(&n.content),
         sync,
         history: availability_online(ctx, "history"),
         content: n.content,
-    }))
+        }),
+    })
+}
+
+/// Editor highlight spans of `content`.
+pub fn hints_of(content: &str) -> Vec<EditorHint> {
+    hints::editor_hints(content)
+        .into_iter()
+        .map(|h| EditorHint {
+            kind: hint_kind(h.kind),
+            start: h.start,
+            end: h.end,
+        })
+        .collect()
+}
+
+/// Admin → Users from the server's list: pending approvals oldest first, then every other
+/// account by username.
+pub fn admin_users(users: Vec<AdminUserItem>) -> AdminUsersView {
+    let (mut pending, mut others): (Vec<_>, Vec<_>) =
+        users.into_iter().partition(|u| u.status == "pending");
+    pending.sort_by(|a, b| (a.created, &a.id).cmp(&(b.created, &b.id)));
+    others.sort_by(|a, b| {
+        (a.username.to_lowercase(), &a.id).cmp(&(b.username.to_lowercase(), &b.id))
+    });
+    AdminUsersView {
+        availability: Availability::Available,
+        pending,
+        users: others,
+    }
 }
 
 /// Online-only features whose endpoints do not exist yet.
-pub fn availability_online(ctx: &ViewCtx, feature: &str) -> Availability {
+pub fn availability_online(ctx: &ViewCtx, _feature: &str) -> Availability {
     if ctx.connectivity == Connectivity::Offline {
         Availability::Offline
     } else {
-        Availability::NotYetAvailable {
-            feature: feature.to_owned(),
-        }
+        Availability::NotYetAvailable
     }
 }
 
@@ -1323,15 +1370,32 @@ fn place_view(conn: &Connection, n: &crate::store::notes::NoteRow) -> CoreResult
 
 /// Entity / document / place page.
 pub fn entity_screen(conn: &Connection, id: &str) -> CoreResult<EntityScreen> {
-    let Some(n) = crate::store::notes::get(conn, id)?.filter(|n| !n.deleted) else {
-        return Ok(EntityScreen::NotFound { id: id.to_owned() });
+    let mut screen = EntityScreen {
+        id: id.to_owned(),
+        kind: EntityPageKind::NotFound,
+        entity: None,
+        document: None,
+        place: None,
     };
-    Ok(match n.kind.as_str() {
-        "person" | "company" => EntityScreen::Entity(entity_view(conn, &n)?),
-        "document" => EntityScreen::Document(document_view(conn, &n)?),
-        "place" => EntityScreen::Place(place_view(conn, &n)?),
-        _ => EntityScreen::NotFound { id: id.to_owned() },
-    })
+    let Some(n) = crate::store::notes::get(conn, id)?.filter(|n| !n.deleted) else {
+        return Ok(screen);
+    };
+    match n.kind.as_str() {
+        "person" | "company" => {
+            screen.kind = EntityPageKind::Entity;
+            screen.entity = Some(entity_view(conn, &n)?);
+        }
+        "document" => {
+            screen.kind = EntityPageKind::Document;
+            screen.document = Some(document_view(conn, &n)?);
+        }
+        "place" => {
+            screen.kind = EntityPageKind::Place;
+            screen.place = Some(place_view(conn, &n)?);
+        }
+        _ => {}
+    }
+    Ok(screen)
 }
 
 // ---------------------------------------------------------------------------------------------

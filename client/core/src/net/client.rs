@@ -43,7 +43,7 @@ fn session(s: types::AuthSession) -> SessionTokens {
 
 /// [`AccountApi`] over the generated client.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct ClientAccountApi;
+pub struct ClientAccountApi {}
 
 impl AccountApi for ClientAccountApi {
     fn signup(
@@ -257,7 +257,7 @@ impl SyncApi for BrokenSyncApi {
 /// `streams` module is empty). Returns [`NetError::NotAvailable`]; the session then relies on
 /// the timer and lifecycle triggers.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct ClientEventsApi;
+pub struct ClientEventsApi {}
 
 impl EventsApi for ClientEventsApi {
     fn next_event(&self) -> BoxFuture<'_, Result<(), NetError>> {
@@ -295,7 +295,7 @@ mod tests {
             })
         );
         assert_eq!(
-            ClientEventsApi.next_event().await,
+            ClientEventsApi {}.next_event().await,
             Err(NetError::NotAvailable {
                 endpoint: "events".into()
             })
@@ -305,7 +305,7 @@ mod tests {
     #[tokio::test]
     async fn unreachable_server_is_offline() {
         // Port 9 (discard) on localhost is closed in the test environment: connection refused.
-        let r = ClientAccountApi
+        let r = ClientAccountApi {}
             .login(
                 "http://127.0.0.1:9".into(),
                 "u".into(),

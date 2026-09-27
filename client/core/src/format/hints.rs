@@ -6,7 +6,7 @@ use vault_format::Document;
 
 /// What a span is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum HintKind {
+pub enum SpanKind {
     /// The frontmatter block.
     Frontmatter,
     /// A heading line.
@@ -27,9 +27,9 @@ pub enum HintKind {
 
 /// One span.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Hint {
+pub struct Span {
     /// Kind.
-    pub kind: HintKind,
+    pub kind: SpanKind,
     /// Start (UTF-16 units, inclusive).
     pub start: u32,
     /// End (UTF-16 units, exclusive).
@@ -50,47 +50,47 @@ impl Utf16Map<'_> {
 }
 
 /// Highlight spans of a whole note, sorted by start then kind.
-pub fn editor_hints(content: &str) -> Vec<Hint> {
+pub fn editor_hints(content: &str) -> Vec<Span> {
     let doc = Document::parse(content);
     let map = Utf16Map { text: content };
     let off = doc.body_offset();
     let mut out = Vec::new();
     let mut push = |kind, start: usize, end: usize| {
-        out.push(Hint {
+        out.push(Span {
             kind,
             start: map.at(start),
             end: map.at(end),
         });
     };
     if doc.frontmatter().is_some() && off > 0 {
-        push(HintKind::Frontmatter, 0, off);
+        push(SpanKind::Frontmatter, 0, off);
     }
     let a = doc.analyze_body();
     for h in &a.headings {
-        push(HintKind::Heading, off + h.span.start, off + h.span.end);
+        push(SpanKind::Heading, off + h.span.start, off + h.span.end);
     }
     for l in &a.links {
         let kind = if l.embed {
-            HintKind::Embed
+            SpanKind::Embed
         } else {
-            HintKind::WikiLink
+            SpanKind::WikiLink
         };
         push(kind, off + l.span.start, off + l.span.end);
     }
     for t in &a.tags {
-        push(HintKind::Tag, off + t.span.start, off + t.span.end);
+        push(SpanKind::Tag, off + t.span.start, off + t.span.end);
     }
     for b in &a.blocks {
         if let Some(id) = &b.id {
-            push(HintKind::BlockId, off + id.span.start, off + id.span.end);
+            push(SpanKind::BlockId, off + id.span.start, off + id.span.end);
         }
     }
     for c in &a.code_spans {
-        push(HintKind::Code, off + c.start, off + c.end);
+        push(SpanKind::Code, off + c.start, off + c.end);
     }
     for t in vault_format::tasks::extract_tasks(doc.body()) {
         push(
-            HintKind::TaskLine,
+            SpanKind::TaskLine,
             off + t.line_span.start,
             off + t.line_span.end,
         );
@@ -110,13 +110,13 @@ mod tests {
         assert_eq!(
             hints,
             vec![
-                Hint {
-                    kind: HintKind::WikiLink,
+                Span {
+                    kind: SpanKind::WikiLink,
                     start: 4,
                     end: 12
                 },
-                Hint {
-                    kind: HintKind::Tag,
+                Span {
+                    kind: SpanKind::Tag,
                     start: 13,
                     end: 17
                 },
@@ -127,17 +127,17 @@ mod tests {
     #[test]
     fn frontmatter_heading_task_and_block_id() {
         let text = "---\nid: X\n---\n# Title\n- [ ] do ^t-1\n";
-        let kinds: Vec<(HintKind, u32, u32)> = editor_hints(text)
+        let kinds: Vec<(SpanKind, u32, u32)> = editor_hints(text)
             .into_iter()
             .map(|h| (h.kind, h.start, h.end))
             .collect();
         assert_eq!(
             kinds,
             vec![
-                (HintKind::Frontmatter, 0, 14),
-                (HintKind::Heading, 14, 21),
-                (HintKind::TaskLine, 22, 35),
-                (HintKind::BlockId, 31, 35),
+                (SpanKind::Frontmatter, 0, 14),
+                (SpanKind::Heading, 14, 21),
+                (SpanKind::TaskLine, 22, 35),
+                (SpanKind::BlockId, 31, 35),
             ]
         );
     }

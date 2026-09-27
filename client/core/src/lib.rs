@@ -23,7 +23,7 @@
 // Tests assert exact values and may `expect` with a message stating the invariant.
 #![cfg_attr(test, allow(clippy::expect_used, clippy::float_cmp))]
 
-// pub mod api;
+pub mod api;
 pub mod auth;
 pub mod clock;
 pub mod error;
@@ -53,6 +53,6 @@ pub mod view;
     non_snake_case,
     unreachable_patterns
 )]
-// mod frb_generated;
+mod frb_generated;
 
 pub use error::CoreError;

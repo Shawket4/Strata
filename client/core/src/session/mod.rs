@@ -26,8 +26,8 @@ use crate::store::{AccountDb, account, notes, outbox, tokens};
 use crate::sync::engine::{CycleOutcome, CycleReport, SyncEngine, SyncHost, Trigger};
 use crate::view::build;
 use crate::view::model::{
-    Connectivity, NotificationMode, NotificationOp, NotificationResult, Platform, SessionState,
-    SyncPhase,
+    Connectivity, NotificationMode, NotificationOp, NotificationResult, Platform, SessionKind,
+    SessionState, SyncActivity,
 };
 use crate::view::{Topics, ViewCtx, ViewHub, ViewSink, WatchId};
 
@@ -43,7 +43,7 @@ struct Inner {
     db: AccountDb,
     hub: ViewHub,
     connectivity: Connectivity,
-    phase: SyncPhase,
+    activity: SyncActivity,
     notify_sinks: Vec<Box<dyn ViewSink<NotificationOp>>>,
     notify_buffer: Vec<NotificationOp>,
     session_changed: bool,
@@ -68,11 +68,11 @@ impl std::fmt::Debug for Session {
 
 /// The [`TokenStore`] over the session's database.
 #[derive(Debug)]
-struct SessionTokens {
+struct DbTokenStore {
     session: std::sync::Weak<Session>,
 }
 
-impl TokenStore for SessionTokens {
+impl TokenStore for DbTokenStore {
     fn load(&self) -> Option<tokens::StoredTokens> {
         let s = self.session.upgrade()?;
         let g = s.lock();
@@ -107,7 +107,7 @@ impl Session {
             .map(|a| a.server_url)
             .unwrap_or_default();
         Ok(Arc::new_cyclic(|weak: &std::sync::Weak<Session>| {
-            let store: Arc<dyn TokenStore> = Arc::new(SessionTokens {
+            let store: Arc<dyn TokenStore> = Arc::new(DbTokenStore {
                 session: weak.clone(),
             });
             let tokens = Arc::new(CoreTokenProvider::new(
@@ -126,7 +126,7 @@ impl Session {
                     db,
                     hub: ViewHub::new(),
                     connectivity: Connectivity::Unknown,
-                    phase: SyncPhase::Idle,
+                    activity: SyncActivity::default(),
                     notify_sinks: Vec::new(),
                     notify_buffer: Vec::new(),
                     session_changed: false,
@@ -173,7 +173,7 @@ impl Session {
             now: self.env.clock.now(),
             tz: Self::tz(g.db.conn()),
             connectivity: g.connectivity,
-            phase: g.phase.clone(),
+            activity: g.activity.clone(),
             notification_mode: notification_mode(self.env.platform),
         }
     }
@@ -318,29 +318,27 @@ impl Session {
         let a = account::get(conn)?.ok_or(CoreError::NotSignedIn)?;
         let has_tokens = tokens::get(conn)?.is_some();
         let unsynced = outbox::unsynced_count(conn)?;
+        let state = |kind| SessionState {
+            account: Some(summary.clone()),
+            ..SessionState::of(kind)
+        };
         Ok(match account_mode(&a.status, a.password_change_required) {
-            AccountMode::Disabled => SessionState::Disabled {
-                account: summary,
+            AccountMode::Disabled => SessionState {
                 unsynced_ops: unsynced,
+                ..state(SessionKind::Disabled)
             },
             AccountMode::DeletionPending => {
                 let at = a.deletion_at.as_deref().map(build::ts);
-                SessionState::DeletionPending {
+                SessionState {
                     days_remaining: at.map(|t| build::days_until(self.env.clock.now(), t)),
                     deletion_at: at,
-                    account: summary,
                     unsynced_ops: unsynced,
+                    ..state(SessionKind::DeletionPending)
                 }
             }
-            _ if !has_tokens => SessionState::SignedOut {
-                known_accounts: Vec::new(),
-                server_url: Some(a.server_url),
-                device_name: String::new(),
-            },
-            AccountMode::PasswordChangeRequired => {
-                SessionState::PasswordChangeRequired { account: summary }
-            }
-            AccountMode::Active => SessionState::Active { account: summary },
+            _ if !has_tokens => SessionState::of(SessionKind::SignedOut),
+            AccountMode::PasswordChangeRequired => state(SessionKind::PasswordChangeRequired),
+            AccountMode::Active => state(SessionKind::Active),
         })
     }
 
@@ -440,12 +438,12 @@ impl SyncHost for Session {
         self.write(f)
     }
 
-    fn set_phase(&self, phase: SyncPhase) {
+    fn set_activity(&self, activity: SyncActivity) {
         let mut g = self.lock();
-        if g.phase == phase {
+        if g.activity == activity {
             return;
         }
-        g.phase = phase;
+        g.activity = activity;
         let ctx = self.ctx_of(&g);
         let Inner { db, hub, .. } = &mut *g;
         if let Err(e) = hub.notify(db.conn(), &ctx, Topics::SYNC) {

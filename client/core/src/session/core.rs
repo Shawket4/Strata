@@ -15,7 +15,7 @@ use crate::net::{AccountApi, NetError, SyncApi, Tokens};
 use crate::store::registry::{self, KnownAccount, Registry};
 use crate::store::{StorePaths, account, tokens};
 use crate::view::model::{
-    CoreConfig, KnownAccountItem, Platform, SessionState, SignInRequest, SignOutOutcome,
+    CoreConfig, KnownAccountItem, Platform, SessionKind, SessionState, SignInRequest, SignOutOutcome,
     SignUpOutcome, SignUpRequest,
 };
 use crate::view::{Topics, ViewSink};
@@ -55,13 +55,13 @@ impl std::fmt::Debug for CoreEnv {
 impl CoreEnv {
     /// The production environment for `config`.
     pub fn production(config: &CoreConfig) -> Self {
-        let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+        let clock: Arc<dyn Clock> = Arc::new(SystemClock {});
         Self {
             paths: StorePaths::new(std::path::Path::new(&config.app_data_dir)),
             platform: config.platform,
             ids: Arc::new(UlidGenerator::new(clock.clone())),
             clock,
-            account_api: Arc::new(ClientAccountApi),
+            account_api: Arc::new(ClientAccountApi {}),
             sync_api: Arc::new(|url: &str, tokens: Tokens| -> Arc<dyn SyncApi> {
                 match ClientSyncApi::new(url, tokens) {
                     Ok(api) => Arc::new(api),
@@ -130,7 +130,7 @@ impl Core {
 
     fn signed_out(&self) -> CoreResult<SessionState> {
         let reg = lock(&self.registry);
-        Ok(SessionState::SignedOut {
+        Ok(SessionState {
             known_accounts: reg
                 .accounts()?
                 .into_iter()
@@ -147,6 +147,7 @@ impl Core {
             device_name: reg
                 .device_value(registry::DEVICE_NAME)?
                 .unwrap_or_else(|| self.env.default_device_name.clone()),
+            ..SessionState::of(SessionKind::SignedOut)
         })
     }
 
@@ -156,7 +157,7 @@ impl Core {
             return self.signed_out();
         };
         match session.session_state()? {
-            SessionState::SignedOut { .. } => {
+            s if s.kind == SessionKind::SignedOut => {
                 // The session ended (refresh refused): keep the data, show the login screen.
                 session.close();
                 *lock(&self.active) = None;
@@ -352,7 +353,8 @@ impl Core {
         let session = self.session()?;
         let unsynced = session.unsynced()?;
         if unsynced > 0 && !force {
-            return Ok(SignOutOutcome::NeedsConfirmation {
+            return Ok(SignOutOutcome {
+                signed_out: false,
                 unsynced_ops: unsynced,
             });
         }
@@ -361,7 +363,10 @@ impl Core {
         // Revoking the server session is best effort: offline sign-out still removes local data.
         let _ = self.env.account_api.logout(url, session.tokens()).await;
         self.wipe(session)?;
-        Ok(SignOutOutcome::SignedOut)
+        Ok(SignOutOutcome {
+            signed_out: true,
+            unsynced_ops: 0,
+        })
     }
 
     fn wipe(&self, session: Arc<Session>) -> CoreResult<()> {
@@ -376,7 +381,7 @@ impl Core {
     /// The user saw the "account disabled" warning: local data is wiped (§12.7).
     pub fn acknowledge_disabled(&self) -> CoreResult<SessionState> {
         let session = self.session()?;
-        if !matches!(session.session_state()?, SessionState::Disabled { .. }) {
+        if session.session_state()?.kind != SessionKind::Disabled {
             return Err(CoreError::invalid("state", "not_disabled"));
         }
         session.cancel_all_notifications()?;

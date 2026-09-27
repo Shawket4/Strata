@@ -87,27 +87,7 @@ pub enum CoreError {
 impl CoreError {
     /// The stable key the UI localises (`error.<snake_case>`).
     pub fn message_key(&self) -> String {
-        let key = match self {
-            Self::NotInitialised => "not_initialised",
-            Self::NotSignedIn => "not_signed_in",
-            Self::Offline => "offline",
-            Self::NotAvailable { .. } => "not_available",
-            Self::InvalidInput { .. } => "invalid_input",
-            Self::NotFound { .. } => "not_found",
-            Self::InvalidCredentials => "invalid_credentials",
-            Self::AccountPending => "account_pending",
-            Self::AccountRejected => "account_rejected",
-            Self::AccountDisabled => "account_disabled",
-            Self::AccountDeletionPending => "account_deletion_pending",
-            Self::SessionExpired => "session_expired",
-            Self::RateLimited => "rate_limited",
-            Self::PendingChanges { .. } => "pending_changes",
-            Self::TaskChange { .. } => "task_change",
-            Self::Server { .. } => "server",
-            Self::Storage(_) => "storage",
-            Self::Internal(_) => "internal",
-        };
-        format!("error.{key}")
+        format!("error.{}", self.code())
     }
 
     /// Shorthand for [`CoreError::InvalidInput`].
@@ -147,6 +127,63 @@ impl From<rmp_serde::decode::Error> for CoreError {
 impl From<std::io::Error> for CoreError {
     fn from(e: std::io::Error) -> Self {
         Self::Storage(format!("io: {e}"))
+    }
+}
+
+impl CoreError {
+    fn code(&self) -> &'static str {
+        match self {
+            Self::NotInitialised => "not_initialised",
+            Self::NotSignedIn => "not_signed_in",
+            Self::Offline => "offline",
+            Self::NotAvailable { .. } => "not_available",
+            Self::InvalidInput { .. } => "invalid_input",
+            Self::NotFound { .. } => "not_found",
+            Self::InvalidCredentials => "invalid_credentials",
+            Self::AccountPending => "account_pending",
+            Self::AccountRejected => "account_rejected",
+            Self::AccountDisabled => "account_disabled",
+            Self::AccountDeletionPending => "account_deletion_pending",
+            Self::SessionExpired => "session_expired",
+            Self::RateLimited => "rate_limited",
+            Self::PendingChanges { .. } => "pending_changes",
+            Self::TaskChange { .. } => "task_change",
+            Self::Server { .. } => "server",
+            Self::Storage(_) => "storage",
+            Self::Internal(_) => "internal",
+        }
+    }
+}
+
+impl From<CoreError> for crate::view::model::CoreFailure {
+    fn from(e: CoreError) -> Self {
+        let mut f = Self {
+            code: e.code().to_owned(),
+            message_key: e.message_key(),
+            field: None,
+            reason: None,
+            count: None,
+            status: None,
+        };
+        match e {
+            CoreError::NotAvailable { feature } => f.field = Some(feature),
+            CoreError::InvalidInput { field, reason } => {
+                f.field = Some(field);
+                f.reason = Some(reason);
+            }
+            CoreError::NotFound { what } => f.field = Some(what),
+            CoreError::PendingChanges { count } => f.count = Some(count),
+            CoreError::TaskChange { reason } => f.reason = Some(reason),
+            CoreError::Server {
+                status,
+                problem_type,
+            } => {
+                f.status = Some(status);
+                f.reason = Some(problem_type);
+            }
+            _ => {}
+        }
+        f
     }
 }
 

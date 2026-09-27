@@ -19,17 +19,14 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 // ---------------------------------------------------------------------------------------------
 
 /// Whether an online-only or not-yet-built feature can be used right now.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Availability {
     /// Usable.
     Available,
     /// Needs the server; the device is offline (§12.6).
     Offline,
     /// Not available yet: the server has no endpoint for it or the feature is not built.
-    NotYetAvailable {
-        /// Stable feature name (`ask`, `history`, `semantic_search`, …).
-        feature: String,
-    },
+    NotYetAvailable,
     /// The account may not use it (e.g. Admin → Users for members, export-only sessions).
     NotAllowed,
 }
@@ -46,29 +43,34 @@ pub enum Connectivity {
 }
 
 /// What the sync engine is doing.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SyncPhase {
     /// Nothing running.
+    #[default]
     Idle,
     /// Downloading the full snapshot (first login or epoch change).
-    Bootstrapping {
-        /// Pages applied.
-        pages_done: u32,
-        /// Total pages, when the server says.
-        pages_total: Option<u32>,
-    },
+    Bootstrapping,
     /// Pushing outbox ops.
-    Pushing {
-        /// Ops in this push.
-        ops: u32,
-    },
+    Pushing,
     /// Pulling changes.
     Pulling,
     /// Waiting to retry after a failure.
-    Backoff {
-        /// When the next attempt runs.
-        retry_at: DateTime<Utc>,
-    },
+    Backoff,
+}
+
+/// The sync engine's current activity (progress details of [`SyncPhase`]).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SyncActivity {
+    /// Phase.
+    pub phase: SyncPhase,
+    /// Bootstrap pages applied.
+    pub pages_done: u32,
+    /// Bootstrap pages in total, when the server says.
+    pub pages_total: Option<u32>,
+    /// Ops in the push in flight.
+    pub ops: u32,
+    /// When the next attempt runs (backoff).
+    pub retry_at: Option<DateTime<Utc>>,
 }
 
 /// The compact sync indicator (§12.5: online/offline, pending ops, last sync, conflicts).
@@ -76,8 +78,8 @@ pub enum SyncPhase {
 pub struct SyncPill {
     /// Reachability.
     pub connectivity: Connectivity,
-    /// Current phase.
-    pub phase: SyncPhase,
+    /// Current activity.
+    pub activity: SyncActivity,
     /// Unsynced ops.
     pub pending_ops: u32,
     /// Unresolved conflicts.
@@ -224,50 +226,60 @@ pub struct KnownAccountItem {
     pub server_url: String,
 }
 
+/// Which screen the account state leads to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionKind {
+    /// `init_core` has not run.
+    NotInitialised,
+    /// No account is active: the login screen.
+    SignedOut,
+    /// Signed in and usable.
+    Active,
+    /// An admin reset the password: change it before anything else.
+    PasswordChangeRequired,
+    /// The server disabled the account (§12.7): warn; local data is wiped after the user
+    /// acknowledges.
+    Disabled,
+    /// The account is scheduled for deletion (D25): export-only; local data is read-only.
+    DeletionPending,
+}
+
 /// The app's account state: decides between the login screen, the main shell and the
 /// restricted screens.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SessionState {
-    /// `init_core` has not run.
-    NotInitialised,
-    /// No account is active: show the login screen.
-    SignedOut {
-        /// Accounts that still have local data (switch without re-downloading).
-        known_accounts: Vec<KnownAccountItem>,
-        /// Prefill for the server URL field.
-        server_url: Option<String>,
-        /// Prefill for the device name field.
-        device_name: String,
-    },
-    /// Signed in and usable.
-    Active {
-        /// The account.
-        account: AccountSummary,
-    },
-    /// An admin reset the password: change it before anything else.
-    PasswordChangeRequired {
-        /// The account.
-        account: AccountSummary,
-    },
-    /// The server disabled the account (§12.7): show the warning; local data is wiped after
-    /// the user acknowledges.
-    Disabled {
-        /// The account.
-        account: AccountSummary,
-        /// Ops that will be lost (exportable first).
-        unsynced_ops: u32,
-    },
-    /// The account is scheduled for deletion (D25): export-only; local data is read-only.
-    DeletionPending {
-        /// The account.
-        account: AccountSummary,
-        /// When the account is purged.
-        deletion_at: Option<DateTime<Utc>>,
-        /// Whole days until then.
-        days_remaining: Option<u32>,
-        /// Ops that never synced (listed and exportable).
-        unsynced_ops: u32,
-    },
+pub struct SessionState {
+    /// Which screen.
+    pub kind: SessionKind,
+    /// The account (every kind but `NotInitialised` and `SignedOut`).
+    pub account: Option<AccountSummary>,
+    /// `SignedOut`: accounts that still have local data (switch without re-downloading).
+    pub known_accounts: Vec<KnownAccountItem>,
+    /// `SignedOut`: prefill for the server URL field.
+    pub server_url: Option<String>,
+    /// `SignedOut`: prefill for the device name field.
+    pub device_name: String,
+    /// `Disabled` / `DeletionPending`: ops that never synced (listed and exportable).
+    pub unsynced_ops: u32,
+    /// `DeletionPending`: when the account is purged.
+    pub deletion_at: Option<DateTime<Utc>>,
+    /// `DeletionPending`: whole days until then.
+    pub days_remaining: Option<u32>,
+}
+
+impl SessionState {
+    /// A state of `kind` with every detail empty.
+    pub fn of(kind: SessionKind) -> Self {
+        Self {
+            kind,
+            account: None,
+            known_accounts: Vec::new(),
+            server_url: None,
+            device_name: String::new(),
+            unsynced_ops: 0,
+            deletion_at: None,
+            days_remaining: None,
+        }
+    }
 }
 
 /// What `sign_in` needs.
@@ -305,14 +317,12 @@ pub struct SignUpOutcome {
 
 /// Result of `sign_out`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SignOutOutcome {
-    /// Signed out; the account's local database and tokens are deleted.
-    SignedOut,
-    /// Ops have not synced: offer "Sync now / Sign out anyway / Cancel" (§12.7).
-    NeedsConfirmation {
-        /// Unsynced ops.
-        unsynced_ops: u32,
-    },
+pub struct SignOutOutcome {
+    /// Signed out; the account's local database and tokens are deleted. `false`: ops have not
+    /// synced — offer "Sync now / Sign out anyway / Cancel" (§12.7).
+    pub signed_out: bool,
+    /// Unsynced ops (when not signed out).
+    pub unsynced_ops: u32,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -449,21 +459,15 @@ pub struct TaskPatch {
 
 /// Task detail.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum TaskScreen {
-    /// No such task locally.
-    NotFound {
-        /// Task ID asked for.
-        id: String,
-    },
-    /// The task.
-    Ready {
-        /// The task.
-        task: TaskItem,
-        /// The raw task line (editor).
-        line: String,
-        /// Completed occurrences of the same recurring task in the same note, newest first.
-        history: Vec<TaskItem>,
-    },
+pub struct TaskScreen {
+    /// Task ID asked for.
+    pub id: String,
+    /// The task (`None`: not found locally).
+    pub task: Option<TaskItem>,
+    /// The raw task line (editor).
+    pub line: String,
+    /// Completed occurrences of the same recurring task in the same note, newest first.
+    pub history: Vec<TaskItem>,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -488,59 +492,77 @@ pub struct CandidateItem {
 }
 
 /// What a suggestion proposes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SuggestionKind {
+    /// AI filing of a capture (`title`, `folder`, `tags`).
+    Filing,
+    /// "Who is “بابا”?": link to a candidate or create a person (`mention`, `candidates`).
+    EntityLinkOrCreate,
+    /// A custody event to confirm (`document`, `line`, `confidence`).
+    Custody,
+    /// The item resembles existing items (`duplicates`).
+    Duplicate,
+    /// A low-confidence relation (`target`, `rel_type`, `confidence`, `reason`).
+    Relation,
+    /// A task proposed from a capture (`line`).
+    Task,
+    /// A kind this app version cannot show (`server_kind`).
+    Unsupported,
+}
+
+/// The details of a suggestion; which fields are set depends on [`SuggestionKind`].
 #[derive(Debug, Clone, PartialEq)]
-pub enum SuggestionKindView {
-    /// AI filing of a capture.
-    Filing {
-        /// Title.
-        title: String,
-        /// Folder.
-        folder: String,
-        /// Tags.
-        tags: Vec<String>,
-    },
-    /// "Who is “بابا”?": link to a candidate or create a person.
-    EntityLinkOrCreate {
-        /// The mention.
-        mention: String,
-        /// Candidates.
-        candidates: Vec<EntityRef>,
-    },
-    /// A custody event to confirm.
-    Custody {
-        /// The document, when resolved.
-        document: Option<EntityRef>,
-        /// The proposed custody line.
-        line: String,
-        /// Confidence.
-        confidence: f64,
-    },
-    /// The item resembles existing items.
-    Duplicate {
-        /// Candidates.
-        candidates: Vec<CandidateItem>,
-    },
-    /// A low-confidence relation.
-    Relation {
-        /// Target.
-        target: EntityRef,
-        /// Type.
-        rel_type: String,
-        /// Confidence.
-        confidence: f64,
-        /// Reason.
-        reason: String,
-    },
-    /// A task proposed from a capture.
-    Task {
-        /// Proposed line.
-        line: String,
-    },
-    /// A kind this app version cannot show.
-    Unsupported {
-        /// Server kind.
-        kind: String,
-    },
+pub struct SuggestionDetail {
+    /// Kind.
+    pub kind: SuggestionKind,
+    /// Filing: title.
+    pub title: String,
+    /// Filing: folder.
+    pub folder: String,
+    /// Filing: tags.
+    pub tags: Vec<String>,
+    /// Link-or-create: the mention.
+    pub mention: String,
+    /// Link-or-create: candidates.
+    pub candidates: Vec<EntityRef>,
+    /// Custody: the document.
+    pub document: Option<EntityRef>,
+    /// Custody / task: the proposed line.
+    pub line: String,
+    /// Custody / relation: confidence.
+    pub confidence: Option<f64>,
+    /// Duplicate: candidates.
+    pub duplicates: Vec<CandidateItem>,
+    /// Relation: target.
+    pub target: Option<EntityRef>,
+    /// Relation: type.
+    pub rel_type: String,
+    /// Relation: reason.
+    pub reason: String,
+    /// Unsupported: the server's kind string.
+    pub server_kind: String,
+}
+
+impl SuggestionDetail {
+    /// An empty detail of `kind`.
+    pub fn of(kind: SuggestionKind) -> Self {
+        Self {
+            kind,
+            title: String::new(),
+            folder: String::new(),
+            tags: Vec::new(),
+            mention: String::new(),
+            candidates: Vec::new(),
+            document: None,
+            line: String::new(),
+            confidence: None,
+            duplicates: Vec::new(),
+            target: None,
+            rel_type: String::new(),
+            reason: String::new(),
+            server_kind: String::new(),
+        }
+    }
 }
 
 /// A suggestion.
@@ -553,7 +575,7 @@ pub struct SuggestionItem {
     /// `pending` | `accepted` | `rejected`.
     pub status: String,
     /// What it proposes.
-    pub kind: SuggestionKindView,
+    pub detail: SuggestionDetail,
     /// Created at.
     pub created: DateTime<Utc>,
     /// The user's accept/reject has not synced yet.
@@ -617,18 +639,12 @@ pub enum DuplicateChoice {
 
 /// Result of a create intent.
 #[derive(Debug, Clone, PartialEq)]
-pub enum CreateOutcome {
-    /// Created locally and queued.
-    Created {
-        /// The new item's ID.
-        id: String,
-    },
-    /// The local duplicate check found candidates; nothing was created. Call again with
+pub struct CreateOutcome {
+    /// The new item's ID (`None`: nothing was created).
+    pub id: Option<String>,
+    /// The local duplicate check's candidates when nothing was created; call again with
     /// `force` to create anyway.
-    Duplicate {
-        /// Candidates.
-        candidates: Vec<CandidateItem>,
-    },
+    pub candidates: Vec<CandidateItem>,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -701,20 +717,25 @@ pub struct EditorHint {
 }
 
 /// Sync state of one note.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum NoteSyncState {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NoteSyncKind {
     /// Nothing pending.
     Synced,
     /// Ops waiting.
-    Pending {
-        /// How many.
-        ops: u32,
-    },
+    Pending,
     /// An edit conflicts with the server (open the conflict screen).
-    Conflict {
-        /// The op.
-        op_id: String,
-    },
+    Conflict,
+}
+
+/// Sync state of one note.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoteSyncState {
+    /// Kind.
+    pub kind: NoteSyncKind,
+    /// Ops waiting.
+    pub pending_ops: u32,
+    /// The conflicting op.
+    pub conflict_op_id: Option<String>,
 }
 
 /// A note.
@@ -752,14 +773,11 @@ pub struct NoteView {
 
 /// The note screen.
 #[derive(Debug, Clone, PartialEq)]
-pub enum NoteScreen {
-    /// Unknown ID.
-    NotFound {
-        /// ID asked for.
-        id: String,
-    },
-    /// The note.
-    Ready(NoteView),
+pub struct NoteScreen {
+    /// ID asked for.
+    pub id: String,
+    /// The note (`None`: unknown or deleted).
+    pub note: Option<NoteView>,
 }
 
 /// A folder in the notes tree.
@@ -955,20 +973,32 @@ pub struct PlaceView {
     pub recent_movements: Vec<CustodyItem>,
 }
 
-/// Entity, document or place screen.
-#[derive(Debug, Clone, PartialEq)]
-pub enum EntityScreen {
-    /// Unknown ID.
-    NotFound {
-        /// ID asked for.
-        id: String,
-    },
+/// Which page an ID leads to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EntityPageKind {
+    /// Unknown ID (or not an entity).
+    NotFound,
     /// Person/company.
-    Entity(EntityView),
+    Entity,
     /// Document.
-    Document(DocumentView),
+    Document,
     /// Place.
-    Place(PlaceView),
+    Place,
+}
+
+/// Entity, document or place screen (one of the pages is set, per `kind`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct EntityScreen {
+    /// ID asked for.
+    pub id: String,
+    /// Kind.
+    pub kind: EntityPageKind,
+    /// Person/company page.
+    pub entity: Option<EntityView>,
+    /// Document page.
+    pub document: Option<DocumentView>,
+    /// Place page.
+    pub place: Option<PlaceView>,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1073,23 +1103,17 @@ pub struct GraphEdge {
 /// A note's neighbourhood (depth 1–3) from cached links and relations, laid out radially
 /// (local mind map, D4).
 #[derive(Debug, Clone, PartialEq)]
-pub enum LocalGraphView {
-    /// Unknown note.
-    NotFound {
-        /// ID asked for.
-        id: String,
-    },
-    /// The neighbourhood.
-    Ready {
-        /// The focused note.
-        center: String,
-        /// Depth used.
-        depth: u8,
-        /// Nodes, focus first, then by ring.
-        nodes: Vec<GraphNode>,
-        /// Edges.
-        edges: Vec<GraphEdge>,
-    },
+pub struct LocalGraphView {
+    /// The focused note.
+    pub center: String,
+    /// Whether the note exists.
+    pub found: bool,
+    /// Depth used.
+    pub depth: u8,
+    /// Nodes, focus first, then by ring.
+    pub nodes: Vec<GraphNode>,
+    /// Edges.
+    pub edges: Vec<GraphEdge>,
 }
 
 /// A cluster region label.
@@ -1192,7 +1216,7 @@ pub struct SyncStatusView {
 }
 
 /// How to resolve one conflicting hunk.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HunkChoiceKind {
     /// Keep the local side.
     Ours,
@@ -1204,11 +1228,8 @@ pub enum HunkChoiceKind {
     OursThenTheirs,
     /// Body only: the server's lines, then local ones.
     TheirsThenOurs,
-    /// Body only: this text instead.
-    Text {
-        /// Replacement (ends with a line terminator).
-        text: String,
-    },
+    /// Body only: [`HunkChoice::text`] instead.
+    Text,
 }
 
 /// A choice for one hunk.
@@ -1218,25 +1239,33 @@ pub struct HunkChoice {
     pub hunk: u32,
     /// The choice.
     pub choice: HunkChoiceKind,
+    /// Replacement text for [`HunkChoiceKind::Text`] (ends with a line terminator).
+    pub text: Option<String>,
 }
 
 /// How to resolve a conflict.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ConflictResolution {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResolutionKind {
     /// Push the local content over the server's.
     KeepMine,
     /// Drop the local edit.
     KeepServer,
-    /// Push this merged content.
-    Merged {
-        /// The merged markdown.
-        content: String,
-    },
-    /// Resolve the merge preview hunk by hunk (`sync-model` `Conflicted::resolve`).
-    Hunks {
-        /// One choice per hunk.
-        choices: Vec<HunkChoice>,
-    },
+    /// Push [`ConflictResolution::content`].
+    Merged,
+    /// Resolve the merge preview hunk by hunk ([`ConflictResolution::choices`],
+    /// `sync-model` `Conflicted::resolve`).
+    Hunks,
+}
+
+/// How to resolve a conflict.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConflictResolution {
+    /// Kind.
+    pub kind: ResolutionKind,
+    /// `Merged`: the merged markdown.
+    pub content: Option<String>,
+    /// `Hunks`: one choice per hunk.
+    pub choices: Vec<HunkChoice>,
 }
 
 /// One conflicting hunk of a merge preview.
@@ -1258,33 +1287,32 @@ pub struct ConflictHunkView {
 
 /// One conflict, for side-by-side resolution (D19).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ConflictScreen {
-    /// Unknown or resolved.
-    NotFound {
-        /// Op ID asked for.
-        op_id: String,
-    },
-    /// The conflict.
-    Ready {
-        /// Op ID.
-        op_id: String,
-        /// Note ID.
-        note_id: String,
-        /// Title.
-        title: String,
-        /// The base both edits started from.
-        base: Option<String>,
-        /// The local version.
-        local: Option<String>,
-        /// The server version (when known).
-        server: Option<String>,
-        /// Local 3-way merge preview (conflict markers where hunks overlap).
-        merged_preview: Option<String>,
-        /// Whether the preview merged cleanly.
-        merge_clean: Option<bool>,
-        /// Conflicting hunks of the preview (resolve with [`ConflictResolution::Hunks`]).
-        hunks: Vec<ConflictHunkView>,
-    },
+pub struct ConflictDetail {
+    /// Note ID.
+    pub note_id: String,
+    /// Title.
+    pub title: String,
+    /// The base both edits started from.
+    pub base: Option<String>,
+    /// The local version.
+    pub local: Option<String>,
+    /// The server version (once pulled).
+    pub server: Option<String>,
+    /// Local 3-way merge preview (conflict markers where hunks overlap).
+    pub merged_preview: Option<String>,
+    /// Whether the preview merged cleanly.
+    pub merge_clean: Option<bool>,
+    /// Conflicting hunks of the preview (resolve with [`ResolutionKind::Hunks`]).
+    pub hunks: Vec<ConflictHunkView>,
+}
+
+/// The conflict screen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConflictScreen {
+    /// Op ID asked for.
+    pub op_id: String,
+    /// The conflict (`None`: unknown or resolved).
+    pub conflict: Option<ConflictDetail>,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1372,51 +1400,48 @@ pub struct AdminUsersView {
 // Reminders (§12.5b)
 // ---------------------------------------------------------------------------------------------
 
+/// What the notification adapter must do.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotificationOpKind {
+    /// `zonedSchedule(id, at, …)`.
+    Schedule,
+    /// Replace a scheduled notification (same ID, new time or text).
+    Update,
+    /// `cancel(id)`.
+    Cancel,
+    /// Show immediately (Linux, while running).
+    ShowNow,
+}
+
 /// An operation for the notification adapter in Dart (`flutter_local_notifications`).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum NotificationOp {
-    /// `zonedSchedule(id, at, …)`.
-    Schedule {
-        /// Stable ID.
-        id: i32,
-        /// When (UTC).
-        at: DateTime<Utc>,
-        /// Title.
-        title: String,
-        /// Body.
-        body: String,
-        /// Task block ID (payload for Done/Snooze).
-        task_id: String,
-    },
-    /// Replace a scheduled notification (same ID, new time or text).
-    Update {
-        /// Stable ID.
-        id: i32,
-        /// When (UTC).
-        at: DateTime<Utc>,
-        /// Title.
-        title: String,
-        /// Body.
-        body: String,
-        /// Task block ID.
-        task_id: String,
-    },
-    /// `cancel(id)`.
-    Cancel {
-        /// Stable ID.
-        id: i32,
-    },
-    /// Show immediately (Linux, while running).
-    ShowNow {
-        /// Stable ID.
-        id: i32,
-        /// Title.
-        title: String,
-        /// Body.
-        body: String,
-        /// Task block ID.
-        task_id: String,
-    },
+pub struct NotificationOp {
+    /// What to do.
+    pub kind: NotificationOpKind,
+    /// Stable ID.
+    pub id: i32,
+    /// When (UTC; `Schedule` / `Update`).
+    pub at: Option<DateTime<Utc>>,
+    /// Title.
+    pub title: String,
+    /// Body.
+    pub body: String,
+    /// Task block ID (payload for Done/Snooze).
+    pub task_id: String,
+}
+
+impl NotificationOp {
+    /// `Cancel { id }`.
+    pub fn cancel(id: i32) -> Self {
+        Self {
+            kind: NotificationOpKind::Cancel,
+            id,
+            at: None,
+            title: String::new(),
+            body: String::new(),
+            task_id: String::new(),
+        }
+    }
 }
 
 /// What the platform said about an operation.
@@ -1432,14 +1457,20 @@ pub enum NotificationResult {
 
 /// A notification action tapped by the user.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NotificationAction {
+pub enum NotificationActionKind {
     /// Mark the task done.
     Done,
     /// Remind again later.
-    Snooze {
-        /// Minutes from now.
-        minutes: u32,
-    },
+    Snooze,
+}
+
+/// A notification action tapped by the user.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NotificationAction {
+    /// Kind.
+    pub kind: NotificationActionKind,
+    /// `Snooze`: minutes from now.
+    pub minutes: u32,
 }
 
 /// App lifecycle events forwarded by Dart (sync and reminder triggers).
@@ -1449,4 +1480,27 @@ pub enum AppLifecycle {
     Resumed,
     /// Background.
     Paused,
+}
+
+// ---------------------------------------------------------------------------------------------
+// Errors at the bridge
+// ---------------------------------------------------------------------------------------------
+
+/// A failed call, as Dart receives it (thrown as an exception). `code` is typed; `message_key`
+/// is the localisation key (`error.<code>`); the other fields carry the error's IDs and codes
+/// (never user content).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CoreFailure {
+    /// Stable code (`offline`, `not_found`, `pending_changes`, …).
+    pub code: String,
+    /// Localisation key.
+    pub message_key: String,
+    /// Argument or item concerned (`path`, `note`, …).
+    pub field: Option<String>,
+    /// Reason code.
+    pub reason: Option<String>,
+    /// Count (`pending_changes`).
+    pub count: Option<u32>,
+    /// HTTP status (`server`).
+    pub status: Option<u16>,
 }

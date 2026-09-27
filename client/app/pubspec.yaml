@@ -10,6 +10,7 @@ environment:
 workspace:
   - apps/strata
   - packages/strata_ui
+  - packages/strata_bridge
   - packages/strata_l10n
   - packages/features/accounts
   - packages/features/admin

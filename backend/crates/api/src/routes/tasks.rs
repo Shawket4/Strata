@@ -381,7 +381,7 @@ pub async fn create_task(
     patch, path = "/tasks/{id}", tag = "tasks", operation_id = "patch_task",
     params(
         ("id" = String, Path, description = "Task block ID (`t-<ulid>`)."),
-        ("If-Match" = Option<String>, Header, description = "Optional: the task's current version."),
+        ("If-Match" = Option<String>, Header, nullable = false, description = "Optional: the task's current version."),
     ),
     request_body = PatchTaskRequest,
     responses(
@@ -456,7 +456,7 @@ async fn transition(
     post, path = "/tasks/{id}/complete", tag = "tasks", operation_id = "complete_task",
     params(
         ("id" = String, Path, description = "Task block ID."),
-        ("If-Match" = Option<String>, Header, description = "Optional: the task's current version."),
+        ("If-Match" = Option<String>, Header, nullable = false, description = "Optional: the task's current version."),
     ),
     responses(
         (status = 200, description = "Completed.", body = TaskTransitioned),
@@ -477,7 +477,7 @@ pub async fn complete_task(
     post, path = "/tasks/{id}/cancel", tag = "tasks", operation_id = "cancel_task",
     params(
         ("id" = String, Path, description = "Task block ID."),
-        ("If-Match" = Option<String>, Header, description = "Optional: the task's current version."),
+        ("If-Match" = Option<String>, Header, nullable = false, description = "Optional: the task's current version."),
     ),
     responses(
         (status = 200, description = "Cancelled.", body = TaskTransitioned),
@@ -498,7 +498,7 @@ pub async fn cancel_task(
     post, path = "/tasks/{id}/reopen", tag = "tasks", operation_id = "reopen_task",
     params(
         ("id" = String, Path, description = "Task block ID."),
-        ("If-Match" = Option<String>, Header, description = "Optional: the task's current version."),
+        ("If-Match" = Option<String>, Header, nullable = false, description = "Optional: the task's current version."),
     ),
     responses(
         (status = 200, description = "Reopened.", body = TaskTransitioned),

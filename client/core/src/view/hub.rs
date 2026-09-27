@@ -11,7 +11,7 @@ use rusqlite::Connection;
 
 use crate::error::CoreResult;
 use crate::view::Topics;
-use crate::view::model::{Connectivity, NotificationMode, SyncPhase};
+use crate::view::model::{Connectivity, NotificationMode, SyncActivity};
 
 /// Receives a stream's values. `emit` returns `false` once the receiver is gone (the watcher
 /// is then dropped).
@@ -29,8 +29,8 @@ pub struct ViewCtx {
     pub tz: Tz,
     /// Reachability.
     pub connectivity: Connectivity,
-    /// Sync phase.
-    pub phase: SyncPhase,
+    /// Sync activity.
+    pub activity: SyncActivity,
     /// How reminders are delivered on this platform.
     pub notification_mode: NotificationMode,
 }
@@ -216,7 +216,7 @@ mod tests {
             now: DateTime::UNIX_EPOCH,
             tz: chrono_tz::UTC,
             connectivity: Connectivity::Unknown,
-            phase: SyncPhase::Idle,
+            activity: SyncActivity::default(),
             notification_mode: NotificationMode::OsScheduled,
         }
     }

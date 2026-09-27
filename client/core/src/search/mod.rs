@@ -58,9 +58,7 @@ pub fn search(conn: &Connection, ctx: &ViewCtx, query: &str, mode: SearchMode) -
         SearchMode::Semantic | SearchMode::Hybrid if ctx.connectivity == Connectivity::Offline => {
             Availability::Offline
         }
-        SearchMode::Semantic | SearchMode::Hybrid => Availability::NotYetAvailable {
-            feature: "semantic_search".to_owned(),
-        },
+        SearchMode::Semantic | SearchMode::Hybrid => Availability::NotYetAvailable,
     };
     let Some(q) = fts_query(query) else {
         return Ok(SearchView {

@@ -484,7 +484,7 @@ pub async fn get_entity(
     patch, path = "/entities/{id}", tag = "entities", operation_id = "patch_entity",
     params(
         ("id" = Ulid, Path, description = "Entity ID (ULID)."),
-        ("If-Match" = Option<String>, Header, description = "Optional: the note's current version."),
+        ("If-Match" = Option<String>, Header, nullable = false, description = "Optional: the note's current version."),
     ),
     request_body = PatchEntityRequest,
     responses(

@@ -378,7 +378,7 @@ pub async fn get_document(
 pub async fn patch_document(
     client: &crate::Client,
     id: ::ulid::Ulid,
-    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    if_match: ::std::option::Option<&str>,
     body: &types::PatchDocumentRequest,
 ) -> ::std::result::Result<types::Document, crate::Error> {
     let request = crate::Request::new(
@@ -394,9 +394,7 @@ pub async fn patch_document(
     );
     let request = request.authenticated();
     let request = match &if_match {
-        ::std::option::Option::Some(value) => {
-            request.header("If-Match", crate::param_string(value)?)
-        }
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
     let request = request.body(body)?;
@@ -502,7 +500,7 @@ pub async fn get_entity(
 pub async fn patch_entity(
     client: &crate::Client,
     id: ::ulid::Ulid,
-    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    if_match: ::std::option::Option<&str>,
     body: &types::PatchEntityRequest,
 ) -> ::std::result::Result<types::Entity, crate::Error> {
     let request = crate::Request::new(
@@ -518,9 +516,7 @@ pub async fn patch_entity(
     );
     let request = request.authenticated();
     let request = match &if_match {
-        ::std::option::Option::Some(value) => {
-            request.header("If-Match", crate::param_string(value)?)
-        }
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
     let request = request.body(body)?;
@@ -894,7 +890,7 @@ pub async fn get_note_revision(
 pub async fn move_note(
     client: &crate::Client,
     id: ::ulid::Ulid,
-    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    if_match: ::std::option::Option<&str>,
     body: &types::MoveNoteRequest,
 ) -> ::std::result::Result<types::Note, crate::Error> {
     let request = crate::Request::new(
@@ -910,9 +906,7 @@ pub async fn move_note(
     );
     let request = request.authenticated();
     let request = match &if_match {
-        ::std::option::Option::Some(value) => {
-            request.header("If-Match", crate::param_string(value)?)
-        }
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
     let request = request.body(body)?;
@@ -1003,7 +997,7 @@ pub async fn get_place(
 pub async fn patch_place(
     client: &crate::Client,
     id: ::ulid::Ulid,
-    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    if_match: ::std::option::Option<&str>,
     body: &types::PatchPlaceRequest,
 ) -> ::std::result::Result<types::Place, crate::Error> {
     let request = crate::Request::new(
@@ -1019,9 +1013,7 @@ pub async fn patch_place(
     );
     let request = request.authenticated();
     let request = match &if_match {
-        ::std::option::Option::Some(value) => {
-            request.header("If-Match", crate::param_string(value)?)
-        }
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
     let request = request.body(body)?;
@@ -1239,7 +1231,7 @@ pub async fn create_task(
 pub async fn patch_task(
     client: &crate::Client,
     id: &str,
-    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    if_match: ::std::option::Option<&str>,
     body: &types::PatchTaskRequest,
 ) -> ::std::result::Result<types::Task, crate::Error> {
     let request = crate::Request::new(
@@ -1255,9 +1247,7 @@ pub async fn patch_task(
     );
     let request = request.authenticated();
     let request = match &if_match {
-        ::std::option::Option::Some(value) => {
-            request.header("If-Match", crate::param_string(value)?)
-        }
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
     let request = request.body(body)?;
@@ -1269,7 +1259,7 @@ pub async fn patch_task(
 pub async fn cancel_task(
     client: &crate::Client,
     id: &str,
-    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    if_match: ::std::option::Option<&str>,
 ) -> ::std::result::Result<types::TaskTransitioned, crate::Error> {
     let request = crate::Request::new(
         crate::Method::POST,
@@ -1284,9 +1274,7 @@ pub async fn cancel_task(
     );
     let request = request.authenticated();
     let request = match &if_match {
-        ::std::option::Option::Some(value) => {
-            request.header("If-Match", crate::param_string(value)?)
-        }
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
     client.send(request).await
@@ -1297,7 +1285,7 @@ pub async fn cancel_task(
 pub async fn complete_task(
     client: &crate::Client,
     id: &str,
-    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    if_match: ::std::option::Option<&str>,
 ) -> ::std::result::Result<types::TaskTransitioned, crate::Error> {
     let request = crate::Request::new(
         crate::Method::POST,
@@ -1312,9 +1300,7 @@ pub async fn complete_task(
     );
     let request = request.authenticated();
     let request = match &if_match {
-        ::std::option::Option::Some(value) => {
-            request.header("If-Match", crate::param_string(value)?)
-        }
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
     client.send(request).await
@@ -1325,7 +1311,7 @@ pub async fn complete_task(
 pub async fn reopen_task(
     client: &crate::Client,
     id: &str,
-    if_match: ::std::option::Option<&::std::option::Option<::std::string::String>>,
+    if_match: ::std::option::Option<&str>,
 ) -> ::std::result::Result<types::TaskTransitioned, crate::Error> {
     let request = crate::Request::new(
         crate::Method::POST,
@@ -1340,9 +1326,7 @@ pub async fn reopen_task(
     );
     let request = request.authenticated();
     let request = match &if_match {
-        ::std::option::Option::Some(value) => {
-            request.header("If-Match", crate::param_string(value)?)
-        }
+        ::std::option::Option::Some(value) => request.header("If-Match", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
     client.send(request).await

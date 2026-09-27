@@ -13,7 +13,7 @@ pub trait Clock: Send + Sync + fmt::Debug {
 
 /// The system clock (production).
 #[derive(Debug, Clone, Copy, Default)]
-pub struct SystemClock;
+pub struct SystemClock {}
 
 impl Clock for SystemClock {
     fn now(&self) -> DateTime<Utc> {

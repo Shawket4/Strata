@@ -24,7 +24,7 @@ use sha2::{Digest, Sha256};
 use crate::error::CoreResult;
 use crate::store::notifications::{self, ScheduledRow};
 use crate::store::settings;
-use crate::view::model::{NotificationMode, NotificationOp, NotificationResult};
+use crate::view::model::{NotificationMode, NotificationOp, NotificationOpKind, NotificationResult};
 
 /// Size of the rolling window of scheduled reminders.
 pub const WINDOW: usize = 60;
@@ -141,31 +141,26 @@ pub fn recompute(
         if mode == NotificationMode::OsScheduled && !fired {
             // A reminder that already fired is left alone: cancelling would remove it from the
             // notification centre.
-            cancels.push(NotificationOp::Cancel { id: row.id });
+            cancels.push(NotificationOp::cancel(row.id));
         }
     }
     for p in &planned {
         let old = existing.iter().find(|r| r.id == p.id);
-        let op_schedule = || NotificationOp::Schedule {
+        let op_of = |kind| NotificationOp {
+            kind,
             id: p.id,
-            at: p.fire_at,
+            at: Some(p.fire_at),
             title: p.title.clone(),
             body: p.body.clone(),
             task_id: p.task_id.clone(),
         };
         let op = match old {
-            None => Some(op_schedule()),
-            Some(r) if r.state == "failed" => Some(op_schedule()),
+            None => Some(op_of(NotificationOpKind::Schedule)),
+            Some(r) if r.state == "failed" => Some(op_of(NotificationOpKind::Schedule)),
             Some(r)
                 if r.fire_at != p.fire_at.to_rfc3339() || r.title != p.title || r.body != p.body =>
             {
-                Some(NotificationOp::Update {
-                    id: p.id,
-                    at: p.fire_at,
-                    title: p.title.clone(),
-                    body: p.body.clone(),
-                    task_id: p.task_id.clone(),
-                })
+                Some(op_of(NotificationOpKind::Update))
             }
             Some(_) => None,
         };
@@ -182,10 +177,7 @@ pub fn recompute(
             }
         }
     }
-    cancels.sort_by_key(|op| match op {
-        NotificationOp::Cancel { id } => *id,
-        _ => 0,
-    });
+    cancels.sort_by_key(|op| op.id);
     cancels.extend(schedules);
     Ok(cancels)
 }
@@ -197,13 +189,10 @@ pub fn cancel_all(conn: &Connection, now: DateTime<Utc>, mode: NotificationMode)
         notifications::delete(conn, row.id)?;
         let fired = crate::view::build::ts(&row.fire_at) <= now || row.state == "shown";
         if mode == NotificationMode::OsScheduled && !fired {
-            ops.push(NotificationOp::Cancel { id: row.id });
+            ops.push(NotificationOp::cancel(row.id));
         }
     }
-    ops.sort_by_key(|op| match op {
-        NotificationOp::Cancel { id } => *id,
-        _ => 0,
-    });
+    ops.sort_by_key(|op| op.id);
     Ok(ops)
 }
 
@@ -236,7 +225,9 @@ pub fn due_now(conn: &Connection, now: DateTime<Utc>) -> CoreResult<Vec<Notifica
             "UPDATE scheduled_notifications SET state = 'shown', updated_at = ?2 WHERE id = ?1",
             params![row.id, now.to_rfc3339()],
         )?;
-        ops.push(NotificationOp::ShowNow {
+        ops.push(NotificationOp {
+            kind: NotificationOpKind::ShowNow,
+            at: None,
             id: row.id,
             title: row.title,
             body: row.body,

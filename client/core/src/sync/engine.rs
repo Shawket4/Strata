@@ -25,7 +25,7 @@ use crate::store::{outbox, sync_state};
 use crate::sync::apply;
 use crate::sync::model::SyncCursor;
 use crate::view::Topics;
-use crate::view::model::{Connectivity, SyncPhase};
+use crate::view::model::{Connectivity, SyncActivity, SyncPhase};
 
 /// What woke the engine (§12.4 triggers).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -97,7 +97,7 @@ pub trait SyncHost: Send + Sync {
         f: impl FnOnce(&Connection, &str) -> CoreResult<(R, Topics)>,
     ) -> CoreResult<R>;
     /// Reports progress (views of the sync pill).
-    fn set_phase(&self, phase: SyncPhase);
+    fn set_activity(&self, activity: SyncActivity);
     /// Reports reachability.
     fn set_connectivity(&self, connectivity: Connectivity);
 }
@@ -180,7 +180,7 @@ impl SyncEngine {
                 Flow::Go(()) => CycleOutcome::Synced,
             },
         };
-        host.set_phase(SyncPhase::Idle);
+        host.set_activity(SyncActivity::default());
         if outcome == CycleOutcome::Synced {
             host.set_connectivity(Connectivity::Online);
             host.db(|c, now| {
@@ -211,8 +211,10 @@ impl SyncEngine {
             if let Flow::Stop(o) = self.crash(Step::MarkedInflight, ()) {
                 return Ok(Flow::Stop(o));
             }
-            host.set_phase(SyncPhase::Pushing {
+            host.set_activity(SyncActivity {
+                phase: SyncPhase::Pushing,
                 ops: u32::try_from(batch.len()).unwrap_or(u32::MAX),
+                ..SyncActivity::default()
             });
             let request = batch
                 .iter()
@@ -267,7 +269,10 @@ impl SyncEngine {
                     Flow::Stop(o) => return Ok(Flow::Stop(o)),
                 }
             };
-            host.set_phase(SyncPhase::Pulling);
+            host.set_activity(SyncActivity {
+                phase: SyncPhase::Pulling,
+                ..SyncActivity::default()
+            });
             let page = match self
                 .api
                 .changes(state.cursor_seq, epoch, self.page_limit)
@@ -345,9 +350,10 @@ impl SyncEngine {
                 }
                 Ok((s, Topics::NONE))
             })?;
-            host.set_phase(SyncPhase::Bootstrapping {
+            host.set_activity(SyncActivity {
+                phase: SyncPhase::Bootstrapping,
                 pages_done: state.bootstrap_pages,
-                pages_total: None,
+                ..SyncActivity::default()
             });
             let page = match self.api.bootstrap(state.bootstrap_cursor.clone()).await {
                 Ok(p) => p,
@@ -381,9 +387,10 @@ impl SyncEngine {
                 Ok((last, re.apply(c)?))
             })?;
             report.pulled += n;
-            host.set_phase(SyncPhase::Bootstrapping {
+            host.set_activity(SyncActivity {
+                phase: SyncPhase::Bootstrapping,
                 pages_done: state.bootstrap_pages + 1,
-                pages_total: None,
+                ..SyncActivity::default()
             });
             if let Flow::Stop(o) = self.crash(Step::BootstrapApplied, ()) {
                 return Ok(Flow::Stop(o));

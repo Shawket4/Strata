@@ -18,3 +18,16 @@ pub mod views;
 
 mod runtime;
 mod sink;
+
+use crate::error::CoreError;
+use crate::view::model::CoreFailure;
+
+/// Runs a core call and converts its error for Dart.
+fn lift<T>(f: impl FnOnce() -> Result<T, CoreError>) -> Result<T, CoreFailure> {
+    f().map_err(Into::into)
+}
+
+/// Runs an async core call and converts its error for Dart.
+async fn lift_async<T>(f: impl Future<Output = Result<T, CoreError>>) -> Result<T, CoreFailure> {
+    f.await.map_err(Into::into)
+}

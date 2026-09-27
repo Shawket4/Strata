@@ -654,7 +654,7 @@ pub async fn get_document(
     patch, path = "/documents/{id}", tag = "entities", operation_id = "patch_document",
     params(
         ("id" = Ulid, Path, description = "Document ID (ULID)."),
-        ("If-Match" = Option<String>, Header, description = "Optional: the note's current version."),
+        ("If-Match" = Option<String>, Header, nullable = false, description = "Optional: the note's current version."),
     ),
     request_body = PatchDocumentRequest,
     responses(
@@ -832,7 +832,7 @@ pub async fn get_place(
     patch, path = "/places/{id}", tag = "entities", operation_id = "patch_place",
     params(
         ("id" = Ulid, Path, description = "Place ID (ULID)."),
-        ("If-Match" = Option<String>, Header, description = "Optional: the note's current version."),
+        ("If-Match" = Option<String>, Header, nullable = false, description = "Optional: the note's current version."),
     ),
     request_body = PatchPlaceRequest,
     responses(

@@ -1,0 +1,10 @@
+# flutter_rust_bridge_codegen generate (run in this directory; codegen 2.13.0 = runtime 2.13.0).
+# Only `crate::api` functions are callable from Dart; view-models and errors are the types
+# they carry.
+rust_input: crate::api,crate::view::model
+rust_root: ../../../core
+dart_output: lib/src/generated
+dart_entrypoint_class_name: StrataCore
+add_mod_to_lib: false
+web: false
+dart_format_line_length: 80

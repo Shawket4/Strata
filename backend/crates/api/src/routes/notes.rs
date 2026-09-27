@@ -458,7 +458,7 @@ pub async fn update_note(
     post, path = "/notes/{id}/move", tag = "notes", operation_id = "move_note",
     params(
         ("id" = Ulid, Path, description = "Note ID (ULID)."),
-        ("If-Match" = Option<String>, Header, description = "Optional: the note's current version."),
+        ("If-Match" = Option<String>, Header, nullable = false, description = "Optional: the note's current version."),
     ),
     request_body = MoveNoteRequest,
     responses(

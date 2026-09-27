@@ -178,7 +178,13 @@ pub fn local_graph(conn: &Connection, id: &str, depth: u8) -> CoreResult<LocalGr
     let loaded = load(conn)?;
     let g = &loaded.graph;
     let Some(focus) = g.index_of(id) else {
-        return Ok(LocalGraphView::NotFound { id: id.to_owned() });
+        return Ok(LocalGraphView {
+            center: id.to_owned(),
+            found: false,
+            depth: 0,
+            nodes: Vec::new(),
+            edges: Vec::new(),
+        });
     };
     let depth = depth.clamp(1, 3);
     let hood = neighbourhood(g, focus, depth, &Filter::default())
@@ -203,8 +209,9 @@ pub fn local_graph(conn: &Connection, id: &str, depth: u8) -> CoreResult<LocalGr
             }
         })
         .collect();
-    Ok(LocalGraphView::Ready {
+    Ok(LocalGraphView {
         center: id.to_owned(),
+        found: true,
         depth,
         nodes,
         edges: edge_views(g, hood.edges.iter().copied()),
