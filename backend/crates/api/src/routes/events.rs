@@ -31,7 +31,7 @@ pub async fn events(
 ) -> Result<HttpResponse, actix_web::Error> {
     let config = req
         .app_data::<web::Data<WsConfig>>()
-        .map_or_else(WsConfig::default, |c| **c);
+        .map_or_else(WsConfig::default, |c| ***c);
     let frames = events::connection(
         bus.into_inner(),
         state.revocations().clone(),

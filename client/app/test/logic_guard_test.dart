@@ -272,7 +272,8 @@ void main() {
     final packages = loadWorkspace(root);
     expect(packages.map((p) => p.name), contains('strata_ui'));
     expect(packages.map((p) => p.name), contains('strata_bridge'));
-    expect(packages, hasLength(18));
+    expect(packages.map((p) => p.name), contains('strata_state'));
+    expect(packages, hasLength(19));
     expect(runGuard(root), isEmpty);
   });
 }

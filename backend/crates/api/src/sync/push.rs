@@ -191,7 +191,7 @@ pub async fn push(
         let stored = log::idempotency_get(&mut tx, op_id)
             .await
             .map_err(|e| index(&e))?;
-        tx.commit().await.map_err(|e| index(&e.into()))?;
+        tx.commit().await.map_err(|e| index(&e))?;
         let bytes = if let Some(rec) = stored {
             rec.result
         } else {
@@ -202,7 +202,7 @@ pub async fn push(
                 log::idempotency_put(&mut tx, op_id, ctx.device, &bytes, ctx.clock.now())
                     .await
                     .map_err(|e| index(&e))?;
-            tx.commit().await.map_err(|e| index(&e.into()))?;
+            tx.commit().await.map_err(|e| index(&e))?;
             rec.result
         };
         results.push((op_id, bytes));
@@ -907,7 +907,7 @@ async fn relink(ctx: &PushContext<'_>, id: NoteId) -> Result<(), Problem> {
     )
     .await
     .map_err(|e| index(&e))?;
-    tx.commit().await.map_err(|e| index(&e.into()))?;
+    tx.commit().await.map_err(|e| index(&e))?;
     Ok(())
 }
 
@@ -942,7 +942,7 @@ async fn device_settings(
         .await
         .map_err(|e| index(&e))?;
     }
-    tx.commit().await.map_err(|e| index(&e.into()))?;
+    tx.commit().await.map_err(|e| index(&e))?;
     if p.reminders_enabled.is_some() {
         publish(ctx.bus, ctx.scope.user_id(), Event::DeviceSettingsChanged {
             device_id: p.device_id,

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
@@ -366,19 +368,40 @@ void main() {
     test('forwards errors and closes', () async {
       final fake = FakeCoreApi();
       final events = <Object>[];
-      final done = fake
-          .watchSettings()
-          .listen(events.add, onError: events.add)
-          .asFuture<void>();
+      final done = Completer<void>();
+      fake.watchSettings().listen(
+        events.add,
+        onError: events.add,
+        onDone: done.complete,
+      );
       fake.settings
         ..add(StrataFixtures.settingsView)
         ..addError(StrataFixtures.coreFailure);
       fake.dispose();
-      await done.catchError((_) {});
+      await done.future;
       expect(events, [
         same(StrataFixtures.settingsView),
         same(StrataFixtures.coreFailure),
       ]);
+    });
+
+    test('keeps order when live values follow a pending replay', () async {
+      final fake = FakeCoreApi();
+      addTearDown(fake.dispose);
+      final first = StrataFixtures.homeView;
+      final second = HomeView(
+        recentNotes: const [],
+        inboxCount: 1,
+        tasks: StrataFixtures.taskSections,
+        sync_: StrataFixtures.syncPillOffline,
+      );
+      fake.home.add(first);
+      final seen = <HomeView>[];
+      final sub = fake.watchHome().listen(seen.add);
+      addTearDown(sub.cancel);
+      fake.home.add(second);
+      await Future<void>.delayed(Duration.zero);
+      expect(seen, [same(first), same(second)]);
     });
 
     test('families keep one stream per argument', () {

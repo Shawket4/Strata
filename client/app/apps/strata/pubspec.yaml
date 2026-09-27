@@ -30,6 +30,7 @@ dependencies:
   strata_maps: any
   strata_notes: any
   strata_settings: any
+  strata_state: any
   strata_sync: any
   strata_tasks: any
   strata_ui: any

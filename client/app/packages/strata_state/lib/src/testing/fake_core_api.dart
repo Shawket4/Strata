@@ -85,12 +85,23 @@ final class FakeStream<T> implements EventSink<T> {
   bool _hasLatest = false;
 
   /// The stream handed to the provider.
+  ///
+  /// Live values are delivered synchronously, so one `tester.pump()` after
+  /// [add] shows them; the replayed value is delivered asynchronously (a
+  /// stream may not emit during `listen`), and live values wait behind it.
   Stream<T> get stream => Stream<T>.multi((subscriber) {
-    if (_hasLatest) subscriber.add(_latest as T);
+    var replaying = false;
+    if (_hasLatest) {
+      replaying = true;
+      subscriber.add(_latest as T);
+      scheduleMicrotask(() => replaying = false);
+    }
     final subscription = _controller.stream.listen(
-      subscriber.add,
-      onError: subscriber.addError,
-      onDone: subscriber.close,
+      (value) => replaying ? subscriber.add(value) : subscriber.addSync(value),
+      onError: (Object error, StackTrace stackTrace) => replaying
+          ? subscriber.addError(error, stackTrace)
+          : subscriber.addErrorSync(error, stackTrace),
+      onDone: () => replaying ? subscriber.close() : subscriber.closeSync(),
     );
     subscriber
       ..onCancel = subscription.cancel

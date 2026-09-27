@@ -9,7 +9,7 @@
 library;
 
 import 'dart:io';
-import 'dart:isolate';
+import 'dart:convert';
 
 /// One function: return type, name and normalised parameter list.
 final class ApiFunction {
@@ -174,20 +174,42 @@ List<String> checkDelegation(
   return problems;
 }
 
-/// The directory of [packageUri]'s `lib/`, resolved through the package
-/// config (independent of the working directory).
-Future<Directory> packageLib(String package) async {
-  final uri = await Isolate.resolvePackageUri(
-    Uri.parse('package:$package/$package.dart'),
-  );
-  if (uri == null) throw StateError('package $package not resolved');
-  return File.fromUri(uri).parent;
+/// The `lib/` directory of [package], resolved through the workspace's
+/// `.dart_tool/package_config.json` (found from the working directory up),
+/// so the check does not depend on relative paths between packages.
+/// (`Isolate.resolvePackageUri` is unsupported under `flutter test`.)
+Directory packageLib(String package) {
+  var dir = Directory.current.absolute;
+  while (true) {
+    final config = File('${dir.path}/.dart_tool/package_config.json');
+    if (config.existsSync()) {
+      final json =
+          jsonDecode(config.readAsStringSync()) as Map<String, Object?>;
+      final packages = (json['packages']! as List<Object?>)
+          .cast<Map<String, Object?>>();
+      for (final entry in packages) {
+        if (entry['name'] != package) continue;
+        var root = entry['rootUri']! as String;
+        if (!root.endsWith('/')) root = '$root/';
+        final lib = config.uri
+            .resolve(root)
+            .resolve((entry['packageUri'] as String?) ?? 'lib/');
+        return Directory.fromUri(lib);
+      }
+      throw StateError('$package is not in ${config.path}');
+    }
+    final parent = dir.parent;
+    if (parent.path == dir.path) {
+      throw StateError('no .dart_tool/package_config.json above the cwd');
+    }
+    dir = parent;
+  }
 }
 
 /// The generated facade files of `strata_bridge`.
 Future<List<File>> facadeFiles() async {
   final api = Directory(
-    '${(await packageLib('strata_bridge')).path}'
+    '${packageLib('strata_bridge').path}'
     '/src/generated/api',
   );
   return api

@@ -484,7 +484,7 @@ pub async fn bootstrap(
             }
         }
     }
-    tx.commit().await.map_err(sqlx_problem)?;
+    tx.commit().await.map_err(index_problem)?;
     let mut records = Vec::with_capacity(items.len());
     for item in items {
         match item {
@@ -685,7 +685,7 @@ pub async fn changes(
         let record = current(&mut tx, ty, &r.entity_id).await?;
         kept.insert(r.seq, (ty, r.entity_id, record));
     }
-    tx.commit().await.map_err(sqlx_problem)?;
+    tx.commit().await.map_err(index_problem)?;
     let mut out = Vec::with_capacity(kept.len());
     for (seq, (ty, id, record)) in kept {
         let seq = u64::try_from(seq).unwrap_or(0);

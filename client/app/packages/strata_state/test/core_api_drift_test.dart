@@ -20,8 +20,8 @@ void main() {
 
   setUpAll(() async {
     facade = await loadFacade();
-    final lib = (await packageLib('strata_state')).path;
-    final bridgeLib = (await packageLib('strata_bridge')).path;
+    final lib = packageLib('strata_state').path;
+    final bridgeLib = packageLib('strata_bridge').path;
     interfaceSource = File('$lib/src/core_api.dart').readAsStringSync();
     bridgeSource = File('$lib/src/bridge_core_api.dart').readAsStringSync();
     librarySource = File('$lib/strata_state.dart').readAsStringSync();
