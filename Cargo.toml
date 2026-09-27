@@ -138,3 +138,12 @@ git2 = { version = "0.21", default-features = false, features = ["vendored-libgi
 # (runtime pinned to the exact flutter_rust_bridge_codegen version)
 rusqlite = { version = "0.39", features = ["bundled"] }
 flutter_rust_bridge = { version = "=2.13.0", features = ["chrono"] }
+
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+[profile.test]
+debug = "line-tables-only"

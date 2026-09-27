@@ -213,6 +213,11 @@ impl Prepared {
         }
     }
 
+    /// Whether ours supplied the output line-ending style.
+    pub fn line_endings_from_ours(&self) -> bool {
+        self.ours.converted
+    }
+
     /// Whether the output style was changed by one side.
     pub fn line_endings_changed(&self) -> bool {
         self.ours.converted || self.theirs.converted

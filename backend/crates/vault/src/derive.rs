@@ -304,6 +304,41 @@ pub fn derive(
         kind: Some(kind),
         ..Derived::default()
     };
+    if let Some(s) = sidecar {
+        for r in &s.rejected {
+            out.rejected
+                .push((NoteId::from_ulid(r.target_id), r.kind.as_str().to_owned(), to_utc(r.at)));
+        }
+        let own = dedupe_kind(crate::paths::untrash_path(path).unwrap_or(path), kind).to_owned();
+        for k in &s.keep_both {
+            let (a, b) = (id.to_string(), k.other_id.to_string());
+            if a != b {
+                out.keep_both.push(KeepBothRow {
+                    kind: own.clone(),
+                    a,
+                    b,
+                    at: to_utc(k.at),
+                });
+            }
+        }
+        if let Some(serde_json::Value::Array(items)) = s.extra.get(TASK_KEEP_BOTH_KEY) {
+            for item in items {
+                let get = |k: &str| item.get(k).and_then(serde_json::Value::as_str);
+                if let (Some(a), Some(b), Some(at)) = (get("task"), get("other"), get("at"))
+                    && let Ok(at) = DateTime::parse_from_rfc3339(at)
+                    && a != b
+                {
+                    out.keep_both.push(KeepBothRow {
+                        kind: "task".into(),
+                        a: a.to_owned(),
+                        b: b.to_owned(),
+                        at: to_utc(at),
+                    });
+                }
+            }
+        }
+    }
+
     if trashed {
         return Some(out);
     }
@@ -396,41 +431,6 @@ pub fn derive(
     }
     out.relations
         .sort_by(|a, b| (&a.rel_type, a.dst_id).cmp(&(&b.rel_type, b.dst_id)));
-    if let Some(s) = sidecar {
-        for r in &s.rejected {
-            out.rejected
-                .push((NoteId::from_ulid(r.target_id), r.kind.as_str().to_owned(), to_utc(r.at)));
-        }
-        let own = dedupe_kind(path, kind).to_owned();
-        for k in &s.keep_both {
-            let (a, b) = (id.to_string(), k.other_id.to_string());
-            if a != b {
-                out.keep_both.push(KeepBothRow {
-                    kind: own.clone(),
-                    a,
-                    b,
-                    at: to_utc(k.at),
-                });
-            }
-        }
-        if let Some(serde_json::Value::Array(items)) = s.extra.get(TASK_KEEP_BOTH_KEY) {
-            for item in items {
-                let get = |k: &str| item.get(k).and_then(serde_json::Value::as_str);
-                if let (Some(a), Some(b), Some(at)) = (get("task"), get("other"), get("at"))
-                    && let Ok(at) = DateTime::parse_from_rfc3339(at)
-                    && a != b
-                {
-                    out.keep_both.push(KeepBothRow {
-                        kind: "task".into(),
-                        a: a.to_owned(),
-                        b: b.to_owned(),
-                        at: to_utc(at),
-                    });
-                }
-            }
-        }
-    }
-
     // Blocks with IDs.
     let body_offset = doc.body_offset();
     let mut block_ids = BTreeSet::new();
