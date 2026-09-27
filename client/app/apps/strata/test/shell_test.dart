@@ -306,6 +306,7 @@ void main() {
     test('locations', () {
       expect(const HomeRoute().location, '/home');
       expect(const InboxRoute().location, '/inbox');
+      expect(const InboxItemRoute(noteId: 'c-1').location, '/inbox/c-1');
       expect(const TasksRoute().location, '/tasks');
       expect(const TaskRoute(taskId: 't-1').location, '/tasks/t-1');
       expect(const NotesRoute().location, '/notes');

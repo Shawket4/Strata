@@ -4,6 +4,7 @@
 
 pub mod ai;
 pub mod entities;
+pub mod files;
 pub mod notes;
 pub mod read;
 pub mod relations;

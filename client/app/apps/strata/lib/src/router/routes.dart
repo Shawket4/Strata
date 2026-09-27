@@ -65,7 +65,12 @@ class _StandaloneScreen extends StatelessWidget {
       routes: [TypedGoRoute<HomeRoute>(path: '/home')],
     ),
     TypedStatefulShellBranch<InboxBranch>(
-      routes: [TypedGoRoute<InboxRoute>(path: '/inbox')],
+      routes: [
+        TypedGoRoute<InboxRoute>(
+          path: '/inbox',
+          routes: [TypedGoRoute<InboxItemRoute>(path: ':noteId')],
+        ),
+      ],
     ),
     TypedStatefulShellBranch<TasksBranch>(
       routes: [
@@ -207,6 +212,25 @@ class InboxRoute extends GoRouteData with $InboxRoute {
   Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
     state,
     InboxScreen(
+      onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
+      onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
+    ),
+  );
+}
+
+/// `/inbox/:noteId`: one capture with its suggestions selected.
+class InboxItemRoute extends GoRouteData with $InboxItemRoute {
+  /// Creates the route for the capture [noteId].
+  const new({required this.noteId});
+
+  /// The capture's note ID.
+  final String noteId;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
+    state,
+    InboxScreen(
+      initialNoteId: noteId,
       onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
       onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
     ),

@@ -4,8 +4,38 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Strata graph assembly from the index (global, local, entity lens), saved JSON Canvas maps, and the Leiden `cluster` job (PLAN §6.5, §6.8, §7.5 Graph, §9.2, §9.6, §10)"
 
 [dependencies]
+strata-common = { workspace = true, features = ["sqlx"] }
+strata-index = { workspace = true }
+strata-vault = { workspace = true }
+strata-jobs = { workspace = true }
+strata-ai = { workspace = true }
+graph-algo = { workspace = true }
+domain = { workspace = true }
+vault-format = { workspace = true }
+sqlx = { workspace = true }
+pgvector = { workspace = true }
+tokio = { workspace = true }
+futures-util = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rmp-serde = { workspace = true }
+chrono = { workspace = true }
+ulid = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+strata-testkit = { workspace = true }
+strata-ai = { workspace = true, features = ["test-support"] }
+strata-jobs = { workspace = true, features = ["test-support"] }
+chrono-tz = { workspace = true }
+pretty_assertions = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true

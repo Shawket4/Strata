@@ -35,6 +35,13 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           path: '/inbox',
           hasOverriddenOnExit: false,
           factory: $InboxRoute._fromState,
+          routes: [
+            GoRouteData.$route(
+              path: ':noteId',
+              hasOverriddenOnExit: false,
+              factory: $InboxItemRoute._fromState,
+            ),
+          ],
         ),
       ],
     ),
@@ -179,6 +186,30 @@ mixin $InboxRoute on GoRouteData {
 
   @override
   String get location => GoRouteData.$location('/inbox');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $InboxItemRoute on GoRouteData {
+  static InboxItemRoute _fromState(GoRouterState state) =>
+      InboxItemRoute(noteId: state.pathParameters['noteId']!);
+
+  InboxItemRoute get _self => this as InboxItemRoute;
+
+  @override
+  String get location =>
+      GoRouteData.$location('/inbox/${Uri.encodeComponent(_self.noteId)}');
 
   @override
   void go(BuildContext context) => context.go(location);
