@@ -31,20 +31,30 @@ fn scalar() -> impl Strategy<Value = String> {
 }
 
 fn known_entry() -> impl Strategy<Value = (String, PropertyValue)> {
-    (prop::sample::select(KnownKey::ALL.to_vec()), scalar(), prop::collection::vec(scalar(), 0..4)).prop_map(
-        |(k, s, list)| {
+    (
+        prop::sample::select(KnownKey::ALL.to_vec()),
+        scalar(),
+        prop::collection::vec(scalar(), 0..4),
+    )
+        .prop_map(|(k, s, list)| {
             let v = match k.shape() {
                 ValueShape::Text | ValueShape::Link => PropertyValue::Text(s),
                 ValueShape::List | ValueShape::LinkList => PropertyValue::List(list),
             };
             (k.as_str().to_owned(), v)
-        },
-    )
+        })
 }
 
 fn unknown_entry() -> impl Strategy<Value = (String, PropertyValue)> {
-    ("[a-z][a-z0-9_]{0,8}( [a-z]{1,4})?", scalar(), prop::collection::vec(scalar(), 0..3), 0..3u8)
-        .prop_filter("not a known key", |(k, ..)| KnownKey::from_name(k).is_none())
+    (
+        "[a-z][a-z0-9_]{0,8}( [a-z]{1,4})?",
+        scalar(),
+        prop::collection::vec(scalar(), 0..3),
+        0..3u8,
+    )
+        .prop_filter("not a known key", |(k, ..)| {
+            KnownKey::from_name(k).is_none()
+        })
         .prop_map(|(k, s, list, pick)| {
             let v = match pick {
                 0 => PropertyValue::Text(s),
@@ -69,7 +79,10 @@ fn word() -> impl Strategy<Value = String> {
 }
 
 fn paragraph() -> impl Strategy<Value = (String, Option<String>)> {
-    (prop::collection::vec(word(), 1..8), prop::option::of("[a-z0-9]{1,6}"))
+    (
+        prop::collection::vec(word(), 1..8),
+        prop::option::of("[a-z0-9]{1,6}"),
+    )
         .prop_map(|(words, id)| (words.join(" "), id))
 }
 
@@ -94,7 +107,13 @@ fn body(eol: LineEnding) -> impl Strategy<Value = (String, usize, Vec<String>)> 
     })
 }
 
-fn doc_parts() -> impl Strategy<Value = (LineEnding, Vec<(String, PropertyValue)>, (String, usize, Vec<String>))> {
+fn doc_parts() -> impl Strategy<
+    Value = (
+        LineEnding,
+        Vec<(String, PropertyValue)>,
+        (String, usize, Vec<String>),
+    ),
+> {
     eol().prop_flat_map(|e| {
         (
             Just(e),
@@ -214,7 +233,8 @@ proptest! {
 }
 
 fn date() -> impl Strategy<Value = NaiveDate> {
-    (2000i32..2100, 1u32..13, 1u32..29).prop_map(|(y, m, d)| NaiveDate::from_ymd_opt(y, m, d).unwrap())
+    (2000i32..2100, 1u32..13, 1u32..29)
+        .prop_map(|(y, m, d)| NaiveDate::from_ymd_opt(y, m, d).unwrap())
 }
 
 fn reminder() -> impl Strategy<Value = Reminder> {
@@ -241,32 +261,45 @@ fn task_spec() -> impl Strategy<Value = TaskSpec> {
     (
         (
             prop::sample::select(vec!["- ", "* ", "  - ", "1. ", "> - "]),
-            prop::sample::select(vec![TaskStatus::Todo, TaskStatus::Done, TaskStatus::Cancelled, TaskStatus::Other('/')]),
+            prop::sample::select(vec![
+                TaskStatus::Todo,
+                TaskStatus::Done,
+                TaskStatus::Cancelled,
+                TaskStatus::Other('/'),
+            ]),
             description(),
             prop::option::of(prop::sample::select(Priority::ALL.to_vec())),
             prop::option::of(prop::sample::select(vec![
-                "every day", "every 2 weeks on Monday, Thursday", "every month on the 1st", "every year when done", "every blue moon",
+                "every day",
+                "every 2 weeks on Monday, Thursday",
+                "every month on the 1st",
+                "every year when done",
+                "every blue moon",
             ])),
         ),
         prop::collection::vec(prop::option::of(date()), 6),
         prop::collection::vec(reminder(), 0..3),
         prop::option::of("t-[0-9a-z]{4,10}"),
     )
-        .prop_map(|((prefix, status, description, priority, recurrence), dates, reminders, block_id)| TaskSpec {
-            prefix: prefix.to_owned(),
-            status,
-            description,
-            priority,
-            recurrence: recurrence.map(str::to_owned),
-            created: dates[0],
-            start: dates[1],
-            scheduled: dates[2],
-            due: dates[3],
-            cancelled: dates[4],
-            done: dates[5],
-            reminders,
-            block_id,
-        })
+        .prop_map(
+            |((prefix, status, description, priority, recurrence), dates, reminders, block_id)| {
+                TaskSpec {
+                    prefix: prefix.to_owned(),
+                    status,
+                    description,
+                    priority,
+                    recurrence: recurrence.map(str::to_owned),
+                    created: dates[0],
+                    start: dates[1],
+                    scheduled: dates[2],
+                    due: dates[3],
+                    cancelled: dates[4],
+                    done: dates[5],
+                    reminders,
+                    block_id,
+                }
+            },
+        )
 }
 
 proptest! {

@@ -129,7 +129,11 @@ impl Frontmatter {
             [] | [Yaml::Null] => &empty,
             [Yaml::Hash(map)] => map,
             [_] => return Err(FrontmatterError::NotAMapping),
-            _ => return Err(FrontmatterError::Unsupported("multiple YAML documents".into())),
+            _ => {
+                return Err(FrontmatterError::Unsupported(
+                    "multiple YAML documents".into(),
+                ));
+            }
         };
         if map.len() != self.entries.len() {
             return Err(FrontmatterError::Unsupported(format!(
@@ -143,7 +147,9 @@ impl Frontmatter {
                 return Err(FrontmatterError::Unsupported("complex mapping key".into()));
             };
             let Some(node) = lookup(map, key) else {
-                return Err(FrontmatterError::Unsupported(format!("key `{key}` not found")));
+                return Err(FrontmatterError::Unsupported(format!(
+                    "key `{key}` not found"
+                )));
             };
             entry.value = yaml::to_property(node, raw_scalar(&entry.raw));
         }

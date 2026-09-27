@@ -198,10 +198,18 @@ struct Prepared<'a> {
 
 impl<'a> Prepared<'a> {
     fn new(body: &'a str) -> Self {
-        let blank = |l: &str| !l.is_empty() && l.chars().all(|c| matches!(c, ' ' | '\t' | '\u{b}' | '\u{c}'));
-        let needs_work = body.contains(['\u{b}', '\u{c}']) || markdown_lines(body).any(|(l, _)| blank(l));
+        let blank = |l: &str| {
+            !l.is_empty()
+                && l.chars()
+                    .all(|c| matches!(c, ' ' | '\t' | '\u{b}' | '\u{c}'))
+        };
+        let needs_work =
+            body.contains(['\u{b}', '\u{c}']) || markdown_lines(body).any(|(l, _)| blank(l));
         if !needs_work {
-            return Self { text: body.into(), removed: Vec::new() };
+            return Self {
+                text: body.into(),
+                removed: Vec::new(),
+            };
         }
         let mut text = String::with_capacity(body.len());
         let mut removed = Vec::new();
@@ -211,11 +219,20 @@ impl<'a> Prepared<'a> {
                 total += content.len();
                 removed.push((text.len(), total));
             } else {
-                text.extend(content.chars().map(|c| if matches!(c, '\u{b}' | '\u{c}') { ' ' } else { c }));
+                text.extend(content.chars().map(|c| {
+                    if matches!(c, '\u{b}' | '\u{c}') {
+                        ' '
+                    } else {
+                        c
+                    }
+                }));
             }
             text.push_str(eol);
         }
-        Self { text: text.into(), removed }
+        Self {
+            text: text.into(),
+            removed,
+        }
     }
 
     /// Maps an offset in the parsed text to the original (a position at an emptied line maps
@@ -657,9 +674,23 @@ mod tests {
         // Positions at an emptied line map to the start of that line.
         assert_eq!(p.map(2), 2);
         assert_eq!(p.map(6), 9);
-        for (parsed, orig) in [(0, 0), (1, 1), (3, 6), (4, 7), (5, 8), (7, 13), (8, 14), (9, 15), (10, 16)] {
+        for (parsed, orig) in [
+            (0, 0),
+            (1, 1),
+            (3, 6),
+            (4, 7),
+            (5, 8),
+            (7, 13),
+            (8, 14),
+            (9, 15),
+            (10, 16),
+        ] {
             assert_eq!(p.map(parsed), orig, "{parsed}");
-            let expect = if &body[orig..=orig] == "\u{b}" { " " } else { &body[orig..=orig] };
+            let expect = if &body[orig..=orig] == "\u{b}" {
+                " "
+            } else {
+                &body[orig..=orig]
+            };
             assert_eq!(expect, &p.text[parsed..=parsed], "{parsed}");
         }
         assert!(Prepared::new("plain\n").removed.is_empty());

@@ -406,24 +406,47 @@ pub async fn export_me(
     auth: Authenticated,
 ) -> Result<HttpResponse, AccountError> {
     // The path comes from the authenticated scope, never from the request.
-    let vault = state.vaults.vault_dir(auth.scope().user_id());
-    let (rx, task) = export::stream_vault_zip(vault);
-    let user = auth.user_id();
-    let state_for_mark = state.clone();
-    tokio::spawn(async move {
-        match task.await {
-            Ok(Ok(())) => {
-                let now = state_for_mark.clock.now();
-                if let Err(err) = state_for_mark.accounts.mark_export_downloaded(user, now).await {
-                    tracing::warn!(user = %user, error = %err, "cannot record export download");
-                }
+    let user = auth.scope().user_id();
+    let (rx, task) = export::stream_vault_zip(state.vaults.vault_dir(user));
+    // Chunks as they are written; once the archive is complete the download is recorded
+    // (admins see only that timestamp) before the response ends.
+    enum Step {
+        Chunks(tokio::sync::mpsc::Receiver<std::io::Result<bytes::Bytes>>),
+        Finish,
+        Done,
+    }
+    let finish_state = state.clone();
+    let mut task = Some(task);
+    let body = futures_util::stream::unfold(Step::Chunks(rx), move |step| {
+        let state = finish_state.clone();
+        let task = task.take();
+        async move {
+            match step {
+                Step::Chunks(mut rx) => match rx.recv().await {
+                    Some(Ok(chunk)) => Some((Ok(chunk), Step::Chunks(rx))),
+                    Some(Err(err)) => Some((Err(err), Step::Done)),
+                    None => {
+                        let Some(task) = task else {
+                            return None;
+                        };
+                        match task.await {
+                            Ok(Ok(())) => {
+                                let now = state.clock.now();
+                                if let Err(err) =
+                                    state.accounts.mark_export_downloaded(user, now).await
+                                {
+                                    tracing::warn!(user = %user, error = %err, "cannot record the export download");
+                                }
+                                Some((Ok(bytes::Bytes::new()), Step::Finish))
+                            }
+                            Ok(Err(err)) => Some((Err(err), Step::Done)),
+                            Err(err) => Some((Err(std::io::Error::other(err)), Step::Done)),
+                        }
+                    }
+                },
+                Step::Finish | Step::Done => None,
             }
-            Ok(Err(err)) => tracing::warn!(user = %user, error = %err, "export aborted"),
-            Err(err) => tracing::error!(user = %user, error = %err, "export task failed"),
         }
-    });
-    let body = futures_util::stream::unfold(rx, |mut rx| async move {
-        rx.recv().await.map(|chunk| (chunk, rx))
     });
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, ZIP))

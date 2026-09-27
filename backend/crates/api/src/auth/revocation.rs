@@ -110,12 +110,12 @@ impl RevocationSet {
         if state.purged.contains_key(&user) {
             return Err(Revoked::UserPurged);
         }
-        if state.sessions.contains_key(&session) {
-            return Err(Revoked::Session);
-        }
         let flags = state.users.get(&user).copied().unwrap_or_default();
         if flags.disabled {
             return Err(Revoked::UserDisabled);
+        }
+        if state.sessions.contains_key(&session) {
+            return Err(Revoked::Session);
         }
         Ok(flags)
     }

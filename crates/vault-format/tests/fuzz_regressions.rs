@@ -16,7 +16,9 @@ fn invalid_frontmatter_is_never_reordered() {
     // yaml-rust2 stops reading at the NUL, so the key count no longer matches the lines.
     assert_eq!(
         doc.frontmatter().unwrap().error(),
-        Some(&FrontmatterError::Unsupported("found 4 top-level lines but 3 keys".into()))
+        Some(&FrontmatterError::Unsupported(
+            "found 4 top-level lines but 3 keys".into()
+        ))
     );
     assert_eq!(doc.render(), text);
     assert_eq!(doc.render_canonical(), text);
@@ -29,9 +31,15 @@ fn bare_carriage_returns_make_frontmatter_read_only() {
     let mut doc = Document::parse(text);
     assert_eq!(
         doc.frontmatter().unwrap().error(),
-        Some(&FrontmatterError::Unsupported("bare carriage return".into()))
+        Some(&FrontmatterError::Unsupported(
+            "bare carriage return".into()
+        ))
     );
-    assert!(doc.frontmatter_mut().set_text(KnownKey::Title, "x").is_err());
+    assert!(
+        doc.frontmatter_mut()
+            .set_text(KnownKey::Title, "x")
+            .is_err()
+    );
     assert_eq!(doc.render(), text);
 }
 
@@ -43,7 +51,10 @@ fn reordering_that_breaks_anchors_falls_back_to_file_order() {
     let fm = doc.frontmatter_mut();
     assert_eq!(fm.get("title"), Some(&PropertyValue::Text("hello".into())));
     fm.set_text(KnownKey::Lang, "en").unwrap();
-    assert_eq!(doc.render(), "---\nbase: &b hello\ntitle: *b\nlang: en\n---\n");
+    assert_eq!(
+        doc.render(),
+        "---\nbase: &b hello\ntitle: *b\nlang: en\n---\n"
+    );
     // Canonical rendering writes the resolved value, which needs no anchor.
     assert_eq!(
         Document::parse(text).render_canonical(),
@@ -70,7 +81,12 @@ fn inserted_fields_stay_separated() {
     let day = NaiveDate::from_ymd_opt(2026, 1, 31).unwrap();
     for kind in DateKind::ALL {
         let edited = t.with_date(kind, Some(day));
-        assert_eq!(edited.date(kind), Some(day), "{kind:?}: {}", edited.as_str());
+        assert_eq!(
+            edited.date(kind),
+            Some(day),
+            "{kind:?}: {}",
+            edited.as_str()
+        );
     }
     assert_eq!(
         t.with_date(DateKind::Due, Some(day)).as_str(),
@@ -83,11 +99,17 @@ fn inserted_fields_stay_separated() {
 fn removing_a_field_removes_its_duplicates() {
     let line = "- [/] In progress ⏫ 🛫 2052-09-20 ⏳🛫 2052-09-20 ⏳ 2026-09-22";
     let t = TaskLine::parse(line).unwrap();
-    assert_eq!(t.date(DateKind::Start), NaiveDate::from_ymd_opt(2052, 9, 20));
+    assert_eq!(
+        t.date(DateKind::Start),
+        NaiveDate::from_ymd_opt(2052, 9, 20)
+    );
     let removed = t.with_date(DateKind::Start, None);
     assert_eq!(removed.date(DateKind::Start), None);
     assert_eq!(removed.as_str(), "- [/] In progress ⏫ ⏳⏳ 2026-09-22");
-    assert_eq!(removed.date(DateKind::Scheduled), NaiveDate::from_ymd_opt(2026, 9, 22));
+    assert_eq!(
+        removed.date(DateKind::Scheduled),
+        NaiveDate::from_ymd_opt(2026, 9, 22)
+    );
 }
 
 /// fuzz/body: pulldown-cmark 0.13.4 panics on this input; analysis must survive it.

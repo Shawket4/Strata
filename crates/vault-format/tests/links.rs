@@ -30,20 +30,38 @@ fn r(p: &str) -> Resolution {
 fn resolution_rules() {
     let idx = PathIndex::new(VAULT.iter().copied());
     let src = Some("inbox/2026-09-27-101500.md");
-    assert_eq!(idx.resolve("Pricing experiments", src), r("notes/Pricing experiments.md"));
+    assert_eq!(
+        idx.resolve("Pricing experiments", src),
+        r("notes/Pricing experiments.md")
+    );
     assert_eq!(idx.resolve("pricing", src), r("concepts/Pricing.md"));
     assert_eq!(idx.resolve("أحمد سمير", src), r("people/أحمد سمير.md"));
-    assert_eq!(idx.resolve("photo.png", src), r("attachments/2026/09/photo.png"));
-    assert_eq!(idx.resolve("09/scan.pdf", src), r("attachments/2026/09/scan.pdf"));
+    assert_eq!(
+        idx.resolve("photo.png", src),
+        r("attachments/2026/09/photo.png")
+    );
+    assert_eq!(
+        idx.resolve("09/scan.pdf", src),
+        r("attachments/2026/09/scan.pdf")
+    );
     assert_eq!(
         idx.resolve("Meeting", src),
-        Resolution::Ambiguous(vec!["notes/2025/Meeting.md".into(), "notes/2026/Meeting.md".into()])
+        Resolution::Ambiguous(vec![
+            "notes/2025/Meeting.md".into(),
+            "notes/2026/Meeting.md".into()
+        ])
     );
-    assert_eq!(idx.resolve("Meeting", Some("notes/2025/Other.md")), r("notes/2025/Meeting.md"));
+    assert_eq!(
+        idx.resolve("Meeting", Some("notes/2025/Other.md")),
+        r("notes/2025/Meeting.md")
+    );
     assert_eq!(idx.resolve("2026/Meeting", src), r("notes/2026/Meeting.md"));
     assert_eq!(idx.resolve("Nope", src), Resolution::Unresolved);
     assert_eq!(idx.resolve("", src), Resolution::CurrentNote);
-    assert_eq!(idx.link_text_for("notes/2026/Meeting.md"), "notes/2026/Meeting");
+    assert_eq!(
+        idx.link_text_for("notes/2026/Meeting.md"),
+        "notes/2026/Meeting"
+    );
     assert_eq!(idx.link_text_for("people/أحمد سمير.md"), "أحمد سمير");
 }
 
@@ -73,8 +91,14 @@ fn rename_rewrites_body_and_frontmatter() {
         &before,
         &after,
         [
-            ("notes/Pricing experiments.md".to_owned(), "notes/archive/Pricing tests 2026.md".to_owned()),
-            ("people/أحمد سمير.md".to_owned(), "people/أحمد سمير عبد الله.md".to_owned()),
+            (
+                "notes/Pricing experiments.md".to_owned(),
+                "notes/archive/Pricing tests 2026.md".to_owned(),
+            ),
+            (
+                "people/أحمد سمير.md".to_owned(),
+                "people/أحمد سمير عبد الله.md".to_owned(),
+            ),
         ],
     );
     let mut doc = Document::parse(NOTE);
@@ -103,7 +127,10 @@ fn untouched_note_is_byte_identical_after_rewrite_pass() {
     let before = PathIndex::new(VAULT.iter().copied());
     let moves = MoveSet::new(&before, &before, Vec::new());
     let mut doc = Document::parse(NOTE);
-    assert_eq!(doc.rewrite_links(&moves, "notes/Churn notes.md").unwrap(), 0);
+    assert_eq!(
+        doc.rewrite_links(&moves, "notes/Churn notes.md").unwrap(),
+        0
+    );
     assert_eq!(doc.render(), NOTE);
 }
 
@@ -118,35 +145,61 @@ fn folder_move_rewrites_path_links_only_when_needed() {
     let moves = MoveSet::new(
         &before,
         &after,
-        [("notes/2026/Meeting.md".to_owned(), "archive/2026/Meeting.md".to_owned())],
+        [(
+            "notes/2026/Meeting.md".to_owned(),
+            "archive/2026/Meeting.md".to_owned(),
+        )],
     );
     let body = "[[notes/2026/Meeting]] [[2026/Meeting|m]] [[notes/2025/Meeting]] [[Meeting]]";
     let out = moves.rewrite_body(body, "people/Shady.md");
     // The ambiguous bare [[Meeting]] is left for the user; the others follow.
-    assert_eq!(out.text, "[[archive/2026/Meeting]] [[2026/Meeting|m]] [[notes/2025/Meeting]] [[Meeting]]");
+    assert_eq!(
+        out.text,
+        "[[archive/2026/Meeting]] [[2026/Meeting|m]] [[notes/2025/Meeting]] [[Meeting]]"
+    );
     assert_eq!(out.changed, 1);
 }
 
 #[test]
 fn canvas_references_follow_moves() {
     let mut c = Canvas::from_json(include_str!("fixtures/maps/Pricing.canvas")).unwrap();
-    assert_eq!(c.rename_file("people/أحمد سمير.md", "people/أحمد سمير عبد الله.md"), 1);
-    assert_eq!(c.files(), ["notes/Pricing experiments.md", "people/أحمد سمير عبد الله.md"]);
+    assert_eq!(
+        c.rename_file("people/أحمد سمير.md", "people/أحمد سمير عبد الله.md"),
+        1
+    );
+    assert_eq!(
+        c.files(),
+        [
+            "notes/Pricing experiments.md",
+            "people/أحمد سمير عبد الله.md"
+        ]
+    );
 }
 
 #[test]
 fn block_id_append_on_fixture_keeps_prose() {
     let body = include_str!("fixtures/notes/Every link form.md");
     let a = analyze(body);
-    let table = a.blocks.iter().find(|b| body[b.span.clone()].starts_with("| Table")).unwrap();
+    let table = a
+        .blocks
+        .iter()
+        .find(|b| body[b.span.clone()].starts_with("| Table"))
+        .unwrap();
     let out = append_block_id(body, table.span.start, "tbl1").unwrap();
     assert_eq!(out.inserted, "\n\n^tbl1");
     assert_eq!(
-        out.body.replacen("| [[Note\\|table alias]] |\n\n^tbl1\n", "| [[Note\\|table alias]] |\n", 1),
+        out.body.replacen(
+            "| [[Note\\|table alias]] |\n\n^tbl1\n",
+            "| [[Note\\|table alias]] |\n",
+            1
+        ),
         body
     );
     let a2 = analyze(&out.body);
-    assert_eq!(a2.block_by_id("tbl1").map(|b| b.span.clone()), Some(table.span.clone()));
+    assert_eq!(
+        a2.block_by_id("tbl1").map(|b| b.span.clone()),
+        Some(table.span.clone())
+    );
     // Every other block and link is unchanged.
     assert_eq!(a2.links.len(), a.links.len());
     assert_eq!(a2.blocks.len(), a.blocks.len());

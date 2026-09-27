@@ -627,7 +627,11 @@ impl TaskLine {
             .filter(|(r, _)| *r < rank)
             .max_by_key(|(_, s)| s.end)
         {
-            let after = if self.text[s.end..].starts_with(|c: char| !is_ws(c)) { " " } else { "" };
+            let after = if self.text[s.end..].starts_with(|c: char| !is_ws(c)) {
+                " "
+            } else {
+                ""
+            };
             return (s.end..s.end, format!(" {field}{after}"));
         }
         self.insert_at_end(field)
@@ -641,7 +645,11 @@ impl TaskLine {
             " "
         };
         // Content may be empty with the block ID right after it (`- [ ] ^t-1`).
-        let after = if self.text[at..].starts_with(|c: char| !is_ws(c)) { " " } else { "" };
+        let after = if self.text[at..].starts_with(|c: char| !is_ws(c)) {
+            " "
+        } else {
+            ""
+        };
         (at..at, format!("{sep}{field}{after}"))
     }
 
@@ -1072,7 +1080,10 @@ mod tests {
         assert_eq!(t2.as_str(), "- [ ] a 🔺 call mom 🔁 every day ^t-1");
         assert_eq!(t2.recurrence_text(), Some("every day"));
         let t = p("- [ ] ^t-1");
-        assert_eq!(t.with_date(DateKind::Due, Some(d("2026-01-01"))).as_str(), "- [ ] 📅 2026-01-01 ^t-1");
+        assert_eq!(
+            t.with_date(DateKind::Due, Some(d("2026-01-01"))).as_str(),
+            "- [ ] 📅 2026-01-01 ^t-1"
+        );
         let t = p("- [ ] call");
         assert_eq!(t.with_block_id("t-9").as_str(), "- [ ] call ^t-9");
         let r = [Reminder {

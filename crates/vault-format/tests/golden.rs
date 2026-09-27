@@ -51,7 +51,11 @@ fn every_markdown_fixture_round_trips_byte_for_byte() {
         let text = std::fs::read_to_string(&f).unwrap();
         let doc = Document::parse(&text);
         assert_eq!(doc.render(), text, "{}", f.display());
-        let rel = f.strip_prefix(&root).unwrap().to_string_lossy().replace('\\', "/");
+        let rel = f
+            .strip_prefix(&root)
+            .unwrap()
+            .to_string_lossy()
+            .replace('\\', "/");
         assert_eq!(validate_vault_path(&rel), Ok(()), "{rel}");
     }
 }
@@ -121,7 +125,10 @@ fn unknown_keys_survive_untouched_and_after_edits() {
     assert_eq!(fm.aliases(), ["pricing tests"]);
     assert_eq!(fm.get("nested"), Some(&PropertyValue::Other));
     assert_eq!(fm.get("publish"), Some(&PropertyValue::Text("true".into())));
-    assert_eq!(fm.get("Title Case Key"), Some(&PropertyValue::Text("keep me".into())));
+    assert_eq!(
+        fm.get("Title Case Key"),
+        Some(&PropertyValue::Text("keep me".into()))
+    );
     assert_eq!(
         fm.get("multiline"),
         Some(&PropertyValue::Text("line one\n\nline three\n".into()))
@@ -168,7 +175,9 @@ fn crlf_and_arabic_note() {
         .collect();
     assert_eq!(ids, ["p-ar1", "p-en1", "t-01j9x1"]);
 
-    doc.frontmatter_mut().set_text(KnownKey::Lang, "mixed").unwrap();
+    doc.frontmatter_mut()
+        .set_text(KnownKey::Lang, "mixed")
+        .unwrap();
     let out = doc.render();
     assert!(out.contains("lang: mixed\r\n"));
     assert!(!out.replace("\r\n", "").contains('\n'));
@@ -226,7 +235,10 @@ fn every_link_form_and_code_is_inert() {
         && !l.path.contains("code")
         && !l.path.contains("math")
         && l.path != "escaped"));
-    assert_eq!(a.block_by_id("quote-id").map(|b| b.kind), Some(BlockKind::BlockQuote));
+    assert_eq!(
+        a.block_by_id("quote-id").map(|b| b.kind),
+        Some(BlockKind::BlockQuote)
+    );
     assert_eq!(a.block_by_id("fakeid"), None);
 }
 
@@ -316,7 +328,10 @@ fn document_custody_matches_frontmatter() {
     assert_eq!(events.len(), 3);
     let state = CustodyState::derive(&events).unwrap();
     assert_eq!(state.location.as_deref(), fm.text(KnownKey::Location));
-    assert_eq!(state.holder.as_deref().unwrap_or(""), fm.text(KnownKey::Holder).unwrap());
+    assert_eq!(
+        state.holder.as_deref().unwrap_or(""),
+        fm.text(KnownKey::Holder).unwrap()
+    );
     assert_eq!(state.last_holder.as_deref(), fm.text(KnownKey::LastHolder));
     assert_eq!(Some(state.status.clone()), fm.status());
     assert_eq!(state.status, DocumentStatus::Stored);
@@ -336,7 +351,9 @@ fn document_custody_matches_frontmatter() {
     .unwrap();
     rewritten.set_body(new_body);
     let (events, _) = custody::parse_section(
-        &rewritten.body()[sections::sections(rewritten.body())[1].own_content_span.clone()],
+        &rewritten.body()[sections::sections(rewritten.body())[1]
+            .own_content_span
+            .clone()],
     );
     let state = CustodyState::derive(&events).unwrap();
     state.write_to(rewritten.frontmatter_mut()).unwrap();
@@ -346,7 +363,10 @@ fn document_custody_matches_frontmatter() {
             "location: \"\"",
         )
         .replace("holder: \"\"", "holder: \"[[Accountant]]\"")
-        .replace("last-holder: \"[[Shady]]\"", "last-holder: \"[[Accountant]]\"")
+        .replace(
+            "last-holder: \"[[Shady]]\"",
+            "last-holder: \"[[Accountant]]\"",
+        )
         .replace("status: stored", "status: checked-out")
         .replace(
             "## Custody\n",
@@ -359,7 +379,10 @@ fn document_custody_matches_frontmatter() {
 fn canvas_fixture_round_trips() {
     let c = Canvas::from_json(CANVAS).unwrap();
     assert_eq!(c.validate(), vec![]);
-    assert_eq!(c.files(), ["notes/Pricing experiments.md", "people/أحمد سمير.md"]);
+    assert_eq!(
+        c.files(),
+        ["notes/Pricing experiments.md", "people/أحمد سمير.md"]
+    );
     assert_eq!(c.to_json(), CANVAS);
 }
 
