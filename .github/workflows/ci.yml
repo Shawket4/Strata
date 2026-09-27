@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+  STRATA_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+
+jobs:
+  rust:
+    name: Rust (fmt, clippy, tests, coverage)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_INITDB_ARGS: --locale=C.UTF-8 --encoding=UTF8
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.94.1
+          components: rustfmt, clippy, llvm-tools-preview
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest,cargo-llvm-cov
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests with coverage (line coverage gate 90%)
+        run: cargo llvm-cov nextest --workspace --no-fail-fast --fail-under-lines 90 --lcov --output-path lcov.info
+      - run: cargo test --workspace --doc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lcov
+          path: lcov.info
+
+  contract:
+    name: OpenAPI contract and generated client
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.94.1
+      - uses: Swatinem/rust-cache@v2
+      - name: Regenerate contract and client, fail on diff
+        run: ./api/generate.sh --check
+
+  fuzz-smoke:
+    name: Fuzz smoke (vault-format)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-fuzz
+      - name: Run each fuzz target for 60s
+        working-directory: crates/vault-format/fuzz
+        run: |
+          for t in $(cargo fuzz list); do cargo fuzz run "$t" -- -max_total_time=60; done
+
+  mutants:
+    name: Mutation testing (critical crates)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.94.1
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-mutants
+      - run: cargo mutants -p vault-format -p text-normalize -p domain --timeout 180 --no-shuffle
+
+  flutter:
+    name: Flutter (analyze, logic guard, widget + golden tests)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: client/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+      - run: dart pub global activate melos
+      - run: melos bootstrap
+      - run: melos run format-check
+      - run: melos run analyze
+      - run: melos run logic-guard
+      - run: melos run test
