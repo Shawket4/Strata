@@ -3,9 +3,39 @@ name = "strata-core"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+rust-version.workspace = true
 publish = false
+description = "Strata client core (PLAN §12): local SQLite per account, outbox, sync, search, reminders, auth and view-models, exposed to Flutter through flutter_rust_bridge"
+
+[lib]
+name = "strata_core"
+# rlib for tests, cdylib for Android/Linux/Windows/macOS (dlopen), staticlib for iOS.
+crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
+vault-format = { workspace = true }
+text-normalize = { workspace = true }
+domain = { workspace = true }
+strata-client = { workspace = true }
+rusqlite = { workspace = true }
+flutter_rust_bridge = { workspace = true }
+serde = { workspace = true }
+rmp-serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+ulid = { workspace = true }
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+pretty_assertions = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true

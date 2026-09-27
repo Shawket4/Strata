@@ -118,6 +118,16 @@ The canonical order is the table order. Unknown keys follow, in their original o
 Keys are case-sensitive (`Title` is an unknown key). Link-list keys are `RelationKey`s; the
 same kebab-case names are the sidecar `type` values.
 
+**Vocabularies come from the `domain` crate** (PLAN L16): relation keys are
+`domain::RelationType`, `MentionType`, `EntityRelationType` and `DocumentRelationType`; the
+values of `kind`, `lang`, `doc-type`, `copy` and `status` are `domain::NoteKind`, `Lang`,
+`DocType`, `CopyKind` and `DocumentStatus`. Typed getters return `Open<T>`: `Known(T)` for the
+canonical spelling, `Other(String)` for anything else (kept verbatim, so e.g. `certified-copy`,
+which `domain` accepts as an alias, reads as `Other` and round-trips unchanged).
+`set_kind(NoteKind::Note)` removes `kind:` (plain notes carry none). Custody event types,
+sidecar `by` (`RelationOrigin`) and task priorities (`Priority`; `Normal` = no signifier)
+are also the `domain` enums.
+
 ### 3.2 Canonical value syntax
 
 ```yaml

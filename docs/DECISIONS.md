@@ -4,6 +4,16 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### Implementation decisions (vault-format)
+Gaps in PLAN §6 filled while building `crates/vault-format` (details in `docs/VAULT_FORMAT.md`); the owner may revisit any of them.
+1. **One global canonical frontmatter key order** for every note kind: `id, kind, title, aliases, tags, created, updated, source, lang`, then entity/document/place property keys (`role, industry, website, phone, email, address, doc-type, copy, location, holder, last-holder, expires, status`), then all relation keys (note relations, `concepts/people/companies`, entity relations, `copy-of`), then unknown keys in original order. PLAN's person/document examples interleave `companies`/`people` among entity fields; those are illustrative only.
+2. **Canonical task field order is the Obsidian Tasks plugin's** (description, reminders, then priority 🔁 ➕ 🛫 ⏳ 📅 ❌ ✅, then `^id`), because the plugin only reads fields at the end of a line. Lines in PLAN's example layout (`📅 … (@…) [[…]] ^id`) are fully parsed and preserved on edit.
+3. **Custody line grammar**: `- YYYY-MM-DD — <type> [[primary]] [at|to|in [[place]]] [by [[person]]] [with|from [[party]]] — [[citation]]…`, plus fixed rules for the frontmatter state each event type produces (PLAN gave only a prose example).
+4. **New `.meta/` shapes**: a `keep_both` list in the per-note sidecar mirrors duplicate "keep both" decisions (PLAN §7.4 names no location); `.meta/clusters.json` is `{version, generated, algorithm, clusters:[{id, name, named_by, notes}]}`.
+5. **Month-end clamping** for recurrences ("the 31st" is 28/29 Feb, 30 Apr), expressed in RRULE as `BYMONTHDAY=28,29,30,31;BYSETPOS=-1`, instead of RFC 5545's skipping; plain `every month` from the 31st drifts after a short month exactly as the Tasks plugin does. Completing a recurring task sets the new line's ➕ to the completion date when the task has one.
+6. **Links in unknown frontmatter keys are not rewritten on rename** (unknown keys are preserved exactly, PLAN §6.4); only known link-holding keys and body links follow moves. Ambiguous link names prefer exact case, then the linking note's folder; otherwise they are reported and never rewritten.
+- Per L16, vault-format's vocabularies come from `domain`: added `domain::DocType`, `domain::MentionType` (`concepts/people/companies`) and `domain::DocumentRelationType` (`copy-of`); frontmatter values outside a vocabulary are kept verbatim as `Open::Other`.
+
 ### L16 widened — shared crates for all shared logic
 - New shared crates `sync-model` (ops, change records, 3-way merge), `graph-algo` (neighbourhoods, Leiden, layouts), `dedupe` (exact/near detection, ranking). Rule: anything both the backend and the client core need goes into a shared crate.
 

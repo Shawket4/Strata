@@ -156,6 +156,11 @@ async fn startup_accepts_the_prepared_database_and_refuses_open_secrets() {
                 mode: 0o640,
             })
         );
+        std::fs::set_permissions(
+            &config.auth.signing_key_file,
+            std::fs::Permissions::from_mode(0o600),
+        )
+        .expect("chmod");
     }
     let mut missing = config.clone();
     missing.auth.signing_key_file = dir.path().join("absent.pem");
@@ -281,7 +286,7 @@ async fn migrate_and_bootstrap_roles_prepare_an_empty_database() {
         .fetch_one(&db.superuser)
         .await
         .expect("query");
-    assert_eq!(users.as_deref(), Some("strata.users"));
+    assert_eq!(users.as_deref(), Some("users"));
     let script = commands::bootstrap_script(&config).expect("script");
     assert_eq!(
         script,

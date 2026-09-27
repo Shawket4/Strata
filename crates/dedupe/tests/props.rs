@@ -53,7 +53,7 @@ proptest! {
     }
 
     #[test]
-    fn case_and_diacritics_never_matter(k in kind(), x in text()) {
+    fn case_and_diacritics_never_matter(k in kind().prop_filter("aliases compare with entities", |k| *k != DedupeKind::Alias), x in text()) {
         let a = Item { kind: k, ..Item::note(Some("a"), &x) };
         let b = Item { kind: k, ..Item::note(Some("b"), &format!("  {}! ", x.to_uppercase())) };
         let out = check(&a, &[Existing::from(b)], &Thresholds::default(), &KeepBothSet::new());

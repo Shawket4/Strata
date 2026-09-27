@@ -130,3 +130,11 @@ clap = { version = "4.6", features = ["derive", "env"] }
 # shared algorithm crates (sync-model: line diffs for the 3-way merge; graph-algo: benches)
 similar = "3.2"
 criterion = { version = "0.8", default-features = false, features = ["cargo_bench_support"] }
+# vault store (strata-vault): the per-user git repository. libgit2 is vendored (no system
+# library, no network transports: the repository never has remotes, PLAN L10).
+git2 = { version = "0.21", default-features = false, features = ["vendored-libgit2"] }
+# client core (strata-core): local SQLite per account (bundled SQLite with FTS5; 0.39 keeps
+# libsqlite3-sys 0.37, which sqlx-sqlite in the lock file also links), and the Flutter bridge
+# (runtime pinned to the exact flutter_rust_bridge_codegen version)
+rusqlite = { version = "0.39", features = ["bundled"] }
+flutter_rust_bridge = { version = "=2.13.0", features = ["chrono"] }
