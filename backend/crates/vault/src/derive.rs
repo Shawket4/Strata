@@ -18,8 +18,7 @@ use strata_index::repo::graph::{Block, Link, Relation};
 use strata_index::repo::notes::Note;
 use strata_index::repo::tasks::Task;
 use strata_index::types::{
-    By, CustodyType, DocCopy, DocStatus, EntityKind, Lang, LinkKind, NoteKind, Priority,
-    TaskStatus,
+    By, CustodyType, DocCopy, DocStatus, EntityKind, Lang, LinkKind, NoteKind, Priority, TaskStatus,
 };
 use text_normalize::{dedupe_key, normalize_for_search};
 use ulid::Ulid;
@@ -154,7 +153,7 @@ pub fn title_of(path: &str, doc: &VDocument) -> String {
 /// The note kind in frontmatter (`note` when absent or unknown).
 pub fn kind_of(doc: &VDocument) -> DNoteKind {
     doc.frontmatter()
-        .and_then(|f| f.kind())
+        .and_then(vault_format::Frontmatter::kind)
         .and_then(|k| k.known())
         .unwrap_or(DNoteKind::Note)
 }
@@ -264,6 +263,7 @@ fn link_values(doc: &VDocument) -> Vec<WikiLink> {
 
 /// Derives every index row of the note at `path` (or of a trashed note, whose only row is
 /// `notes` with `trashed = true`).
+#[allow(clippy::too_many_lines)] // one linear pass; splitting would scatter the rules
 pub fn derive(
     path: &str,
     text: &str,
@@ -284,7 +284,7 @@ pub fn derive(
         .map_or(created, to_utc)
         .max(created);
     let lang = fm
-        .and_then(|f| f.lang())
+        .and_then(vault_format::Frontmatter::lang)
         .and_then(|l| l.known())
         .and_then(|l| l.as_str().parse::<Lang>().ok());
     let body = doc.body();
@@ -306,8 +306,11 @@ pub fn derive(
     };
     if let Some(s) = sidecar {
         for r in &s.rejected {
-            out.rejected
-                .push((NoteId::from_ulid(r.target_id), r.kind.as_str().to_owned(), to_utc(r.at)));
+            out.rejected.push((
+                NoteId::from_ulid(r.target_id),
+                r.kind.as_str().to_owned(),
+                to_utc(r.at),
+            ));
         }
         let own = dedupe_kind(crate::paths::untrash_path(path).unwrap_or(path), kind).to_owned();
         for k in &s.keep_both {
@@ -345,11 +348,18 @@ pub fn derive(
     let analysis = doc.analyze_body();
 
     // Tags and aliases.
-    let mut tags: BTreeSet<String> = fm.map(|f| f.tags()).unwrap_or_default().into_iter().collect();
+    let mut tags: BTreeSet<String> = fm
+        .map(vault_format::Frontmatter::tags)
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
     tags.extend(analysis.tags.iter().map(|t| t.name.clone()));
     out.tags = tags.into_iter().collect();
     let mut aliases: Vec<String> = Vec::new();
-    for a in fm.map(|f| f.aliases()).unwrap_or_default() {
+    for a in fm
+        .map(vault_format::Frontmatter::aliases)
+        .unwrap_or_default()
+    {
         let a = a.trim().to_owned();
         if !a.is_empty() && !aliases.contains(&a) {
             aliases.push(a);
@@ -380,7 +390,11 @@ pub fn derive(
             ord: i32::try_from(ord).unwrap_or(i32::MAX),
             dst_id: dst,
             dst_raw: l.path.clone(),
-            kind: if l.embed { LinkKind::Embed } else { LinkKind::Link },
+            kind: if l.embed {
+                LinkKind::Embed
+            } else {
+                LinkKind::Link
+            },
             anchor,
             block_id,
         });
@@ -479,7 +493,10 @@ pub fn derive(
                 .and_then(|v| v.iter().find(|(_, k)| *k == want).map(|(i, _)| *i))
         };
         if kind == DNoteKind::Place {
-            out.place_parent = Some(rel(RelationKey::Note(RelationType::PartOf), DNoteKind::Place));
+            out.place_parent = Some(rel(
+                RelationKey::Note(RelationType::PartOf),
+                DNoteKind::Place,
+            ));
         }
         if kind == DNoteKind::Document {
             out.document = Some(derive_document(&doc, id, path, ctx, &targets));
@@ -489,11 +506,7 @@ pub fn derive(
 
     // Mentions (people:/companies:).
     for mt in [MentionType::People, MentionType::Companies] {
-        for (dst, dkind) in targets
-            .get(&RelationKey::Mention(mt))
-            .into_iter()
-            .flatten()
-        {
+        for (dst, dkind) in targets.get(&RelationKey::Mention(mt)).into_iter().flatten() {
             if entity_kind(*dkind).is_some() {
                 out.mentions.push((*dst, created, updated));
             }
@@ -600,12 +613,12 @@ fn derive_document(
     Document {
         note_id: id,
         doc_type: fm
-            .and_then(|f| f.doc_type())
+            .and_then(vault_format::Frontmatter::doc_type)
             .map(|d| d.as_str().trim().to_owned())
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "other".to_owned()),
         copy: fm
-            .and_then(|f| f.copy_kind())
+            .and_then(vault_format::Frontmatter::copy_kind)
             .and_then(|c| c.known())
             .and_then(|c| c.as_str().parse::<DocCopy>().ok())
             .unwrap_or(DocCopy::Original),
@@ -617,7 +630,7 @@ fn derive_document(
         holder_id: link_to(KnownKey::Holder, &entities),
         last_holder_id: link_to(KnownKey::LastHolder, &entities),
         status: fm
-            .and_then(|f| f.status())
+            .and_then(vault_format::Frontmatter::status)
             .and_then(|s| s.known())
             .and_then(|s| s.as_str().parse::<DocStatus>().ok())
             .unwrap_or(DocStatus::Stored),
@@ -649,7 +662,12 @@ fn derive_custody(
         let (dst, k) = ctx.resolve(&l.path, path)?;
         want.contains(&k).then_some(dst)
     };
-    let people = [DNoteKind::Person, DNoteKind::Company, DNoteKind::Place, DNoteKind::Document];
+    let people = [
+        DNoteKind::Person,
+        DNoteKind::Company,
+        DNoteKind::Place,
+        DNoteKind::Document,
+    ];
     let mut out = Vec::new();
     for (n, e) in custody_events(doc.body()).iter().enumerate() {
         let at = Utc.from_utc_datetime(&e.date.and_time(NaiveTime::MIN));

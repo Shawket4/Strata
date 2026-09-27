@@ -8,6 +8,10 @@
 //! Screens whose data does not exist locally yet return a well-defined [`Availability`] state
 //! instead of failing.
 
+// Screens are streamed as whole values; variant sizes don't matter, and plain enums map to
+// sealed classes in Dart one to one.
+#![allow(clippy::large_enum_variant)]
+
 use chrono::{DateTime, NaiveDate, Utc};
 
 // ---------------------------------------------------------------------------------------------

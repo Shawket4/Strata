@@ -57,7 +57,7 @@ impl fmt::Debug for ViewHub {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ViewHub")
             .field("watchers", &self.watchers.len())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 

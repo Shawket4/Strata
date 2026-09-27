@@ -146,6 +146,7 @@ pub fn error_kind(err: &ProviderError) -> &'static str {
         ProviderError::Unavailable(_) => "unavailable",
         ProviderError::Truncated => "truncated",
         ProviderError::Refused => "refused",
+        ProviderError::NotJson(_) => "not_json",
         ProviderError::Protocol(_) => "protocol",
         ProviderError::MissingFixture { .. } => "missing_fixture",
     }

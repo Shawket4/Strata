@@ -155,7 +155,10 @@ mod tests {
     fn validate_reports_paths_and_masks_values_in_kinds() {
         let v = compile(&json!({
             "type": "object",
-            "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}},
+            "properties": {
+                "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                "reason": {"type": "string"}
+            },
             "required": ["confidence", "reason"],
             "additionalProperties": false
         }))
@@ -174,7 +177,7 @@ mod tests {
             errs[1].detail,
             "7.5 is greater than the maximum of 1".to_owned()
         );
-        assert_eq!(validate(&v, &json!({"confidence": 1, "reason": "x"})), Err(vec![]).or(Ok(())));
+        assert_eq!(validate(&v, &json!({"confidence": 1, "reason": "x"})), Ok(()));
     }
 
     #[test]

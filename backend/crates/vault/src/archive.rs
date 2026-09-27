@@ -114,10 +114,14 @@ fn read_archive(bytes: &[u8], limits: ImportLimits) -> Result<(Vec<Entry>, Vec<S
             return Err(VaultError::InvalidArchive(reason.into()));
         }
         if file.is_symlink() {
-            return Err(VaultError::InvalidArchive("the archive contains a symlink".into()));
+            return Err(VaultError::InvalidArchive(
+                "the archive contains a symlink".into(),
+            ));
         }
         if file.enclosed_name().is_none() {
-            return Err(VaultError::InvalidArchive("an entry path escapes the vault".into()));
+            return Err(VaultError::InvalidArchive(
+                "an entry path escapes the vault".into(),
+            ));
         }
         if file.is_dir() {
             continue;
@@ -158,8 +162,11 @@ fn read_archive(bytes: &[u8], limits: ImportLimits) -> Result<(Vec<Entry>, Vec<S
         total = total.saturating_add(read);
         if total > limits.max_total_bytes {
             return Err(VaultError::ArchiveTooLarge(
-                format!("the archive is larger than {} bytes uncompressed", limits.max_total_bytes)
-                    .into(),
+                format!(
+                    "the archive is larger than {} bytes uncompressed",
+                    limits.max_total_bytes
+                )
+                .into(),
             ));
         }
         entries.push(Entry { path, bytes: buf });
@@ -204,9 +211,8 @@ impl Core {
                 state.note(i).is_some_and(|(p, _)| p == path)
                     || state.trash_by_id.get(&i).is_some_and(|p| *p == path)
             };
-            let free = id.filter(|i| {
-                !used.contains(i) && (!state.contains_id(*i) || existing_here(*i))
-            });
+            let free =
+                id.filter(|i| !used.contains(i) && (!state.contains_id(*i) || existing_here(*i)));
             let editable = doc.frontmatter().is_none_or(|f| f.error().is_none());
             let final_id = match free {
                 Some(i) => {
@@ -333,8 +339,10 @@ impl VaultService {
 
     /// `POST /import`.
     pub async fn import(&self, scope: &UserScope, bytes: Vec<u8>) -> Result<ImportReport> {
-        self.exec(scope, move |core, s| Box::pin(async move { core.import(s, bytes).await }))
-            .await
+        self.exec(scope, move |core, s| {
+            Box::pin(async move { core.import(s, bytes).await })
+        })
+        .await
     }
 }
 
@@ -353,10 +361,19 @@ mod tests {
 
     #[test]
     fn unsafe_paths_reject_the_archive() {
-        for bad in ["../evil.md", "notes/../../x.md", "/etc/passwd", "C:/x.md", "a\\b.md"] {
+        for bad in [
+            "../evil.md",
+            "notes/../../x.md",
+            "/etc/passwd",
+            "C:/x.md",
+            "a\\b.md",
+        ] {
             let z = zip_of(&[("notes/ok.md", b"x"), (bad, b"x")]);
             assert!(
-                matches!(read_archive(&z, ImportLimits::default()), Err(VaultError::InvalidArchive(_))),
+                matches!(
+                    read_archive(&z, ImportLimits::default()),
+                    Err(VaultError::InvalidArchive(_))
+                ),
                 "{bad}"
             );
         }
@@ -377,7 +394,12 @@ mod tests {
         assert_eq!(names, vec!["notes/ok.md", ".meta/notes/x.json"]);
         assert_eq!(
             skipped,
-            vec![".git/HEAD", ".obsidian/app.json", "notes/.DS_Store", "notes/a?b.md"]
+            vec![
+                ".git/HEAD",
+                ".obsidian/app.json",
+                "notes/.DS_Store",
+                "notes/a?b.md"
+            ]
         );
     }
 
@@ -390,19 +412,28 @@ mod tests {
             max_entry_bytes: 1000,
             max_total_bytes: 10_000,
         };
-        assert!(matches!(read_archive(&z, limits), Err(VaultError::ArchiveTooLarge(_))));
+        assert!(matches!(
+            read_archive(&z, limits),
+            Err(VaultError::ArchiveTooLarge(_))
+        ));
         let z = zip_of(&[("a.md", &big[..900]), ("b.md", &big[..900])]);
         let limits = ImportLimits {
             max_entries: 10,
             max_entry_bytes: 1000,
             max_total_bytes: 1000,
         };
-        assert!(matches!(read_archive(&z, limits), Err(VaultError::ArchiveTooLarge(_))));
+        assert!(matches!(
+            read_archive(&z, limits),
+            Err(VaultError::ArchiveTooLarge(_))
+        ));
         let limits = ImportLimits {
             max_entries: 1,
             ..ImportLimits::default()
         };
-        assert!(matches!(read_archive(&z, limits), Err(VaultError::ArchiveTooLarge(_))));
+        assert!(matches!(
+            read_archive(&z, limits),
+            Err(VaultError::ArchiveTooLarge(_))
+        ));
         assert!(matches!(
             read_archive(b"not a zip", ImportLimits::default()),
             Err(VaultError::InvalidArchive(_))
@@ -422,6 +453,9 @@ mod tests {
         let names: Vec<&str> = archive.file_names().collect();
         let mut sorted = names.clone();
         sorted.sort_unstable();
-        assert_eq!(sorted, vec![".meta/notes/x.json", ".obsidian/app.json", "notes/a.md"]);
+        assert_eq!(
+            sorted,
+            vec![".meta/notes/x.json", ".obsidian/app.json", "notes/a.md"]
+        );
     }
 }

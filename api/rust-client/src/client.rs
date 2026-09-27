@@ -243,7 +243,9 @@ impl Client {
             builder = builder.header(AUTHORIZATION, format!("Bearer {token}"));
         }
         if let Some(body) = &request.body {
-            builder = builder.header(CONTENT_TYPE, MSGPACK).body(body.clone());
+            builder = builder
+                .header(CONTENT_TYPE, request.content_type.unwrap_or(MSGPACK))
+                .body(body.clone());
         }
         let response = builder.send().await?;
         let status = response.status().as_u16();

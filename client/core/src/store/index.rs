@@ -133,6 +133,7 @@ pub fn reindex_note(conn: &Connection, id: &str, resolver: &LinkResolver) -> Cor
     Ok(topics)
 }
 
+#[allow(clippy::too_many_lines)] // one insert block per derived table
 fn index_parsed(
     conn: &Connection,
     id: &str,
@@ -221,7 +222,7 @@ fn index_parsed(
         for (i, e) in p.custody.iter().enumerate() {
             let target = |l: &Option<String>| {
                 l.as_deref()
-                    .and_then(|s| vault_format::WikiLink::parse_exact(s))
+                    .and_then(vault_format::WikiLink::parse_exact)
                     .map(|w| w.target().to_owned())
             };
             let (place, person, party) = (

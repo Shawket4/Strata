@@ -26,6 +26,7 @@ fn seen(conn: &Connection, kind: &str, id: &str) -> CoreResult<()> {
 
 /// Applies one pulled record. `bootstrapping` records the ID for the final sweep.
 /// Re-applying the same record is a no-op (idempotent).
+#[allow(clippy::too_many_lines)] // one arm per record kind
 pub fn apply_record(
     conn: &Connection,
     record: &ChangeRecord,
@@ -215,6 +216,7 @@ pub fn finish_bootstrap(conn: &Connection, now: &str, re: &mut Reindex) -> CoreR
 
 /// Records the result of one pushed op (idempotent: a result for an op that is no longer
 /// `inflight` is ignored).
+#[allow(clippy::too_many_lines)] // one arm per result kind
 pub fn record_result(
     conn: &Connection,
     op: &OutboxOp,

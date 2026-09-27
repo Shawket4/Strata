@@ -109,7 +109,7 @@ impl Core {
         let active = match registry.active()? {
             Some(a) => {
                 let id = crate::store::parse_ulid(&a.user_id)?;
-                Some(Session::open(env.clone(), id)?)
+                Some(Session::open(&env, id)?)
             }
             None => None,
         };
@@ -227,7 +227,7 @@ impl Core {
         let user_id = crate::store::parse_ulid(&t.user_id)?;
         let now = self.env.clock.now().to_rfc3339();
         self.deactivate()?;
-        let session = Session::open(self.env.clone(), user_id)?;
+        let session = Session::open(&self.env, user_id)?;
         session.write(|c, _| {
             tokens::put(c, &stored(&t, &now))?;
             let existing = account::get(c)?;
@@ -265,7 +265,7 @@ impl Core {
         // existed; reopen so they carry the server URL.
         session.close();
         drop(session);
-        let session = Session::open(self.env.clone(), user_id)?;
+        let session = Session::open(&self.env, user_id)?;
         {
             let mut reg = lock(&self.registry);
             reg.activate(&KnownAccount {
@@ -339,7 +339,7 @@ impl Core {
             .ok_or_else(|| CoreError::not_found("account"))?;
         let id: Ulid = crate::store::parse_ulid(user_id)?;
         self.deactivate()?;
-        let session = Session::open(self.env.clone(), id)?;
+        let session = Session::open(&self.env, id)?;
         lock(&self.registry).activate(&KnownAccount {
             last_active_at: self.env.clock.now().to_rfc3339(),
             active: true,

@@ -4,6 +4,13 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### Implementation decisions (sync-model, graph-algo, dedupe)
+- Manual custody events recorded by the user through the API carry `by: user` and need no citation; the citation requirement applies to AI-produced events.
+- Task edits use the hash of the task line as their base version, so edits to other lines of the same note never conflict.
+- Clustering/layout edge weights: user edges 3, AI edges with confidence ≥ 0.85 weight 2, other AI edges 1; similarity edges excluded. Cluster identity kept by greedy Jaccard matching (≥ 0.25).
+- Duplicate detection: exact keys fold simple English plurals; captures and tasks ignore a leading "remind me to" / "don't forget to" / "فكرني"; a transliteration-key match counts as near only at ≥ 0.75 similarity; captures are checked against tasks.
+- Merge limitation (as in git): a line moved on one side and deleted on the other reappears at its new place.
+
 ### Implementation decisions (vault-format)
 Gaps in PLAN §6 filled while building `crates/vault-format` (details in `docs/VAULT_FORMAT.md`); the owner may revisit any of them.
 1. **One global canonical frontmatter key order** for every note kind: `id, kind, title, aliases, tags, created, updated, source, lang`, then entity/document/place property keys (`role, industry, website, phone, email, address, doc-type, copy, location, holder, last-holder, expires, status`), then all relation keys (note relations, `concepts/people/companies`, entity relations, `copy-of`), then unknown keys in original order. PLAN's person/document examples interleave `companies`/`people` among entity fields; those are illustrative only.

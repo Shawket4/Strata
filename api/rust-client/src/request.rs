@@ -54,6 +54,7 @@ pub struct Request {
     pub(crate) query: Vec<(&'static str, String)>,
     pub(crate) headers: Vec<(&'static str, String)>,
     pub(crate) body: Option<Vec<u8>>,
+    pub(crate) content_type: Option<&'static str>,
     pub(crate) accept: Option<&'static str>,
 }
 
@@ -68,6 +69,7 @@ impl Request {
             query: Vec::new(),
             headers: Vec::new(),
             body: None,
+            content_type: None,
             accept: None,
         }
     }
@@ -108,6 +110,14 @@ impl Request {
         })?;
         self.body = Some(bytes);
         Ok(self)
+    }
+
+    /// Sets a raw `application/zip` body (vault import).
+    #[must_use]
+    pub fn zip_body(mut self, body: bytes::Bytes) -> Self {
+        self.body = Some(body.to_vec());
+        self.content_type = Some(crate::ZIP);
+        self
     }
 
     /// The operation id.

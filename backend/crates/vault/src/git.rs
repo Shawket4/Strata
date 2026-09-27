@@ -238,23 +238,20 @@ pub fn history(dir: &Path, path: &str) -> Result<Vec<FileRevision>> {
                     .map(|pt| rename_source(&repo, pt, &tree, &current))
                     .transpose()?
                     .flatten();
-                match renamed_from {
-                    Some(old) => {
-                        out.push(FileRevision {
-                            commit: info(&commit),
-                            path: current.clone(),
-                            change: Change::Renamed,
-                        });
-                        current = old;
-                    }
-                    None => {
-                        out.push(FileRevision {
-                            commit: info(&commit),
-                            path: current.clone(),
-                            change: Change::Added,
-                        });
-                        break;
-                    }
+                if let Some(old) = renamed_from {
+                    out.push(FileRevision {
+                        commit: info(&commit),
+                        path: current.clone(),
+                        change: Change::Renamed,
+                    });
+                    current = old;
+                } else {
+                    out.push(FileRevision {
+                        commit: info(&commit),
+                        path: current.clone(),
+                        change: Change::Added,
+                    });
+                    break;
                 }
             }
             (None, None) => {}
@@ -389,9 +386,14 @@ mod tests {
         assert!(init(dir).expect("init"));
         assert!(!init(dir).expect("again"));
         atomic_write(dir, "notes/a.md", b"one\ntwo\nthree\n").expect("w");
-        let c1 = commit_paths(dir, &["notes/a.md".into()], "user: create notes/a.md", t(100))
-            .expect("commit")
-            .expect("changed");
+        let c1 = commit_paths(
+            dir,
+            &["notes/a.md".into()],
+            "user: create notes/a.md",
+            t(100),
+        )
+        .expect("commit")
+        .expect("changed");
         assert_eq!(
             commit_paths(dir, &["notes/a.md".into()], "noop", t(101)).expect("commit"),
             None
@@ -402,12 +404,20 @@ mod tests {
             .expect("changed");
         // A later unrelated edit survives reverting the ai commit.
         atomic_write(dir, "notes/a.md", b"zero\n\none\nTWO\nthree\n").expect("w");
-        let c3 = commit_paths(dir, &["notes/a.md".into()], "user: update notes/a.md", t(300))
-            .expect("commit")
-            .expect("changed");
+        let c3 = commit_paths(
+            dir,
+            &["notes/a.md".into()],
+            "user: update notes/a.md",
+            t(300),
+        )
+        .expect("commit")
+        .expect("changed");
         assert_eq!(
             revert_changes(dir, &c2).expect("revert"),
-            vec![("notes/a.md".into(), Some(b"zero\n\none\ntwo\nthree\n".to_vec()))]
+            vec![(
+                "notes/a.md".into(),
+                Some(b"zero\n\none\ntwo\nthree\n".to_vec())
+            )]
         );
         // rename
         let content = std::fs::read(dir.join("notes/a.md")).expect("read");
@@ -446,7 +456,10 @@ mod tests {
             Some("user: create notes/a.md".into())
         );
         assert_eq!(find_commit(dir, "zz").expect("find"), None);
-        assert!(matches!(revert_changes(dir, &c1), Err(VaultError::NotFound)));
+        assert!(matches!(
+            revert_changes(dir, &c1),
+            Err(VaultError::NotFound)
+        ));
     }
 
     #[test]
@@ -457,11 +470,17 @@ mod tests {
         std::fs::create_dir_all(dir.join("notes")).expect("mkdir");
         std::fs::write(dir.join("notes/.strata-tmp-1-1"), "x").expect("w");
         std::fs::write(dir.join("notes/new.md"), "x").expect("w");
-        assert_eq!(dirty_paths(dir).expect("status"), vec!["notes/new.md".to_owned()]);
+        assert_eq!(
+            dirty_paths(dir).expect("status"),
+            vec!["notes/new.md".to_owned()]
+        );
         let id = commit_all(dir, "system: recovered changes", t(5))
             .expect("commit")
             .expect("changed");
-        assert_eq!(changed_paths(dir, &id).expect("paths"), vec!["notes/new.md"]);
+        assert_eq!(
+            changed_paths(dir, &id).expect("paths"),
+            vec!["notes/new.md"]
+        );
         assert_eq!(dirty_paths(dir).expect("status"), Vec::<String>::new());
     }
 }

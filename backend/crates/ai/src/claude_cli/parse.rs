@@ -277,10 +277,10 @@ fn reset_clock_time(lower: &str, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
     let rest = rest.trim_start();
     if let Some(r) = rest.strip_prefix("am") {
         hour %= 12;
-        rest_after_meridiem(r)
+        Some(r)
     } else if let Some(r) = rest.strip_prefix("pm") {
         hour = hour % 12 + 12;
-        rest_after_meridiem(r)
+        Some(r)
     } else {
         Some(rest)
     }
@@ -304,10 +304,6 @@ fn reset_clock_time(lower: &str, now: DateTime<Utc>) -> Option<DateTime<Utc>> {
         }
         None
     })
-}
-
-fn rest_after_meridiem(r: &str) -> Option<&str> {
-    Some(r)
 }
 
 #[cfg(test)]

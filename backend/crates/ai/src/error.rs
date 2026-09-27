@@ -49,6 +49,9 @@ pub enum ProviderError {
     /// The model declined the request.
     #[error("model refused the request")]
     Refused,
+    /// The model's reply is not JSON (counts as invalid output and is retried).
+    #[error("model output is not JSON: {0}")]
+    NotJson(String),
     /// The provider answered in a shape this code does not understand.
     #[error("malformed provider response: {0}")]
     Protocol(String),

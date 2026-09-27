@@ -116,11 +116,9 @@ impl DomainError for VaultError {
             Self::InvalidArchive(_) => ProblemType::InvalidArchive,
             Self::ArchiveTooLarge(_) => ProblemType::PayloadTooLarge,
             Self::AiUnavailable => ProblemType::AiUnavailable,
-            Self::WriterGone
-            | Self::Io(_)
-            | Self::Git(_)
-            | Self::Index(_)
-            | Self::Internal(_) => ProblemType::Internal,
+            Self::WriterGone | Self::Io(_) | Self::Git(_) | Self::Index(_) | Self::Internal(_) => {
+                ProblemType::Internal
+            }
         }
     }
 

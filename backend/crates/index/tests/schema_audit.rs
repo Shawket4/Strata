@@ -47,6 +47,8 @@ async fn global_tables_have_no_rls_and_no_app_access_beyond_the_allow_list() {
         rows,
         vec![
             ("_sqlx_migrations".into(), false, false, false, false),
+            // ai_usage_global: per-day counters only, updated by the app role.
+            ("ai_usage_global".into(), false, true, true, false),
             ("audit_log".into(), false, false, false, true),
             ("invites".into(), false, false, false, true),
             ("job_wakeups".into(), false, true, true, false),

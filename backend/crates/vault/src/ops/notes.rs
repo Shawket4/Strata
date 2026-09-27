@@ -34,7 +34,7 @@ pub struct CreateNote {
     pub force: bool,
 }
 
-/// Payload of a `duplicate` suggestion (MessagePack in `suggestions.payload`).
+/// Payload of a `duplicate` suggestion (`MessagePack` in `suggestions.payload`).
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct DuplicatePayload {
     /// The candidates found when the item was saved.
@@ -114,14 +114,20 @@ impl Core {
         let (path, trashed) = match state.note(id) {
             Some((p, _)) => (p.to_owned(), false),
             None => (
-                state.trash_by_id.get(&id).cloned().ok_or(VaultError::NotFound)?,
+                state
+                    .trash_by_id
+                    .get(&id)
+                    .cloned()
+                    .ok_or(VaultError::NotFound)?,
                 true,
             ),
         };
         let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
         let doc = Document::parse(&text);
         let (created, updated) = timestamps(&doc, id);
-        Ok(NoteView::from_text(id, &path, text, created, updated, trashed))
+        Ok(NoteView::from_text(
+            id, &path, text, created, updated, trashed,
+        ))
     }
 
     /// Writes the changes, commits, indexes, and commits `tx`.
@@ -164,12 +170,7 @@ impl Core {
         let now = self.local_now(tz);
         let mut doc = Document::parse(content);
         let created = created_fallback.unwrap_or(now);
-        prepare::stamp(
-            &mut doc,
-            id,
-            Some(&created),
-            stamp_updated.then_some(&now),
-        )?;
+        prepare::stamp(&mut doc, id, Some(&created), stamp_updated.then_some(&now))?;
         let taken = taken_task_ids(tx, doc.body(), id).await?;
         let body = prepare::assign_task_ids(doc.body(), self.ids(), &taken);
         if body != doc.body() {
@@ -189,7 +190,10 @@ impl Core {
         let kind = kind_of(doc);
         let title = derive::title_of(path, doc);
         let text = dedupe_text(path, kind, &title, doc);
-        let aliases = doc.frontmatter().map(|f| f.aliases()).unwrap_or_default();
+        let aliases = doc
+            .frontmatter()
+            .map(vault_format::Frontmatter::aliases)
+            .unwrap_or_default();
         dup::find(
             tx,
             &NewItem {
@@ -209,10 +213,7 @@ impl Core {
         let at = self.now().fixed_offset();
         for c in candidates {
             if !sidecar.keep_both.iter().any(|k| k.other_id == c.id) && c.id != sidecar.id {
-                sidecar.keep_both.push(KeepBoth {
-                    other_id: c.id,
-                    at,
-                });
+                sidecar.keep_both.push(KeepBoth { other_id: c.id, at });
             }
         }
     }
@@ -294,8 +295,9 @@ impl Core {
             .frontmatter()
             .and_then(|f| f.created().ok().flatten());
         let mut tx = self.begin(&scope).await?;
+        // `updated` records the user's edits; AI edits (frontmatter keys, AI sections) keep it.
         let doc = self
-            .prepare(&mut tx, &content, id, old_created, true)
+            .prepare(&mut tx, &content, id, old_created, author == Author::User)
             .await?;
         let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
         if let Some(mut sc) = self.sidecar(id).await? {
@@ -342,11 +344,11 @@ impl Core {
             .cloned()
             .collect();
         let mut changes = Vec::new();
-        let moved = match moved_text {
+        let moved_body = match moved_text {
             Some(t) => t,
             None => self.read_text(old).await?.ok_or(VaultError::NotFound)?,
         };
-        let mut doc = Document::parse(&moved);
+        let mut doc = Document::parse(&moved_body);
         doc.rewrite_links(&moves, old)
             .map_err(|_| VaultError::invalid("the note's frontmatter cannot be edited"))?;
         changes.push((old.to_owned(), None));
@@ -400,8 +402,12 @@ impl Core {
         }
         let tx = self.begin(&scope).await?;
         let changes = self.plan_move(&old, &new_path, None).await?;
-        self.finish(tx, changes, author.message("move", &format!("{old} -> {new_path}")))
-            .await?;
+        self.finish(
+            tx,
+            changes,
+            author.message("move", &format!("{old} -> {new_path}")),
+        )
+        .await?;
         self.view(id).await
     }
 
@@ -427,22 +433,36 @@ impl Core {
                 .map(|p| paths::file_name(p).strip_suffix(".md").unwrap_or(p))
                 .collect()
         };
-        Ok(paths::join(folder, &format!("{}.md", unique_name(stem, taken))))
+        Ok(paths::join(
+            folder,
+            &format!("{}.md", unique_name(stem, taken)),
+        ))
     }
 
     /// Moves a note to `.trash/` (soft delete).
-    pub async fn delete_note(&mut self, scope: UserScope, id: NoteId, author: Author) -> Result<NoteView> {
+    pub async fn delete_note(
+        &mut self,
+        scope: UserScope,
+        id: NoteId,
+        author: Author,
+    ) -> Result<NoteView> {
         let (path, _) = self.live(id)?;
         let trash = self.free_path(&paths::trash_path(&path), true)?;
         let text = self.read(&path).await?.ok_or(VaultError::NotFound)?;
         let tx = self.begin(&scope).await?;
         let changes = vec![(path.clone(), None), (trash, Some(text))];
-        self.finish(tx, changes, author.message("delete", &path)).await?;
+        self.finish(tx, changes, author.message("delete", &path))
+            .await?;
         self.view(id).await
     }
 
     /// Restores a note from `.trash/` to its original path (or a free name next to it).
-    pub async fn restore_note(&mut self, scope: UserScope, id: NoteId, author: Author) -> Result<NoteView> {
+    pub async fn restore_note(
+        &mut self,
+        scope: UserScope,
+        id: NoteId,
+        author: Author,
+    ) -> Result<NoteView> {
         let trash = self
             .state()?
             .trash_by_id
@@ -454,7 +474,8 @@ impl Core {
         let text = self.read(&trash).await?.ok_or(VaultError::NotFound)?;
         let tx = self.begin(&scope).await?;
         let changes = vec![(trash, None), (target.clone(), Some(text))];
-        self.finish(tx, changes, author.message("restore", &target)).await?;
+        self.finish(tx, changes, author.message("restore", &target))
+            .await?;
         self.view(id).await
     }
 
@@ -471,7 +492,8 @@ impl Core {
             (trash.clone(), None),
             (NoteSidecar::path_for(id.as_ulid()), None),
         ];
-        self.finish(tx, changes, author.message("purge", &trash)).await?;
+        self.finish(tx, changes, author.message("purge", &trash))
+            .await?;
         Ok(())
     }
 
@@ -531,14 +553,21 @@ impl Core {
             if git::find_commit(&dir, &c)?.is_none() {
                 return Err(VaultError::NotFound);
             }
-            git::revert_changes(&dir, &c)
+            match git::revert_changes(&dir, &c) {
+                Err(VaultError::RevertConflict) => crate::revert::structured(&dir, &c),
+                other => other,
+            }
         })
         .await?;
         let paths: Vec<String> = changes.iter().map(|(p, _)| p.clone()).collect();
         let tx = self.begin(&scope).await?;
         let short: String = commit.chars().take(12).collect();
         let id = self
-            .finish(tx, changes, author.message("revert", &format!("commit {short}")))
+            .finish(
+                tx,
+                changes,
+                author.message("revert", &format!("commit {short}")),
+            )
             .await?;
         Ok((id, paths))
     }
@@ -603,8 +632,15 @@ impl Core {
                 .map_err(|e| VaultError::Internal(e.to_string()))?;
             let mut tx = self.begin(&scope).await?;
             let sid = SuggestionId::generate(self.ids());
-            suggestions::create_suggestion(&mut tx, sid, Some(id), "duplicate", &payload, self.now())
-                .await?;
+            suggestions::create_suggestion(
+                &mut tx,
+                sid,
+                Some(id),
+                "duplicate",
+                &payload,
+                self.now(),
+            )
+            .await?;
             let sid_text = sid.to_string();
             strata_index::repo::sync::append_change(
                 &mut tx,
@@ -642,8 +678,12 @@ impl Core {
             .unwrap_or_else(|| NoteSidecar::new(id.as_ulid()));
         self.keep_both(&mut sc, others);
         let tx = self.begin(&scope).await?;
-        self.finish(tx, vec![Core::sidecar_change(&sc)?], author.message("keep-both", &path))
-            .await?;
+        self.finish(
+            tx,
+            vec![Core::sidecar_change(&sc)?],
+            author.message("keep-both", &path),
+        )
+        .await?;
         Ok(())
     }
 }
@@ -654,17 +694,15 @@ pub(crate) fn timestamps(
     id: NoteId,
 ) -> (chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>) {
     let fm = doc.frontmatter();
-    let created = fm
-        .and_then(|f| f.created().ok().flatten())
-        .map_or_else(
-            || {
-                chrono::DateTime::from_timestamp_millis(
-                    i64::try_from(id.as_ulid().timestamp_ms()).unwrap_or(0),
-                )
-                .unwrap_or_default()
-            },
-            |c| c.with_timezone(&chrono::Utc),
-        );
+    let created = fm.and_then(|f| f.created().ok().flatten()).map_or_else(
+        || {
+            chrono::DateTime::from_timestamp_millis(
+                i64::try_from(id.as_ulid().timestamp_ms()).unwrap_or(0),
+            )
+            .unwrap_or_default()
+        },
+        |c| c.with_timezone(&chrono::Utc),
+    );
     let updated = fm
         .and_then(|f| f.updated().ok().flatten())
         .map_or(created, |u| u.with_timezone(&chrono::Utc))

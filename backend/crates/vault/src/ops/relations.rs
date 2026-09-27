@@ -74,7 +74,10 @@ fn add_link(
         return Err(VaultError::invalid("the frontmatter cannot be edited"));
     }
     let mut items = fm.relation(rel);
-    if items.iter().any(|i| resolves_to(i, dst_path, index, src_path)) {
+    if items
+        .iter()
+        .any(|i| resolves_to(i, dst_path, index, src_path))
+    {
         return Ok(false);
     }
     items.push(format!("[[{}]]", index.link_text_for(dst_path)));
@@ -132,8 +135,14 @@ impl Core {
         if !add_link(&mut doc, rel, &dst_path, &index, &src_path)? {
             return Ok(false);
         }
-        self.save(scope, &src_path, &doc, &sc, Author::User.message("relation add", &src_path))
-            .await?;
+        self.save(
+            scope,
+            &src_path,
+            &doc,
+            &sc,
+            Author::User.message("relation add", &src_path),
+        )
+        .await?;
         Ok(true)
     }
 
@@ -174,8 +183,14 @@ impl Core {
             return Err(VaultError::NotFound);
         }
         let was_ai = self.reject(&mut sc, rel, dst);
-        self.save(scope, &src_path, &doc, &sc, Author::User.message("relation remove", &src_path))
-            .await?;
+        self.save(
+            scope,
+            &src_path,
+            &doc,
+            &sc,
+            Author::User.message("relation remove", &src_path),
+        )
+        .await?;
         Ok(was_ai)
     }
 
@@ -201,8 +216,14 @@ impl Core {
         self.reject(&mut sc, rel, dst);
         sc.relations
             .retain(|r| !(r.kind == new_rel && r.target_id == dst.as_ulid()));
-        self.save(scope, &src_path, &doc, &sc, Author::User.message("relation retype", &src_path))
-            .await?;
+        self.save(
+            scope,
+            &src_path,
+            &doc,
+            &sc,
+            Author::User.message("relation retype", &src_path),
+        )
+        .await?;
         Ok(())
     }
 
@@ -245,7 +266,13 @@ impl Core {
         if !changed {
             return Ok(None);
         }
-        self.save(scope, &src_path, &doc, &sc, Author::Ai(job.to_owned()).message("", &src_path))
-            .await
+        self.save(
+            scope,
+            &src_path,
+            &doc,
+            &sc,
+            Author::Ai(job.to_owned()).message("", &src_path),
+        )
+        .await
     }
 }

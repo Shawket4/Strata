@@ -4,6 +4,7 @@
 //! and the list views.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 
 use chrono::NaiveDate;
 use strata_common::NoteId;
@@ -87,9 +88,9 @@ fn task_error(e: &TaskError) -> VaultError {
         TaskError::RecurrenceNotUnderstood(_) => {
             VaultError::TaskState("the recurrence is not understood; edit it first".into())
         }
-        TaskError::NoReferenceDate => VaultError::TaskState(
-            "a recurring task needs a due, scheduled or start date".into(),
-        ),
+        TaskError::NoReferenceDate => {
+            VaultError::TaskState("a recurring task needs a due, scheduled or start date".into())
+        }
         TaskError::NoNextOccurrence => {
             VaultError::TaskState("the recurrence has no next occurrence".into())
         }
@@ -131,39 +132,36 @@ pub fn rrule_of(task: &TaskLine) -> Option<String> {
 /// the end if missing).
 fn insert_under_heading(body: &str, heading: &str, line: &str) -> String {
     let secs = vault_format::sections::sections(body);
-    match secs
+    if let Some(s) = secs
         .iter()
         .find(|s| s.level == 2 && s.title.trim() == heading)
     {
-        Some(s) => {
-            let content = &body[s.content_span.clone()];
-            let trimmed = content.trim_end().len();
-            let at = if trimmed == 0 {
-                s.content_span.start
-            } else {
-                let last = s.content_span.start + trimmed;
-                body[last..].find('\n').map_or(body.len(), |i| last + i + 1)
-            };
-            let mut out = body[..at].to_owned();
-            if !out.ends_with('\n') && !out.is_empty() {
-                out.push('\n');
-            }
-            out.push_str(line);
+        let content = &body[s.content_span.clone()];
+        let trimmed = content.trim_end().len();
+        let at = if trimmed == 0 {
+            s.content_span.start
+        } else {
+            let last = s.content_span.start + trimmed;
+            body[last..].find('\n').map_or(body.len(), |i| last + i + 1)
+        };
+        let mut out = body[..at].to_owned();
+        if !out.ends_with('\n') && !out.is_empty() {
             out.push('\n');
-            out.push_str(&body[at..]);
-            out
         }
-        None => {
-            let mut out = body.to_owned();
-            if !out.is_empty() && !out.ends_with('\n') {
-                out.push('\n');
-            }
-            if !out.is_empty() {
-                out.push('\n');
-            }
-            out.push_str(&format!("## {heading}\n\n{line}\n"));
-            out
+        out.push_str(line);
+        out.push('\n');
+        out.push_str(&body[at..]);
+        out
+    } else {
+        let mut out = body.to_owned();
+        if !out.is_empty() && !out.ends_with('\n') {
+            out.push('\n');
         }
+        if !out.is_empty() {
+            out.push('\n');
+        }
+        let _ = write!(out, "## {heading}\n\n{line}\n");
+        out
     }
 }
 
@@ -189,7 +187,9 @@ fn find_task(body: &str, id: &str) -> Option<(std::ops::Range<usize>, TaskLine)>
 impl Core {
     async fn locate_task(&self, scope: &UserScope, id: &str) -> Result<(NoteId, String, String)> {
         let mut tx = self.begin(scope).await?;
-        let row = trepo::get_task(&mut tx, id).await?.ok_or(VaultError::NotFound)?;
+        let row = trepo::get_task(&mut tx, id)
+            .await?
+            .ok_or(VaultError::NotFound)?;
         tx.commit().await?;
         let (path, version) = self.live(row.note_id)?;
         Ok((row.note_id, path, version))
@@ -222,7 +222,8 @@ impl Core {
             ..TaskSpec::default()
         }
         .render();
-        let parsed = TaskLine::parse(&line).ok_or(VaultError::invalid("the task line is invalid"))?;
+        let parsed =
+            TaskLine::parse(&line).ok_or(VaultError::invalid("the task line is invalid"))?;
         let description = parsed.description().to_owned();
         let exact = task_exact_key(&description, rrule_of(&parsed).as_deref());
         let candidates = dup::find(
@@ -250,10 +251,17 @@ impl Core {
             }
             None => match self.state()?.notes.get(TASKS_NOTE).map(|m| m.id) {
                 Some(n) => {
-                    let t = self.read_text(TASKS_NOTE).await?.ok_or(VaultError::NotFound)?;
+                    let t = self
+                        .read_text(TASKS_NOTE)
+                        .await?
+                        .ok_or(VaultError::NotFound)?;
                     (n, TASKS_NOTE.to_owned(), t)
                 }
-                None => (NoteId::generate(self.ids()), TASKS_NOTE.to_owned(), "# Tasks\n".to_owned()),
+                None => (
+                    NoteId::generate(self.ids()),
+                    TASKS_NOTE.to_owned(),
+                    "# Tasks\n".to_owned(),
+                ),
             },
         };
         let mut doc = Document::parse(&text);
@@ -305,19 +313,23 @@ impl Core {
         if let Some(Some(r)) = &patch.recurrence {
             validate_recurrence(r)?;
         }
-        let (note, path, version) = self.locate_task(&scope, id).await?;
+        let (note, note_path, version) = self.locate_task(&scope, id).await?;
         if let Some(m) = if_match
             && m != version
         {
             return Err(VaultError::VersionConflict { current: version });
         }
-        let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
+        let text = self
+            .read_text(&note_path)
+            .await?
+            .ok_or(VaultError::NotFound)?;
         let mut doc = Document::parse(&text);
         let (span, mut task) = find_task(doc.body(), id).ok_or(VaultError::NotFound)?;
         if let Some(t) = &patch.text {
             let mut spec = task.to_spec();
-            spec.description = t.trim().to_owned();
-            task = TaskLine::parse(&spec.render()).ok_or(VaultError::invalid("the task line is invalid"))?;
+            t.trim().clone_into(&mut spec.description);
+            task = TaskLine::parse(&spec.render())
+                .ok_or(VaultError::invalid("the task line is invalid"))?;
         }
         for (kind, value) in [
             (DateKind::Due, patch.due),
@@ -338,7 +350,12 @@ impl Core {
             task = task.with_priority(p);
         }
         let body = doc.body();
-        let new_body = format!("{}{}{}", &body[..span.start], task.as_str(), &body[span.end..]);
+        let new_body = format!(
+            "{}{}{}",
+            &body[..span.start],
+            task.as_str(),
+            &body[span.end..]
+        );
         doc.set_body(new_body);
         let mut tx = self.begin(&scope).await?;
         let tz = self.tz(&mut tx).await?;
@@ -346,8 +363,8 @@ impl Core {
         prepare::stamp(&mut doc, note, None, Some(&now))?;
         self.finish(
             tx,
-            vec![(path.clone(), Some(doc.render().into_bytes()))],
-            Author::User.message("task update", &path),
+            vec![(note_path.clone(), Some(doc.render().into_bytes()))],
+            Author::User.message("task update", &note_path),
         )
         .await?;
         Ok(())
@@ -396,7 +413,12 @@ impl Core {
             }
         };
         let body = doc.body();
-        let new_body = format!("{}{}{}", &body[..span.start], replacement, &body[span.end..]);
+        let new_body = format!(
+            "{}{}{}",
+            &body[..span.start],
+            replacement,
+            &body[span.end..]
+        );
         doc.set_body(new_body);
         prepare::stamp(&mut doc, note, None, Some(&now))?;
         let op = match transition {
@@ -501,8 +523,12 @@ impl VaultService {
     pub async fn task(&self, scope: &UserScope, id: &str) -> Result<TaskItem> {
         self.ready(scope).await?;
         let mut tx = self.inner.db.begin(scope).await?;
-        let t = trepo::get_task(&mut tx, id).await?.ok_or(VaultError::NotFound)?;
-        let note = notes::get_note(&mut tx, t.note_id).await?.ok_or(VaultError::NotFound)?;
+        let t = trepo::get_task(&mut tx, id)
+            .await?
+            .ok_or(VaultError::NotFound)?;
+        let note = notes::get_note(&mut tx, t.note_id)
+            .await?
+            .ok_or(VaultError::NotFound)?;
         let reminders = vrepo::reminders_of(&mut tx, id).await?;
         tx.commit().await?;
         let text = self.note_text(scope, &note.path).await?.unwrap_or_default();
@@ -530,7 +556,11 @@ mod tests {
             "# Tasks\n\n## 2026-09\n\n- [ ] a\n"
         );
         assert_eq!(
-            insert_under_heading("# Tasks\n\n## 2026-09\n\n- [ ] a\n\n## 2026-10\n\n- [ ] c\n", "2026-09", "- [ ] b"),
+            insert_under_heading(
+                "# Tasks\n\n## 2026-09\n\n- [ ] a\n\n## 2026-10\n\n- [ ] c\n",
+                "2026-09",
+                "- [ ] b"
+            ),
             "# Tasks\n\n## 2026-09\n\n- [ ] a\n- [ ] b\n\n## 2026-10\n\n- [ ] c\n"
         );
         assert_eq!(

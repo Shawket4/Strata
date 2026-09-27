@@ -12,10 +12,12 @@
 //! # Ok(()) }
 //! ```
 
+mod ai;
 mod db;
 mod error;
 mod fixtures;
 
+pub use ai::{FakeLlmProvider, Fixture, detached_scope};
 pub use db::{
     ADMIN_URL_ENV, DEFAULT_ADMIN_URL, ROLE_PASSWORD_ENV, TEMPLATE_PREFIX, TEST_DB_PREFIX, TestDb,
     admin_url, template_name,

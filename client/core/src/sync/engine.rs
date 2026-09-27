@@ -149,7 +149,7 @@ impl SyncEngine {
         }
     }
 
-    fn failed<H: SyncHost>(&self, host: &H, e: NetError) -> CoreResult<CycleOutcome> {
+    fn failed<H: SyncHost>(host: &H, e: NetError) -> CoreResult<CycleOutcome> {
         let offline = matches!(e, NetError::Offline(_));
         host.set_connectivity(if offline {
             Connectivity::Offline
@@ -228,7 +228,7 @@ impl SyncEngine {
                         outbox::requeue_inflight(c, Some(&msg))?;
                         Ok(((), Topics::SYNC))
                     })?;
-                    return Ok(Flow::Stop(self.failed(host, e)?));
+                    return Ok(Flow::Stop(Self::failed(host, e)?));
                 }
             };
             host.set_connectivity(Connectivity::Online);
@@ -262,14 +262,11 @@ impl SyncEngine {
     async fn pull_all<H: SyncHost>(&self, host: &H, report: &mut CycleReport) -> CoreResult<Flow<()>> {
         loop {
             let state = host.db(|c, _| Ok((sync_state::get(c)?, Topics::NONE)))?;
-            let epoch = match (state.bootstrap_complete, state.epoch) {
-                (true, Some(e)) => e,
-                _ => {
-                    report.bootstrapped = true;
-                    match self.bootstrap(host, report).await? {
-                        Flow::Go(()) => continue,
-                        Flow::Stop(o) => return Ok(Flow::Stop(o)),
-                    }
+            let (true, Some(epoch)) = (state.bootstrap_complete, state.epoch) else {
+                report.bootstrapped = true;
+                match self.bootstrap(host, report).await? {
+                    Flow::Go(()) => continue,
+                    Flow::Stop(o) => return Ok(Flow::Stop(o)),
                 }
             };
             host.set_phase(SyncPhase::Pulling);
@@ -291,7 +288,7 @@ impl SyncEngine {
                     })?;
                     continue;
                 }
-                Err(e) => return Ok(Flow::Stop(self.failed(host, e)?)),
+                Err(e) => return Ok(Flow::Stop(Self::failed(host, e)?)),
             };
             host.set_connectivity(Connectivity::Online);
             if let Flow::Stop(o) = self.crash(Step::ChangesFetched, ()) {
@@ -332,7 +329,7 @@ impl SyncEngine {
             });
             let page = match self.api.bootstrap(state.bootstrap_cursor.clone()).await {
                 Ok(p) => p,
-                Err(e) => return Ok(Flow::Stop(self.failed(host, e)?)),
+                Err(e) => return Ok(Flow::Stop(Self::failed(host, e)?)),
             };
             host.set_connectivity(Connectivity::Online);
             if let Flow::Stop(o) = self.crash(Step::BootstrapFetched, ()) {

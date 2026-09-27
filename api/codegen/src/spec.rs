@@ -44,6 +44,8 @@ pub(crate) struct Operation {
     pub response: Option<Value>,
     /// The success response is an `application/zip` download, returned as raw bytes.
     pub zip_response: bool,
+    /// The request body is an `application/zip` upload, sent as raw bytes (`POST /import`).
+    pub zip_body: bool,
     pub auth: bool,
     /// Payload component of a stream operation.
     pub stream: Option<String>,
@@ -137,6 +139,7 @@ fn parse_operation(
         body: None,
         response: None,
         zip_response: false,
+        zip_body: false,
         auth,
         stream: None,
     };
@@ -150,7 +153,11 @@ fn parse_operation(
         operation.params.retain(|p| p.location == Location::Path);
         return Ok(operation);
     }
-    operation.body = parse_body(doc, op, &at)?;
+    if is_zip_body(doc, op) {
+        operation.zip_body = true;
+    } else {
+        operation.body = parse_body(doc, op, &at)?;
+    }
     match parse_response(doc, op, &at)? {
         Success::Zip => operation.zip_response = true,
         Success::MsgPack(schema) => operation.response = schema,
@@ -203,6 +210,15 @@ fn parse_params(
     };
     params.sort_by_key(|p| (p.location != Location::Path, order(p)));
     Ok(params)
+}
+
+/// Whether the request body is only `application/zip` (a raw upload).
+fn is_zip_body(doc: &Value, op: &Value) -> bool {
+    op.get("requestBody")
+        .map(|b| resolve(doc, b))
+        .and_then(|b| b.get("content"))
+        .and_then(Value::as_object)
+        .is_some_and(|c| c.len() == 1 && c.contains_key(ZIP))
 }
 
 /// The MessagePack request body schema and whether it is required.

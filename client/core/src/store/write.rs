@@ -92,15 +92,17 @@ fn require(state: Option<NoteState>) -> CoreResult<NoteState> {
     state.ok_or_else(|| CoreError::not_found("note"))
 }
 
-fn with_content(state: NoteState, content: String) -> Option<NoteState> {
-    Some(NoteState {
+#[allow(clippy::unnecessary_wraps)] // keeps every match arm a single expression
+fn with_content(state: NoteState, content: String) -> CoreResult<Option<NoteState>> {
+    Ok(Some(NoteState {
         path: state.path,
         content,
-    })
+    }))
 }
 
 /// What `payload` does to a note whose state is `state`. `note_id` is the note's ID and
 /// `entity_id` the op's server entity (the task block ID for task ops). Pure.
+#[allow(clippy::too_many_lines)] // one arm per op kind
 pub fn apply_to_note(
     note_id: &str,
     entity_id: &str,
@@ -144,7 +146,7 @@ pub fn apply_to_note(
                 content: edit::entity_content(parse_ulid(note_id)?, kind, aliases)?,
             }))
         }
-        OpPayload::NoteUpdate { content } => Ok(with_content(require(state)?, content.clone())),
+        OpPayload::NoteUpdate { content } => with_content(require(state)?, content.clone()),
         OpPayload::NoteMove { new_path } => {
             validate_note_path(new_path)?;
             let s = require(state)?;
@@ -162,14 +164,14 @@ pub fn apply_to_note(
         } => {
             let s = require(state)?;
             let c = edit::add_relation(&s.content, rel_type, dst_link)?;
-            Ok(with_content(s, c))
+            with_content(s, c)
         }
         OpPayload::RelationRemove {
             rel_type, dst_link, ..
         } => {
             let s = require(state)?;
             let c = edit::remove_relation(&s.content, rel_type, dst_link)?;
-            Ok(with_content(s, c))
+            with_content(s, c)
         }
         OpPayload::RelationRetype {
             rel_type,
@@ -179,12 +181,12 @@ pub fn apply_to_note(
         } => {
             let s = require(state)?;
             let c = edit::retype_relation(&s.content, rel_type, new_type, dst_link)?;
-            Ok(with_content(s, c))
+            with_content(s, c)
         }
         OpPayload::TaskCreate { line, .. } => match state {
             Some(s) => {
                 let c = edit::append_task(&s.content, line);
-                Ok(with_content(s, c))
+                with_content(s, c)
             }
             // The task home does not exist yet: create it (§6.11 `tasks/Tasks.md`).
             None => Ok(Some(NoteState {
@@ -195,7 +197,7 @@ pub fn apply_to_note(
         OpPayload::TaskUpdate { line } => {
             let s = require(state)?;
             let c = edit::update_task(&s.content, entity_id, line)?;
-            Ok(with_content(s, c))
+            with_content(s, c)
         }
         OpPayload::TaskComplete {
             done_date,
@@ -208,22 +210,22 @@ pub fn apply_to_note(
                 date(done_date)?,
                 next_task_id.as_deref(),
             )?;
-            Ok(with_content(s, c))
+            with_content(s, c)
         }
         OpPayload::TaskCancel { date: d } => {
             let s = require(state)?;
             let c = edit::cancel_task(&s.content, entity_id, date(d)?)?;
-            Ok(with_content(s, c))
+            with_content(s, c)
         }
         OpPayload::TaskReopen => {
             let s = require(state)?;
             let c = edit::reopen_task(&s.content, entity_id)?;
-            Ok(with_content(s, c))
+            with_content(s, c)
         }
         OpPayload::TaskDelete => {
             let s = require(state)?;
             let c = edit::delete_task(&s.content, entity_id)?;
-            Ok(with_content(s, c))
+            with_content(s, c)
         }
         OpPayload::SuggestionAccept | OpPayload::SuggestionReject | OpPayload::RelinkRequest => {
             Ok(state)

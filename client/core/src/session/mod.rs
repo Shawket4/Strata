@@ -100,7 +100,7 @@ impl TokenStore for SessionTokens {
 impl Session {
     /// Opens the session of `user_id` (its database must exist or is created). Ops interrupted
     /// mid-push by a crash go back to the queue.
-    pub fn open(env: Arc<CoreEnv>, user_id: Ulid) -> CoreResult<Arc<Self>> {
+    pub fn open(env: &Arc<CoreEnv>, user_id: Ulid) -> CoreResult<Arc<Self>> {
         let db = AccountDb::open(&env.paths, user_id)?;
         crate::sync::engine::recover(db.conn())?;
         let server_url = account::get(db.conn())?
@@ -255,13 +255,13 @@ impl Session {
     /// Runs an intent (optimistic change + outbox op, §12.3).
     pub fn execute(&self, intent: &crate::store::write::Intent) -> CoreResult<()> {
         let mut g = self.lock();
-        self.ensure_writable(&g)?;
+        Self::ensure_writable(&g)?;
         let now = self.env.clock.now().to_rfc3339();
         let topics = crate::store::write::execute(g.db.conn_mut(), intent, &now)?;
         self.after_change(&mut g, topics)
     }
 
-    fn ensure_writable(&self, g: &Inner) -> CoreResult<()> {
+    fn ensure_writable(g: &Inner) -> CoreResult<()> {
         match account::get(g.db.conn())?.map(|a| account_mode(&a.status, false)) {
             Some(AccountMode::DeletionPending) => Err(CoreError::AccountDeletionPending),
             Some(AccountMode::Disabled) => Err(CoreError::AccountDisabled),
@@ -296,7 +296,7 @@ impl Session {
             _ => return Ok(()),
         };
         self.write(|c, _| {
-            account::update(c, |a| a.status = status.to_owned())?;
+            account::update(c, |a| status.clone_into(&mut a.status))?;
             Ok(((), Topics::ACCOUNT))
         })?;
         self.lock().session_changed = true;

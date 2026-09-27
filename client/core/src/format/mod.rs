@@ -137,6 +137,7 @@ fn anchor_text(a: &Anchor) -> String {
 }
 
 /// Parses a note for the index.
+#[allow(clippy::too_many_lines)] // one straight pass over the note's parts
 pub fn parse_note(path: &str, content: &str) -> ParsedNote {
     let doc = Document::parse(content);
     let title = title_of(path);

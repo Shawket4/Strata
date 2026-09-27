@@ -345,7 +345,9 @@ impl Core {
     /// Opens a transaction scoped to this vault's user.
     pub(crate) async fn begin(&self, scope: &UserScope) -> Result<ScopedTx> {
         if scope.user_id() != self.user {
-            return Err(VaultError::Internal("scope does not match the vault".into()));
+            return Err(VaultError::Internal(
+                "scope does not match the vault".into(),
+            ));
         }
         Ok(self.inner.db.begin(scope).await?)
     }
@@ -467,13 +469,24 @@ impl Core {
         for p in paths {
             let is_md = p.ends_with(".md");
             if paths::is_content(p) || p.starts_with(paths::TRASH_DIR) {
-                let text = if is_md { self.read_text(p).await? } else { None };
+                let text = if is_md {
+                    self.read_text(p).await?
+                } else {
+                    None
+                };
                 let exists = if is_md {
                     text.is_some()
                 } else {
                     self.read(p).await?.is_some()
                 };
-                contents.insert(p.clone(), if exists { Some(text.unwrap_or_default()) } else { None });
+                contents.insert(
+                    p.clone(),
+                    if exists {
+                        Some(text.unwrap_or_default())
+                    } else {
+                        None
+                    },
+                );
             }
         }
         let state = self.state_mut()?;
@@ -678,7 +691,6 @@ impl Core {
         }
         Ok(())
     }
-
 }
 
 /// The note ID of a sidecar path `.meta/notes/<id>.json`.

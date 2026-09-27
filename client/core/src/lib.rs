@@ -5,9 +5,9 @@
 //!
 //! | Layer | Role |
 //! |---|---|
-//! | [`api`] | the flutter_rust_bridge facade: the **only** surface Dart can call (async fns + streams) |
+//! | [`api`] | the `flutter_rust_bridge` facade: the **only** surface Dart can call (async fns + streams) |
 //! | [`view`] | view-model structs streamed to Dart, their builders and the watcher hub |
-//! | [`store`] | one SQLite database per account (schema, migrations, FTS5), the write path and the outbox |
+//! | [`store`] | one `SQLite` database per account (schema, migrations, `FTS5`), the write path and the outbox |
 //! | [`sync`] | push / pull / bootstrap, conflicts, retry with backoff, connectivity |
 //! | [`search`] | local full-text search over `text-normalize`d text |
 //! | [`graph`] | local neighbourhoods from cached relations and links |

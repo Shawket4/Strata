@@ -69,7 +69,8 @@ pub fn stamp(
         ));
     }
     if fm.id().ok().flatten() != Some(id.as_ulid()) {
-        fm.set_id(id.as_ulid()).map_err(|_| VaultError::invalid("the id property could not be set"))?;
+        fm.set_id(id.as_ulid())
+            .map_err(|_| VaultError::invalid("the id property could not be set"))?;
     }
     if let Some(c) = created
         && fm.created().ok().flatten().is_none()

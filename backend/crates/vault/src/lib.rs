@@ -19,6 +19,9 @@
 
 // Tests assert exact values and may `expect` with a message stating the invariant.
 #![cfg_attr(test, allow(clippy::expect_used, clippy::float_cmp))]
+// Vault notes are `.md` exactly as Obsidian writes them; link resolution is case-insensitive
+// separately (vault-format `PathIndex`).
+#![allow(clippy::case_sensitive_file_extension_comparisons)]
 
 pub mod archive;
 pub mod derive;
@@ -32,6 +35,7 @@ pub mod ops;
 pub mod paths;
 pub mod prepare;
 pub mod reconcile;
+pub mod revert;
 pub mod state;
 pub mod store;
 

@@ -308,6 +308,10 @@ fn operation_fn(
     }
 
     let body_arg = match &op.body {
+        None if op.zip_body => {
+            steps.push(quote! { let request = request.zip_body(body); });
+            Some(quote! { body: ::bytes::Bytes })
+        }
         None => None,
         Some((schema, required)) => {
             let ty = type_tokens(space, schema, format!("{}Body", pascal(&op.id)))?;

@@ -1,5 +1,8 @@
-//! Builders: view-models from the local database. Pure reads; every list is sorted here (L15:
-//! Dart never sorts or filters).
+//! Builders: view-models from the local database. Pure reads; every list is sorted here
+//! (L15: Dart never sorts or filters).
+
+// SQL rows are read into tuples right where the query is written.
+#![allow(clippy::type_complexity)]
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -12,6 +15,7 @@ use crate::format::{self, hints};
 use crate::store::{account, conflicts, from_msgpack, outbox, settings, sync_state};
 use crate::sync::model::{Candidate, SuggestionPayload};
 use crate::view::ViewCtx;
+#[allow(clippy::wildcard_imports)] // the builders construct every view-model type
 use crate::view::model::*;
 
 // ---------------------------------------------------------------------------------------------
@@ -1072,16 +1076,16 @@ fn cited_bullets(conn: &Connection, content: &str) -> CoreResult<Vec<CitedBullet
             citations.push(citation(conn, l)?);
         }
         text.push_str(&item[last..]);
-        let mut text = text.trim().trim_end_matches(['—', '–', '-']).trim().to_owned();
-        let mut day = None;
-        if let Some(d) = text.get(..10).and_then(date) {
-            day = Some(d);
-            text = text[10..]
+        let trimmed = text.trim().trim_end_matches(['—', '–', '-']).trim();
+        let day = trimmed.get(..10).and_then(date);
+        let text = match day {
+            Some(_) => trimmed[10..]
                 .trim_start()
                 .trim_start_matches(['—', '–', '-'])
                 .trim()
-                .to_owned();
-        }
+                .to_owned(),
+            None => trimmed.to_owned(),
+        };
         out.push(CitedBullet {
             text,
             date: day,

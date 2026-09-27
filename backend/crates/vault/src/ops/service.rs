@@ -16,7 +16,9 @@ use crate::store::{Author, VaultService};
 macro_rules! on_actor {
     ($self:ident, $scope:ident, |$core:ident, $s:ident| $body:expr) => {
         $self
-            .exec($scope, move |$core, $s| Box::pin(async move { $body.await }))
+            .exec($scope, move |$core, $s| {
+                Box::pin(async move { $body.await })
+            })
             .await
     };
 }
@@ -24,7 +26,11 @@ macro_rules! on_actor {
 impl VaultService {
     /// `POST /notes`.
     pub async fn create_note(&self, scope: &UserScope, req: CreateNote) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.create_note(s, req, Author::User))
+        on_actor!(self, scope, |core, s| core.create_note(
+            s,
+            req,
+            Author::User
+        ))
     }
 
     /// `PUT /notes/{id}`.
@@ -35,7 +41,13 @@ impl VaultService {
         content: String,
         if_match: String,
     ) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.update_note(s, id, content, &if_match, Author::User))
+        on_actor!(self, scope, |core, s| core.update_note(
+            s,
+            id,
+            content,
+            &if_match,
+            Author::User
+        ))
     }
 
     /// An `ai:` edit of a note's content (Phase 4 jobs; tests).
@@ -47,7 +59,13 @@ impl VaultService {
         content: String,
         if_match: String,
     ) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.update_note(s, id, content, &if_match, Author::Ai(job)))
+        on_actor!(self, scope, |core, s| core.update_note(
+            s,
+            id,
+            content,
+            &if_match,
+            Author::Ai(job)
+        ))
     }
 
     /// `POST /notes/{id}/move`.
@@ -58,7 +76,13 @@ impl VaultService {
         new_path: String,
         if_match: Option<String>,
     ) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.move_note(s, id, new_path, if_match.as_deref(), Author::User))
+        on_actor!(self, scope, |core, s| core.move_note(
+            s,
+            id,
+            new_path,
+            if_match.as_deref(),
+            Author::User
+        ))
     }
 
     /// `DELETE /notes/{id}` (soft delete).
@@ -68,7 +92,11 @@ impl VaultService {
 
     /// `POST /trash/{id}/restore`.
     pub async fn restore_note(&self, scope: &UserScope, id: NoteId) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.restore_note(s, id, Author::User))
+        on_actor!(self, scope, |core, s| core.restore_note(
+            s,
+            id,
+            Author::User
+        ))
     }
 
     /// `DELETE /trash/{id}` (purge).
@@ -77,8 +105,18 @@ impl VaultService {
     }
 
     /// `POST /notes/{id}/revert`.
-    pub async fn revert_note(&self, scope: &UserScope, id: NoteId, commit: String) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.revert_note(s, id, &commit, Author::User))
+    pub async fn revert_note(
+        &self,
+        scope: &UserScope,
+        id: NoteId,
+        commit: String,
+    ) -> Result<NoteView> {
+        on_actor!(self, scope, |core, s| core.revert_note(
+            s,
+            id,
+            &commit,
+            Author::User
+        ))
     }
 
     /// `POST /commits/{commit}/revert`.
@@ -87,7 +125,11 @@ impl VaultService {
         scope: &UserScope,
         commit: String,
     ) -> Result<(Option<String>, Vec<String>)> {
-        on_actor!(self, scope, |core, s| core.revert_commit(s, &commit, Author::User))
+        on_actor!(self, scope, |core, s| core.revert_commit(
+            s,
+            &commit,
+            Author::User
+        ))
     }
 
     /// Appends a block ID (citations; `ai: <job>` when a job needs it).
@@ -99,7 +141,13 @@ impl VaultService {
         block_id: String,
         author: Author,
     ) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.append_block_id(s, id, block_start, &block_id, author))
+        on_actor!(self, scope, |core, s| core.append_block_id(
+            s,
+            id,
+            block_start,
+            &block_id,
+            author
+        ))
     }
 
     /// `POST /capture`.
@@ -114,7 +162,12 @@ impl VaultService {
         id: NoteId,
         others: Vec<Candidate>,
     ) -> Result<()> {
-        on_actor!(self, scope, |core, s| core.keep_both_notes(s, id, &others, Author::User))
+        on_actor!(self, scope, |core, s| core.keep_both_notes(
+            s,
+            id,
+            &others,
+            Author::User
+        ))
     }
 
     /// `POST /relations`.
@@ -137,7 +190,8 @@ impl VaultService {
         rel: RelationKey,
         new_rel: RelationKey,
     ) -> Result<()> {
-        on_actor!(self, scope, |core, s| core.retype_relation(s, src, dst, rel, new_rel))
+        on_actor!(self, scope, |core, s| core
+            .retype_relation(s, src, dst, rel, new_rel))
     }
 
     /// `DELETE /relations`. Returns whether the removed edge was by AI (and so rejected).
@@ -148,7 +202,8 @@ impl VaultService {
         dst: NoteId,
         rel: RelationKey,
     ) -> Result<bool> {
-        on_actor!(self, scope, |core, s| core.remove_relation(s, src, dst, rel))
+        on_actor!(self, scope, |core, s| core
+            .remove_relation(s, src, dst, rel))
     }
 
     /// AI edges in one `ai: <job>` commit.
@@ -159,7 +214,8 @@ impl VaultService {
         src: NoteId,
         edges: Vec<AiEdge>,
     ) -> Result<Option<String>> {
-        on_actor!(self, scope, |core, s| core.ai_add_relations(s, &job, src, edges))
+        on_actor!(self, scope, |core, s| core
+            .ai_add_relations(s, &job, src, edges))
     }
 
     /// `POST /entities`, `/documents`, `/places`.
@@ -184,7 +240,8 @@ impl VaultService {
         loser: NoteId,
         survivor: NoteId,
     ) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.merge_entities(s, loser, survivor))
+        on_actor!(self, scope, |core, s| core
+            .merge_entities(s, loser, survivor))
     }
 
     /// `POST /documents/{id}/custody`.
@@ -194,7 +251,8 @@ impl VaultService {
         document: NoteId,
         ev: NewCustodyEvent,
     ) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.add_custody_event(s, document, ev))
+        on_actor!(self, scope, |core, s| core
+            .add_custody_event(s, document, ev))
     }
 
     /// `POST /tasks`.
@@ -210,7 +268,12 @@ impl VaultService {
         patch: TaskPatch,
         if_match: Option<String>,
     ) -> Result<()> {
-        on_actor!(self, scope, |core, s| core.patch_task(s, &id, patch, if_match.as_deref()))
+        on_actor!(self, scope, |core, s| core.patch_task(
+            s,
+            &id,
+            patch,
+            if_match.as_deref()
+        ))
     }
 
     /// `POST /tasks/{id}/complete|cancel|reopen`.
@@ -221,7 +284,12 @@ impl VaultService {
         transition: Transition,
         if_match: Option<String>,
     ) -> Result<Option<String>> {
-        on_actor!(self, scope, |core, s| core.transition_task(s, &id, transition, if_match.as_deref()))
+        on_actor!(self, scope, |core, s| core.transition_task(
+            s,
+            &id,
+            transition,
+            if_match.as_deref()
+        ))
     }
 
     /// `stratad verify --user`: reconciles the vault now and returns what was found.

@@ -1,4 +1,4 @@
-//! Local SQLite storage (PLAN §12.2, §12.7).
+//! Local `SQLite` storage (PLAN §12.2, §12.7).
 //!
 //! - One database file **per account**, keyed by user ID, under
 //!   `<app data>/strata/accounts/<user id>.sqlite3` ([`AccountDb`]). Account switching opens a
@@ -162,12 +162,12 @@ pub(crate) fn open_connection(path: &Path) -> CoreResult<Connection> {
     Ok(conn)
 }
 
-/// Encodes a value as MessagePack (named maps, like the wire, L21).
+/// Encodes a value as `MessagePack` (named maps, like the wire, L21).
 pub(crate) fn to_msgpack<T: serde::Serialize>(value: &T) -> CoreResult<Vec<u8>> {
     Ok(rmp_serde::to_vec_named(value)?)
 }
 
-/// Decodes MessagePack.
+/// Decodes `MessagePack`.
 pub(crate) fn from_msgpack<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> CoreResult<T> {
     Ok(rmp_serde::from_slice(bytes)?)
 }

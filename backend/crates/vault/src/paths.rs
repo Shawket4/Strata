@@ -140,7 +140,12 @@ mod tests {
         ] {
             assert!(validate_note_path(bad).is_err(), "{bad:?}");
         }
-        for good in ["notes/x.md", "people/أحمد سمير.md", "a.md", "inbox/2026-09-27-120000.md"] {
+        for good in [
+            "notes/x.md",
+            "people/أحمد سمير.md",
+            "a.md",
+            "inbox/2026-09-27-120000.md",
+        ] {
             assert_eq!(validate_note_path(good).ok(), Some(()), "{good:?}");
         }
     }

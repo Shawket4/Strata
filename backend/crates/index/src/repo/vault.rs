@@ -8,7 +8,9 @@ use strata_common::NoteId;
 use uuid::Uuid;
 
 use crate::error::Result;
-use crate::repo::entities::{CustodyEvent, Document, Entity, add_custody_event, set_trigram_threshold};
+use crate::repo::entities::{
+    CustodyEvent, Document, Entity, add_custody_event, set_trigram_threshold,
+};
 use crate::repo::tasks::Task;
 use crate::scope::ScopedTx;
 use crate::types::{DocStatus, EntityKind};
@@ -174,11 +176,10 @@ pub async fn clear_derived(tx: &mut ScopedTx) -> Result<()> {
 pub async fn derived_snapshot(tx: &mut ScopedTx) -> Result<Vec<(String, Vec<String>)>> {
     let mut out = Vec::new();
     for t in DERIVED_TABLES {
-        let mut rows: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
-            "SELECT x::text FROM {t} x"
-        )))
-        .fetch_all(tx.conn())
-        .await?;
+        let mut rows: Vec<String> =
+            sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT x::text FROM {t} x")))
+                .fetch_all(tx.conn())
+                .await?;
         rows.sort();
         out.push(((*t).to_owned(), rows));
     }
@@ -383,14 +384,8 @@ pub async fn list_task_view(
             "status = 'open' AND (due = $1 OR (scheduled = $1 AND (due IS NULL OR due >= $1)))",
             "due NULLS LAST, note_id, line_start",
         ),
-        TaskView::Upcoming => (
-            "status = 'open' AND due > $1",
-            "due, note_id, line_start",
-        ),
-        TaskView::Overdue => (
-            "status = 'open' AND due < $1",
-            "due, note_id, line_start",
-        ),
+        TaskView::Upcoming => ("status = 'open' AND due > $1", "due, note_id, line_start"),
+        TaskView::Overdue => ("status = 'open' AND due < $1", "due, note_id, line_start"),
         TaskView::Recurring => (
             "status = 'open' AND recurrence_raw IS NOT NULL",
             "due NULLS LAST, note_id, line_start",

@@ -157,7 +157,9 @@ impl Core {
     /// Creates an entity note (`people/`, `companies/`, `documents/`, `places/`).
     pub async fn create_entity(&mut self, scope: UserScope, req: NewEntity) -> Result<NoteView> {
         if entity_kind(req.kind).is_none() {
-            return Err(VaultError::invalid("kind must be person, company, document or place"));
+            return Err(VaultError::invalid(
+                "kind must be person, company, document or place",
+            ));
         }
         let name = req.name.trim();
         if name.is_empty() {
@@ -172,7 +174,9 @@ impl Core {
         if let Some(p) = req.parent
             && (req.kind != NoteKind::Place || self.kind_of_id(p) != Some(NoteKind::Place))
         {
-            return Err(VaultError::invalid("parent must be a place (and only places nest)"));
+            return Err(VaultError::invalid(
+                "parent must be a place (and only places nest)",
+            ));
         }
         if let Some(id) = req.id
             && self.state()?.contains_id(id)
@@ -216,7 +220,8 @@ impl Core {
                 fm.set_text(KnownKey::Title, name).map_err(err)?;
             }
             if !aliases.is_empty() {
-                fm.set_list(KnownKey::Aliases, aliases.clone()).map_err(err)?;
+                fm.set_list(KnownKey::Aliases, aliases.clone())
+                    .map_err(err)?;
             }
             let tags = clean_list(&req.tags);
             if !tags.is_empty() {
@@ -250,13 +255,14 @@ impl Core {
     }
 
     /// Edits user fields, aliases, tags, the name (rename) and, for places, the parent.
+    #[allow(clippy::too_many_lines)] // one linear pass; splitting would scatter the rules
     pub async fn patch_entity(
         &mut self,
         scope: UserScope,
         id: NoteId,
         patch: EntityPatch,
     ) -> Result<NoteView> {
-        let (path, version, kind) = self.entity_meta(id)?;
+        let (note_path, version, kind) = self.entity_meta(id)?;
         if let Some(m) = &patch.if_match
             && *m != version
         {
@@ -279,16 +285,24 @@ impl Core {
             }
             let mut tx = self.begin(&scope).await?;
             if erepo::place_subtree(&mut tx, id).await?.contains(&p) {
-                return Err(VaultError::invalid("a place cannot be nested inside itself"));
+                return Err(VaultError::invalid(
+                    "a place cannot be nested inside itself",
+                ));
             }
             tx.commit().await?;
         }
-        let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
+        let text = self
+            .read_text(&note_path)
+            .await?
+            .ok_or(VaultError::NotFound)?;
         let mut doc = Document::parse(&text);
         let mut tx = self.begin(&scope).await?;
         let mut keep: Vec<crate::error::Candidate> = Vec::new();
         {
-            let old_aliases = doc.frontmatter().map(|f| f.aliases()).unwrap_or_default();
+            let old_aliases = doc
+                .frontmatter()
+                .map(vault_format::Frontmatter::aliases)
+                .unwrap_or_default();
             let fm = doc.frontmatter_mut();
             if fm.error().is_some() {
                 return Err(VaultError::invalid("the frontmatter cannot be edited"));
@@ -362,7 +376,7 @@ impl Core {
         let tz = self.tz(&mut tx).await?;
         let now = self.local_now(tz);
         prepare::stamp(&mut doc, id, None, Some(&now))?;
-        let mut new_path = path.clone();
+        let mut new_path = note_path.clone();
         if let Some(name) = &patch.name {
             let name = name.trim();
             if name.is_empty() {
@@ -377,19 +391,20 @@ impl Core {
                 fm.set_text(KnownKey::Title, name)
                     .map_err(|_| VaultError::invalid("the property could not be set"))?;
             }
-            new_path = paths::join(paths::parent(&path), &format!("{stem}.md"));
+            new_path = paths::join(paths::parent(&note_path), &format!("{stem}.md"));
             let state = self.state()?;
-            if new_path != path
+            if new_path != note_path
                 && (state.notes.contains_key(&new_path) || state.attachments.contains(&new_path))
             {
                 return Err(VaultError::PathTaken);
             }
         }
         let rendered = doc.render();
-        let mut changes = if new_path == path {
-            vec![(path.clone(), Some(rendered.into_bytes()))]
+        let mut changes = if new_path == note_path {
+            vec![(note_path.clone(), Some(rendered.into_bytes()))]
         } else {
-            self.plan_move(&path, &new_path, Some(rendered)).await?
+            self.plan_move(&note_path, &new_path, Some(rendered))
+                .await?
         };
         if !keep.is_empty() {
             let mut sc = self
@@ -399,10 +414,10 @@ impl Core {
             self.keep_both(&mut sc, &keep);
             changes.push(Core::sidecar_change(&sc)?);
         }
-        let subject = if new_path == path {
-            path.clone()
+        let subject = if new_path == note_path {
+            note_path.clone()
         } else {
-            format!("{path} -> {new_path}")
+            format!("{note_path} -> {new_path}")
         };
         self.finish(tx, changes, Author::User.message("update", &subject))
             .await?;
@@ -413,6 +428,7 @@ impl Core {
     /// loser is rewritten to the survivor (sidecar references too), aliases are unioned (the
     /// loser's name becomes an alias), the loser's `## Notes` move under a dated sub-heading
     /// of the survivor's `## Notes`, and the loser goes to the trash — one commit.
+    #[allow(clippy::too_many_lines)] // one linear pass; splitting would scatter the rules
     pub async fn merge_entities(
         &mut self,
         scope: UserScope,
@@ -420,12 +436,16 @@ impl Core {
         survivor: NoteId,
     ) -> Result<NoteView> {
         if loser == survivor {
-            return Err(VaultError::invalid("an entity cannot be merged into itself"));
+            return Err(VaultError::invalid(
+                "an entity cannot be merged into itself",
+            ));
         }
         let (lpath, _, lkind) = self.entity_meta(loser)?;
         let (spath, _, skind) = self.entity_meta(survivor)?;
         if lkind != skind {
-            return Err(VaultError::invalid("only entities of the same kind can be merged"));
+            return Err(VaultError::invalid(
+                "only entities of the same kind can be merged",
+            ));
         }
         let mut tx = self.begin(&scope).await?;
         let tz = self.tz(&mut tx).await?;
@@ -440,10 +460,15 @@ impl Core {
         let stitle = crate::derive::title_of(&spath, &sdoc);
 
         // Aliases.
-        let mut aliases = sdoc.frontmatter().map(|f| f.aliases()).unwrap_or_default();
-        for a in std::iter::once(ltitle.clone())
-            .chain(ldoc.frontmatter().map(|f| f.aliases()).unwrap_or_default())
-        {
+        let mut aliases = sdoc
+            .frontmatter()
+            .map(vault_format::Frontmatter::aliases)
+            .unwrap_or_default();
+        for a in std::iter::once(ltitle.clone()).chain(
+            ldoc.frontmatter()
+                .map(vault_format::Frontmatter::aliases)
+                .unwrap_or_default(),
+        ) {
             if a != stitle && !aliases.contains(&a) {
                 aliases.push(a);
             }
@@ -462,7 +487,9 @@ impl Core {
             let fm = sdoc.frontmatter_mut();
             let err = |_| VaultError::invalid("the survivor's frontmatter cannot be edited");
             if fm.error().is_some() {
-                return Err(VaultError::invalid("the survivor's frontmatter cannot be edited"));
+                return Err(VaultError::invalid(
+                    "the survivor's frontmatter cannot be edited",
+                ));
             }
             fm.set_list(KnownKey::Aliases, aliases).map_err(err)?;
             for (rk, items) in rel_lists {
@@ -472,7 +499,8 @@ impl Core {
                         .map(|l| index.resolve(&l.path, Some(&lpath)));
                     let points_home = matches!(&target, Some(Resolution::Resolved(p)) if *p == spath || *p == lpath);
                     let dup = list.iter().any(|x| {
-                        let a = WikiLink::parse_exact(x.trim()).map(|l| index.resolve(&l.path, Some(&spath)));
+                        let a = WikiLink::parse_exact(x.trim())
+                            .map(|l| index.resolve(&l.path, Some(&spath)));
                         a.is_some() && a == target
                     });
                     if !points_home && !dup && !list.contains(&item) {
@@ -489,38 +517,35 @@ impl Core {
             let body = sdoc.body().to_owned();
             let secs = sections::sections(&body);
             let insert = format!("{heading}\n\n{}\n", lnotes.trim_end());
-            let new_body = match secs
+            let new_body = if let Some(s) = secs
                 .iter()
                 .find(|s| s.level == 2 && s.title.trim().eq_ignore_ascii_case("Notes"))
             {
-                Some(s) => {
-                    let end = s.content_span.end;
-                    let mut b = body[..end].to_owned();
-                    if !b.ends_with('\n') {
-                        b.push('\n');
-                    }
-                    if !b.ends_with("\n\n") {
-                        b.push('\n');
-                    }
-                    b.push_str(&insert);
-                    if end < body.len() {
-                        b.push('\n');
-                        b.push_str(&body[end..]);
-                    }
-                    b
+                let end = s.content_span.end;
+                let mut b = body[..end].to_owned();
+                if !b.ends_with('\n') {
+                    b.push('\n');
                 }
-                None => {
-                    let mut b = body.clone();
-                    if !b.is_empty() && !b.ends_with('\n') {
-                        b.push('\n');
-                    }
-                    if !b.is_empty() {
-                        b.push('\n');
-                    }
-                    b.push_str("## Notes\n\n");
-                    b.push_str(&insert);
-                    b
+                if !b.ends_with("\n\n") {
+                    b.push('\n');
                 }
+                b.push_str(&insert);
+                if end < body.len() {
+                    b.push('\n');
+                    b.push_str(&body[end..]);
+                }
+                b
+            } else {
+                let mut b = body.clone();
+                if !b.is_empty() && !b.ends_with('\n') {
+                    b.push('\n');
+                }
+                if !b.is_empty() {
+                    b.push('\n');
+                }
+                b.push_str("## Notes\n\n");
+                b.push_str(&insert);
+                b
             };
             sdoc.set_body(new_body);
         }
@@ -568,26 +593,26 @@ impl Core {
             if sc.id == loser.as_ulid() {
                 continue;
             }
-            let mut changed = false;
+            let mut touched = false;
             for r in &mut sc.relations {
                 if r.target_id == loser.as_ulid() {
                     r.target_id = survivor.as_ulid();
-                    changed = true;
+                    touched = true;
                 }
             }
             for r in &mut sc.rejected {
                 if r.target_id == loser.as_ulid() {
                     r.target_id = survivor.as_ulid();
-                    changed = true;
+                    touched = true;
                 }
             }
             for k in &mut sc.keep_both {
                 if k.other_id == loser.as_ulid() {
                     k.other_id = survivor.as_ulid();
-                    changed = true;
+                    touched = true;
                 }
             }
-            if changed {
+            if touched {
                 let (_, content) = Core::sidecar_change(&sc)?;
                 changes.insert(f, content);
             }
@@ -651,7 +676,9 @@ impl Core {
             None => true,
         };
         if !primary_ok {
-            return Err(VaultError::invalid("the event type's primary argument is missing"));
+            return Err(VaultError::invalid(
+                "the event type's primary argument is missing",
+            ));
         }
         let citation = match ev.source {
             Some(s) => {
@@ -672,7 +699,10 @@ impl Core {
             citations: vec![citation],
         };
         // Newest first; a new event on an existing date goes above the older ones.
-        let at = events.iter().position(|e| e.date <= ev.date).unwrap_or(events.len());
+        let at = events
+            .iter()
+            .position(|e| e.date <= ev.date)
+            .unwrap_or(events.len());
         events.insert(at, new);
         let content = custody::render_section(&events);
         let body = sections::replace_ai_sections(
@@ -720,7 +750,9 @@ fn retarget_links(
     to_link: &str,
     index: &vault_format::PathIndex,
 ) -> bool {
-    let resolves = |l: &WikiLink| index.resolve(&l.path, Some(source)) == Resolution::Resolved(from.to_owned());
+    let resolves = |l: &WikiLink| {
+        index.resolve(&l.path, Some(source)) == Resolution::Resolved(from.to_owned())
+    };
     let rewritten = vault_format::rewrite::rewrite_body(doc.body(), |l| {
         resolves(l).then(|| l.with_path(to_link))
     });
@@ -729,8 +761,9 @@ fn retarget_links(
         doc.set_body(rewritten.text);
     }
     let targets_to = |s: &str| {
-        WikiLink::parse_exact(s.trim())
-            .is_some_and(|l| index.resolve(&l.path, Some(source)) == Resolution::Resolved(to.to_owned()))
+        WikiLink::parse_exact(s.trim()).is_some_and(|l| {
+            index.resolve(&l.path, Some(source)) == Resolution::Resolved(to.to_owned())
+        })
     };
     let fm = doc.frontmatter_mut();
     if fm.error().is_some() {
@@ -911,7 +944,15 @@ impl VaultService {
         self.ready(scope).await?;
         let q = query.map(normalize_for_search).filter(|q| !q.is_empty());
         let mut tx = self.inner.db.begin(scope).await?;
-        let hits = vrepo::search_entities(&mut tx, kind, q.as_deref(), tag, 0.3, i64::from(limit.clamp(1, 500))).await?;
+        let hits = vrepo::search_entities(
+            &mut tx,
+            kind,
+            q.as_deref(),
+            tag,
+            0.3,
+            i64::from(limit.clamp(1, 500)),
+        )
+        .await?;
         tx.commit().await?;
         self.entity_summaries(scope, hits).await
     }
@@ -924,13 +965,20 @@ impl VaultService {
         if erepo::get_entity(&mut tx, id).await?.is_none() {
             return Err(VaultError::NotFound);
         }
-        let me = notes::get_note(&mut tx, id).await?.ok_or(VaultError::NotFound)?;
+        let me = notes::get_note(&mut tx, id)
+            .await?
+            .ok_or(VaultError::NotFound)?;
         let mut ids: BTreeSet<NoteId> = erepo::mentions_of(&mut tx, id)
             .await?
             .into_iter()
             .map(|m| m.note_id)
             .collect();
-        ids.extend(graph::backlinks(&mut tx, id).await?.into_iter().map(|l| l.src_id));
+        ids.extend(
+            graph::backlinks(&mut tx, id)
+                .await?
+                .into_iter()
+                .map(|l| l.src_id),
+        );
         ids.remove(&id);
         let mut rows = Vec::new();
         for i in ids {
@@ -970,9 +1018,11 @@ impl VaultService {
     pub(crate) async fn note_text(&self, scope: &UserScope, rel: &str) -> Result<Option<String>> {
         let dir = self.vault_dir(scope.user_id());
         let rel = rel.to_owned();
-        Ok(crate::store::blocking(move || Ok(crate::fsio::read(&dir, &rel)?))
-            .await?
-            .map(|b| String::from_utf8_lossy(&b).into_owned()))
+        Ok(
+            crate::store::blocking(move || Ok(crate::fsio::read(&dir, &rel)?))
+                .await?
+                .map(|b| String::from_utf8_lossy(&b).into_owned()),
+        )
     }
 
     /// Documents held now, last handled, or concerning the entity.
@@ -992,13 +1042,20 @@ impl VaultService {
     }
 
     /// The aggregated entity page.
-    pub async fn entity(&self, scope: &UserScope, id: NoteId, mention_limit: usize) -> Result<EntityView> {
+    pub async fn entity(
+        &self,
+        scope: &UserScope,
+        id: NoteId,
+        mention_limit: usize,
+    ) -> Result<EntityView> {
         let note = self.note(scope, id).await?;
         if note.trashed {
             return Err(VaultError::NotFound);
         }
         let mut tx = self.inner.db.begin(scope).await?;
-        let entity = erepo::get_entity(&mut tx, id).await?.ok_or(VaultError::NotFound)?;
+        let entity = erepo::get_entity(&mut tx, id)
+            .await?
+            .ok_or(VaultError::NotFound)?;
         let aliases = graph::aliases_for(&mut tx, id).await?;
         let tags = graph::tags_for(&mut tx, id).await?;
         let mut relations = Vec::new();
@@ -1007,40 +1064,87 @@ impl VaultService {
             if skip.contains(&r.rel_type.as_str()) {
                 continue;
             }
-            let title = notes::get_note(&mut tx, r.dst_id).await?.map(|n| n.title).unwrap_or_default();
-            relations.push(EntityEdge { rel: r.rel_type, other: r.dst_id, title, outgoing: true, by: r.by.as_str().to_owned() });
+            let title = notes::get_note(&mut tx, r.dst_id)
+                .await?
+                .map(|n| n.title)
+                .unwrap_or_default();
+            relations.push(EntityEdge {
+                rel: r.rel_type,
+                other: r.dst_id,
+                title,
+                outgoing: true,
+                by: r.by.as_str().to_owned(),
+            });
         }
         for r in graph::relations_to(&mut tx, id).await? {
             if skip.contains(&r.rel_type.as_str()) {
                 continue;
             }
-            let title = notes::get_note(&mut tx, r.src_id).await?.map(|n| n.title).unwrap_or_default();
-            relations.push(EntityEdge { rel: r.rel_type, other: r.src_id, title, outgoing: false, by: r.by.as_str().to_owned() });
+            let title = notes::get_note(&mut tx, r.src_id)
+                .await?
+                .map(|n| n.title)
+                .unwrap_or_default();
+            relations.push(EntityEdge {
+                rel: r.rel_type,
+                other: r.src_id,
+                title,
+                outgoing: false,
+                by: r.by.as_str().to_owned(),
+            });
         }
         tx.commit().await?;
         let doc = Document::parse(&note.content);
         let sections: Vec<(String, String)> = sections::sections(doc.body())
             .into_iter()
             .filter(|s| s.level == 2)
-            .map(|s| (s.title.clone(), doc.body()[s.own_content_span].trim().to_owned()))
+            .map(|s| {
+                (
+                    s.title.clone(),
+                    doc.body()[s.own_content_span].trim().to_owned(),
+                )
+            })
             .collect();
         let mut mentions = self.entity_notes(scope, id).await?;
         let mention_count = mentions.len();
         mentions.truncate(mention_limit);
         let documents = self.entity_documents(scope, id).await?;
-        Ok(EntityView { note, entity, aliases, tags, sections, mentions, mention_count, relations, documents })
+        Ok(EntityView {
+            note,
+            entity,
+            aliases,
+            tags,
+            sections,
+            mentions,
+            mention_count,
+            relations,
+            documents,
+        })
     }
 
     /// Documents matching the filter (`place` includes nested places).
-    pub async fn list_documents(&self, scope: &UserScope, mut filter: DocumentFilter) -> Result<Vec<(DocRow, EntitySummary)>> {
+    pub async fn list_documents(
+        &self,
+        scope: &UserScope,
+        mut filter: DocumentFilter,
+    ) -> Result<Vec<(DocRow, EntitySummary)>> {
         self.ready(scope).await?;
-        filter.query = filter.query.map(|q| normalize_for_search(&q)).filter(|q| !q.is_empty());
+        filter.query = filter
+            .query
+            .map(|q| normalize_for_search(&q))
+            .filter(|q| !q.is_empty());
         let mut tx = self.inner.db.begin(scope).await?;
         let docs = vrepo::list_documents(&mut tx, &filter, 0.3).await?;
         let mut hits = Vec::new();
         for d in &docs {
             if let Some(e) = erepo::get_entity(&mut tx, d.note_id).await? {
-                hits.push(EntityHit { note_id: e.note_id, kind: e.kind, display_name: e.display_name, role: e.role, industry: e.industry, score: 0.0 });
+                hits.push(EntityHit {
+                    note_id: e.note_id,
+                    kind: e.kind,
+                    display_name: e.display_name,
+                    role: e.role,
+                    industry: e.industry,
+                    score: 0.0,
+                });
             }
         }
         tx.commit().await?;
@@ -1055,7 +1159,9 @@ impl VaultService {
             return Err(VaultError::NotFound);
         }
         let mut tx = self.inner.db.begin(scope).await?;
-        let document = erepo::get_document(&mut tx, id).await?.ok_or(VaultError::NotFound)?;
+        let document = erepo::get_document(&mut tx, id)
+            .await?
+            .ok_or(VaultError::NotFound)?;
         let custody = erepo::custody_history(&mut tx, id).await?;
         let mut location_path = Vec::new();
         if let Some(loc) = document.location_id {
@@ -1065,7 +1171,13 @@ impl VaultService {
         }
         let copies = vrepo::copies_of(&mut tx, id).await?;
         tx.commit().await?;
-        Ok(DocumentView { note, document, custody, location_path, copies })
+        Ok(DocumentView {
+            note,
+            document,
+            custody,
+            location_path,
+            copies,
+        })
     }
 
     /// A place's ancestors, children and every document inside it (recursively).

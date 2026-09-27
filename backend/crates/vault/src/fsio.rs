@@ -222,16 +222,29 @@ mod tests {
         let tmp = tempfile::tempdir().expect("tempdir");
         atomic_write(tmp.path(), "notes/a.md", b"one").expect("write");
         atomic_write(tmp.path(), "notes/a.md", b"two").expect("write");
-        assert_eq!(read(tmp.path(), "notes/a.md").expect("read"), Some(b"two".to_vec()));
-        assert_eq!(scan(tmp.path()).expect("scan"), vec!["notes/a.md".to_owned()]);
-        assert_eq!(remove_temp_files(tmp.path()).expect("clean"), Vec::<String>::new());
+        assert_eq!(
+            read(tmp.path(), "notes/a.md").expect("read"),
+            Some(b"two".to_vec())
+        );
+        assert_eq!(
+            scan(tmp.path()).expect("scan"),
+            vec!["notes/a.md".to_owned()]
+        );
+        assert_eq!(
+            remove_temp_files(tmp.path()).expect("clean"),
+            Vec::<String>::new()
+        );
     }
 
     #[test]
     fn temp_files_are_invisible_and_cleaned() {
         let tmp = tempfile::tempdir().expect("tempdir");
         fs::create_dir_all(tmp.path().join("notes")).expect("mkdir");
-        fs::write(tmp.path().join("notes/.strata-tmp-9-9"), "---\nid: x\n---\n").expect("w");
+        fs::write(
+            tmp.path().join("notes/.strata-tmp-9-9"),
+            "---\nid: x\n---\n",
+        )
+        .expect("w");
         fs::create_dir_all(tmp.path().join(".git")).expect("mkdir");
         fs::write(tmp.path().join(".git/HEAD"), "x").expect("w");
         assert_eq!(scan(tmp.path()).expect("scan"), Vec::<String>::new());

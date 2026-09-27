@@ -107,7 +107,8 @@ fn scan_and_recover(
     let mut seen_tasks = BTreeSet::new();
     let mut assigned = Vec::new();
     for f in &files {
-        let is_trash_note = f.ends_with(".md") && paths::untrash_path(f).is_some_and(paths::is_note);
+        let is_trash_note =
+            f.ends_with(".md") && paths::untrash_path(f).is_some_and(paths::is_note);
         if !(paths::is_note(f) || is_trash_note) {
             continue;
         }
@@ -224,6 +225,7 @@ async fn warn(
 /// Reconciles the vault with git and the index (see the module docs) and loads the writer
 /// state. With `repair`, findings are reported as `index_repaired` (after a failed write)
 /// rather than as out-of-band edits.
+#[allow(clippy::too_many_lines)] // one linear pass; splitting would scatter the rules
 pub async fn reconcile(core: &mut Core, scope: UserScope, repair: bool) -> Result<Report> {
     let dir = core.dir.clone();
     let inner = core.inner.clone();
@@ -242,7 +244,11 @@ pub async fn reconcile(core: &mut Core, scope: UserScope, repair: bool) -> Resul
     let index = state.path_index();
     let mut sidecar_changes = Vec::new();
     let mut sidecars: HashMap<NoteId, NoteSidecar> = HashMap::new();
-    for f in scanned.files.iter().filter(|f| f.starts_with(".meta/notes/")) {
+    for f in scanned
+        .files
+        .iter()
+        .filter(|f| f.starts_with(".meta/notes/"))
+    {
         let Some(id) = sidecar_id(f) else { continue };
         let Some(text) = core.read_text(f).await? else {
             continue;
@@ -354,12 +360,25 @@ pub async fn reconcile(core: &mut Core, scope: UserScope, repair: bool) -> Resul
 
     // Warnings.
     let (oob_kind, oob_detail) = if repair {
-        (kinds::INDEX_REPAIRED, "the index was repaired from the file after a failed write")
+        (
+            kinds::INDEX_REPAIRED,
+            "the index was repaired from the file after a failed write",
+        )
     } else {
-        (kinds::OUT_OF_BAND, "the file was changed outside the API; the index was updated")
+        (
+            kinds::OUT_OF_BAND,
+            "the file was changed outside the API; the index was updated",
+        )
     };
     for p in &report.temp_files_removed {
-        warn(core, &mut tx, kinds::TEMP_FILE, Some(p), "a temporary file of an interrupted write was removed").await?;
+        warn(
+            core,
+            &mut tx,
+            kinds::TEMP_FILE,
+            Some(p),
+            "a temporary file of an interrupted write was removed",
+        )
+        .await?;
     }
     if !report.recovered.is_empty() {
         let detail = format!(
@@ -369,21 +388,49 @@ pub async fn reconcile(core: &mut Core, scope: UserScope, repair: bool) -> Resul
         warn(core, &mut tx, kinds::UNCOMMITTED, None, &detail).await?;
     }
     for p in &report.ids_assigned {
-        warn(core, &mut tx, kinds::ID_ASSIGNED, Some(p), "the note was given an id or task block ids").await?;
+        warn(
+            core,
+            &mut tx,
+            kinds::ID_ASSIGNED,
+            Some(p),
+            "the note was given an id or task block ids",
+        )
+        .await?;
     }
     for p in &report.sidecars_repaired {
         let orphan = sidecar_id(p).is_some_and(|id| !state.contains_id(id));
         if orphan {
-            warn(core, &mut tx, kinds::ORPHAN_SIDECAR, Some(p), "a sidecar without a note was removed").await?;
+            warn(
+                core,
+                &mut tx,
+                kinds::ORPHAN_SIDECAR,
+                Some(p),
+                "a sidecar without a note was removed",
+            )
+            .await?;
         } else {
-            warn(core, &mut tx, kinds::SIDECAR, Some(p), "sidecar provenance was repaired from the frontmatter").await?;
+            warn(
+                core,
+                &mut tx,
+                kinds::SIDECAR,
+                Some(p),
+                "sidecar provenance was repaired from the frontmatter",
+            )
+            .await?;
         }
     }
     for p in &report.out_of_band {
         warn(core, &mut tx, oob_kind, Some(p), oob_detail).await?;
     }
     for p in &report.missing {
-        warn(core, &mut tx, kinds::MISSING_FILE, Some(p), "the note's file is missing; it was removed from the index").await?;
+        warn(
+            core,
+            &mut tx,
+            kinds::MISSING_FILE,
+            Some(p),
+            "the note's file is missing; it was removed from the index",
+        )
+        .await?;
     }
     core.state = Some(state);
     if !first_build {
@@ -413,7 +460,9 @@ fn derive_all(
             tz,
         };
         for (path, meta) in state.notes.iter().chain(state.trash.iter()) {
-            let Some(text) = texts.get(path) else { continue };
+            let Some(text) = texts.get(path) else {
+                continue;
+            };
             let trashed = !paths::is_note(path);
             if let Some(d) = derive::derive(path, text, sidecars.get(&meta.id), &ctx, trashed) {
                 names.push((path.clone(), d.link_names.clone()));
@@ -438,7 +487,11 @@ pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
     let scanned = blocking(move || scan_and_recover(&dir, inner.ids.as_ref(), at)).await?;
     let mut state = build_state(&scanned.files, &scanned.texts);
     let mut sidecars = HashMap::new();
-    for f in scanned.files.iter().filter(|f| f.starts_with(".meta/notes/")) {
+    for f in scanned
+        .files
+        .iter()
+        .filter(|f| f.starts_with(".meta/notes/"))
+    {
         if let Some(id) = sidecar_id(f)
             && let Some(text) = core.read_text(f).await?
             && let Ok(sc) = NoteSidecar::from_json(&text)

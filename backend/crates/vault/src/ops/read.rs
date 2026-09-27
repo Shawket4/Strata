@@ -6,10 +6,10 @@ use std::collections::{BTreeMap, HashMap};
 
 use strata_common::NoteId;
 use strata_index::UserScope;
+use strata_index::repo::graph;
 use strata_index::repo::notes::{self, Note};
 use strata_index::repo::suggestions::{self, Suggestion};
 use strata_index::repo::vault::{self as vrepo, IntegrityWarning};
-use strata_index::repo::graph;
 use strata_index::types::{LinkKind, SuggestionStatus};
 use text_normalize::normalize_for_search;
 use vault_format::Document;
@@ -88,7 +88,10 @@ impl VaultService {
         match self.read_file(scope, &row.path).await? {
             Some(text) => Ok(Self::view_of(&row, text)),
             // Moved while we looked: ask the writer.
-            None => self.exec(scope, move |core, _| Box::pin(core.view(id))).await,
+            None => {
+                self.exec(scope, move |core, _| Box::pin(core.view(id)))
+                    .await
+            }
         }
     }
 
@@ -111,7 +114,8 @@ impl VaultService {
     pub async fn tree(&self, scope: &UserScope) -> Result<Vec<TreeEntry>> {
         self.ready(scope).await?;
         let dir = self.vault_dir(scope.user_id());
-        let (dirs, files) = blocking(move || Ok((fsio::scan_dirs(&dir)?, fsio::scan(&dir)?))).await?;
+        let (dirs, files) =
+            blocking(move || Ok((fsio::scan_dirs(&dir)?, fsio::scan(&dir)?))).await?;
         let mut tx = self.inner.db.begin(scope).await?;
         let rows = notes::list_notes(&mut tx, false).await?;
         tx.commit().await?;
@@ -119,7 +123,10 @@ impl VaultService {
         for d in dirs {
             out.insert(d.clone(), TreeEntry::Folder { path: d });
         }
-        for f in files.into_iter().filter(|f| paths::is_content(f) && !f.ends_with(".md")) {
+        for f in files
+            .into_iter()
+            .filter(|f| paths::is_content(f) && !f.ends_with(".md"))
+        {
             out.insert(f.clone(), TreeEntry::File { path: f });
         }
         for n in rows {
@@ -164,25 +171,32 @@ impl VaultService {
         tx.commit().await?;
         let mut groups: BTreeMap<(u8, String), Vec<Backlink>> = BTreeMap::new();
         for l in links {
-            let Some(src) = sources.get(&l.src_id) else { continue };
+            let Some(src) = sources.get(&l.src_id) else {
+                continue;
+            };
             let kind = match l.kind {
                 LinkKind::Link => "link",
                 LinkKind::Embed => "embed",
             };
             let rank = u8::from(l.kind == LinkKind::Embed);
-            groups.entry((rank, kind.to_owned())).or_default().push(Backlink {
-                source_id: src.id,
-                source_path: src.path.clone(),
-                source_title: src.title.clone(),
-                kind: kind.to_owned(),
-                by: None,
-                confidence: None,
-                anchor: l.anchor,
-                block_id: l.block_id,
-            });
+            groups
+                .entry((rank, kind.to_owned()))
+                .or_default()
+                .push(Backlink {
+                    source_id: src.id,
+                    source_path: src.path.clone(),
+                    source_title: src.title.clone(),
+                    kind: kind.to_owned(),
+                    by: None,
+                    confidence: None,
+                    anchor: l.anchor,
+                    block_id: l.block_id,
+                });
         }
         for r in relations {
-            let Some(src) = sources.get(&r.src_id) else { continue };
+            let Some(src) = sources.get(&r.src_id) else {
+                continue;
+            };
             groups
                 .entry((2, r.rel_type.clone()))
                 .or_default()
@@ -201,8 +215,11 @@ impl VaultService {
             .into_iter()
             .map(|((_, kind), mut items)| {
                 items.sort_by(|a, b| {
-                    (&a.source_path, &a.anchor, &a.block_id)
-                        .cmp(&(&b.source_path, &b.anchor, &b.block_id))
+                    (&a.source_path, &a.anchor, &a.block_id).cmp(&(
+                        &b.source_path,
+                        &b.anchor,
+                        &b.block_id,
+                    ))
                 });
                 items.dedup();
                 BacklinkGroup { kind, items }
@@ -244,7 +261,12 @@ impl VaultService {
     }
 
     /// The note as of `commit` (a commit in its history).
-    pub async fn note_at(&self, scope: &UserScope, id: NoteId, commit: &str) -> Result<NoteAtRevision> {
+    pub async fn note_at(
+        &self,
+        scope: &UserScope,
+        id: NoteId,
+        commit: &str,
+    ) -> Result<NoteAtRevision> {
         self.ready(scope).await?;
         let row = self.note_row(scope, id).await?;
         let dir = self.vault_dir(scope.user_id());
@@ -283,7 +305,9 @@ impl VaultService {
         }
         let q = normalize_for_search(query);
         if q.is_empty() {
-            return Err(VaultError::invalid("the query is empty after normalisation"));
+            return Err(VaultError::invalid(
+                "the query is empty after normalisation",
+            ));
         }
         self.ready(scope).await?;
         let mut tx = self.inner.db.begin(scope).await?;
@@ -315,7 +339,11 @@ impl VaultService {
                 })
                 .map(|l| {
                     let s: String = l.chars().take(160).collect();
-                    if l.chars().count() > 160 { format!("{s}…") } else { s }
+                    if l.chars().count() > 160 {
+                        format!("{s}…")
+                    } else {
+                        s
+                    }
                 });
             out.push(SearchHit {
                 kind: kind_of(&n),

@@ -176,10 +176,10 @@ impl FakeServer {
     }
 
     fn apply(s: &mut State, op: &PushOp) -> OpResult {
-        if let Some(i) = s.scripted.iter().position(|(e, _)| *e == op.entity_id) {
-            if let Some((_, r)) = s.scripted.remove(i) {
-                return r;
-            }
+        if let Some(i) = s.scripted.iter().position(|(e, _)| *e == op.entity_id)
+            && let Some((_, r)) = s.scripted.remove(i)
+        {
+            return r;
         }
         let note_id = match &op.payload {
             OpPayload::TaskCreate { note_id, .. } => note_id.clone(),
@@ -325,16 +325,15 @@ impl SyncApi for FakeServer {
             s.pushes.push(ops.clone());
             let mut out = Vec::new();
             for op in &ops {
-                let result = match s.results.get(&op.op_id) {
-                    Some(r) => r.clone(),
-                    None => {
-                        let r = Self::apply(&mut s, op);
-                        s.results.insert(op.op_id.clone(), r.clone());
-                        if matches!(r, OpResult::Applied { .. }) {
-                            s.applied_ops.push(op.op_id.clone());
-                        }
-                        r
+                let result = if let Some(r) = s.results.get(&op.op_id) {
+                    r.clone()
+                } else {
+                    let r = Self::apply(&mut s, op);
+                    s.results.insert(op.op_id.clone(), r.clone());
+                    if matches!(r, OpResult::Applied { .. }) {
+                        s.applied_ops.push(op.op_id.clone());
                     }
+                    r
                 };
                 out.push(OpOutcome {
                     op_id: op.op_id.clone(),

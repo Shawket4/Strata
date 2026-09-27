@@ -75,16 +75,14 @@ fn snippet_of(text: &str) -> Option<String> {
 }
 
 /// Existing items the new one resembles, exact matches first, then by score and ID.
+#[allow(clippy::too_many_lines)] // one linear pass; splitting would scatter the rules
 pub async fn find(
     tx: &mut ScopedTx,
     item: &NewItem<'_>,
     overrides: &BTreeMap<String, f32>,
 ) -> Result<Vec<Candidate>> {
     let threshold = near_threshold(item.kind, overrides);
-    let exact = item
-        .exact
-        .clone()
-        .unwrap_or_else(|| dedupe_key(item.text));
+    let exact = item.exact.clone().unwrap_or_else(|| dedupe_key(item.text));
     let trigram = normalize_for_search(&crate::derive::strip_links(item.text));
     // (kind, item id) -> (level, score)
     let mut found: BTreeMap<(String, String), (MatchLevel, f64)> = BTreeMap::new();

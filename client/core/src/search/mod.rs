@@ -1,4 +1,4 @@
-//! Local full-text search (PLAN §12.1 `search/`): SQLite FTS5 over text normalised with the
+//! Local full-text search (PLAN §12.1 `search/`): `SQLite` `FTS5` over text normalised with the
 //! shared `text-normalize` crate, applied identically at index time
 //! ([`crate::store::index`]) and query time, so Arabic letter variants, tashkeel, tatweel
 //! and case never prevent a match — the same rules the server's `tsvector` uses.

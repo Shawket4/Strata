@@ -12,6 +12,7 @@ use crate::error::Result;
 /// Tables without per-user RLS. Anything else must pass the user-owned checks.
 pub const GLOBAL_TABLES: &[&str] = &[
     "_sqlx_migrations",
+    "ai_usage_global",
     "audit_log",
     "invites",
     "job_wakeups",

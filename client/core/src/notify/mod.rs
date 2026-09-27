@@ -174,7 +174,7 @@ pub fn recompute(
             if let Some(r) = old
                 && r.state == "shown"
             {
-                row.state = "shown".to_owned();
+                "shown".clone_into(&mut row.state);
             }
             notifications::put(conn, &row, &now_s)?;
             if mode == NotificationMode::OsScheduled {

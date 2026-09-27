@@ -40,9 +40,10 @@ impl FakeClock {
     /// # Panics
     /// If `rfc3339` does not parse (a test fixture error).
     pub fn at(rfc3339: &str) -> Self {
-        let now = DateTime::parse_from_rfc3339(rfc3339)
-            .map(|d| d.with_timezone(&Utc))
-            .unwrap_or_else(|e| panic!("bad fixture instant {rfc3339}: {e}"));
+        let now = DateTime::parse_from_rfc3339(rfc3339).map_or_else(
+            |e| panic!("bad fixture instant {rfc3339}: {e}"),
+            |d| d.with_timezone(&Utc),
+        );
         Self::new(now)
     }
 
