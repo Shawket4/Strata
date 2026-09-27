@@ -17,6 +17,7 @@ pub mod ai;
 pub mod app;
 pub mod auth;
 pub mod events;
+pub mod graph;
 pub mod health;
 pub mod openapi;
 pub mod routes;

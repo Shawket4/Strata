@@ -3,7 +3,8 @@
 //! Only the API writes the vault, so a difference between the files, git and the index means
 //! a crash or out-of-band tampering. Reconciliation:
 //!
-//! 1. removes leftover temporary files of interrupted atomic writes;
+//! 1. removes leftover temporary files of interrupted atomic writes and rolls back a write
+//!    that stopped before its git commit ([`crate::journal`]);
 //! 2. gives notes without a (unique) ID one, and task lines without a block ID theirs;
 //! 3. commits anything uncommitted as `system: recovered changes`;
 //! 4. repairs sidecars from frontmatter (frontmatter wins for the existence of an edge; the
@@ -11,7 +12,10 @@
 //!    committed as `system: repair sidecars`;
 //! 5. compares every note's hash and path with the index and re-derives what differs, plus
 //!    every note whose links may resolve differently; notes gone from disk are purged;
-//! 6. records an integrity warning for each finding (surfaced by `GET /integrity`).
+//! 6. re-inserts the op results of commits the index never committed with (a crash between
+//!    a write's git commit and its database commit, [`crate::receipt`]) and records `HEAD` as
+//!    `sync_epochs.vault_head`;
+//! 7. records an integrity warning for each finding (surfaced by `GET /integrity`).
 //!
 //! A full reindex instead deletes every derived row and derives the whole vault again.
 
@@ -49,13 +53,22 @@ pub mod kinds {
     pub const ORPHAN_SIDECAR: &str = "orphan_sidecar_removed";
     /// The index was repaired after a failed write.
     pub const INDEX_REPAIRED: &str = "index_repaired";
+    /// A write that stopped before its commit was undone.
+    pub const WRITE_ROLLED_BACK: &str = "interrupted_write_rolled_back";
+    /// A pushed op's result was recovered from its commit.
+    pub const OP_RESULT_RECOVERED: &str = "op_result_recovered";
 }
+
+/// Most commits walked when looking for op results the index never committed.
+const RECOVERY_WALK_LIMIT: usize = 10_000;
 
 /// What reconciliation found and did.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Report {
     /// Temporary files removed.
     pub temp_files_removed: Vec<String>,
+    /// Paths restored because the write changing them never committed.
+    pub rolled_back: Vec<String>,
     /// Paths committed as recovered changes.
     pub recovered: Vec<String>,
     /// Notes that were given an ID.
@@ -70,22 +83,27 @@ pub struct Report {
     pub missing: Vec<String>,
     /// Notes re-derived in total.
     pub reindexed: usize,
+    /// Op IDs whose results were recovered from commit trailers.
+    pub ops_recovered: Vec<String>,
 }
 
 impl Report {
     /// True if nothing was wrong.
     pub fn is_clean(&self) -> bool {
         self.temp_files_removed.is_empty()
+            && self.rolled_back.is_empty()
             && self.recovered.is_empty()
             && self.ids_assigned.is_empty()
             && self.sidecars_repaired.is_empty()
             && self.out_of_band.is_empty()
             && self.missing.is_empty()
+            && self.ops_recovered.is_empty()
     }
 }
 
 struct Scanned {
     temp: Vec<String>,
+    rolled_back: Vec<String>,
     dirty: Vec<String>,
     assigned: Vec<String>,
     commit: Option<String>,
@@ -101,6 +119,11 @@ fn scan_and_recover(
     write: bool,
 ) -> Result<Scanned> {
     let temp = fsio::temp_files(dir, write)?;
+    let rolled_back = if write {
+        crate::journal::recover(dir)?
+    } else {
+        Vec::new()
+    };
     let dirty = git::dirty_paths(dir)?;
     let files = fsio::scan(dir)?;
     let mut texts = BTreeMap::new();
@@ -163,6 +186,7 @@ fn scan_and_recover(
     };
     Ok(Scanned {
         temp,
+        rolled_back,
         dirty,
         assigned,
         commit,
@@ -248,6 +272,7 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
     let mut state = build_state(&scanned.files, &scanned.texts);
     let mut report = Report {
         temp_files_removed: scanned.temp.clone(),
+        rolled_back: scanned.rolled_back.clone(),
         recovered: scanned.dirty.clone(),
         ids_assigned: scanned.assigned.clone(),
         recovery_commit: scanned.commit.clone(),
@@ -402,6 +427,16 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
         )
         .await?;
     }
+    for p in &report.rolled_back {
+        warn(
+            core,
+            &mut tx,
+            kinds::WRITE_ROLLED_BACK,
+            Some(p),
+            "a write that stopped before its commit was undone",
+        )
+        .await?;
+    }
     if !report.recovered.is_empty() {
         let detail = format!(
             "{} uncommitted file(s) were committed as system: recovered changes",
@@ -470,10 +505,17 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
         };
         core.log_changes(&mut tx, &synced).await?;
     }
+    report.ops_recovered = recover_op_results(core, &mut tx).await?;
+    for op in &report.ops_recovered {
+        let detail = format!("the result of op {op} was recovered from its commit");
+        warn(core, &mut tx, kinds::OP_RESULT_RECOVERED, None, &detail).await?;
+    }
     let warnings = vrepo::list_warnings(&mut tx, i64::MAX).await?.len();
     tx.commit().await?;
     notice.integrity_warnings = u32::try_from(
         report.temp_files_removed.len()
+            + report.rolled_back.len()
+            + report.ops_recovered.len()
             + usize::from(!report.recovered.is_empty())
             + report.ids_assigned.len()
             + report.sidecars_repaired.len()
@@ -486,6 +528,44 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
     notice.user = Some(core.user);
     core.inner.notify(core.user, &notice);
     Ok(report)
+}
+
+/// Re-inserts the op results recorded in the commits after `sync_epochs.vault_head` (their
+/// database transaction never committed) and records `HEAD` there. Returns the recovered op
+/// IDs, oldest first.
+async fn recover_op_results(core: &Core, tx: &mut ScopedTx) -> Result<Vec<String>> {
+    use strata_index::repo::sync as log;
+    let recorded = log::vault_head(tx).await?;
+    let dir = core.dir.clone();
+    let stop = recorded.clone();
+    let (head, commits) = blocking(move || {
+        let head = git::head(&dir)?.map(|c| c.id);
+        if head.is_none() || head == stop {
+            return Ok((head, Vec::new()));
+        }
+        Ok((
+            head,
+            git::commits_since(&dir, stop.as_deref(), RECOVERY_WALK_LIMIT)?,
+        ))
+    })
+    .await?;
+    let Some(head) = head else {
+        return Ok(Vec::new());
+    };
+    let mut recovered = Vec::new();
+    for (_, message) in &commits {
+        let Some(r) = crate::receipt::parse_trailers(message) else {
+            continue;
+        };
+        if log::idempotency_get(tx, r.op_id).await?.is_none() {
+            log::idempotency_put(tx, r.op_id, r.device, &r.result, core.now()).await?;
+            recovered.push(r.op_id.to_string());
+        }
+    }
+    if recorded.as_deref() != Some(head.as_str()) {
+        log::set_vault_head(tx, &head, core.now()).await?;
+    }
+    Ok(recovered)
 }
 
 /// Note events for what reconciliation re-derived or purged.

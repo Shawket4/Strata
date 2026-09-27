@@ -40,6 +40,8 @@ strata-vault = { workspace = true }
 # AI pipelines: semantic/hybrid search, Ask, AI status (PLAN §9.5, §7.5 Search/AI)
 strata-jobs = { workspace = true }
 strata-ai = { workspace = true }
+# graph, maps and clustering (PLAN §7.5 Graph, §10)
+strata-graph = { workspace = true }
 vault-format = { workspace = true }
 domain = { workspace = true }
 sync-model = { workspace = true }

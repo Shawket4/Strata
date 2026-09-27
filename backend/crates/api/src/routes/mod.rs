@@ -6,6 +6,9 @@ pub mod ai;
 pub mod auth;
 pub mod devices;
 pub mod events;
+// The graph component (mounted by `graph::configure`, documented by `graph::GraphApiDoc`).
+pub mod graph;
+pub mod maps;
 pub mod me;
 pub mod sync;
 // The vault store (mounted and documented by `crate::vault`).

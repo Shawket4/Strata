@@ -243,6 +243,13 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
         prepared.ids.clone(),
         &config,
     )?);
+    let graph_api = web::Data::new(crate::jobs::graph_api(
+        &prepared.ai,
+        &prepared.app_db,
+        &prepared.vault,
+        prepared.clock.clone(),
+        prepared.ids.clone(),
+    ));
     let background = crate::jobs::start(
         &config,
         &prepared.ai,
@@ -273,6 +280,7 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
             .app_data(vault.clone())
             .app_data(ai.clone())
             .app_data(ai_api.clone())
+            .app_data(graph_api.clone())
             .app_data(events.clone())
             .app_data(sync.clone())
             .wrap(from_fn(crate::logging::log_request))

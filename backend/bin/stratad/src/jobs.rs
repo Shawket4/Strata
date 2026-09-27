@@ -85,6 +85,52 @@ impl Background {
     }
 }
 
+/// The standard handlers plus the graph's `cluster` job (publishing `cluster.updated`).
+pub fn handlers(deps: &Deps, bus: Arc<EventBus>) -> Vec<Arc<dyn strata_jobs::JobHandler>> {
+    let mut handlers = strata_jobs::standard_handlers(deps);
+    handlers.push(Arc::new(strata_graph::cluster::ClusterHandler::new(
+        deps.db.clone(),
+        deps.vault.clone(),
+        deps.ai.clone(),
+        Arc::new(strata_api::graph::BusClusterEvents(bus)),
+        strata_graph::cluster::ClusterConfig::default(),
+    )));
+    handlers
+}
+
+/// The standard periodic kinds plus the nightly `cluster` run (§9.2).
+pub fn periodic() -> Vec<strata_jobs::Periodic> {
+    let mut periodic = strata_jobs::standard_periodic();
+    periodic.push(strata_jobs::Periodic {
+        kind: strata_graph::cluster::CLUSTER,
+        cadence: strata_jobs::Cadence::Nightly,
+    });
+    periodic
+}
+
+/// The graph endpoints' dependencies: graph reads (with similarity edges when an embedding
+/// model is configured), the clock and IDs for the recluster trigger.
+pub fn graph_api(
+    parts: &AiParts,
+    db: &AppDb,
+    vault: &VaultService,
+    clock: Arc<dyn Clock>,
+    ids: Arc<dyn IdGenerator>,
+) -> strata_api::graph::GraphApi {
+    let similarity = parts.embedder.as_ref().map(|e| {
+        Arc::new(strata_graph::similarity::NoteVectorSimilarity::new(
+            db.clone(),
+            e.model_id(),
+            strata_graph::similarity::SimilarityConfig::default(),
+        )) as Arc<dyn strata_graph::similarity::SimilaritySource>
+    });
+    strata_api::graph::GraphApi::new(
+        strata_graph::GraphService::new(db.clone(), vault.clone(), similarity),
+        clock,
+        ids,
+    )
+}
+
 /// The API's AI features over `parts`.
 pub fn ai_api(
     parts: &AiParts,
@@ -151,9 +197,9 @@ pub async fn start(
         db.clone(),
         issuer.clone(),
         clock.clone(),
-        Arc::new(BusEvents(bus)),
+        Arc::new(BusEvents(bus.clone())),
         RunnerConfig::from_config(config),
-        strata_jobs::standard_handlers(&deps),
+        handlers(&deps, bus),
     );
     let users: Arc<dyn UserDirectory> = Arc::new(AccountUsers(accounts.clone()));
     let active = users.active_users().await.unwrap_or_else(|e| {
@@ -172,7 +218,7 @@ pub async fn start(
         users,
         tz,
         config.jobs.nightly_hour,
-        strata_jobs::standard_periodic(),
+        periodic(),
     ));
     if parts.embedder.is_some() {
         let n = scheduler

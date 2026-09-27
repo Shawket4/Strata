@@ -186,6 +186,31 @@ pub async fn idempotency_put(
     }
 }
 
+/// The vault commit the index last committed with (`sync_epochs.vault_head`), if recorded.
+pub async fn vault_head(tx: &mut ScopedTx) -> Result<Option<String>> {
+    Ok(
+        sqlx::query_scalar::<_, Option<String>>("SELECT vault_head FROM sync_epochs")
+            .fetch_optional(tx.conn())
+            .await?
+            .flatten(),
+    )
+}
+
+/// Records `head` (a full 40-hex commit ID) as the vault commit the index commits with. Runs
+/// in the transaction of the write that made the commit; the epoch and seq are unchanged.
+pub async fn set_vault_head(tx: &mut ScopedTx, head: &str, now: DateTime<Utc>) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO sync_epochs AS s (user_id, epoch, last_seq, updated, vault_head) \
+         VALUES (strata_current_user(), 1, 0, $2, $1) \
+         ON CONFLICT (user_id) DO UPDATE SET vault_head = EXCLUDED.vault_head",
+    )
+    .bind(head)
+    .bind(now)
+    .execute(tx.conn())
+    .await?;
+    Ok(())
+}
+
 /// Deletes idempotency records created before `before`; returns how many.
 pub async fn idempotency_purge_before(tx: &mut ScopedTx, before: DateTime<Utc>) -> Result<u64> {
     Ok(sqlx::query("DELETE FROM idempotency WHERE created < $1")

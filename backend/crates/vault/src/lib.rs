@@ -13,6 +13,8 @@
 //!   user's scoped transaction, the change log is appended and AI jobs are enqueued;
 //! - **reconciliation** ([`reconcile`]) repairs crashes and out-of-band edits and can rebuild
 //!   a user's derived rows from the vault;
+//! - a write is **all-or-nothing** across crashes ([`journal`]), and a pushed op's result is
+//!   stored in the write's own transaction and commit ([`receipt`]);
 //! - duplicate checks on create ([`dup`]), export/import ([`archive`]).
 //!
 //! The design is written up in `docs/ARCHITECTURE.md`, section "Vault store".
@@ -32,10 +34,12 @@ pub mod events;
 pub mod fsio;
 pub mod git;
 pub mod indexer;
+pub mod journal;
 pub mod model;
 pub mod ops;
 pub mod paths;
 pub mod prepare;
+pub mod receipt;
 pub mod reconcile;
 pub mod revert;
 pub mod semantic;
@@ -44,4 +48,5 @@ pub mod store;
 
 pub use error::{Candidate, MatchLevel, Result, VaultError};
 pub use events::{CommitListener, Committed};
-pub use store::{Author, Core, ImportLimits, VaultConfig, VaultService};
+pub use receipt::{AfterWrite, OpReceipt, ResultHook};
+pub use store::{Author, Core, CrashPoint, ImportLimits, VaultConfig, VaultService};

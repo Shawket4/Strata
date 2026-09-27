@@ -107,6 +107,7 @@ pub fn document() -> Value {
     let mut api = ApiDoc::openapi();
     api.merge(<crate::vault::VaultApiDoc as OpenApi>::openapi());
     api.merge(<crate::routes::ai::AiApiDoc as OpenApi>::openapi());
+    api.merge(<crate::routes::graph::GraphApiDoc as OpenApi>::openapi());
     build(&api, STREAMS)
 }
 

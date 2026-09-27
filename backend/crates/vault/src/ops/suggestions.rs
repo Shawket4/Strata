@@ -17,6 +17,7 @@ use strata_index::types::{ChangeOp, ReplyAuthor, SuggestionStatus};
 
 use crate::error::{Result, VaultError};
 use crate::ops::notes::DuplicatePayload;
+use crate::receipt::AfterWrite;
 use crate::store::{Author, VaultService};
 
 /// A suggestion with its thread.
@@ -103,6 +104,9 @@ impl VaultService {
                 if s.status != SuggestionStatus::Pending {
                     return Err(VaultError::invalid("the suggestion was already decided"));
                 }
+                // A pushed op's result is stored with the decision below, not with the
+                // keep-both writes before it (they are idempotent if the op is replayed).
+                let receipt = core.receipt.take();
                 if accept
                     && s.kind == "duplicate"
                     && let Some(note) = s.note_id
@@ -127,6 +131,7 @@ impl VaultService {
                 {
                     core.reject_duplicates(scope, note, &p).await?;
                 }
+                core.receipt = receipt;
                 let now = core.now();
                 let mut tx = core.begin(&scope).await?;
                 let status = if accept {
@@ -149,8 +154,18 @@ impl VaultService {
                     },
                 )
                 .await?;
+                let pending = crate::receipt::settle(
+                    core.receipt.as_ref(),
+                    &mut tx,
+                    &AfterWrite::database_only(),
+                    now,
+                )
+                .await?;
                 let replies = srepo::replies(&mut tx, id).await?;
                 tx.commit().await?;
+                if let Some(p) = pending {
+                    p.commit();
+                }
                 core.inner
                     .notify(core.user, &suggestion_notice(&decided, false));
                 Ok(SuggestionView {
@@ -227,14 +242,25 @@ impl VaultService {
             },
         )
         .await?;
+        let pending = crate::receipt::settle(
+            crate::receipt::current().as_ref(),
+            &mut tx,
+            &AfterWrite::database_only(),
+            now,
+        )
+        .await?;
         let view = self.view_suggestion(&mut tx, s).await?;
         tx.commit().await?;
+        if let Some(p) = pending {
+            p.commit();
+        }
         self.inner
             .notify(scope.user_id(), &suggestion_notice(&view.suggestion, false));
         Ok(view)
     }
 
-    /// Records a new pending suggestion (with its change-log row) and announces it.
+    /// Records a new pending suggestion (with its change-log row) and announces it. An armed
+    /// op receipt in scope is settled in the same transaction.
     pub async fn create_suggestion(
         &self,
         scope: &UserScope,
@@ -258,7 +284,17 @@ impl VaultService {
             },
         )
         .await?;
+        let pending = crate::receipt::settle(
+            crate::receipt::current().as_ref(),
+            &mut tx,
+            &AfterWrite::database_only(),
+            now,
+        )
+        .await?;
         tx.commit().await?;
+        if let Some(p) = pending {
+            p.commit();
+        }
         self.inner
             .notify(scope.user_id(), &suggestion_notice(&s, true));
         Ok(s)

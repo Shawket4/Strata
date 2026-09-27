@@ -10,6 +10,8 @@
 //! - [`merge()`]: the 3-way merge of note documents (key-by-key frontmatter, diff3 body, atomic
 //!   task lines) and the D19 update decision.
 //! - [`apply`]: pure op application rules (relations, patches, custody, task edits).
+//! - [`settings`]: how stored user settings become setting records, and which records a
+//!   change touches.
 //! - [`Version`]: content-hash versions.
 //!
 //! These are internal models: the API layer maps them to its `OpenAPI` DTOs. They serialise
@@ -21,6 +23,7 @@ pub mod changes;
 pub mod merge;
 pub mod ops;
 pub mod results;
+pub mod settings;
 mod version;
 
 pub use changes::{

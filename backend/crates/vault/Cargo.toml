@@ -6,6 +6,11 @@ license.workspace = true
 publish = false
 description = "Strata vault store: per-user single-writer actor, atomic writes, git history, link rewriting, index maintenance, reconciliation, export/import"
 
+[features]
+# Crash injection at the boundaries of a write (`VaultService::inject_crash`), for the
+# exactly-once tests of sync push. Never enabled in production builds.
+fault-injection = []
+
 [dependencies]
 vault-format = { workspace = true }
 text-normalize = { workspace = true }
@@ -28,6 +33,7 @@ chrono-tz = { workspace = true }
 ulid = { workspace = true }
 uuid = { workspace = true }
 sha2 = { workspace = true }
+base64 = { workspace = true }
 zip = { workspace = true }
 
 [dev-dependencies]

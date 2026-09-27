@@ -156,6 +156,18 @@ impl Core {
 
     /// Creates an entity note (`people/`, `companies/`, `documents/`, `places/`).
     pub async fn create_entity(&mut self, scope: UserScope, req: NewEntity) -> Result<NoteView> {
+        self.create_entity_linked(scope, req, &[]).await
+    }
+
+    /// [`Self::create_entity`] with user relations to existing notes written in the same
+    /// commit (a pushed `document.create` with `copy_of`, `companies`, `people`). Every target
+    /// must be a live note (`NotFound` otherwise, and nothing is created).
+    pub async fn create_entity_linked(
+        &mut self,
+        scope: UserScope,
+        req: NewEntity,
+        links: &[(vault_format::RelationKey, NoteId)],
+    ) -> Result<NoteView> {
         if entity_kind(req.kind).is_none() {
             return Err(VaultError::invalid(
                 "kind must be person, company, document or place",
@@ -182,6 +194,11 @@ impl Core {
             && self.state()?.contains_id(id)
         {
             return Err(VaultError::invalid("a note with this id already exists"));
+        }
+        let mut targets = Vec::with_capacity(links.len());
+        for (rel, dst) in links {
+            let (dst_path, _) = self.live(*dst)?;
+            targets.push((*rel, dst_path));
         }
         let aliases = clean_list(&req.aliases);
         let mut tx = self.begin(&scope).await?;
@@ -245,6 +262,21 @@ impl Core {
         let tz = self.tz(&mut tx).await?;
         let now = self.local_now(tz);
         prepare::stamp(&mut doc, id, Some(&now), Some(&now))?;
+        if !targets.is_empty() {
+            // Link text as `relation add` would write it once the note exists.
+            let state = self.state()?;
+            let index = vault_format::PathIndex::new(
+                state
+                    .notes
+                    .keys()
+                    .cloned()
+                    .chain(state.attachments.iter().cloned())
+                    .chain(std::iter::once(path.clone())),
+            );
+            for (rel, dst_path) in &targets {
+                crate::ops::relations::add_link(&mut doc, *rel, dst_path, &index, &path)?;
+            }
+        }
         let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
         if !candidates.is_empty() {
             let mut sc = NoteSidecar::new(id.as_ulid());

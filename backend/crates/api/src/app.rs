@@ -29,6 +29,7 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
     crate::routes::sync::configure(cfg);
     crate::routes::events::configure(cfg);
     crate::routes::ai::configure(cfg);
+    crate::routes::graph::configure(cfg);
 }
 
 /// The `/api/v1` scope with `routes` mounted and the wire conventions applied:

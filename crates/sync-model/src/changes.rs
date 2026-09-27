@@ -190,7 +190,7 @@ pub struct ClusterNameRecord {
 pub struct SettingRecord {
     /// Key.
     pub key: String,
-    /// Value (setting-specific text).
+    /// Value as text; a map setting has one record per entry (see [`crate::settings`]).
     pub value: String,
 }
 

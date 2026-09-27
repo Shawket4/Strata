@@ -181,10 +181,7 @@ void main() {
     test('timezone is not an allowed dev dependency', () {
       final root = _workspace(
         members: {
-          'apps/strata': _pubspec(
-            'strata',
-            devDeps: '  timezone: ^0.11.0\n',
-          ),
+          'apps/strata': _pubspec('strata', devDeps: '  timezone: ^0.11.0\n'),
         },
       );
       expect(runGuard(root), [

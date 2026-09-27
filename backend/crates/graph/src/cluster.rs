@@ -370,17 +370,41 @@ pub fn plan(
     }
 }
 
-#[derive(Debug, Serialize)]
-struct NamingCluster<'a> {
-    cluster_id: String,
-    titles: &'a [String],
-    concepts: &'a [String],
-    previous_name: Option<&'a str>,
+/// One cluster of the `cluster_naming` input.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct NamingCluster {
+    /// Stable ID.
+    pub cluster_id: String,
+    /// Most central titles.
+    pub titles: Vec<String>,
+    /// Most frequent concepts.
+    pub concepts: Vec<String>,
+    /// The name it had, if any.
+    pub previous_name: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
-struct NamingInput<'a> {
-    clusters: Vec<NamingCluster<'a>>,
+/// The `cluster_naming` input (serialised as the prompt's user message).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct NamingInput {
+    /// Clusters to name.
+    pub clusters: Vec<NamingCluster>,
+}
+
+impl NamingInput {
+    /// The input for `clusters`.
+    pub fn of(clusters: &[&Planned]) -> Self {
+        Self {
+            clusters: clusters
+                .iter()
+                .map(|p| NamingCluster {
+                    cluster_id: p.id.to_string(),
+                    titles: p.titles.clone(),
+                    concepts: p.concepts.clone(),
+                    previous_name: p.previous.as_ref().map(|c| c.name.clone()),
+                })
+                .collect(),
+        }
+    }
 }
 
 /// The file content for `plan` with the AI's `names` (`generated` = `now`).
@@ -546,17 +570,7 @@ impl ClusterHandler {
         };
         let wanted: Vec<&Planned> = plan.clusters.iter().filter(|p| p.needs_name).collect();
         for chunk in wanted.chunks(self.config.names_per_call.max(1)) {
-            let input = NamingInput {
-                clusters: chunk
-                    .iter()
-                    .map(|p| NamingCluster {
-                        cluster_id: p.id.to_string(),
-                        titles: &p.titles,
-                        concepts: &p.concepts,
-                        previous_name: p.previous.as_ref().map(|c| c.name.as_str()),
-                    })
-                    .collect(),
-            };
+            let input = NamingInput::of(chunk);
             let caller = AiCaller {
                 scope: *scope,
                 username: username.to_owned(),

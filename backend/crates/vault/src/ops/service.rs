@@ -266,6 +266,19 @@ impl VaultService {
         on_actor!(self, scope, |core, s| core.create_entity(s, req))
     }
 
+    /// A create with user relations to existing notes, in one commit (sync `document.create`
+    /// with `copy_of`, `companies`, `people`).
+    pub async fn create_entity_linked(
+        &self,
+        scope: &UserScope,
+        req: NewEntity,
+        links: Vec<(RelationKey, NoteId)>,
+    ) -> Result<NoteView> {
+        on_actor!(self, scope, |core, s| core.create_entity_linked(
+            s, req, &links
+        ))
+    }
+
     /// `PATCH /entities/{id}` (and documents/places).
     pub async fn patch_entity(
         &self,

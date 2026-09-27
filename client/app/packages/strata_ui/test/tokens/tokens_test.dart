@@ -25,6 +25,9 @@ void main() {
       expect(c.accent, const Color(0xFF2477B3));
       expect(c.accentText, const Color(0xFF1D5C8C));
       expect(c.accentTint, const Color(0xFFDCEAF4));
+      expect(c.accentFill, const Color(0xFF1D5C8C));
+      expect(c.onAccentFill, const Color(0xFFFFFFFF));
+      expect(c.onDanger, const Color(0xFFFFFFFF));
       expect(c.sand, const Color(0xFFD8B47E));
       expect(c.danger, const Color(0xFFB3412E));
       expect(c.warning, const Color(0xFF9A6A12));
@@ -48,6 +51,10 @@ void main() {
       expect(c.accent, const Color(0xFF2477B3));
       expect(c.accentText, const Color(0xFF6CB4DD));
       expect(c.accentTint, const Color(0xFF1B3A55));
+      expect(c.accentFill, const Color(0xFF6CB4DD));
+      expect(c.onAccentFill, const Color(0xFF0F1B26));
+      expect(c.danger, const Color(0xFFE07A66));
+      expect(c.onDanger, const Color(0xFF0F1B26));
     });
 
     test('palette names the coastal colours', () {
@@ -74,6 +81,8 @@ void main() {
           'accentText/surface': (c.accentText, c.surface),
           'accentText/accentTint': (c.accentText, c.accentTint),
           'onAccent/accent': (c.onAccent, c.accent),
+          'onAccentFill/accentFill': (c.onAccentFill, c.accentFill),
+          'onDanger/danger': (c.onDanger, c.danger),
           'successText/successTint': (c.successText, c.successTint),
           'warningText/warningTint': (c.warningText, c.warningTint),
           'dangerText/dangerTint': (c.dangerText, c.dangerTint),
@@ -101,8 +110,32 @@ void main() {
         ),
       );
       expect(StrataColors.light.lerp(null, 0.5), same(StrataColors.light));
-      final copy = StrataColors.light.copyWith(accent: const Color(0xFF000000));
+      expect(
+        mid.accentFill,
+        Color.lerp(
+          StrataColors.light.accentFill,
+          StrataColors.dark.accentFill,
+          0.5,
+        ),
+      );
+      expect(
+        mid.onDanger,
+        Color.lerp(
+          StrataColors.light.onDanger,
+          StrataColors.dark.onDanger,
+          0.5,
+        ),
+      );
+      final copy = StrataColors.light.copyWith(
+        accent: const Color(0xFF000000),
+        accentFill: const Color(0xFF000001),
+        onAccentFill: const Color(0xFF000002),
+        onDanger: const Color(0xFF000003),
+      );
       expect(copy.accent, const Color(0xFF000000));
+      expect(copy.accentFill, const Color(0xFF000001));
+      expect(copy.onAccentFill, const Color(0xFF000002));
+      expect(copy.onDanger, const Color(0xFF000003));
       expect(copy.text, StrataColors.light.text);
     });
   });
@@ -308,10 +341,12 @@ void main() {
         expect(theme.extension<StrataGraphColors>(), isNotNull);
         expect(theme.extension<StrataTextStyles>(), isNotNull);
         expect(theme.extension<StrataMotion>(), StrataMotion.standardMotion);
-        expect(theme.colorScheme.primary, colors.accent);
+        expect(theme.colorScheme.primary, colors.accentFill);
+        expect(theme.colorScheme.onPrimary, colors.onAccentFill);
         expect(theme.colorScheme.surface, colors.surface);
         expect(theme.colorScheme.onSurface, colors.text);
         expect(theme.colorScheme.error, colors.danger);
+        expect(theme.colorScheme.onError, colors.onDanger);
         expect(theme.scaffoldBackgroundColor, colors.background);
         expect(theme.navigationRailTheme.minWidth, StrataLayout.railWidth);
         expect(theme.navigationBarTheme.indicatorColor, colors.accentTint);

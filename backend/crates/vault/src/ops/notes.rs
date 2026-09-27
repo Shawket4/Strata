@@ -104,6 +104,11 @@ impl DuplicatePayload {
     }
 }
 
+/// Database work run inside a write's transaction after its index update.
+pub(crate) type InTx = Box<
+    dyn for<'t> FnOnce(&'t mut ScopedTx) -> futures_util::future::BoxFuture<'t, Result<()>> + Send,
+>;
+
 /// Task block IDs used by other notes among those in `body`.
 pub(crate) async fn taken_task_ids(
     tx: &mut ScopedTx,
@@ -157,37 +162,104 @@ impl Core {
         ))
     }
 
-    /// Writes the changes, commits, indexes, and commits `tx`.
+    /// Writes the changes, indexes, commits, and commits `tx` (one logical write):
+    ///
+    /// 1. journal the write and write the files atomically ([`crate::journal`]);
+    /// 2. re-derive the index, append the change log and enqueue jobs in `tx`;
+    /// 3. store the armed op receipt's result in `tx` ([`crate::receipt`]);
+    /// 4. one git commit (with the result as trailers) and close the journal;
+    /// 5. record the commit as `sync_epochs.vault_head` in `tx` and commit `tx`.
+    ///
+    /// A failure at any step leaves the writer to reload: before step 4 the files are rolled
+    /// back, after it the index and the op result are recovered from the commit.
     pub(crate) async fn finish(
+        &mut self,
+        tx: ScopedTx,
+        changes: Vec<FileChange>,
+        message: String,
+    ) -> Result<Option<String>> {
+        self.finish_then(tx, changes, message, None).await
+    }
+
+    /// [`Self::finish`] with `extra` database work done in `tx` right after the index update
+    /// (rows that reference the written notes and must commit with them).
+    pub(crate) async fn finish_then(
         &mut self,
         mut tx: ScopedTx,
         changes: Vec<FileChange>,
         message: String,
+        extra: Option<InTx>,
     ) -> Result<Option<String>> {
+        use crate::store::CrashPoint;
         let paths: BTreeSet<String> = changes.iter().map(|(p, _)| p.clone()).collect();
         self.drop_notice_keep_merge();
-        let commit = match self.apply(changes, message.clone()).await {
-            Ok(c) => c,
+        let written = match self.write_files(&changes).await {
+            Ok(()) => self.crash_point(CrashPoint::AfterFileWrite),
+            Err(e) => Err(e),
+        };
+        if let Err(e) = written {
+            self.failed();
+            return Err(e);
+        }
+        if let Err(e) = self.sync_paths(&mut tx, &paths).await {
+            self.failed();
+            return Err(e);
+        }
+        if let Some(extra) = extra
+            && let Err(e) = extra(&mut tx).await
+        {
+            self.failed();
+            return Err(e);
+        }
+        let files: std::collections::BTreeMap<String, Option<Vec<u8>>> =
+            changes.into_iter().collect();
+        let slot = self.receipt.clone();
+        let now = self.now();
+        let settled = {
+            let after = crate::receipt::AfterWrite::new(self.state.as_ref(), &files);
+            crate::receipt::settle(slot.as_ref(), &mut tx, &after, now).await
+        };
+        let pending = match settled {
+            Ok(p) => p,
             Err(e) => {
-                self.drop_notice();
+                self.failed();
                 return Err(e);
             }
         };
-        let synced = self.sync_paths(&mut tx, &paths).await;
-        match synced {
-            Ok(_) => {}
+        let full_message = match &pending {
+            Some(p) => format!("{message}{}", p.trailers()),
+            None => message.clone(),
+        };
+        let committed = match self
+            .commit_files(files.into_keys().collect(), full_message)
+            .await
+        {
+            Ok(c) => self.crash_point(CrashPoint::AfterGitCommit).map(|()| c),
+            Err(e) => Err(e),
+        };
+        let commit = match committed {
+            Ok(c) => c,
             Err(e) => {
-                self.state = None;
-                self.repair = true;
-                self.drop_notice();
+                self.failed();
                 return Err(e);
             }
+        };
+        if let Some(c) = &commit
+            && let Err(e) = strata_index::repo::sync::set_vault_head(&mut tx, c, now).await
+        {
+            self.failed();
+            return Err(e.into());
         }
         if let Err(e) = tx.commit().await {
-            self.state = None;
-            self.repair = true;
-            self.drop_notice();
+            self.failed();
             return Err(e.into());
+        }
+        if let Err(e) = self.crash_point(CrashPoint::AfterDbCommit) {
+            self.failed();
+            return Err(e);
+        }
+        if let Some(p) = pending {
+            p.commit();
         }
         self.flush_notice(&message);
         Ok(commit)
@@ -695,45 +767,48 @@ impl Core {
         doc.set_body(body);
         prepare::stamp(&mut doc, id, Some(&now), None)?;
         let content = doc.render();
-        // The capture hits disk (and git) first; the duplicate check runs afterwards.
+        // The duplicate check never refuses a capture: likely duplicates become a suggestion,
+        // written in the same transaction as the capture's index update (one write, so a
+        // replayed capture finds both or neither).
         let candidates = self
             .check_duplicates(&mut tx, &path, &Document::parse(&content), id)
             .await?;
-        self.finish(
-            tx,
-            vec![(path.clone(), Some(content.into_bytes()))],
-            Author::User.message("capture", &path),
-        )
-        .await?;
         let mut suggestion = None;
+        let mut extra: Option<InTx> = None;
         if !candidates.is_empty() {
             let payload = rmp_serde::to_vec_named(&DuplicatePayload::from_candidates(&candidates))
                 .map_err(|e| VaultError::Internal(e.to_string()))?;
-            let mut tx = self.begin(&scope).await?;
             let sid = SuggestionId::generate(self.ids());
-            suggestions::create_suggestion(
-                &mut tx,
-                sid,
-                Some(id),
-                "duplicate",
-                &payload,
-                self.now(),
-            )
-            .await?;
-            let sid_text = sid.to_string();
-            strata_index::repo::sync::append_change(
-                &mut tx,
-                &strata_index::repo::sync::NewChange {
-                    entity_type: "suggestion",
-                    entity_id: &sid_text,
-                    op: strata_index::types::ChangeOp::Upsert,
-                    version: None,
-                    at: self.now(),
-                },
-            )
-            .await?;
-            tx.commit().await?;
+            let now = self.now();
             suggestion = Some(sid);
+            extra = Some(Box::new(move |tx: &mut ScopedTx| {
+                Box::pin(async move {
+                    suggestions::create_suggestion(tx, sid, Some(id), "duplicate", &payload, now)
+                        .await?;
+                    let sid_text = sid.to_string();
+                    strata_index::repo::sync::append_change(
+                        tx,
+                        &strata_index::repo::sync::NewChange {
+                            entity_type: "suggestion",
+                            entity_id: &sid_text,
+                            op: strata_index::types::ChangeOp::Upsert,
+                            version: None,
+                            at: now,
+                        },
+                    )
+                    .await?;
+                    Ok(())
+                })
+            }));
+        }
+        self.finish_then(
+            tx,
+            vec![(path.clone(), Some(content.into_bytes()))],
+            Author::User.message("capture", &path),
+            extra,
+        )
+        .await?;
+        if let Some(sid) = suggestion {
             self.inner.notify(
                 self.user,
                 &crate::events::Committed {

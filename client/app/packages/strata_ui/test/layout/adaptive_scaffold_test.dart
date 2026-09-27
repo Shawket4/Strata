@@ -115,6 +115,64 @@ void main() {
     }
   });
 
+  // Regression: the selected Settings footer label in Arabic was drawn under
+  // a FittedBox scale off the pixel grid and measured 1.3:1 (light) and
+  // 2.1:1 (dark).
+  group('rail with Settings selected is accessible', () {
+    for (final v in variants(sizes: const {'medium': StrataTestSizes.medium})) {
+      testWidgets('$v', (tester) async {
+        await pumpVariant(
+          tester,
+          v,
+          const TestShell(selectedIndex: Dest.settings),
+        );
+        await expectAccessible(tester);
+      });
+    }
+  });
+
+  group('RailLabel', () {
+    const style = TextStyle(fontSize: 12);
+    TextScaler fit(String label, double scale) => RailLabel.fittedTextScaler(
+      label: label,
+      style: style,
+      textScaler: TextScaler.linear(scale),
+      textDirection: TextDirection.ltr,
+    );
+
+    test('keeps the text scale when the label fits', () {
+      // The test font draws every glyph 1 em wide: 5 × 12 = 60 <= 64.
+      expect(fit('Inbox', 1), TextScaler.noScaling);
+      expect(fit('Map', 1.5), const TextScaler.linear(1.5));
+    });
+
+    test('shrinks an enlarged label to fit, never below the caption size', () {
+      // 'Notes' at 1.5 is 90 px wide: 64 / 90 of 1.5.
+      expect(fit('Notes', 1.5).scale(12), closeTo(12 * 1.5 * 64 / 90, 1e-9));
+      // 'Settings' at 1.5 would need 0.67: floored at the unscaled caption.
+      expect(fit('Settings', 1.5), TextScaler.noScaling);
+      expect(fit('Settings', 1), TextScaler.noScaling);
+      // A smaller system scale is kept.
+      expect(fit('Settings', 0.5), const TextScaler.linear(0.5));
+    });
+
+    testWidgets('lays the label out, ellipsized, at the caption size or '
+        'larger', (tester) async {
+      await tester.pumpWidget(
+        const Directionality(
+          textDirection: TextDirection.rtl,
+          child: Center(child: RailLabel('الإعدادات', style: style)),
+        ),
+      );
+      final text = tester.widget<Text>(find.text('الإعدادات'));
+      expect(text.textScaler, TextScaler.noScaling);
+      expect(text.maxLines, 1);
+      expect(text.overflow, TextOverflow.ellipsis);
+      expect(find.byType(FittedBox), findsNothing);
+      expect(tester.getSize(find.byType(RailLabel)).width, RailLabel.maxWidth);
+    });
+  });
+
   group('AdaptiveScaffold selection', () {
     final en = variants(textScales: const [1]).where(
       (v) => v.brightness == Brightness.light && v.locale.languageCode == 'en',

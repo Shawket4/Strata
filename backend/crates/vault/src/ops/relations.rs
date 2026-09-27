@@ -70,7 +70,7 @@ fn remove_links(
 
 /// Adds a link to `dst_path` to relation `rel` unless one already resolves there (the shared
 /// `sync-model` rule writes `[[<shortest link text>]]`).
-fn add_link(
+pub(crate) fn add_link(
     doc: &mut Document,
     rel: RelationKey,
     dst_path: &str,

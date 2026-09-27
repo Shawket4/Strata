@@ -22,7 +22,8 @@ const EMAIL: &str = "strata@localhost";
 pub struct CommitInfo {
     /// Full hex ID.
     pub id: String,
-    /// Message (`user: …`, `ai: …`, `system: …`).
+    /// Message (`user: …`, `ai: …`, `system: …`), without the `Strata-*` trailers of a
+    /// pushed op (see [`crate::receipt`]).
     pub message: String,
     /// Commit time.
     pub at: DateTime<Utc>,
@@ -55,7 +56,7 @@ pub struct FileRevision {
 fn info(c: &git2::Commit<'_>) -> CommitInfo {
     CommitInfo {
         id: c.id().to_string(),
-        message: c.message().unwrap_or_default().to_owned(),
+        message: crate::receipt::strip_trailers(c.message().unwrap_or_default()).to_owned(),
         at: DateTime::from_timestamp(c.time().seconds(), 0).unwrap_or_default(),
     }
 }
@@ -185,6 +186,34 @@ pub fn log(dir: &Path) -> Result<Vec<CommitInfo>> {
     for oid in walk {
         out.push(info(&repo.find_commit(oid?)?));
     }
+    Ok(out)
+}
+
+/// The commits after `stop` up to `HEAD` along first parents, oldest first, as (ID, full raw
+/// message). With `stop` absent or not found, at most `limit` commits are walked (the newest
+/// ones).
+pub fn commits_since(dir: &Path, stop: Option<&str>, limit: usize) -> Result<Vec<(String, String)>> {
+    let repo = open(dir)?;
+    if head_commit(&repo).is_none() {
+        return Ok(Vec::new());
+    }
+    let stop = stop.and_then(|s| Oid::from_str(s).ok());
+    let mut walk = repo.revwalk()?;
+    walk.push_head()?;
+    walk.simplify_first_parent()?;
+    let mut out = Vec::new();
+    for oid in walk {
+        let oid = oid?;
+        if Some(oid) == stop || out.len() == limit {
+            break;
+        }
+        let commit = repo.find_commit(oid)?;
+        out.push((
+            oid.to_string(),
+            commit.message().unwrap_or_default().to_owned(),
+        ));
+    }
+    out.reverse();
     Ok(out)
 }
 

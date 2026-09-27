@@ -96,6 +96,8 @@ pub(crate) struct Inner {
     runtime: Option<tokio::runtime::Handle>,
     listener: ListenerSlot,
     semantic: std::sync::RwLock<Option<Arc<dyn crate::semantic::SemanticDuplicates>>>,
+    #[cfg(feature = "fault-injection")]
+    crash: Mutex<Option<CrashPoint>>,
 }
 
 /// The vault store for all users (cheap to clone).
@@ -132,6 +134,8 @@ impl VaultService {
                 runtime: tokio::runtime::Handle::try_current().ok(),
                 listener: std::sync::RwLock::new(None),
                 semantic: std::sync::RwLock::new(None),
+                #[cfg(feature = "fault-injection")]
+                crash: Mutex::new(None),
             }),
         }
     }
@@ -194,6 +198,7 @@ impl VaultService {
             repair: false,
             pending: Committed::default(),
             merge_hint: None,
+            receipt: None,
         };
         let task = run_actor(core, rx);
         match &self.inner.runtime {
@@ -230,8 +235,11 @@ impl VaultService {
     {
         let scope = *scope;
         let (done_tx, done_rx) = oneshot::channel();
+        // A pushed op's receipt in scope of the caller applies to the write this job makes.
+        let receipt = crate::receipt::current();
         let job: Job = Box::new(move |core: &mut Core| {
             Box::pin(async move {
+                core.receipt = receipt;
                 let loaded = if load {
                     core.ensure_loaded(scope).await
                 } else if core.dir.join(".git").is_dir() {
@@ -243,6 +251,7 @@ impl VaultService {
                     Ok(()) => f(core, scope).await,
                     Err(e) => Err(e),
                 };
+                core.receipt = None;
                 let _ = done_tx.send(result);
             })
         });
@@ -251,6 +260,24 @@ impl VaultService {
             .map_err(|_| VaultError::WriterGone)?;
         // A dropped sender means the job panicked (the actor survives and reloads).
         done_rx.await.map_err(|_| VaultError::WriterGone)?
+    }
+
+    /// Brings the user's vault to a consistent state before a sync push: loads it if the
+    /// writer has no state (first use, or after a failed write), which rolls back an
+    /// interrupted write and recovers op results committed to git but not to the database
+    /// (see [`crate::receipt`]).
+    pub async fn recover(&self, scope: &UserScope) -> Result<()> {
+        self.exec(scope, |_, _| Box::pin(async { Ok(()) })).await
+    }
+
+    /// Makes the next write stop at `point` as if the process died there (one shot; tests).
+    #[cfg(feature = "fault-injection")]
+    pub fn inject_crash(&self, point: CrashPoint) {
+        *self
+            .inner
+            .crash
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner) = Some(point);
     }
 
     /// Stops the user's actor (its state is reloaded — and the vault reconciled — on next
@@ -302,8 +329,21 @@ async fn run_actor(mut core: Core, mut rx: mpsc::UnboundedReceiver<Job>) {
             core.repair = true;
             core.pending = Committed::default();
             core.merge_hint = None;
+            core.receipt = None;
         }
     }
+}
+
+/// A point inside a write where a crash can be injected (feature `fault-injection`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CrashPoint {
+    /// The files are written, nothing is committed.
+    AfterFileWrite,
+    /// The git commit exists; the database transaction (index, change log, op result) is
+    /// not committed.
+    AfterGitCommit,
+    /// Everything is committed; the caller never hears back.
+    AfterDbCommit,
 }
 
 /// Who made a change: the commit message prefix (PLAN §7.2).
@@ -349,6 +389,8 @@ pub struct Core {
     pub(crate) pending: Committed,
     /// `(loser, survivor)` of the entity merge in progress.
     pub(crate) merge_hint: Option<(NoteId, NoteId)>,
+    /// The receipt of the pushed op the current job applies, if any.
+    pub(crate) receipt: Option<Arc<crate::receipt::Slot>>,
 }
 
 impl fmt::Debug for Core {
@@ -484,33 +526,65 @@ impl Core {
         Ok((path, Some(json.into_bytes())))
     }
 
-    /// Writes the changes atomically and commits them (one commit). Returns the commit ID,
-    /// or `None` when the files already had this content.
-    pub(crate) async fn apply(
-        &mut self,
-        changes: Vec<FileChange>,
-        message: String,
-    ) -> Result<Option<String>> {
+    /// Journals the write, then writes the changes atomically (not committed yet).
+    pub(crate) async fn write_files(&mut self, changes: &[FileChange]) -> Result<()> {
         let dir = self.dir.clone();
-        let at = self.now();
-        let result = blocking(move || {
-            let mut paths = Vec::with_capacity(changes.len());
+        let changes = changes.to_vec();
+        blocking(move || {
+            let paths: Vec<String> = changes.iter().map(|(p, _)| p.clone()).collect();
+            crate::journal::begin(&dir, &paths)?;
             for (path, content) in &changes {
                 match content {
                     Some(bytes) => fsio::atomic_write(&dir, path, bytes)?,
                     None => fsio::remove(&dir, path)?,
                 }
-                paths.push(path.clone());
             }
-            git::commit_paths(&dir, &paths, &message, at)
+            Ok(())
         })
-        .await;
-        if result.is_err() {
-            // Files may be half-written: reload (and recover) before the next write.
-            self.state = None;
-            self.repair = true;
+        .await
+    }
+
+    /// Commits the written `paths` (one commit) and closes the journal. Returns the commit
+    /// ID, or `None` when the files already had this content.
+    pub(crate) async fn commit_files(
+        &mut self,
+        paths: Vec<String>,
+        message: String,
+    ) -> Result<Option<String>> {
+        let dir = self.dir.clone();
+        let at = self.now();
+        blocking(move || {
+            let commit = git::commit_paths(&dir, &paths, &message, at)?;
+            crate::journal::end(&dir)?;
+            Ok(commit)
+        })
+        .await
+    }
+
+    /// After a failed write: reload (roll back or recover) before the next one.
+    pub(crate) fn failed(&mut self) {
+        self.state = None;
+        self.repair = true;
+        self.drop_notice();
+    }
+
+    /// Stops here if a crash was injected at `point` (feature `fault-injection`).
+    #[allow(clippy::unused_self, clippy::unnecessary_wraps)] // no-op without the feature
+    pub(crate) fn crash_point(&self, point: CrashPoint) -> Result<()> {
+        #[cfg(feature = "fault-injection")]
+        {
+            let mut armed = self
+                .inner
+                .crash
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner);
+            if *armed == Some(point) {
+                *armed = None;
+                return Err(VaultError::Internal(format!("injected crash {point:?}")));
+            }
         }
-        result
+        let _ = point;
+        Ok(())
     }
 
     /// Brings the state and the index up to date with the files at `paths` (after they were
