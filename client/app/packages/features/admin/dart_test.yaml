@@ -1,0 +1,3 @@
+tags:
+  golden:
+    description: Alchemist golden tests (CI variant with bundled fonts).

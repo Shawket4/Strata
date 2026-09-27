@@ -367,8 +367,12 @@ class _EditorRow extends StatelessWidget {
     final text = context.strataText;
     final shown = value;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: colors.text2),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(icon, size: 20, color: colors.text2),
+        ),
         const SizedBox(width: StrataSpacing.s3),
         Expanded(
           child: Column(
@@ -377,10 +381,14 @@ class _EditorRow extends StatelessWidget {
               Text(label, style: text.caption.copyWith(color: colors.text2)),
               if (shown != null)
                 Text(shown, style: text.bodySmall.withWeight(FontWeight.w500)),
+              if (actions.isNotEmpty)
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: actions,
+                ),
             ],
           ),
         ),
-        ...actions,
       ],
     );
   }

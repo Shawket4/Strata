@@ -108,7 +108,7 @@ abstract final class EditorFixtures {
   ];
 
   /// The open task.
-  static final TaskItem openTask = TaskItem(
+  static const TaskItem openTask = TaskItem(
     id: 't-01j9p1',
     noteId: noteId,
     noteTitle: 'Pricing experiments',
@@ -116,8 +116,8 @@ abstract final class EditorFixtures {
     state: TaskState.open,
     priority: 'normal',
     recurrenceUnderstood: true,
-    reminders: const [],
-    links: const [],
+    reminders: [],
+    links: [],
     pendingSync: false,
   );
 

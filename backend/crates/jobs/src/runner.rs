@@ -311,14 +311,15 @@ impl Runner {
             tx.commit().await?;
             return Ok(Some((job, username)));
         }
-        // Nothing claimable: refresh the wakeup hint, and skip this user until its next job of
-        // a kind we run is due (or a while, when it only has jobs of other kinds).
+        // Nothing claimable: refresh the wakeup hint. When the hint stays due only because of
+        // jobs of kinds this process does not run, skip the user until its next job of a kind
+        // we run is due, or for a while (it would otherwise be looked at on every pass).
         let handled: Vec<String> = self.kinds().iter().map(|k| (*k).to_owned()).collect();
         let blocked = repo::any_due(&mut tx, now, &handled).await?;
         let next = repo::next_due(&mut tx, &handled).await?;
-        jobs::refresh_wakeup(&mut tx).await?;
+        let earliest = jobs::refresh_wakeup(&mut tx).await?;
         tx.commit().await?;
-        if !blocked {
+        if !blocked && earliest.is_some_and(|e| e <= now) {
             let recheck = now + self.inner.config.idle_recheck;
             let until = next.map_or(recheck, |n| n.min(recheck));
             self.state().skip_until.insert(scope.user_id(), until);
@@ -326,11 +327,19 @@ impl Runner {
         Ok(None)
     }
 
-    /// One scheduling pass: claims as many jobs as capacity allows, fairly across users, and
-    /// starts them. Returns what it claimed.
+    /// One scheduling pass: claims as many jobs as the capacity free at its start allows,
+    /// fairly across users, and starts them. Returns what it claimed.
     pub async fn tick(&self) -> Vec<Claimed> {
         let now = self.inner.clock.now();
+        let budget = self
+            .inner
+            .config
+            .max_concurrency
+            .saturating_sub(self.state().running_total);
         let mut claimed = Vec::new();
+        if budget == 0 {
+            return claimed;
+        }
         let users = self.due_users(now).await;
         let mut active: Vec<UserId> = users;
         loop {
@@ -355,6 +364,9 @@ impl Runner {
                         });
                         self.start(scope, job, username, now).await;
                         next_round.push(user);
+                        if claimed.len() >= budget {
+                            return claimed;
+                        }
                     }
                     Ok(None) => {}
                     Err(e) => tracing::error!(user = %user, error = %e, "claiming a job failed"),

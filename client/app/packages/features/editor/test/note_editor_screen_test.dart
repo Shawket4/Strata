@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_editor/strata_editor.dart';
-import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
@@ -12,7 +11,7 @@ import 'package:super_editor/super_editor_test.dart';
 import 'support/editor_fixtures.dart';
 import 'support/harness.dart';
 
-const _id = EditorFixtures.noteId;
+const String _id = EditorFixtures.noteId;
 
 FakeCoreApi fakeWith(NoteView? note) {
   final fake = FakeCoreApi()..editorHintsAnswer.returns(const []);
@@ -257,13 +256,11 @@ void main() {
             content: newContent,
             hints: [
               for (final h in EditorFixtures.hints)
-                h.kind == HintKind.frontmatter
-                    ? EditorHint(kind: h.kind, start: 0, end: h.end + shift)
-                    : EditorHint(
-                        kind: h.kind,
-                        start: h.start + shift,
-                        end: h.end + shift,
-                      ),
+                EditorHint(
+                  kind: h.kind,
+                  start: h.kind == HintKind.frontmatter ? 0 : h.start + shift,
+                  end: h.end + shift,
+                ),
             ],
           ),
         ),

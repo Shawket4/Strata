@@ -1132,3 +1132,100 @@ async fn another_users_ids_are_rejected_as_not_found_and_never_applied() {
     assert_eq!(r, applied(&h.read(alice.id, "notes/Other.md")));
     h.finish().await;
 }
+
+#[tokio::test]
+async fn task_edits_use_the_devices_dates_and_ids_and_conflict_per_line() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let uid = alice.id;
+    let tid = "t-01j9recuraaaaaaaaaaaaaaaa".to_owned();
+    let next = "t-01j9nextaaaaaaaaaaaaaaaaa".to_owned();
+    one(
+        &h,
+        &alice,
+        op(
+            1,
+            None,
+            Op::TaskCreate(o::TaskCreate {
+                id: tid.clone(),
+                note_id: None,
+                text: "Pay rent".into(),
+                due: Some(d(2026, 10, 1)),
+                scheduled: None,
+                start: None,
+                recurrence: Some("every month on the 1st".into()),
+                reminders: vec![],
+                priority: None,
+                force: false,
+            }),
+        ),
+    )
+    .await;
+    let open = format!("- [ ] Pay rent 🔁 every month on the 1st 📅 2026-10-01 ^{tid}");
+    assert!(h.read(uid, "tasks/Tasks.md").contains(&open));
+    let r = one(
+        &h,
+        &alice,
+        op(
+            2,
+            Some(version(&open)),
+            Op::TaskComplete(o::TaskComplete {
+                id: tid.clone(),
+                done: d(2026, 9, 30),
+                next_id: Some(next.clone()),
+            }),
+        ),
+    )
+    .await;
+    let done = format!("- [x] Pay rent 🔁 every month on the 1st 📅 2026-10-01 ✅ 2026-09-30 ^{tid}");
+    let upcoming = format!("- [ ] Pay rent 🔁 every month on the 1st 📅 2026-11-01 ^{next}");
+    assert!(
+        h.read(uid, "tasks/Tasks.md")
+            .contains(&format!("{upcoming}\n{done}\n")),
+        "{}",
+        h.read(uid, "tasks/Tasks.md")
+    );
+    assert_eq!(r, applied(&done));
+    // Another device completes the same occurrence from the old line: already in effect.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            3,
+            Some(version(&open)),
+            Op::TaskComplete(o::TaskComplete {
+                id: tid.clone(),
+                done: d(2026, 9, 30),
+                next_id: Some("t-01j9otheraaaaaaaaaaaaaaaa".into()),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied(&done));
+    // A text edit based on the old line conflicts at line level; the server line stands.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            4,
+            Some(version(&open)),
+            Op::TaskUpdate(o::TaskUpdate {
+                id: tid.clone(),
+                text: Some("Pay the rent".into()),
+                ..o::TaskUpdate::default()
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(
+        r,
+        OpResult::Conflict {
+            server_version: Some(version(&done)),
+            resolution: ConflictResolution::ServerKept {
+                reason: "the task line changed on the server".into()
+            }
+        }
+    );
+    assert!(h.read(uid, "tasks/Tasks.md").contains(&done));
+    h.finish().await;
+}

@@ -17,7 +17,7 @@ import '../support/editor_fixtures.dart';
 
 /// A corpus note: its bytes and decoded text.
 final class CorpusNote {
-  CorpusNote(this.file)
+  new(this.file)
     : bytes = file.readAsBytesSync(),
       name = file.uri.pathSegments.last;
 

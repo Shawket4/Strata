@@ -1,30 +1,24 @@
 /// Strata documents feature (UI only; view-models come from the Rust core,
-/// PLAN L15).
+/// PLAN L15): document pages ([DocumentScreen]) and place pages
+/// ([PlaceScreen]) with custody history and "Record a move".
 library;
 
-import 'package:flutter/material.dart';
-import 'package:strata_l10n/strata_l10n.dart';
-import 'package:strata_ui/strata_ui.dart';
+import 'package:strata_documents/src/document/document_screen.dart';
+import 'package:strata_documents/src/place/place_screen.dart';
 
-/// Entry widget of the documents feature. Documents and places pages (PLAN §11
-/// screens 7a, 7b).
-///
-/// Until the Rust core streams this screen's view-model it renders the
-/// design-system placeholder state.
-class DocumentsScreen extends StatelessWidget {
-  /// Creates the documents entry widget.
-  const new({super.key});
-
-  /// The icon that represents this feature.
-  static const IconData icon = Icons.folder_copy_outlined;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return StrataEmptyState(
-      icon: icon,
-      title: l10n.featureDocuments,
-      message: l10n.featurePlaceholderMessage,
-    );
-  }
-}
+export 'src/common/custody.dart'
+    show
+        CustodyList,
+        CustodyTile,
+        DocumentBriefTile,
+        DocumentStatusPill,
+        HolderLine,
+        PlaceBreadcrumb;
+export 'src/common/l10n.dart'
+    show DocumentsLocalizationScope, DocumentsLocalizations;
+export 'src/common/labels.dart';
+export 'src/common/record_move.dart'
+    show MoveEvent, RecordMoveForm, openRecordMove, showRecordMove;
+export 'src/common/widgets.dart';
+export 'src/document/document_screen.dart' show DocumentPage, DocumentScreen;
+export 'src/place/place_screen.dart' show PlacePage, PlaceScreen;

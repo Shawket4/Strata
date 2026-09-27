@@ -10,7 +10,7 @@ use std::collections::BTreeSet;
 use domain::{NoteKind, RelationOrigin};
 use pretty_assertions::assert_eq;
 use strata_client::{operations as ops, types};
-use sync_harness::{Device, H, User, header, version};
+use sync_harness::{Device, H, User, version};
 use sync_model::changes::{NoteRecord, RelationRecord};
 use sync_model::ops::{self as o, Op};
 use sync_model::{ChangeRecord, ChangesPage, EntityType, OpResult, Record, SyncOp, Version};
@@ -440,6 +440,5 @@ async fn feeds_never_include_another_users_data() {
         (bob_start.cursor.expect("c").seq, bob_device.cursor.expect("c").seq),
         (0, 1)
     );
-    let _ = header("x");
     h.finish().await;
 }

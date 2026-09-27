@@ -85,9 +85,9 @@ class HolderLine extends StatelessWidget {
         ] else ...[
           Text(
             l10n.nobodyHasIt,
-            style: style.withWeight(FontWeight.w600).copyWith(
-              color: colors.text,
-            ),
+            style: style
+                .withWeight(FontWeight.w600)
+                .copyWith(color: colors.text),
           ),
           if (last != null) ...[
             Text(l10n.lastWith, style: style),

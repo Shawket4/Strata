@@ -1,0 +1,291 @@
+{
+  "@@locale": "en",
+  "notesRoot": "Notes",
+  "@notesRoot": {
+    "description": "Breadcrumb root: the vault's top folder."
+  },
+  "folderBreadcrumbLabel": "Folder",
+  "@folderBreadcrumbLabel": {
+    "description": "Semantics label of the folder breadcrumb."
+  },
+  "folderNoteCount": "{count, plural, =1{1 note} other{{count} notes}}",
+  "@folderNoteCount": {
+    "description": "Number of notes directly in a folder.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
+  "folderRowSemantics": "Folder {name}, {count}",
+  "@folderRowSemantics": {
+    "description": "Semantics label of a folder row.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "sales"
+      },
+      "count": {
+        "type": "String",
+        "example": "7 notes"
+      }
+    }
+  },
+  "searchNotesLabel": "Search notes",
+  "@searchNotesLabel": {
+    "description": "Label and hint of the notes search field."
+  },
+  "clearSearch": "Clear search",
+  "@clearSearch": {
+    "description": "Button that clears the notes search."
+  },
+  "notesInFolderLabel": "Notes in {folder}",
+  "@notesInFolderLabel": {
+    "description": "Semantics label of the notes list pane.",
+    "placeholders": {
+      "folder": {
+        "type": "String",
+        "example": "sales"
+      }
+    }
+  },
+  "emptyFolderTitle": "No notes here yet",
+  "@emptyFolderTitle": {
+    "description": "Empty state of a folder."
+  },
+  "emptyFolderMessage": "Captures filed into this folder and notes you create here show up in this list.",
+  "@emptyFolderMessage": {
+    "description": "Empty state message of a folder."
+  },
+  "noSearchResults": "No notes match “{query}”",
+  "@noSearchResults": {
+    "description": "Search returned nothing.",
+    "placeholders": {
+      "query": {
+        "type": "String",
+        "example": "pricing"
+      }
+    }
+  },
+  "searchUnavailable": "Search isn't available right now.",
+  "@searchUnavailable": {
+    "description": "Search could not run."
+  },
+  "listErrorTitle": "Couldn't load this folder",
+  "@listErrorTitle": {
+    "description": "Error state of the notes list."
+  },
+  "listErrorMessage": "Something went wrong while reading notes on this device.",
+  "@listErrorMessage": {
+    "description": "Error state message of the notes list."
+  },
+  "notSyncedYet": "Not synced yet",
+  "@notSyncedYet": {
+    "description": "Semantics label of the pending-sync dot on a note row."
+  },
+  "selectNoteTitle": "Select a note",
+  "@selectNoteTitle": {
+    "description": "Detail pane when no note is selected."
+  },
+  "selectNoteMessage": "Pick a note from the list to read and edit it.",
+  "@selectNoteMessage": {
+    "description": "Detail pane message when no note is selected."
+  },
+  "noteViewsLabel": "Note views",
+  "@noteViewsLabel": {
+    "description": "Semantics label of the compact Note / Links / History tabs."
+  },
+  "tabNote": "Note",
+  "@tabNote": {
+    "description": "Compact tab: the note."
+  },
+  "tabLinks": "Links",
+  "@tabLinks": {
+    "description": "Compact tab: relations and backlinks."
+  },
+  "tabHistory": "History",
+  "@tabHistory": {
+    "description": "Tab: version history."
+  },
+  "tabBacklinks": "Backlinks",
+  "@tabBacklinks": {
+    "description": "Context tab: backlinks."
+  },
+  "tabGraph": "Graph",
+  "@tabGraph": {
+    "description": "Context tab: local graph."
+  },
+  "contextLabel": "Note context",
+  "@contextLabel": {
+    "description": "Semantics label of the context panel."
+  },
+  "contextTitle": "Context",
+  "@contextTitle": {
+    "description": "Title of the medium-size context drawer."
+  },
+  "showContext": "Show context panel",
+  "@showContext": {
+    "description": "Button that opens the context panel."
+  },
+  "hideContext": "Hide context panel",
+  "@hideContext": {
+    "description": "Button that closes the context panel."
+  },
+  "openLocalMap": "Open local mind map",
+  "@openLocalMap": {
+    "description": "Button that opens the local mind map."
+  },
+  "moreActions": "More actions",
+  "@moreActions": {
+    "description": "Overflow menu button."
+  },
+  "backToNotes": "Back to notes",
+  "@backToNotes": {
+    "description": "Back button of the compact note page."
+  },
+  "propertiesTitle": "Properties",
+  "@propertiesTitle": {
+    "description": "Title of the properties panel."
+  },
+  "propertiesSummary": "{relations, plural, =0{No relations} =1{1 relation} other{{relations} relations}}",
+  "@propertiesSummary": {
+    "description": "Collapsed properties summary.",
+    "placeholders": {
+      "relations": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "expandProperties": "Expand properties",
+  "@expandProperties": {
+    "description": "Button that expands the compact properties panel."
+  },
+  "collapseProperties": "Collapse properties",
+  "@collapseProperties": {
+    "description": "Button that collapses the compact properties panel."
+  },
+  "relationsLabel": "Relations",
+  "@relationsLabel": {
+    "description": "Properties row: typed relations."
+  },
+  "tagsLabel": "Tags",
+  "@tagsLabel": {
+    "description": "Properties row: tags."
+  },
+  "tagChip": "#{tag}",
+  "@tagChip": {
+    "description": "A tag chip (the tag as the core gives it).",
+    "placeholders": {
+      "tag": {
+        "type": "String",
+        "example": "pricing"
+      }
+    }
+  },
+  "aiSuggestedBy": "Suggested by AI",
+  "@aiSuggestedBy": {
+    "description": "Title of the AI relation card."
+  },
+  "aiConfidence": "confidence {value}",
+  "@aiConfidence": {
+    "description": "Confidence of an AI relation.",
+    "placeholders": {
+      "value": {
+        "type": "String",
+        "example": "0.72"
+      }
+    }
+  },
+  "noReason": "No reason recorded.",
+  "@noReason": {
+    "description": "AI relation without a reason."
+  },
+  "relationReject": "Reject",
+  "@relationReject": {
+    "description": "Reject an AI relation."
+  },
+  "relationRetype": "Retype",
+  "@relationRetype": {
+    "description": "Change a relation's type."
+  },
+  "retypeTitle": "Change relation type",
+  "@retypeTitle": {
+    "description": "Title of the retype chooser."
+  },
+  "relationActionsHint": "Long-press for reject or retype",
+  "@relationActionsHint": {
+    "description": "Semantics hint on AI relation chips (phones)."
+  },
+  "relationUnresolved": "Not in this vault yet",
+  "@relationUnresolved": {
+    "description": "The relation's target does not resolve locally."
+  },
+  "backlinksByType": "Backlinks by relation type",
+  "@backlinksByType": {
+    "description": "Semantics label of the grouped backlinks."
+  },
+  "noBacklinks": "No notes link here yet.",
+  "@noBacklinks": {
+    "description": "No backlinks."
+  },
+  "backlinkKindLink": "body links",
+  "@backlinkKindLink": {
+    "description": "Backlink group of plain body links."
+  },
+  "localGraphTitle": "Local graph",
+  "@localGraphTitle": {
+    "description": "Title of the local graph section."
+  },
+  "openMap": "Open map",
+  "@openMap": {
+    "description": "Opens the local mind map."
+  },
+  "localGraphPlaceholder": "The mind map of this note opens in Map.",
+  "@localGraphPlaceholder": {
+    "description": "Placeholder of the mini graph slot."
+  },
+  "historyTitle": "History",
+  "@historyTitle": {
+    "description": "Title of the history section."
+  },
+  "historyAvailable": "Versions of this note appear here.",
+  "@historyAvailable": {
+    "description": "History available, no entries streamed."
+  },
+  "historyOffline": "History needs a connection. It's back when you're online.",
+  "@historyOffline": {
+    "description": "History unavailable offline."
+  },
+  "historyNotYetAvailable": "History isn't available yet.",
+  "@historyNotYetAvailable": {
+    "description": "History not built yet."
+  },
+  "historyNotAllowed": "History isn't available for this account.",
+  "@historyNotAllowed": {
+    "description": "History not allowed."
+  },
+  "deleteNote": "Delete note",
+  "@deleteNote": {
+    "description": "Context menu: delete."
+  },
+  "deleteNoteTitle": "Delete “{title}”?",
+  "@deleteNoteTitle": {
+    "description": "Delete confirmation title.",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Pricing experiments"
+      }
+    }
+  },
+  "deleteNoteMessage": "The note moves to the vault's trash.",
+  "@deleteNoteMessage": {
+    "description": "Delete confirmation message."
+  },
+  "shortcutsSearch": "Search notes",
+  "@shortcutsSearch": {
+    "description": "Keyboard shortcut description."
+  }
+}

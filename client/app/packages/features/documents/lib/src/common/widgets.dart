@@ -19,6 +19,11 @@ class EntityLinks {
     this.onBack,
   });
 
+  /// The links of the closest [EntityLinksScope] (none when absent).
+  factory of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<EntityLinksScope>()?.links ??
+      const EntityLinks();
+
   /// Opens a person, company, document or place page (its ID).
   final ValueChanged<String>? onOpenEntity;
 
@@ -31,10 +36,6 @@ class EntityLinks {
   /// Leaves a full-screen page (compact).
   final VoidCallback? onBack;
 
-  /// The links of the closest [EntityLinksScope] (none when absent).
-  static EntityLinks of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<EntityLinksScope>()?.links ??
-      const EntityLinks();
 }
 
 /// Provides [EntityLinks] to a page's widgets.
@@ -429,7 +430,10 @@ class _DetailLayoutState extends State<DetailLayout> {
                       style: text.bodySmall.copyWith(color: colors.text2),
                     ),
                   ),
-                  Text(widget.title, style: text.bodySmall.withWeight(FontWeight.w600)),
+                  Text(
+                    widget.title,
+                    style: text.bodySmall.withWeight(FontWeight.w600),
+                  ),
                   if (subtitle != null)
                     Text(
                       subtitle,

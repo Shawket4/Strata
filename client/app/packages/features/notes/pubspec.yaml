@@ -1,6 +1,9 @@
 name: strata_notes
 description: >-
-  Strata "notes" feature UI (widgets only; view-models come from the Rust core).
+  Strata "notes" feature UI: the notes list and the note view (editor,
+  properties with typed relations, backlinks, history, local graph slot),
+  adaptive per size class. Widgets only; view-models come from the Rust core
+  (PLAN L15).
 version: 0.1.0
 publish_to: none
 resolution: workspace
@@ -12,10 +15,18 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_riverpod: ^3.4.3
+  strata_editor: any
   strata_l10n: any
+  strata_state: any
   strata_ui: any
 
 dev_dependencies:
+  alchemist: ^0.14.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^11.0.0
+
+flutter:
+  generate: true
+  uses-material-design: true

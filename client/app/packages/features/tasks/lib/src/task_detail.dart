@@ -372,13 +372,14 @@ class _TaskDetailBody extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: StrataSpacing.s4),
-              StrataSectionHeader(
-                title: l10n.tasksHistoryTitle,
-                padding: EdgeInsets.zero,
-                trailing: Text(
-                  l10n.tasksHistorySubtitle,
-                  style: text.caption.copyWith(color: colors.text2),
-                ),
+              Semantics(
+                header: true,
+                container: true,
+                child: Text(l10n.tasksHistoryTitle, style: text.titleSmall),
+              ),
+              Text(
+                l10n.tasksHistorySubtitle,
+                style: text.caption.copyWith(color: colors.text2),
               ),
               const SizedBox(height: StrataSpacing.s2),
               if (screen.history.isEmpty)
@@ -420,10 +421,8 @@ class _TaskDetailBody extends ConsumerWidget {
             ],
           ),
         ),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: colors.border)),
-          ),
+        Material(
+          color: colors.surface2,
           child: Padding(
             padding: const EdgeInsets.all(StrataSpacing.s3),
             child: Wrap(
