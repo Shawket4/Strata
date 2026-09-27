@@ -158,3 +158,9 @@ View-model fields and intents the Flutter screens need from the Rust core (PLAN 
 - **Source preview:** the cited block's text (`resolve_citation(note_id, anchor) -> {block_text, heading, path, date}`); the preview shows title, path and tags only.
 - **Per-paragraph direction:** a `lang`/direction hint on `AskMessage`, `SearchHit.snippet`, `NoteListItem.snippet`, `CitedBullet.text` and graph node titles (PLAN §11: direction by first strong character) — today they use the ambient direction with `TextAlign.start`.
 - **Search:** `SearchHit.highlights` (match spans), `score`, and `SearchView.available_modes` (so unavailable modes can be disabled before searching; today availability is only known after the search runs).
+
+## Coordinator notes (to resolve in the core-gaps pass)
+- Maps: edge/node filters are currently applied in the Dart painter (visibility/dimming). Move filtering and lens selection into the core (filtered view-models) so Dart only paints (L15).
+- Directory: rename the `EntityScreen` widget (clashes with the `EntityScreen` view-model type) to `EntityPage`.
+- Content direction: provide per-paragraph direction hints from the core everywhere text is rendered (maps, directory, ask, documents), replacing ambient-direction fallbacks.
+- Share the duplicated `test/helpers` across feature packages via `strata_state/testing.dart`.

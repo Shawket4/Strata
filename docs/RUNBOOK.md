@@ -338,3 +338,77 @@ day). A reached cap pauses AI work until the next day starts; nothing fails.
 ```sql
 SELECT * FROM strata.ai_usage_global ORDER BY day DESC LIMIT 7;
 ```
+
+## 12. AI: background jobs, fp32 embeddings, Ask (PLAN §9.1b, §9.2, §9.5)
+
+### The fp32 model (default)
+Since the owner decision of 2026-09-27 the embedder uses the full-precision export
+`onnx/model.onnx` of the same repository and revision as §10 (≈ 390 MB). Fetch it next to the
+other files and verify it against the checksum the repository states (the Git LFS pointer of the
+file carries its SHA-256):
+
+```sh
+cd /opt/models/granite-embedding-97m-multilingual-r2
+REV=835ad14087e140460703cf0fae09f97d469d65c2
+BASE=https://huggingface.co/ibm-granite/granite-embedding-97m-multilingual-r2
+curl -fsSL "$BASE/raw/$REV/onnx/model.onnx" | grep '^oid sha256:' | cut -d: -f2 > /tmp/model.onnx.sha256
+curl -fL -o onnx/model.onnx.part "$BASE/resolve/$REV/onnx/model.onnx"
+echo "$(cat /tmp/model.onnx.sha256)  onnx/model.onnx.part" | sha256sum -c - \
+  && mv onnx/model.onnx.part onnx/model.onnx
+echo "$(cat /tmp/model.onnx.sha256)  onnx/model.onnx" >> SHA256SUMS
+rm -f /tmp/model.onnx.sha256
+```
+
+The defaults (`deploy/stratad.example.toml`) then need only the two paths of §10. The model ID
+stored with every vector changes (`…@onnx/model`), so the first start after switching queues a
+resumable re-embed of every note (below). To stay on the int8 file, set `model_file =
+"onnx/model_quint8_avx2.onnx"`, `model_id =
+"ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"` and `pad_batches =
+false`.
+
+The model is not loaded at startup: the first embedding loads it (a second or two) and it is
+unloaded after `ai.embedding.idle_unload_secs` (default 300) without calls. Real-model checks
+(fp32 padding invariance and agreement with the quint8 reference; load → idle unload → reload):
+
+```sh
+STRATA_EMBED_MODEL_DIR=/opt/models/granite-embedding-97m-multilingual-r2 \
+STRATA_ONNXRUNTIME_LIB=/opt/onnxruntime/lib/libonnxruntime.so.1.30.0 \
+  cargo test -p strata-ai --test onnx_real -- --ignored
+```
+
+### Background jobs
+`stratad serve` runs the job runner (`[jobs]`: `max_concurrency` 2, `poll_interval_secs`,
+`backoff_base_secs`/`backoff_max_secs`, `nightly_hour` 3 in `default_timezone`,
+`shutdown_grace_secs`). Kinds: `embed` (after each content change), `embed_backfill` (at every
+start when embeddings are configured, until every note is current), `summarize` (after `embed`;
+sidecar summary, `ai: summarize <path>`), `dedupe` (nightly semantic duplicate sweep producing
+`duplicates` suggestions). Jobs of kinds without a handler yet (`link`, `file_inbox`) stay
+queued. A reached budget or provider usage limit pauses LLM jobs (they wait, attempts are not
+spent); `ai.daily_job_limit` caps LLM jobs per UTC day (in memory, reset at restart).
+Jobs left `running` by a stopped process are re-queued at the next start.
+
+Inspect a user's queue (as the owner role, inside the user's scope):
+
+```sql
+BEGIN;
+SELECT set_config('strata.user_id', '<user uuid>', true);
+SELECT kind, status, count(*), min(run_after) FROM strata.jobs GROUP BY 1, 2 ORDER BY 1, 2;
+SELECT kind, attempts, last_error, run_after FROM strata.jobs WHERE status = 'failed' ORDER BY updated DESC LIMIT 20;
+-- embedding coverage with the current model
+SELECT count(v.note_id) AS embedded, count(*) AS notes FROM strata.notes n
+  LEFT JOIN strata.note_vectors v ON v.note_id = n.id AND v.user_id = n.user_id
+   AND v.content_hash = n.content_hash
+ WHERE NOT n.trashed;
+ROLLBACK;
+```
+
+`GET /api/v1/ai/status` shows the same for the signed-in user (queue depth, pause, usage,
+embedding model loaded or not, embedded / total notes).
+
+### Ask
+`POST /api/v1/ask {question, scope?}` returns an answer ID; the client streams it from the
+WebSocket `GET /api/v1/ask/{id}` (token batches, citations, `done`, `end`). Answers are kept in
+memory for 30 minutes (lost at restart); `POST /api/v1/ask/{id}/save` writes one to `notes/`.
+Citing a block without an ID appends `^ask-xxxxxx` to it in one `ai: ask <path>` commit
+(revertible like any AI commit). `503 ai_paused` / `ai_unavailable` mean the budget or provider
+limit is reached, or AI is off for the account.

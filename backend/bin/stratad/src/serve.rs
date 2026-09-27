@@ -286,7 +286,9 @@ pub async fn run(config: Config) -> Result<(), StartupError> {
         Err(err) => Err(err),
     };
     background
-        .shutdown(StdDuration::from_secs(u64::from(config.jobs.shutdown_grace_secs)))
+        .shutdown(StdDuration::from_secs(u64::from(
+            config.jobs.shutdown_grace_secs,
+        )))
         .await;
     reload.abort();
     purge.abort();

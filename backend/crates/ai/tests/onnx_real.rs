@@ -155,7 +155,10 @@ async fn the_lazy_embedder_loads_the_real_model_on_demand_and_unloads_it_when_id
     );
     assert!(!lazy.is_loaded());
     let v = lazy.embed(&["عقد وطنية".to_owned()]).await.expect("embed");
-    assert_eq!((v[0].vector.len(), lazy.is_loaded(), lazy.loads()), (384, true, 1));
+    assert_eq!(
+        (v[0].vector.len(), lazy.is_loaded(), lazy.loads()),
+        (384, true, 1)
+    );
     clock.advance(chrono::Duration::seconds(300));
     assert!(lazy.unload_if_idle());
     assert!(!lazy.is_loaded());

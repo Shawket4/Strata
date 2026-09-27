@@ -69,14 +69,20 @@ async fn job_notices_are_published_as_job_events_of_their_user() {
 async fn the_scheduler_runs_jobs_for_active_and_deletion_pending_accounts_only() {
     let db = TestDb::new().await.expect("db");
     let active = TestUser::new("active").create(&db).await.expect("user").id;
-    let _pending = TestUser::new("waiting").pending().create(&db).await.expect("user");
-    let leaving = TestUser::new("leaving").create(&db).await.expect("user").id;
-    sqlx::query("UPDATE users SET status = $1, deletion_at = now() + interval '14 days' WHERE id = $2")
-        .bind(UserStatus::DeletionPending)
-        .bind(leaving)
-        .execute(&db.accounts)
+    let _pending = TestUser::new("waiting")
+        .pending()
+        .create(&db)
         .await
-        .expect("status");
+        .expect("user");
+    let leaving = TestUser::new("leaving").create(&db).await.expect("user").id;
+    sqlx::query(
+        "UPDATE users SET status = $1, deletion_at = now() + interval '14 days' WHERE id = $2",
+    )
+    .bind(UserStatus::DeletionPending)
+    .bind(leaving)
+    .execute(&db.accounts)
+    .await
+    .expect("status");
     let mut users = AccountUsers(db.accounts_db.clone())
         .active_users()
         .await
@@ -94,8 +100,7 @@ async fn ai_features_follow_the_embedding_configuration() {
     let data = TempDataRoot::new().expect("data");
     let config = Config::default();
     let clock: Arc<dyn Clock> = Arc::new(db.clock.clone());
-    let parts =
-        stratad::ai::build(&config, db.app_db.clone(), clock.clone()).expect("ai parts");
+    let parts = stratad::ai::build(&config, db.app_db.clone(), clock.clone()).expect("ai parts");
     let vault = stratad::serve::vault_service(
         &Config {
             data_root: data.path().to_path_buf(),
@@ -131,10 +136,21 @@ async fn ai_features_follow_the_embedding_configuration() {
             lazy.loads(),
             strata_ai::Embedder::model_id(lazy.as_ref())
         ),
-        (false, 0, "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model")
+        (
+            false,
+            0,
+            "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model"
+        )
     );
-    let api = stratad::jobs::ai_api(&parts, &db.app_db, &vault, clock, db.ids.clone(), &with_model)
-        .expect("ai api");
+    let api = stratad::jobs::ai_api(
+        &parts,
+        &db.app_db,
+        &vault,
+        clock,
+        db.ids.clone(),
+        &with_model,
+    )
+    .expect("ai api");
     assert!(api.retriever.is_some());
     db.cleanup().await.expect("cleanup");
 }

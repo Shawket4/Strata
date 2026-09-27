@@ -237,11 +237,8 @@ pub fn build(config: &Config, db: AppDb, clock: Arc<dyn Clock>) -> Result<AiPart
         clock,
         Arc::new(PgUsageStore::new(db)),
     );
-    let (lazy_embedder, embedder_state) =
-        load_embedder(&config.ai.embedding, &gate, lazy_clock);
-    let embedder: Option<Arc<dyn Embedder>> = lazy_embedder
-        .clone()
-        .map(|e| e as Arc<dyn Embedder>);
+    let (lazy_embedder, embedder_state) = load_embedder(&config.ai.embedding, &gate, lazy_clock);
+    let embedder: Option<Arc<dyn Embedder>> = lazy_embedder.clone().map(|e| e as Arc<dyn Embedder>);
     let mut service = AiService::new(router.clone(), budget.clone());
     if let Some(e) = &embedder {
         service = service.with_embedder(e.clone());

@@ -114,6 +114,8 @@ void main() {
         fake: fake,
         size: StrataTestSizes.expanded,
       );
+      // (Settings: this package's own content next to the sidebar.)
+      await go(tester, app, const SettingsRoute().location);
       final folder = StrataFixtures.notesListView.folders.first;
       expect(find.text(folder.name), findsWidgets);
       await tester.tap(find.byType(SidebarItem).at(2));
