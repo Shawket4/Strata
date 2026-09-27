@@ -9,21 +9,22 @@ Design canvas (Claude Design): https://claude.ai/artifact/PttxTsS31VynwkgAC2cx7F
 
 | File | Use |
 |------|-----|
-| `brand/strata-symbol.svg` | Symbol, shale on light grounds |
-| `brand/strata-badge.svg` | App icon / badge tile (shale) |
+| `brand/strata-symbol.svg` | Symbol, abyss on light grounds |
+| `brand/strata-badge.svg` | App icon / badge tile (abyss) |
 | `brand/strata-favicon.svg` | Favicon form (16–32 px) |
 
-## Colour tokens (draft) — "sediment"
+## Colour tokens (draft) — "coastal"
 
 | Token | Hex | Use |
 |-------|-----|-----|
-| shale | `#1F1D1B` | Mark, text, default icon tile, dark UI ground |
-| limestone | `#F4F0E8` | Backgrounds, surfaces; the mark on dark |
-| flint | `#8A8178` | Dividers, quiet UI (text use `#625B54`) |
-| rust | `#9A4F1E` | Accent on light: links, focus, eyebrows, accent tile |
-| ochre | `#E0975A` | The same accent on dark grounds |
+| abyss | `#0F1B26` | Mark, text, default icon tile, dark UI ground |
+| mist | `#F1F5F7` | Backgrounds, surfaces; the mark on dark |
+| harbour | `#7C8C96` | Dividers, quiet UI (text use `#52616B`) |
+| tide | `#1D5C8C` | Accent on light: links, focus, eyebrows, accent tile |
+| surf | `#6CB4DD` | The same accent on dark grounds |
+| sand | `#D8B47E` | The seam in the strata bands only |
 
-Signature device: the **strata bands** — horizontal bands of uneven depth, one tone apart, with a single thin rust seam.
+Signature device: the **strata bands** — horizontal bands of uneven depth, one tone apart, with a single thin sand seam.
 
 ## Type
 
