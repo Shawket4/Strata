@@ -439,3 +439,80 @@ pub async fn export_me(
     let request = request.authenticated();
     client.send_zip(request).await
 }
+/** A paged snapshot of the caller's data: notes with full content and version (entities,
+documents, places, task homes and inbox notes included), relations with provenance,
+rejected edges, suggestions, cluster assignments and names, settings, device settings and
+keep-both pairs. The first page captures the log position (`seq`); pull
+`/sync/changes?since=seq` after the last page.*/
+///
+/// `GET /api/v1/sync/bootstrap`
+pub async fn sync_bootstrap(
+    client: &::strata_client::Client,
+    cursor: ::std::option::Option<&str>,
+    limit: ::std::option::Option<u64>,
+) -> ::std::result::Result<types::SyncBootstrapPage, ::strata_client::Error> {
+    let request = ::strata_client::Request::new(
+        ::strata_client::Method::GET,
+        ::std::string::String::from("/api/v1/sync/bootstrap"),
+        "sync_bootstrap",
+    );
+    let request = request.authenticated();
+    let request = match &cursor {
+        ::std::option::Option::Some(value) => request.query("cursor", (*value).to_owned()),
+        ::std::option::Option::None => request,
+    };
+    let request = match &limit {
+        ::std::option::Option::Some(value) => request.query("limit", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/** Changed records after `since` with full payloads, tombstones for deletes, and the seq to
+continue from.*/
+///
+/// `GET /api/v1/sync/changes`
+pub async fn sync_changes(
+    client: &::strata_client::Client,
+    since: u64,
+    epoch: u64,
+    limit: ::std::option::Option<u64>,
+) -> ::std::result::Result<types::SyncChangesPage, ::strata_client::Error> {
+    let request = ::strata_client::Request::new(
+        ::strata_client::Method::GET,
+        ::std::string::String::from("/api/v1/sync/changes"),
+        "sync_changes",
+    );
+    let request = request.authenticated();
+    let request = {
+        let value = &since;
+        request.query("since", value.to_string())
+    };
+    let request = {
+        let value = &epoch;
+        request.query("epoch", value.to_string())
+    };
+    let request = match &limit {
+        ::std::option::Option::Some(value) => request.query("limit", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/** Applies ops in order and answers one result per op: `applied{new_version, merged}`,
+`conflict{server_version, resolution}` (D19), `duplicate{candidates}` or
+`rejected{problem}`. Results are stored under `op_id`; a replayed op returns its stored
+result byte for byte and is not applied again.*/
+///
+/// `POST /api/v1/sync/push`
+pub async fn sync_push(
+    client: &::strata_client::Client,
+    body: &types::SyncPushRequest,
+) -> ::std::result::Result<types::SyncPushResponse, ::strata_client::Error> {
+    let request = ::strata_client::Request::new(
+        ::strata_client::Method::POST,
+        ::std::string::String::from("/api/v1/sync/push"),
+        "sync_push",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}

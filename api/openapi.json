@@ -93,6 +93,15 @@
       }
     },
     "schemas": {
+      "AccountClosure": {
+        "description": "Why the account stream ended (`account.disabled`).",
+        "enum": [
+          "disabled",
+          "deletion_pending",
+          "deleted"
+        ],
+        "type": "string"
+      },
       "AccountStatus": {
         "description": "Account lifecycle status (D22, D25).",
         "enum": [
@@ -1491,6 +1500,668 @@
           "payload"
         ],
         "type": "object"
+      },
+      "Event": {
+        "description": "One event of the `/events` stream. Internally tagged by `type`.",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "description": "A note appeared (created, captured, imported, restored).",
+            "properties": {
+              "id": {
+                "description": "Note ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/NoteKind",
+                "description": "Kind."
+              },
+              "path": {
+                "description": "Path.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "note.created"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "New version.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "path",
+              "kind",
+              "version",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A note's content changed.",
+            "properties": {
+              "id": {
+                "description": "Note ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/NoteKind",
+                "description": "Kind."
+              },
+              "path": {
+                "description": "Path.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "note.updated"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "New version.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "path",
+              "kind",
+              "version",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A note moved or was renamed.",
+            "properties": {
+              "id": {
+                "description": "Note ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/NoteKind",
+                "description": "Kind."
+              },
+              "old_path": {
+                "description": "Previous path.",
+                "type": "string"
+              },
+              "path": {
+                "description": "New path.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "note.moved"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "New version.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "old_path",
+              "path",
+              "kind",
+              "version",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A note went to the trash (or was removed).",
+            "properties": {
+              "id": {
+                "description": "Note ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/NoteKind",
+                "description": "Kind."
+              },
+              "path": {
+                "description": "Last path.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "note.deleted"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "path",
+              "kind",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A relation appeared.",
+            "properties": {
+              "dst_id": {
+                "description": "Target note.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "relation": {
+                "description": "Relation type (`related`, `works-at`, …).",
+                "type": "string"
+              },
+              "src_id": {
+                "description": "Source note.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "relation.added"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src_id",
+              "dst_id",
+              "relation",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A relation disappeared.",
+            "properties": {
+              "dst_id": {
+                "description": "Target note.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "relation": {
+                "description": "Relation type.",
+                "type": "string"
+              },
+              "src_id": {
+                "description": "Source note.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "relation.removed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "src_id",
+              "dst_id",
+              "relation",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A suggestion was created.",
+            "properties": {
+              "id": {
+                "description": "Suggestion ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "description": "Kind (`duplicate`, `conflict`, …).",
+                "type": "string"
+              },
+              "note_id": {
+                "description": "Note it concerns.",
+                "format": "ulid",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "suggestion.created"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A suggestion was decided or replied to.",
+            "properties": {
+              "id": {
+                "description": "Suggestion ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "description": "Kind.",
+                "type": "string"
+              },
+              "note_id": {
+                "description": "Note it concerns.",
+                "format": "ulid",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "$ref": "#/components/schemas/SuggestionStatus",
+                "description": "Status now."
+              },
+              "type": {
+                "enum": [
+                  "suggestion.updated"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "status",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A background job finished.",
+            "properties": {
+              "id": {
+                "description": "Job ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "description": "Job kind (`embed`, `link`, `file_inbox`, …).",
+                "type": "string"
+              },
+              "note_id": {
+                "description": "Note it worked on.",
+                "format": "ulid",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "job.completed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A background job failed for good.",
+            "properties": {
+              "id": {
+                "description": "Job ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "description": "Job kind.",
+                "type": "string"
+              },
+              "note_id": {
+                "description": "Note it worked on.",
+                "format": "ulid",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "job.failed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Cluster assignments or names changed.",
+            "properties": {
+              "cluster_ids": {
+                "description": "The clusters that changed.",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": {
+                "enum": [
+                  "cluster.updated"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "cluster_ids",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A person, company, document or place was created.",
+            "properties": {
+              "id": {
+                "description": "Entity note ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/NoteKind",
+                "description": "Kind."
+              },
+              "type": {
+                "enum": [
+                  "entity.created"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "New version.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "version",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An entity note changed (fields, aliases, AI sections, rename).",
+            "properties": {
+              "id": {
+                "description": "Entity note ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/NoteKind",
+                "description": "Kind."
+              },
+              "type": {
+                "enum": [
+                  "entity.updated"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "New version.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "version",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An entity was merged into another.",
+            "properties": {
+              "id": {
+                "description": "The entity merged away (now in the trash).",
+                "format": "ulid",
+                "type": "string"
+              },
+              "into_id": {
+                "description": "The survivor.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/NoteKind",
+                "description": "Kind."
+              },
+              "type": {
+                "enum": [
+                  "entity.merged"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "The survivor's new version.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "into_id",
+              "kind",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Reconciliation recorded integrity warnings (`GET /integrity`).",
+            "properties": {
+              "count": {
+                "description": "Number of new warnings.",
+                "format": "int32",
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "integrity.warning"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "count",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The account was disabled, scheduled for deletion or deleted; the stream ends.",
+            "properties": {
+              "reason": {
+                "$ref": "#/components/schemas/AccountClosure",
+                "description": "Why."
+              },
+              "type": {
+                "enum": [
+                  "account.disabled"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "reason",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A task line changed or disappeared.",
+            "properties": {
+              "id": {
+                "description": "Block ID (`t-…`).",
+                "type": "string"
+              },
+              "note_id": {
+                "description": "The note holding the line.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "task.changed"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "The line's version now; absent when the task is gone.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "note_id",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A document's custody history changed.",
+            "properties": {
+              "document_id": {
+                "description": "Document note.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "custody.changed"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "Its new version.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "document_id",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A device setting changed.",
+            "properties": {
+              "device_id": {
+                "description": "Device.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "device.settings_changed"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "device_id",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "EventDataFrame": {
+        "description": "A stream item.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "data"
+            ],
+            "type": "string"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/Event"
+          },
+          "seq": {
+            "description": "Sequence number; see docs/WIRE_FORMAT.md.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "v": {
+            "description": "Envelope version.",
+            "format": "int32",
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "v",
+          "kind",
+          "seq",
+          "payload"
+        ],
+        "type": "object"
+      },
+      "EventFrame": {
+        "description": "A frame of a `Event` stream (binary WebSocket message).",
+        "discriminator": {
+          "mapping": {
+            "data": "#/components/schemas/EventDataFrame",
+            "end": "#/components/schemas/ControlFrame",
+            "error": "#/components/schemas/ErrorFrame",
+            "reset": "#/components/schemas/ControlFrame"
+          },
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/EventDataFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ErrorFrame"
+          },
+          {
+            "$ref": "#/components/schemas/ControlFrame"
+          }
+        ]
       },
       "FileChange": {
         "description": "How a commit changed the file.",
@@ -3019,6 +3690,2379 @@
         },
         "required": [
           "items"
+        ],
+        "type": "object"
+      },
+      "SyncBootstrapPage": {
+        "description": "One page of `GET /sync/bootstrap`.",
+        "properties": {
+          "epoch": {
+            "description": "Epoch of the snapshot.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "next_cursor": {
+            "description": "Cursor of the next page; `nil` on the last page.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "records": {
+            "description": "Records.",
+            "items": {
+              "$ref": "#/components/schemas/SyncRecord"
+            },
+            "type": "array"
+          },
+          "seq": {
+            "description": "Log position of the snapshot (captured on the first page): pull changes after it.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "seq",
+          "records"
+        ],
+        "type": "object"
+      },
+      "SyncCapture": {
+        "description": "`capture`.",
+        "properties": {
+          "created": {
+            "description": "Capture time on the device (names the inbox file).",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Client-generated ID of the inbox note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "text": {
+            "description": "Captured text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "created"
+        ],
+        "type": "object"
+      },
+      "SyncChange": {
+        "description": "Upsert or tombstone, tagged by `op`.",
+        "discriminator": {
+          "propertyName": "op"
+        },
+        "oneOf": [
+          {
+            "description": "The record now is this.",
+            "properties": {
+              "op": {
+                "enum": [
+                  "upsert"
+                ],
+                "type": "string"
+              },
+              "record": {
+                "$ref": "#/components/schemas/SyncRecord",
+                "description": "Full record."
+              }
+            },
+            "required": [
+              "record",
+              "op"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The record was deleted.",
+            "properties": {
+              "op": {
+                "enum": [
+                  "delete"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "op"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SyncChangeRecord": {
+        "description": "One change-log entry with its payload.",
+        "properties": {
+          "change": {
+            "$ref": "#/components/schemas/SyncChange",
+            "description": "Upsert or delete."
+          },
+          "entity_id": {
+            "description": "Entity ID (`<src>:<type>:<dst>` for relations).",
+            "type": "string"
+          },
+          "entity_type": {
+            "$ref": "#/components/schemas/SyncEntityType",
+            "description": "Entity type."
+          },
+          "epoch": {
+            "description": "Epoch.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "seq": {
+            "description": "Position in the user's log.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "version": {
+            "description": "Version after the change (notes).",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "seq",
+          "epoch",
+          "entity_type",
+          "entity_id",
+          "change"
+        ],
+        "type": "object"
+      },
+      "SyncChangesPage": {
+        "description": "One page of `GET /sync/changes`.",
+        "properties": {
+          "changes": {
+            "description": "Changes in seq order.",
+            "items": {
+              "$ref": "#/components/schemas/SyncChangeRecord"
+            },
+            "type": "array"
+          },
+          "epoch": {
+            "description": "Current epoch.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "has_more": {
+            "description": "More changes are waiting.",
+            "type": "boolean"
+          },
+          "next_seq": {
+            "description": "`since` for the next call.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "epoch",
+          "changes",
+          "next_seq",
+          "has_more"
+        ],
+        "type": "object"
+      },
+      "SyncClusterAssignmentRecord": {
+        "description": "A note's cluster.",
+        "properties": {
+          "cluster_id": {
+            "description": "Cluster.",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "Note.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note_id",
+          "cluster_id"
+        ],
+        "type": "object"
+      },
+      "SyncClusterNameRecord": {
+        "description": "A cluster's name.",
+        "properties": {
+          "cluster_id": {
+            "description": "Cluster.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "SyncConflictResolution": {
+        "description": "How the server settled a conflict (D19).",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "description": "Overlapping edits: the server kept its version and saved the device's content as a\nconflict copy next to it.",
+            "properties": {
+              "note_id": {
+                "description": "Conflict copy note ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "path": {
+                "description": "Its path.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "conflict_copy"
+                ],
+                "type": "string"
+              },
+              "version": {
+                "description": "Its version.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "note_id",
+              "path",
+              "version",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "The op cannot apply to the server's state; the server state stands.",
+            "properties": {
+              "reason": {
+                "description": "Why.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "server_kept"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "reason",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SyncDeviceSettingRecord": {
+        "description": "A per-device setting.",
+        "properties": {
+          "device_id": {
+            "description": "Device.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "key": {
+            "description": "Key (`reminders_enabled`).",
+            "type": "string"
+          },
+          "value": {
+            "description": "Value (`true`/`false`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "device_id",
+          "key",
+          "value"
+        ],
+        "type": "object"
+      },
+      "SyncDeviceSettings": {
+        "description": "`device.settings`.",
+        "properties": {
+          "device_id": {
+            "description": "The device.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "reminders_enabled": {
+            "description": "Reminders on/off (`nil` = unchanged).",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "device_id"
+        ],
+        "type": "object"
+      },
+      "SyncDocumentCreate": {
+        "description": "`document.create`.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "companies": {
+            "description": "Companies the document concerns.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "copy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CopyKind",
+                "description": "`copy`."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "copy_of": {
+            "description": "`copy-of`.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "doc_type": {
+            "description": "`doc-type`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires": {
+            "description": "`expires`.",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "force": {
+            "description": "Create even if duplicates exist.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "people": {
+            "description": "People the document concerns.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "SyncDocumentCustody": {
+        "description": "`document.custody`.",
+        "properties": {
+          "at": {
+            "description": "Event date.",
+            "format": "date",
+            "type": "string"
+          },
+          "counterparty_id": {
+            "description": "Third party.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "document_id": {
+            "description": "Document ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "person_id": {
+            "description": "Person.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "place_id": {
+            "description": "Place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/CustodyEventKind",
+            "description": "Event type."
+          }
+        },
+        "required": [
+          "document_id",
+          "type",
+          "at"
+        ],
+        "type": "object"
+      },
+      "SyncDuplicateCandidate": {
+        "description": "A duplicate candidate (§9.7).",
+        "properties": {
+          "id": {
+            "description": "Existing item ID (note ULID or task block ID).",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Kind (`note`, `task`, `person`, …).",
+            "type": "string"
+          },
+          "level": {
+            "description": "`exact`, `near` or `semantic`.",
+            "type": "string"
+          },
+          "score": {
+            "description": "Score.",
+            "format": "float",
+            "type": "number"
+          },
+          "snippet": {
+            "description": "Snippet.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Title.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "level",
+          "score"
+        ],
+        "type": "object"
+      },
+      "SyncEntityCreate": {
+        "description": "`entity.create`.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "fields": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "User fields.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "force": {
+            "description": "Create even if duplicates exist.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NoteKind",
+            "description": "Kind (`person`, `company`, `concept`)."
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name"
+        ],
+        "type": "object"
+      },
+      "SyncEntityMerge": {
+        "description": "`entity.merge`.",
+        "properties": {
+          "id": {
+            "description": "The entity merged away.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "into_id": {
+            "description": "The survivor.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "into_id"
+        ],
+        "type": "object"
+      },
+      "SyncEntityPatch": {
+        "description": "`entity.patch`, `document.patch`, `place.patch`.",
+        "properties": {
+          "add_aliases": {
+            "description": "Aliases to add.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Entity note ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "remove_aliases": {
+            "description": "Aliases to remove.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "set": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Fields to set.",
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "unset": {
+            "description": "Fields to remove.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "SyncEntityType": {
+        "description": "Kind of record a change is about.",
+        "enum": [
+          "note",
+          "relation",
+          "rejected",
+          "suggestion",
+          "cluster_assignment",
+          "cluster_name",
+          "setting",
+          "device_setting",
+          "keep_both"
+        ],
+        "type": "string"
+      },
+      "SyncKeepBoth": {
+        "description": "A keep-both pair (§9.7).",
+        "properties": {
+          "a_id": {
+            "description": "Smaller ID.",
+            "type": "string"
+          },
+          "b_id": {
+            "description": "Larger ID.",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Kind of the force-created item.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "a_id",
+          "b_id"
+        ],
+        "type": "object"
+      },
+      "SyncNoteCreate": {
+        "description": "`note.create`.",
+        "properties": {
+          "content": {
+            "description": "Full file content.",
+            "type": "string"
+          },
+          "force": {
+            "description": "Create even if duplicates exist.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated note ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "path": {
+            "description": "Vault path.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "content"
+        ],
+        "type": "object"
+      },
+      "SyncNoteMove": {
+        "description": "`note.move`.",
+        "properties": {
+          "id": {
+            "description": "Note ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "new_path": {
+            "description": "New vault path.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "new_path"
+        ],
+        "type": "object"
+      },
+      "SyncNoteRecord": {
+        "description": "A note with its full content.",
+        "properties": {
+          "content": {
+            "description": "Full file content (tags, links, relations, entity fields and tasks are derived from it\nwith `vault-format`, as the server's indexer does).",
+            "type": "string"
+          },
+          "id": {
+            "description": "Note ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NoteKind",
+            "description": "Kind."
+          },
+          "path": {
+            "description": "Vault path.",
+            "type": "string"
+          },
+          "summary": {
+            "description": "AI summary, if any.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "description": "Version (`sha256:…`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "path",
+          "content",
+          "version",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "SyncNoteRef": {
+        "description": "`note.delete`, `relink.request`.",
+        "properties": {
+          "id": {
+            "description": "Note ID.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "SyncNoteUpdate": {
+        "description": "`note.update`.",
+        "properties": {
+          "content": {
+            "description": "New full content.",
+            "type": "string"
+          },
+          "id": {
+            "description": "Note ID.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "content"
+        ],
+        "type": "object"
+      },
+      "SyncOp": {
+        "description": "One pushed op.",
+        "properties": {
+          "base_version": {
+            "description": "Version the device edited (edits of existing content only).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "entity_id": {
+            "description": "The entity the op addresses (derived from the payload).",
+            "type": "string"
+          },
+          "op": {
+            "$ref": "#/components/schemas/SyncOperation",
+            "description": "The operation."
+          },
+          "op_id": {
+            "description": "Idempotency key (ULID): a replay returns the stored result.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op_id",
+          "entity_id",
+          "op"
+        ],
+        "type": "object"
+      },
+      "SyncOpOutcome": {
+        "description": "Result of one op, keyed by its idempotency key.",
+        "properties": {
+          "op_id": {
+            "description": "The op.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/SyncOpResult",
+            "description": "Its result (replays return the stored bytes)."
+          }
+        },
+        "required": [
+          "op_id",
+          "result"
+        ],
+        "type": "object"
+      },
+      "SyncOpResult": {
+        "description": "Result of one op, tagged by `status`.",
+        "discriminator": {
+          "propertyName": "status"
+        },
+        "oneOf": [
+          {
+            "description": "Applied; `merged` when a stale edit was 3-way merged cleanly.",
+            "properties": {
+              "merged": {
+                "description": "Whether a clean 3-way merge was needed.",
+                "type": "boolean"
+              },
+              "new_version": {
+                "description": "The entity's new version.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "applied"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Stale and not mergeable.",
+            "properties": {
+              "resolution": {
+                "$ref": "#/components/schemas/SyncConflictResolution",
+                "description": "What the server did."
+              },
+              "server_version": {
+                "description": "The server's current version.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "enum": [
+                  "conflict"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "resolution",
+              "status"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "A create without `force` resembles existing items.",
+            "properties": {
+              "candidates": {
+                "description": "Ranked candidates.",
+                "items": {
+                  "$ref": "#/components/schemas/SyncDuplicateCandidate"
+                },
+                "type": "array"
+              },
+              "status": {
+                "enum": [
+                  "duplicate"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "candidates",
+              "status"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Invalid or not allowed (foreign IDs are `404 not_found`).",
+            "properties": {
+              "problem": {
+                "$ref": "#/components/schemas/SyncProblem",
+                "description": "Why."
+              },
+              "status": {
+                "enum": [
+                  "rejected"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "problem",
+              "status"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SyncOperation": {
+        "description": "An operation: `{kind, payload}`.",
+        "discriminator": {
+          "propertyName": "kind"
+        },
+        "oneOf": [
+          {
+            "description": "Create a note.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "note.create"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncNoteCreate",
+                "description": "Create a note."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Replace a note's content (3-way merged when stale, D19).",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "note.update"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncNoteUpdate",
+                "description": "Replace a note's content (3-way merged when stale, D19)."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Move/rename a note.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "note.move"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncNoteMove",
+                "description": "Move/rename a note."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Soft-delete a note.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "note.delete"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncNoteRef",
+                "description": "Soft-delete a note."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Capture into the inbox.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "capture"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncCapture",
+                "description": "Capture into the inbox."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Add a relation.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "relation.add"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncRelationRef",
+                "description": "Add a relation."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Remove a relation.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "relation.remove"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncRelationRef",
+                "description": "Remove a relation."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Retype a relation.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "relation.retype"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncRelationRetype",
+                "description": "Retype a relation."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Accept a suggestion.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "suggestion.accept"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncSuggestionAccept",
+                "description": "Accept a suggestion."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Reject a suggestion.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "suggestion.reject"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncSuggestionReject",
+                "description": "Reject a suggestion."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Reply to a suggestion.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "suggestion.reply"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncSuggestionReply",
+                "description": "Reply to a suggestion."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Create a person, company or concept.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "entity.create"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncEntityCreate",
+                "description": "Create a person, company or concept."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Patch an entity.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "entity.patch"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncEntityPatch",
+                "description": "Patch an entity."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Merge an entity into another.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "entity.merge"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncEntityMerge",
+                "description": "Merge an entity into another."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Create a document.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "document.create"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncDocumentCreate",
+                "description": "Create a document."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Patch a document.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "document.patch"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncEntityPatch",
+                "description": "Patch a document."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Record a custody event.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "document.custody"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncDocumentCustody",
+                "description": "Record a custody event."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Create a place.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "place.create"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncPlaceCreate",
+                "description": "Create a place."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Patch a place.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "place.patch"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncEntityPatch",
+                "description": "Patch a place."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Create a task line.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "task.create"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncTaskCreate",
+                "description": "Create a task line."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Edit a task line.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "task.update"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncTaskUpdate",
+                "description": "Edit a task line."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Complete a task.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "task.complete"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncTaskComplete",
+                "description": "Complete a task."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Cancel a task.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "task.cancel"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncTaskCancel",
+                "description": "Cancel a task."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Reopen a task.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "task.reopen"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncTaskRef",
+                "description": "Reopen a task."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Delete a task line.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "task.delete"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncTaskRef",
+                "description": "Delete a task line."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Queue a relink job.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "relink.request"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncNoteRef",
+                "description": "Queue a relink job."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Change this device's settings.",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "device.settings"
+                ],
+                "type": "string"
+              },
+              "payload": {
+                "$ref": "#/components/schemas/SyncDeviceSettings",
+                "description": "Change this device's settings."
+              }
+            },
+            "required": [
+              "payload",
+              "kind"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SyncPlaceCreate": {
+        "description": "`place.create`.",
+        "properties": {
+          "address": {
+            "description": "Address.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "aliases": {
+            "description": "Aliases.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "force": {
+            "description": "Create even if duplicates exist.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Name.",
+            "type": "string"
+          },
+          "parent_id": {
+            "description": "Containing place.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object"
+      },
+      "SyncPriority": {
+        "description": "Task priority (`normal` = no signifier).",
+        "enum": [
+          "highest",
+          "high",
+          "medium",
+          "normal",
+          "low",
+          "lowest"
+        ],
+        "type": "string"
+      },
+      "SyncProblem": {
+        "description": "Why an op was rejected (RFC 7807 members).",
+        "properties": {
+          "detail": {
+            "description": "Details.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "description": "The HTTP status the same failure has on the REST endpoint.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": {
+            "description": "Summary.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Problem type slug.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status"
+        ],
+        "type": "object"
+      },
+      "SyncPushRequest": {
+        "description": "`POST /sync/push` body.",
+        "properties": {
+          "ops": {
+            "description": "Ops, applied in order.",
+            "items": {
+              "$ref": "#/components/schemas/SyncOp"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ops"
+        ],
+        "type": "object"
+      },
+      "SyncPushResponse": {
+        "description": "`POST /sync/push` response.",
+        "properties": {
+          "results": {
+            "description": "One result per op, in request order.",
+            "items": {
+              "$ref": "#/components/schemas/SyncOpOutcome"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "results"
+        ],
+        "type": "object"
+      },
+      "SyncRecord": {
+        "description": "A full record: `{type, data}`.",
+        "discriminator": {
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "description": "Note.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncNoteRecord",
+                "description": "Note."
+              },
+              "type": {
+                "enum": [
+                  "note"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Relation.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncRelationRecord",
+                "description": "Relation."
+              },
+              "type": {
+                "enum": [
+                  "relation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Rejected edge.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncRejectedRecord",
+                "description": "Rejected edge."
+              },
+              "type": {
+                "enum": [
+                  "rejected"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Suggestion.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncSuggestionRecord",
+                "description": "Suggestion."
+              },
+              "type": {
+                "enum": [
+                  "suggestion"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Cluster assignment.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncClusterAssignmentRecord",
+                "description": "Cluster assignment."
+              },
+              "type": {
+                "enum": [
+                  "cluster_assignment"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Cluster name.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncClusterNameRecord",
+                "description": "Cluster name."
+              },
+              "type": {
+                "enum": [
+                  "cluster_name"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "User setting.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncSettingRecord",
+                "description": "User setting."
+              },
+              "type": {
+                "enum": [
+                  "setting"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Device setting.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncDeviceSettingRecord",
+                "description": "Device setting."
+              },
+              "type": {
+                "enum": [
+                  "device_setting"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "Keep-both pair.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncKeepBoth",
+                "description": "Keep-both pair."
+              },
+              "type": {
+                "enum": [
+                  "keep_both"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "SyncRejectedRecord": {
+        "description": "A rejected edge.",
+        "properties": {
+          "at": {
+            "description": "When.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "dst_id": {
+            "description": "Target.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "src_id": {
+            "description": "Source.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "type": {
+            "description": "Type.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "src_id",
+          "dst_id",
+          "type",
+          "at"
+        ],
+        "type": "object"
+      },
+      "SyncRelationOrigin": {
+        "description": "Who added a relation.",
+        "enum": [
+          "user",
+          "ai"
+        ],
+        "type": "string"
+      },
+      "SyncRelationRecord": {
+        "description": "A relation with provenance.",
+        "properties": {
+          "by": {
+            "$ref": "#/components/schemas/SyncRelationOrigin",
+            "description": "Who added it."
+          },
+          "confidence": {
+            "description": "AI confidence.",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "created": {
+            "description": "When.",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dst_id": {
+            "description": "Target.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "reason": {
+            "description": "AI reason.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "src_id": {
+            "description": "Source.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "type": {
+            "description": "Type.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "src_id",
+          "dst_id",
+          "type",
+          "by"
+        ],
+        "type": "object"
+      },
+      "SyncRelationRef": {
+        "description": "`relation.add`, `relation.remove`.",
+        "properties": {
+          "dst_id": {
+            "description": "Target note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "src_id": {
+            "description": "Source note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "type": {
+            "description": "Relation key (`related`, `works-at`, …).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "src_id",
+          "dst_id",
+          "type"
+        ],
+        "type": "object"
+      },
+      "SyncRelationRetype": {
+        "description": "`relation.retype`.",
+        "properties": {
+          "dst_id": {
+            "description": "Target note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "new_type": {
+            "description": "New type.",
+            "type": "string"
+          },
+          "src_id": {
+            "description": "Source note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "type": {
+            "description": "Current type.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "src_id",
+          "dst_id",
+          "type",
+          "new_type"
+        ],
+        "type": "object"
+      },
+      "SyncSettingRecord": {
+        "description": "A user setting.",
+        "properties": {
+          "key": {
+            "description": "Key.",
+            "type": "string"
+          },
+          "value": {
+            "description": "Value.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object"
+      },
+      "SyncSuggestionAccept": {
+        "description": "`suggestion.accept`.",
+        "properties": {
+          "edits": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SyncSuggestionEdits",
+                "description": "Optional edits."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "description": "Suggestion ID.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "SyncSuggestionEdits": {
+        "description": "Edits applied when accepting a suggestion.",
+        "properties": {
+          "aliases": {
+            "description": "Aliases to add.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "due": {
+            "description": "Task due date.",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "folder": {
+            "description": "Filing: folder.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recurrence": {
+            "description": "Task recurrence.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reminders": {
+            "description": "Task reminders (local date-times).",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "tags": {
+            "description": "Filing: tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "target_id": {
+            "description": "Entity link / correction target.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "description": "Task text.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Filing: title.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "SyncSuggestionRecord": {
+        "description": "A suggestion.",
+        "properties": {
+          "created": {
+            "description": "Created.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Kind.",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "Note it concerns.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "payload": {
+            "$ref": "#/components/schemas/Binary",
+            "description": "Kind-specific payload (`MessagePack`)."
+          },
+          "replies": {
+            "description": "Thread, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/SyncSuggestionReplyRecord"
+            },
+            "type": "array"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SuggestionStatus",
+            "description": "Status."
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "payload",
+          "created"
+        ],
+        "type": "object"
+      },
+      "SyncSuggestionReject": {
+        "description": "`suggestion.reject`.",
+        "properties": {
+          "id": {
+            "description": "Suggestion ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Optional reason.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "SyncSuggestionReply": {
+        "description": "`suggestion.reply`.",
+        "properties": {
+          "id": {
+            "description": "Suggestion ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "reply_id": {
+            "description": "Client-generated reply ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "text": {
+            "description": "Text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reply_id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "SyncSuggestionReplyRecord": {
+        "description": "A reply in a suggestion thread.",
+        "properties": {
+          "at": {
+            "description": "When.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Reply ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "text": {
+            "description": "Text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "at"
+        ],
+        "type": "object"
+      },
+      "SyncTaskCancel": {
+        "description": "`task.cancel`.",
+        "properties": {
+          "date": {
+            "description": "❌ date.",
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "description": "Block ID.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date"
+        ],
+        "type": "object"
+      },
+      "SyncTaskComplete": {
+        "description": "`task.complete`.",
+        "properties": {
+          "done": {
+            "description": "✅ date.",
+            "format": "date",
+            "type": "string"
+          },
+          "id": {
+            "description": "Block ID.",
+            "type": "string"
+          },
+          "next_id": {
+            "description": "Recurring: the next occurrence's client-generated block ID.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "done"
+        ],
+        "type": "object"
+      },
+      "SyncTaskCreate": {
+        "description": "`task.create`.",
+        "properties": {
+          "due": {
+            "description": "📅",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "force": {
+            "description": "Create even if duplicates exist.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Client-generated block ID (`t-<ulid>`).",
+            "type": "string"
+          },
+          "note_id": {
+            "description": "Home note (`tasks/Tasks.md` when absent).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SyncPriority",
+                "description": "Priority."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recurrence": {
+            "description": "Recurrence phrase.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reminders": {
+            "description": "Reminders (local date-times).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "scheduled": {
+            "description": "⏳",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "🛫",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "description": "Description.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "SyncTaskRef": {
+        "description": "`task.reopen`, `task.delete`.",
+        "properties": {
+          "id": {
+            "description": "Block ID.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "SyncTaskUpdate": {
+        "description": "`task.update` (absent = unchanged, `nil` = clear).",
+        "properties": {
+          "due": {
+            "description": "📅 (`nil` clears).",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Block ID.",
+            "type": "string"
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SyncPriority",
+                "description": "Priority (`nil` = normal)."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recurrence": {
+            "description": "🔁 (`nil` clears).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reminders": {
+            "description": "Reminders (replace all).",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "scheduled": {
+            "description": "⏳ (`nil` clears).",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "🛫 (`nil` clears).",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "description": "New description.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id"
         ],
         "type": "object"
       },
@@ -5252,6 +8296,49 @@
         ]
       }
     },
+    "/api/v1/events": {
+      "get": {
+        "operationId": "events",
+        "parameters": [
+          {
+            "description": "Last seq received; frames after it are replayed (or `reset` is sent).",
+            "in": "query",
+            "name": "resume_from",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "101": {
+            "description": "WebSocket upgrade; the server then sends binary `EventFrame` messages."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The caller's events (note/relation/entity/task/custody/suggestion changes, jobs, clusters, integrity warnings, account closure); resumable with `resume_from`.",
+        "tags": [
+          "events"
+        ],
+        "x-strata-stream": {
+          "frame": "EventFrame",
+          "payload": "Event"
+        }
+      }
+    },
     "/api/v1/export": {
       "get": {
         "operationId": "export_vault",
@@ -6952,6 +10039,209 @@
         ]
       }
     },
+    "/api/v1/sync/bootstrap": {
+      "get": {
+        "operationId": "sync_bootstrap",
+        "parameters": [
+          {
+            "description": "`next_cursor` of the previous page; absent for the first page.",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Records per page (default and maximum 200).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "maximum": 200,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncBootstrapPage"
+                }
+              }
+            },
+            "description": "One page."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "410": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`epoch_changed`: the epoch moved during the bootstrap; start again."
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "A paged snapshot of the caller's data: notes with full content and version (entities,\ndocuments, places, task homes and inbox notes included), relations with provenance,\nrejected edges, suggestions, cluster assignments and names, settings, device settings and\nkeep-both pairs. The first page captures the log position (`seq`); pull\n`/sync/changes?since=seq` after the last page.",
+        "tags": [
+          "sync"
+        ]
+      }
+    },
+    "/api/v1/sync/changes": {
+      "get": {
+        "operationId": "sync_changes",
+        "parameters": [
+          {
+            "description": "The last seq applied (the bootstrap's `seq`, then each page's `next_seq`).",
+            "in": "query",
+            "name": "since",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The epoch the client is on.",
+            "in": "query",
+            "name": "epoch",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Changes per page (default and maximum 500).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "maximum": 500,
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncChangesPage"
+                }
+              }
+            },
+            "description": "One page."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "410": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`epoch_changed`: re-bootstrap."
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Changed records after `since` with full payloads, tombstones for deletes, and the seq to\ncontinue from.",
+        "tags": [
+          "sync"
+        ]
+      }
+    },
+    "/api/v1/sync/push": {
+      "post": {
+        "operationId": "sync_push",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncPushRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncPushResponse"
+                }
+              }
+            },
+            "description": "One result per op, in order."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Applies ops in order and answers one result per op: `applied{new_version, merged}`,\n`conflict{server_version, resolution}` (D19), `duplicate{candidates}` or\n`rejected{problem}`. Results are stored under `op_id`; a replayed op returns its stored\nresult byte for byte and is not applied again.",
+        "tags": [
+          "sync"
+        ]
+      }
+    },
     "/api/v1/tasks": {
       "get": {
         "operationId": "list_tasks",
@@ -7529,6 +10819,14 @@
     {
       "description": "Account administration (admins only).",
       "name": "admin"
+    },
+    {
+      "description": "Offline-first sync: bootstrap, changes feed and op push (PLAN §7.5 Sync, D19).",
+      "name": "sync"
+    },
+    {
+      "description": "The caller's event stream (WebSocket, D24).",
+      "name": "events"
     },
     {
       "description": "Notes, the vault tree, backlinks, history and revert (PLAN §7.5 Notes).",
