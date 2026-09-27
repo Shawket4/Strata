@@ -63,15 +63,15 @@ pub fn transliteration_key(input: &str) -> String {
 }
 
 fn strip_article(word: &str) -> String {
-    if let Some(rest) = word.strip_prefix("عبدال") {
-        if rest.chars().count() >= 2 {
-            return format!("عبد{rest}");
-        }
+    if let Some(rest) = word.strip_prefix("عبدال")
+        && rest.chars().count() >= 2
+    {
+        return format!("عبد{rest}");
     }
-    if let Some(rest) = word.strip_prefix("ال") {
-        if rest.chars().count() >= 2 {
-            return rest.to_owned();
-        }
+    if let Some(rest) = word.strip_prefix("ال")
+        && rest.chars().count() >= 2
+    {
+        return rest.to_owned();
     }
     if let Some(rest) = word.strip_prefix("abd") {
         for joiner in ["el", "al", "ul", "ol", "il"] {
@@ -135,9 +135,8 @@ fn latin_class(c: char, next: Option<char>) -> (&'static str, usize) {
         'd' => "d",
         'j' | 'g' => "j",
         'h' => "h",
-        'k' | 'q' => "k",
         'c' if matches!(next, Some('e' | 'i' | 'y')) => "s",
-        'c' => "k",
+        'k' | 'q' | 'c' => "k",
         'x' => "ks",
         's' => "s",
         'z' => "z",

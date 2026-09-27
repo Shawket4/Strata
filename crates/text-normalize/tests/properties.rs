@@ -77,9 +77,9 @@ proptest! {
 
     #[test]
     fn similarity_to_self_is_one_unless_empty(a in arabic_latin_text()) {
-        let expected = if trigrams(&a).is_empty() { 0.0 } else { 1.0 };
-        prop_assert_eq!(trigram_similarity(&a, &a), expected);
+        let expected: f32 = if trigrams(&a).is_empty() { 0.0 } else { 1.0 };
+        prop_assert_eq!(trigram_similarity(&a, &a).to_bits(), expected.to_bits());
         let n = normalize_for_search(&a);
-        prop_assert_eq!(raw_similarity(&n, &n), expected);
+        prop_assert_eq!(raw_similarity(&n, &n).to_bits(), expected.to_bits());
     }
 }

@@ -1,9 +1,9 @@
-//! Parity with PostgreSQL `pg_trgm` (§9.7): the client core's offline near-duplicate scores
+//! Parity with Postgres `pg_trgm` (§9.7): the client core's offline near-duplicate scores
 //! must equal the server's.
 //!
 //! # How the expected values were obtained
 //!
-//! Every `expected` value below is the `real` returned by PostgreSQL 16.13 (`pg_trgm` 1.6,
+//! Every `expected` value below is the `real` returned by Postgres 16.13 (`pg_trgm` 1.6,
 //! database `LC_CTYPE = C.UTF-8`) for
 //! `SELECT similarity(normalize_for_search(a), normalize_for_search(b))` — the normalised
 //! strings were computed by this crate and sent as literals by the ignored test
@@ -18,14 +18,27 @@
 //! It needs `psql` on `PATH`, creates `pg_trgm` inside a transaction and rolls it back, and
 //! prints the live values as a ready-to-paste table when they differ.
 
+#![expect(
+    clippy::unreadable_literal,
+    reason = "similarity values are pasted verbatim from Postgres output"
+)]
+
 use std::process::Command;
 
 use text_normalize::{normalize_for_search, raw_similarity, raw_trigrams, trigram_similarity};
 
-/// (a, b, PostgreSQL `similarity()` of the normalised strings)
+/// (a, b, Postgres `similarity()` of the normalised strings)
 const NORMALIZED_PAIRS: &[(&str, &str, f32)] = &[
-    ("Watanya's ETA invoice", "ETA invoice for Watanya", 0.8333333),
-    ("Make Watanya's ETA invoice", "Make Watanya ETA invoice monthly", 0.78125),
+    (
+        "Watanya's ETA invoice",
+        "ETA invoice for Watanya",
+        0.8333333,
+    ),
+    (
+        "Make Watanya's ETA invoice",
+        "Make Watanya ETA invoice monthly",
+        0.78125,
+    ),
     ("Petrol Arrows invoice", "Watanya's ETA invoice", 0.23529412),
     ("Ahmed Samir", "Ahmad Sameer", 0.31578946),
     ("Ahmed Samir", "Ahmed Fathy", 0.33333334),
@@ -51,9 +64,17 @@ const NORMALIZED_PAIRS: &[(&str, &str, f32)] = &[
     ("مسئول المشتريات", "مسؤول المشتريات", 0.68421054),
     ("اجتماع مع Acme يوم الأحد", "اجتماع Acme الأحد", 0.7083333),
     ("Watanya", "Watania", 0.45454547),
-    ("Petrol Arrows invoice every week", "Petrol Arrows weekly invoice", 0.7222222),
+    (
+        "Petrol Arrows invoice every week",
+        "Petrol Arrows weekly invoice",
+        0.7222222,
+    ),
     ("x", "y", 0.0),
-    ("Subscription tiers", "subscription tier pricing", 0.60714287),
+    (
+        "Subscription tiers",
+        "subscription tier pricing",
+        0.60714287,
+    ),
     ("", "abc", 0.0),
     ("Shady", "Shadi", 0.5),
     ("وطنية", "ووتانيا", 0.07692308),
@@ -61,7 +82,7 @@ const NORMALIZED_PAIRS: &[(&str, &str, f32)] = &[
     ("Ahmed (أحمد) called", "أحمد called Ahmed", 1.0),
 ];
 
-/// (a, b, PostgreSQL `similarity(a, b)` on the raw strings) — checks the word splitting and
+/// (a, b, Postgres `similarity(a, b)` on the raw strings) — checks the word splitting and
 /// lower-casing of the raw algorithm itself.
 const RAW_PAIRS: &[(&str, &str, f32)] = &[
     ("Hello, World!", "hello world", 1.0),
@@ -71,7 +92,7 @@ const RAW_PAIRS: &[(&str, &str, f32)] = &[
     ("Watanya's", "watanya", 0.8),
 ];
 
-/// ASCII strings whose raw trigram sets are compared with `show_trgm()` (PostgreSQL prints
+/// ASCII strings whose raw trigram sets are compared with `show_trgm()` (Postgres prints
 /// multi-byte trigrams as hashes, so only ASCII sets are compared literally).
 const SHOW_TRGM_INPUTS: &[&str] = &[
     "Hello, World!",
@@ -85,13 +106,22 @@ const SHOW_TRGM_INPUTS: &[&str] = &[
 
 /// `show_trgm()` output for [`SHOW_TRGM_INPUTS`], same order.
 const SHOW_TRGM_EXPECTED: &[&[&str]] = &[
-    &["  h", "  w", " he", " wo", "ell", "hel", "ld ", "llo", "lo ", "orl", "rld", "wor"],
+    &[
+        "  h", "  w", " he", " wo", "ell", "hel", "ld ", "llo", "lo ", "orl", "rld", "wor",
+    ],
     &["  a", " a "],
     &["  a", " ab", "ab "],
-    &["  b", "  f", " ba", " fo", "ar ", "az ", "bar", "baz", "foo", "oo "],
-    &["  e", "  i", "  s", "  w", " et", " in", " s ", " wa", "any", "ata", "ce ", "eta", "ice", "inv", "nvo", "nya", "oic", "ta ", "tan", "voi", "wat", "ya "],
+    &[
+        "  b", "  f", " ba", " fo", "ar ", "az ", "bar", "baz", "foo", "oo ",
+    ],
+    &[
+        "  e", "  i", "  s", "  w", " et", " in", " s ", " wa", "any", "ata", "ce ", "eta", "ice",
+        "inv", "nvo", "nya", "oic", "ta ", "tan", "voi", "wat", "ya ",
+    ],
     &["  x", " x "],
-    &["  0", "  1", "  2", " 01", " 10", " 20", "01 ", "026", "10 ", "202", "26 "],
+    &[
+        "  0", "  1", "  2", " 01", " 10", " 20", "01 ", "026", "10 ", "202", "26 ",
+    ],
 ];
 
 const TOLERANCE: f32 = 1e-6;
@@ -131,33 +161,45 @@ fn sql_literal(s: &str) -> String {
     format!("'{}'", s.replace('\'', "''"))
 }
 
-fn run_psql(select_list: &[String]) -> Vec<String> {
+type TestResult<T> = Result<T, Box<dyn std::error::Error>>;
+
+fn run_psql(select_list: &[String]) -> TestResult<Vec<String>> {
     let url = std::env::var("STRATA_TEST_DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres@127.0.0.1:5432/postgres".to_owned());
     let mut sql = String::from("BEGIN;\nCREATE EXTENSION IF NOT EXISTS pg_trgm;\n");
     for item in select_list {
-        sql.push_str(&format!("SELECT {item};\n"));
+        sql.push_str("SELECT ");
+        sql.push_str(item);
+        sql.push_str(";\n");
     }
     sql.push_str("ROLLBACK;\n");
     let output = Command::new("psql")
-        .args([url.as_str(), "-X", "-q", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-c", &sql])
-        .output()
-        .expect("psql must be installed to run the live parity test");
+        .args([
+            url.as_str(),
+            "-X",
+            "-q",
+            "-A",
+            "-t",
+            "-v",
+            "ON_ERROR_STOP=1",
+            "-c",
+            &sql,
+        ])
+        .output()?;
     assert!(
         output.status.success(),
         "psql failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    String::from_utf8(output.stdout)
-        .expect("psql output is UTF-8")
+    Ok(String::from_utf8(output.stdout)?
         .lines()
         .map(str::to_owned)
-        .collect()
+        .collect())
 }
 
 #[test]
-#[ignore = "needs a live PostgreSQL with pg_trgm (STRATA_TEST_DATABASE_URL) and psql"]
-fn live_postgres_matches_hardcoded_values() {
+#[ignore = "needs a live Postgres with pg_trgm (STRATA_TEST_DATABASE_URL) and psql"]
+fn live_postgres_matches_hardcoded_values() -> TestResult<()> {
     let pairs: Vec<(&str, &str)> = NORMALIZED_PAIRS.iter().map(|(a, b, _)| (*a, *b)).collect();
     let normalized_sql: Vec<String> = pairs
         .iter()
@@ -178,9 +220,9 @@ fn live_postgres_matches_hardcoded_values() {
         .map(|s| format!("array_to_string(show_trgm({}), '|')", sql_literal(s)))
         .collect();
 
-    let norm_live = run_psql(&normalized_sql);
-    let raw_live = run_psql(&raw_sql);
-    let show_live = run_psql(&show_sql);
+    let norm_live = run_psql(&normalized_sql)?;
+    let raw_live = run_psql(&raw_sql)?;
+    let show_live = run_psql(&show_sql)?;
 
     println!("NORMALIZED_PAIRS (live):");
     for ((a, b), v) in pairs.iter().zip(&norm_live) {
@@ -197,13 +239,22 @@ fn live_postgres_matches_hardcoded_values() {
     }
 
     for ((a, b, expected), live) in NORMALIZED_PAIRS.iter().zip(&norm_live) {
-        let live: f32 = live.parse().expect("similarity() prints a float");
-        assert!((live - expected).abs() <= TOLERANCE, "{a:?} vs {b:?}: live {live}");
-        assert!((trigram_similarity(a, b) - live).abs() <= TOLERANCE, "{a:?} vs {b:?}");
+        let live: f32 = live.parse()?;
+        assert!(
+            (live - expected).abs() <= TOLERANCE,
+            "{a:?} vs {b:?}: live {live}"
+        );
+        assert!(
+            (trigram_similarity(a, b) - live).abs() <= TOLERANCE,
+            "{a:?} vs {b:?}"
+        );
     }
     for ((a, b, expected), live) in RAW_PAIRS.iter().zip(&raw_live) {
-        let live: f32 = live.parse().expect("similarity() prints a float");
-        assert!((live - expected).abs() <= TOLERANCE, "{a:?} vs {b:?}: live {live}");
+        let live: f32 = live.parse()?;
+        assert!(
+            (live - expected).abs() <= TOLERANCE,
+            "{a:?} vs {b:?}: live {live}"
+        );
     }
     for (expected, live) in SHOW_TRGM_EXPECTED.iter().zip(&show_live) {
         let live: Vec<&str> = live.split('|').collect();
@@ -212,4 +263,5 @@ fn live_postgres_matches_hardcoded_values() {
     assert_eq!(norm_live.len(), NORMALIZED_PAIRS.len());
     assert_eq!(raw_live.len(), RAW_PAIRS.len());
     assert_eq!(show_live.len(), SHOW_TRGM_INPUTS.len());
+    Ok(())
 }

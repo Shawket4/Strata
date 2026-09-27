@@ -4,8 +4,16 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Shared Strata domain enums and constants (relation types, kinds, statuses, thresholds)."
 
 [dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+rmp-serde = { workspace = true }
+text-normalize = { workspace = true }
 
 [lints]
 workspace = true

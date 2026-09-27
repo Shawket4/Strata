@@ -1,15 +1,15 @@
-//! Trigram similarity with PostgreSQL `pg_trgm` semantics (§9.7 "Near"), so the client core's
+//! Trigram similarity with Postgres `pg_trgm` semantics (§9.7 "Near"), so the client core's
 //! offline near-duplicate check returns exactly the score the server computes with
 //! `similarity(trigram_text, $1)`.
 //!
 //! The server stores [`normalize_for_search`] output in `dedupe_keys.trigram_text` and
 //! `entity_aliases.alias_normalized`; [`trigrams`] and [`trigram_similarity`] normalise their
 //! input first, so `trigram_similarity(a, b)` equals
-//! `similarity(normalize_for_search(a), normalize_for_search(b))` in PostgreSQL.
+//! `similarity(normalize_for_search(a), normalize_for_search(b))` in Postgres.
 //! [`raw_trigrams`] / [`raw_similarity`] skip normalisation (use them for text that is already
 //! normalised).
 //!
-//! `pg_trgm` algorithm (PostgreSQL 16, `trgm_op.c`, default build with `KEEPONLYALNUM`,
+//! `pg_trgm` algorithm (Postgres 16, `trgm_op.c`, default build with `KEEPONLYALNUM`,
 //! `IGNORECASE` and `DIVUNION`):
 //! - words are maximal runs of alphanumeric characters; everything else separates words;
 //! - each word is lower-cased and padded with two spaces in front and one behind
@@ -20,9 +20,9 @@
 //!
 //! Parity caveats (documented, covered by the parity tests):
 //! - The server database must use a UTF-8 `LC_CTYPE` other than plain `C`/`POSIX` (e.g.
-//!   `C.UTF-8`, `en_US.UTF-8`); under plain `C`, PostgreSQL does not treat Arabic letters as
+//!   `C.UTF-8`, `en_US.UTF-8`); under plain `C`, Postgres does not treat Arabic letters as
 //!   word characters.
-//! - PostgreSQL stores trigrams of multi-byte characters as 3-byte CRC hashes; a hash
+//! - Postgres stores trigrams of multi-byte characters as 3-byte CRC hashes; a hash
 //!   collision could in theory make it count one more shared trigram. Normalised text only
 //!   contains letters and digits, for which Rust's `char::is_alphanumeric` agrees with glibc.
 
@@ -77,7 +77,10 @@ pub fn raw_similarity(a: &str, b: &str) -> f32 {
 
 fn trigram_set(input: &str) -> BTreeSet<String> {
     let mut set = BTreeSet::new();
-    for word in input.split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()) {
+    for word in input
+        .split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+    {
         let mut padded: Vec<char> = vec![' ', ' '];
         padded.extend(word.chars().flat_map(char::to_lowercase));
         padded.push(' ');

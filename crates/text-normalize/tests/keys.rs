@@ -122,6 +122,10 @@ fn transliteration_key_separates_different_names() {
         ("Watanya", "Petrol Arrows"),
     ];
     for (a, b) in distinct {
-        assert_ne!(transliteration_key(a), transliteration_key(b), "{a:?} vs {b:?}");
+        assert_ne!(
+            transliteration_key(a),
+            transliteration_key(b),
+            "{a:?} vs {b:?}"
+        );
     }
 }

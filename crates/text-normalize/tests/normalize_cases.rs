@@ -11,13 +11,21 @@ const CASES: &[(&str, &str, &str)] = &[
     ("ٱلرحمن", "الرحمن", "alef wasla"),
     ("ٲ", "ا", "alef with wavy hamza above"),
     ("\u{0627}\u{0653}مال", "امال", "decomposed alef + madda"),
-    ("\u{0627}\u{0654}حمد", "احمد", "decomposed alef + hamza above"),
+    (
+        "\u{0627}\u{0654}حمد",
+        "احمد",
+        "decomposed alef + hamza above",
+    ),
     ("ﺃﺣﻤﺪ", "احمد", "presentation forms (NFKC)"),
     ("ﻻ", "لا", "lam-alef ligature"),
     ("ﻷ", "لا", "lam-alef with hamza ligature"),
     // --- ta marbuta / heh ---
     ("مدرسة", "مدرسه", "ta marbuta"),
-    ("فاطمة الزهراء", "فاطمه الزهراء", "ta marbuta mid-phrase, standalone hamza kept"),
+    (
+        "فاطمة الزهراء",
+        "فاطمه الزهراء",
+        "ta marbuta mid-phrase, standalone hamza kept",
+    ),
     ("ﺓ", "ه", "ta marbuta presentation form"),
     ("ۀ", "ه", "heh with yeh above"),
     ("ھ", "ه", "heh doachashmee"),
@@ -35,8 +43,16 @@ const CASES: &[(&str, &str, &str)] = &[
     ("شُكْرًا", "شكرا", "sukun, tanween fath"),
     ("رَحْمَٰن", "رحمن", "superscript alef"),
     ("بِسْمِ ٱللَّهِ", "بسم الله", "full basmala marks and alef wasla"),
-    ("صلى الله عليه وسلمۖ", "صلي الله عليه وسلم", "Quranic pause mark"),
-    ("ﷺ", "صلي الله عليه وسلم", "honorific ligature expands via NFKC"),
+    (
+        "صلى الله عليه وسلمۖ",
+        "صلي الله عليه وسلم",
+        "Quranic pause mark",
+    ),
+    (
+        "ﷺ",
+        "صلي الله عليه وسلم",
+        "honorific ligature expands via NFKC",
+    ),
     // --- tatweel ---
     ("مـحـمـد", "محمد", "tatweel between letters"),
     ("جمـــيل", "جميل", "repeated tatweel"),
@@ -49,20 +65,36 @@ const CASES: &[(&str, &str, &str)] = &[
     ("１２３", "123", "full-width digits"),
     ("x²", "x2", "superscript via NFKC"),
     // --- punctuation ---
-    ("مرحبا، كيف الحال؟", "مرحبا كيف الحال", "Arabic comma and question mark"),
+    (
+        "مرحبا، كيف الحال؟",
+        "مرحبا كيف الحال",
+        "Arabic comma and question mark",
+    ),
     ("أولاً؛ ثانياً", "اولا ثانيا", "Arabic semicolon and tanween"),
     ("Hello, world!", "hello world", "Latin punctuation"),
-    ("e-mail/fax", "e mail fax", "hyphen and slash separate words"),
+    (
+        "e-mail/fax",
+        "e mail fax",
+        "hyphen and slash separate words",
+    ),
     ("«اقتباس»", "اقتباس", "guillemets"),
     ("#tag @mention", "tag mention", "hash and at"),
     ("50%", "50", "percent sign"),
     ("🔁 every month", "every month", "emoji"),
     // --- apostrophes / possessive ---
-    ("Watanya's ETA invoice", "watanya eta invoice", "possessive 's"),
+    (
+        "Watanya's ETA invoice",
+        "watanya eta invoice",
+        "possessive 's",
+    ),
     ("Watanya’s", "watanya", "typographic apostrophe possessive"),
     ("don't", "dont", "contraction apostrophe removed"),
     ("'quoted'", "quoted", "quote marks"),
-    ("rock 'n' roll", "rock n roll", "apostrophes around a letter"),
+    (
+        "rock 'n' roll",
+        "rock n roll",
+        "apostrophes around a letter",
+    ),
     // --- case and Latin diacritics ---
     ("HELLO World", "hello world", "lower-casing"),
     ("Café Crème", "cafe creme", "acute and grave"),
@@ -85,12 +117,24 @@ const CASES: &[(&str, &str, &str)] = &[
     // --- invisible format characters / mixed direction ---
     ("\u{200F}مرحبا\u{200F} Ahmed", "مرحبا ahmed", "RLM marks"),
     ("\u{202B}نص\u{202C} text", "نص text", "RLE/PDF embedding"),
-    ("\u{2067}أحمد\u{2069} said hi", "احمد said hi", "RLI/PDI isolates"),
+    (
+        "\u{2067}أحمد\u{2069} said hi",
+        "احمد said hi",
+        "RLI/PDI isolates",
+    ),
     ("می\u{200C}خواهم", "ميخواهم", "ZWNJ joins"),
     ("\u{FEFF}start", "start", "BOM"),
     ("soft\u{00AD}hyphen", "softhyphen", "soft hyphen"),
-    ("Invoice فاتورة ٢٠٢٦", "invoice فاتوره 2026", "mixed scripts and digits"),
-    ("اجتماع مع Acme Logistics يوم ١/١٠", "اجتماع مع acme logistics يوم 1 10", "mixed sentence"),
+    (
+        "Invoice فاتورة ٢٠٢٦",
+        "invoice فاتوره 2026",
+        "mixed scripts and digits",
+    ),
+    (
+        "اجتماع مع Acme Logistics يوم ١/١٠",
+        "اجتماع مع acme logistics يوم 1 10",
+        "mixed sentence",
+    ),
     ("Ahmed(أحمد)", "ahmed احمد", "parentheses between scripts"),
     // --- other scripts are left intact ---
     ("日本語", "日本語", "CJK kept"),
@@ -103,7 +147,9 @@ fn table_cases() {
     for (input, expected, what) in CASES {
         let actual = normalize_for_search(input);
         if actual != *expected {
-            failures.push(format!("{what}: {input:?} -> {actual:?}, expected {expected:?}"));
+            failures.push(format!(
+                "{what}: {input:?} -> {actual:?}, expected {expected:?}"
+            ));
         }
     }
     assert!(failures.is_empty(), "failures:\n{}", failures.join("\n"));

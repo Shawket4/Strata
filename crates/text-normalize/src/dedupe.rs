@@ -40,14 +40,17 @@ pub const ENGLISH_STOPWORDS: &[&str] = &[
 /// Arabic (MSA + Egyptian) stopwords removed by [`dedupe_key`], in normalised form:
 /// `في` (in), `من` (from), `عن` (about), `الي` (= `إلى`, to), `مع` (with), `و` (and),
 /// `بتاع` / `بتاعه` (= `بتاعة`) / `بتوع` (Egyptian "of/belonging to").
-pub const ARABIC_STOPWORDS: &[&str] = &[
-    "في", "من", "عن", "الي", "مع", "و", "بتاع", "بتاعه", "بتوع",
-];
+pub const ARABIC_STOPWORDS: &[&str] =
+    &["في", "من", "عن", "الي", "مع", "و", "بتاع", "بتاعه", "بتوع"];
 
 /// Returns the exact-duplicate key of `input`. See the module docs for the rules.
 pub fn dedupe_key(input: &str) -> String {
     let normalized = normalize_for_search(input);
-    let words: Vec<&str> = normalized.split(' ').filter(|w| !w.is_empty()).map(strip_article).collect();
+    let words: Vec<&str> = normalized
+        .split(' ')
+        .filter(|w| !w.is_empty())
+        .map(strip_article)
+        .collect();
 
     let content: BTreeSet<&str> = words.iter().copied().filter(|w| !is_stopword(w)).collect();
     let chosen = if content.is_empty() {
