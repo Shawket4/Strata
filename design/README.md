@@ -9,19 +9,19 @@ Design canvas (Claude Design): https://claude.ai/artifact/PttxTsS31VynwkgAC2cx7F
 
 | File | Use |
 |------|-----|
-| `brand/strata-symbol.svg` | Symbol, abyss on light grounds |
-| `brand/strata-badge.svg` | App icon / badge tile (abyss) |
-| `brand/strata-favicon.svg` | Favicon form (16–32 px) |
+| `brand/strata-symbol.svg` | Symbol in tide (works on mist and abyss) |
+| `brand/strata-badge.svg` | App icon: abyss tile, tide mark |
+| `brand/strata-favicon.svg` | Favicon form in tide (16–32 px) |
 
 ## Colour tokens (draft) — "coastal"
 
 | Token | Hex | Use |
 |-------|-----|-----|
-| abyss | `#0F1B26` | Mark, text, default icon tile, dark UI ground |
+| tide | `#2477B3` | **Lead colour**: the symbol, icon marks, accent tiles (text use `#1D5C8C`) |
+| abyss | `#0F1B26` | Ink: app icon background, text, dark UI ground |
 | mist | `#F1F5F7` | Backgrounds, surfaces; the mark on dark |
 | harbour | `#7C8C96` | Dividers, quiet UI (text use `#52616B`) |
-| tide | `#1D5C8C` | Accent on light: links, focus, eyebrows, accent tile |
-| surf | `#6CB4DD` | The same accent on dark grounds |
+| surf | `#6CB4DD` | Small text and links on dark grounds |
 | sand | `#D8B47E` | The seam in the strata bands only |
 
 Signature device: the **strata bands** — horizontal bands of uneven depth, one tone apart, with a single thin sand seam.
