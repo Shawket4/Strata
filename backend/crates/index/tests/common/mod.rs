@@ -52,6 +52,7 @@ INSERT INTO settings VALUES ('{u}', 'timezone', '\xa4', '2026-09-27T12:00:00Z');
 INSERT INTO sync_epochs VALUES ('{u}', 1, 1, '2026-09-27T12:00:00Z');
 INSERT INTO change_log VALUES ('{u}', 1, 1, 'note', 'x', 'upsert', 'v1', '2026-09-27T12:00:00Z');
 INSERT INTO idempotency VALUES ('{u}', md5('{u}o1')::uuid, md5('{u}d1')::uuid, '\x01', '2026-09-27T12:00:00Z');
+INSERT INTO integrity_warnings VALUES ('{u}', md5('{u}w1')::uuid, 'out_of_band_edit', 'notes/A.md', 'changed outside the API', '2026-09-27T12:00:00Z');
 INSERT INTO dedupe_keys VALUES ('{u}', 'note', 'x', 'a', 'a');
 INSERT INTO dedupe_keep_both VALUES ('{u}', 'note', 'a', 'b', '2026-09-27T12:00:00Z');
 INSERT INTO devices VALUES ('{u}', md5('{u}d1')::uuid, 'phone', 'android', '2026-09-27T12:00:00Z', '2026-09-27T12:00:00Z', 'none', NULL, NULL);

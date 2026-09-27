@@ -449,7 +449,10 @@ mod tests {
             Err(TokenError::Invalid("malformed"))
         );
         let truncated = format!("{}.{}", parts[0], parts[1]);
-        assert_eq!(svc.verify(&truncated), Err(TokenError::Invalid("malformed")));
+        assert_eq!(
+            svc.verify(&truncated),
+            Err(TokenError::Invalid("malformed"))
+        );
     }
 
     #[test]
@@ -475,7 +478,9 @@ mod tests {
     fn other_algorithms_are_rejected() {
         let clock = FakeClock::at_default_epoch();
         let svc = service(&generate_key_pem().expect("key"), &clock, "strata-api");
-        let claims = svc.verify(&svc.issue(&ids()).expect("issue").token).expect("ok");
+        let claims = svc
+            .verify(&svc.issue(&ids()).expect("issue").token)
+            .expect("ok");
         let mut header = Header::new(Algorithm::HS256);
         header.kid = Some(svc.keys.kid().to_owned());
         let hs = jsonwebtoken::encode(&header, &claims, &EncodingKey::from_secret(b"guess"))
@@ -487,12 +492,17 @@ mod tests {
     fn claims_of_another_version_are_rejected() {
         let clock = FakeClock::at_default_epoch();
         let svc = service(&generate_key_pem().expect("key"), &clock, "strata-api");
-        let mut claims = svc.verify(&svc.issue(&ids()).expect("issue").token).expect("ok");
+        let mut claims = svc
+            .verify(&svc.issue(&ids()).expect("issue").token)
+            .expect("ok");
         claims.ver = 2;
         let mut header = Header::new(Algorithm::EdDSA);
         header.kid = Some(svc.keys.kid().to_owned());
         let token = jsonwebtoken::encode(&header, &claims, &svc.keys.encoding).expect("sign");
-        assert_eq!(svc.verify(&token), Err(TokenError::Invalid("claims version")));
+        assert_eq!(
+            svc.verify(&token),
+            Err(TokenError::Invalid("claims version"))
+        );
     }
 
     #[test]

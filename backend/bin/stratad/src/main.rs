@@ -4,9 +4,9 @@ use std::io::BufRead;
 use std::process::ExitCode;
 
 use clap::Parser;
+use strata_common::Config;
 use stratad::cli::{Cli, Command};
 use stratad::commands::{self, CreateUser};
-use strata_common::Config;
 
 fn main() -> ExitCode {
     let cli = Cli::parse();

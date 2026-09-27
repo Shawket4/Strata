@@ -241,7 +241,9 @@ mod tests {
         let b = temporary_password().expect("rng");
         assert_eq!(a.chars().count(), 16);
         assert_ne!(a, b);
-        assert!(a.chars().all(|c| c.is_ascii_alphanumeric()
-            && !matches!(c, '0' | 'O' | '1' | 'l' | 'I')));
+        assert!(
+            a.chars()
+                .all(|c| c.is_ascii_alphanumeric() && !matches!(c, '0' | 'O' | '1' | 'l' | 'I'))
+        );
     }
 }

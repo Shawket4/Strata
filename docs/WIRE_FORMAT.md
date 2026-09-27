@@ -10,20 +10,32 @@ encoder's output, the fixture, or the dump quoted here disagree.
 
 | Use | Media type |
 |---|---|
-| Request and response bodies | `application/msgpack` |
+| Request and response bodies | `application/vnd.msgpack` |
 | Errors (RFC 7807 problem details) | `application/problem+msgpack` |
 | Vault export/import | `application/zip` |
 
-**Open decision:** PLAN §7.7 says `application/msgpack`; the IANA-registered type is
-`application/vnd.msgpack`. The implementation uses `application/msgpack` until the owner decides;
-the string lives in one constant per side (`strata_api::wire::MSGPACK`,
-`strata_client::MSGPACK`), so switching means changing those, regenerating (`api/generate.sh`)
-and updating this page.
+**Why these names.** PLAN §7.7 asks for the currently registered MessagePack media type. IANA
+registers MessagePack as `application/vnd.msgpack` (vendor tree); `application/msgpack` and
+`application/x-msgpack` are unregistered names in informal use. Strata therefore sends and
+accepts only `application/vnd.msgpack`; the unregistered names are rejected like any other
+type (`415`), so there is one spelling on the wire. Problem details stay
+`application/problem+msgpack`: IANA registers no MessagePack problem type, and this name
+follows RFC 7807's own pattern (`application/problem+json`, `application/problem+xml`) with the
+structured-syntax suffix convention, so a problem body is recognisable by media type alone and
+a client can tell an error from a payload without decoding it. It is a distinct type on purpose
+(a problem is not a `vnd.msgpack` payload of the operation) and is used only for error
+responses. The strings live in one constant per side (`strata_api::wire::MSGPACK` /
+`PROBLEM_MSGPACK`, `strata_client::MSGPACK` / `PROBLEM_MSGPACK`) and the generator's spec
+reader.
 
-- Requests with a body must send `Content-Type: application/msgpack` (parameters are ignored).
-  Anything else, or a `Content-Encoding` other than `identity`, is `415 unsupported_media_type`.
-- `Accept` may be absent, `*/*`, `application/*` or name `application/msgpack`. The most specific
-  matching range decides and `q=0` excludes it. Otherwise the response is `406 not_acceptable`.
+- Requests with a body must send `Content-Type: application/vnd.msgpack` (parameters are
+  ignored, the comparison is case-insensitive). Anything else, or a `Content-Encoding` other
+  than `identity`, is `415 unsupported_media_type`.
+- `Accept` may be absent, `*/*`, `application/*` or name `application/vnd.msgpack`. The most
+  specific matching range decides and `q=0` excludes it. Otherwise the response is
+  `406 not_acceptable`. Zip downloads (`GET /me/export`) are requested with
+  `Accept: application/zip, application/vnd.msgpack;q=0.5` (the MessagePack range keeps
+  problem responses acceptable); the generated client does this in `Client::send_zip`.
 - Error responses are always `application/problem+msgpack`. That includes errors produced by the
   framework: unknown route (`404 route_not_found`), wrong method (`405 method_not_allowed`),
   malformed path segment (`404 not_found`) and malformed query (`422 invalid_parameter`).
@@ -126,11 +138,15 @@ optionally `detail` and `instance`. Extension members appear only when relevant:
 | `candidates: [DuplicateCandidate]` | `duplicate_candidates` (`409`) |
 | `current_version: string` | `version_conflict` (`409`) |
 
-Known slugs are `invalid_body`, `invalid_parameter`, `unsupported_media_type`,
-`payload_too_large`, `not_acceptable`, `not_found`, `route_not_found`, `method_not_allowed`,
-`bad_request`, `unauthorized`, `forbidden`, `version_conflict`, `duplicate_candidates`,
-`account_pending`, `account_disabled`, `account_deletion_pending`, `epoch_changed`,
-`rate_limited` and `internal`. Clients must handle unknown slugs by `status`: the generated
+Known slugs — the catalogue `strata_common::ProblemType`, the only list; domain errors
+declare theirs through `strata_common::DomainError` and reach the wire via
+`strata_api::wire::Problem::from_domain` — are `invalid_body`, `invalid_parameter`,
+`invalid_name`, `unsupported_media_type`, `payload_too_large`, `not_acceptable`, `not_found`,
+`route_not_found`, `method_not_allowed`, `bad_request`, `unauthorized`, `invalid_credentials`,
+`forbidden`, `account_pending`, `account_rejected`, `account_disabled`,
+`account_deletion_pending`, `password_change_required`, `version_conflict`,
+`duplicate_candidates`, `username_taken`, `account_state_conflict`, `epoch_changed`,
+`rate_limited` (sent with `Retry-After`) and `internal`. Clients must handle unknown slugs by `status`: the generated
 client maps them to `ApiError::Other`. `detail` and `message` never contain user content.
 Decode errors keep only the part of the message that comes from the target type (for example
 `invalid type` or `missing field \`count\``).

@@ -257,8 +257,15 @@ pub async fn approve_user(
         }
         return Err(AccountError::StateConflict("the account is not pending"));
     };
-    audit(&state.accounts, state.ids.as_ref(), Some(admin.id), "user.approve", user.id, now)
-        .await?;
+    audit(
+        &state.accounts,
+        state.ids.as_ref(),
+        Some(admin.id),
+        "user.approve",
+        user.id,
+        now,
+    )
+    .await?;
     Ok(MsgPack(approved.into()))
 }
 
@@ -288,8 +295,15 @@ pub async fn reject_user(
         .reject_user(user.id, now)
         .await?
         .ok_or(AccountError::StateConflict("the account is not pending"))?;
-    audit(&state.accounts, state.ids.as_ref(), Some(admin.id), "user.reject", user.id, now)
-        .await?;
+    audit(
+        &state.accounts,
+        state.ids.as_ref(),
+        Some(admin.id),
+        "user.reject",
+        user.id,
+        now,
+    )
+    .await?;
     Ok(MsgPack(rejected.into()))
 }
 
@@ -316,57 +330,14 @@ pub async fn update_user(
     let admin = require_admin(&state, &auth).await?;
     let mut user = target(&state, id.into_inner()).await?;
     let body = body.into_inner();
-    let now = state.clock.now();
-    let ids = state.ids.as_ref();
-
-    // Check every requested change against the current state before applying any.
-    match body.status {
-        Some(SettableStatus::Disabled) => {
-            not_self(&admin, &user, "admins cannot disable their own account")?;
-            if user.status != UserStatus::Active {
-                return Err(AccountError::StateConflict("only active accounts can be disabled"));
-            }
-        }
-        Some(SettableStatus::Active) if user.status != UserStatus::Disabled => {
-            return Err(AccountError::StateConflict("only disabled accounts can be enabled"));
-        }
-        _ => {}
-    }
-    if body.role == Some(Role::Member) {
-        not_self(&admin, &user, "admins cannot demote themselves")?;
-    }
-    let reset = body.reset_password == Some(true);
-    if reset && !matches!(user.status, UserStatus::Active | UserStatus::Disabled) {
-        return Err(AccountError::StateConflict(
-            "passwords can only be reset on active or disabled accounts",
-        ));
-    }
-
-    match body.status {
-        Some(SettableStatus::Disabled) => {
-            state.revocations.update_user(user.id, |f| f.disabled = true);
-            user = state
-                .accounts
-                .disable_user(user.id, now)
-                .await?
-                .ok_or(AccountError::StateConflict("only active accounts can be disabled"))?;
-            revoke_all_sessions(&state, user.id, RevokeReason::UserDisabled).await?;
-            audit(&state.accounts, ids, Some(admin.id), "user.disable", user.id, now).await?;
-        }
-        Some(SettableStatus::Active) => {
-            user = state
-                .accounts
-                .enable_user(user.id, now)
-                .await?
-                .ok_or(AccountError::StateConflict("only disabled accounts can be enabled"))?;
-            state.revocations.update_user(user.id, |f| f.disabled = false);
-            audit(&state.accounts, ids, Some(admin.id), "user.enable", user.id, now).await?;
-        }
-        None => {}
+    check_update(&admin, &user, &body)?;
+    if let Some(status) = body.status {
+        user = apply_status(&state, &admin, &user, status).await?;
     }
     if let Some(role) = body.role
         && UserRole::from(role) != user.role
     {
+        let now = state.clock.now();
         user = state
             .accounts
             .set_role(user.id, role.into(), now)
@@ -376,28 +347,129 @@ pub async fn update_user(
             Role::Admin => "user.role.admin",
             Role::Member => "user.role.member",
         };
-        audit(&state.accounts, ids, Some(admin.id), action, user.id, now).await?;
+        audit(
+            &state.accounts,
+            state.ids.as_ref(),
+            Some(admin.id),
+            action,
+            user.id,
+            now,
+        )
+        .await?;
     }
     let mut temporary = None;
-    if reset {
-        let password = temporary_password()?;
-        let hash = format!("{TEMPORARY_PREFIX}{}", state.passwords.hash(&password)?);
-        state
-            .revocations
-            .update_user(user.id, |f| f.must_change_password = true);
-        user = state
-            .accounts
-            .set_password_hash(user.id, &hash, now)
-            .await?
-            .ok_or(AccountError::NotFound)?;
-        revoke_all_sessions(&state, user.id, RevokeReason::Admin).await?;
-        audit(&state.accounts, ids, Some(admin.id), "user.password_reset", user.id, now).await?;
+    if body.reset_password == Some(true) {
+        let (updated, password) = reset_password(&state, &admin, &user).await?;
+        user = updated;
         temporary = Some(password);
     }
     Ok(MsgPack(UpdateUserResult {
         user: user.into(),
         temporary_password: temporary,
     }))
+}
+
+/// Checks every requested change against the current state before any is applied.
+fn check_update(admin: &User, user: &User, body: &UpdateUser) -> Result<(), AccountError> {
+    match body.status {
+        Some(SettableStatus::Disabled) => {
+            not_self(admin, user, "admins cannot disable their own account")?;
+            if user.status != UserStatus::Active {
+                return Err(AccountError::StateConflict(
+                    "only active accounts can be disabled",
+                ));
+            }
+        }
+        Some(SettableStatus::Active) if user.status != UserStatus::Disabled => {
+            return Err(AccountError::StateConflict(
+                "only disabled accounts can be enabled",
+            ));
+        }
+        _ => {}
+    }
+    if body.role == Some(Role::Member) {
+        not_self(admin, user, "admins cannot demote themselves")?;
+    }
+    if body.reset_password == Some(true)
+        && !matches!(user.status, UserStatus::Active | UserStatus::Disabled)
+    {
+        return Err(AccountError::StateConflict(
+            "passwords can only be reset on active or disabled accounts",
+        ));
+    }
+    Ok(())
+}
+
+/// Disables (revoking every session at once) or re-enables an account.
+async fn apply_status(
+    state: &AuthState,
+    admin: &User,
+    user: &User,
+    status: SettableStatus,
+) -> Result<User, AccountError> {
+    let now = state.clock.now();
+    let (updated, action) = match status {
+        SettableStatus::Disabled => {
+            // Block in memory first (fail closed), then persist and revoke.
+            state
+                .revocations
+                .update_user(user.id, |f| f.disabled = true);
+            let updated = state.accounts.disable_user(user.id, now).await?.ok_or(
+                AccountError::StateConflict("only active accounts can be disabled"),
+            )?;
+            revoke_all_sessions(state, user.id, RevokeReason::UserDisabled).await?;
+            (updated, "user.disable")
+        }
+        SettableStatus::Active => {
+            let updated = state.accounts.enable_user(user.id, now).await?.ok_or(
+                AccountError::StateConflict("only disabled accounts can be enabled"),
+            )?;
+            state
+                .revocations
+                .update_user(user.id, |f| f.disabled = false);
+            (updated, "user.enable")
+        }
+    };
+    audit(
+        &state.accounts,
+        state.ids.as_ref(),
+        Some(admin.id),
+        action,
+        user.id,
+        now,
+    )
+    .await?;
+    Ok(updated)
+}
+
+/// Replaces the password with a temporary one (returned) and ends every session.
+async fn reset_password(
+    state: &AuthState,
+    admin: &User,
+    user: &User,
+) -> Result<(User, String), AccountError> {
+    let now = state.clock.now();
+    let password = temporary_password()?;
+    let hash = format!("{TEMPORARY_PREFIX}{}", state.passwords.hash(&password)?);
+    state
+        .revocations
+        .update_user(user.id, |f| f.must_change_password = true);
+    let updated = state
+        .accounts
+        .set_password_hash(user.id, &hash, now)
+        .await?
+        .ok_or(AccountError::NotFound)?;
+    revoke_all_sessions(state, user.id, RevokeReason::Admin).await?;
+    audit(
+        &state.accounts,
+        state.ids.as_ref(),
+        Some(admin.id),
+        "user.password_reset",
+        user.id,
+        now,
+    )
+    .await?;
+    Ok((updated, password))
 }
 
 /// Schedule the account's deletion (D25): sessions end now; the user can still sign in to an
@@ -439,10 +511,19 @@ pub async fn delete_user(
             "only active or disabled accounts can be scheduled for deletion",
         ))?;
     // A disabled account being deleted keeps no "disabled" block: it may export.
-    state.revocations.update_user(user.id, |f| f.disabled = false);
+    state
+        .revocations
+        .update_user(user.id, |f| f.disabled = false);
     revoke_all_sessions(&state, user.id, RevokeReason::DeletionScheduled).await?;
-    audit(&state.accounts, state.ids.as_ref(), Some(admin.id), "user.delete.schedule", user.id, now)
-        .await?;
+    audit(
+        &state.accounts,
+        state.ids.as_ref(),
+        Some(admin.id),
+        "user.delete.schedule",
+        user.id,
+        now,
+    )
+    .await?;
     Ok(MsgPack(scheduled.into()))
 }
 
@@ -476,8 +557,15 @@ pub async fn cancel_deletion(
     state
         .revocations
         .update_user(user.id, |f| f.deletion_pending = false);
-    audit(&state.accounts, state.ids.as_ref(), Some(admin.id), "user.delete.cancel", user.id, now)
-        .await?;
+    audit(
+        &state.accounts,
+        state.ids.as_ref(),
+        Some(admin.id),
+        "user.delete.cancel",
+        user.id,
+        now,
+    )
+    .await?;
     Ok(MsgPack(restored.into()))
 }
 

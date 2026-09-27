@@ -1,4 +1,5 @@
 //! Properties of the duplicate decision.
+#![allow(clippy::float_cmp)] // exact score assertions
 
 use dedupe::{DedupeKind, Existing, Item, KeepBothSet, MatchLevel, Thresholds, check, score_pair};
 use proptest::prelude::*;
@@ -22,7 +23,12 @@ fn kind() -> impl Strategy<Value = DedupeKind> {
 }
 
 fn item(id: &'static str) -> impl Strategy<Value = Item> {
-    (kind(), text(), prop::collection::vec(text(), 0..3), prop::option::of("FREQ=(DAILY|WEEKLY)"))
+    (
+        kind(),
+        text(),
+        prop::collection::vec(text(), 0..3),
+        prop::option::of("FREQ=(DAILY|WEEKLY)"),
+    )
         .prop_map(move |(kind, text, aliases, rrule)| Item {
             kind,
             id: Some(id.to_owned()),

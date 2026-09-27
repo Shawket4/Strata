@@ -96,7 +96,9 @@ async fn scheduled_deletion_export_only_session_and_purge_after_the_grace_period
     let alice = h
         .create_user("alice", "alice-password-1", UserRole::Member)
         .await;
-    let bob = h.create_user("bob", "bob-password-1", UserRole::Member).await;
+    let bob = h
+        .create_user("bob", "bob-password-1", UserRole::Member)
+        .await;
     write(&h, alice, "notes/Plan.md", "# Alice's plan\n");
     write(&h, alice, "people/أحمد.md", "عربي\n");
     write(&h, bob, "notes/Plan.md", "# Bob's plan\n");
@@ -151,7 +153,10 @@ async fn scheduled_deletion_export_only_session_and_purge_after_the_grace_period
         ops::delete_device(&client, export_session.device_id).await,
         &deletion_pending(),
     );
-    assert_problem(ops::admin_list_users(&client, None).await, &deletion_pending());
+    assert_problem(
+        ops::admin_list_users(&client, None).await,
+        &deletion_pending(),
+    );
     let me = ops::get_me(&client).await.expect("me");
     assert_eq!(me.status, types::AccountStatus::DeletionPending);
     assert!(me.export_only);
@@ -254,7 +259,12 @@ async fn scheduled_deletion_export_only_session_and_purge_after_the_grace_period
     assert_problem(ops::get_me(&client).await, &unauthorized("account deleted"));
     assert_problem(
         h.try_login("alice", "alice-password-1").await,
-        &plain("invalid_credentials", "Invalid username or password", 401, None),
+        &plain(
+            "invalid_credentials",
+            "Invalid username or password",
+            401,
+            None,
+        ),
     );
     // A second run has nothing to do.
     assert_eq!(
@@ -385,7 +395,9 @@ async fn cancelling_a_deletion_restores_the_account() {
 async fn a_disabled_account_scheduled_for_deletion_can_still_export() {
     let h = Harness::new().await;
     let (admin_id, admin) = h.admin().await;
-    let eve = h.create_user("eve", "eve-password-1", UserRole::Member).await;
+    let eve = h
+        .create_user("eve", "eve-password-1", UserRole::Member)
+        .await;
     ops::admin_update_user(
         &admin,
         eve.as_ulid(),

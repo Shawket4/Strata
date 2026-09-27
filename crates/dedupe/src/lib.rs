@@ -3,7 +3,7 @@
 //!
 //! Both sides generate *candidates* cheaply from their own store — the backend with SQL
 //! (`dedupe_keys` equality and `pg_trgm` `similarity()`), the client core from its local
-//! SQLite cache — and then call [`check`] on the new item and those candidates for the final
+//! `SQLite` cache — and then call [`check`] on the new item and those candidates for the final
 //! decision. Because the decision, the keys and the scores all come from this crate, an
 //! offline check on the device and the server's re-check on push always agree.
 //!
@@ -29,19 +29,21 @@
 //!
 //! Everything here is pure and deterministic: no I/O, no clock, no randomness.
 
+#![cfg_attr(test, allow(clippy::float_cmp))] // tests assert exact scores
+
 mod check;
 mod item;
 pub mod keys;
 mod score;
 
 pub use check::{
-    CheckOutcome, DuplicateCandidate, DuplicatePair, Existing, KeepBoth, KeepBothSet, SemanticEvidence,
-    Thresholds, check, compatible_kinds, sweep,
+    CheckOutcome, DuplicateCandidate, DuplicatePair, Existing, KeepBoth, KeepBothSet,
+    SemanticEvidence, Thresholds, check, compatible_kinds, sweep,
 };
 pub use domain::{DedupeKind, DedupeThresholds, MatchLevel};
 pub use item::Item;
 pub use keys::{CandidateQuery, DedupeKeys};
 pub use score::{
-    PHONETIC_CROSS_SCRIPT_SCORE, PHONETIC_MIN_KEY_LEN, PHONETIC_MIN_SPELLING_SIMILARITY,
-    PairScore, edit_similarity, score_pair,
+    PHONETIC_CROSS_SCRIPT_SCORE, PHONETIC_MIN_KEY_LEN, PHONETIC_MIN_SPELLING_SIMILARITY, PairScore,
+    edit_similarity, score_pair,
 };

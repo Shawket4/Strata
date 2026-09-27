@@ -422,7 +422,10 @@ impl Config {
         positive("auth.session_ttl_days", auth.session_ttl_days)?;
         positive("auth.revocation_reload_secs", auth.revocation_reload_secs)?;
         positive("auth.min_password_length", auth.min_password_length)?;
-        positive("accounts.purge_interval_secs", self.accounts.purge_interval_secs)?;
+        positive(
+            "accounts.purge_interval_secs",
+            self.accounts.purge_interval_secs,
+        )?;
         positive("auth.argon2.iterations", auth.argon2.iterations)?;
         positive("auth.argon2.parallelism", auth.argon2.parallelism)?;
         if auth.argon2.memory_kib < 8 * auth.argon2.parallelism {

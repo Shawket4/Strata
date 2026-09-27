@@ -34,8 +34,10 @@ fn write_key(dir: &Path) -> std::path::PathBuf {
 }
 
 fn config_for(db: &str, dir: &Path) -> Config {
-    let mut config = Config::default();
-    config.data_root = dir.to_path_buf();
+    let mut config = Config {
+        data_root: dir.to_path_buf(),
+        ..Config::default()
+    };
     config.auth.signing_key_file = write_key(dir);
     config.auth.argon2.memory_kib = 64;
     config.auth.argon2.iterations = 1;
@@ -108,8 +110,10 @@ async fn startup_refuses_a_c_locale_database() {
         }
     );
     assert!(
-        err.to_string()
-            .starts_with(&format!("database `{}` has LC_CTYPE `C`; Strata requires", scratch.0)),
+        err.to_string().starts_with(&format!(
+            "database `{}` has LC_CTYPE `C`; Strata requires",
+            scratch.0
+        )),
         "{err}"
     );
     scratch.drop_now().await;
@@ -228,7 +232,10 @@ async fn create_user_makes_an_active_admin_with_a_vault() {
     assert_eq!(user.display_name, "The Owner");
     assert_eq!(user.role, strata_index::types::UserRole::Admin);
     assert_eq!(user.status, strata_index::types::UserStatus::Active);
-    assert!(user.password_hash.starts_with("$argon2id$v=19$m=64,t=1,p=1$"));
+    assert!(
+        user.password_hash
+            .starts_with("$argon2id$v=19$m=64,t=1,p=1$")
+    );
     assert!(
         dir.path()
             .join("users")

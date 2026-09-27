@@ -50,6 +50,7 @@ async fn seed_covers_every_user_owned_table_for_both_users() {
             "entities",
             "entity_aliases",
             "idempotency",
+            "integrity_warnings",
             "jobs",
             "links",
             "mentions",

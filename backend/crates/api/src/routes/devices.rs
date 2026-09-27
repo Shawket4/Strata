@@ -11,9 +11,9 @@ use actix_web::{HttpResponse, web};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use strata_common::DeviceId;
+use strata_index::ScopedTx;
 use strata_index::accounts::Device as DeviceRow;
 use strata_index::repo::{devices, settings};
-use strata_index::ScopedTx;
 use ulid::Ulid;
 use utoipa::ToSchema;
 

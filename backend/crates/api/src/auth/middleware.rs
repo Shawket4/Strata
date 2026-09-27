@@ -43,11 +43,8 @@ pub const EXPORT_ONLY_ROUTES: &[(&str, &str)] = &[
 ];
 
 /// `(method, path below /api/v1)` an account on a temporary password may call.
-pub const PASSWORD_CHANGE_ROUTES: &[(&str, &str)] = &[
-    ("GET", "/me"),
-    ("PATCH", "/me"),
-    ("POST", "/auth/logout"),
-];
+pub const PASSWORD_CHANGE_ROUTES: &[(&str, &str)] =
+    &[("GET", "/me"), ("PATCH", "/me"), ("POST", "/auth/logout")];
 
 /// Holds the capability to mint scopes; only this module can use it.
 #[derive(Debug, Clone)]
@@ -112,7 +109,9 @@ impl FromRequest for Authenticated {
                 .get::<AuthContext>()
                 .copied()
                 .map(Self)
-                .ok_or(AccountError::Unauthorized("a bearer access token is required")),
+                .ok_or(AccountError::Unauthorized(
+                    "a bearer access token is required",
+                )),
         )
     }
 }
@@ -141,7 +140,10 @@ fn route_allowed(method: &Method, path: &str, allowed: &[(&str, &str)]) -> bool 
 }
 
 /// Resolves the caller of `req` (see the module docs).
-pub fn resolve(state: &AuthState, req: &ServiceRequest) -> Result<Option<AuthContext>, AccountError> {
+pub fn resolve(
+    state: &AuthState,
+    req: &ServiceRequest,
+) -> Result<Option<AuthContext>, AccountError> {
     let Some(token) = bearer(req) else {
         return Ok(None);
     };
@@ -183,15 +185,25 @@ pub async fn authenticate(
     next: Next<impl MessageBody + 'static>,
 ) -> Result<ServiceResponse<EitherBody<impl MessageBody>>, Error> {
     let Some(state) = req.app_data::<web::Data<AuthState>>().cloned() else {
-        return next.call(req).await.map(ServiceResponse::map_into_left_body);
+        return next
+            .call(req)
+            .await
+            .map(ServiceResponse::map_into_left_body);
     };
     match resolve(&state, &req) {
         Ok(Some(ctx)) => {
             req.extensions_mut().insert(ctx);
-            next.call(req).await.map(ServiceResponse::map_into_left_body)
+            next.call(req)
+                .await
+                .map(ServiceResponse::map_into_left_body)
         }
-        Ok(None) => next.call(req).await.map(ServiceResponse::map_into_left_body),
-        Err(err) => Ok(req.into_response(err.error_response()).map_into_right_body()),
+        Ok(None) => next
+            .call(req)
+            .await
+            .map(ServiceResponse::map_into_left_body),
+        Err(err) => Ok(req
+            .into_response(err.error_response())
+            .map_into_right_body()),
     }
 }
 

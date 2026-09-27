@@ -6,9 +6,9 @@ use std::net::IpAddr;
 use actix_web::HttpRequest;
 use chrono::{DateTime, Utc};
 use strata_common::{AuditId, DeviceId, IdGenerator, SessionId, UserId};
+use strata_index::AccountsDb;
 use strata_index::accounts::{AuditEntry, NewUser, RefreshOutcome, RefreshToken, Session, User};
 use strata_index::types::{Platform, RevokeReason, UserRole, UserStatus};
-use strata_index::AccountsDb;
 
 use crate::auth::AuthState;
 use crate::auth::error::AccountError;
@@ -56,12 +56,10 @@ pub fn client_ip(req: &HttpRequest, trust_forwarded_for: bool) -> String {
 }
 
 fn parse_ip(value: &str) -> Option<IpAddr> {
-    value.parse::<IpAddr>().ok().or_else(|| {
-        value
-            .parse::<std::net::SocketAddr>()
-            .ok()
-            .map(|a| a.ip())
-    })
+    value
+        .parse::<IpAddr>()
+        .ok()
+        .or_else(|| value.parse::<std::net::SocketAddr>().ok().map(|a| a.ip()))
 }
 
 fn limited(reason: &'static str) -> impl Fn(Limited) -> AccountError {
@@ -138,9 +136,12 @@ struct ValidAccount {
     display_name: String,
 }
 
-fn validate_account(input: &NewAccount<'_>, min_password: usize) -> Result<ValidAccount, AccountError> {
-    let username = username::parse_username(input.username)
-        .map_err(|e| AccountError::name("/username", e))?;
+fn validate_account(
+    input: &NewAccount<'_>,
+    min_password: usize,
+) -> Result<ValidAccount, AccountError> {
+    let username =
+        username::parse_username(input.username).map_err(|e| AccountError::name("/username", e))?;
     let display_name = username::parse_display_name(input.display_name)
         .map_err(|e: NameError| AccountError::name("/display_name", e))?;
     check_password(input.password, min_password, "/password")?;
@@ -155,7 +156,11 @@ async fn insert_user(
     new: &NewUser,
     now: DateTime<Utc>,
 ) -> Result<User, AccountError> {
-    if accounts.user_by_username(&new.username_normalized).await?.is_some() {
+    if accounts
+        .user_by_username(&new.username_normalized)
+        .await?
+        .is_some()
+    {
         return Err(AccountError::UsernameTaken);
     }
     match accounts.create_user(new, now).await {
@@ -298,7 +303,15 @@ pub async fn login(
             .set_password_hash(user.id, &rehashed, now)
             .await?;
     }
-    open_session(state, &user, &device_name, input.platform, status, stored.temporary).await
+    open_session(
+        state,
+        &user,
+        &device_name,
+        input.platform,
+        status,
+        stored.temporary,
+    )
+    .await
 }
 
 async fn open_session(
@@ -374,7 +387,10 @@ async fn issue_tokens(
 
 /// `POST /auth/refresh`: rotates a refresh token. A replayed token revokes its whole
 /// session (reuse detection); a session whose account can no longer hold it is revoked.
-pub async fn refresh(state: &AuthState, refresh_token: &str) -> Result<IssuedSession, AccountError> {
+pub async fn refresh(
+    state: &AuthState,
+    refresh_token: &str,
+) -> Result<IssuedSession, AccountError> {
     let now = state.clock.now();
     let spent = match state
         .accounts
@@ -382,7 +398,9 @@ pub async fn refresh(state: &AuthState, refresh_token: &str) -> Result<IssuedSes
         .await?
     {
         RefreshOutcome::Invalid => {
-            return Err(AccountError::Unauthorized("invalid or expired refresh token"));
+            return Err(AccountError::Unauthorized(
+                "invalid or expired refresh token",
+            ));
         }
         RefreshOutcome::Reused(token) => {
             state.revocations.revoke_sessions([token.session_id]);
@@ -401,12 +419,17 @@ pub async fn refresh(state: &AuthState, refresh_token: &str) -> Result<IssuedSes
         .accounts
         .session_by_id(spent.session_id)
         .await?
-        .ok_or(AccountError::Unauthorized("invalid or expired refresh token"))?;
-    let user = state
-        .accounts
-        .user_by_id(spent.user_id)
-        .await?
-        .ok_or(AccountError::Unauthorized("invalid or expired refresh token"))?;
+        .ok_or(AccountError::Unauthorized(
+            "invalid or expired refresh token",
+        ))?;
+    let user =
+        state
+            .accounts
+            .user_by_id(spent.user_id)
+            .await?
+            .ok_or(AccountError::Unauthorized(
+                "invalid or expired refresh token",
+            ))?;
     let allowed = match user.status {
         UserStatus::Active => !session.export_only,
         UserStatus::DeletionPending => session.export_only,

@@ -32,7 +32,9 @@ async fn signup_approval_login_refresh_reuse_and_logout() {
     let anon = h.anon();
 
     // Sign-up: pending, no vault, no session.
-    let pending = ops::signup(&anon, &signup_body("Sam")).await.expect("signup");
+    let pending = ops::signup(&anon, &signup_body("Sam"))
+        .await
+        .expect("signup");
     assert_eq!(
         pending,
         types::PendingAccount {
@@ -50,7 +52,12 @@ async fn signup_approval_login_refresh_reuse_and_logout() {
     // A wrong password never reveals the status.
     assert_problem(
         h.try_login("sam", "wrong-password-1").await,
-        &plain("invalid_credentials", "Invalid username or password", 401, None),
+        &plain(
+            "invalid_credentials",
+            "Invalid username or password",
+            401,
+            None,
+        ),
     );
     assert!(!h.data.path().join("users").join(sam.to_string()).exists());
 
@@ -115,7 +122,7 @@ async fn signup_approval_login_refresh_reuse_and_logout() {
             export_only: false,
             id: pending.id,
             password_change_required: false,
-            preferences: Default::default(),
+            preferences: std::collections::HashMap::default(),
             role: types::Role::Member,
             status: types::AccountStatus::Active,
             timezone: "UTC".into(),
@@ -219,7 +226,13 @@ async fn rejected_signups_cannot_log_in() {
             Some("the account is not pending"),
         ),
     );
-    assert!(!h.data.path().join("users").join(pending.id.to_string()).exists());
+    assert!(
+        !h.data
+            .path()
+            .join("users")
+            .join(pending.id.to_string())
+            .exists()
+    );
     // Unknown IDs are 404.
     assert_problem(
         ops::admin_reject_user(&admin, ulid::Ulid::from_parts(1, 1)).await,
@@ -254,7 +267,10 @@ async fn disabling_revokes_live_tokens_immediately() {
     assert_eq!(result.temporary_password, None);
 
     // The still-unexpired access token is refused on the very next request.
-    assert_problem(ops::get_me(&client).await, &unauthorized("account disabled"));
+    assert_problem(
+        ops::get_me(&client).await,
+        &unauthorized("account disabled"),
+    );
     assert_problem(
         ops::refresh(&h.anon(), &refresh_body(&session.refresh_token)).await,
         &unauthorized("invalid or expired refresh token"),
@@ -265,7 +281,10 @@ async fn disabling_revokes_live_tokens_immediately() {
     );
     // Survives a reload from the database.
     h.state.reload_revocations().await.expect("reload");
-    assert_problem(ops::get_me(&client).await, &unauthorized("account disabled"));
+    assert_problem(
+        ops::get_me(&client).await,
+        &unauthorized("account disabled"),
+    );
 
     // Admins cannot disable themselves; enabling only applies to disabled accounts.
     assert_problem(
@@ -377,7 +396,12 @@ async fn password_change_requires_the_current_password_and_signs_out_other_devic
     );
     assert_problem(
         h.try_login("paul", "paul-password-1").await,
-        &plain("invalid_credentials", "Invalid username or password", 401, None),
+        &plain(
+            "invalid_credentials",
+            "Invalid username or password",
+            401,
+            None,
+        ),
     );
     h.login("paul", "paul-password-2").await;
     h.finish().await;
@@ -402,7 +426,10 @@ async fn admin_password_reset_forces_a_change_at_next_login() {
     )
     .await
     .expect("reset");
-    let temporary = reset.temporary_password.clone().expect("temporary password");
+    let temporary = reset
+        .temporary_password
+        .clone()
+        .expect("temporary password");
     assert_eq!(temporary.chars().count(), 16);
     assert!(reset.user.password_change_required);
     assert_problem(
@@ -411,7 +438,12 @@ async fn admin_password_reset_forces_a_change_at_next_login() {
     );
     assert_problem(
         h.try_login("rana", "rana-password-1").await,
-        &plain("invalid_credentials", "Invalid username or password", 401, None),
+        &plain(
+            "invalid_credentials",
+            "Invalid username or password",
+            401,
+            None,
+        ),
     );
 
     let session = h.login("rana", &temporary).await;
@@ -440,12 +472,20 @@ async fn admin_password_reset_forces_a_change_at_next_login() {
     assert!(!me.password_change_required);
     // The device from before the reset is still listed (its session ended).
     assert_eq!(
-        ops::list_devices(&client).await.expect("unrestricted").len(),
+        ops::list_devices(&client)
+            .await
+            .expect("unrestricted")
+            .len(),
         2
     );
     assert_problem(
         h.try_login("rana", &temporary).await,
-        &plain("invalid_credentials", "Invalid username or password", 401, None),
+        &plain(
+            "invalid_credentials",
+            "Invalid username or password",
+            401,
+            None,
+        ),
     );
     let audit = h.state_audit().await;
     assert!(audit.contains(&(
@@ -482,7 +522,10 @@ async fn role_changes_apply_on_the_next_request() {
     // Same access token, new role (admin routes check the database).
     let users = ops::admin_list_users(&omar, None).await.expect("admin now");
     assert_eq!(
-        users.iter().map(|u| u.username.as_str()).collect::<Vec<_>>(),
+        users
+            .iter()
+            .map(|u| u.username.as_str())
+            .collect::<Vec<_>>(),
         vec!["admin", "omar"]
     );
     ops::admin_update_user(
@@ -585,7 +628,11 @@ async fn admin_created_accounts_are_active_with_a_vault() {
         ),
     );
     let audit = h.state_audit().await;
-    assert!(audit.contains(&(Some(admin_id), "user.create".to_owned(), format!("user:{nour}"))));
+    assert!(audit.contains(&(
+        Some(admin_id),
+        "user.create".to_owned(),
+        format!("user:{nour}")
+    )));
     h.finish().await;
 }
 
@@ -593,10 +640,15 @@ async fn admin_created_accounts_are_active_with_a_vault() {
 async fn confusable_usernames_are_rejected() {
     let h = Harness::with_config(|c| c.auth.rate_limits.signup_per_ip.max = 100).await;
     let anon = h.anon();
-    ops::signup(&anon, &signup_body("ahmed")).await.expect("first");
+    ops::signup(&anon, &signup_body("ahmed"))
+        .await
+        .expect("first");
     let taken = plain("username_taken", "Username not available", 409, None);
     // Cyrillic "а" (U+0430) in place of the Latin "a".
-    assert_problem(ops::signup(&anon, &signup_body("\u{0430}hmed")).await, &taken);
+    assert_problem(
+        ops::signup(&anon, &signup_body("\u{0430}hmed")).await,
+        &taken,
+    );
     assert_problem(ops::signup(&anon, &signup_body("AHMED")).await, &taken);
     assert_problem(ops::signup(&anon, &signup_body("ＡＨＭＥＤ")).await, &taken);
     ops::signup(&anon, &signup_body("ace")).await.expect("ace");
@@ -697,7 +749,10 @@ async fn devices_are_listed_renamed_and_removed_within_the_callers_scope() {
 
     // Another user's device ID is indistinguishable from a missing one — even for an admin.
     let not_found = plain("not_found", "Not found", 404, None);
-    assert_problem(ops::delete_device(&admin, first.device_id).await, &not_found);
+    assert_problem(
+        ops::delete_device(&admin, first.device_id).await,
+        &not_found,
+    );
     assert_problem(
         ops::update_device(&admin, first.device_id, &types::UpdateDevice::default()).await,
         &not_found,

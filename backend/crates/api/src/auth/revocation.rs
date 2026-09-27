@@ -174,12 +174,7 @@ impl RevocationSet {
     /// Applies a database snapshot taken after [`Self::begin_reload`] returned `since`:
     /// revoked sessions are merged in; user flags are replaced except for users changed
     /// locally after `since`; expired entries are dropped.
-    pub fn apply_reload(
-        &self,
-        since: u64,
-        sessions: &[SessionId],
-        users: &[(UserId, UserFlags)],
-    ) {
+    pub fn apply_reload(&self, since: u64, sessions: &[SessionId], users: &[(UserId, UserFlags)]) {
         let now = self.clock.now();
         let until = now + self.retention;
         let mut state = self.write();

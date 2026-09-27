@@ -182,7 +182,8 @@ impl KeepBothSet {
 
     /// Whether `x` (of `kx`) and `y` (of `ky`) were marked "keep both".
     pub fn contains(&self, kx: DedupeKind, x: &str, ky: DedupeKind, y: &str) -> bool {
-        self.pairs.contains(&KeepBoth::new(kx, x, y)) || self.pairs.contains(&KeepBoth::new(ky, x, y))
+        self.pairs.contains(&KeepBoth::new(kx, x, y))
+            || self.pairs.contains(&KeepBoth::new(ky, x, y))
     }
 }
 
@@ -232,11 +233,7 @@ impl CheckOutcome {
     }
 }
 
-fn decide(
-    new: &Item,
-    existing: &Existing,
-    thresholds: &Thresholds,
-) -> Option<(MatchLevel, f32)> {
+fn decide(new: &Item, existing: &Existing, thresholds: &Thresholds) -> Option<(MatchLevel, f32)> {
     let cand = &existing.item;
     let pair = score_pair(new, cand);
     if pair.exact {
@@ -348,14 +345,19 @@ pub struct DuplicatePair {
 /// Exact and near duplicate pairs within a (caller-blocked) candidate set, for the nightly
 /// sweep (§9.2 `dedupe`), skipping keep-both pairs. Pairs are ordered like
 /// [`CheckOutcome::candidates`], then by IDs. Quadratic in `items.len()`.
-pub fn sweep(items: &[Item], thresholds: &Thresholds, keep_both: &KeepBothSet) -> Vec<DuplicatePair> {
+pub fn sweep(
+    items: &[Item],
+    thresholds: &Thresholds,
+    keep_both: &KeepBothSet,
+) -> Vec<DuplicatePair> {
     let mut out = Vec::new();
     for (i, x) in items.iter().enumerate() {
         for y in &items[i + 1..] {
             let (Some(xi), Some(yi)) = (x.id.as_deref(), y.id.as_deref()) else {
                 continue;
             };
-            if xi == yi || !compatible(x.kind, y.kind) || keep_both.contains(x.kind, xi, y.kind, yi) {
+            if xi == yi || !compatible(x.kind, y.kind) || keep_both.contains(x.kind, xi, y.kind, yi)
+            {
                 continue;
             }
             if let Some((level, score)) = decide(x, &Existing::from(y.clone()), thresholds) {

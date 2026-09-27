@@ -9,9 +9,7 @@ use std::sync::{Arc, Mutex};
 use actix_web::web;
 use strata_api::auth::service::NewAccount;
 use strata_api::auth::tokens::generate_key_pem;
-use strata_api::auth::{
-    AuthDeps, AuthState, DataRoot, GitVaultProvisioner, SigningKeys,
-};
+use strata_api::auth::{AuthDeps, AuthState, DataRoot, GitVaultProvisioner, SigningKeys};
 use strata_api::contract::Contract;
 use strata_api::testing::TestServer;
 use strata_client::{
@@ -62,8 +60,10 @@ pub struct Harness {
 
 /// Cheap Argon2 so tests stay fast (the production default is 19 MiB × 2).
 pub fn test_config(data_root: PathBuf) -> Config {
-    let mut config = Config::default();
-    config.data_root = data_root;
+    let mut config = Config {
+        data_root,
+        ..Config::default()
+    };
     config.auth.argon2 = Argon2Config {
         memory_kib: 64,
         iterations: 1,
@@ -263,7 +263,12 @@ pub fn invalid_field(code: &str, pointer: &str, message: &str) -> types::Problem
             message: message.to_owned(),
             pointer: Some(pointer.to_owned()),
         }],
-        ..plain("invalid_body", "Request body is invalid", 422, Some(message))
+        ..plain(
+            "invalid_body",
+            "Request body is invalid",
+            422,
+            Some(message),
+        )
     }
 }
 

@@ -36,7 +36,12 @@ async fn login_is_limited_per_username_including_confusable_spellings() {
         .await;
     h.create_user("other", "other-password-1", UserRole::Member)
         .await;
-    let wrong = plain("invalid_credentials", "Invalid username or password", 401, None);
+    let wrong = plain(
+        "invalid_credentials",
+        "Invalid username or password",
+        401,
+        None,
+    );
     assert_problem(h.try_login("ahmed", "nope-nope-nope").await, &wrong);
     assert_problem(h.try_login("AHMED", "nope-nope-nope").await, &wrong);
     h.clock.advance(Duration::seconds(20));
@@ -64,7 +69,12 @@ async fn login_is_limited_per_client_address() {
         };
     })
     .await;
-    let wrong = plain("invalid_credentials", "Invalid username or password", 401, None);
+    let wrong = plain(
+        "invalid_credentials",
+        "Invalid username or password",
+        401,
+        None,
+    );
     assert_problem(h.try_login("first", "x-password-123").await, &wrong);
     assert_problem(h.try_login("second", "x-password-123").await, &wrong);
     assert_problem(
@@ -177,7 +187,9 @@ async fn signups_stop_while_too_many_accounts_await_approval() {
     ops::admin_approve_user(&admin, first.id)
         .await
         .expect("approve");
-    ops::signup(&anon, &signup("user3")).await.expect("room again");
+    ops::signup(&anon, &signup("user3"))
+        .await
+        .expect("room again");
     assert_eq!(
         ops::admin_list_users(&admin, Some(&types::AccountStatus::Pending))
             .await

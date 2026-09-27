@@ -63,6 +63,14 @@ fn sample_doc() -> Value {
                         "409": problem,
                     },
                 },
+                "get": {
+                    "operationId": "download_item",
+                    "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+                    "responses": {
+                        "200": { "description": "zip", "content": { "application/zip": { "schema": { "type": "string", "format": "binary" } } } },
+                        "404": problem,
+                    },
+                },
                 "delete": {
                     "operationId": "delete_item",
                     "security": [{}],
@@ -131,6 +139,12 @@ pub async fn put_item(
     assert!(delete.contains("-> ::std::result::Result<(), crate::Error>"));
     assert!(delete.contains("client.send_empty(request).await"));
     assert!(!delete.contains("authenticated"));
+    // A zip download returns raw bytes through `send_zip`.
+    let download = &ops[ops.find("pub async fn download_item").expect("download fn")..];
+    let download = &download[..download.find("\n}\n").expect("fn end")];
+    assert!(download.contains("-> ::std::result::Result<::bytes::Bytes, crate::Error>"));
+    assert!(download.contains("client.send_zip(request).await"));
+    assert!(download.contains("let request = request.authenticated();"));
 
     let types = file(&files, "types.rs");
     for fragment in [

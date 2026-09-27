@@ -2,7 +2,7 @@
 //!
 //! All text goes through `text-normalize` first. On top of that this module adds the
 //! duplicate-specific rules (documented here because the backend's SQL candidate generation
-//! and the client's SQLite lookup must use the very same keys):
+//! and the client's `SQLite` lookup must use the very same keys):
 //!
 //! - **Task-intent preambles** ("remind me to", "don't forget to", "فكرني", …) are removed from
 //!   the start of captures and tasks ([`prepare_text`]), so "remind me to make Watanya's
@@ -178,7 +178,11 @@ pub fn exact_keys(item: &Item) -> Vec<String> {
     for name in item.names() {
         let mut key = name_key(item.kind, name);
         if item.kind == DedupeKind::Task {
-            let rrule = item.rrule.as_deref().map(canonical_rrule).unwrap_or_default();
+            let rrule = item
+                .rrule
+                .as_deref()
+                .map(canonical_rrule)
+                .unwrap_or_default();
             let entities: BTreeSet<String> = item
                 .entities
                 .iter()
@@ -257,10 +261,7 @@ mod tests {
             "اعمل فاتوره وطنيه"
         );
         // Only the preamble: kept as is.
-        assert_eq!(
-            prepare_text(DedupeKind::Capture, "Remind me"),
-            "remind me"
-        );
+        assert_eq!(prepare_text(DedupeKind::Capture, "Remind me"), "remind me");
         // Not stripped for notes, nor in the middle of a word.
         assert_eq!(
             prepare_text(DedupeKind::Note, "Remind me to call"),

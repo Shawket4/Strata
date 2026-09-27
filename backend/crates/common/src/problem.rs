@@ -89,10 +89,20 @@ problem_types! {
     UsernameTaken = ("username_taken", 409, "Username not available");
     /// The account is not in a state that allows this action (e.g. approving an active user).
     AccountStateConflict = ("account_state_conflict", 409, "Account state does not allow this");
+    /// A note already exists at the target path (create, move, restore).
+    PathTaken = ("path_taken", 409, "Path already exists");
+    /// Reverting a commit or file conflicts with later changes.
+    RevertConflict = ("revert_conflict", 409, "Revert conflicts with later changes");
+    /// A task's state does not allow the transition (e.g. completing a done task).
+    TaskStateConflict = ("task_state_conflict", 409, "Task state does not allow this");
+    /// An import archive was rejected (symlink, absolute path, `..`, not a zip, ...).
+    InvalidArchive = ("invalid_archive", 422, "Invalid archive");
     /// The sync epoch changed; the client must re-bootstrap (PLAN §7.5 sync).
     EpochChanged = ("epoch_changed", 410, "Sync epoch changed");
     /// Too many requests (login, signup, capture, ask); see `Retry-After`.
     RateLimited = ("rate_limited", 429, "Too many requests");
+    /// The AI subsystem is disabled or not available yet (semantic/hybrid search, ask).
+    AiUnavailable = ("ai_unavailable", 503, "AI unavailable");
     /// Unexpected server error; details are logged, never returned.
     Internal = ("internal", 500, "Internal server error");
 }
@@ -167,8 +177,13 @@ mod tests {
                 ("duplicate_candidates", 409),
                 ("username_taken", 409),
                 ("account_state_conflict", 409),
+                ("path_taken", 409),
+                ("revert_conflict", 409),
+                ("task_state_conflict", 409),
+                ("invalid_archive", 422),
                 ("epoch_changed", 410),
                 ("rate_limited", 429),
+                ("ai_unavailable", 503),
                 ("internal", 500),
             ]
         );

@@ -4,8 +4,26 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 publish = false
+description = "Sync operations, results, change records and the 3-way note merge (D19) shared by the backend and the client core."
 
 [dependencies]
+domain = { workspace = true }
+vault-format = { workspace = true }
+dedupe = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
+rmp-serde = { workspace = true }
+thiserror = { workspace = true }
+ulid = { workspace = true }
+chrono = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+similar = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+pretty_assertions = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

@@ -147,9 +147,7 @@ mod tests {
         let p = GitVaultProvisioner::new(DataRoot::new(tmp.path()));
         assert!(p.provision(user()).await.expect("created"));
         assert!(!p.provision(user()).await.expect("exists"));
-        let vault = tmp
-            .path()
-            .join("users/01M3HBS0G00000000000000001/vault");
+        let vault = tmp.path().join("users/01M3HBS0G00000000000000001/vault");
         assert_eq!(p.vault_dir(user()), vault);
         assert!(vault.join(".git/HEAD").is_file());
         assert_eq!(
@@ -159,7 +157,10 @@ mod tests {
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            let mode = std::fs::metadata(&vault).expect("meta").permissions().mode();
+            let mode = std::fs::metadata(&vault)
+                .expect("meta")
+                .permissions()
+                .mode();
             assert_eq!(mode & 0o777, 0o700);
         }
     }
@@ -175,10 +176,7 @@ mod tests {
         p.deprovision(user()).await.expect("removed");
         assert!(!root.user_dir(user()).exists());
         assert!(root.vault_dir(other).join(".git").is_dir());
-        assert_eq!(
-            std::fs::read_dir(root.users_dir()).expect("dir").count(),
-            1
-        );
+        assert_eq!(std::fs::read_dir(root.users_dir()).expect("dir").count(), 1);
         p.deprovision(user()).await.expect("idempotent");
     }
 }

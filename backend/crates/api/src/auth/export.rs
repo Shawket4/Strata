@@ -102,7 +102,10 @@ fn write_zip(root: &Path, writer: ChannelWriter) -> io::Result<()> {
 /// and the writer task, which resolves once the whole archive was handed over.
 pub fn stream_vault_zip(
     vault_dir: PathBuf,
-) -> (mpsc::Receiver<io::Result<Bytes>>, JoinHandle<io::Result<()>>) {
+) -> (
+    mpsc::Receiver<io::Result<Bytes>>,
+    JoinHandle<io::Result<()>>,
+) {
     let (tx, rx) = mpsc::channel(4);
     let task = tokio::task::spawn_blocking(move || {
         let writer = ChannelWriter {

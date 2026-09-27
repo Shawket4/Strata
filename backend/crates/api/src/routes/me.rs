@@ -12,10 +12,10 @@ use actix_web::http::header::{CONTENT_DISPOSITION, CONTENT_TYPE};
 use actix_web::{HttpResponse, web};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use strata_index::ScopedTx;
 use strata_index::accounts::User;
 use strata_index::repo::settings;
 use strata_index::types::{RevokeReason, UserRole, UserStatus};
-use strata_index::ScopedTx;
 use ulid::Ulid;
 use utoipa::ToSchema;
 
@@ -337,7 +337,11 @@ pub async fn update_me(
                     "current_password is not the account's password",
                 ));
             }
-            check_password(new_password, state.settings.min_password_length, "/new_password")?;
+            check_password(
+                new_password,
+                state.settings.min_password_length,
+                "/new_password",
+            )?;
             Some(state.passwords.hash(new_password)?)
         }
     };

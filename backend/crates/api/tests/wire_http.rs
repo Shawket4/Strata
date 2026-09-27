@@ -128,7 +128,7 @@ async fn valid_body_round_trips_as_named_map() {
 async fn media_type_parameters_are_ignored() {
     let req = test::TestRequest::post()
         .uri("/api/v1/echo")
-        .insert_header((CONTENT_TYPE, "Application/MsgPack; charset=binary"))
+        .insert_header((CONTENT_TYPE, "Application/VND.MsgPack; charset=binary"))
         .set_payload(encode(&echo_value()).expect("encodes"));
     assert_eq!(send(req).await.status, StatusCode::OK);
 }
@@ -144,8 +144,13 @@ async fn missing_or_wrong_content_type_is_415() {
     let json = test::TestRequest::post()
         .uri("/api/v1/echo")
         .insert_header((CONTENT_TYPE, "application/json"))
+        .set_payload(body.clone());
+    // The unregistered pre-IANA name is not an alias.
+    let unregistered = test::TestRequest::post()
+        .uri("/api/v1/echo")
+        .insert_header((CONTENT_TYPE, "application/msgpack"))
         .set_payload(body);
-    for req in [none, json] {
+    for req in [none, json, unregistered] {
         let reply = send(req).await;
         assert_eq!(reply.status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
         assert_eq!(reply.problem(), expected);
@@ -311,7 +316,8 @@ async fn accept_excluding_msgpack_is_406() {
     assert_eq!(reply.status, StatusCode::NOT_ACCEPTABLE);
     assert_eq!(
         reply.problem(),
-        Problem::new(ProblemType::NotAcceptable).with_detail("responses are application/vnd.msgpack")
+        Problem::new(ProblemType::NotAcceptable)
+            .with_detail("responses are application/vnd.msgpack")
     );
 }
 

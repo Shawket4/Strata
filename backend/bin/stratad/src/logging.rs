@@ -27,13 +27,7 @@ pub fn init() {
 pub fn loggable_path(target: &str) -> String {
     let path = target.split(['?', '#']).next().unwrap_or_default();
     path.split('/')
-        .map(|segment| {
-            if segment.len() > 64 {
-                "…"
-            } else {
-                segment
-            }
-        })
+        .map(|segment| if segment.len() > 64 { "…" } else { segment })
         .collect::<Vec<_>>()
         .join("/")
 }
