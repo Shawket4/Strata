@@ -6,6 +6,7 @@
 //! numeric ID, so equal inputs give byte-identical responses.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::hash::BuildHasher;
 
 use chrono::{DateTime, Utc};
 use domain::{GraphEdgeKind, GraphNodeKind, NoteKind, RelationOrigin};
@@ -145,11 +146,11 @@ fn sort_edges(edges: &mut [EdgeView]) {
 }
 
 /// Builds the node views of `ids` (in ID order) with degrees counted over `edges`.
-fn finish(
+fn finish<S: BuildHasher>(
     data: &GraphData,
     ids: &BTreeMap<NoteId, Option<u8>>,
     mut edges: Vec<EdgeView>,
-    summaries: &HashMap<NoteId, String>,
+    summaries: &HashMap<NoteId, String, S>,
     similarity: SimilarityStatus,
 ) -> GraphView {
     sort_edges(&mut edges);
@@ -204,12 +205,12 @@ fn finish(
 
 /// `GET /graph` without a lens: every live note of an allowed kind, every allowed edge
 /// between them, similarity edges when given.
-pub fn global(
+pub fn global<S: BuildHasher>(
     data: &GraphData,
     query: &GraphQuery,
     similar: &[SimilarPair],
     similarity: SimilarityStatus,
-    summaries: &HashMap<NoteId, String>,
+    summaries: &HashMap<NoteId, String, S>,
 ) -> GraphView {
     let ids: BTreeMap<NoteId, Option<u8>> = data
         .nodes
@@ -245,11 +246,11 @@ pub fn global(
 /// `GET /graph?lens=people|companies`: the lens's entities as nodes; edges are entity
 /// relations between them and co-mention strength (`graph_algo::co_mentions`: per note
 /// mentioning `m` of them, each pair gains `1/(m−1)`).
-pub fn lens(
+pub fn lens<S: BuildHasher>(
     data: &GraphData,
     lens: Lens,
     edges_filter: &EdgeFilter,
-    summaries: &HashMap<NoteId, String>,
+    summaries: &HashMap<NoteId, String, S>,
 ) -> GraphView {
     let kind = lens.kind();
     let ids: BTreeMap<NoteId, Option<u8>> = data
@@ -304,13 +305,13 @@ pub fn lens(
 /// `GET /graph/local/{id}`: the focus and everything within `depth` hops over allowed edges
 /// (either direction) through allowed nodes, plus every allowed edge among them
 /// (`graph_algo::neighbourhood`). `similar` are the focus's similarity edges, if requested.
-pub fn local(
+pub fn local<S: BuildHasher>(
     data: &GraphData,
     focus: NoteId,
     query: &LocalQuery,
     similar: &[SimilarPair],
     similarity: SimilarityStatus,
-    summaries: &HashMap<NoteId, String>,
+    summaries: &HashMap<NoteId, String, S>,
 ) -> Result<GraphView> {
     let mut b = GraphBuilder::new();
     for n in &data.nodes {

@@ -128,13 +128,14 @@ type CustodyTuple = (
 );
 
 /// Loads the scope's graph.
+#[allow(clippy::too_many_lines)] // one query per edge source, in order
 pub async fn load(tx: &mut ScopedTx) -> Result<GraphData> {
-    let notes: Vec<NoteTuple> = sqlx::query_as(
+    let rows: Vec<NoteTuple> = sqlx::query_as(
         "SELECT id, title, kind, path, lang, updated FROM notes WHERE NOT trashed ORDER BY id",
     )
     .fetch_all(tx.conn())
     .await?;
-    let nodes: Vec<NodeRow> = notes
+    let nodes: Vec<NodeRow> = rows
         .into_iter()
         .map(|(id, title, kind, path, lang, updated)| NodeRow {
             id,

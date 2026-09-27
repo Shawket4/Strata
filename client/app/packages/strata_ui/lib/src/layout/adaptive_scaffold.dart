@@ -594,8 +594,19 @@ class SidebarItem extends StatelessWidget {
   }
 }
 
-/// A navigation-rail label: one line, scaled down to fit the 80 px rail
-/// rather than wrapping mid-word.
+/// A navigation-rail label: one line that fits the 80 px rail without
+/// wrapping mid-word.
+///
+/// A label wider than the rail at the current (chrome-clamped) text scale is
+/// laid out at a smaller text scale, down to the unscaled caption size (the
+/// spec's smallest text) and never below it; whatever still does not fit is
+/// ellipsized (the semantics label keeps the full text).
+///
+/// The label is resized through its text scaler, not a transform: a
+/// `FittedBox` rasterised the glyphs under a fractional scale, off the pixel
+/// grid, so every stroke of a thin script (Arabic at caption size) became a
+/// blend of text and background and the label measured 1.3:1 instead of the
+/// token contrast (6.4:1 for accent text on surface-2).
 class RailLabel extends StatelessWidget {
   /// Creates a rail label.
   const new(this.label, {super.key, this.style});
@@ -606,14 +617,55 @@ class RailLabel extends StatelessWidget {
   /// Optional style (the rail theme's label style applies otherwise).
   final TextStyle? style;
 
+  /// Width available to a label in the rail.
+  static const double maxWidth = StrataLayout.railWidth - StrataSpacing.s4;
+
   @override
   Widget build(BuildContext context) {
+    final scaler = fittedTextScaler(
+      label: label,
+      style: DefaultTextStyle.of(context).style.merge(style),
+      textScaler: MediaQuery.textScalerOf(context),
+      textDirection: Directionality.of(context),
+      locale: Localizations.maybeLocaleOf(context),
+    );
     return SizedBox(
-      width: StrataLayout.railWidth - StrataSpacing.s4,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(label, maxLines: 1, style: style),
+      width: maxWidth,
+      child: Text(
+        label,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: style,
+        textScaler: scaler,
       ),
     );
+  }
+
+  /// The text scaler that fits [label] into [maxWidth]: [textScaler] when it
+  /// fits, otherwise a smaller linear scale, but never below the unscaled
+  /// size (or [textScaler] itself when that is already smaller).
+  static TextScaler fittedTextScaler({
+    required String label,
+    required TextStyle style,
+    required TextScaler textScaler,
+    required TextDirection textDirection,
+    Locale? locale,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: label, style: style, locale: locale),
+      textDirection: textDirection,
+      textScaler: textScaler,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    if (width <= maxWidth) return textScaler;
+    final base = style.fontSize ?? 14;
+    final current = textScaler.scale(base) / base;
+    final floor = current < 1 ? current : 1.0;
+    final fitted = current * maxWidth / width;
+    return TextScaler.linear(fitted > floor ? fitted : floor);
   }
 }

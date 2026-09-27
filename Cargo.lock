@@ -4557,6 +4557,32 @@ dependencies = [
 [[package]]
 name = "strata-graph"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "chrono-tz",
+ "domain",
+ "futures-util",
+ "graph-algo",
+ "pgvector",
+ "pretty_assertions",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "strata-ai",
+ "strata-common",
+ "strata-index",
+ "strata-jobs",
+ "strata-testkit",
+ "strata-vault",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "ulid",
+ "uuid",
+ "vault-format",
+]
 
 [[package]]
 name = "strata-index"

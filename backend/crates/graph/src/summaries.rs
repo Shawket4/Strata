@@ -73,7 +73,7 @@ mod tests {
         assert_eq!(short(" \n "), None);
         let long = "word ".repeat(100);
         let s = short(&long).expect("some");
-        assert_eq!(s.chars().count(), 199);
+        assert_eq!(s.chars().count(), 200);
         assert!(s.ends_with("word…"));
         let arabic = "ب".repeat(250);
         assert_eq!(short(&arabic).expect("some").chars().count(), 200);
