@@ -4,6 +4,9 @@ members = [
     "crates/vault-format",
     "crates/text-normalize",
     "crates/domain",
+    "crates/sync-model",
+    "crates/graph-algo",
+    "crates/dedupe",
     "backend/crates/common",
     "backend/crates/api",
     "backend/crates/vault",
@@ -47,6 +50,9 @@ must_use_candidate = "allow"
 vault-format = { path = "crates/vault-format" }
 text-normalize = { path = "crates/text-normalize" }
 domain = { path = "crates/domain" }
+sync-model = { path = "crates/sync-model" }
+graph-algo = { path = "crates/graph-algo" }
+dedupe = { path = "crates/dedupe" }
 strata-common = { path = "backend/crates/common" }
 strata-api = { path = "backend/crates/api" }
 strata-vault = { path = "backend/crates/vault" }
