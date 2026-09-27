@@ -6,10 +6,10 @@
 
 use chrono::{NaiveDate, NaiveDateTime};
 use ulid::Ulid;
+use vault_format::blocks::is_valid_block_id;
 use vault_format::custody::{self, CustodyEvent, CustodyState};
 use vault_format::frontmatter::ValueShape;
 use vault_format::sections::sections;
-use vault_format::blocks::is_valid_block_id;
 use vault_format::tasks::{self, DateKind, Priority, Reminder, TaskError, TaskLine, TaskSpec};
 use vault_format::{Document, Frontmatter, FrontmatterError, KnownKey, LineEnding, RelationKey};
 

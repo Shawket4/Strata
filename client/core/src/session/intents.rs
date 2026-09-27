@@ -1,21 +1,24 @@
-//! Intents (§12.3): each user action becomes one op with client-generated IDs and dates, applied
-//! optimistically and queued. IDs come from the injected generator and dates from the injected
-//! clock in the user's timezone, so the op carries everything the server needs to apply it
-//! identically.
+//! Intents (§12.3): each user action becomes one `sync-model` op with client-generated IDs and
+//! dates, is applied optimistically and queued. IDs come from the injected generator and dates
+//! from the injected clock in the user's timezone, so the op carries everything the server
+//! needs to apply it identically. Creates first run the offline duplicate check (§9.7).
 
-use chrono::{DateTime, Duration, FixedOffset, NaiveDate, NaiveTime};
-use vault_format::tasks::{Reminder, TaskLine, TaskSpec};
+use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
+use sync_model::ops as sm;
+use ulid::Ulid;
+use vault_format::RelationKey;
 
 use super::Session;
 use crate::error::{CoreError, CoreResult};
-use crate::format::edit;
 use crate::ids::task_block_id;
-use crate::store::write::{Intent, LocalEntity, TASK_HOME, note_of_task};
+use crate::store::write::{Intent, LocalEntity, TASK_HOME, capture_created, note_of_task};
 use crate::store::{conflicts, notes, settings};
 use crate::sync::apply;
-use crate::sync::model::OpPayload;
+use crate::sync::model::Op;
 use crate::view::Topics;
-use crate::view::model::{ConflictResolution, DuplicateChoice, NotificationAction};
+use crate::view::model::{
+    CandidateItem, ConflictResolution, CreateOutcome, DuplicateChoice, NotificationAction,
+};
 
 /// A task to create.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -30,167 +33,214 @@ pub struct NewTask {
     pub scheduled: Option<NaiveDate>,
     /// 🔁 phrase.
     pub recurrence: Option<String>,
-    /// Reminders (date, optional time).
-    pub reminders: Vec<(NaiveDate, Option<NaiveTime>)>,
+    /// Reminders (local wall-clock times).
+    pub reminders: Vec<NaiveDateTime>,
     /// Priority.
     pub priority: Option<domain::Priority>,
 }
 
-impl Session {
-    fn new_id(&self) -> String {
-        self.env.ids.ulid().to_string()
-    }
+/// Field edits of a task (`None` = unchanged; `Some(None)` = clear).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TaskEdit {
+    /// New description.
+    pub text: Option<String>,
+    /// 📅
+    pub due: Option<Option<NaiveDate>>,
+    /// ⏳
+    pub scheduled: Option<Option<NaiveDate>>,
+    /// 🔁
+    pub recurrence: Option<Option<String>>,
+    /// Reminders (replace all).
+    pub reminders: Option<Vec<NaiveDateTime>>,
+    /// Priority.
+    pub priority: Option<Option<domain::Priority>>,
+}
 
-    fn local_now(&self) -> DateTime<FixedOffset> {
-        let ctx = self.ctx();
-        ctx.now.with_timezone(&ctx.tz).fixed_offset()
+/// A candidate for the view.
+pub fn candidate_item(c: dedupe::DuplicateCandidate) -> CandidateItem {
+    CandidateItem {
+        id: c.id,
+        kind: c.kind.as_str().to_owned(),
+        title: c.title,
+        snippet: c.snippet,
+        match_level: c.level.as_str().to_owned(),
+        score: f64::from(c.score),
+    }
+}
+
+fn ulid_of(id: &str) -> CoreResult<Ulid> {
+    Ulid::from_string(id).map_err(|_| CoreError::invalid("id", "not_a_ulid"))
+}
+
+impl Session {
+    fn new_ulid(&self) -> Ulid {
+        self.env.ids.ulid()
     }
 
     fn today(&self) -> NaiveDate {
-        self.local_now().date_naive()
+        let ctx = self.ctx();
+        ctx.now.with_timezone(&ctx.tz).date_naive()
     }
 
-    fn run(&self, entity_id: String, local: LocalEntity, payload: OpPayload) -> CoreResult<String> {
-        let op_id = self.new_id();
+    fn run(&self, local: LocalEntity, op: Op) -> CoreResult<String> {
+        let op_id = self.new_ulid();
         self.execute(&Intent {
-            op_id: op_id.clone(),
-            entity_id,
+            op_id,
             local,
-            payload,
+            op,
         })?;
-        Ok(op_id)
+        Ok(op_id.to_string())
     }
 
-    fn note_intent(&self, id: &str, payload: OpPayload) -> CoreResult<String> {
-        self.run(id.to_owned(), LocalEntity::Note(id.to_owned()), payload)
+    fn duplicates(&self, item: &dedupe::Item) -> CoreResult<Vec<CandidateItem>> {
+        self.read(|c, _| crate::search::duplicates::check(c, item))
+            .map(|v| v.into_iter().map(candidate_item).collect())
     }
 
-    /// Captures text into the inbox; returns the new note ID. Never refused (§9.7).
+    fn create(
+        &self,
+        id: &str,
+        item: Option<dedupe::Item>,
+        force: bool,
+        local: LocalEntity,
+        op: Op,
+    ) -> CoreResult<CreateOutcome> {
+        if !force && let Some(item) = item {
+            let candidates = self.duplicates(&item)?;
+            if !candidates.is_empty() {
+                return Ok(CreateOutcome::Duplicate { candidates });
+            }
+        }
+        self.run(local, op)?;
+        Ok(CreateOutcome::Created { id: id.to_owned() })
+    }
+
+    /// Captures text into the inbox; returns the new note ID. Never refused (§9.7): the
+    /// duplicate flag rides on the server's inbox suggestion.
     pub fn capture(&self, text: &str) -> CoreResult<String> {
         if text.trim().is_empty() {
             return Err(CoreError::invalid("text", "empty"));
         }
-        let id = self.new_id();
-        let created = self.local_now();
-        let taken: Vec<String> = self.read(|c, _| {
-            Ok(crate::store::notes::live_paths(c)?
-                .into_iter()
-                .map(|(_, p)| p)
-                .collect())
-        })?;
-        let path = edit::capture_path(&created, taken.iter().map(String::as_str));
-        self.note_intent(
-            &id,
-            OpPayload::Capture {
+        let id = self.new_ulid();
+        let ctx = self.ctx();
+        self.run(
+            LocalEntity::Note(id.to_string()),
+            Op::Capture(sm::Capture {
+                id,
                 text: text.to_owned(),
-                path,
-                created: vault_format::frontmatter::format_timestamp(&created),
-            },
+                created: capture_created(ctx.now, ctx.tz),
+            }),
         )?;
-        Ok(id)
+        Ok(id.to_string())
     }
 
-    /// Creates a note; returns its ID.
-    pub fn create_note(&self, path: &str, content: &str, force: bool) -> CoreResult<String> {
-        let id = self.new_id();
-        self.note_intent(
-            &id,
-            OpPayload::NoteCreate {
+    /// Creates a note (duplicate-checked unless `force`).
+    pub fn create_note(&self, path: &str, content: &str, force: bool) -> CoreResult<CreateOutcome> {
+        let id = self.new_ulid();
+        let title = crate::format::title_of(path);
+        self.create(
+            &id.to_string(),
+            Some(dedupe::Item::note(Some(&id.to_string()), &title)),
+            force,
+            LocalEntity::Note(id.to_string()),
+            Op::NoteCreate(sm::NoteCreate {
+                id,
                 path: path.to_owned(),
                 content: content.to_owned(),
                 force,
-            },
-        )?;
-        Ok(id)
+            }),
+        )
+    }
+
+    fn note_op(&self, id: &str, op: Op) -> CoreResult<String> {
+        self.run(LocalEntity::Note(id.to_owned()), op)
     }
 
     /// Replaces a note's content.
     pub fn update_note(&self, id: &str, content: &str) -> CoreResult<String> {
-        self.note_intent(
+        let ulid = ulid_of(id)?;
+        self.note_op(
             id,
-            OpPayload::NoteUpdate {
+            Op::NoteUpdate(sm::NoteUpdate {
+                id: ulid,
                 content: content.to_owned(),
-            },
+            }),
         )
     }
 
     /// Moves/renames a note.
     pub fn move_note(&self, id: &str, new_path: &str) -> CoreResult<String> {
-        self.note_intent(
+        let ulid = ulid_of(id)?;
+        self.note_op(
             id,
-            OpPayload::NoteMove {
+            Op::NoteMove(sm::NoteMove {
+                id: ulid,
                 new_path: new_path.to_owned(),
-            },
+            }),
         )
     }
 
     /// Deletes a note (soft delete on the server).
     pub fn delete_note(&self, id: &str) -> CoreResult<String> {
-        self.note_intent(id, OpPayload::NoteDelete)
+        let ulid = ulid_of(id)?;
+        self.note_op(id, Op::NoteDelete(sm::NoteRef { id: ulid }))
     }
 
-    /// Creates a person/company/document/place.
+    /// Creates a person, company or concept (duplicate-checked unless `force`).
     pub fn create_entity(
         &self,
         kind: domain::NoteKind,
         name: &str,
         aliases: &[String],
         force: bool,
-    ) -> CoreResult<String> {
-        if !kind.is_entity() {
-            return Err(CoreError::invalid("kind", "not_an_entity"));
-        }
-        let file = vault_format::filename::sanitize_file_name(name);
-        let path = format!("{}/{file}.md", kind.default_folder());
-        let id = self.new_id();
-        self.note_intent(
-            &id,
-            OpPayload::EntityCreate {
-                kind: kind.as_str().to_owned(),
+    ) -> CoreResult<CreateOutcome> {
+        let dkind = match kind {
+            domain::NoteKind::Person => domain::DedupeKind::Person,
+            domain::NoteKind::Company => domain::DedupeKind::Company,
+            domain::NoteKind::Concept => domain::DedupeKind::Concept,
+            _ => return Err(CoreError::invalid("kind", "not_an_entity")),
+        };
+        let id = self.new_ulid();
+        let refs: Vec<&str> = aliases.iter().map(String::as_str).collect();
+        self.create(
+            &id.to_string(),
+            Some(dedupe::Item::entity(dkind, Some(&id.to_string()), name, &refs)),
+            force,
+            LocalEntity::Note(id.to_string()),
+            Op::EntityCreate(sm::EntityCreate {
+                id,
+                kind,
                 name: name.to_owned(),
                 aliases: aliases.to_vec(),
-                path,
+                fields: std::collections::BTreeMap::new(),
                 force,
-            },
-        )?;
-        Ok(id)
+            }),
+        )
     }
 
-    fn link_of(&self, dst_id: &str) -> CoreResult<String> {
-        self.read(|c, _| {
-            let dst = notes::current(c, dst_id)?.ok_or_else(|| CoreError::not_found("note"))?;
-            Ok(vault_format::resolve::link_path(&dst.path)
-                .rsplit('/')
-                .next()
-                .unwrap_or_default()
-                .to_owned())
+    fn relation_op(&self, src_id: &str, dst_id: &str, rel_type: &str) -> CoreResult<sm::RelationRef> {
+        if !self.note_exists(dst_id)? {
+            return Err(CoreError::not_found("note"));
+        }
+        Ok(sm::RelationRef {
+            src_id: ulid_of(src_id)?,
+            dst_id: ulid_of(dst_id)?,
+            relation: rel_type
+                .parse::<RelationKey>()
+                .map_err(|_| CoreError::invalid("rel_type", "unknown_relation"))?,
         })
     }
 
     /// Adds a relation `src —rel_type→ dst`.
     pub fn add_relation(&self, src_id: &str, dst_id: &str, rel_type: &str) -> CoreResult<String> {
-        let dst_link = self.link_of(dst_id)?;
-        self.note_intent(
-            src_id,
-            OpPayload::RelationAdd {
-                rel_type: rel_type.to_owned(),
-                dst_id: dst_id.to_owned(),
-                dst_link,
-            },
-        )
+        let r = self.relation_op(src_id, dst_id, rel_type)?;
+        self.note_op(src_id, Op::RelationAdd(r))
     }
 
     /// Removes a relation.
     pub fn remove_relation(&self, src_id: &str, dst_id: &str, rel_type: &str) -> CoreResult<String> {
-        let dst_link = self.link_of(dst_id)?;
-        self.note_intent(
-            src_id,
-            OpPayload::RelationRemove {
-                rel_type: rel_type.to_owned(),
-                dst_id: dst_id.to_owned(),
-                dst_link,
-            },
-        )
+        let r = self.relation_op(src_id, dst_id, rel_type)?;
+        self.note_op(src_id, Op::RelationRemove(r))
     }
 
     /// Changes a relation's type.
@@ -201,33 +251,40 @@ impl Session {
         rel_type: &str,
         new_type: &str,
     ) -> CoreResult<String> {
-        let dst_link = self.link_of(dst_id)?;
-        self.note_intent(
+        let r = self.relation_op(src_id, dst_id, rel_type)?;
+        let new_type = new_type
+            .parse::<RelationKey>()
+            .map_err(|_| CoreError::invalid("new_type", "unknown_relation"))?;
+        self.note_op(
             src_id,
-            OpPayload::RelationRetype {
-                rel_type: rel_type.to_owned(),
-                new_type: new_type.to_owned(),
-                dst_id: dst_id.to_owned(),
-                dst_link,
-            },
+            Op::RelationRetype(sm::RelationRetype {
+                src_id: r.src_id,
+                dst_id: r.dst_id,
+                relation: r.relation,
+                new_type,
+            }),
         )
     }
 
     /// Accepts a suggestion.
     pub fn accept_suggestion(&self, id: &str) -> CoreResult<String> {
         self.run(
-            id.to_owned(),
             LocalEntity::Suggestion(id.to_owned()),
-            OpPayload::SuggestionAccept,
+            Op::SuggestionAccept(sm::SuggestionAccept {
+                id: ulid_of(id)?,
+                edits: None,
+            }),
         )
     }
 
     /// Rejects a suggestion.
     pub fn reject_suggestion(&self, id: &str) -> CoreResult<String> {
         self.run(
-            id.to_owned(),
             LocalEntity::Suggestion(id.to_owned()),
-            OpPayload::SuggestionReject,
+            Op::SuggestionReject(sm::SuggestionReject {
+                id: ulid_of(id)?,
+                reason: None,
+            }),
         )
     }
 
@@ -236,76 +293,93 @@ impl Session {
         if !self.note_exists(note_id)? {
             return Err(CoreError::not_found("note"));
         }
-        self.run(note_id.to_owned(), LocalEntity::Nothing, OpPayload::RelinkRequest)
+        self.run(
+            LocalEntity::Nothing,
+            Op::RelinkRequest(sm::NoteRef {
+                id: ulid_of(note_id)?,
+            }),
+        )
     }
 
-    /// Creates a task; returns its block ID.
-    pub fn create_task(&self, t: &NewTask, force: bool) -> CoreResult<String> {
+    /// Creates a task (duplicate-checked unless `force`); the new ID is its block ID.
+    pub fn create_task(&self, t: &NewTask, force: bool) -> CoreResult<CreateOutcome> {
         if t.description.trim().is_empty() {
             return Err(CoreError::invalid("description", "empty"));
         }
-        if let Some(r) = &t.recurrence {
-            vault_format::tasks::parse_recurrence(r)
-                .map_err(|_| CoreError::invalid("recurrence", "not_understood"))?;
-        }
-        let task_id = task_block_id(self.env.ids.ulid());
-        let line = TaskSpec {
-            description: t.description.trim().to_owned(),
-            priority: t.priority,
-            recurrence: t.recurrence.clone(),
-            scheduled: t.scheduled,
-            due: t.due,
-            reminders: t
-                .reminders
-                .iter()
-                .map(|(date, time)| Reminder {
-                    date: *date,
-                    time: *time,
-                })
-                .collect(),
-            block_id: Some(task_id.clone()),
-            ..TaskSpec::default()
-        }
-        .render();
-        let (note_id, create_home) = match &t.note_id {
+        let rrule = match &t.recurrence {
+            Some(r) => Some(
+                vault_format::tasks::parse_recurrence(r)
+                    .map_err(|_| CoreError::invalid("recurrence", "not_understood"))?
+                    .to_rrule(),
+            ),
+            None => None,
+        };
+        let task_id = task_block_id(self.new_ulid());
+        let (local_note, note_id) = match &t.note_id {
             Some(n) => {
                 if !self.note_exists(n)? {
                     return Err(CoreError::not_found("note"));
                 }
-                (n.clone(), false)
+                (n.clone(), Some(ulid_of(n)?))
             }
             None => match self.read(|c, _| notes::id_by_path(c, TASK_HOME))? {
-                Some(home) => (home, false),
-                None => (self.new_id(), true),
+                Some(home) => (home, None),
+                // No task home yet: a local placeholder shows the line until the server's
+                // `tasks/Tasks.md` arrives by pull.
+                None => (self.new_ulid().to_string(), None),
             },
         };
-        self.run(
-            task_id.clone(),
-            LocalEntity::Note(note_id.clone()),
-            OpPayload::TaskCreate {
+        let links: Vec<String> = vault_format::wikilink::find_all(&t.description)
+            .iter()
+            .map(|l| vault_format::resolve::link_name(l.target()).to_owned())
+            .collect();
+        let entities: Vec<&str> = links.iter().map(String::as_str).collect();
+        self.create(
+            &task_id,
+            Some(dedupe::Item::task(
+                Some(&task_id),
+                &t.description,
+                rrule.as_deref(),
+                &entities,
+            )),
+            force,
+            LocalEntity::Note(local_note),
+            Op::TaskCreate(sm::TaskCreate {
+                id: task_id.clone(),
                 note_id,
-                create_home,
-                line,
+                text: t.description.trim().to_owned(),
+                due: t.due,
+                scheduled: t.scheduled,
+                start: None,
+                recurrence: t.recurrence.clone(),
+                reminders: t.reminders.clone(),
+                priority: t.priority,
                 force,
-            },
-        )?;
-        Ok(task_id)
+            }),
+        )
     }
 
-    fn task_intent(&self, task_id: &str, payload: OpPayload) -> CoreResult<String> {
+    fn task_op(&self, task_id: &str, op: Op) -> CoreResult<String> {
         let note = self
             .read(|c, _| note_of_task(c, task_id))?
             .ok_or_else(|| CoreError::not_found("task"))?;
-        self.run(task_id.to_owned(), LocalEntity::Note(note), payload)
+        self.run(LocalEntity::Note(note), op)
     }
 
-    /// Replaces a task's line (editor).
-    pub fn update_task(&self, task_id: &str, line: &str) -> CoreResult<String> {
-        self.task_intent(
+    /// Edits a task's fields.
+    pub fn update_task(&self, task_id: &str, e: &TaskEdit) -> CoreResult<String> {
+        self.task_op(
             task_id,
-            OpPayload::TaskUpdate {
-                line: line.to_owned(),
-            },
+            Op::TaskUpdate(sm::TaskUpdate {
+                id: task_id.to_owned(),
+                text: e.text.clone(),
+                due: e.due,
+                scheduled: e.scheduled,
+                start: None,
+                recurrence: e.recurrence.clone(),
+                reminders: e.reminders.clone(),
+                priority: e.priority,
+            }),
         )
     }
 
@@ -318,39 +392,52 @@ impl Session {
                 |r| r.get::<_, bool>(0),
             ))?)
         })?;
-        let next_task_id = recurring
+        let next_id = recurring
             .unwrap_or(false)
-            .then(|| task_block_id(self.env.ids.ulid()));
-        self.task_intent(
+            .then(|| task_block_id(self.new_ulid()));
+        self.task_op(
             task_id,
-            OpPayload::TaskComplete {
-                done_date: self.today().to_string(),
-                next_task_id,
-            },
+            Op::TaskComplete(sm::TaskComplete {
+                id: task_id.to_owned(),
+                done: self.today(),
+                next_id,
+            }),
         )
     }
 
     /// Cancels a task today.
     pub fn cancel_task(&self, task_id: &str) -> CoreResult<String> {
-        self.task_intent(
+        self.task_op(
             task_id,
-            OpPayload::TaskCancel {
-                date: self.today().to_string(),
-            },
+            Op::TaskCancel(sm::TaskCancel {
+                id: task_id.to_owned(),
+                date: self.today(),
+            }),
         )
     }
 
     /// Reopens a task.
     pub fn reopen_task(&self, task_id: &str) -> CoreResult<String> {
-        self.task_intent(task_id, OpPayload::TaskReopen)
+        self.task_op(
+            task_id,
+            Op::TaskReopen(sm::TaskRef {
+                id: task_id.to_owned(),
+            }),
+        )
     }
 
     /// Deletes a task line.
     pub fn delete_task(&self, task_id: &str) -> CoreResult<String> {
-        self.task_intent(task_id, OpPayload::TaskDelete)
+        self.task_op(
+            task_id,
+            Op::TaskDelete(sm::TaskRef {
+                id: task_id.to_owned(),
+            }),
+        )
     }
 
-    /// A notification action (Done / Snooze) forwarded from Dart; applied through the outbox.
+    /// A notification action (Done / Snooze) forwarded from Dart; applied through the outbox
+    /// like any other mutation (§12.5b).
     pub fn notification_action(&self, id: i32, action: NotificationAction) -> CoreResult<String> {
         let (task_id, remind_at) = self
             .read(|c, _| crate::notify::lookup(c, id))?
@@ -358,62 +445,91 @@ impl Session {
         match action {
             NotificationAction::Done => self.complete_task(&task_id),
             NotificationAction::Snooze { minutes } => {
-                let line: String = self.read(|c, _| {
-                    Ok(c.query_row("SELECT line FROM tasks WHERE id = ?1", [&task_id], |r| {
-                        r.get(0)
-                    })?)
+                let (rows, default_time) = self.read(|c, _| {
+                    let mut st = c.prepare(
+                        "SELECT remind_date, remind_time FROM task_reminders WHERE task_id = ?1
+                         ORDER BY remind_date, remind_time",
+                    )?;
+                    let rows: Vec<(String, String)> = st
+                        .query_map([&task_id], |r| Ok((r.get(0)?, r.get(1)?)))?
+                        .collect::<Result<_, _>>()?;
+                    Ok((rows, crate::view::build::default_reminder_time(c)?))
                 })?;
-                let task = TaskLine::parse(&line).ok_or_else(|| CoreError::not_found("task"))?;
-                let later = (self.local_now() + Duration::minutes(i64::from(minutes))).naive_local();
-                let snoozed = Reminder {
-                    date: later.date(),
-                    time: Some(later.time().with_second(0).unwrap_or(later.time())),
-                };
-                let mut reminders = task.reminders();
-                let fired = reminders.iter().position(|r| {
-                    let t = r.time.map(|t| t.format("%H:%M").to_string());
-                    let written = format!("{} {}", r.date, t.unwrap_or_default());
-                    written.trim_end() == remind_at || remind_at.starts_with(&r.date.to_string()) && r.time.is_none()
-                });
+                let ctx = self.ctx();
+                let later = (ctx.now.with_timezone(&ctx.tz) + Duration::minutes(i64::from(minutes)))
+                    .naive_local();
+                let later = later.with_second(0).unwrap_or(later).with_nanosecond(0).unwrap_or(later);
+                let mut reminders: Vec<NaiveDateTime> = rows
+                    .iter()
+                    .filter_map(|(d, t)| {
+                        let day = NaiveDate::parse_from_str(d, "%Y-%m-%d").ok()?;
+                        let time = NaiveTime::parse_from_str(t, "%H:%M").unwrap_or(default_time);
+                        Some(day.and_time(time))
+                    })
+                    .collect();
+                let fired = reminders
+                    .iter()
+                    .position(|r| r.format("%Y-%m-%d %H:%M").to_string() == remind_at);
                 match fired {
-                    Some(i) => reminders[i] = snoozed,
-                    None => reminders.push(snoozed),
+                    Some(i) => reminders[i] = later,
+                    None => reminders.push(later),
                 }
-                let new_line = task.with_reminders(&reminders).as_str().to_owned();
-                self.update_task(&task_id, &new_line)
+                self.update_task(
+                    &task_id,
+                    &TaskEdit {
+                        reminders: Some(reminders),
+                        ..TaskEdit::default()
+                    },
+                )
             }
         }
     }
 
     /// Resolves a conflict (D19).
     pub fn resolve_conflict(&self, op_id: &str, resolution: ConflictResolution) -> CoreResult<()> {
+        let conflict = self
+            .read(|c, _| conflicts::conflict(c, op_id))?
+            .ok_or_else(|| CoreError::not_found("conflict"))?;
         let keep = match resolution {
             ConflictResolution::KeepServer => None,
             ConflictResolution::Merged { content } => Some(content),
             ConflictResolution::KeepMine => Some(
-                self.read(|c, _| conflicts::conflict(c, op_id))?
-                    .and_then(|c| c.local_content)
+                conflict
+                    .local_content
                     .ok_or_else(|| CoreError::not_found("conflict"))?,
             ),
+            ConflictResolution::Hunks { choices } => {
+                let Some(sync_model::MergeOutcome::Conflicted(c)) = conflict.merge_outcome else {
+                    return Err(CoreError::invalid("resolution", "no_hunks"));
+                };
+                let choices: Vec<(u32, sync_model::Choice)> = choices
+                    .into_iter()
+                    .map(|h| (h.hunk, crate::view::build::hunk_choice(h.choice)))
+                    .collect();
+                Some(
+                    c.resolve(&choices)
+                        .map_err(|e| CoreError::invalid("resolution", &e.to_string()))?,
+                )
+            }
         };
-        let new_op = self.new_id();
+        let new_op = self.new_ulid();
         self.write(|c, now| {
             let mut re = crate::store::index::Reindex::new();
-            apply::resolve_conflict(c, op_id, keep, &new_op, now, &mut re)?;
+            apply::resolve_conflict(c, op_id, keep, new_op, now, &mut re)?;
             Ok(((), re.apply(c)?))
         })
     }
 
     /// Answers a duplicate prompt.
     pub fn resolve_duplicate(&self, op_id: &str, choice: DuplicateChoice) -> CoreResult<()> {
-        let new_op = self.new_id();
+        let new_op = self.new_ulid();
         self.write(|c, now| {
             let mut re = crate::store::index::Reindex::new();
             apply::resolve_duplicate(
                 c,
                 op_id,
                 choice == DuplicateChoice::CreateAnyway,
-                &new_op,
+                new_op,
                 now,
                 &mut re,
             )?;
@@ -429,9 +545,13 @@ impl Session {
         })
     }
 
-    /// Turns reminders on/off for this device (off cancels everything, §12.5b). Returns the
-    /// device ID so the caller can sync the setting to the server.
+    /// Turns reminders on/off for this device: stored locally (off cancels everything,
+    /// §12.5b) and synced as a device setting through the outbox.
     pub fn set_reminders_enabled(&self, enabled: bool) -> CoreResult<()> {
+        let device_id = self
+            .read(|c, _| apply::device_id(c))?
+            .map(|d| ulid_of(&d))
+            .transpose()?;
         self.write(|c, _| {
             let changed = settings::set(
                 c,
@@ -439,8 +559,16 @@ impl Session {
                 if enabled { "true" } else { "false" },
             )?;
             Ok(((), if changed { Topics::SETTINGS } else { Topics::NONE }))
-        })
+        })?;
+        if let Some(device_id) = device_id {
+            self.run(
+                LocalEntity::Nothing,
+                Op::DeviceSettings(sm::DeviceSettings {
+                    device_id,
+                    reminders_enabled: Some(enabled),
+                }),
+            )?;
+        }
+        Ok(())
     }
 }
-
-use chrono::Timelike as _;

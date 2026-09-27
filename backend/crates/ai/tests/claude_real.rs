@@ -20,11 +20,11 @@ use serde_json::json;
 use strata_ai::outputs::Summary;
 use strata_ai::prompts::{self, ids};
 use strata_ai::{
-    AiService, BudgetGuard, BudgetLimits, ClaudeCliConfig, ClaudeCliProvider, CpuGate, MemoryUsageStore,
-    ProviderRouter, StreamEvent,
+    AiService, BudgetGuard, BudgetLimits, ClaudeCliConfig, ClaudeCliProvider, CpuGate,
+    MemoryUsageStore, ProviderRouter, StreamEvent,
 };
-use strata_common::config::AiProviderKind;
 use strata_common::SystemClock;
+use strata_common::config::AiProviderKind;
 
 #[tokio::test]
 #[ignore = "calls the real claude CLI (needs a login; spends subscription usage)"]
@@ -46,16 +46,29 @@ async fn real_claude_cli_answers_a_structured_prompt_and_streams() {
     let store = Arc::new(MemoryUsageStore::default());
     let service = AiService::new(
         router,
-        BudgetGuard::new(BudgetLimits::default(), chrono_tz::UTC, clock, store.clone()),
+        BudgetGuard::new(
+            BudgetLimits::default(),
+            chrono_tz::UTC,
+            clock,
+            store.clone(),
+        ),
     );
 
     let input = json!({"note": {"id": "n1", "title": "Watanya invoicing", "created": "2026-09-27T14:32:00+03:00",
         "text": "اتفقنا مع وطنية إن فاتورة الـ ETA تطلع أول كل شهر، والعقد الأصلي في الخزنة في مكتب مدينة نصر.", "truncated": false}});
     let out = service
-        .complete::<Summary>(common::caller("owner", 1), prompts::latest(ids::SUMMARY).expect("prompt"), &input, 1024)
+        .complete::<Summary>(
+            common::caller("owner", 1),
+            prompts::latest(ids::SUMMARY).expect("prompt"),
+            &input,
+            1024,
+        )
         .await
         .expect("structured reply");
-    eprintln!("summary: {:?} (attempts {}, model {})", out.value, out.attempts, out.model);
+    eprintln!(
+        "summary: {:?} (attempts {}, model {})",
+        out.value, out.attempts, out.model
+    );
     assert!(!out.value.summary.is_empty());
     assert_eq!(store.rows().len(), 1);
 
@@ -76,5 +89,8 @@ async fn real_claude_cli_answers_a_structured_prompt_and_streams() {
         .collect();
     eprintln!("ask: {text}");
     assert!(matches!(items.last(), Some(Ok(StreamEvent::Done { .. }))));
-    assert!(text.contains("[[Capture 2026-09-20#^c1d2]]"), "answer cites its source");
+    assert!(
+        text.contains("[[Capture 2026-09-20#^c1d2]]"),
+        "answer cites its source"
+    );
 }

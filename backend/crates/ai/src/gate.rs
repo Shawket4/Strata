@@ -43,7 +43,10 @@ mod tests {
         let gate = CpuGate::new();
         let llm_a = gate.llm().await;
         // Two CLI calls may overlap.
-        let llm_b = gate.llm().now_or_never().expect("second llm guard is immediate");
+        let llm_b = gate
+            .llm()
+            .now_or_never()
+            .expect("second llm guard is immediate");
 
         let mut embed = Box::pin(gate.embed());
         assert!((&mut embed).now_or_never().is_none(), "embedding must wait");

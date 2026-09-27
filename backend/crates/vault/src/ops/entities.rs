@@ -1177,6 +1177,25 @@ impl VaultService {
         Ok((note, tree))
     }
 
+    /// Places (optionally matching `query`) with their parent.
+    pub async fn places(
+        &self,
+        scope: &UserScope,
+        query: Option<&str>,
+    ) -> Result<Vec<(EntitySummary, Option<NoteId>)>> {
+        let list = self
+            .list_entities(scope, Some(EntityKind::Place), query, None, 500)
+            .await?;
+        let mut tx = self.inner.db.begin(scope).await?;
+        let mut out = Vec::with_capacity(list.len());
+        for s in list {
+            let parent = erepo::place_parent(&mut tx, s.entity.note_id).await?.flatten();
+            out.push((s, parent));
+        }
+        tx.commit().await?;
+        Ok(out)
+    }
+
     /// The status of a document status string (for filters).
     pub fn parse_status(s: &str) -> Option<DocStatus> {
         s.parse().ok()

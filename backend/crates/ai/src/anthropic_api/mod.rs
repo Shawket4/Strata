@@ -55,7 +55,9 @@ impl ApiKey {
         let meta = std::fs::symlink_metadata(path)
             .map_err(|e| AiError::Config(format!("api key file {shown}: {:?}", e.kind())))?;
         if !meta.file_type().is_file() {
-            return Err(AiError::Config(format!("api key file {shown} is not a regular file")));
+            return Err(AiError::Config(format!(
+                "api key file {shown} is not a regular file"
+            )));
         }
         #[cfg(unix)]
         {
@@ -184,7 +186,14 @@ impl AnthropicApiProvider {
     }
 
     /// The request body for `system`/`user` (+ structured output when `schema` is given).
-    pub fn body(&self, system: &str, user: &str, max_tokens: u32, schema: Option<&Value>, stream: bool) -> Value {
+    pub fn body(
+        &self,
+        system: &str,
+        user: &str,
+        max_tokens: u32,
+        schema: Option<&Value>,
+        stream: bool,
+    ) -> Value {
         let mut body = json!({
             "model": self.cfg.model,
             "max_tokens": max_tokens,
@@ -246,7 +255,11 @@ impl AnthropicApiProvider {
             .await
             .ok()
             .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
-            .and_then(|v| v.pointer("/error/type").and_then(Value::as_str).map(str::to_owned))
+            .and_then(|v| {
+                v.pointer("/error/type")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+            })
             .unwrap_or_else(|| format!("http_{status}"));
         let (error, retryable) = match status {
             401 | 403 => (ProviderError::Auth, false),
@@ -254,7 +267,10 @@ impl AnthropicApiProvider {
                 ProviderError::Unavailable(format!("{error_type} (HTTP {status})")),
                 true,
             ),
-            _ => (ProviderError::Rejected(format!("{error_type} (HTTP {status})")), false),
+            _ => (
+                ProviderError::Rejected(format!("{error_type} (HTTP {status})")),
+                false,
+            ),
         };
         Err(AttemptError {
             error,
@@ -311,7 +327,13 @@ impl AnthropicApiProvider {
     }
 
     async fn complete_inner(&self, req: &JsonRequest) -> Result<JsonCompletion, ProviderError> {
-        let body = self.body(&req.system, &req.user, req.max_tokens, Some(&req.schema), false);
+        let body = self.body(
+            &req.system,
+            &req.user,
+            req.max_tokens,
+            Some(&req.schema),
+            false,
+        );
         let resp = self.send(&body).await?;
         let bytes = resp.bytes().await.map_err(|e| {
             if e.is_timeout() {
@@ -331,8 +353,8 @@ impl AnthropicApiProvider {
             .filter(|b| b.get("type").and_then(Value::as_str) == Some("text"))
             .filter_map(|b| b.get("text").and_then(Value::as_str))
             .collect();
-        let value: Value = serde_json::from_str(text.trim())
-            .map_err(|e| ProviderError::NotJson(e.to_string()))?;
+        let value: Value =
+            serde_json::from_str(text.trim()).map_err(|e| ProviderError::NotJson(e.to_string()))?;
         Ok(JsonCompletion {
             value,
             usage: self.usage_from(msg.get("usage").unwrap_or(&Value::Null)),
@@ -348,7 +370,11 @@ impl AnthropicApiProvider {
         match outcome {
             Ok(()) => self.health.success(),
             Err(e) => {
-                tracing::warn!(provider = "anthropic_api", error = error_kind(e), "call failed");
+                tracing::warn!(
+                    provider = "anthropic_api",
+                    error = error_kind(e),
+                    "call failed"
+                );
                 self.health.failure(e, self.clock.now());
             }
         }
@@ -438,8 +464,14 @@ impl SseState {
             match self.bytes.next().await {
                 Some(Ok(chunk)) => self.pending.extend(self.parser.push(&chunk)),
                 Some(Err(e)) if e.is_timeout() => return Err(ProviderError::Timeout(self.timeout)),
-                Some(Err(_)) => return Err(ProviderError::Unavailable("stream interrupted".into())),
-                None => return Err(ProviderError::Protocol("stream ended before message_stop".into())),
+                Some(Err(_)) => {
+                    return Err(ProviderError::Unavailable("stream interrupted".into()));
+                }
+                None => {
+                    return Err(ProviderError::Protocol(
+                        "stream ended before message_stop".into(),
+                    ));
+                }
             }
         }
     }
@@ -524,6 +556,9 @@ mod tests {
 
     #[test]
     fn api_key_debug_is_redacted() {
-        assert_eq!(format!("{:?}", ApiKey::new("sk-ant-secret")), "ApiKey(<redacted>)");
+        assert_eq!(
+            format!("{:?}", ApiKey::new("sk-ant-secret")),
+            "ApiKey(<redacted>)"
+        );
     }
 }

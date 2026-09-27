@@ -42,10 +42,7 @@ pub fn compile(schema: &Value) -> Result<jsonschema::Validator, AiError> {
 }
 
 /// Validates `instance`; `Err` lists every violation.
-pub fn validate(
-    validator: &jsonschema::Validator,
-    instance: &Value,
-) -> Result<(), Vec<Violation>> {
+pub fn validate(validator: &jsonschema::Validator, instance: &Value) -> Result<(), Vec<Violation>> {
     let violations: Vec<Violation> = validator
         .iter_errors(instance)
         .map(|e| Violation {
@@ -163,7 +160,10 @@ mod tests {
             "additionalProperties": false
         }))
         .expect("schema compiles");
-        assert_eq!(validate(&v, &json!({"confidence": 0.5, "reason": 1})).map_err(|e| e.len()), Err(1));
+        assert_eq!(
+            validate(&v, &json!({"confidence": 0.5, "reason": 1})).map_err(|e| e.len()),
+            Err(1)
+        );
         let errs = validate(&v, &json!({"confidence": 7.5})).expect_err("invalid");
         let summaries: Vec<String> = errs.iter().map(Violation::summary).collect();
         assert_eq!(
@@ -177,7 +177,10 @@ mod tests {
             errs[1].detail,
             "7.5 is greater than the maximum of 1".to_owned()
         );
-        assert_eq!(validate(&v, &json!({"confidence": 1, "reason": "x"})), Ok(()));
+        assert_eq!(
+            validate(&v, &json!({"confidence": 1, "reason": "x"})),
+            Ok(())
+        );
     }
 
     #[test]

@@ -1112,6 +1112,35 @@ pub struct SyncStatusView {
     pub rejections: Vec<RejectionItem>,
 }
 
+/// How to resolve one conflicting hunk.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HunkChoiceKind {
+    /// Keep the local side.
+    Ours,
+    /// Keep the server side.
+    Theirs,
+    /// Keep the base.
+    Base,
+    /// Body only: local lines, then the server's.
+    OursThenTheirs,
+    /// Body only: the server's lines, then local ones.
+    TheirsThenOurs,
+    /// Body only: this text instead.
+    Text {
+        /// Replacement (ends with a line terminator).
+        text: String,
+    },
+}
+
+/// A choice for one hunk.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HunkChoice {
+    /// Hunk ID ([`ConflictHunkView::id`]).
+    pub hunk: u32,
+    /// The choice.
+    pub choice: HunkChoiceKind,
+}
+
 /// How to resolve a conflict.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ConflictResolution {
@@ -1124,6 +1153,28 @@ pub enum ConflictResolution {
         /// The merged markdown.
         content: String,
     },
+    /// Resolve the merge preview hunk by hunk (`sync-model` `Conflicted::resolve`).
+    Hunks {
+        /// One choice per hunk.
+        choices: Vec<HunkChoice>,
+    },
+}
+
+/// One conflicting hunk of a merge preview.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConflictHunkView {
+    /// Hunk ID.
+    pub id: u32,
+    /// `frontmatter:<key>` or `body:<line>`.
+    pub location: String,
+    /// Kind (`frontmatter_key`, `body`, `task_line`, …).
+    pub kind: String,
+    /// Base text.
+    pub base: String,
+    /// Local text.
+    pub ours: String,
+    /// Server text.
+    pub theirs: String,
 }
 
 /// One conflict, for side-by-side resolution (D19).
@@ -1152,6 +1203,8 @@ pub enum ConflictScreen {
         merged_preview: Option<String>,
         /// Whether the preview merged cleanly.
         merge_clean: Option<bool>,
+        /// Conflicting hunks of the preview (resolve with [`ConflictResolution::Hunks`]).
+        hunks: Vec<ConflictHunkView>,
     },
 }
 

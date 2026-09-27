@@ -377,7 +377,11 @@ mod tests {
             resets_at: Some(1_790_528_400),
         };
         assert_eq!(
-            classify(Some(&result("You've hit your limit", Some(429))), Some(&rl), ""),
+            classify(
+                Some(&result("You've hit your limit", Some(429))),
+                Some(&rl),
+                ""
+            ),
             paused_until("2026-09-27T17:00:00Z")
         );
     }
@@ -385,7 +389,11 @@ mod tests {
     #[test]
     fn usage_limit_message_with_epoch_pauses_until_that_epoch() {
         assert_eq!(
-            classify(Some(&result("Claude AI usage limit reached|1790528400", None)), None, ""),
+            classify(
+                Some(&result("Claude AI usage limit reached|1790528400", None)),
+                None,
+                ""
+            ),
             paused_until("2026-09-27T17:00:00Z")
         );
     }
@@ -394,15 +402,30 @@ mod tests {
     fn usage_limit_with_clock_time_and_zone_resolves_the_next_occurrence() {
         // 12:00Z = 15:00 in Cairo (UTC+3, EEST on 2026-09-27): 3pm has passed → next day.
         assert_eq!(
-            classify(Some(&result("5-hour limit reached ∙ resets 3pm (Africa/Cairo)", None)), None, ""),
+            classify(
+                Some(&result(
+                    "5-hour limit reached ∙ resets 3pm (Africa/Cairo)",
+                    None
+                )),
+                None,
+                ""
+            ),
             paused_until("2026-09-28T12:00:00Z")
         );
         assert_eq!(
-            classify(None, None, "You've hit your limit · resets 5:30pm (Europe/Berlin)"),
+            classify(
+                None,
+                None,
+                "You've hit your limit · resets 5:30pm (Europe/Berlin)"
+            ),
             paused_until("2026-09-27T15:30:00Z")
         );
         assert_eq!(
-            classify(None, None, "Claude usage limit reached. Your limit will reset at 11 am (UTC)."),
+            classify(
+                None,
+                None,
+                "Claude usage limit reached. Your limit will reset at 11 am (UTC)."
+            ),
             paused_until("2026-09-28T11:00:00Z")
         );
     }
@@ -432,7 +455,11 @@ mod tests {
     #[test]
     fn auth_and_other_failures_are_typed() {
         assert_eq!(
-            classify(Some(&result("Not logged in · Please run /login", None)), None, ""),
+            classify(
+                Some(&result("Not logged in · Please run /login", None)),
+                None,
+                ""
+            ),
             ProviderError::Auth
         );
         assert_eq!(classify(None, None, "Invalid API key"), ProviderError::Auth);
@@ -447,7 +474,11 @@ mod tests {
             ProviderError::Unavailable("claude API error status 500".into())
         );
         assert_eq!(
-            classify(None, None, "Error: --json-schema is not a valid JSON Schema: no schema with key or ref"),
+            classify(
+                None,
+                None,
+                "Error: --json-schema is not a valid JSON Schema: no schema with key or ref"
+            ),
             ProviderError::Rejected("claude rejected the --json-schema".into())
         );
         assert_eq!(

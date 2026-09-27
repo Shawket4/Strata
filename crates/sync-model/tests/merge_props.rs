@@ -233,7 +233,10 @@ fn split(outcome: &MergeOutcome) -> (bool, MergeOutcome) {
         },
         MergeOutcome::Conflicted(c) => {
             let resolved = c.resolve(
-                &c.hunks.iter().map(|h| (h.id, sync_model::Choice::Ours)).collect::<Vec<_>>(),
+                &c.hunks
+                    .iter()
+                    .map(|h| (h.id, sync_model::Choice::Ours))
+                    .collect::<Vec<_>>(),
             );
             let text = resolved.unwrap_or_default();
             match text.strip_prefix('\u{feff}') {

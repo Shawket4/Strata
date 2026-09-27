@@ -1,4 +1,4 @@
-//! `PgUsageStore` on a real per-test PostgreSQL database: per-user rows stay isolated by RLS,
+//! `PgUsageStore` on a real per-test `PostgreSQL` database: per-user rows stay isolated by RLS,
 //! the global day total sums every user, and the budget guard pauses on the global cap.
 #![allow(clippy::expect_used)] // tests: expect with messages
 
@@ -30,28 +30,75 @@ async fn usage_is_recorded_per_user_under_rls_and_summed_globally() {
     let store = PgUsageStore::new(db.app_db.clone());
     let day = NaiveDate::from_ymd_opt(2026, 9, 27).expect("date");
 
-    store.add(&sa, day, "claude_cli", "claude-sonnet-5", &usage(100, 20, 5)).await.expect("a1");
-    store.add(&sa, day, "claude_cli", "claude-sonnet-5", &usage(100, 20, 5)).await.expect("a2");
-    store.add(&sb, day, "anthropic_api", "claude-opus-5", &usage(50, 5, 900)).await.expect("b1");
+    store
+        .add(
+            &sa,
+            day,
+            "claude_cli",
+            "claude-sonnet-5",
+            &usage(100, 20, 5),
+        )
+        .await
+        .expect("a1");
+    store
+        .add(
+            &sa,
+            day,
+            "claude_cli",
+            "claude-sonnet-5",
+            &usage(100, 20, 5),
+        )
+        .await
+        .expect("a2");
+    store
+        .add(
+            &sb,
+            day,
+            "anthropic_api",
+            "claude-opus-5",
+            &usage(50, 5, 900),
+        )
+        .await
+        .expect("b1");
 
     assert_eq!(
         store.user_day(&sa, day).await.expect("alice"),
-        UsageTotals { calls: 2, input_tokens: 220, output_tokens: 40, cost_micros: 10 }
+        UsageTotals {
+            calls: 2,
+            input_tokens: 220,
+            output_tokens: 40,
+            cost_micros: 10
+        }
     );
     assert_eq!(
         store.user_day(&sb, day).await.expect("bob"),
-        UsageTotals { calls: 1, input_tokens: 60, output_tokens: 5, cost_micros: 900 }
+        UsageTotals {
+            calls: 1,
+            input_tokens: 60,
+            output_tokens: 5,
+            cost_micros: 900
+        }
     );
-    let global = UsageTotals { calls: 3, input_tokens: 280, output_tokens: 45, cost_micros: 910 };
+    let global = UsageTotals {
+        calls: 3,
+        input_tokens: 280,
+        output_tokens: 45,
+        cost_micros: 910,
+    };
     assert_eq!(store.global_day(&sa, day).await.expect("global"), global);
     assert_eq!(store.global_day(&sb, day).await.expect("global"), global);
     let next = day.succ_opt().expect("date");
-    assert_eq!(store.global_day(&sa, next).await.expect("empty"), UsageTotals::default());
+    assert_eq!(
+        store.global_day(&sa, next).await.expect("empty"),
+        UsageTotals::default()
+    );
 
     // Alice's scope sees only her ai_usage rows.
     let mut tx = db.begin(alice.id).await.expect("tx");
     assert_eq!(
-        settings::ai_usage_for_day(&mut tx, day).await.expect("rows"),
+        settings::ai_usage_for_day(&mut tx, day)
+            .await
+            .expect("rows"),
         vec![AiUsage {
             day,
             provider: "claude_cli".into(),
@@ -67,15 +114,24 @@ async fn usage_is_recorded_per_user_under_rls_and_summed_globally() {
     // The global cap applies across users: 325 of 330 tokens used, then carol adds 10
     // (default test clock: 2026-09-27T12:00Z).
     let guard = BudgetGuard::new(
-        BudgetLimits { global_daily_tokens: 330, ..BudgetLimits::default() },
+        BudgetLimits {
+            global_daily_tokens: 330,
+            ..BudgetLimits::default()
+        },
         chrono_tz::UTC,
         Arc::new(db.clock.clone()),
         Arc::new(store),
     );
     let carol = TestUser::new("carol").create(&db).await.expect("carol");
-    let caller = AiCaller { scope: db.scope(carol.id), username: "carol".into() };
+    let caller = AiCaller {
+        scope: db.scope(carol.id),
+        username: "carol".into(),
+    };
     assert_eq!(guard.check(&caller).await, Ok(()));
-    guard.record(&caller, "claude_cli", "m", &usage(0, 0, 0)).await.expect("record");
+    guard
+        .record(&caller, "claude_cli", "m", &usage(0, 0, 0))
+        .await
+        .expect("record");
     assert_eq!(
         guard.check(&caller).await,
         Err(AiError::Paused {

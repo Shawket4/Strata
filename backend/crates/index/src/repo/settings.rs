@@ -112,7 +112,10 @@ pub async fn ai_usage_for_day(tx: &mut ScopedTx, day: NaiveDate) -> Result<Vec<A
 
 /// Adds one call's usage to the day's global totals (AI budget guard, PLAN §9.1) and returns the
 /// new totals. Runs in any user's scope; the table is global.
-pub async fn add_global_ai_usage(tx: &mut ScopedTx, delta: &GlobalAiUsage) -> Result<GlobalAiUsage> {
+pub async fn add_global_ai_usage(
+    tx: &mut ScopedTx,
+    delta: &GlobalAiUsage,
+) -> Result<GlobalAiUsage> {
     Ok(sqlx::query_as(
         "INSERT INTO ai_usage_global AS g (day, calls, input_tokens, output_tokens, est_cost_micros) \
          VALUES ($1, $2, $3, $4, $5) \
@@ -132,7 +135,10 @@ pub async fn add_global_ai_usage(tx: &mut ScopedTx, delta: &GlobalAiUsage) -> Re
 }
 
 /// The global totals for `day` across all users, if any call was recorded.
-pub async fn global_ai_usage_for_day(tx: &mut ScopedTx, day: NaiveDate) -> Result<Option<GlobalAiUsage>> {
+pub async fn global_ai_usage_for_day(
+    tx: &mut ScopedTx,
+    day: NaiveDate,
+) -> Result<Option<GlobalAiUsage>> {
     Ok(sqlx::query_as(
         "SELECT day, calls, input_tokens, output_tokens, est_cost_micros FROM ai_usage_global WHERE day = $1",
     )

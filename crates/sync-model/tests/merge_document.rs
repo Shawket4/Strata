@@ -428,7 +428,10 @@ const PLUGIN: &str = "plugin:\n  a: 1\n  b: [x]\n";
 
 #[test]
 fn nested_value_changed_by_theirs_is_applied() {
-    let base = note(&format!("{ID}title: Pricing\n{PLUGIN}custom: 1\n"), "body\n");
+    let base = note(
+        &format!("{ID}title: Pricing\n{PLUGIN}custom: 1\n"),
+        "body\n",
+    );
     let ours = note(
         &format!("{ID}title: Pricing tests\n{PLUGIN}custom: 1\n"),
         "body (ours)\n",
@@ -442,7 +445,10 @@ fn nested_value_changed_by_theirs_is_applied() {
         &format!("{ID}title: Pricing tests\n{theirs_plugin}custom: 1\n"),
         "body (ours)\n",
     );
-    assert_eq!(merge(&base, &ours, &theirs), MergeOutcome::Clean(expected.clone()));
+    assert_eq!(
+        merge(&base, &ours, &theirs),
+        MergeOutcome::Clean(expected.clone())
+    );
     // Symmetric: ours' title still wins its side when the roles swap.
     assert_eq!(merge(&base, &theirs, &ours), MergeOutcome::Clean(expected));
 }
@@ -621,11 +627,7 @@ fn bom_change_is_reported_with_conflicts() {
         Ok(format!("{BOM}{}", note(&format!("{ID}title: C\n"), "x\n")))
     );
     // Both sides dropped it: identical.
-    let c = conflicted(merge(
-        &format!("{BOM}{base}"),
-        &ours,
-        &theirs[BOM.len()..],
-    ));
+    let c = conflicted(merge(&format!("{BOM}{base}"), &ours, &theirs[BOM.len()..]));
     assert_eq!(
         c.auto_resolved,
         [AutoResolved {
@@ -633,10 +635,7 @@ fn bom_change_is_reported_with_conflicts() {
             resolution: AutoResolution::Identical
         }]
     );
-    assert_eq!(
-        c.resolve(&[(0, Choice::Ours)]),
-        Ok(ours.clone())
-    );
+    assert_eq!(c.resolve(&[(0, Choice::Ours)]), Ok(ours.clone()));
 }
 
 #[test]
@@ -662,18 +661,20 @@ fn bom_in_whole_file_merges_of_invalid_yaml() {
             resolution: AutoResolution::TookOurs
         }]
     );
-    assert_eq!(
-        c.resolve(&[(0, Choice::Theirs)]),
-        Ok(theirs.to_owned())
-    );
+    assert_eq!(c.resolve(&[(0, Choice::Theirs)]), Ok(theirs.to_owned()));
     let c = conflicted(merge(&base, &ours, &format!("{BOM}{theirs}")));
     assert_eq!(
         c.template.body.first(),
         Some(&sync_model::merge::TemplatePiece::Text { text: BOM.into() })
     );
     assert_eq!(
-        c.merged_with_markers.as_deref().map(|m| m.starts_with(&format!("{BOM}---\n<<<<<<<"))),
+        c.merged_with_markers
+            .as_deref()
+            .map(|m| m.starts_with(&format!("{BOM}---\n<<<<<<<"))),
         Some(true)
     );
-    assert_eq!(c.resolve(&[(0, Choice::Theirs)]), Ok(format!("{BOM}{theirs}")));
+    assert_eq!(
+        c.resolve(&[(0, Choice::Theirs)]),
+        Ok(format!("{BOM}{theirs}"))
+    );
 }

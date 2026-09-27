@@ -13,8 +13,8 @@ use serde_json::{Value, json};
 use strata_ai::anthropic_api::ANTHROPIC_VERSION;
 use strata_ai::retry::RecordingSleeper;
 use strata_ai::{
-    AiError, AnthropicApiConfig, AnthropicApiProvider, ApiKey, ChatRequest, JsonCompletion, JsonRequest,
-    LlmProvider, PauseReason, PromptRef, ProviderError, StreamEvent, Usage,
+    AiError, AnthropicApiConfig, AnthropicApiProvider, ApiKey, ChatRequest, JsonCompletion,
+    JsonRequest, LlmProvider, PauseReason, PromptRef, ProviderError, StreamEvent, Usage,
 };
 use strata_common::FakeClock;
 use wiremock::matchers::{body_json, header, method, path};
@@ -38,7 +38,10 @@ fn schema() -> Value {
 
 fn json_request() -> JsonRequest {
     JsonRequest {
-        prompt: PromptRef { id: "duplicate_confirm".into(), version: 1 },
+        prompt: PromptRef {
+            id: "duplicate_confirm".into(),
+            version: 1,
+        },
         system: "Decide duplicates.".into(),
         user: "{\"kind\":\"task\"}".into(),
         schema: Arc::new(schema()),
@@ -120,7 +123,10 @@ async fn structured_call_sends_the_documented_request_and_parses_the_reply() {
         .mount(&server)
         .await;
     let sleeper = RecordingSleeper::default();
-    let out = provider(&server, &sleeper).complete_json(json_request()).await.expect("ok");
+    let out = provider(&server, &sleeper)
+        .complete_json(json_request())
+        .await
+        .expect("ok");
     assert_eq!(
         out,
         JsonCompletion {
@@ -167,11 +173,18 @@ async fn overloaded_and_server_errors_are_retried_with_backoff_and_retry_after()
         .mount(&server)
         .await;
     let sleeper = RecordingSleeper::default();
-    let out = provider(&server, &sleeper).complete_json(json_request()).await.expect("ok");
+    let out = provider(&server, &sleeper)
+        .complete_json(json_request())
+        .await
+        .expect("ok");
     assert_eq!(out.value["verdict"], "distinct");
     assert_eq!(
         sleeper.delays(),
-        vec![Duration::from_secs(1), Duration::from_secs(2), Duration::from_secs(7)]
+        vec![
+            Duration::from_secs(1),
+            Duration::from_secs(2),
+            Duration::from_secs(7)
+        ]
     );
 }
 
@@ -210,9 +223,17 @@ async fn rate_limit_after_all_retries_becomes_a_pause() {
 #[tokio::test]
 async fn client_errors_are_not_retried() {
     for (status, kind, expected) in [
-        (400, "invalid_request_error", ProviderError::Rejected("invalid_request_error (HTTP 400)".into())),
+        (
+            400,
+            "invalid_request_error",
+            ProviderError::Rejected("invalid_request_error (HTTP 400)".into()),
+        ),
         (401, "authentication_error", ProviderError::Auth),
-        (404, "not_found_error", ProviderError::Rejected("not_found_error (HTTP 404)".into())),
+        (
+            404,
+            "not_found_error",
+            ProviderError::Rejected("not_found_error (HTTP 404)".into()),
+        ),
     ] {
         let server = MockServer::start().await;
         Mock::given(method("POST"))
@@ -221,7 +242,12 @@ async fn client_errors_are_not_retried() {
             .mount(&server)
             .await;
         let sleeper = RecordingSleeper::default();
-        assert_eq!(provider(&server, &sleeper).complete_json(json_request()).await, Err(expected));
+        assert_eq!(
+            provider(&server, &sleeper)
+                .complete_json(json_request())
+                .await,
+            Err(expected)
+        );
         assert_eq!(sleeper.delays(), Vec::<Duration>::new());
     }
 }
@@ -229,9 +255,17 @@ async fn client_errors_are_not_retried() {
 #[tokio::test]
 async fn truncated_refused_and_prose_replies_are_typed() {
     for (text, stop, expected) in [
-        (r#"{"verdict": "dup"#, "max_tokens", ProviderError::Truncated),
+        (
+            r#"{"verdict": "dup"#,
+            "max_tokens",
+            ProviderError::Truncated,
+        ),
         ("", "refusal", ProviderError::Refused),
-        ("I think they are duplicates.", "end_turn", ProviderError::NotJson("expected value at line 1 column 1".into())),
+        (
+            "I think they are duplicates.",
+            "end_turn",
+            ProviderError::NotJson("expected value at line 1 column 1".into()),
+        ),
     ] {
         let server = MockServer::start().await;
         Mock::given(method("POST"))
@@ -239,7 +273,12 @@ async fn truncated_refused_and_prose_replies_are_typed() {
             .mount(&server)
             .await;
         let sleeper = RecordingSleeper::default();
-        assert_eq!(provider(&server, &sleeper).complete_json(json_request()).await, Err(expected));
+        assert_eq!(
+            provider(&server, &sleeper)
+                .complete_json(json_request())
+                .await,
+            Err(expected)
+        );
     }
 }
 
@@ -272,7 +311,10 @@ data: {\"type\":\"message_stop\"}
 
 fn chat() -> ChatRequest {
     ChatRequest {
-        prompt: PromptRef { id: "ask".into(), version: 1 },
+        prompt: PromptRef {
+            id: "ask".into(),
+            version: 1,
+        },
         system: "Answer with citations.".into(),
         user: "{\"question\":\"فين العقد؟\"}".into(),
         max_tokens: 64000,
@@ -297,7 +339,12 @@ async fn stream_parses_sse_text_deltas_and_usage() {
         .mount(&server)
         .await;
     let sleeper = RecordingSleeper::default();
-    let items: Vec<_> = provider(&server, &sleeper).stream(chat()).await.expect("stream").collect().await;
+    let items: Vec<_> = provider(&server, &sleeper)
+        .stream(chat())
+        .await
+        .expect("stream")
+        .collect()
+        .await;
     assert_eq!(
         items,
         vec![
@@ -324,8 +371,14 @@ event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,
 event: error\ndata: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\",\"message\":\"Overloaded\"}}\n\n";
     let early = "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"Hi\"}}\n\n";
     for (body, last) in [
-        (error_sse, ProviderError::Unavailable("overloaded_error (in stream)".into())),
-        (early, ProviderError::Protocol("stream ended before message_stop".into())),
+        (
+            error_sse,
+            ProviderError::Unavailable("overloaded_error (in stream)".into()),
+        ),
+        (
+            early,
+            ProviderError::Protocol("stream ended before message_stop".into()),
+        ),
     ] {
         let server = MockServer::start().await;
         Mock::given(method("POST"))
@@ -333,7 +386,12 @@ event: error\ndata: {\"type\":\"error\",\"error\":{\"type\":\"overloaded_error\"
             .mount(&server)
             .await;
         let sleeper = RecordingSleeper::default();
-        let items: Vec<_> = provider(&server, &sleeper).stream(chat()).await.expect("stream").collect().await;
+        let items: Vec<_> = provider(&server, &sleeper)
+            .stream(chat())
+            .await
+            .expect("stream")
+            .collect()
+            .await;
         assert_eq!(items, vec![Ok(StreamEvent::Text("Hi".into())), Err(last)]);
     }
 }
@@ -357,6 +415,9 @@ fn api_key_file_must_be_private() {
     std::fs::write(&path, "  \n").expect("write");
     assert_eq!(
         ApiKey::from_file(&path),
-        Err(AiError::Config(format!("api key file {} is empty", path.display())))
+        Err(AiError::Config(format!(
+            "api key file {} is empty",
+            path.display()
+        )))
     );
 }

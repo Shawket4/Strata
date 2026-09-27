@@ -485,29 +485,61 @@ mod tests {
         crate::schema::validate(&v, &value).expect("sample matches the schema");
         let typed: T = serde_json::from_value(value.clone()).expect("sample fits the type");
         // The type round-trips to exactly the validated JSON (no field lost or renamed).
-        assert_eq!(serde_json::to_value(&typed).expect("serialize"), value, "{id}");
+        assert_eq!(
+            serde_json::to_value(&typed).expect("serialize"),
+            value,
+            "{id}"
+        );
         typed
     }
 
     #[test]
+    #[allow(clippy::many_single_char_names)]
     fn sample_outputs_validate_and_round_trip_through_the_types() {
-        let f: InboxFiling = check(ids::INBOX_FILING, include_str!("../tests/fixtures/outputs/inbox_filing.v1.json"));
+        let f: InboxFiling = check(
+            ids::INBOX_FILING,
+            include_str!("../tests/fixtures/outputs/inbox_filing.v1.json"),
+        );
         assert_eq!(f.lang, Lang::Mixed);
-        let l: Linking = check(ids::LINKING, include_str!("../tests/fixtures/outputs/linking.v1.json"));
+        let l: Linking = check(
+            ids::LINKING,
+            include_str!("../tests/fixtures/outputs/linking.v1.json"),
+        );
         assert_eq!(l.custody[1].kind, CustodyEventType::StoredAt);
-        let s: Summary = check(ids::SUMMARY, include_str!("../tests/fixtures/outputs/summary.v1.json"));
+        let s: Summary = check(
+            ids::SUMMARY,
+            include_str!("../tests/fixtures/outputs/summary.v1.json"),
+        );
         assert_eq!(s.lang, Lang::Ar);
-        let e: EntityInsights = check(ids::ENTITY_INSIGHTS, include_str!("../tests/fixtures/outputs/entity_insights.v1.json"));
+        let e: EntityInsights = check(
+            ids::ENTITY_INSIGHTS,
+            include_str!("../tests/fixtures/outputs/entity_insights.v1.json"),
+        );
         assert_eq!(e.timeline[0].date, "2026-09-28");
-        let c: CustodyExtraction = check(ids::CUSTODY, include_str!("../tests/fixtures/outputs/custody.v1.json"));
+        let c: CustodyExtraction = check(
+            ids::CUSTODY,
+            include_str!("../tests/fixtures/outputs/custody.v1.json"),
+        );
         assert_eq!(c.events.len(), 2);
-        let k: Correction = check(ids::CORRECTION, include_str!("../tests/fixtures/outputs/correction.v1.json"));
+        let k: Correction = check(
+            ids::CORRECTION,
+            include_str!("../tests/fixtures/outputs/correction.v1.json"),
+        );
         assert_eq!(k.fixes[0].action, CorrectionAction::Repoint);
-        let d: DuplicateConfirmation = check(ids::DUPLICATE_CONFIRM, include_str!("../tests/fixtures/outputs/duplicate_confirm.v1.json"));
+        let d: DuplicateConfirmation = check(
+            ids::DUPLICATE_CONFIRM,
+            include_str!("../tests/fixtures/outputs/duplicate_confirm.v1.json"),
+        );
         assert_eq!(d.verdict, DuplicateVerdict::Duplicate);
-        let n: ClusterNames = check(ids::CLUSTER_NAMING, include_str!("../tests/fixtures/outputs/cluster_naming.v1.json"));
+        let n: ClusterNames = check(
+            ids::CLUSTER_NAMING,
+            include_str!("../tests/fixtures/outputs/cluster_naming.v1.json"),
+        );
         assert_eq!(n.names.len(), 2);
-        let g: Digest = check(ids::DIGEST, include_str!("../tests/fixtures/outputs/digest.v1.json"));
+        let g: Digest = check(
+            ids::DIGEST,
+            include_str!("../tests/fixtures/outputs/digest.v1.json"),
+        );
         assert_eq!(g.title, "Weekly digest 2026-W39");
     }
 
@@ -523,7 +555,9 @@ mod tests {
         });
         let errs = crate::schema::validate(&v, &value).expect_err("uncited");
         assert_eq!(
-            errs.iter().map(crate::schema::Violation::summary).collect::<Vec<_>>(),
+            errs.iter()
+                .map(crate::schema::Violation::summary)
+                .collect::<Vec<_>>(),
             vec!["/insights/0/citations: value has less than 1 item".to_owned()]
         );
     }

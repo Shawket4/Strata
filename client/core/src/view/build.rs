@@ -13,7 +13,7 @@ use vault_format::wikilink::{self, WikiLink};
 use crate::error::CoreResult;
 use crate::format::{self, hints};
 use crate::store::{account, conflicts, from_msgpack, outbox, settings, sync_state};
-use crate::sync::model::{Candidate, SuggestionPayload};
+use crate::sync::model::SuggestionPayload;
 use crate::view::ViewCtx;
 #[allow(clippy::wildcard_imports)] // the builders construct every view-model type
 use crate::view::model::*;
@@ -249,6 +249,26 @@ pub fn conflict_screen(conn: &Connection, op_id: &str) -> CoreResult<ConflictScr
             op_id: op_id.to_owned(),
         });
     };
+    let hunks = match &c.merge_outcome {
+        Some(sync_model::MergeOutcome::Conflicted(m)) => m
+            .hunks
+            .iter()
+            .map(|h| ConflictHunkView {
+                id: h.id,
+                location: match &h.location {
+                    sync_model::Location::Frontmatter { key } => format!("frontmatter:{key}"),
+                    sync_model::Location::Body { ours_line, .. } => format!("body:{ours_line}"),
+                    sync_model::Location::LineEndings => "line_endings".to_owned(),
+                    sync_model::Location::ByteOrderMark => "byte_order_mark".to_owned(),
+                },
+                kind: format!("{:?}", h.kind).to_ascii_lowercase(),
+                base: h.base.clone(),
+                ours: h.ours.clone(),
+                theirs: h.theirs.clone(),
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
     Ok(ConflictScreen::Ready {
         title: note_title(conn, &c.entity_id)?.unwrap_or_default(),
         op_id: c.op_id,
@@ -258,7 +278,20 @@ pub fn conflict_screen(conn: &Connection, op_id: &str) -> CoreResult<ConflictScr
         server: c.server_content,
         merged_preview: c.merged_preview,
         merge_clean: c.merge_clean,
+        hunks,
     })
+}
+
+/// The `sync-model` choice for a hunk choice of the conflict screen.
+pub fn hunk_choice(c: HunkChoiceKind) -> sync_model::Choice {
+    match c {
+        HunkChoiceKind::Ours => sync_model::Choice::Ours,
+        HunkChoiceKind::Theirs => sync_model::Choice::Theirs,
+        HunkChoiceKind::Base => sync_model::Choice::Base,
+        HunkChoiceKind::OursThenTheirs => sync_model::Choice::OursThenTheirs,
+        HunkChoiceKind::TheirsThenOurs => sync_model::Choice::TheirsThenOurs,
+        HunkChoiceKind::Text { text } => sync_model::Choice::Text(text),
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -502,15 +535,8 @@ pub fn home(conn: &Connection, ctx: &ViewCtx) -> CoreResult<HomeView> {
     })
 }
 
-fn candidate_item(c: Candidate) -> CandidateItem {
-    CandidateItem {
-        id: c.id,
-        kind: c.kind,
-        title: c.title,
-        snippet: c.snippet,
-        match_level: c.match_level,
-        score: c.score,
-    }
+fn candidate_item(c: dedupe::DuplicateCandidate) -> CandidateItem {
+    crate::session::candidate_item(c)
 }
 
 fn suggestion_kind(conn: &Connection, p: SuggestionPayload) -> CoreResult<SuggestionKindView> {
@@ -567,9 +593,9 @@ fn suggestion_kind(conn: &Connection, p: SuggestionPayload) -> CoreResult<Sugges
 
 fn suggestions(conn: &Connection, only_pending: bool) -> CoreResult<Vec<SuggestionItem>> {
     let pending = pending_entities(conn)?;
-    let rows: Vec<(String, Option<String>, Vec<u8>, String, String)> = {
+    let rows: Vec<(String, Option<String>, Vec<u8>, String, String, String)> = {
         let mut st = conn.prepare(&format!(
-            "SELECT id, note_id, payload, status, created FROM suggestions {} ORDER BY created DESC, id",
+            "SELECT id, note_id, payload, status, created, kind FROM suggestions {} ORDER BY created DESC, id",
             if only_pending {
                 "WHERE status = 'pending'"
             } else {
@@ -577,13 +603,13 @@ fn suggestions(conn: &Connection, only_pending: bool) -> CoreResult<Vec<Suggesti
             }
         ))?;
         st.query_map([], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
         })?
         .collect::<Result<_, _>>()?
     };
     let mut out = Vec::new();
-    for (id, note_id, payload, status, created) in rows {
-        let payload: SuggestionPayload = from_msgpack(&payload)?;
+    for (id, note_id, payload, status, created, kind) in rows {
+        let payload = SuggestionPayload::decode(&kind, &payload);
         out.push(SuggestionItem {
             pending_sync: pending.contains_key(&format!("suggestion:{id}")),
             kind: suggestion_kind(conn, payload)?,
@@ -644,7 +670,7 @@ pub fn duplicate_prompts(conn: &Connection) -> CoreResult<DuplicatePromptsView> 
         let Some(op) = outbox::get(conn, &op_id)? else {
             continue;
         };
-        let (kind, title) = crate::store::write::describe_create(conn, &op)?;
+        let (kind, title) = crate::store::write::describe_create(&op.op);
         prompts.push(DuplicatePrompt {
             op_id,
             kind,

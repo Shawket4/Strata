@@ -5,6 +5,7 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 ## 2026-09-27
 
 ### Implementation decisions (sync-model, graph-algo, dedupe)
+- `tasks/Tasks.md` groups tasks under `## <Month YYYY>` headings (English month name), oldest month first; a task created with a named home note is appended to the end of that note's body.
 - Manual custody events recorded by the user through the API carry `by: user` and need no citation; the citation requirement applies to AI-produced events.
 - Task edits use the hash of the task line as their base version, so edits to other lines of the same note never conflict.
 - Clustering/layout edge weights: user edges 3, AI edges with confidence ≥ 0.85 weight 2, other AI edges 1; similarity edges excluded. Cluster identity kept by greedy Jaccard matching (≥ 0.25).

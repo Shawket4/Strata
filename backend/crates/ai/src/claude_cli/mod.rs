@@ -127,7 +127,9 @@ impl ClaudeCliConfig {
             ));
         }
         if self.timeout.is_zero() {
-            return Err(AiError::Config("claude_cli.timeout must be positive".into()));
+            return Err(AiError::Config(
+                "claude_cli.timeout must be positive".into(),
+            ));
         }
         Ok(())
     }
@@ -146,7 +148,11 @@ pub struct ClaudeCliProvider {
 
 impl ClaudeCliProvider {
     /// Validates `cfg` and builds the provider. `gate` must be the one the embedder uses.
-    pub fn new(cfg: ClaudeCliConfig, clock: Arc<dyn Clock>, gate: CpuGate) -> Result<Self, AiError> {
+    pub fn new(
+        cfg: ClaudeCliConfig,
+        clock: Arc<dyn Clock>,
+        gate: CpuGate,
+    ) -> Result<Self, AiError> {
         cfg.validate()?;
         Ok(Self {
             model_label: cfg.model.clone().unwrap_or_else(|| "default".to_owned()),
@@ -199,7 +205,12 @@ impl ClaudeCliProvider {
         }
     }
 
-    async fn start(&self, system: &str, schema: Option<&Value>, user: String) -> Result<Running, ProviderError> {
+    async fn start(
+        &self,
+        system: &str,
+        schema: Option<&Value>,
+        user: String,
+    ) -> Result<Running, ProviderError> {
         self.check_pause()?;
         let permit = Arc::clone(&self.permits)
             .acquire_owned()
@@ -226,7 +237,9 @@ impl ClaudeCliProvider {
             .process_group(0)
             .kill_on_drop(true)
             .spawn()
-            .map_err(|e| ProviderError::Unavailable(format!("failed to start claude: {:?}", e.kind())))?;
+            .map_err(|e| {
+                ProviderError::Unavailable(format!("failed to start claude: {:?}", e.kind()))
+            })?;
         tracing::debug!(provider = "claude_cli", pid = child.id(), "claude started");
 
         let mut stdin = child
@@ -262,7 +275,10 @@ impl ClaudeCliProvider {
             kept
         });
         Ok(Running {
-            pgid: child.id().and_then(|id| i32::try_from(id).ok()).and_then(rustix::process::Pid::from_raw),
+            pgid: child
+                .id()
+                .and_then(|id| i32::try_from(id).ok())
+                .and_then(rustix::process::Pid::from_raw),
             child,
             lines: BufReader::new(stdout).lines(),
             stderr_task: Some(stderr_task),
@@ -280,7 +296,11 @@ impl ClaudeCliProvider {
         match outcome {
             Ok(()) => self.health.success(),
             Err(e) => {
-                tracing::warn!(provider = "claude_cli", error = error_kind(e), "claude call failed");
+                tracing::warn!(
+                    provider = "claude_cli",
+                    error = error_kind(e),
+                    "claude call failed"
+                );
                 self.health.failure(e, self.clock.now());
             }
         }
@@ -323,7 +343,10 @@ impl Running {
                     return Err(ProviderError::Timeout(self.timeout));
                 }
                 Ok(Err(e)) => {
-                    return Err(ProviderError::Protocol(format!("reading claude output: {:?}", e.kind())));
+                    return Err(ProviderError::Protocol(format!(
+                        "reading claude output: {:?}",
+                        e.kind()
+                    )));
                 }
                 Ok(Ok(None)) => return Ok(Step::Eof),
                 Ok(Ok(Some(line))) => line,
@@ -341,14 +364,13 @@ impl Running {
     /// Waits for exit (bounded by the deadline plus the grace period) and collects stderr.
     async fn finish(&mut self) -> (Option<i32>, Vec<u8>) {
         let wait_until = self.deadline + self.kill_grace;
-        let code = if let Ok(Ok(status)) =
-            tokio::time::timeout_at(wait_until, self.child.wait()).await
-        {
-            status.code()
-        } else {
-            self.terminate().await;
-            None
-        };
+        let code =
+            if let Ok(Ok(status)) = tokio::time::timeout_at(wait_until, self.child.wait()).await {
+                status.code()
+            } else {
+                self.terminate().await;
+                None
+            };
         let stderr = match self.stderr_task.take() {
             Some(t) => tokio::time::timeout(self.kill_grace, t)
                 .await
@@ -365,7 +387,10 @@ impl Running {
     async fn terminate(&mut self) {
         if let Some(pgid) = self.pgid {
             let _ = rustix::process::kill_process_group(pgid, rustix::process::Signal::TERM);
-            if tokio::time::timeout(self.kill_grace, self.child.wait()).await.is_ok() {
+            if tokio::time::timeout(self.kill_grace, self.child.wait())
+                .await
+                .is_ok()
+            {
                 return;
             }
             let _ = rustix::process::kill_process_group(pgid, rustix::process::Signal::KILL);
@@ -375,7 +400,12 @@ impl Running {
         let _ = self.child.wait().await;
     }
 
-    async fn failure(&mut self, result: Option<&ResultMsg>, now: chrono::DateTime<chrono::Utc>, default_pause: chrono::Duration) -> ProviderError {
+    async fn failure(
+        &mut self,
+        result: Option<&ResultMsg>,
+        now: chrono::DateTime<chrono::Utc>,
+        default_pause: chrono::Duration,
+    ) -> ProviderError {
         let (exit_code, stderr) = self.finish().await;
         classify_failure(
             &FailureContext {
@@ -418,8 +448,7 @@ fn result_value(r: &ResultMsg) -> Result<Value, ProviderError> {
         .and_then(|t| t.strip_suffix("```"))
         .unwrap_or(text)
         .trim();
-    serde_json::from_str(inner)
-        .map_err(|e| ProviderError::NotJson(e.to_string()))
+    serde_json::from_str(inner).map_err(|e| ProviderError::NotJson(e.to_string()))
 }
 
 fn succeeded(r: &ResultMsg) -> bool {
@@ -454,13 +483,21 @@ impl LlmProvider for ClaudeCliProvider {
                             .or_else(|| run.model.clone())
                             .unwrap_or_else(|| self.model_label.clone());
                         let _ = run.finish().await;
-                        return Ok(JsonCompletion { value, usage: r.usage, model });
+                        return Ok(JsonCompletion {
+                            value,
+                            usage: r.usage,
+                            model,
+                        });
                     }
                     Step::Result(r) => {
-                        return Err(run.failure(Some(&r), self.clock.now(), self.default_pause()).await);
+                        return Err(run
+                            .failure(Some(&r), self.clock.now(), self.default_pause())
+                            .await);
                     }
                     Step::Eof => {
-                        return Err(run.failure(None, self.clock.now(), self.default_pause()).await);
+                        return Err(run
+                            .failure(None, self.clock.now(), self.default_pause())
+                            .await);
                     }
                 }
             }
@@ -499,7 +536,11 @@ impl LlmProvider for ClaudeCliProvider {
                 }
                 Err(e) => {
                     st.done = true;
-                    tracing::warn!(provider = "claude_cli", error = error_kind(e), "claude stream failed");
+                    tracing::warn!(
+                        provider = "claude_cli",
+                        error = error_kind(e),
+                        "claude stream failed"
+                    );
                     st.health.failure(e, st.clock.now());
                 }
             }
@@ -531,8 +572,14 @@ impl StreamState {
                 let _ = self.run.finish().await;
                 Ok(StreamEvent::Done { usage, model })
             }
-            Step::Result(r) => Err(self.run.failure(Some(&r), self.clock.now(), self.default_pause).await),
-            Step::Eof => Err(self.run.failure(None, self.clock.now(), self.default_pause).await),
+            Step::Result(r) => Err(self
+                .run
+                .failure(Some(&r), self.clock.now(), self.default_pause)
+                .await),
+            Step::Eof => Err(self
+                .run
+                .failure(None, self.clock.now(), self.default_pause)
+                .await),
         }
     }
 }
@@ -558,7 +605,10 @@ mod tests {
         cfg.env.insert("CLAUDE_CODE_SIMPLE".into(), "1".into());
         assert!(cfg.validate().is_err());
         let empty = ClaudeCliConfig::new(vec![], "/tmp".into());
-        assert_eq!(empty.validate(), Err(AiError::Config("claude_cli.command is empty".into())));
+        assert_eq!(
+            empty.validate(),
+            Err(AiError::Config("claude_cli.command is empty".into()))
+        );
     }
 
     #[test]
@@ -580,7 +630,9 @@ mod tests {
         r.result = Some("not json".into());
         assert_eq!(
             result_value(&r),
-            Err(ProviderError::NotJson("expected ident at line 1 column 2".into()))
+            Err(ProviderError::NotJson(
+                "expected ident at line 1 column 2".into()
+            ))
         );
     }
 }

@@ -14,7 +14,11 @@ use super::{EmbedError, Pooling};
 /// `model_quint8_avx2.onnx` of granite-embedding-97m-multilingual-r2 gives cosine 0.96–0.99
 /// between a text embedded alone and the same text padded in a batch (the fp32 export gives
 /// 1.0), measured with ONNX Runtime 1.30.
-pub fn plan_batches(lengths: &[usize], max_batch_tokens: usize, allow_padding: bool) -> Vec<Vec<usize>> {
+pub fn plan_batches(
+    lengths: &[usize],
+    max_batch_tokens: usize,
+    allow_padding: bool,
+) -> Vec<Vec<usize>> {
     let mut order: Vec<usize> = (0..lengths.len()).collect();
     if !allow_padding {
         order.sort_by_key(|&i| lengths[i]);
@@ -144,11 +148,20 @@ mod tests {
     #[test]
     fn padded_batches_respect_the_token_budget_and_keep_order() {
         assert_eq!(plan_batches(&[], 10, true), Vec::<Vec<usize>>::new());
-        assert_eq!(plan_batches(&[3, 3, 3, 3], 10, true), vec![vec![0, 1, 2], vec![3]]);
+        assert_eq!(
+            plan_batches(&[3, 3, 3, 3], 10, true),
+            vec![vec![0, 1, 2], vec![3]]
+        );
         // A long sequence raises the padded size of everything batched with it.
-        assert_eq!(plan_batches(&[2, 2, 8, 2], 10, true), vec![vec![0, 1], vec![2], vec![3]]);
+        assert_eq!(
+            plan_batches(&[2, 2, 8, 2], 10, true),
+            vec![vec![0, 1], vec![2], vec![3]]
+        );
         // Longer than the budget: alone.
-        assert_eq!(plan_batches(&[20, 1, 1], 10, true), vec![vec![0], vec![1, 2]]);
+        assert_eq!(
+            plan_batches(&[20, 1, 1], 10, true),
+            vec![vec![0], vec![1, 2]]
+        );
     }
 
     #[test]

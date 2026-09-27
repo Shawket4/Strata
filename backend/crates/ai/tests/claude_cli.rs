@@ -14,8 +14,8 @@ use pretty_assertions::assert_eq;
 use serde_json::json;
 use strata_ai::provider::HealthState;
 use strata_ai::{
-    ChatRequest, ClaudeCliConfig, ClaudeCliProvider, CpuGate, JsonCompletion, JsonRequest, LlmProvider,
-    PauseReason, PromptRef, ProviderError, StreamEvent, Usage,
+    ChatRequest, ClaudeCliConfig, ClaudeCliProvider, CpuGate, JsonCompletion, JsonRequest,
+    LlmProvider, PauseReason, PromptRef, ProviderError, StreamEvent, Usage,
 };
 use strata_common::FakeClock;
 use tempfile::TempDir;
@@ -41,11 +41,19 @@ impl Harness {
 
     fn config(&self, scenario: &str) -> ClaudeCliConfig {
         let mut cfg = ClaudeCliConfig::new(
-            vec![common::fixture("claude_cli/fake-claude").display().to_string()],
+            vec![
+                common::fixture("claude_cli/fake-claude")
+                    .display()
+                    .to_string(),
+            ],
             self.work.path().to_path_buf(),
         );
-        cfg.env.insert("FAKE_CLAUDE_LOG".into(), self.log.path().display().to_string());
-        cfg.env.insert("FAKE_CLAUDE_SCENARIO".into(), scenario.into());
+        cfg.env.insert(
+            "FAKE_CLAUDE_LOG".into(),
+            self.log.path().display().to_string(),
+        );
+        cfg.env
+            .insert("FAKE_CLAUDE_SCENARIO".into(), scenario.into());
         cfg.model = Some("sonnet".into());
         cfg.timeout = Duration::from_secs(20);
         cfg.kill_grace = Duration::from_millis(200);
@@ -53,7 +61,8 @@ impl Harness {
     }
 
     fn provider(&self, cfg: ClaudeCliConfig) -> ClaudeCliProvider {
-        ClaudeCliProvider::new(cfg, Arc::new(self.clock.clone()), self.gate.clone()).expect("provider")
+        ClaudeCliProvider::new(cfg, Arc::new(self.clock.clone()), self.gate.clone())
+            .expect("provider")
     }
 
     fn read(&self, name: &str) -> String {
@@ -102,7 +111,10 @@ fn schema() -> serde_json::Value {
 
 fn json_request(user: &str) -> JsonRequest {
     JsonRequest {
-        prompt: PromptRef { id: "summary".into(), version: 1 },
+        prompt: PromptRef {
+            id: "summary".into(),
+            version: 1,
+        },
         system: SYSTEM.into(),
         user: user.into(),
         schema: Arc::new(schema()),
@@ -113,7 +125,10 @@ fn json_request(user: &str) -> JsonRequest {
 
 fn chat_request(user: &str) -> ChatRequest {
     ChatRequest {
-        prompt: PromptRef { id: "ask".into(), version: 1 },
+        prompt: PromptRef {
+            id: "ask".into(),
+            version: 1,
+        },
         system: SYSTEM.into(),
         user: user.into(),
         max_tokens: 4096,
@@ -190,7 +205,12 @@ async fn json_call_runs_isolated_without_tools_or_api_key_and_parses_structured_
     assert!(!h.argv().iter().any(|a| a.contains("وطنية")));
     assert_eq!(
         h.read("cwd").trim(),
-        h.work.path().canonicalize().expect("canonical").display().to_string()
+        h.work
+            .path()
+            .canonicalize()
+            .expect("canonical")
+            .display()
+            .to_string()
     );
     assert_eq!(p.health().state, HealthState::Ready);
 }
@@ -203,7 +223,10 @@ async fn json_in_a_fenced_text_result_is_parsed_and_prose_is_not_json() {
         .complete_json(json_request("x"))
         .await
         .expect("success");
-    assert_eq!(out.value, json!({"summary": "اتفقنا مع وطنية على فاتورة ETA شهرية.", "lang": "ar"}));
+    assert_eq!(
+        out.value,
+        json!({"summary": "اتفقنا مع وطنية على فاتورة ETA شهرية.", "lang": "ar"})
+    );
 
     let h = Harness::new();
     let err = h
@@ -211,14 +234,22 @@ async fn json_in_a_fenced_text_result_is_parsed_and_prose_is_not_json() {
         .complete_json(json_request("x"))
         .await
         .expect_err("prose");
-    assert_eq!(err, ProviderError::NotJson("expected value at line 1 column 1".into()));
+    assert_eq!(
+        err,
+        ProviderError::NotJson("expected value at line 1 column 1".into())
+    );
 }
 
 #[tokio::test]
 async fn stream_yields_main_conversation_text_then_done_with_usage() {
     let h = Harness::new();
     let p = h.provider(h.config("stream_success"));
-    let items: Vec<_> = p.stream(chat_request("where is the contract?")).await.expect("stream").collect().await;
+    let items: Vec<_> = p
+        .stream(chat_request("where is the contract?"))
+        .await
+        .expect("stream")
+        .collect()
+        .await;
     assert_eq!(
         items,
         vec![
@@ -237,7 +268,10 @@ async fn stream_yields_main_conversation_text_then_done_with_usage() {
         ]
     );
     let argv = h.argv();
-    assert_eq!(argv.last().map(String::as_str), Some("--include-partial-messages"));
+    assert_eq!(
+        argv.last().map(String::as_str),
+        Some("--include-partial-messages")
+    );
     assert!(!argv.iter().any(|a| a == "--json-schema"));
     assert_eq!(h.read("stdin"), "where is the contract?");
 }
@@ -256,7 +290,9 @@ async fn stream_failure_mid_way_ends_with_a_typed_error() {
         items,
         vec![
             Ok(StreamEvent::Text("Partial".into())),
-            Err(ProviderError::Unavailable("claude run failed (error_during_execution)".into())),
+            Err(ProviderError::Unavailable(
+                "claude run failed (error_during_execution)".into()
+            )),
         ]
     );
 }
@@ -269,7 +305,10 @@ async fn usage_limit_pauses_until_reset_without_spawning_again_then_resumes() {
         reason: PauseReason::ProviderUsageLimit,
         until: Some(instant("2026-09-27T17:00:00Z")),
     };
-    assert_eq!(p.complete_json(json_request("x")).await, Err(paused.clone()));
+    assert_eq!(
+        p.complete_json(json_request("x")).await,
+        Err(paused.clone())
+    );
     assert_eq!(h.calls(), 1);
     assert_eq!(
         p.health().state,
@@ -279,7 +318,10 @@ async fn usage_limit_pauses_until_reset_without_spawning_again_then_resumes() {
         }
     );
     // While paused no process is started.
-    assert_eq!(p.complete_json(json_request("x")).await, Err(paused.clone()));
+    assert_eq!(
+        p.complete_json(json_request("x")).await,
+        Err(paused.clone())
+    );
     assert_eq!(p.stream(chat_request("q")).await.err(), Some(paused));
     assert_eq!(h.calls(), 1);
 
@@ -293,7 +335,9 @@ async fn usage_limit_pauses_until_reset_without_spawning_again_then_resumes() {
 async fn usage_limit_message_with_epoch_and_other_failures_are_classified() {
     let h = Harness::new();
     assert_eq!(
-        h.provider(h.config("usage_limit_text")).complete_json(json_request("x")).await,
+        h.provider(h.config("usage_limit_text"))
+            .complete_json(json_request("x"))
+            .await,
         Err(ProviderError::Paused {
             reason: PauseReason::ProviderUsageLimit,
             until: Some(instant("2026-09-28T00:00:00Z")),
@@ -301,7 +345,10 @@ async fn usage_limit_message_with_epoch_and_other_failures_are_classified() {
     );
     let h = Harness::new();
     let p = h.provider(h.config("not_logged_in"));
-    assert_eq!(p.complete_json(json_request("x")).await, Err(ProviderError::Auth));
+    assert_eq!(
+        p.complete_json(json_request("x")).await,
+        Err(ProviderError::Auth)
+    );
     assert_eq!(p.health().state, HealthState::Degraded);
     assert_eq!(p.health().last_error.as_deref(), Some("auth"));
 
@@ -312,7 +359,10 @@ async fn usage_limit_message_with_epoch_and_other_failures_are_classified() {
         .complete_json(json_request("x"))
         .await
         .expect_err("crash");
-    assert_eq!(err, ProviderError::Unavailable("claude exited with status 3".into()));
+    assert_eq!(
+        err,
+        ProviderError::Unavailable("claude exited with status 3".into())
+    );
     assert!(!err.to_string().contains("TypeError"));
 }
 
@@ -326,7 +376,10 @@ async fn assert_killed_on_timeout(scenario: &str) {
         Err(ProviderError::Timeout(Duration::from_millis(500)))
     );
     let pid = h.read("pid").trim().to_owned();
-    assert!(!Path::new(&format!("/proc/{pid}")).exists(), "process {pid} was killed and reaped");
+    assert!(
+        !Path::new(&format!("/proc/{pid}")).exists(),
+        "process {pid} was killed and reaped"
+    );
     assert_eq!(p.health().last_error.as_deref(), Some("timeout"));
     // The permit and the CPU gate are released.
     assert!(h.gate.embed().now_or_never().is_some());
@@ -363,7 +416,10 @@ async fn concurrency_limit_serialises_calls_and_holds_the_cpu_gate() {
     while !h.log.path().join("order").exists() {
         tokio::task::yield_now().await;
     }
-    assert!(h.gate.embed().now_or_never().is_none(), "embedding waits for claude");
+    assert!(
+        h.gate.embed().now_or_never().is_none(),
+        "embedding waits for claude"
+    );
     call.await.expect("join").expect("ok");
     assert!(h.gate.embed().now_or_never().is_some());
 }
@@ -375,7 +431,9 @@ async fn spawn_failure_is_unavailable() {
     cfg.command = vec!["/nonexistent/claude".into()];
     assert_eq!(
         h.provider(cfg).complete_json(json_request("x")).await,
-        Err(ProviderError::Unavailable("failed to start claude: NotFound".into()))
+        Err(ProviderError::Unavailable(
+            "failed to start claude: NotFound".into()
+        ))
     );
 }
 
@@ -387,10 +445,15 @@ async fn a_launcher_prefix_runs_in_front_of_the_claude_arguments() {
     cfg.command = vec![
         "/usr/bin/env".into(),
         "LAUNCHED_BY=launcher".into(),
-        common::fixture("claude_cli/fake-claude").display().to_string(),
+        common::fixture("claude_cli/fake-claude")
+            .display()
+            .to_string(),
     ];
     cfg.model = None;
-    h.provider(cfg).complete_json(json_request("x")).await.expect("success");
+    h.provider(cfg)
+        .complete_json(json_request("x"))
+        .await
+        .expect("success");
     assert_eq!(h.argv()[..3], ["-p", "--output-format", "stream-json"]);
     assert!(!h.argv().iter().any(|a| a == "--model"));
     assert!(h.env().contains(&"LAUNCHED_BY=launcher".to_owned()));

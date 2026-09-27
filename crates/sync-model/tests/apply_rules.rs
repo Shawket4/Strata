@@ -402,15 +402,21 @@ fn task_create_goes_under_the_month_heading_of_tasks_md() {
         Ok("## September 2026\n- [ ] ادفع فاتورة الكهرباء 📅 2026-09-30 ^t-01j9b1\n".into())
     );
     // Existing months around it, CRLF.
-    let body = "# Tasks\r\n\r\n## August 2026\r\n- [ ] a ^t-a\r\n\r\n## October 2026\r\n- [ ] o ^t-o\r\n";
+    let body =
+        "# Tasks\r\n\r\n## August 2026\r\n- [ ] a ^t-a\r\n\r\n## October 2026\r\n- [ ] o ^t-o\r\n";
     let out = apply_task_create(body, &op, d("2026-09-27"), LineEnding::CrLf).unwrap();
     assert_eq!(
         out,
         "# Tasks\r\n\r\n## August 2026\r\n- [ ] a ^t-a\r\n\r\n## September 2026\r\n- [ ] ادفع فاتورة الكهرباء 📅 2026-09-30 ^t-01j9b1\r\n\r\n## October 2026\r\n- [ ] o ^t-o\r\n"
     );
     // Same month: appended after the month's last line.
-    let out = apply_task_create(&out, &create("t-01j9b2", "second"), d("2026-09-01"), LineEnding::CrLf)
-        .unwrap();
+    let out = apply_task_create(
+        &out,
+        &create("t-01j9b2", "second"),
+        d("2026-09-01"),
+        LineEnding::CrLf,
+    )
+    .unwrap();
     assert_eq!(
         out,
         "# Tasks\r\n\r\n## August 2026\r\n- [ ] a ^t-a\r\n\r\n## September 2026\r\n- [ ] ادفع فاتورة الكهرباء 📅 2026-09-30 ^t-01j9b1\r\n- [ ] second ^t-01j9b2\r\n\r\n## October 2026\r\n- [ ] o ^t-o\r\n"
@@ -432,7 +438,10 @@ fn task_create_goes_under_the_month_heading_of_tasks_md() {
     .unwrap();
     assert_eq!(
         done,
-        out.replace("- [ ] second ^t-01j9b2", "- [x] second ✅ 2026-09-28 ^t-01j9b2")
+        out.replace(
+            "- [ ] second ^t-01j9b2",
+            "- [x] second ✅ 2026-09-28 ^t-01j9b2"
+        )
     );
 }
 

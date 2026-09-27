@@ -244,7 +244,11 @@ fn raw_entries_must_be_one_entry_for_the_key() {
         "  indented: 1\n",
         "",
     ] {
-        assert_eq!(fm.set_raw_entry("plugin", bad), Err(single.clone()), "{bad:?}");
+        assert_eq!(
+            fm.set_raw_entry("plugin", bad),
+            Err(single.clone()),
+            "{bad:?}"
+        );
     }
     assert_eq!(
         fm.set_raw_entry("plugin", "plugin: [\n"),
@@ -294,7 +298,8 @@ fn node() -> impl Strategy<Value = Yaml> {
     })
 }
 
-const PREFIX: &str = "---\nid: 01J8ZK3M4X7Q0000000000000A\ntitle: T\n# comment\nextra: [a, \"b, c\"]\n";
+const PREFIX: &str =
+    "---\nid: 01J8ZK3M4X7Q0000000000000A\ntitle: T\n# comment\nextra: [a, \"b, c\"]\n";
 const SUFFIX: &str = "last: |\n  block\n  text\n---\nbody ^b1\n";
 
 proptest! {

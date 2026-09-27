@@ -133,9 +133,14 @@ impl OnnxEmbedder {
         };
         let cfg = cfg.clone();
         Self::spawn(settings, gate, move || {
-            let encoder = HfEncoder::load(&cfg.model_dir.join(&cfg.tokenizer_file), cfg.max_tokens)?;
-            let session = OrtSession::load(&cfg.onnxruntime_lib, &cfg.model_dir.join(&cfg.model_file))?;
-            Ok((Box::new(encoder) as Box<dyn TextEncoder>, Box::new(session) as Box<dyn EmbeddingSession>))
+            let encoder =
+                HfEncoder::load(&cfg.model_dir.join(&cfg.tokenizer_file), cfg.max_tokens)?;
+            let session =
+                OrtSession::load(&cfg.onnxruntime_lib, &cfg.model_dir.join(&cfg.model_file))?;
+            Ok((
+                Box::new(encoder) as Box<dyn TextEncoder>,
+                Box::new(session) as Box<dyn EmbeddingSession>,
+            ))
         })
     }
 
@@ -152,7 +157,9 @@ impl OnnxEmbedder {
     fn spawn(
         settings: PipelineSettings,
         gate: CpuGate,
-        init: impl FnOnce() -> Result<(Box<dyn TextEncoder>, Box<dyn EmbeddingSession>), EmbedError> + Send + 'static,
+        init: impl FnOnce() -> Result<(Box<dyn TextEncoder>, Box<dyn EmbeddingSession>), EmbedError>
+        + Send
+        + 'static,
     ) -> Result<Self, EmbedError> {
         let (jobs, rx) = mpsc::channel::<Job>();
         let (ready_tx, ready_rx) = mpsc::channel::<Result<(), EmbedError>>();
@@ -174,12 +181,19 @@ impl OnnxEmbedder {
                 while let Ok(job) = rx.recv() {
                     match job {
                         Job::Embed { texts, reply } => {
-                            let out = embed_texts(encoder.as_ref(), session.as_mut(), &worker_settings, &texts);
+                            let out = embed_texts(
+                                encoder.as_ref(),
+                                session.as_mut(),
+                                &worker_settings,
+                                &texts,
+                            );
                             let _ = reply.send(out);
                         }
                         Job::Priority { reply } => {
-                            let p = rustix::process::getpriority_process(Some(rustix::thread::gettid()))
-                                .map_err(|e| EmbedError::Inference(format!("getpriority: {e}")));
+                            let p = rustix::process::getpriority_process(Some(
+                                rustix::thread::gettid(),
+                            ))
+                            .map_err(|e| EmbedError::Inference(format!("getpriority: {e}")));
                             let _ = reply.send(p);
                         }
                     }
@@ -245,7 +259,11 @@ fn embed_texts(
         };
         for (i, mut v) in indices.into_iter().zip(vectors) {
             if v.len() != s.dims {
-                return Err(EmbedError::Output(format!("{} dimensions, expected {}", v.len(), s.dims)));
+                return Err(EmbedError::Output(format!(
+                    "{} dimensions, expected {}",
+                    v.len(),
+                    s.dims
+                )));
             }
             l2_normalize(&mut v);
             out[i] = Some(v);
@@ -297,7 +315,9 @@ pub struct HfEncoder {
 
 impl std::fmt::Debug for HfEncoder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("HfEncoder").field("pad_id", &self.pad_id).finish_non_exhaustive()
+        f.debug_struct("HfEncoder")
+            .field("pad_id", &self.pad_id)
+            .finish_non_exhaustive()
     }
 }
 
@@ -310,7 +330,10 @@ impl HfEncoder {
     }
 
     /// Wraps a tokenizer (padding is done by the pipeline, not the tokenizer).
-    pub fn new(mut tokenizer: tokenizers::Tokenizer, max_tokens: usize) -> Result<Self, EmbedError> {
+    pub fn new(
+        mut tokenizer: tokenizers::Tokenizer,
+        max_tokens: usize,
+    ) -> Result<Self, EmbedError> {
         let pad_id = tokenizer.get_padding().map_or(0, |p| p.pad_id);
         tokenizer.with_padding(None);
         tokenizer
@@ -346,7 +369,9 @@ pub struct OrtSession {
 
 impl std::fmt::Debug for OrtSession {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("OrtSession").field("inputs", &self.inputs).finish_non_exhaustive()
+        f.debug_struct("OrtSession")
+            .field("inputs", &self.inputs)
+            .finish_non_exhaustive()
     }
 }
 
@@ -364,7 +389,8 @@ impl OrtSession {
             })
             .clone()
             .map_err(EmbedError::Load)?;
-        let load = |e: ort::Error<ort::session::builder::SessionBuilder>| EmbedError::Load(e.to_string());
+        let load =
+            |e: ort::Error<ort::session::builder::SessionBuilder>| EmbedError::Load(e.to_string());
         let session = ort::session::Session::builder()
             .map_err(|e| EmbedError::Load(e.to_string()))?
             .with_intra_threads(1)
@@ -377,10 +403,16 @@ impl OrtSession {
             .map_err(load)?
             .commit_from_file(model)
             .map_err(|e| EmbedError::Load(format!("model {}: {e}", model.display())))?;
-        let inputs: Vec<String> = session.inputs().iter().map(|i| i.name().to_owned()).collect();
+        let inputs: Vec<String> = session
+            .inputs()
+            .iter()
+            .map(|i| i.name().to_owned())
+            .collect();
         for required in ["input_ids", "attention_mask"] {
             if !inputs.iter().any(|n| n == required) {
-                return Err(EmbedError::Load(format!("model has no input {required}: {inputs:?}")));
+                return Err(EmbedError::Load(format!(
+                    "model has no input {required}: {inputs:?}"
+                )));
             }
         }
         Ok(Self { session, inputs })
@@ -397,14 +429,21 @@ impl EmbeddingSession for OrtSession {
                 "input_ids" => batch.input_ids.clone(),
                 "attention_mask" => batch.attention_mask.clone(),
                 "token_type_ids" => vec![0; batch.input_ids.len()],
-                other => return Err(EmbedError::Inference(format!("unsupported model input {other}"))),
+                other => {
+                    return Err(EmbedError::Inference(format!(
+                        "unsupported model input {other}"
+                    )));
+                }
             };
             let tensor = ort::value::Tensor::from_array((shape, data)).map_err(err)?;
             values.push((name.clone(), tensor.into()));
         }
         let outputs = self.session.run(values).map_err(err)?;
         let (shape, data) = outputs[0].try_extract_tensor::<f32>().map_err(err)?;
-        let shape: Vec<usize> = shape.iter().map(|&d| usize::try_from(d).unwrap_or(0)).collect();
+        let shape: Vec<usize> = shape
+            .iter()
+            .map(|&d| usize::try_from(d).unwrap_or(0))
+            .collect();
         Ok((shape, data.to_vec()))
     }
 }
@@ -422,7 +461,10 @@ mod tests {
     impl TextEncoder for WordLenEncoder {
         fn encode(&self, text: &str) -> Result<Vec<u32>, EmbedError> {
             let mut ids = vec![1];
-            ids.extend(text.split_whitespace().map(|w| u32::try_from(w.chars().count()).unwrap_or(0) + 10));
+            ids.extend(
+                text.split_whitespace()
+                    .map(|w| u32::try_from(w.chars().count()).unwrap_or(0) + 10),
+            );
             ids.push(2);
             Ok(ids)
         }
@@ -438,7 +480,10 @@ mod tests {
 
     impl EmbeddingSession for FakeSession {
         fn run(&mut self, batch: &PaddedBatch) -> Result<(Vec<usize>, Vec<f32>), EmbedError> {
-            self.shapes.lock().expect("lock").push((batch.batch, batch.seq));
+            self.shapes
+                .lock()
+                .expect("lock")
+                .push((batch.batch, batch.seq));
             let mut v = Vec::new();
             for b in 0..batch.batch {
                 for t in 0..batch.seq {
@@ -453,12 +498,16 @@ mod tests {
         }
     }
 
-    fn embedder(pooling: Pooling, max_batch_tokens: usize) -> (OnnxEmbedder, std::sync::Arc<std::sync::Mutex<Vec<(usize, usize)>>>, CpuGate) {
+    type Shapes = std::sync::Arc<std::sync::Mutex<Vec<(usize, usize)>>>;
+
+    fn embedder(pooling: Pooling, max_batch_tokens: usize) -> (OnnxEmbedder, Shapes, CpuGate) {
         let shapes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
         let gate = CpuGate::new();
         let e = OnnxEmbedder::with_parts(
             Box::new(WordLenEncoder),
-            Box::new(FakeSession { shapes: shapes.clone() }),
+            Box::new(FakeSession {
+                shapes: shapes.clone(),
+            }),
             PipelineSettings {
                 model_id: "fake-model@1".into(),
                 dims: 3,
@@ -485,8 +534,14 @@ mod tests {
         assert_eq!(
             out,
             vec![
-                Embedding { model_id: "fake-model@1".into(), vector: vec![h, 0.0, h] },
-                Embedding { model_id: "fake-model@1".into(), vector: vec![h, 0.0, h] },
+                Embedding {
+                    model_id: "fake-model@1".into(),
+                    vector: vec![h, 0.0, h]
+                },
+                Embedding {
+                    model_id: "fake-model@1".into(),
+                    vector: vec![h, 0.0, h]
+                },
             ]
         );
         assert_eq!(*shapes.lock().expect("lock"), vec![(2, 4)]);
@@ -518,8 +573,17 @@ mod tests {
         let shapes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
         let e = OnnxEmbedder::with_parts(
             Box::new(WordLenEncoder),
-            Box::new(FakeSession { shapes: shapes.clone() }),
-            PipelineSettings { model_id: "m".into(), dims: 3, pooling: Pooling::Mean, max_batch_tokens: 100, pad_batches: false, nice: 19 },
+            Box::new(FakeSession {
+                shapes: shapes.clone(),
+            }),
+            PipelineSettings {
+                model_id: "m".into(),
+                dims: 3,
+                pooling: Pooling::Mean,
+                max_batch_tokens: 100,
+                pad_batches: false,
+                nice: 19,
+            },
             CpuGate::new(),
         )
         .expect("spawn");
@@ -529,7 +593,10 @@ mod tests {
         assert_eq!(*shapes.lock().expect("lock"), vec![(2, 3), (2, 4)]);
         let one = |t: &str| {
             let mut ids = vec![1u32];
-            ids.extend(t.split_whitespace().map(|w| u32::try_from(w.len()).expect("len") + 10));
+            ids.extend(
+                t.split_whitespace()
+                    .map(|w| u32::try_from(w.len()).expect("len") + 10),
+            );
             ids.push(2);
             #[allow(clippy::cast_precision_loss)]
             let n = ids.len() as f32;
@@ -547,7 +614,10 @@ mod tests {
         };
         for (got, text) in out.iter().zip(&texts) {
             let want = one(text);
-            assert!(crate::embed::pooling::dot(&got.vector, &want) > 0.999_999, "{text}");
+            assert!(
+                crate::embed::pooling::dot(&got.vector, &want) > 0.999_999,
+                "{text}"
+            );
         }
     }
 
@@ -557,7 +627,10 @@ mod tests {
         let llm = gate.llm().await;
         let texts = vec!["x".to_owned()];
         let mut fut = Box::pin(e.embed(&texts));
-        assert!((&mut fut).now_or_never().is_none(), "blocked by the llm guard");
+        assert!(
+            (&mut fut).now_or_never().is_none(),
+            "blocked by the llm guard"
+        );
         drop(llm);
         assert_eq!(fut.await.expect("embed").len(), 1);
     }
@@ -574,7 +647,14 @@ mod tests {
         let e = OnnxEmbedder::with_parts(
             Box::new(WordLenEncoder),
             Box::new(FakeSession { shapes }),
-            PipelineSettings { model_id: "m".into(), dims: 384, pooling: Pooling::Cls, max_batch_tokens: 100, pad_batches: true, nice: 19 },
+            PipelineSettings {
+                model_id: "m".into(),
+                dims: 384,
+                pooling: Pooling::Cls,
+                max_batch_tokens: 100,
+                pad_batches: true,
+                nice: 19,
+            },
             CpuGate::new(),
         )
         .expect("spawn");
@@ -585,7 +665,7 @@ mod tests {
         assert_eq!(e.embed(&[]).await, Ok(vec![]));
     }
 
-    /// A tiny WordLevel tokenizer with a CLS/SEP template, as in granite's tokenizer.json.
+    /// A tiny `WordLevel` tokenizer with a CLS/SEP template, as in granite's `tokenizer.json`.
     const TINY_TOKENIZER: &str = r#"{
       "version": "1.0",
       "truncation": null,
@@ -616,13 +696,19 @@ mod tests {
         let enc = HfEncoder::new(tok, 4).expect("encoder");
         assert_eq!(enc.pad_id(), 3);
         assert_eq!(enc.encode("عقد وطنية").expect("ids"), vec![0, 4, 5, 1]);
-        assert_eq!(enc.encode("contract in the safe").expect("ids"), vec![0, 6, 2, 1]);
+        assert_eq!(
+            enc.encode("contract in the safe").expect("ids"),
+            vec![0, 6, 2, 1]
+        );
         assert_eq!(enc.encode("").expect("ids"), vec![0, 1]);
     }
 
     #[test]
     fn missing_runtime_library_is_a_load_error() {
-        let cfg = OnnxEmbedderConfig::granite_97m_r2("/nonexistent/model".into(), "/nonexistent/libonnxruntime.so".into());
+        let cfg = OnnxEmbedderConfig::granite_97m_r2(
+            "/nonexistent/model".into(),
+            "/nonexistent/libonnxruntime.so".into(),
+        );
         let err = OnnxEmbedder::load(&cfg, CpuGate::new()).expect_err("no model");
         assert!(matches!(err, EmbedError::Load(_)), "{err:?}");
     }

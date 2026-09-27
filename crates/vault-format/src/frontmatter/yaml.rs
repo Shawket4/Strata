@@ -174,7 +174,11 @@ pub(crate) fn double_quote(s: &str) -> String {
 
 /// Renders a whole entry (`key: value` or `key:` plus indented block lines) for any YAML
 /// value. `key` is already rendered. Errors name what cannot be written.
-pub(crate) fn render_entry_yaml(key: &str, value: &Yaml, eol: LineEnding) -> Result<String, String> {
+pub(crate) fn render_entry_yaml(
+    key: &str,
+    value: &Yaml,
+    eol: LineEnding,
+) -> Result<String, String> {
     let eol = eol.as_str();
     let mut out = String::new();
     match value {

@@ -101,7 +101,12 @@ impl AiService {
             let feedback = match outcome {
                 Ok(done) => {
                     self.budget
-                        .record(&attempt_req.caller, provider.name(), &done.model, &done.usage)
+                        .record(
+                            &attempt_req.caller,
+                            provider.name(),
+                            &done.model,
+                            &done.usage,
+                        )
                         .await?;
                     add_usage(&mut total, &done.usage);
                     match schema::validate(&validator, &done.value) {
@@ -205,7 +210,9 @@ impl AiService {
             health: p.health(),
         });
         let provider_pause = provider_status.as_ref().and_then(|p| match p.health.state {
-            crate::provider::HealthState::Paused { reason, until } => Some(PauseInfo { reason, until }),
+            crate::provider::HealthState::Paused { reason, until } => {
+                Some(PauseInfo { reason, until })
+            }
             _ => None,
         });
         Ok(AiStatus {

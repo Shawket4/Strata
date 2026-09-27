@@ -16,7 +16,7 @@ pub fn user_id(n: u8) -> UserId {
 /// A caller with a DB-less scope (tests that use the in-memory usage store).
 pub fn caller(name: &str, n: u8) -> AiCaller {
     AiCaller {
-        scope: strata_testkit::detached_scope(user_id(n)),
+        scope: strata_testkit::detached_scope(user_id(n)).expect("detached scope"),
         username: name.to_owned(),
     }
 }

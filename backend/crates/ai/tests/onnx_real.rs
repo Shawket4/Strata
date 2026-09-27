@@ -43,21 +43,31 @@ async fn granite_matches_the_python_reference_for_arabic_english_and_mixed_text(
     let texts: Vec<String> = refs.iter().map(|r| r.text.clone()).collect();
 
     // Tokenisation matches the Python tokenizers package exactly (CLS … SEP).
-    let encoder = HfEncoder::load(&cfg.model_dir.join(&cfg.tokenizer_file), cfg.max_tokens).expect("tokenizer");
+    let encoder = HfEncoder::load(&cfg.model_dir.join(&cfg.tokenizer_file), cfg.max_tokens)
+        .expect("tokenizer");
     for r in &refs {
         assert_eq!(encoder.encode(&r.text).expect("ids"), r.ids, "{}", r.text);
     }
     assert_eq!(encoder.pad_id(), 179_935);
 
     let e = OnnxEmbedder::load(&cfg, CpuGate::new()).expect("model loads");
-    assert_eq!((e.dims(), e.model_id()), (384, "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"));
+    assert_eq!(
+        (e.dims(), e.model_id()),
+        (
+            384,
+            "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"
+        )
+    );
     assert_eq!(e.worker_priority().await, Ok(19));
     let out = e.embed(&texts).await.expect("embed");
     assert_eq!(out.len(), refs.len());
     for (v, r) in out.iter().zip(&refs) {
         assert_eq!(v.model_id, e.model_id());
         assert_eq!(v.vector.len(), 384);
-        assert!((dot(&v.vector, &v.vector) - 1.0).abs() < 1e-5, "unit length");
+        assert!(
+            (dot(&v.vector, &v.vector) - 1.0).abs() < 1e-5,
+            "unit length"
+        );
         let cos = dot(&v.vector, &r.vector);
         assert!(cos > 0.9999, "{}: cosine {cos} to the reference", r.text);
     }

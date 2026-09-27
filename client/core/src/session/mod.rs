@@ -9,7 +9,7 @@ mod core;
 mod intents;
 
 pub use self::core::{Core, CoreEnv, SyncApiFactory};
-pub use intents::NewTask;
+pub use intents::{NewTask, TaskEdit, candidate_item};
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 

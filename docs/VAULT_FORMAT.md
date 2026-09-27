@@ -71,6 +71,10 @@ id: 01J8…
 body…          ← everything after the close line, byte-for-byte
 ```
 
+The byte order mark is kept as found; `Document::set_bom(bool)` adds or removes it
+(`has_bom()` reads it) without touching any other byte. The 3-way merge takes theirs' BOM when
+ours kept the base's, and ours' otherwise.
+
 The line ending (`LF` or `CRLF`) of the file's first line is used for every line Strata adds
 to frontmatter or body sections. A frontmatter created for a note that had none (e.g. to add
 an `id`) uses the body's line ending and is not written if it stays empty.
@@ -79,8 +83,10 @@ an `id`) uses the body's line ending and is not written if it stays empty.
 
 ## 3. Frontmatter
 
-YAML 1.2, Obsidian "Properties"-compatible. Values Strata writes are flat: a scalar or a flat
-list of scalars; relations are lists of wikilink strings.
+YAML 1.2, Obsidian "Properties"-compatible. Values Strata writes for its own keys are flat: a
+scalar or a flat list of scalars; relations are lists of wikilink strings. Nested values
+(mappings, lists of mappings, …) of other keys are preserved, and can be written when a user's
+value has to be carried over (e.g. by a merge, §3.4 rule 6).
 
 ### 3.1 Known keys, shapes and canonical order
 
@@ -158,7 +164,8 @@ empty-value:
 - `aliases: foo` reads as `[foo]`; a legacy `tags: a, b` string is split on commas/spaces.
 - Unquoted wikilinks, which YAML parses as nested lists (`related: [[X]]`,
   `- [[X]]`), read as the wikilink `"[[X]]"`.
-- Nested mappings/lists read as `PropertyValue::Other` (raw YAML only).
+- Nested mappings/lists read as `PropertyValue::Other`; `yaml(key)` returns the parsed YAML
+  node of any key (nested or flat) and `raw_entry(key)` its exact text.
 - A frontmatter that is not valid YAML (duplicate keys, bad indentation, …), is not a
   mapping, contains a bare `\r`, or whose layout the entry splitter cannot map 1:1 to the
   parsed keys is **read-only**: `error()` explains why, typed getters return nothing, every
@@ -182,6 +189,36 @@ comment/blank lines directly above it attached to it. Each entry keeps its raw t
 5. `render_canonical()` additionally rewrites every known key in canonical syntax (e.g.
    block lists become flow lists). Unknown keys are never rewritten. A canonical document
    renders byte-identically under both `render` and `render_canonical`.
+6. **Nested values.** `set` writes flat values only (`NestedValue` otherwise). Two setters
+   write any value, under the same rules 2–4 (other entries keep their bytes; the result must
+   read back as exactly the expected keys and values, now compared as whole YAML nodes, so a
+   nested value is verified in full):
+   - `set_yaml(key, &Yaml)` renders canonical **block YAML**: `key:` then the value indented
+     by two spaces per level; sequences are indented under their key (`key:\n  - a`); a
+     mapping inside a sequence starts on the dash line (`- k: v\n  n: 1`), as does a nested
+     sequence (`- - a`); scalars follow §3.2 (plain when they read back unchanged, otherwise
+     double-quoted; mapping keys the same); empty collections are `{}` / `[]`; a nested null
+     is `null` (a top-level one `key:`). Aliases, bad values and non-scalar mapping keys are
+     refused with `InvalidValue`.
+   - `set_raw_entry(key, raw)` writes an entry verbatim (a key line for `key` plus its
+     continuation lines, as `raw_entry` returns it — comments and styles included), converted
+     to the frontmatter's line ending and terminated. Anything but exactly one entry for `key`
+     (other keys, comment or blank lines around it), or text that is not valid YAML on its
+     own, is refused with `InvalidValue`.
+
+```yaml
+plugin:                 ← set_yaml("plugin", {a: 2, list: [x, "y: z"], deep: {k: [{nr: 1, m: مريم}, []]}, empty: {}})
+  a: 2
+  list:
+    - x
+    - "y: z"
+  deep:
+    k:
+      - nr: 1
+        m: مريم
+      - []
+  empty: {}
+```
 
 Example — adding `concepts` to an Obsidian-written note:
 
@@ -474,6 +511,42 @@ Errors: `NotATask`, `NotOpen`, `NotRecurring`, `RecurrenceNotUnderstood`, `NoRef
 `NoNextOccurrence`, `InvalidBlockId`. `complete`, `cancel` (`[-]` + `❌`) and `reopen`
 (`[ ]`, ✅/❌ removed) handle the other transitions.
 
+### 9.5 Tasks without a home note (`tasks/Tasks.md`, `tasks::insert_under_month`)
+
+Tasks created without a home note (PLAN §6.11) go to `tasks/Tasks.md`
+(`tasks::DEFAULT_TASK_NOTE`), under a level-2 heading per month of creation:
+
+```markdown
+# Tasks                     ← anything before the first month heading is the user's
+
+## August 2026
+- [ ] فاتورة وطنية 📅 2026-08-01 ^t-01j8x1
+
+## September 2026
+- [ ] Make Watanya's ETA invoice 🔁 every month on the 1st 📅 2026-10-01 ^t-01j9a2
+- [ ] Petrol Arrows invoice 📅 2026-09-30 ^t-01j9a3   ← a new September task goes here
+```
+
+- **Heading format:** `## <Month> <YYYY>` — the English month name (`January` … `December`),
+  one space, the four-digit year (`tasks::month_heading`). Only level-2 headings with exactly
+  this title are month headings (`### September 2026`, `## september 2026` or headings
+  inside code blocks are ordinary text). The month is the creation date in the user's time
+  zone, supplied by the caller.
+- **Order:** month headings are chronological, oldest first.
+- **Month heading exists** (the first one, if repeated): the line goes after the last
+  non-blank line the heading directly owns (before any sub-heading under it), or directly
+  under the heading when it owns none.
+- **Month heading missing:** `## <Month> <YYYY>` and the line are inserted before the first
+  month heading of a later month; if there is none, after the last month section (before a
+  following non-month heading of level 1–2); if there are no month headings, at the end of
+  the body. The new block is separated by a blank line from the text before it and from a
+  heading after it. An empty file becomes `## September 2026\n<line>\n`.
+- New lines use the note's line ending; a last line without a terminator gets one. **Every
+  other byte is unchanged.**
+- `task.create` (`sync_model::apply::apply_task_create`) writes the canonical line
+  (`TaskSpec::render`, block ID `^t-<ulid>`) this way; with a home note, the line is appended
+  at the end of that note's body instead. A block ID the note already has is refused.
+
 ---
 
 ## 10. Sidecar metadata
@@ -583,6 +656,11 @@ them (see `docs/DECISIONS.md`).
 9. **Recurring completion sets ➕ to the completion date** on the new line when the task has
    a created date.
 10. Markdown-style links (`[text](Note.md)`) are not treated as vault links.
+11. **`tasks/Tasks.md` month headings** (§9.5): PLAN asks for "a heading per month of
+    creation" without a format; Strata uses `## <English month> <YYYY>` in chronological
+    order (oldest first), new tasks at the end of their month.
+12. **Nested frontmatter values** (§3.4 rule 6) are written as block YAML with two-space
+    indentation; PLAN only requires unknown keys to be preserved.
 
 ## Robustness notes
 

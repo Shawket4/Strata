@@ -3,6 +3,8 @@
 //! ([`crate::store::index`]) and query time, so Arabic letter variants, tashkeel, tatweel
 //! and case never prevent a match — the same rules the server's `tsvector` uses.
 
+pub mod duplicates;
+
 use rusqlite::{Connection, params};
 
 use crate::error::CoreResult;

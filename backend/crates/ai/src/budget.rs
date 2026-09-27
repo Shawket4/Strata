@@ -103,7 +103,10 @@ pub struct MemoryUsageStore {
 impl MemoryUsageStore {
     /// Every row, as `ai_usage` would hold it.
     pub fn rows(&self) -> BTreeMap<(UserId, NaiveDate, String, String), UsageTotals> {
-        self.rows.lock().unwrap_or_else(PoisonError::into_inner).clone()
+        self.rows
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 }
 
@@ -259,7 +262,12 @@ pub struct BudgetSnapshot {
 
 impl BudgetGuard {
     /// A guard over `store` with days in `tz`.
-    pub fn new(limits: BudgetLimits, tz: Tz, clock: Arc<dyn Clock>, store: Arc<dyn UsageStore>) -> Self {
+    pub fn new(
+        limits: BudgetLimits,
+        tz: Tz,
+        clock: Arc<dyn Clock>,
+        store: Arc<dyn UsageStore>,
+    ) -> Self {
         Self {
             limits,
             tz,

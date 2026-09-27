@@ -53,5 +53,7 @@ pub use request::{
     AiCaller, ChatRequest, JsonCompletion, JsonRequest, PromptRef, StreamEvent, TokenStream, Usage,
 };
 pub use router::ProviderRouter;
-pub use service::{AiService, AiTokenStream, MAX_INVALID_OUTPUT_RETRIES, Structured, ValidatedJson};
+pub use service::{
+    AiService, AiTokenStream, MAX_INVALID_OUTPUT_RETRIES, Structured, ValidatedJson,
+};
 pub use status::{AiStatus, PauseInfo, UsageStatus};

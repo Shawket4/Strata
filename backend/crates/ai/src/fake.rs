@@ -21,7 +21,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{PauseReason, ProviderError};
 use crate::provider::{LlmProvider, ProviderHealth};
-use crate::request::{ChatRequest, JsonCompletion, JsonRequest, PromptRef, StreamEvent, TokenStream, Usage};
+use crate::request::{
+    ChatRequest, JsonCompletion, JsonRequest, PromptRef, StreamEvent, TokenStream, Usage,
+};
 
 /// One recorded response.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -99,7 +101,9 @@ impl Fixture {
     }
 
     fn model(&self) -> String {
-        self.model.clone().unwrap_or_else(|| "fake-model".to_owned())
+        self.model
+            .clone()
+            .unwrap_or_else(|| "fake-model".to_owned())
     }
 
     fn failure(&self) -> Option<ProviderError> {
@@ -191,7 +195,10 @@ impl FakeLlmProvider {
 
     /// Every call so far, in order.
     pub fn calls(&self) -> Vec<RecordedCall> {
-        self.calls.lock().unwrap_or_else(PoisonError::into_inner).clone()
+        self.calls
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone()
     }
 
     /// Where the fixture for (prompt, hash) lives under `dir`.
@@ -201,7 +208,12 @@ impl FakeLlmProvider {
             .join(format!("{input_hash}.json"))
     }
 
-    fn lookup(&self, prompt: &PromptRef, input_hash: &str, user: &str) -> Result<Fixture, ProviderError> {
+    fn lookup(
+        &self,
+        prompt: &PromptRef,
+        input_hash: &str,
+        user: &str,
+    ) -> Result<Fixture, ProviderError> {
         self.calls
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
@@ -226,7 +238,12 @@ impl FakeLlmProvider {
             }
         }
         let path = self.dir.as_deref().map_or_else(
-            || PathBuf::from(format!("<fixtures>/{}/v{}/{input_hash}.json", prompt.id, prompt.version)),
+            || {
+                PathBuf::from(format!(
+                    "<fixtures>/{}/v{}/{input_hash}.json",
+                    prompt.id, prompt.version
+                ))
+            },
             |d| Self::fixture_path(d, prompt, input_hash),
         );
         if self.dir.is_some()
@@ -283,8 +300,10 @@ impl LlmProvider for FakeLlmProvider {
             .stream
             .clone()
             .ok_or_else(|| ProviderError::Protocol("fixture has no stream".into()))?;
-        let mut items: Vec<Result<StreamEvent, ProviderError>> =
-            tokens.into_iter().map(|t| Ok(StreamEvent::Text(t))).collect();
+        let mut items: Vec<Result<StreamEvent, ProviderError>> = tokens
+            .into_iter()
+            .map(|t| Ok(StreamEvent::Text(t)))
+            .collect();
         items.push(Ok(StreamEvent::Done {
             usage: f.usage(),
             model: f.model(),
@@ -316,7 +335,8 @@ impl<P: LlmProvider> FixtureRecorder<P> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(io)?;
         }
-        let text = serde_json::to_string_pretty(f).map_err(|e| ProviderError::Protocol(e.to_string()))?;
+        let text =
+            serde_json::to_string_pretty(f).map_err(|e| ProviderError::Protocol(e.to_string()))?;
         std::fs::write(&path, text + "\n").map_err(io)
     }
 }

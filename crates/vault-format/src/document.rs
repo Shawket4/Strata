@@ -219,7 +219,10 @@ mod tests {
         d.set_bom(true);
         assert!(d.has_bom());
         assert_eq!(d.render(), "\u{feff}---\r\nid: x\r\n---\r\nنص\r\n");
-        assert_eq!(d.render_canonical(), "\u{feff}---\r\nid: x\r\n---\r\nنص\r\n");
+        assert_eq!(
+            d.render_canonical(),
+            "\u{feff}---\r\nid: x\r\n---\r\nنص\r\n"
+        );
         let mut d = Document::parse("\u{feff}body only");
         d.set_bom(false);
         assert_eq!(d.render(), "body only");

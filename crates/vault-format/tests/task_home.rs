@@ -113,7 +113,9 @@ fn new_month_before_only_later_headings() {
     let body = "# Tasks\n\n## October 2026\n- [ ] o ^t-o\n## January 2027\n";
     assert_eq!(
         sep(body),
-        format!("# Tasks\n\n## September 2026\n{LINE}\n\n## October 2026\n- [ ] o ^t-o\n## January 2027\n")
+        format!(
+            "# Tasks\n\n## September 2026\n{LINE}\n\n## October 2026\n- [ ] o ^t-o\n## January 2027\n"
+        )
     );
     // Later heading on the first line.
     assert_eq!(
@@ -127,23 +129,25 @@ fn new_month_after_only_earlier_headings() {
     let body = "## August 2025\n- [ ] a ^t-a\n\n## August 2026\n- [ ] b ^t-b";
     assert_eq!(
         sep(body),
-        format!("## August 2025\n- [ ] a ^t-a\n\n## August 2026\n- [ ] b ^t-b\n\n## September 2026\n{LINE}\n")
+        format!(
+            "## August 2025\n- [ ] a ^t-a\n\n## August 2026\n- [ ] b ^t-b\n\n## September 2026\n{LINE}\n"
+        )
     );
     // A non-month level-2 heading after the months stays after the new month.
     let body = "## August 2026\n- [ ] a ^t-a\n\n## Notes\nfree text\n";
     assert_eq!(
         sep(body),
-        format!("## August 2026\n- [ ] a ^t-a\n\n## September 2026\n{LINE}\n\n## Notes\nfree text\n")
+        format!(
+            "## August 2026\n- [ ] a ^t-a\n\n## September 2026\n{LINE}\n\n## Notes\nfree text\n"
+        )
     );
 }
 
 #[test]
 fn look_alike_headings_are_not_month_headings() {
-    let body = "### September 2026\n- [ ] deep ^t-d\n```\n## September 2026\n```\n## september 2026\n";
-    assert_eq!(
-        sep(body),
-        format!("{body}\n## September 2026\n{LINE}\n")
-    );
+    let body =
+        "### September 2026\n- [ ] deep ^t-d\n```\n## September 2026\n```\n## september 2026\n";
+    assert_eq!(sep(body), format!("{body}\n## September 2026\n{LINE}\n"));
 }
 
 #[test]
@@ -202,7 +206,9 @@ proptest! {
             body.push_str(eol_s);
         }
         for ((y, m), lines) in months.iter().zip(&contents) {
-            body.push_str(&format!("## {}{eol_s}", month_heading(d(*y, *m, 1))));
+            body.push_str("## ");
+            body.push_str(&month_heading(d(*y, *m, 1)));
+            body.push_str(eol_s);
             for l in lines {
                 body.push_str(l);
                 body.push_str(eol_s);
