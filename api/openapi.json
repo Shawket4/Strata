@@ -7003,6 +7003,16 @@
           "403": {
             "$ref": "#/components/responses/Restricted"
           },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: the `entity` or `note` filter names no note in the caller's vault."
+          },
           "406": {
             "$ref": "#/components/responses/NotAcceptable"
           },

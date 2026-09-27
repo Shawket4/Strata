@@ -177,7 +177,9 @@ impl FakeServer {
             format!("{}/{}", record.entity_type().as_str(), record.entity_id()),
             record.clone(),
         );
-        Self::log(&mut s, |seq, epoch| ChangeRecord::upsert(seq, epoch, record));
+        Self::log(&mut s, |seq, epoch| {
+            ChangeRecord::upsert(seq, epoch, record)
+        });
     }
 
     /// The server rebuilt without preserving seqs: clients must re-bootstrap.

@@ -5,7 +5,9 @@ use std::fmt;
 use futures::future::BoxFuture;
 use strata_client::{Client, operations, types};
 
-use crate::net::{AccountApi, EventsApi, MeInfo, NetError, SessionTokens, SyncApi, Tokens, classify};
+use crate::net::{
+    AccountApi, EventsApi, MeInfo, NetError, SessionTokens, SyncApi, Tokens, classify,
+};
 use crate::sync::model::{BootstrapPage, ChangesPage, OpOutcome, SyncOp};
 use crate::view::model::{AdminUserItem, Platform};
 

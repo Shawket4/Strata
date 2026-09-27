@@ -19,7 +19,7 @@ Pod::Spec.new do |s|
 
   s.script_phase = {
     :name => 'Build Rust library',
-    :script => 'sh "$PODS_TARGET_SRCROOT/../cargokit/build_pod.sh" ../../../../core strata_core',
+    :script => 'sh "$PODS_TARGET_SRCROOT/../../../../core/cargokit/build_pod.sh" ../../../../core strata_core',
     :execution_position => :before_compile,
     :input_files => ['${BUILT_PRODUCTS_DIR}/cargokit_phony'],
     :output_files => ["${PODS_CONFIGURATION_BUILD_DIR}/strata_bridge/libstrata_core.a"],

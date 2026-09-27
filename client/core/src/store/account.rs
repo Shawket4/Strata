@@ -83,7 +83,10 @@ pub fn put(conn: &Connection, a: &AccountRow) -> CoreResult<()> {
 }
 
 /// Updates the account row with `f` (no-op without an account).
-pub fn update(conn: &Connection, f: impl FnOnce(&mut AccountRow)) -> CoreResult<Option<AccountRow>> {
+pub fn update(
+    conn: &Connection,
+    f: impl FnOnce(&mut AccountRow),
+) -> CoreResult<Option<AccountRow>> {
     let Some(mut a) = get(conn)? else {
         return Ok(None);
     };

@@ -10,14 +10,18 @@ use crate::store::conflicts::{self, ConflictRow, RejectionRow};
 use crate::store::index::Reindex;
 use crate::store::notes::{self, NoteBase};
 use crate::store::outbox::{self, OpStatus, OutboxOp};
-use crate::store::write::{self, DbLinks, LocalEntity};
 use crate::store::settings;
+use crate::store::write::{self, DbLinks, LocalEntity};
 use crate::sync::model::{Op, OpResult, Version};
 use crate::view::Topics;
 
 /// A local 3-way merge preview (D19) with `sync_model::merge`: ours = the local edit,
 /// theirs = the server's content.
-pub fn merge_preview(base: &str, local: &str, server: &str) -> (Option<String>, bool, MergeOutcome) {
+pub fn merge_preview(
+    base: &str,
+    local: &str,
+    server: &str,
+) -> (Option<String>, bool, MergeOutcome) {
     let outcome = sync_model::merge(base, local, server);
     match &outcome {
         MergeOutcome::Clean(text) => (Some(text.clone()), true, outcome.clone()),
@@ -223,7 +227,10 @@ pub fn apply_delete(
             re.topics(Topics::NOTES);
         }
         EntityType::ClusterName => {
-            conn.execute("DELETE FROM cluster_names WHERE cluster_id = ?1", [entity_id])?;
+            conn.execute(
+                "DELETE FROM cluster_names WHERE cluster_id = ?1",
+                [entity_id],
+            )?;
             re.topics(Topics::NOTES);
         }
         EntityType::Setting => {
@@ -283,8 +290,7 @@ pub fn finish_bootstrap(conn: &Connection, now: &str, re: &mut Reindex) -> CoreR
             "SELECT id FROM notes WHERE base_exists = 1
                AND id NOT IN (SELECT id FROM bootstrap_seen WHERE kind = 'note') ORDER BY id",
         )?;
-        st.query_map([], |r| r.get(0))?
-            .collect::<Result<_, _>>()?
+        st.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?
     };
     for id in stale {
         notes::set_base(conn, &id, None, now)?;
@@ -300,8 +306,7 @@ pub fn finish_bootstrap(conn: &Connection, now: &str, re: &mut Reindex) -> CoreR
             "SELECT DISTINCT local_entity FROM outbox
              WHERE status IN ('pending', 'inflight', 'conflict', 'duplicate') ORDER BY 1",
         )?;
-        st.query_map([], |r| r.get(0))?
-            .collect::<Result<_, _>>()?
+        st.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?
     };
     for key in live {
         write::rebuild(conn, &LocalEntity::parse(&key), now, re)?;
@@ -486,7 +491,11 @@ pub fn resolve_duplicate(
     if create_anyway {
         conn.execute(
             "UPDATE outbox SET op_id = ?2, payload = ?3, status = 'pending' WHERE op_id = ?1",
-            params![op_id, new_op_id.to_string(), forced(&op.op).payload_bytes()?],
+            params![
+                op_id,
+                new_op_id.to_string(),
+                forced(&op.op).payload_bytes()?
+            ],
         )?;
     } else {
         outbox::delete(conn, op_id)?;

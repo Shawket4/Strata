@@ -56,7 +56,10 @@ fn parses_a_document_note() {
 
 #[test]
 fn plain_note_without_frontmatter() {
-    let p = parse_note("notes/Churn notes.md", "Churn is up [[Pricing]] ![[chart.png]]\n");
+    let p = parse_note(
+        "notes/Churn notes.md",
+        "Churn is up [[Pricing]] ![[chart.png]]\n",
+    );
     assert_eq!(p.kind, domain::NoteKind::Note);
     assert_eq!(p.title, "Churn notes");
     assert!(p.properties.is_empty());
@@ -83,7 +86,10 @@ fn recurring_task_gets_an_rrule_and_bad_recurrence_is_flagged() {
         "tasks/Tasks.md",
         "- [ ] A 🔁 every month on the 1st 📅 2026-10-01 ^t-a\n- [ ] B 🔁 every blue moon 📅 2026-10-01 ^t-b\n",
     );
-    assert_eq!(p.tasks[0].rrule.as_deref(), Some("FREQ=MONTHLY;BYMONTHDAY=1"));
+    assert_eq!(
+        p.tasks[0].rrule.as_deref(),
+        Some("FREQ=MONTHLY;BYMONTHDAY=1")
+    );
     assert_eq!(p.tasks[0].recurrence_error, None);
     assert_eq!(p.tasks[1].rrule, None);
     assert_eq!(

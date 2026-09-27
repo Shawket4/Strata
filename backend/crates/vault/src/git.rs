@@ -72,14 +72,22 @@ pub fn init(dir: &Path) -> Result<bool> {
     }
     let mut opts = RepositoryInitOptions::new();
     opts.initial_head("main").mkdir(true).no_reinit(true);
-    let repo = Repository::init_opts(dir, &opts)?;
+    Repository::init_opts(dir, &opts)?;
+    configure(dir)?;
+    Ok(true)
+}
+
+/// Sets the repository options the store relies on (no CRLF conversion, no mode tracking,
+/// temp files excluded). Idempotent; also applied to repositories created elsewhere.
+pub fn configure(dir: &Path) -> Result<()> {
+    let repo = open(dir)?;
     let mut config = repo.config()?;
     config.set_bool("core.autocrlf", false)?;
     config.set_bool("core.filemode", false)?;
     let info = dir.join(".git").join("info");
     std::fs::create_dir_all(&info)?;
     std::fs::write(info.join("exclude"), format!("{TEMP_PREFIX}*\n"))?;
-    Ok(true)
+    Ok(())
 }
 
 fn signature(at: DateTime<Utc>) -> Result<Signature<'static>> {

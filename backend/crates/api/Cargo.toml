@@ -61,6 +61,7 @@ strata-api = { path = ".", features = ["test-support"] }
 strata-testkit = { workspace = true }
 strata-client = { workspace = true }
 reqwest = { workspace = true }
+zip = { workspace = true }
 
 [[bin]]
 name = "emit-openapi"

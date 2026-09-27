@@ -73,12 +73,16 @@ impl CoreTokenProvider {
     }
 
     /// Refreshes now. `Ok(None)`: the session cannot be refreshed (ended).
-    pub async fn refresh_now(&self, failed_access: Option<String>) -> Result<Option<String>, NetError> {
+    pub async fn refresh_now(
+        &self,
+        failed_access: Option<String>,
+    ) -> Result<Option<String>, NetError> {
         let _guard = self.refresh_lock.lock().await;
         let Some(current) = self.store.load() else {
             return Ok(None);
         };
-        if failed_access.is_some() && failed_access.as_deref() != Some(current.access_token.as_str())
+        if failed_access.is_some()
+            && failed_access.as_deref() != Some(current.access_token.as_str())
         {
             // Someone refreshed while we waited: use their token.
             return Ok(Some(current.access_token));

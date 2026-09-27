@@ -24,7 +24,9 @@ use sha2::{Digest, Sha256};
 use crate::error::CoreResult;
 use crate::store::notifications::{self, ScheduledRow};
 use crate::store::settings;
-use crate::view::model::{NotificationMode, NotificationOp, NotificationOpKind, NotificationResult};
+use crate::view::model::{
+    NotificationMode, NotificationOp, NotificationOpKind, NotificationResult,
+};
 
 /// Size of the rolling window of scheduled reminders.
 pub const WINDOW: usize = 60;
@@ -158,7 +160,9 @@ pub fn recompute(
             None => Some(op_of(NotificationOpKind::Schedule)),
             Some(r) if r.state == "failed" => Some(op_of(NotificationOpKind::Schedule)),
             Some(r)
-                if r.fire_at != p.fire_at.to_rfc3339() || r.title != p.title || r.body != p.body =>
+                if r.fire_at != p.fire_at.to_rfc3339()
+                    || r.title != p.title
+                    || r.body != p.body =>
             {
                 Some(op_of(NotificationOpKind::Update))
             }
@@ -183,7 +187,11 @@ pub fn recompute(
 }
 
 /// Cancels everything this device scheduled (reminders off, sign-out).
-pub fn cancel_all(conn: &Connection, now: DateTime<Utc>, mode: NotificationMode) -> CoreResult<Vec<NotificationOp>> {
+pub fn cancel_all(
+    conn: &Connection,
+    now: DateTime<Utc>,
+    mode: NotificationMode,
+) -> CoreResult<Vec<NotificationOp>> {
     let mut ops = Vec::new();
     for row in notifications::all(conn)? {
         notifications::delete(conn, row.id)?;
@@ -266,7 +274,8 @@ mod tests {
         assert!(a >= 0);
         // Pinned: changing the derivation would orphan every scheduled notification.
         let digest = Sha256::digest(b"t-01j9a3@2026-09-27 10:00");
-        let expected = u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]) & 0x7fff_ffff;
+        let expected =
+            u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]) & 0x7fff_ffff;
         assert_eq!(i64::from(a), i64::from(expected));
     }
 }

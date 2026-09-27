@@ -98,8 +98,9 @@ fn scan_and_recover(
     dir: &std::path::Path,
     ids: &dyn strata_common::IdGenerator,
     at: chrono::DateTime<chrono::Utc>,
+    write: bool,
 ) -> Result<Scanned> {
-    let temp = fsio::remove_temp_files(dir)?;
+    let temp = fsio::temp_files(dir, write)?;
     let dirty = git::dirty_paths(dir)?;
     let files = fsio::scan(dir)?;
     let mut texts = BTreeMap::new();
@@ -145,14 +146,17 @@ fn scan_and_recover(
             seen_ids.insert(i);
         }
         if new_text != text {
-            fsio::atomic_write(dir, f, new_text.as_bytes())?;
+            if write {
+                fsio::atomic_write(dir, f, new_text.as_bytes())?;
+            }
             if !assigned.contains(f) {
                 assigned.push(f.clone());
             }
         }
-        texts.insert(f.clone(), new_text);
+        // Dry run: the index is compared with the file as it is.
+        texts.insert(f.clone(), if write { new_text } else { text });
     }
-    let commit = if dirty.is_empty() && assigned.is_empty() {
+    let commit = if !write || (dirty.is_empty() && assigned.is_empty()) {
         None
     } else {
         git::commit_all(dir, "system: recovered changes", at)?
@@ -225,12 +229,23 @@ async fn warn(
 /// Reconciles the vault with git and the index (see the module docs) and loads the writer
 /// state. With `repair`, findings are reported as `index_repaired` (after a failed write)
 /// rather than as out-of-band edits.
-#[allow(clippy::too_many_lines)] // one linear pass; splitting would scatter the rules
 pub async fn reconcile(core: &mut Core, scope: UserScope, repair: bool) -> Result<Report> {
+    run(core, scope, repair, false).await
+}
+
+/// `stratad verify`: what [`reconcile`] would find, without changing the vault, git, the
+/// index or the writer state (nothing is written, no warning is recorded).
+pub async fn check(core: &mut Core, scope: UserScope) -> Result<Report> {
+    run(core, scope, false, true).await
+}
+
+#[allow(clippy::too_many_lines)] // one linear pass; splitting would scatter the rules
+async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Result<Report> {
     let dir = core.dir.clone();
     let inner = core.inner.clone();
     let at = core.now();
-    let scanned = blocking(move || scan_and_recover(&dir, inner.ids.as_ref(), at)).await?;
+    let scanned =
+        blocking(move || scan_and_recover(&dir, inner.ids.as_ref(), at, !dry)).await?;
     let mut state = build_state(&scanned.files, &scanned.texts);
     let mut report = Report {
         temp_files_removed: scanned.temp.clone(),
@@ -279,7 +294,7 @@ pub async fn reconcile(core: &mut Core, scope: UserScope, repair: bool) -> Resul
         }
         sidecars.insert(id, sc);
     }
-    if !sidecar_changes.is_empty() {
+    if !dry && !sidecar_changes.is_empty() {
         let dir = core.dir.clone();
         let changes = sidecar_changes.clone();
         blocking(move || {
@@ -318,7 +333,7 @@ pub async fn reconcile(core: &mut Core, scope: UserScope, repair: bool) -> Resul
             if let Some((old, _)) = db.get(&meta.id) {
                 names.insert(name_key(old));
             }
-            if !first_build && !report.ids_assigned.contains(path) {
+            if (dry || !first_build) && !report.ids_assigned.contains(path) {
                 report.out_of_band.push(path.clone());
             }
         }
@@ -341,6 +356,10 @@ pub async fn reconcile(core: &mut Core, scope: UserScope, repair: bool) -> Resul
                 report.missing.push(n.path.clone());
             }
         }
+    }
+    if dry {
+        tx.commit().await?;
+        return Ok(report);
     }
     let mut affected = changed.clone();
     affected.extend(state.linking_to(&names));
@@ -484,7 +503,7 @@ pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
     let dir = core.dir.clone();
     let inner = core.inner.clone();
     let at = core.now();
-    let scanned = blocking(move || scan_and_recover(&dir, inner.ids.as_ref(), at)).await?;
+    let scanned = blocking(move || scan_and_recover(&dir, inner.ids.as_ref(), at, true)).await?;
     let mut state = build_state(&scanned.files, &scanned.texts);
     let mut sidecars = HashMap::new();
     for f in scanned

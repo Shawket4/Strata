@@ -85,11 +85,7 @@ impl Session {
 
     fn run(&self, local: LocalEntity, op: Op) -> CoreResult<String> {
         let op_id = self.new_ulid();
-        self.execute(&Intent {
-            op_id,
-            local,
-            op,
-        })?;
+        self.execute(&Intent { op_id, local, op })?;
         Ok(op_id.to_string())
     }
 
@@ -211,7 +207,12 @@ impl Session {
         let refs: Vec<&str> = aliases.iter().map(String::as_str).collect();
         self.create(
             &id.to_string(),
-            Some(dedupe::Item::entity(dkind, Some(&id.to_string()), name, &refs)),
+            Some(dedupe::Item::entity(
+                dkind,
+                Some(&id.to_string()),
+                name,
+                &refs,
+            )),
             force,
             LocalEntity::Note(id.to_string()),
             Op::EntityCreate(sm::EntityCreate {
@@ -225,7 +226,12 @@ impl Session {
         )
     }
 
-    fn relation_op(&self, src_id: &str, dst_id: &str, rel_type: &str) -> CoreResult<sm::RelationRef> {
+    fn relation_op(
+        &self,
+        src_id: &str,
+        dst_id: &str,
+        rel_type: &str,
+    ) -> CoreResult<sm::RelationRef> {
         if !self.note_exists(dst_id)? {
             return Err(CoreError::not_found("note"));
         }
@@ -245,7 +251,12 @@ impl Session {
     }
 
     /// Removes a relation.
-    pub fn remove_relation(&self, src_id: &str, dst_id: &str, rel_type: &str) -> CoreResult<String> {
+    pub fn remove_relation(
+        &self,
+        src_id: &str,
+        dst_id: &str,
+        rel_type: &str,
+    ) -> CoreResult<String> {
         let r = self.relation_op(src_id, dst_id, rel_type)?;
         self.note_op(src_id, Op::RelationRemove(r))
     }
@@ -464,9 +475,14 @@ impl Session {
                     Ok((rows, crate::view::build::default_reminder_time(c)?))
                 })?;
                 let ctx = self.ctx();
-                let later = (ctx.now.with_timezone(&ctx.tz) + Duration::minutes(i64::from(minutes)))
-                    .naive_local();
-                let later = later.with_second(0).unwrap_or(later).with_nanosecond(0).unwrap_or(later);
+                let later = (ctx.now.with_timezone(&ctx.tz)
+                    + Duration::minutes(i64::from(minutes)))
+                .naive_local();
+                let later = later
+                    .with_second(0)
+                    .unwrap_or(later)
+                    .with_nanosecond(0)
+                    .unwrap_or(later);
                 let mut reminders: Vec<NaiveDateTime> = rows
                     .iter()
                     .filter_map(|(d, t)| {
@@ -571,7 +587,14 @@ impl Session {
                 settings::REMINDERS_ENABLED,
                 if enabled { "true" } else { "false" },
             )?;
-            Ok(((), if changed { Topics::SETTINGS } else { Topics::NONE }))
+            Ok((
+                (),
+                if changed {
+                    Topics::SETTINGS
+                } else {
+                    Topics::NONE
+                },
+            ))
         })?;
         if let Some(device_id) = device_id {
             self.run(

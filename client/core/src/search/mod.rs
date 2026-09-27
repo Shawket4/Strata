@@ -52,7 +52,12 @@ pub fn snippet_for(content: &str, query: &str) -> String {
 /// Runs a search. Keyword search is local and works offline; semantic and hybrid need the
 /// server (`GET /search`, not in the contract yet), so they fall back to keyword results
 /// and report their availability.
-pub fn search(conn: &Connection, ctx: &ViewCtx, query: &str, mode: SearchMode) -> CoreResult<SearchView> {
+pub fn search(
+    conn: &Connection,
+    ctx: &ViewCtx,
+    query: &str,
+    mode: SearchMode,
+) -> CoreResult<SearchView> {
     let availability = match mode {
         SearchMode::Keyword => Availability::Available,
         SearchMode::Semantic | SearchMode::Hybrid if ctx.connectivity == Connectivity::Offline => {
@@ -76,10 +81,9 @@ pub fn search(conn: &Connection, ctx: &ViewCtx, query: &str, mode: SearchMode) -
              ORDER BY bm25(notes_fts, 0.0, 10.0, 1.0, 5.0), n.title, n.id
              LIMIT ?2",
         )?;
-        st.query_map(
-            params![q, i64::try_from(LIMIT).unwrap_or(50)],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?)),
-        )?
+        st.query_map(params![q, i64::try_from(LIMIT).unwrap_or(50)], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+        })?
         .collect::<Result<_, _>>()?
     };
     Ok(SearchView {
@@ -105,7 +109,10 @@ mod tests {
 
     #[test]
     fn queries_are_normalised_prefix_terms() {
-        assert_eq!(fts_query("Pricing  TIERS").as_deref(), Some("\"pricing\"* \"tiers\"*"));
+        assert_eq!(
+            fts_query("Pricing  TIERS").as_deref(),
+            Some("\"pricing\"* \"tiers\"*")
+        );
         assert_eq!(fts_query("   "), None);
         // Punctuation (quotes included) separates tokens after normalisation.
         assert_eq!(fts_query("a\"b").as_deref(), Some("\"a\"* \"b\"*"));

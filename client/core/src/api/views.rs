@@ -1,14 +1,14 @@
 //! View-model streams (one per screen, PLAN §11) and one-shot reads.
 
 use super::runtime::core;
-use super::{lift, lift_async};
 use super::sink::DartSink;
+use super::{lift, lift_async};
 use crate::error::CoreError;
-use crate::view::model::CoreFailure;
 use crate::frb_generated::StreamSink;
 use crate::graph;
 use crate::net::NetError;
 use crate::view::build;
+use crate::view::model::CoreFailure;
 use crate::view::model::{
     AdminUsersView, AskView, Availability, ConflictScreen, DirectoryTab, DirectoryView,
     DuplicatePromptsView, EditorHint, EntityScreen, GlobalGraphView, HomeView, InboxView,
@@ -29,9 +29,7 @@ where
 
 /// Home: recent notes, inbox count, task sections, sync pill.
 pub fn watch_home(sink: StreamSink<HomeView>) -> Result<(), CoreFailure> {
-    lift(|| {
-        watch(Topics::ALL, build::home, DartSink(sink))
-    })
+    lift(|| watch(Topics::ALL, build::home, DartSink(sink)))
 }
 
 /// Inbox: captures with suggestions, other suggestions.
@@ -57,7 +55,10 @@ pub fn watch_note(id: String, sink: StreamSink<NoteScreen>) -> Result<(), CoreFa
 }
 
 /// A folder of the notes tree (`""` = vault root).
-pub fn watch_notes_list(folder: String, sink: StreamSink<NotesListView>) -> Result<(), CoreFailure> {
+pub fn watch_notes_list(
+    folder: String,
+    sink: StreamSink<NotesListView>,
+) -> Result<(), CoreFailure> {
     lift(|| {
         watch(
             Topics::NOTES | Topics::SYNC,
@@ -118,7 +119,11 @@ pub fn watch_task(id: String, sink: StreamSink<TaskScreen>) -> Result<(), CoreFa
 /// Sync status and conflicts.
 pub fn watch_sync_status(sink: StreamSink<SyncStatusView>) -> Result<(), CoreFailure> {
     lift(|| {
-        watch(Topics::SYNC | Topics::NOTES, build::sync_status, DartSink(sink))
+        watch(
+            Topics::SYNC | Topics::NOTES,
+            build::sync_status,
+            DartSink(sink),
+        )
     })
 }
 
@@ -136,7 +141,11 @@ pub fn watch_conflict(op_id: String, sink: StreamSink<ConflictScreen>) -> Result
 /// Open "Already exists" prompts.
 pub fn watch_duplicate_prompts(sink: StreamSink<DuplicatePromptsView>) -> Result<(), CoreFailure> {
     lift(|| {
-        watch(Topics::SYNC, |c, _| build::duplicate_prompts(c), DartSink(sink))
+        watch(
+            Topics::SYNC,
+            |c, _| build::duplicate_prompts(c),
+            DartSink(sink),
+        )
     })
 }
 
@@ -169,7 +178,9 @@ pub fn watch_local_graph(
 /// The global map (positions from the cached, warm-started force layout).
 pub fn global_graph() -> Result<GlobalGraphView, CoreFailure> {
     lift(|| {
-        core()?.session()?.write(|c, _| Ok((graph::global_graph(c)?, Topics::NONE)))
+        core()?
+            .session()?
+            .write(|c, _| Ok((graph::global_graph(c)?, Topics::NONE)))
     })
 }
 
@@ -200,8 +211,8 @@ pub async fn load_admin_users() -> Result<AdminUsersView, CoreFailure> {
     lift_async(async {
         let core = core()?;
         let session = core.session()?;
-        let is_admin = session
-            .read(|c, _| Ok(build::account_summary(c)?.is_some_and(|a| a.is_admin)))?;
+        let is_admin =
+            session.read(|c, _| Ok(build::account_summary(c)?.is_some_and(|a| a.is_admin)))?;
         if !is_admin {
             return Ok(AdminUsersView {
                 availability: Availability::NotAllowed,
@@ -210,7 +221,12 @@ pub async fn load_admin_users() -> Result<AdminUsersView, CoreFailure> {
             });
         }
         let url = session.server_url()?;
-        match core.env().account_api.admin_users(url, session.tokens()).await {
+        match core
+            .env()
+            .account_api
+            .admin_users(url, session.tokens())
+            .await
+        {
             Ok(users) => Ok(build::admin_users(users)),
             Err(NetError::Offline(_)) => Ok(AdminUsersView {
                 availability: Availability::Offline,

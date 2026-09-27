@@ -110,7 +110,7 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
     assert!(
         strata_index::repo::dedupe::is_keep_both(
             &mut tx,
-            "note",
+            "capture",
             &first.note.id.to_string(),
             &second.note.id.to_string()
         )
@@ -133,8 +133,15 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
         .expect("reject");
     assert_eq!(rejected.status, types::SuggestionStatus::Rejected);
     assert_eq!(ops::get_note(c, third.note.id).await.expect("kept").trashed, false);
-    let all = ops::list_suggestions(c, None).await.expect("all");
-    assert_eq!(all.items.len(), 2);
+    let accepted = ops::list_suggestions(c, Some(&types::SuggestionStatus::Accepted))
+        .await
+        .expect("accepted");
+    assert_eq!(accepted.items.iter().map(|s| s.id).collect::<Vec<_>>(), vec![sid]);
+    let rejected = ops::list_suggestions(c, Some(&types::SuggestionStatus::Rejected))
+        .await
+        .expect("rejected");
+    assert_eq!(rejected.items.len(), 1);
+    assert_eq!(ops::list_suggestions(c, None).await.expect("pending").items, vec![]);
     assert_problem(ops::accept_suggestion(c, ulid::Ulid::new()).await, &not_found());
     let _ = scope;
     h.finish().await;

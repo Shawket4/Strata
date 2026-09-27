@@ -309,3 +309,50 @@ async fn migrate_and_bootstrap_roles_prepare_an_empty_database() {
     );
     db.cleanup().await.expect("cleanup");
 }
+
+#[tokio::test]
+async fn verify_and_reindex_work_on_a_created_users_vault() {
+    let db = TestDb::new().await.expect("db");
+    let dir = tempfile::tempdir().expect("tempdir");
+    let config = config_for(db.name(), dir.path());
+    let id = commands::create_user(
+        &config,
+        &CreateUser {
+            username: "owner",
+            display_name: "Owner",
+            password: "owner-password-1",
+            admin: false,
+        },
+    )
+    .await
+    .expect("created");
+    let vault = dir.path().join("users").join(id.to_string()).join("vault");
+    assert!(vault.join("inbox/.gitkeep").is_file(), "§6.1 skeleton");
+    let clean = commands::verify(&config, "OWNER").await.expect("verify");
+    assert!(clean.is_clean(), "{clean:?}");
+    // A note written behind the server's back: reported, not repaired.
+    std::fs::write(vault.join("notes/Outside.md"), "Hello.\n").expect("write");
+    let dirty = commands::verify(&config, &id.to_string())
+        .await
+        .expect("verify");
+    assert_eq!(dirty.recovered, vec!["notes/Outside.md".to_owned()]);
+    assert_eq!(dirty.ids_assigned, vec!["notes/Outside.md".to_owned()]);
+    assert_eq!(
+        std::fs::read_to_string(vault.join("notes/Outside.md")).expect("read"),
+        "Hello.\n",
+        "verify changes nothing"
+    );
+    // Reindex reconciles first (ID + recovery commit) and derives every note.
+    assert_eq!(commands::reindex(&config, "owner").await.expect("reindex"), 1);
+    assert!(
+        commands::verify(&config, "owner")
+            .await
+            .expect("verify")
+            .is_clean()
+    );
+    assert!(matches!(
+        commands::verify(&config, "nobody").await,
+        Err(CommandError::Invalid(m)) if m == "no such user: nobody"
+    ));
+    db.cleanup().await.expect("cleanup");
+}

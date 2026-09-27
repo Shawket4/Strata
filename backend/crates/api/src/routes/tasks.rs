@@ -308,7 +308,10 @@ fn reminders(r: &[ReminderAt]) -> Result<Vec<chrono::NaiveDateTime>, Problem> {
 #[utoipa::path(
     get, path = "/tasks", tag = "tasks", operation_id = "list_tasks",
     params(TasksQuery),
-    responses((status = 200, description = "Tasks.", body = TaskList)),
+    responses(
+        (status = 200, description = "Tasks.", body = TaskList),
+        (status = 404, description = "`not_found`: the `entity` or `note` filter names no note in the caller's vault.", body = Problem),
+    ),
 )]
 pub async fn list_tasks(
     auth: Authenticated,

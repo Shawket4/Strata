@@ -360,6 +360,8 @@ impl Core {
         if !self.dir.join(".git").is_dir() {
             return Err(VaultError::NotFound);
         }
+        let (dir, at) = (self.dir.clone(), self.now());
+        blocking(move || crate::archive::complete_init(&dir, at)).await?;
         let repair = self.repair;
         crate::reconcile::reconcile(self, scope, repair).await?;
         self.repair = false;

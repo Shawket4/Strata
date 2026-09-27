@@ -92,10 +92,7 @@ pub struct CycleReport {
 /// The session side the engine runs against.
 pub trait SyncHost: Send + Sync {
     /// Runs `f` in one transaction and then refreshes views for the topics it returns.
-    fn db<R>(
-        &self,
-        f: impl FnOnce(&Connection, &str) -> CoreResult<(R, Topics)>,
-    ) -> CoreResult<R>;
+    fn db<R>(&self, f: impl FnOnce(&Connection, &str) -> CoreResult<(R, Topics)>) -> CoreResult<R>;
     /// Reports progress (views of the sync pill).
     fn set_activity(&self, activity: SyncActivity);
     /// Reports reachability.
@@ -166,7 +163,11 @@ impl SyncEngine {
     }
 
     /// Runs one full cycle: push everything, then pull (bootstrapping when needed).
-    pub async fn run_cycle<H: SyncHost>(&self, host: &H, _trigger: Trigger) -> CoreResult<CycleReport> {
+    pub async fn run_cycle<H: SyncHost>(
+        &self,
+        host: &H,
+        _trigger: Trigger,
+    ) -> CoreResult<CycleReport> {
         let mut report = CycleReport {
             pushed: 0,
             pulled: 0,
@@ -196,7 +197,11 @@ impl SyncEngine {
         Ok(report)
     }
 
-    async fn push_all<H: SyncHost>(&self, host: &H, report: &mut CycleReport) -> CoreResult<Flow<()>> {
+    async fn push_all<H: SyncHost>(
+        &self,
+        host: &H,
+        report: &mut CycleReport,
+    ) -> CoreResult<Flow<()>> {
         loop {
             let batch = host.db(|c, _| {
                 let ops = outbox::next_batch(c, self.batch_size)?;
@@ -259,7 +264,11 @@ impl SyncEngine {
         }
     }
 
-    async fn pull_all<H: SyncHost>(&self, host: &H, report: &mut CycleReport) -> CoreResult<Flow<()>> {
+    async fn pull_all<H: SyncHost>(
+        &self,
+        host: &H,
+        report: &mut CycleReport,
+    ) -> CoreResult<Flow<()>> {
         loop {
             let state = host.db(|c, _| Ok((sync_state::get(c)?, Topics::NONE)))?;
             let (true, Some(epoch)) = (state.bootstrap_complete, state.epoch) else {
@@ -341,7 +350,11 @@ impl SyncEngine {
         }
     }
 
-    async fn bootstrap<H: SyncHost>(&self, host: &H, report: &mut CycleReport) -> CoreResult<Flow<()>> {
+    async fn bootstrap<H: SyncHost>(
+        &self,
+        host: &H,
+        report: &mut CycleReport,
+    ) -> CoreResult<Flow<()>> {
         loop {
             let state = host.db(|c, _| {
                 let s = sync_state::get(c)?;

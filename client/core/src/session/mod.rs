@@ -239,7 +239,10 @@ impl Session {
     }
 
     /// Runs a write transaction and refreshes views.
-    pub fn write<R>(&self, f: impl FnOnce(&Connection, &str) -> CoreResult<(R, Topics)>) -> CoreResult<R> {
+    pub fn write<R>(
+        &self,
+        f: impl FnOnce(&Connection, &str) -> CoreResult<(R, Topics)>,
+    ) -> CoreResult<R> {
         let mut g = self.lock();
         let now = self.env.clock.now().to_rfc3339();
         let (r, topics) = {
@@ -275,7 +278,11 @@ impl Session {
     }
 
     /// Runs one sync cycle with a specific engine (tests: crash points).
-    pub async fn sync_with(&self, engine: &SyncEngine, trigger: Trigger) -> CoreResult<CycleReport> {
+    pub async fn sync_with(
+        &self,
+        engine: &SyncEngine,
+        trigger: Trigger,
+    ) -> CoreResult<CycleReport> {
         let report = engine.run_cycle(self, trigger).await?;
         if let CycleOutcome::Failed(e) = &report.outcome {
             self.account_failure(e)?;
@@ -382,7 +389,14 @@ impl Session {
         let now = self.env.clock.now();
         self.write(|c, _| {
             let changed = notify::record_result(c, id, result, now)?;
-            Ok(((), if changed { Topics::SETTINGS } else { Topics::NONE }))
+            Ok((
+                (),
+                if changed {
+                    Topics::SETTINGS
+                } else {
+                    Topics::NONE
+                },
+            ))
         })
     }
 

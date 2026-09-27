@@ -27,7 +27,12 @@ impl TokenStore for MemStore {
 
 async fn provider() -> (Arc<MemStore>, Arc<FakeAccountApi>, CoreTokenProvider) {
     let api = Arc::new(FakeAccountApi::default());
-    api.add_user("shawket", "pw", "01K5DSSE000000000000000USR", "Africa/Cairo");
+    api.add_user(
+        "shawket",
+        "pw",
+        "01K5DSSE000000000000000USR",
+        "Africa/Cairo",
+    );
     let t = api
         .login(
             "https://s".into(),
@@ -70,8 +75,14 @@ async fn a_caller_that_waited_reuses_the_new_token() {
     let (_, api, p) = provider().await;
     // First caller refreshes; the second one failed with the old token and must not spend the
     // rotated refresh token again.
-    assert_eq!(p.refresh_now(Some("access-1".into())).await, Ok(Some("access-2".into())));
-    assert_eq!(p.refresh_now(Some("access-1".into())).await, Ok(Some("access-2".into())));
+    assert_eq!(
+        p.refresh_now(Some("access-1".into())).await,
+        Ok(Some("access-2".into()))
+    );
+    assert_eq!(
+        p.refresh_now(Some("access-1".into())).await,
+        Ok(Some("access-2".into()))
+    );
     assert_eq!(api.calls.lock().expect("lock").len(), 2);
 }
 
@@ -92,13 +103,22 @@ async fn offline_refresh_is_an_error_not_a_sign_out() {
         p.refresh_now(None).await,
         Err(NetError::Offline("x".into()))
     );
-    assert_eq!(store.load().map(|t| t.access_token), Some("access-1".into()));
+    assert_eq!(
+        store.load().map(|t| t.access_token),
+        Some("access-1".into())
+    );
 }
 
 #[test]
 fn account_modes() {
     assert_eq!(account_mode("active", false), AccountMode::Active);
-    assert_eq!(account_mode("active", true), AccountMode::PasswordChangeRequired);
+    assert_eq!(
+        account_mode("active", true),
+        AccountMode::PasswordChangeRequired
+    );
     assert_eq!(account_mode("disabled", false), AccountMode::Disabled);
-    assert_eq!(account_mode("deletion_pending", true), AccountMode::DeletionPending);
+    assert_eq!(
+        account_mode("deletion_pending", true),
+        AccountMode::DeletionPending
+    );
 }

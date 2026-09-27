@@ -135,6 +135,10 @@ fn read_archive(bytes: &[u8], limits: ImportLimits) -> Result<(Vec<Entry>, Vec<S
         let first = path.split('/').next().unwrap_or_default();
         let hidden_ok = first == paths::META_DIR || first == paths::TRASH_DIR;
         let hidden = path.split('/').any(|s| s.starts_with('.'));
+        if paths::file_name(&path) == ".gitkeep" {
+            // Skeleton placeholders (every export has them): not content, not reported.
+            continue;
+        }
         if (hidden && !hidden_ok) || path.is_empty() {
             skipped.push(path);
             continue;
@@ -276,6 +280,24 @@ impl Core {
     }
 }
 
+/// Finishes a vault whose repository has no commit yet (one created by this store, or by
+/// an older provisioner that only ran `git init`): repository options, the §6.1 skeleton
+/// and the `system: initialize vault` commit. Does nothing once a commit exists.
+pub fn complete_init(dir: &Path, at: chrono::DateTime<chrono::Utc>) -> Result<bool> {
+    if git::head(dir)?.is_some() {
+        return Ok(false);
+    }
+    git::configure(dir)?;
+    for folder in SKELETON {
+        let keep = format!("{folder}/.gitkeep");
+        if fsio::read(dir, &keep)?.is_none() {
+            fsio::atomic_write(dir, &keep, b"")?;
+        }
+    }
+    git::commit_all(dir, "system: initialize vault", at)?;
+    Ok(true)
+}
+
 impl VaultService {
     /// Creates the user's vault if missing (§6.1 skeleton, one initial commit). Returns
     /// whether it was created now.
@@ -290,10 +312,7 @@ impl VaultService {
             fsio::create_dir_private(&user_dir)?;
             fsio::create_dir_private(&dir)?;
             git::init(&dir)?;
-            for folder in SKELETON {
-                fsio::atomic_write(&dir, &format!("{folder}/.gitkeep"), b"")?;
-            }
-            git::commit_all(&dir, "system: initialize vault", at)?;
+            complete_init(&dir, at)?;
             Ok(true)
         })
         .await

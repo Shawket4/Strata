@@ -238,7 +238,8 @@ mod tests {
         .expect("watch");
         hub.notify(&conn, &ctx(), Topics::NOTES).expect("same");
         conn.execute("UPDATE t SET v = 2", []).expect("update");
-        hub.notify(&conn, &ctx(), Topics::TASKS).expect("other topic");
+        hub.notify(&conn, &ctx(), Topics::TASKS)
+            .expect("other topic");
         hub.notify(&conn, &ctx(), Topics::NOTES).expect("changed");
         assert_eq!(rec.take(), vec![1, 2]);
         rec.close();

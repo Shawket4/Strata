@@ -5,8 +5,6 @@ analyzer:
     - build/**
     # frb-generated bindings (regenerate with flutter_rust_bridge_codegen generate).
     - lib/src/generated/**
-    # Vendored cargokit build tool (runs at native build time, not part of the app).
-    - cargokit/**
     - android/**
     - ios/**
     - windows/**

@@ -65,6 +65,37 @@ fn run(command: Command, config: Config) -> Result<(), String> {
             println!("created {id}");
             Ok(())
         }
+        Command::Verify { user } => {
+            let report = runtime()?
+                .block_on(commands::verify(&config, &user))
+                .map_err(|e| e.to_string())?;
+            let lines = [
+                ("temp file", &report.temp_files_removed),
+                ("uncommitted change", &report.recovered),
+                ("note without an ID", &report.ids_assigned),
+                ("sidecar to repair", &report.sidecars_repaired),
+                ("note out of date in the index", &report.out_of_band),
+                ("indexed note without a file", &report.missing),
+            ];
+            for (what, paths) in lines {
+                for path in paths {
+                    println!("{what}: {path}");
+                }
+            }
+            if report.is_clean() {
+                println!("vault is consistent");
+                Ok(())
+            } else {
+                Err("the vault needs reconciliation (it runs when stratad serve starts)".into())
+            }
+        }
+        Command::Reindex { user } => {
+            let notes = runtime()?
+                .block_on(commands::reindex(&config, &user))
+                .map_err(|e| e.to_string())?;
+            println!("reindexed {notes} notes");
+            Ok(())
+        }
         Command::Openapi { out } => {
             commands::openapi(&out).map_err(|e| e.to_string())?;
             println!("wrote {}", out.display());

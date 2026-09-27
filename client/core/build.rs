@@ -1,4 +1,4 @@
-//! Declares the `frb_expand` cfg that flutter_rust_bridge's `#[frb]` attribute emits (set
+//! Declares the `frb_expand` cfg that `flutter_rust_bridge`'s `#[frb]` attribute emits (set
 //! only while the codegen expands the crate).
 
 fn main() {

@@ -45,7 +45,11 @@ pub fn with_id(content: &str, id: Ulid) -> CoreResult<String> {
 }
 
 /// The markdown of a new capture (§6.9): frontmatter `id` and `created`, then the text.
-pub fn capture_content(id: Ulid, created: &DateTime<FixedOffset>, text: &str) -> CoreResult<String> {
+pub fn capture_content(
+    id: Ulid,
+    created: &DateTime<FixedOffset>,
+    text: &str,
+) -> CoreResult<String> {
     // The whole text is body, even if it starts with `---`; the new frontmatter uses the
     // text's line ending.
     let mut doc = Document::parse(if text.contains("\r\n") { "\r\n" } else { "" });
@@ -71,7 +75,11 @@ pub fn entity_content(id: Ulid, kind: domain::NoteKind, aliases: &[String]) -> C
 
 /// Appends a task line at the end of a note (a new line is started if needed).
 pub fn append_task(content: &str, line: &str) -> String {
-    let eol = if content.contains("\r\n") { "\r\n" } else { "\n" };
+    let eol = if content.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    };
     let mut out = content.to_owned();
     if !out.is_empty() && !out.ends_with('\n') {
         out.push_str(eol);
@@ -117,7 +125,12 @@ mod tests {
     fn capture_content_has_id_and_created() {
         let created = DateTime::parse_from_rfc3339("2026-09-27T14:32:00+03:00").expect("ts");
         assert_eq!(
-            capture_content(Ulid::from_string("01J8ZK3M4X7Q9W2E5R6T8Y0V1H").expect("ulid"), &created, "كلمت أحمد النهارده").expect("ok"),
+            capture_content(
+                Ulid::from_string("01J8ZK3M4X7Q9W2E5R6T8Y0V1H").expect("ulid"),
+                &created,
+                "كلمت أحمد النهارده"
+            )
+            .expect("ok"),
             "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\ncreated: 2026-09-27T14:32:00+03:00\n---\nكلمت أحمد النهارده"
         );
     }
@@ -138,7 +151,10 @@ mod tests {
     #[test]
     fn appending_task_lines() {
         assert_eq!(append_task("x", "- [ ] y ^t-1"), "x\n- [ ] y ^t-1\n");
-        assert_eq!(append_task("x\r\n", "- [ ] y ^t-1"), "x\r\n- [ ] y ^t-1\r\n");
+        assert_eq!(
+            append_task("x\r\n", "- [ ] y ^t-1"),
+            "x\r\n- [ ] y ^t-1\r\n"
+        );
         assert_eq!(append_task("", "- [ ] y ^t-1"), "- [ ] y ^t-1\n");
     }
 

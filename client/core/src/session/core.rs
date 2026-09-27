@@ -15,8 +15,8 @@ use crate::net::{AccountApi, NetError, SyncApi, Tokens};
 use crate::store::registry::{self, KnownAccount, Registry};
 use crate::store::{StorePaths, account, tokens};
 use crate::view::model::{
-    CoreConfig, KnownAccountItem, Platform, SessionKind, SessionState, SignInRequest, SignOutOutcome,
-    SignUpOutcome, SignUpRequest,
+    CoreConfig, KnownAccountItem, Platform, SessionKind, SessionState, SignInRequest,
+    SignOutOutcome, SignUpOutcome, SignUpRequest,
 };
 use crate::view::{Topics, ViewSink};
 
@@ -85,7 +85,9 @@ pub struct Core {
 
 impl std::fmt::Debug for Core {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Core").field("env", &self.env).finish_non_exhaustive()
+        f.debug_struct("Core")
+            .field("env", &self.env)
+            .finish_non_exhaustive()
     }
 }
 

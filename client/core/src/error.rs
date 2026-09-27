@@ -198,14 +198,20 @@ mod tests {
     fn message_keys_are_stable() {
         let cases = [
             (CoreError::Offline, "error.offline"),
-            (CoreError::PendingChanges { count: 3 }, "error.pending_changes"),
+            (
+                CoreError::PendingChanges { count: 3 },
+                "error.pending_changes",
+            ),
             (
                 CoreError::NotAvailable {
                     feature: "ask".into(),
                 },
                 "error.not_available",
             ),
-            (CoreError::AccountDeletionPending, "error.account_deletion_pending"),
+            (
+                CoreError::AccountDeletionPending,
+                "error.account_deletion_pending",
+            ),
             (CoreError::invalid("path", "empty"), "error.invalid_input"),
             (CoreError::not_found("note"), "error.not_found"),
         ];

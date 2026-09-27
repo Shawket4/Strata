@@ -110,12 +110,10 @@ pub fn live_paths(conn: &Connection) -> CoreResult<Vec<(String, String)>> {
 
 /// The current state of a live note.
 pub fn current(conn: &Connection, id: &str) -> CoreResult<Option<NoteState>> {
-    Ok(get(conn, id)?
-        .filter(|n| !n.deleted)
-        .map(|n| NoteState {
-            path: n.path,
-            content: n.content,
-        }))
+    Ok(get(conn, id)?.filter(|n| !n.deleted).map(|n| NoteState {
+        path: n.path,
+        content: n.content,
+    }))
 }
 
 /// The server base of a note.
@@ -141,7 +139,10 @@ pub fn write_current(
     now: &str,
 ) -> CoreResult<bool> {
     let before = get(conn, id)?;
-    let before_path = before.as_ref().filter(|n| !n.deleted).map(|n| n.path.clone());
+    let before_path = before
+        .as_ref()
+        .filter(|n| !n.deleted)
+        .map(|n| n.path.clone());
     match state {
         Some(s) => {
             let parsed = format::parse_note(&s.path, &s.content);

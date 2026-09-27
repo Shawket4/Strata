@@ -3,12 +3,12 @@
 use flutter_rust_bridge::frb;
 
 use super::runtime::{self, core};
-use super::{lift, lift_async};
 use super::sink::DartSink;
-use crate::view::model::CoreFailure;
+use super::{lift, lift_async};
 use crate::frb_generated::StreamSink;
 use crate::session::{Core, CoreEnv};
 use crate::sync::engine::Trigger;
+use crate::view::model::CoreFailure;
 use crate::view::model::{
     AppLifecycle, CoreConfig, SessionState, SignInRequest, SignOutOutcome, SignUpOutcome,
     SignUpRequest,
@@ -33,17 +33,12 @@ pub async fn init_core(config: CoreConfig) -> Result<SessionState, CoreFailure> 
 
 /// Streams the session state (login screen, main shell, restricted screens).
 pub fn watch_session(sink: StreamSink<SessionState>) -> Result<(), CoreFailure> {
-    lift(|| {
-        core()?.watch_state(Box::new(DartSink(sink)))
-    })
+    lift(|| core()?.watch_state(Box::new(DartSink(sink))))
 }
 
 /// Registers an account; it waits for admin approval (D22).
 pub async fn sign_up(request: SignUpRequest) -> Result<SignUpOutcome, CoreFailure> {
-    lift_async(async {
-        core()?.sign_up(request).await
-    })
-    .await
+    lift_async(async { core()?.sign_up(request).await }).await
 }
 
 /// Signs in as this device.
@@ -58,10 +53,7 @@ pub async fn sign_in(request: SignInRequest) -> Result<SessionState, CoreFailure
 
 /// Signs out: `force = false` returns `NeedsConfirmation` while ops are unsynced.
 pub async fn sign_out(force: bool) -> Result<SignOutOutcome, CoreFailure> {
-    lift_async(async {
-        core()?.sign_out(force).await
-    })
-    .await
+    lift_async(async { core()?.sign_out(force).await }).await
 }
 
 /// Switches to another account with data on this device.
@@ -75,17 +67,12 @@ pub fn switch_account(user_id: String) -> Result<SessionState, CoreFailure> {
 
 /// The user saw the "account disabled" screen: wipes the account's local data.
 pub fn acknowledge_account_disabled() -> Result<SessionState, CoreFailure> {
-    lift(|| {
-        core()?.acknowledge_disabled()
-    })
+    lift(|| core()?.acknowledge_disabled())
 }
 
 /// Re-reads the profile (`GET /me`).
 pub async fn refresh_account() -> Result<(), CoreFailure> {
-    lift_async(async {
-        core()?.refresh_account().await
-    })
-    .await
+    lift_async(async { core()?.refresh_account().await }).await
 }
 
 /// App lifecycle (resume triggers a sync and a reminder refill, §12.4, §12.5b).

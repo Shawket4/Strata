@@ -79,7 +79,13 @@ pub fn delete(conn: &Connection, id: i32) -> CoreResult<()> {
 }
 
 /// Records a platform result. Returns whether a row was updated.
-pub fn set_result(conn: &Connection, id: i32, state: &str, result: &str, now: &str) -> CoreResult<bool> {
+pub fn set_result(
+    conn: &Connection,
+    id: i32,
+    state: &str,
+    result: &str,
+    now: &str,
+) -> CoreResult<bool> {
     Ok(conn.execute(
         "UPDATE scheduled_notifications SET state = ?2, last_result = ?3, updated_at = ?4
          WHERE id = ?1",

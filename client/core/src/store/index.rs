@@ -230,11 +230,8 @@ fn index_parsed(
                     .and_then(vault_format::WikiLink::parse_exact)
                     .map(|w| w.target().to_owned())
             };
-            let (place, person, party) = (
-                target(&e.place),
-                target(&e.person),
-                target(&e.counterparty),
-            );
+            let (place, person, party) =
+                (target(&e.place), target(&e.person), target(&e.counterparty));
             conn.execute(
                 "INSERT INTO custody_events (document_id, ord, type, at, place_id, place_raw,
                                              person_id, person_raw, counterparty_id,

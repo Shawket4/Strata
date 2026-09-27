@@ -86,7 +86,11 @@ fn resolve_display(conn: &Connection, target: &str) -> CoreResult<EntityRef> {
     })
 }
 
-fn entity_ref(conn: &Connection, id: Option<String>, raw: Option<String>) -> CoreResult<Option<EntityRef>> {
+fn entity_ref(
+    conn: &Connection,
+    id: Option<String>,
+    raw: Option<String>,
+) -> CoreResult<Option<EntityRef>> {
     match (id, raw) {
         (Some(id), raw) => {
             let title: Option<String> = conn
@@ -567,7 +571,10 @@ fn suggestion_detail(conn: &Connection, p: SuggestionPayload) -> CoreResult<Sugg
             mention,
             candidates: candidates
                 .into_iter()
-                .map(|(id, title)| EntityRef { id: Some(id), title })
+                .map(|(id, title)| EntityRef {
+                    id: Some(id),
+                    title,
+                })
                 .collect(),
             ..SuggestionDetail::of(SuggestionKind::EntityLinkOrCreate)
         },
@@ -620,7 +627,14 @@ fn suggestions(conn: &Connection, only_pending: bool) -> CoreResult<Vec<Suggesti
             }
         ))?;
         st.query_map([], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+            Ok((
+                r.get(0)?,
+                r.get(1)?,
+                r.get(2)?,
+                r.get(3)?,
+                r.get(4)?,
+                r.get(5)?,
+            ))
         })?
         .collect::<Result<_, _>>()?
     };
@@ -703,7 +717,14 @@ pub fn duplicate_prompts(conn: &Connection) -> CoreResult<DuplicatePromptsView> 
 // ---------------------------------------------------------------------------------------------
 
 fn relation_chips(conn: &Connection, sql: &str, id: &str) -> CoreResult<Vec<RelationChip>> {
-    let rows: Vec<(String, Option<String>, String, Option<String>, Option<f64>, Option<String>)> = {
+    let rows: Vec<(
+        String,
+        Option<String>,
+        String,
+        Option<String>,
+        Option<f64>,
+        Option<String>,
+    )> = {
         let mut st = conn.prepare(sql)?;
         st.query_map([id], |r| {
             Ok((
@@ -818,28 +839,28 @@ pub fn note_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Not
     Ok(NoteScreen {
         id: id.to_owned(),
         note: Some(NoteView {
-        id: n.id.clone(),
-        path: n.path,
-        title: parsed.display_title.clone(),
-        kind: n.kind,
-        version: n.base_version,
-        properties: parsed
-            .properties
-            .iter()
-            .filter(|(k, _)| !is_relation_key(k))
-            .map(|(k, v)| PropertyItem {
-                key: k.clone(),
-                values: format::property_display(v),
-            })
-            .collect(),
-        relations: relation_chips(conn, OUTGOING_RELATIONS, id)?,
-        backlinks: backlinks(conn, id)?,
-        tags: parsed.tags,
-        tasks,
-        hints: hints_of(&n.content),
-        sync,
-        history: availability_online(ctx, "history"),
-        content: n.content,
+            id: n.id.clone(),
+            path: n.path,
+            title: parsed.display_title.clone(),
+            kind: n.kind,
+            version: n.base_version,
+            properties: parsed
+                .properties
+                .iter()
+                .filter(|(k, _)| !is_relation_key(k))
+                .map(|(k, v)| PropertyItem {
+                    key: k.clone(),
+                    values: format::property_display(v),
+                })
+                .collect(),
+            relations: relation_chips(conn, OUTGOING_RELATIONS, id)?,
+            backlinks: backlinks(conn, id)?,
+            tags: parsed.tags,
+            tasks,
+            hints: hints_of(&n.content),
+            sync,
+            history: availability_online(ctx, "history"),
+            content: n.content,
         }),
     })
 }
@@ -1010,12 +1031,28 @@ pub fn directory(conn: &Connection, tab: DirectoryTab, query: &str) -> CoreResul
 }
 
 fn document_brief(conn: &Connection, id: &str) -> CoreResult<DocumentBrief> {
-    let row: Option<(String, Option<String>, Option<String>, Option<String>, Option<String>, Option<String>)> = conn
+    let row: Option<(
+        String,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+        Option<String>,
+    )> = conn
         .query_row(
             "SELECT n.title, d.status, d.location_id, d.location_raw, d.holder_id, d.holder_raw
              FROM documents d JOIN notes n ON n.id = d.note_id WHERE d.note_id = ?1",
             [id],
-            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?)),
+            |r| {
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                ))
+            },
         )
         .optional()?;
     let Some((title, status, loc_id, loc_raw, holder_id, holder_raw)) = row else {
@@ -1055,10 +1092,12 @@ fn breadcrumb(conn: &Connection, id: &str, include_self: bool) -> CoreResult<Vec
     let mut chain = Vec::new();
     let mut seen = HashSet::new();
     if include_self {
-        chain.push(entity_ref(conn, Some(id.to_owned()), None)?.unwrap_or(EntityRef {
-            id: Some(id.to_owned()),
-            title: String::new(),
-        }));
+        chain.push(
+            entity_ref(conn, Some(id.to_owned()), None)?.unwrap_or(EntityRef {
+                id: Some(id.to_owned()),
+                title: String::new(),
+            }),
+        );
     }
     let mut cur = id.to_owned();
     seen.insert(cur.clone());
@@ -1074,7 +1113,11 @@ fn breadcrumb(conn: &Connection, id: &str, include_self: bool) -> CoreResult<Vec
     Ok(chain)
 }
 
-fn custody_items(conn: &Connection, where_sql: &str, p: impl rusqlite::Params) -> CoreResult<Vec<CustodyItem>> {
+fn custody_items(
+    conn: &Connection,
+    where_sql: &str,
+    p: impl rusqlite::Params,
+) -> CoreResult<Vec<CustodyItem>> {
     type Row = (
         String,
         String,
@@ -1226,13 +1269,17 @@ fn entity_view(conn: &Connection, n: &crate::store::notes::NoteRow) -> CoreResul
         properties: parsed
             .properties
             .iter()
-            .filter(|(k, _)| !is_relation_key(k) && !matches!(k.as_str(), "id" | "kind" | "aliases"))
+            .filter(|(k, _)| {
+                !is_relation_key(k) && !matches!(k.as_str(), "id" | "kind" | "aliases")
+            })
             .map(|(k, v)| PropertyItem {
                 key: k.clone(),
                 values: format::property_display(v),
             })
             .collect(),
-        summary: section("Summary").map(|s| s.trim().to_owned()).filter(|s| !s.is_empty()),
+        summary: section("Summary")
+            .map(|s| s.trim().to_owned())
+            .filter(|s| !s.is_empty()),
         insights: cited_bullets(conn, &section("Insights").unwrap_or_default())?,
         open_items: cited_bullets(conn, &section("Open items").unwrap_or_default())?,
         timeline: cited_bullets(conn, &section("Timeline").unwrap_or_default())?,

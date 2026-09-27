@@ -4,8 +4,11 @@
 //! [`dedupe::CandidateQuery`]: equal exact or phonetic keys, or trigram similarity of the
 //! prepared texts above the query's floor; the decision is `dedupe::check`.
 
+use dedupe::{
+    CandidateQuery, DedupeKind, DuplicateCandidate, Existing, Item, KeepBoth, KeepBothSet,
+    Thresholds,
+};
 use rusqlite::Connection;
-use dedupe::{CandidateQuery, DedupeKind, DuplicateCandidate, Existing, Item, KeepBoth, KeepBothSet, Thresholds};
 
 use crate::error::CoreResult;
 
@@ -97,7 +100,10 @@ fn keep_both(conn: &Connection) -> CoreResult<KeepBothSet> {
 fn matches_query(q: &CandidateQuery, cand: &Item) -> bool {
     let keys = cand.keys();
     keys.exact_keys.iter().any(|k| q.exact_keys.contains(k))
-        || keys.phonetic_keys.iter().any(|k| q.phonetic_keys.contains(k))
+        || keys
+            .phonetic_keys
+            .iter()
+            .any(|k| q.phonetic_keys.contains(k))
         || keys.trigram_texts.iter().any(|t| {
             q.trigram_texts
                 .iter()

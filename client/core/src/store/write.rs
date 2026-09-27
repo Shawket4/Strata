@@ -111,9 +111,27 @@ impl Links for DbLinks {
     }
 }
 
+/// Stable reason code of an invalid vault path (never the path itself: errors carry no user
+/// content).
+fn path_error_code(e: &vault_format::filename::PathError) -> &'static str {
+    use vault_format::filename::{FileNameError as F, PathError as P};
+    match e {
+        P::Absolute => "absolute",
+        P::Segment { error, .. } => match error {
+            F::Empty => "empty_segment",
+            F::ForbiddenChar(_) => "forbidden_char",
+            F::ControlChar(_) => "control_char",
+            F::LeadingDot => "leading_dot",
+            F::EdgeWhitespaceOrDot => "edge_whitespace_or_dot",
+            F::Reserved(_) => "reserved_name",
+            F::TooLong(_) => "too_long",
+        },
+    }
+}
+
 fn validate_note_path(path: &str) -> CoreResult<()> {
     vault_format::filename::validate_vault_path(path)
-        .map_err(|e| CoreError::invalid("path", &format!("{e:?}").to_ascii_lowercase()))?;
+        .map_err(|e| CoreError::invalid("path", path_error_code(&e)))?;
     if !path.to_ascii_lowercase().ends_with(".md") {
         return Err(CoreError::invalid("path", "not_markdown"));
     }
@@ -159,7 +177,9 @@ fn edit_fm(
 }
 
 fn link_or_missing(links: &dyn Links, id: Ulid) -> CoreResult<String> {
-    links.link_for(id).ok_or_else(|| CoreError::not_found("note"))
+    links
+        .link_for(id)
+        .ok_or_else(|| CoreError::not_found("note"))
 }
 
 fn with_body(
@@ -296,22 +316,26 @@ pub fn apply_to_note(
                 Ok(())
             })
         }
-        Op::DocumentCreate(p) => {
-            new_entity(p.id, domain::NoteKind::Document, &p.name, &p.aliases, |fm| {
-                document_fields(fm, p, links)
+        Op::DocumentCreate(p) => new_entity(
+            p.id,
+            domain::NoteKind::Document,
+            &p.name,
+            &p.aliases,
+            |fm| document_fields(fm, p, links),
+        ),
+        Op::PlaceCreate(p) => {
+            new_entity(p.id, domain::NoteKind::Place, &p.name, &p.aliases, |fm| {
+                if let Some(parent) = p.parent_id {
+                    fm.add_relation_link(relation("part-of")?, &link_or_missing(links, parent)?)
+                        .map_err(|e| fm_err(&e))?;
+                }
+                if let Some(a) = &p.address {
+                    fm.set_text(KnownKey::Address, a.clone())
+                        .map_err(|e| fm_err(&e))?;
+                }
+                Ok(())
             })
         }
-        Op::PlaceCreate(p) => new_entity(p.id, domain::NoteKind::Place, &p.name, &p.aliases, |fm| {
-            if let Some(parent) = p.parent_id {
-                fm.add_relation_link(relation("part-of")?, &link_or_missing(links, parent)?)
-                    .map_err(|e| fm_err(&e))?;
-            }
-            if let Some(a) = &p.address {
-                fm.set_text(KnownKey::Address, a.clone())
-                    .map_err(|e| fm_err(&e))?;
-            }
-            Ok(())
-        }),
         Op::NoteUpdate(p) => {
             let s = require(state)?;
             Ok(Some(NoteState {

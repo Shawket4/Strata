@@ -42,7 +42,7 @@ android {
     }
 }
 
-apply from: "../cargokit/gradle/plugin.gradle"
+apply from: "../../../../core/cargokit/gradle/plugin.gradle"
 cargokit {
     manifestDir = "../../../../core"
     libname = "strata_core"

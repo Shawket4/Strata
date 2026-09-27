@@ -17,6 +17,7 @@ path = "src/main.rs"
 strata-api = { workspace = true }
 strata-common = { workspace = true, features = ["sqlx"] }
 strata-index = { workspace = true }
+strata-vault = { workspace = true }
 actix-web = { workspace = true }
 sqlx = { workspace = true }
 tokio = { workspace = true }

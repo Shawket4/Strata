@@ -136,7 +136,10 @@ fn row(r: &rusqlite::Row<'_>) -> rusqlite::Result<RawRow> {
 
 fn finish(raw: RawRow) -> CoreResult<OutboxOp> {
     let bad = |e: String| CoreError::Storage(format!("outbox op {}: {e}", raw.op_id));
-    let kind: OpKind = raw.kind.parse().map_err(|e: sync_model::OpError| bad(e.to_string()))?;
+    let kind: OpKind = raw
+        .kind
+        .parse()
+        .map_err(|e: sync_model::OpError| bad(e.to_string()))?;
     let op = Op::from_parts(kind, &raw.payload).map_err(|e| bad(e.to_string()))?;
     let base_version = raw
         .base_version
@@ -157,7 +160,11 @@ fn finish(raw: RawRow) -> CoreResult<OutboxOp> {
     })
 }
 
-fn query(conn: &Connection, where_sql: &str, p: impl rusqlite::Params) -> CoreResult<Vec<OutboxOp>> {
+fn query(
+    conn: &Connection,
+    where_sql: &str,
+    p: impl rusqlite::Params,
+) -> CoreResult<Vec<OutboxOp>> {
     let mut st = conn.prepare(&format!("SELECT {COLUMNS} FROM outbox {where_sql}"))?;
     let raw = st.query_map(p, row)?.collect::<Result<Vec<_>, _>>()?;
     raw.into_iter().map(finish).collect()

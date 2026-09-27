@@ -180,7 +180,12 @@ fn walk(root: &Path, dir: &Path, prefix: &str, f: &mut dyn FnMut(&str, Kind)) ->
 /// Removes leftover temporary files (from a crash between write and rename). Returns their
 /// relative paths, sorted.
 pub fn remove_temp_files(root: &Path) -> io::Result<Vec<String>> {
-    fn go(dir: &Path, prefix: &str, out: &mut Vec<String>) -> io::Result<()> {
+    temp_files(root, true)
+}
+
+/// Every leftover temp file (relative, sorted), removing them if `remove`.
+pub fn temp_files(root: &Path, remove: bool) -> io::Result<Vec<String>> {
+    fn go(dir: &Path, prefix: &str, remove: bool, out: &mut Vec<String>) -> io::Result<()> {
         let entries = match fs::read_dir(dir) {
             Ok(e) => e,
             Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(()),
@@ -198,17 +203,19 @@ pub fn remove_temp_files(root: &Path) -> io::Result<Vec<String>> {
             };
             if kind.is_dir() {
                 if !(prefix.is_empty() && name == GIT_DIR) {
-                    go(&entry.path(), &rel, out)?;
+                    go(&entry.path(), &rel, remove, out)?;
                 }
             } else if name.starts_with(TEMP_PREFIX) {
-                fs::remove_file(entry.path())?;
+                if remove {
+                    fs::remove_file(entry.path())?;
+                }
                 out.push(rel);
             }
         }
         Ok(())
     }
     let mut out = Vec::new();
-    go(root, "", &mut out)?;
+    go(root, "", remove, &mut out)?;
     out.sort();
     Ok(out)
 }

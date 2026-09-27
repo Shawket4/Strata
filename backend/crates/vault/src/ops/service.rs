@@ -292,10 +292,10 @@ impl VaultService {
         ))
     }
 
-    /// `stratad verify --user`: reconciles the vault now and returns what was found.
+    /// `stratad verify --user`: what reconciliation would find and repair, changing nothing.
     pub async fn verify(&self, scope: &UserScope) -> Result<Report> {
         self.exec_unloaded(scope, |core, s| {
-            Box::pin(async move { reconcile::reconcile(core, s, false).await })
+            Box::pin(async move { reconcile::check(core, s).await })
         })
         .await
     }

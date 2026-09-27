@@ -107,7 +107,9 @@ impl Registry {
     pub fn device_value(&self, key: &str) -> CoreResult<Option<String>> {
         Ok(self
             .conn
-            .query_row("SELECT value FROM device WHERE key = ?1", [key], |r| r.get(0))
+            .query_row("SELECT value FROM device WHERE key = ?1", [key], |r| {
+                r.get(0)
+            })
             .optional()?)
     }
 

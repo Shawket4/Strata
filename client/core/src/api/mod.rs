@@ -1,4 +1,4 @@
-//! The flutter_rust_bridge facade (PLAN §12.1 `api/`): the **only** surface Dart can call.
+//! The `flutter_rust_bridge` facade (PLAN §12.1 `api/`): the **only** surface Dart can call.
 //!
 //! Every function forwards to the headless [`crate::session::Core`]; streams are view-model
 //! watchers whose sink is the Dart stream. Nothing here decides anything: the facade exists so
@@ -10,6 +10,9 @@
 //! | [`views`] | one `watch_*` stream per screen, plus one-shot reads (search, global map, admin) |
 //! | [`intents`] | every user mutation (queued through the outbox) |
 //! | [`reminders`] | the notification-ops stream and the adapter's results and actions |
+
+// frb passes arguments across FFI as owned values; the facade keeps its signatures.
+#![allow(clippy::needless_pass_by_value)]
 
 pub mod app;
 pub mod intents;

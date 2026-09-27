@@ -153,7 +153,12 @@ pub fn parse_note(path: &str, content: &str) -> ParsedNote {
         .unwrap_or(domain::NoteKind::Note);
     let properties = fm.map_or_else(Vec::new, |f| {
         f.keys()
-            .map(|k| (k.to_owned(), f.get(k).cloned().unwrap_or(PropertyValue::Null)))
+            .map(|k| {
+                (
+                    k.to_owned(),
+                    f.get(k).cloned().unwrap_or(PropertyValue::Null),
+                )
+            })
             .collect()
     });
     let analysis = doc.analyze_body();

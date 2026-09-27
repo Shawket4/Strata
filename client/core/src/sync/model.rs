@@ -9,8 +9,8 @@ pub use sync_model::changes::{
 };
 pub use sync_model::ops;
 pub use sync_model::{
-    BootstrapPage, Change, ChangeRecord, ChangesPage, ConflictResolution, EntityType, Op,
-    OpKind, OpOutcome, OpResult, Problem, Record, SyncCursor, SyncOp, Version,
+    BootstrapPage, Change, ChangeRecord, ChangesPage, ConflictResolution, EntityType, Op, OpKind,
+    OpOutcome, OpResult, Problem, Record, SyncCursor, SyncOp, Version,
 };
 
 /// What a suggestion proposes, decoded from [`SuggestionRecord::payload`] for the inbox.

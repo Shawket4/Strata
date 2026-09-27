@@ -97,8 +97,7 @@ fn finish(raw: RawConflict) -> CoreResult<ConflictRow> {
     let kind: OpKind = kind
         .parse()
         .map_err(|e: sync_model::OpError| CoreError::Storage(e.to_string()))?;
-    let local_op =
-        Op::from_parts(kind, &payload).map_err(|e| CoreError::Storage(e.to_string()))?;
+    let local_op = Op::from_parts(kind, &payload).map_err(|e| CoreError::Storage(e.to_string()))?;
     Ok(ConflictRow {
         op_id: raw.op_id,
         entity_id: raw.entity_id,
@@ -124,7 +123,9 @@ pub fn conflicts(conn: &Connection) -> CoreResult<Vec<ConflictRow>> {
     let mut st = conn.prepare(&format!(
         "SELECT {CONFLICT_COLUMNS} FROM conflicts ORDER BY created, op_id"
     ))?;
-    let raw = st.query_map([], conflict_row)?.collect::<Result<Vec<_>, _>>()?;
+    let raw = st
+        .query_map([], conflict_row)?
+        .collect::<Result<Vec<_>, _>>()?;
     raw.into_iter().map(finish).collect()
 }
 
@@ -170,7 +171,8 @@ pub fn put_duplicate(
 
 /// Every duplicate prompt: `(op_id, candidates)`, oldest first.
 pub fn duplicates(conn: &Connection) -> CoreResult<Vec<(String, Vec<dedupe::DuplicateCandidate>)>> {
-    let mut st = conn.prepare("SELECT op_id, candidates FROM duplicates ORDER BY created, op_id")?;
+    let mut st =
+        conn.prepare("SELECT op_id, candidates FROM duplicates ORDER BY created, op_id")?;
     let raw: Vec<(String, Vec<u8>)> = st
         .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
         .collect::<Result<_, _>>()?;
@@ -207,7 +209,14 @@ pub fn put_rejection(conn: &Connection, r: &RejectionRow) -> CoreResult<()> {
     conn.execute(
         "INSERT OR REPLACE INTO rejections (op_id, kind, entity_id, problem_type, status, created)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        params![r.op_id, r.kind, r.entity_id, r.problem_type, r.status, r.created],
+        params![
+            r.op_id,
+            r.kind,
+            r.entity_id,
+            r.problem_type,
+            r.status,
+            r.created
+        ],
     )?;
     Ok(())
 }

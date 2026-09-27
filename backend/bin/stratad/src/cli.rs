@@ -42,6 +42,20 @@ pub enum Command {
         #[arg(long)]
         admin: bool,
     },
+    /// Check a user's vault against its git history and the index, changing nothing
+    /// (exit status 1 if anything is wrong). Run with the server stopped.
+    Verify {
+        /// User ID or username.
+        #[arg(long)]
+        user: String,
+    },
+    /// Rebuild every derived index row of a user from the vault files (after reconciling
+    /// the vault). Run with the server stopped.
+    Reindex {
+        /// User ID or username.
+        #[arg(long)]
+        user: String,
+    },
     /// Write the OpenAPI contract.
     Openapi {
         /// Output path.
