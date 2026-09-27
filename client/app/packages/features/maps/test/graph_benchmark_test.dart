@@ -154,9 +154,9 @@ void main() {
           palette: palette,
           cache: cache,
           textDirection: TextDirection.ltr,
-          options: GraphPaintOptions(
+          options: const GraphPaintOptions(
             selected: 5000,
-            highlight: const {5000, 5001, 5002},
+            highlight: {5000, 5001, 5002},
             hovered: 4200,
           ),
         );

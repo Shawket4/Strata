@@ -164,7 +164,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     final body = KeyedSubtree(key: _bodyKey, child: widget.navigationShell);
     final Widget shell;
     if (sizeClass == SizeClass.compact && isDetailLocation(widget.location)) {
-      shell = body;
+      // The detail's own page chrome (app bar, back) fills the window.
+      shell = Material(child: body);
     } else {
       shell = AdaptiveScaffold(
         destinations: destinations,
@@ -223,6 +224,7 @@ class _FolderTree extends ConsumerWidget {
         StrataSectionHeader(title: l10n.pinnedTitle),
         for (final folder in folders)
           Semantics(
+            container: true,
             button: true,
             label: l10n.folderSemantics(
               name: folder.name,
