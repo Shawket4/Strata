@@ -1,0 +1,2 @@
+# Product and protocol names used in docs (plus clippy's defaults).
+doc-valid-idents = ["MessagePack", "OpenAPI", "WebSocket", "WebSockets", ".."]

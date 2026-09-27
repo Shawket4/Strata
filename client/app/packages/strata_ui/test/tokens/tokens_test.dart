@@ -94,7 +94,11 @@ void main() {
       final mid = StrataColors.light.lerp(StrataColors.dark, 0.5);
       expect(
         mid.background,
-        Color.lerp(StrataColors.light.background, StrataColors.dark.background, 0.5),
+        Color.lerp(
+          StrataColors.light.background,
+          StrataColors.dark.background,
+          0.5,
+        ),
       );
       expect(StrataColors.light.lerp(null, 0.5), same(StrataColors.light));
       final copy = StrataColors.light.copyWith(accent: const Color(0xFF000000));
@@ -224,10 +228,11 @@ void main() {
     });
 
     test('touch platforms need 48 px targets, pointer platforms 32', () {
-      expect(
-        TargetPlatform.values.where(StrataLayout.isTouch).toSet(),
-        {TargetPlatform.android, TargetPlatform.iOS, TargetPlatform.fuchsia},
-      );
+      expect(TargetPlatform.values.where(StrataLayout.isTouch).toSet(), {
+        TargetPlatform.android,
+        TargetPlatform.iOS,
+        TargetPlatform.fuchsia,
+      });
     });
 
     test('reduced motion zeroes every duration', () {
@@ -261,9 +266,14 @@ void main() {
         text2: StrataColors.light.text2,
       );
       expect(
-        [t.caption, t.bodySmall, t.body, t.titleSmall, t.title, t.display]
-            .map((s) => s.fontSize)
-            .toList(),
+        [
+          t.caption,
+          t.bodySmall,
+          t.body,
+          t.titleSmall,
+          t.title,
+          t.display,
+        ].map((s) => s.fontSize).toList(),
         [12, 14, 16, 18, 22, 28],
       );
       expect(t.body.height, 1.5);

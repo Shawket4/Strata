@@ -133,7 +133,9 @@ impl Contract {
                 .trim()
                 .to_ascii_lowercase()
         });
-        let expected: Vec<String> = content.map(|c| c.keys().cloned().collect()).unwrap_or_default();
+        let expected: Vec<String> = content
+            .map(|c| c.keys().cloned().collect())
+            .unwrap_or_default();
         let mismatch = || ContractViolation::ContentType {
             operation: operation_id.to_owned(),
             status,
@@ -159,14 +161,23 @@ impl Contract {
     }
 
     /// Validates a request body of `operation_id` (MessagePack media type).
-    pub fn validate_request(&self, operation_id: &str, body: &[u8]) -> Result<Value, ContractViolation> {
+    pub fn validate_request(
+        &self,
+        operation_id: &str,
+        body: &[u8],
+    ) -> Result<Value, ContractViolation> {
         let (_, _, op) = self
             .operation(operation_id)
             .ok_or_else(|| ContractViolation::UnknownOperation(operation_id.to_owned()))?;
         let schema = op
-            .pointer(&format!("/requestBody/content/{}", crate::wire::MSGPACK.replace('/', "~1")))
+            .pointer(&format!(
+                "/requestBody/content/{}",
+                crate::wire::MSGPACK.replace('/', "~1")
+            ))
             .and_then(|m| m.get("schema"))
-            .ok_or_else(|| ContractViolation::UnknownOperation(format!("{operation_id} (no body)")))?;
+            .ok_or_else(|| {
+                ContractViolation::UnknownOperation(format!("{operation_id} (no body)"))
+            })?;
         let json = msgpack_to_json(body)?;
         self.validate(schema, &json, &format!("{operation_id} request"))?;
         Ok(json)
@@ -174,16 +185,28 @@ impl Contract {
 
     /// Validates a body against a named component schema.
     pub fn validate_component(&self, name: &str, body: &[u8]) -> Result<Value, ContractViolation> {
-        if self.doc.pointer(&format!("/components/schemas/{name}")).is_none() {
+        if self
+            .doc
+            .pointer(&format!("/components/schemas/{name}"))
+            .is_none()
+        {
             return Err(ContractViolation::UnknownSchema(name.to_owned()));
         }
         let json = msgpack_to_json(body)?;
-        self.validate(&json!({ "$ref": format!("#/components/schemas/{name}") }), &json, name)?;
+        self.validate(
+            &json!({ "$ref": format!("#/components/schemas/{name}") }),
+            &json,
+            name,
+        )?;
         Ok(json)
     }
 
     /// Validates a WebSocket frame of the stream operation `operation_id`.
-    pub fn validate_frame(&self, operation_id: &str, frame: &[u8]) -> Result<Value, ContractViolation> {
+    pub fn validate_frame(
+        &self,
+        operation_id: &str,
+        frame: &[u8],
+    ) -> Result<Value, ContractViolation> {
         let (_, _, op) = self
             .operation(operation_id)
             .ok_or_else(|| ContractViolation::UnknownOperation(operation_id.to_owned()))?;
@@ -191,18 +214,28 @@ impl Contract {
             .get(STREAM_EXTENSION)
             .and_then(|s| s.get("frame"))
             .and_then(Value::as_str)
-            .ok_or_else(|| ContractViolation::UnknownOperation(format!("{operation_id} (not a stream)")))?;
+            .ok_or_else(|| {
+                ContractViolation::UnknownOperation(format!("{operation_id} (not a stream)"))
+            })?;
         self.validate_component(name, frame)
     }
 
     fn deref<'a>(&'a self, value: &'a Value) -> &'a Value {
         match value.get("$ref").and_then(Value::as_str) {
-            Some(r) => self.doc.pointer(&r.replacen('#', "", 1)).unwrap_or(&Value::Null),
+            Some(r) => self
+                .doc
+                .pointer(&r.replacen('#', "", 1))
+                .unwrap_or(&Value::Null),
             None => value,
         }
     }
 
-    fn validate(&self, schema: &Value, instance: &Value, location: &str) -> Result<(), ContractViolation> {
+    fn validate(
+        &self,
+        schema: &Value,
+        instance: &Value,
+        location: &str,
+    ) -> Result<(), ContractViolation> {
         let mut root = schema.clone();
         if let Some(obj) = root.as_object_mut() {
             obj.insert("components".to_owned(), self.strict_components.clone());
@@ -313,7 +346,9 @@ fn to_json(value: &rmpv::Value) -> Result<Value, ContractViolation> {
         M::Integer(i) => match (i.as_u64(), i.as_i64()) {
             (Some(u), _) => Value::Number(u.into()),
             (None, Some(s)) => Value::Number(s.into()),
-            (None, None) => return Err(ContractViolation::NotMsgPack("integer out of range".into())),
+            (None, None) => {
+                return Err(ContractViolation::NotMsgPack("integer out of range".into()));
+            }
         },
         M::F32(f) => float(f64::from(*f))?,
         M::F64(f) => float(*f)?,
@@ -331,7 +366,9 @@ fn to_json(value: &rmpv::Value) -> Result<Value, ContractViolation> {
                     .as_str()
                     .ok_or_else(|| ContractViolation::NotMsgPack("non-string map key".into()))?;
                 if map.insert(key.to_owned(), to_json(v)?).is_some() {
-                    return Err(ContractViolation::NotMsgPack(format!("duplicate map key `{key}`")));
+                    return Err(ContractViolation::NotMsgPack(format!(
+                        "duplicate map key `{key}`"
+                    )));
                 }
             }
             Value::Object(map)

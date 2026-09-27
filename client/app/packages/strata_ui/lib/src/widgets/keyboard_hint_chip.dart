@@ -14,6 +14,9 @@ class KeyboardHintChip extends StatelessWidget {
   /// Styles the caps for use on an accent-filled button.
   final bool onAccent;
 
+  /// The command key, drawn as an icon (no bundled font has the glyph).
+  static const String commandKey = '⌘';
+
   @override
   Widget build(BuildContext context) {
     final colors = context.strataColors;
@@ -41,11 +44,13 @@ class KeyboardHintChip extends StatelessWidget {
                 borderRadius: const BorderRadius.all(Radius.circular(4)),
                 color: onAccent ? null : colors.surface,
               ),
-              child: Text(
-                keys[i],
-                style: style,
-                textDirection: TextDirection.ltr,
-              ),
+              child: keys[i] == commandKey
+                  ? Icon(Icons.keyboard_command_key, size: 12, color: fg)
+                  : Text(
+                      keys[i],
+                      style: style,
+                      textDirection: TextDirection.ltr,
+                    ),
             ),
           ],
         ],

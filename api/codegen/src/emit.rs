@@ -10,7 +10,7 @@ use crate::output::GeneratedFile;
 use crate::spec::{Api, Location, Operation, Param};
 use crate::{Error, Options};
 
-const LINT_ALLOWS: &str = "#![allow(\n    clippy::all,\n    clippy::pedantic,\n    clippy::restriction,\n    missing_docs,\n    unused_imports,\n    rustdoc::all\n)]";
+const LINT_ALLOWS: &str = "#![allow(\n    clippy::all,\n    clippy::pedantic,\n    clippy::restriction,\n    missing_docs,\n    unused,\n    rustdoc::all\n)]";
 
 pub(crate) fn emit(api: &Api, options: &Options) -> Result<Vec<GeneratedFile>, Error> {
     let core: syn::Path = syn::parse_str(&options.core_path)
@@ -57,7 +57,10 @@ pub(crate) fn emit(api: &Api, options: &Options) -> Result<Vec<GeneratedFile>, E
         GeneratedFile::new("mod.rs", module),
         GeneratedFile::new("operations.rs", format!("{header}{operations}")),
         GeneratedFile::new("streams.rs", format!("{header}{streams}")),
-        GeneratedFile::new("types.rs", format!("{header}//! Types of the contract's component schemas.\n{types}")),
+        GeneratedFile::new(
+            "types.rs",
+            format!("{header}//! Types of the contract's component schemas.\n{types}"),
+        ),
     ])
 }
 
@@ -184,11 +187,7 @@ fn docs(op: &Operation, kind: &str) -> TokenStream {
     if !lines.is_empty() {
         lines.push(String::new());
     }
-    lines.push(format!(
-        " `{} {}`{kind}",
-        op.method.to_uppercase(),
-        op.path
-    ));
+    lines.push(format!(" `{} {}`{kind}", op.method.to_uppercase(), op.path));
     quote! { #( #[doc = #lines] )* }
 }
 
@@ -221,7 +220,11 @@ fn param_code(
                 .get("minimum")
                 .and_then(Value::as_f64)
                 .is_some_and(|m| m >= 0.0);
-            let ty = if unsigned { quote! { u64 } } else { quote! { i64 } };
+            let ty = if unsigned {
+                quote! { u64 }
+            } else {
+                quote! { i64 }
+            };
             (ty, quote! { #v.to_string() })
         }
         _ => {
@@ -261,7 +264,11 @@ fn path_expr(op: &Operation, codes: &[(&Param, ParamCode)], core: &syn::Path) ->
     }
 }
 
-fn operation_fn(op: &Operation, core: &syn::Path, space: &mut TypeSpace) -> Result<TokenStream, Error> {
+fn operation_fn(
+    op: &Operation,
+    core: &syn::Path,
+    space: &mut TypeSpace,
+) -> Result<TokenStream, Error> {
     let name = snake_ident(&op.id);
     let id = &op.id;
     let method = format_ident!("{}", op.method.to_uppercase());
@@ -283,9 +290,10 @@ fn operation_fn(op: &Operation, core: &syn::Path, space: &mut TypeSpace) -> Resu
     for (param, code) in codes.iter().filter(|(p, _)| p.location != Location::Path) {
         let (ident, to_string) = (&code.ident, &code.to_string);
         let name = &param.name;
-        let add = match param.location {
-            Location::Header => quote! { request.header(#name, #to_string) },
-            _ => quote! { request.query(#name, #to_string) },
+        let add = if param.location == Location::Header {
+            quote! { request.header(#name, #to_string) }
+        } else {
+            quote! { request.query(#name, #to_string) }
         };
         steps.push(if param.required {
             quote! { let request = { let value = &#ident; #add }; }
@@ -339,7 +347,11 @@ fn operation_fn(op: &Operation, core: &syn::Path, space: &mut TypeSpace) -> Resu
     })
 }
 
-fn stream_fn(op: &Operation, core: &syn::Path, space: &mut TypeSpace) -> Result<TokenStream, Error> {
+fn stream_fn(
+    op: &Operation,
+    core: &syn::Path,
+    space: &mut TypeSpace,
+) -> Result<TokenStream, Error> {
     let name = snake_ident(&op.id);
     let id = &op.id;
     let payload = op.stream.as_deref().unwrap_or_default();

@@ -16,9 +16,7 @@ thiserror = { workspace = true }
 [dev-dependencies]
 strata-testkit = { workspace = true }
 tokio = { workspace = true }
-futures = { workspace = true }
 pretty_assertions = { workspace = true }
-uuid = { workspace = true }
 
 [lints]
 workspace = true

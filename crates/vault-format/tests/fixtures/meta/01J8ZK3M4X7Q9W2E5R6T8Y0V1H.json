@@ -1,0 +1,30 @@
+{
+  "id": "01J8ZK3M4X7Q9W2E5R6T8Y0V1H",
+  "summary": "Ahmed runs operations at Acme Logistics.",
+  "relations": [
+    {
+      "type": "works-at",
+      "target_id": "01J8ZKACME00000000000000AB",
+      "by": "ai",
+      "confidence": 0.91,
+      "reason": "Signs as Operations manager, Acme Logistics.",
+      "model": "claude-code/opus",
+      "created": "2026-09-27T15:12:00+03:00"
+    },
+    {
+      "type": "knows",
+      "target_id": "01J8ZKSHADY000000000000000",
+      "by": "user",
+      "created": "2026-09-27T15:20:00+03:00"
+    }
+  ],
+  "rejected": [
+    {
+      "type": "related",
+      "target_id": "01J8ZKB0000000000000000000",
+      "at": "2026-09-27T16:00:00+03:00"
+    }
+  ],
+  "content_hash": "sha256:0f1e2d",
+  "last_linked_hash": "sha256:0f1e2d"
+}

@@ -52,7 +52,8 @@ pub struct SearchHit {
     pub rank: f32,
 }
 
-const COLS: &str = "id, path, title, kind, lang, created, updated, content_hash, word_count, trashed";
+const COLS: &str =
+    "id, path, title, kind, lang, created, updated, content_hash, word_count, trashed";
 
 /// Inserts or replaces a note by ID (path uniqueness is per user).
 pub async fn upsert_note(tx: &mut ScopedTx, note: &Note) -> Result<()> {
@@ -81,18 +82,22 @@ pub async fn upsert_note(tx: &mut ScopedTx, note: &Note) -> Result<()> {
 
 /// A note by ID.
 pub async fn get_note(tx: &mut ScopedTx, id: NoteId) -> Result<Option<Note>> {
-    Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!("SELECT {COLS} FROM notes WHERE id = $1")))
-        .bind(id)
-        .fetch_optional(tx.conn())
-        .await?)
+    Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "SELECT {COLS} FROM notes WHERE id = $1"
+    )))
+    .bind(id)
+    .fetch_optional(tx.conn())
+    .await?)
 }
 
 /// A note by vault path.
 pub async fn get_note_by_path(tx: &mut ScopedTx, path: &str) -> Result<Option<Note>> {
-    Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!("SELECT {COLS} FROM notes WHERE path = $1")))
-        .bind(path)
-        .fetch_optional(tx.conn())
-        .await?)
+    Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "SELECT {COLS} FROM notes WHERE path = $1"
+    )))
+    .bind(path)
+    .fetch_optional(tx.conn())
+    .await?)
 }
 
 /// All notes ordered by path; trashed notes only if `include_trashed`.

@@ -1,4 +1,4 @@
-//! Test-only harness (PLAN §7.1 `testkit/`, §16.1): a fresh PostgreSQL database per test cloned
+//! Test-only harness (PLAN §7.1 `testkit/`, §16.1): a fresh Postgres database per test cloned
 //! from a migrated template, pools for every role, user builders, temp data roots, and
 //! re-exports of the deterministic clock and ID generator.
 //!

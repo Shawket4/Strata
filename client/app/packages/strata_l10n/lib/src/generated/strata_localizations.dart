@@ -439,6 +439,12 @@ abstract class StrataLocalizations {
   /// In en, this message translates to:
   /// **'Users'**
   String get featureAdmin;
+
+  /// Title of the screen shown for an unknown route or deep link.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not found'**
+  String get errorPageNotFound;
 }
 
 class _StrataLocalizationsDelegate

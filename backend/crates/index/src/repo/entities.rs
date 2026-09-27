@@ -168,8 +168,10 @@ pub async fn replace_entity_aliases(
         .bind(entity)
         .execute(tx.conn())
         .await?;
-    let (raw, normalized): (Vec<&str>, Vec<&str>) =
-        aliases.iter().map(|(a, n)| (a.as_str(), n.as_str())).unzip();
+    let (raw, normalized): (Vec<&str>, Vec<&str>) = aliases
+        .iter()
+        .map(|(a, n)| (a.as_str(), n.as_str()))
+        .unzip();
     sqlx::query(
         "INSERT INTO entity_aliases (user_id, note_id, alias, alias_normalized) \
          SELECT strata_current_user(), $1, a, n FROM unnest($2::text[], $3::text[]) AS x(a, n) \
@@ -283,10 +285,12 @@ pub async fn upsert_place(tx: &mut ScopedTx, place: NoteId, parent: Option<NoteI
 
 /// A place's parent (outer None = unknown place).
 pub async fn place_parent(tx: &mut ScopedTx, place: NoteId) -> Result<Option<Option<NoteId>>> {
-    Ok(sqlx::query_scalar("SELECT parent_id FROM places WHERE note_id = $1")
-        .bind(place)
-        .fetch_optional(tx.conn())
-        .await?)
+    Ok(
+        sqlx::query_scalar("SELECT parent_id FROM places WHERE note_id = $1")
+            .bind(place)
+            .fetch_optional(tx.conn())
+            .await?,
+    )
 }
 
 /// `root` and every place nested inside it (any depth), sorted by ID. Cycle-safe.
@@ -355,14 +359,19 @@ pub async fn documents_in_place(tx: &mut ScopedTx, place: NoteId) -> Result<Vec<
 
 /// Documents a person holds now, by ID.
 pub async fn documents_held_by(tx: &mut ScopedTx, person: NoteId) -> Result<Vec<NoteId>> {
-    Ok(sqlx::query_scalar("SELECT note_id FROM documents WHERE holder_id = $1 ORDER BY note_id")
-        .bind(person)
-        .fetch_all(tx.conn())
-        .await?)
+    Ok(
+        sqlx::query_scalar("SELECT note_id FROM documents WHERE holder_id = $1 ORDER BY note_id")
+            .bind(person)
+            .fetch_all(tx.conn())
+            .await?,
+    )
 }
 
 /// Documents expiring strictly before `date`, soonest first.
-pub async fn documents_expiring_before(tx: &mut ScopedTx, date: NaiveDate) -> Result<Vec<Document>> {
+pub async fn documents_expiring_before(
+    tx: &mut ScopedTx,
+    date: NaiveDate,
+) -> Result<Vec<Document>> {
     Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "SELECT {DOC_COLS} FROM documents WHERE expires < $1 ORDER BY expires, note_id"
     )))

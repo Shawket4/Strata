@@ -1,4 +1,5 @@
 //! The conformance helper itself: conversions, strictness and every violation kind.
+#![allow(clippy::expect_used, clippy::float_cmp, clippy::too_many_lines)] // tests: expect with messages, exact asserts
 
 use pretty_assertions::assert_eq;
 use serde_json::{Value, json};
@@ -45,10 +46,19 @@ fn msgpack_that_json_cannot_represent_is_rejected() {
     let nan = [0xcb, 0x7f, 0xf8, 0, 0, 0, 0, 0, 0];
     let cases: [(&[u8], &str); 5] = [
         (&[0x81, 0x01, 0x02], "non-string map key"),
-        (&[0x82, 0xa1, b'k', 0x01, 0xa1, b'k', 0x02], "duplicate map key `k`"),
+        (
+            &[0x82, 0xa1, b'k', 0x01, 0xa1, b'k', 0x02],
+            "duplicate map key `k`",
+        ),
         (&nan, "non-finite float"),
-        (&[0xd4, 0x01, 0x00], "MessagePack extension types are not allowed"),
-        (&[0x01, 0x01], "1 trailing bytes after the MessagePack value"),
+        (
+            &[0xd4, 0x01, 0x00],
+            "MessagePack extension types are not allowed",
+        ),
+        (
+            &[0x01, 0x01],
+            "1 trailing bytes after the MessagePack value",
+        ),
     ];
     for (bytes, message) in cases {
         assert_eq!(
@@ -164,7 +174,10 @@ fn requests_and_components_validate_too() {
         c.validate_request("rename_widget", &rename),
         Ok(json!({ "name": "x" }))
     );
-    assert!(c.validate_request("rename_widget", &mp(&json!({}))).is_err());
+    assert!(
+        c.validate_request("rename_widget", &mp(&json!({})))
+            .is_err()
+    );
     assert_eq!(
         c.validate_component("Nope", &rename),
         Err(ContractViolation::UnknownSchema("Nope".to_owned()))

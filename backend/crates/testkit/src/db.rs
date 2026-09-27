@@ -141,7 +141,14 @@ async fn build_template(admin: &mut PgConnection) -> Result<String, TestkitError
         return Ok(name);
     }
     let build = format!("{name}_build");
-    exec(admin, format!("DROP DATABASE IF EXISTS {} WITH (FORCE)", quote_ident(&build)?)).await?;
+    exec(
+        admin,
+        format!(
+            "DROP DATABASE IF EXISTS {} WITH (FORCE)",
+            quote_ident(&build)?
+        ),
+    )
+    .await?;
     exec(admin, format!("CREATE DATABASE {}", quote_ident(&build)?)).await?;
     {
         let mut su = admin_conn(Some(&build)).await?;
@@ -153,12 +160,19 @@ async fn build_template(admin: &mut PgConnection) -> Result<String, TestkitError
     }
     exec(
         admin,
-        format!("ALTER DATABASE {} RENAME TO {}", quote_ident(&build)?, quote_ident(&name)?),
+        format!(
+            "ALTER DATABASE {} RENAME TO {}",
+            quote_ident(&build)?,
+            quote_ident(&name)?
+        ),
     )
     .await?;
     exec(
         admin,
-        format!("ALTER DATABASE {} WITH IS_TEMPLATE true ALLOW_CONNECTIONS false", quote_ident(&name)?),
+        format!(
+            "ALTER DATABASE {} WITH IS_TEMPLATE true ALLOW_CONNECTIONS false",
+            quote_ident(&name)?
+        ),
     )
     .await?;
     Ok(name)
@@ -178,8 +192,14 @@ async fn drop_stale_databases(admin: &mut PgConnection) -> Result<(), TestkitErr
             .and_then(|rest| rest.split('_').next())
             .and_then(|secs| secs.parse::<u64>().ok());
         if created.is_some_and(|c| now.saturating_sub(c) > STALE_AFTER_SECS) {
-            exec(admin, format!("DROP DATABASE IF EXISTS {} WITH (FORCE)", quote_ident(&name)?))
-                .await?;
+            exec(
+                admin,
+                format!(
+                    "DROP DATABASE IF EXISTS {} WITH (FORCE)",
+                    quote_ident(&name)?
+                ),
+            )
+            .await?;
         }
     }
     Ok(())
@@ -255,7 +275,11 @@ impl TestDb {
         );
         let mut admin = admin_conn(None).await?;
         let create = match template {
-            Some(t) => format!("CREATE DATABASE {} TEMPLATE {}", quote_ident(&name)?, quote_ident(t)?),
+            Some(t) => format!(
+                "CREATE DATABASE {} TEMPLATE {}",
+                quote_ident(&name)?,
+                quote_ident(t)?
+            ),
             None => format!("CREATE DATABASE {} TEMPLATE template0", quote_ident(&name)?),
         };
         exec(&mut admin, create).await?;
@@ -263,9 +287,7 @@ impl TestDb {
 
         let superuser = PgPoolOptions::new()
             .max_connections(2)
-            .connect_with(
-                strata_index::pool::connect_options(&admin_url())?.database(&name),
-            )
+            .connect_with(strata_index::pool::connect_options(&admin_url())?.database(&name))
             .await?;
         {
             let mut conn = superuser.acquire().await?;
@@ -315,7 +337,10 @@ impl TestDb {
         let mut admin = admin_conn(None).await?;
         exec(
             &mut admin,
-            format!("DROP DATABASE IF EXISTS {} WITH (FORCE)", quote_ident(&self.name)?),
+            format!(
+                "DROP DATABASE IF EXISTS {} WITH (FORCE)",
+                quote_ident(&self.name)?
+            ),
         )
         .await?;
         admin.close().await?;
@@ -334,13 +359,19 @@ impl Drop for TestDb {
         // Drop on a separate thread with its own runtime: `Drop` can't await, and the test's
         // runtime may be a current-thread one. `WITH (FORCE)` ends the pools' connections.
         let handle = std::thread::spawn(move || {
-            let Ok(rt) = tokio::runtime::Builder::new_current_thread().enable_all().build() else {
+            let Ok(rt) = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+            else {
                 return;
             };
             rt.block_on(async move {
                 if let Ok(mut admin) = admin_conn(None).await {
-                    let _ = exec(&mut admin, format!("DROP DATABASE IF EXISTS {name} WITH (FORCE)"))
-                        .await;
+                    let _ = exec(
+                        &mut admin,
+                        format!("DROP DATABASE IF EXISTS {name} WITH (FORCE)"),
+                    )
+                    .await;
                     let _ = admin.close().await;
                 }
             });

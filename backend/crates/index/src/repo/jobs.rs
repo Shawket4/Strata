@@ -107,10 +107,12 @@ pub async fn claim_next(tx: &mut ScopedTx, now: DateTime<Utc>) -> Result<Option<
 
 /// A job by ID.
 pub async fn get_job(tx: &mut ScopedTx, id: JobId) -> Result<Option<Job>> {
-    Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!("SELECT {COLS} FROM jobs WHERE id = $1")))
-        .bind(id)
-        .fetch_optional(tx.conn())
-        .await?)
+    Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "SELECT {COLS} FROM jobs WHERE id = $1"
+    )))
+    .bind(id)
+    .fetch_optional(tx.conn())
+    .await?)
 }
 
 /// Marks a running job done. False if it is not running.
@@ -185,10 +187,12 @@ pub async fn refresh_wakeup(tx: &mut ScopedTx) -> Result<Option<DateTime<Utc>>> 
             .await?;
     match (locked, earliest) {
         (Some(_), Some(at)) => {
-            sqlx::query("UPDATE job_wakeups SET run_after = $1 WHERE user_id = strata_current_user()")
-                .bind(at)
-                .execute(tx.conn())
-                .await?;
+            sqlx::query(
+                "UPDATE job_wakeups SET run_after = $1 WHERE user_id = strata_current_user()",
+            )
+            .bind(at)
+            .execute(tx.conn())
+            .await?;
         }
         (Some(_), None) => {
             sqlx::query("DELETE FROM job_wakeups WHERE user_id = strata_current_user()")

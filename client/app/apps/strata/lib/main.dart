@@ -1,14 +1,9 @@
 import 'package:flutter/widgets.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-
-/// Probe.
-class A extends ConsumerWidget {
-  /// Probe.
-  const A({super.key});
-  @override
-  Widget build(BuildContext context, WidgetRef ref) => const SizedBox();
-}
+import 'package:strata/src/app.dart';
+import 'package:strata_ui/strata_ui.dart';
 
 void main() {
-  runApp(const A());
+  registerStrataFontLicenses();
+  runApp(const ProviderScope(child: StrataApp()));
 }

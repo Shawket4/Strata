@@ -1,0 +1,11 @@
+{
+	"nodes":[
+		{"id":"g1","type":"group","label":"Pricing","x":-400,"y":-300,"width":900,"height":700,"color":"4"},
+		{"id":"n1","type":"file","file":"notes/Pricing experiments.md","x":-300,"y":-200,"width":400,"height":300},
+		{"id":"n2","type":"file","file":"people/أحمد سمير.md","subpath":"#Summary","x":200,"y":-200,"width":250,"height":160,"color":"#22aa88"},
+		{"id":"t1","type":"text","text":"Pinned by the user","x":200,"y":50,"width":250,"height":60}
+	],
+	"edges":[
+		{"id":"e1","fromNode":"n1","fromSide":"right","toNode":"n2","toSide":"left","label":"people"}
+	]
+}

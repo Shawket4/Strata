@@ -56,5 +56,6 @@
   "featureDocuments": "المستندات",
   "featureSync": "المزامنة والتعارضات",
   "featureAccounts": "تسجيل الدخول",
-  "featureAdmin": "المستخدمون"
+  "featureAdmin": "المستخدمون",
+  "errorPageNotFound": "الصفحة غير موجودة"
 }

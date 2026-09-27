@@ -4,7 +4,7 @@ import 'package:strata_ui/strata_ui.dart';
 /// Every shared design-system widget with the spec's sample content, used by
 /// the widget matrix tests and the design-system goldens.
 class WidgetGallery extends StatelessWidget {
-  const WidgetGallery({this.interactive = true, super.key});
+  const new({this.interactive = true, super.key});
 
   /// Whether chips and pills get tap handlers (tap targets apply).
   final bool interactive;
@@ -108,7 +108,10 @@ class WidgetGallery extends StatelessWidget {
           runSpacing: wrap,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            SyncPill(status: const SyncSynced(lastSync: '14:32'), onPressed: tap),
+            SyncPill(
+              status: const SyncSynced(lastSync: '14:32'),
+              onPressed: tap,
+            ),
             SyncPill(status: const SyncOffline(queued: 3), onPressed: tap),
             SyncPill(
               status: const SyncInProgress(done: 12, total: 40),
@@ -157,7 +160,7 @@ class WidgetGallery extends StatelessWidget {
         ),
         gap,
         SizedBox(
-          height: 280,
+          height: MediaQuery.textScalerOf(context).scale(280),
           child: StrataEmptyState(
             title: 'Inbox zero',
             message: 'Captures you make on any device land here.',

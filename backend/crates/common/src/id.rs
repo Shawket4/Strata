@@ -319,14 +319,19 @@ mod tests {
         let ids = SequentialIdGenerator::new(1);
         let first = UserId::generate(&ids);
         let second = UserId::generate(&ids);
-        assert_eq!(first.as_uuid().to_string(), "00000000-0001-0000-0000-000000000001");
+        assert_eq!(
+            first.as_uuid().to_string(),
+            "00000000-0001-0000-0000-000000000001"
+        );
         assert_eq!(UserId::from_uuid(first.as_uuid()), first);
         assert!(first.as_uuid() < second.as_uuid());
     }
 
     #[test]
     fn parse_and_display_round_trip() {
-        let id: DeviceId = "01M3HBS0G00000000000000002".parse().expect("valid ULID literal");
+        let id: DeviceId = "01M3HBS0G00000000000000002"
+            .parse()
+            .expect("valid ULID literal");
         assert_eq!(id.to_string(), "01M3HBS0G00000000000000002");
         assert_eq!(format!("{id:?}"), "DeviceId(01M3HBS0G00000000000000002)");
         assert_eq!(

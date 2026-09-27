@@ -1,0 +1,34 @@
+---
+source: crates/vault-format/tests/golden.rs
+expression: describe_links(doc.body())
+---
+"[[Note]]" embed=false path="Note" anchor=None alias=None escaped=false
+"[[Note|the note]]" embed=false path="Note" anchor=None alias=Some("the note") escaped=false
+"[[Note#Section One]]" embed=false path="Note" anchor=Some(Heading("Section One")) alias=None escaped=false
+"[[Note#A#B]]" embed=false path="Note" anchor=Some(Heading("A#B")) alias=None escaped=false
+"[[Note#^a1b2]]" embed=false path="Note" anchor=Some(Block("a1b2")) alias=None escaped=false
+"![[image.png]]" embed=true path="image.png" anchor=None alias=None escaped=false
+"![[file.pdf]]" embed=true path="file.pdf" anchor=None alias=None escaped=false
+"![[Note#^a1b2|x]]" embed=true path="Note" anchor=Some(Block("a1b2")) alias=Some("x") escaped=false
+"[[notes/sub/Deep]]" embed=false path="notes/sub/Deep" anchor=None alias=None escaped=false
+"[[#Links]]" embed=false path="" anchor=Some(Heading("Links")) alias=None escaped=false
+"[[أحمد سمير|أحمد]]" embed=false path="أحمد سمير" anchor=None alias=Some("أحمد") escaped=false
+"[[Note\\|table alias]]" embed=false path="Note" anchor=None alias=Some("table alias") escaped=true
+"[[Listed]]" embed=false path="Listed" anchor=None alias=None escaped=false
+"[[Quoted]]" embed=false path="Quoted" anchor=None alias=None escaped=false
+tag "tag" at 301..305
+tag "مشروع/عربي" at 306..326
+tag "nested" at 611..618
+heading h1 "Links" path=["Links"]
+block Heading "# Links" id=None
+block Paragraph "Plain [[Note]] and alias [[Note|the note]] and heading [[Note#Section One]] and nested [[Note#A#B]].\nBlock [[Note#^a1b2]] and embed ![[image.png]] and pdf ![[file.pdf]] and block embed ![[Note#^a1b2|x]].\nFolder [[notes/sub/Deep]] and self [[#Links]] and Arabic [[أحمد سمير|أحمد]] #tag #مشروع/عربي" id=None
+block Table "| Table | Link |\n|---|---|\n| a | [[Note\\|table alias]] |" id=None
+block Paragraph "`[[inline code]]` and $[[math]]$ and \\[[escaped]] and not#tag and #123" id=None
+block CodeBlock "```\n[[fenced fake]] #faketag ^fakeid\n```" id=None
+block CodeBlock "~~~md\n![[tilde fake]]\n~~~" id=None
+block CodeBlock "[[indented code]]" id=None
+block Paragraph "$$\n[[display math]]\n$$" id=None
+block ListItem "- item [[Listed]] ^item-1" id=Some("item-1")
+block ListItem "- nested #nested ^item-2" id=Some("item-2")
+block BlockQuote "> quote [[Quoted]]" id=Some("quote-id")
+block Paragraph "Final paragraph with id ^final" id=Some("final")

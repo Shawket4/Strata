@@ -40,7 +40,11 @@ pub async fn set_push(
     token: Option<&str>,
     now: DateTime<Utc>,
 ) -> Result<bool> {
-    let token = if provider == PushProvider::None { None } else { token };
+    let token = if provider == PushProvider::None {
+        None
+    } else {
+        token
+    };
     let done = sqlx::query(
         "UPDATE devices SET push_provider = $2, push_token = $3, push_updated = $4 WHERE id = $1",
     )

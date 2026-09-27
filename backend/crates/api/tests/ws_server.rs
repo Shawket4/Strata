@@ -1,4 +1,5 @@
 //! WebSocket streaming over a real socket: frames, contract conformance, resume, reset, pong.
+#![allow(clippy::expect_used, clippy::float_cmp, clippy::too_many_lines)] // tests: expect with messages, exact asserts
 
 use futures_util::{SinkExt, StreamExt};
 use pretty_assertions::assert_eq;
@@ -27,10 +28,7 @@ fn server() -> TestServer {
 
 /// Every frame until the server closes, validated against the contract.
 async fn frames(server: &TestServer, query: &str) -> Vec<Frame<DemoTick>> {
-    let url = format!(
-        "ws://{}/api/v1/demo/ticks{query}",
-        server.addr()
-    );
+    let url = format!("ws://{}/api/v1/demo/ticks{query}", server.addr());
     let (mut socket, _) = connect_async(url).await.expect("connects");
     let contract = Contract::new(demo::document());
     let mut out = Vec::new();

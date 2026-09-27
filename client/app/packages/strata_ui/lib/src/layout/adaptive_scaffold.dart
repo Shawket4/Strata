@@ -138,7 +138,16 @@ class AdaptiveScaffold extends StatelessWidget {
           if (sync != null)
             Padding(
               padding: const EdgeInsetsDirectional.only(end: StrataSpacing.s3),
-              child: Center(child: sync),
+              child: Center(
+                // Leaves the title room at large text scales; the pill
+                // ellipsizes and keeps its full semantics label.
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.sizeOf(context).width * 0.45,
+                  ),
+                  child: sync,
+                ),
+              ),
             ),
         ],
       ),
@@ -228,15 +237,7 @@ class AdaptiveScaffold extends StatelessWidget {
                       selectedIcon: Icon(
                         destinations[i].selectedIcon ?? destinations[i].icon,
                       ),
-                      label: SizedBox(
-                        width: StrataLayout.railWidth - StrataSpacing.s4,
-                        child: Text(
-                          destinations[i].label,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                      label: RailLabel(destinations[i].label),
                     ),
                 ],
               ),
@@ -335,11 +336,8 @@ class RailFooterDestination extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: StrataSpacing.s1),
-                Text(
+                RailLabel(
                   destination.label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: text.caption
                       .withWeight(selected ? FontWeight.w600 : FontWeight.w400)
                       .copyWith(color: fg),
@@ -591,6 +589,30 @@ class SidebarItem extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A navigation-rail label: one line, scaled down to fit the 80 px rail
+/// rather than wrapping mid-word.
+class RailLabel extends StatelessWidget {
+  /// Creates a rail label.
+  const new(this.label, {super.key, this.style});
+
+  /// The label text.
+  final String label;
+
+  /// Optional style (the rail theme's label style applies otherwise).
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: StrataLayout.railWidth - StrataSpacing.s4,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(label, maxLines: 1, style: style),
       ),
     );
   }

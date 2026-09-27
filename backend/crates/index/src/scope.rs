@@ -14,6 +14,17 @@
 //!    next checkout.
 //! 4. Every repository function takes `&mut ScopedTx` — never a raw user ID. Row-level security
 //!    then makes Postgres itself enforce the scope.
+//!
+//! Code outside this crate cannot forge either capability:
+//!
+//! ```compile_fail
+//! # let user: strata_common::UserId = "01M3HBS0G00000000000000001".parse().unwrap();
+//! let scope = strata_index::UserScope { user_id: user }; // private field
+//! ```
+//!
+//! ```compile_fail
+//! let issuer = strata_index::ScopeIssuer { _sealed: () }; // private field
+//! ```
 
 use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 use strata_common::UserId;

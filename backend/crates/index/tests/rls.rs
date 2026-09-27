@@ -1,5 +1,6 @@
 //! Row-level security at the database level (PLAN §5.2, §16.3), exercised generically over every
 //! user-owned table enumerated from the catalog.
+#![allow(clippy::expect_used, clippy::float_cmp, clippy::too_many_lines)] // tests: expect with messages, exact asserts
 
 mod common;
 
@@ -32,18 +33,49 @@ async fn seed_covers_every_user_owned_table_for_both_users() {
     assert_eq!(
         f.tables,
         [
-            "ai_decisions", "ai_usage", "aliases", "blocks", "change_log", "chunks",
-            "cluster_names", "clusters", "custody_events", "dedupe_keep_both", "dedupe_keys",
-            "devices", "disambiguation_hints", "documents", "entities", "entity_aliases",
-            "idempotency", "jobs", "links", "mentions", "notes", "notification_log", "places",
-            "refresh_tokens", "rejected", "relations", "sessions", "settings", "suggestion_replies",
-            "suggestions", "sync_epochs", "tags", "task_reminders", "tasks",
+            "ai_decisions",
+            "ai_usage",
+            "aliases",
+            "blocks",
+            "change_log",
+            "chunks",
+            "cluster_names",
+            "clusters",
+            "custody_events",
+            "dedupe_keep_both",
+            "dedupe_keys",
+            "devices",
+            "disambiguation_hints",
+            "documents",
+            "entities",
+            "entity_aliases",
+            "idempotency",
+            "jobs",
+            "links",
+            "mentions",
+            "notes",
+            "notification_log",
+            "places",
+            "refresh_tokens",
+            "rejected",
+            "relations",
+            "sessions",
+            "settings",
+            "suggestion_replies",
+            "suggestions",
+            "sync_epochs",
+            "tags",
+            "task_reminders",
+            "tasks",
         ]
     );
     for t in &f.tables {
         let a = superuser_count(&f.db, t, Some(f.a)).await;
         let b = superuser_count(&f.db, t, Some(f.b)).await;
-        assert!(a >= 1 && a == b, "{t}: a={a} b={b} (add a seed row for new tables)");
+        assert!(
+            a >= 1 && a == b,
+            "{t}: a={a} b={b} (add a seed row for new tables)"
+        );
     }
 }
 
@@ -52,9 +84,10 @@ async fn unscoped_app_transaction_sees_zero_rows_everywhere() {
     let f = fixture().await;
     let mut tx = f.db.app.begin().await.expect("tx");
     for t in &f.tables {
-        let res: Result<i64, _> = sqlx::query_scalar(AssertSqlSafe(format!("SELECT count(*) FROM {t}")))
-            .fetch_one(&mut *tx)
-            .await;
+        let res: Result<i64, _> =
+            sqlx::query_scalar(AssertSqlSafe(format!("SELECT count(*) FROM {t}")))
+                .fetch_one(&mut *tx)
+                .await;
         if has_privilege(&f.db, "strata_app", t, "SELECT").await {
             assert_eq!(res.expect("count"), 0, "{t} leaked rows without a scope");
         } else {
@@ -77,7 +110,10 @@ async fn unscoped_owner_also_sees_zero_rows_because_rls_is_forced() {
             .fetch_one(&f.db.owner)
             .await
             .expect("owner count");
-        assert_eq!(n, 0, "{t}: FORCE ROW LEVEL SECURITY must bind the table owner");
+        assert_eq!(
+            n, 0,
+            "{t}: FORCE ROW LEVEL SECURITY must bind the table owner"
+        );
     }
 }
 
@@ -117,14 +153,21 @@ async fn inserting_a_row_for_another_user_fails_the_with_check() {
         let err = classify(res.expect_err("must fail"));
         assert_eq!(err.sqlstate().as_deref(), Some("42501"), "{t}: {err}");
         if has_privilege(&f.db, "strata_app", t, "INSERT").await {
-            assert!(err.is_rls_violation(), "{t}: expected WITH CHECK violation, got {err}");
+            assert!(
+                err.is_rls_violation(),
+                "{t}: expected WITH CHECK violation, got {err}"
+            );
         } else {
             assert!(err.is_permission_denied(), "{t}: {err}");
         }
     }
     // Nothing was written for B.
     for t in &f.tables {
-        assert_eq!(superuser_count(&f.db, t, Some(f.b)).await, superuser_count(&f.db, t, Some(f.a)).await, "{t}");
+        assert_eq!(
+            superuser_count(&f.db, t, Some(f.b)).await,
+            superuser_count(&f.db, t, Some(f.a)).await,
+            "{t}"
+        );
     }
 }
 
@@ -168,11 +211,13 @@ async fn foreign_rows_cannot_be_updated_or_deleted_even_by_explicit_id() {
     assert_eq!(deleted.rows_affected(), 0);
     tx.commit().await.expect("commit");
     assert_eq!(superuser_count(&f.db, "notes", Some(f.b)).await, 4);
-    let title: String = sqlx::query_scalar("SELECT title FROM strata.notes WHERE user_id = $1 AND path = 'notes/A.md'")
-        .bind(f.b)
-        .fetch_one(&f.db.superuser)
-        .await
-        .expect("title");
+    let title: String = sqlx::query_scalar(
+        "SELECT title FROM strata.notes WHERE user_id = $1 AND path = 'notes/A.md'",
+    )
+    .bind(f.b)
+    .fetch_one(&f.db.superuser)
+    .await
+    .expect("title");
     assert_eq!(title, "A");
 }
 
@@ -318,7 +363,12 @@ async fn a_raw_session_level_scope_is_never_needed_and_setting_garbage_fails_clo
 async fn purging_a_user_removes_every_row_of_that_user_and_nothing_else() {
     let f = fixture().await;
     let now = strata_testkit::default_test_epoch();
-    let admin = TestUser::new("root").admin().create(&f.db).await.expect("admin").id;
+    let admin = TestUser::new("root")
+        .admin()
+        .create(&f.db)
+        .await
+        .expect("admin")
+        .id;
     f.db.accounts_db
         .schedule_deletion(f.a, admin, now, now)
         .await
@@ -326,8 +376,18 @@ async fn purging_a_user_removes_every_row_of_that_user_and_nothing_else() {
         .expect("was active");
     assert!(f.db.accounts_db.purge_user(f.a).await.expect("purge"));
     for t in &f.tables {
-        assert_eq!(superuser_count(&f.db, t, Some(f.a)).await, 0, "{t} kept purged rows");
-        assert!(superuser_count(&f.db, t, Some(f.b)).await >= 1, "{t} lost the other user's rows");
+        assert_eq!(
+            superuser_count(&f.db, t, Some(f.a)).await,
+            0,
+            "{t} kept purged rows"
+        );
+        assert!(
+            superuser_count(&f.db, t, Some(f.b)).await >= 1,
+            "{t} lost the other user's rows"
+        );
     }
-    assert_eq!(f.db.accounts_db.user_by_id(f.a).await.expect("lookup"), None);
+    assert_eq!(
+        f.db.accounts_db.user_by_id(f.a).await.expect("lookup"),
+        None
+    );
 }

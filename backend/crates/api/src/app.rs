@@ -41,9 +41,10 @@ pub fn api_v1(
     >,
 > {
     web::scope(API_PREFIX)
-        .app_data(web::PathConfig::default().error_handler(|_, _| {
-            Problem::new(ProblemType::NotFound).into()
-        }))
+        .app_data(
+            web::PathConfig::default()
+                .error_handler(|_, _| Problem::new(ProblemType::NotFound).into()),
+        )
         .app_data(web::QueryConfig::default().error_handler(|err, _| {
             let message = match &err {
                 actix_web::error::QueryPayloadError::Deserialize(e) => {
@@ -61,7 +62,9 @@ pub fn api_v1(
                 .into()
         }))
         .configure(routes)
-        .default_service(web::to(|| async { Problem::new(ProblemType::RouteNotFound) }))
+        .default_service(web::to(|| async {
+            Problem::new(ProblemType::RouteNotFound)
+        }))
         .wrap(from_fn(require_msgpack))
         .wrap(ErrorHandlers::new().default_handler(problemize))
 }

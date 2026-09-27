@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:ui' show Tristate;
 
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_l10n/strata_l10n.dart';
@@ -57,10 +57,7 @@ void main() {
             expect(find.byTooltip(l10n.actionSearch), findsOneWidget);
             final pill = tester.widget<SyncPill>(find.byType(SyncPill));
             expect(pill.dense, isFalse);
-            expect(
-              find.text(l10n.syncOfflineQueued(count: 3)),
-              findsOneWidget,
-            );
+            expect(find.text(l10n.syncOfflineQueued(count: 3)), findsOneWidget);
           case SizeClass.medium:
             expect(find.byType(NavigationBar), findsNothing);
             expect(find.byType(StrataSidebar), findsNothing);
@@ -120,8 +117,7 @@ void main() {
 
   group('AdaptiveScaffold selection', () {
     final en = variants(textScales: const [1]).where(
-      (v) =>
-          v.brightness == Brightness.light && v.locale.languageCode == 'en',
+      (v) => v.brightness == Brightness.light && v.locale.languageCode == 'en',
     );
     final byClass = {for (final v in en) v.sizeClass: v};
 
@@ -173,7 +169,9 @@ void main() {
         TestShell(onSelected: selected.add, selectedIndex: Dest.settings),
       );
       expect(
-        tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex,
+        tester
+            .widget<NavigationRail>(find.byType(NavigationRail))
+            .selectedIndex,
         isNull,
       );
       final footer = tester.widget<RailFooterDestination>(

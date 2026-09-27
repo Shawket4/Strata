@@ -1,4 +1,5 @@
 //! The harness itself: fresh databases per test, template reuse, roles, cleanup, fixtures.
+#![allow(clippy::expect_used, clippy::float_cmp, clippy::too_many_lines)] // tests: expect with messages, exact asserts
 
 use pretty_assertions::assert_eq;
 use strata_index::types::{UserRole, UserStatus};
@@ -54,13 +55,12 @@ async fn each_test_db_is_fresh_migrated_and_dropped_on_cleanup() {
 #[tokio::test]
 async fn template_is_marked_and_connections_disallowed() {
     let db = TestDb::new().await.expect("db");
-    let (is_template, allow_conn): (bool, bool) = sqlx::query_as(
-        "SELECT datistemplate, datallowconn FROM pg_database WHERE datname = $1",
-    )
-    .bind(template_name().expect("name"))
-    .fetch_one(&db.superuser)
-    .await
-    .expect("template row");
+    let (is_template, allow_conn): (bool, bool) =
+        sqlx::query_as("SELECT datistemplate, datallowconn FROM pg_database WHERE datname = $1")
+            .bind(template_name().expect("name"))
+            .fetch_one(&db.superuser)
+            .await
+            .expect("template row");
     assert_eq!((is_template, allow_conn), (true, false));
 }
 
@@ -84,15 +84,18 @@ async fn roles_have_exactly_the_documented_attributes() {
         ]
     );
     // strata_app owns nothing in this database.
-    let owned: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM pg_class WHERE relowner = 'strata_app'::regrole",
-    )
-    .fetch_one(&db.superuser)
-    .await
-    .expect("count");
+    let owned: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM pg_class WHERE relowner = 'strata_app'::regrole")
+            .fetch_one(&db.superuser)
+            .await
+            .expect("count");
     assert_eq!(owned, 0);
     // Connected identities are what the pools claim.
-    for (pool, role) in [(&db.owner, "strata_owner"), (&db.app, "strata_app"), (&db.accounts, "strata_accounts")] {
+    for (pool, role) in [
+        (&db.owner, "strata_owner"),
+        (&db.app, "strata_app"),
+        (&db.accounts, "strata_accounts"),
+    ] {
         let who: String = sqlx::query_scalar("SELECT current_user::text")
             .fetch_one(pool)
             .await
@@ -105,13 +108,25 @@ async fn roles_have_exactly_the_documented_attributes() {
 async fn test_user_builder_creates_deterministic_rows() {
     let db = TestDb::new().await.expect("db");
     let alice = TestUser::new("Alice").create(&db).await.expect("alice");
-    let bob = TestUser::new("bob").admin().pending().display_name("Bob B").create(&db).await.expect("bob");
+    let bob = TestUser::new("bob")
+        .admin()
+        .pending()
+        .display_name("Bob B")
+        .create(&db)
+        .await
+        .expect("bob");
     assert_eq!(alice.id.to_string(), "01M3HBS0G00000000000000001");
     assert_eq!(alice.username_normalized, "alice");
     assert_eq!(alice.status, UserStatus::Active);
-    assert_eq!(alice.approved_at, Some(strata_testkit::default_test_epoch()));
+    assert_eq!(
+        alice.approved_at,
+        Some(strata_testkit::default_test_epoch())
+    );
     assert_eq!(bob.id.to_string(), "01M3HBS0G00000000000000002");
-    assert_eq!((bob.role, bob.status, bob.display_name.as_str()), (UserRole::Admin, UserStatus::Pending, "Bob B"));
+    assert_eq!(
+        (bob.role, bob.status, bob.display_name.as_str()),
+        (UserRole::Admin, UserStatus::Pending, "Bob B")
+    );
     assert_eq!(bob.approved_at, None);
     assert_eq!(bob.created, strata_testkit::default_test_epoch());
 }
@@ -121,7 +136,10 @@ fn temp_data_root_lays_out_user_vaults() {
     let root = TempDataRoot::new().expect("root");
     let user: strata_common::UserId = "01M3HBS0G00000000000000001".parse().expect("id");
     let vault = root.vault_dir(user).expect("vault");
-    assert_eq!(vault, root.path().join("users/01M3HBS0G00000000000000001/vault"));
+    assert_eq!(
+        vault,
+        root.path().join("users/01M3HBS0G00000000000000001/vault")
+    );
     assert!(vault.is_dir());
     let path = root.path().to_path_buf();
     drop(root);

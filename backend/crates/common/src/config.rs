@@ -271,7 +271,9 @@ impl Config {
             if (0.0..=1.0).contains(&v) {
                 Ok(())
             } else {
-                Err(ConfigError::Invalid(format!("{name} must be within 0..=1, got {v}")))
+                Err(ConfigError::Invalid(format!(
+                    "{name} must be within 0..=1, got {v}"
+                )))
             }
         };
         unit("thresholds.relation".into(), self.thresholds.relation)?;
@@ -286,7 +288,9 @@ impl Config {
             ));
         }
         if self.ai.max_concurrency == 0 {
-            return Err(ConfigError::Invalid("ai.max_concurrency must be at least 1".into()));
+            return Err(ConfigError::Invalid(
+                "ai.max_concurrency must be at least 1".into(),
+            ));
         }
         for (name, url) in [
             ("database.owner_url", &self.database.owner_url),
@@ -430,7 +434,10 @@ mod tests {
         assert_eq!(config.default_tz().expect("UTC"), Tz::UTC);
         assert_eq!(
             config.dedupe_threshold("task"),
-            Some(DedupeThreshold { near: 0.6, semantic: 0.88 })
+            Some(DedupeThreshold {
+                near: 0.6,
+                semantic: 0.88
+            })
         );
     }
 
@@ -462,11 +469,17 @@ mod tests {
             .insert("owner".into(), AiProviderKind::ClaudeCli);
         expected.thresholds.dedupe.insert(
             "task".into(),
-            DedupeThreshold { near: 0.5, semantic: 0.8 },
+            DedupeThreshold {
+                near: 0.5,
+                semantic: 0.8,
+            },
         );
         expected.push.apns_key_id = Some("ABC123".into());
         assert_eq!(config, expected);
-        assert_eq!(config.default_tz().expect("valid tz"), chrono_tz::Africa::Cairo);
+        assert_eq!(
+            config.default_tz().expect("valid tz"),
+            chrono_tz::Africa::Cairo
+        );
         assert_eq!(config.ai_provider_for("owner"), AiProviderKind::ClaudeCli);
         assert_eq!(config.ai_provider_for("guest"), AiProviderKind::Disabled);
     }
@@ -489,7 +502,10 @@ mod tests {
         assert_eq!(config.accounts.deletion_grace_days, 7);
         assert_eq!(config.database.max_connections, 3);
         assert_eq!(config.thresholds.relation, 0.75);
-        assert_eq!(config.bind, "0.0.0.0:9000".parse::<SocketAddr>().expect("addr"));
+        assert_eq!(
+            config.bind,
+            "0.0.0.0:9000".parse::<SocketAddr>().expect("addr")
+        );
         assert_eq!(config.thresholds.dedupe["note"].near, 0.65);
         assert_eq!(config.thresholds.dedupe["note"].semantic, 0.9);
     }
@@ -532,11 +548,15 @@ mod tests {
         );
         assert_eq!(
             Config::from_sources("[thresholds]\ncustody = 1.5", env(&[])),
-            Err(ConfigError::Invalid("thresholds.custody must be within 0..=1, got 1.5".into()))
+            Err(ConfigError::Invalid(
+                "thresholds.custody must be within 0..=1, got 1.5".into()
+            ))
         );
         assert_eq!(
             Config::from_sources("[database]\napp_url = \"mysql://x\"", env(&[])),
-            Err(ConfigError::Invalid("database.app_url must be a postgres:// URL".into()))
+            Err(ConfigError::Invalid(
+                "database.app_url must be a postgres:// URL".into()
+            ))
         );
     }
 

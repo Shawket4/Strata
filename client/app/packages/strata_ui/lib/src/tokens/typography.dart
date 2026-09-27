@@ -63,6 +63,10 @@ TextStyle strataTextStyle({
 }) {
   return TextStyle(
     fontFamily: family,
+    // Plex Mono and Quicksand have no Arabic glyphs: fall back to Cairo.
+    fontFamilyFallback: family == StrataFonts.cairo
+        ? null
+        : const [StrataFonts.cairo],
     package: StrataFonts.package,
     fontSize: size,
     fontWeight: weight,

@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// which the text-contrast guideline needs to measure glyph colours exactly.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   TestWidgetsFlutterBinding.ensureInitialized();
-  return AlchemistConfig.runWithConfig(
+  await AlchemistConfig.runWithConfig<FutureOr<void>>(
     config: AlchemistConfig(
       platformGoldensConfig: const PlatformGoldensConfig(enabled: false),
       ciGoldensConfig: const CiGoldensConfig(obscureText: false),

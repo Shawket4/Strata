@@ -70,7 +70,7 @@ pub const STREAMS: &[StreamOperation] = &[];
 
 /// The production contract.
 pub fn document() -> Value {
-    build(ApiDoc::openapi(), STREAMS)
+    build(&ApiDoc::openapi(), STREAMS)
 }
 
 /// Canonical pretty JSON of `doc`, newline-terminated.
@@ -86,8 +86,8 @@ pub fn write(path: impl AsRef<Path>) -> io::Result<()> {
 }
 
 /// Applies the conventions described in the module docs to a utoipa document.
-pub fn build(api: utoipa::openapi::OpenApi, streams: &[StreamOperation]) -> Value {
-    let mut doc = serde_json::to_value(&api).unwrap_or_else(|_| json!({}));
+pub fn build(api: &utoipa::openapi::OpenApi, streams: &[StreamOperation]) -> Value {
+    let mut doc = serde_json::to_value(api).unwrap_or_else(|_| json!({}));
     doc["openapi"] = json!("3.1.0");
     doc["info"] = json!({
         "title": "Strata API",
@@ -206,7 +206,10 @@ fn apply_operation_conventions(op: &mut Value) {
     let public = op
         .get("security")
         .and_then(Value::as_array)
-        .is_some_and(|reqs| reqs.iter().any(|r| r.as_object().is_some_and(Map::is_empty)));
+        .is_some_and(|reqs| {
+            reqs.iter()
+                .any(|r| r.as_object().is_some_and(Map::is_empty))
+        });
 
     let mut add = |status: &str, name: &str| {
         if op["responses"].get(status).is_none() {
@@ -463,12 +466,17 @@ fn lint_operation(doc: &Value, op: &Value, at: &str, out: &mut Vec<String>) {
         for key in ["payload", "frame"] {
             let name = stream[key].as_str().unwrap_or_default();
             if doc["components"]["schemas"].get(name).is_none() {
-                out.push(format!("{at}: stream {key} schema `{name}` is not a component"));
+                out.push(format!(
+                    "{at}: stream {key} schema `{name}` is not a component"
+                ));
             }
         }
         return;
     }
-    if let Some(content) = op.pointer("/requestBody/content").and_then(Value::as_object) {
+    if let Some(content) = op
+        .pointer("/requestBody/content")
+        .and_then(Value::as_object)
+    {
         for media in content.keys() {
             if media != MSGPACK && media != ZIP {
                 out.push(format!("{at}: request media type `{media}`"));
@@ -487,9 +495,7 @@ fn lint_operation(doc: &Value, op: &Value, at: &str, out: &mut Vec<String>) {
     }
     for (status, response) in responses {
         let response = match response["$ref"].as_str() {
-            Some(r) => doc
-                .pointer(&r.replacen('#', "", 1))
-                .unwrap_or(&Value::Null),
+            Some(r) => doc.pointer(&r.replacen('#', "", 1)).unwrap_or(&Value::Null),
             None => response,
         };
         let Some(content) = response["content"].as_object() else {

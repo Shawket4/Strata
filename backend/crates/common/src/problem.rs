@@ -212,7 +212,10 @@ mod tests {
     fn serialises_with_flattened_extensions() {
         let problem = Problem::new(DUPLICATE_CANDIDATES)
             .with_detail("1 existing item matches")
-            .with_extension("candidates", &vec![json!({"id": "01M3HBS0G00000000000000001", "score": 1.0})])
+            .with_extension(
+                "candidates",
+                &vec![json!({"id": "01M3HBS0G00000000000000001", "score": 1.0})],
+            )
             .expect("valid extension");
         let value = serde_json::to_value(&problem).expect("serialise");
         assert_eq!(

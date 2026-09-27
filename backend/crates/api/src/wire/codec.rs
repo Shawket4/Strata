@@ -66,7 +66,7 @@ pub fn decode<T: DeserializeOwned>(bytes: &[u8], limits: &DecodeLimits) -> Resul
 
 fn pointer(path: &serde_path_to_error::Path) -> String {
     let mut out = String::new();
-    for segment in path.iter() {
+    for segment in path {
         match segment {
             Segment::Seq { index } => {
                 out.push('/');
@@ -98,9 +98,9 @@ fn sanitize(err: &rmp_serde::decode::Error) -> String {
 
 /// Keeps only type-derived parts of serde's standard messages.
 ///
-/// `invalid type: string "secret", expected u32` → `invalid type, expected u32`;
-/// `missing field `x`` is kept (the name comes from the target type); anything else becomes
-/// a generic message.
+/// For example `invalid type: string "secret", expected u32` becomes
+/// `invalid type, expected u32`. Missing/duplicate field messages are kept (the field name comes
+/// from the target type); anything else becomes a generic message.
 fn sanitize_serde_message(msg: &str) -> String {
     const PREFIXES: [&str; 5] = [
         "invalid type",

@@ -68,7 +68,7 @@ List<StrataDestination> testDestinations(StrataLocalizations l10n) => [
 
 /// A sample shell with every slot filled, as the app uses it.
 class TestShell extends StatelessWidget {
-  const TestShell({
+  const new({
     this.selectedIndex = Dest.inbox,
     this.onSelected,
     this.onCapture,
@@ -107,9 +107,7 @@ class TestShell extends StatelessWidget {
       ],
       syncIndicatorBuilder: (context, sizeClass) =>
           SyncPill(status: sync, dense: sizeClass == SizeClass.medium),
-      sidebarSections: [
-        StrataSectionHeader(title: l10n.navNotes, count: 2),
-      ],
+      sidebarSections: [StrataSectionHeader(title: l10n.navNotes, count: 2)],
       body: body ?? const SamplePanes(),
     );
   }
@@ -117,7 +115,7 @@ class TestShell extends StatelessWidget {
 
 /// A list / detail / context pane body used by the shell tests and goldens.
 class SamplePanes extends StatelessWidget {
-  const SamplePanes({this.contextOpen = false, super.key});
+  const new({this.contextOpen = false, super.key});
 
   final bool contextOpen;
 

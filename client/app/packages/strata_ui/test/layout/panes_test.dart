@@ -6,7 +6,7 @@ import 'package:strata_ui/strata_ui.dart';
 import '../helpers/harness.dart';
 
 class _Panes extends StatelessWidget {
-  const _Panes({
+  const new({
     this.open = false,
     this.onClosed,
     this.showDetail = false,
@@ -116,9 +116,7 @@ void main() {
       expect(find.text('Pricing experiments'), findsNothing);
     });
 
-    testWidgets('medium hides the context drawer until opened', (
-      tester,
-    ) async {
+    testWidgets('medium hides the context drawer until opened', (tester) async {
       await pumpVariant(tester, at(SizeClass.medium), const _Panes());
       expect(find.text('Backlinks'), findsNothing);
       expect(find.text('Churn notes'), findsOneWidget);

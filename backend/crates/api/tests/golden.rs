@@ -5,6 +5,7 @@
 //! fixture, that decoding the fixture gives the value back, and that `docs/WIRE_FORMAT.md`
 //! quotes the fixture verbatim. Regenerate after an intended change with
 //! `STRATA_UPDATE_GOLDEN=1 cargo test -p strata-api --test golden`, then review the diff.
+#![allow(clippy::expect_used, clippy::float_cmp, clippy::too_many_lines)] // tests: expect with messages, exact asserts
 
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -71,10 +72,7 @@ fn golden<T: Serialize + DeserializeOwned + PartialEq + Debug>(name: &str, value
     );
 }
 
-fn frame_golden<P: Serialize + DeserializeOwned + PartialEq + Debug>(
-    name: &str,
-    frame: &Frame<P>,
-) {
+fn frame_golden<P: Serialize + DeserializeOwned + PartialEq + Debug>(name: &str, frame: &Frame<P>) {
     let bytes = frame.encode().expect("encodes");
     let path = fixture_path(name);
     if updating() {
@@ -93,7 +91,9 @@ fn frame_golden<P: Serialize + DeserializeOwned + PartialEq + Debug>(
 }
 
 fn at(secs: i64) -> DateTime<Utc> {
-    Utc.timestamp_opt(secs, 0).single().expect("valid timestamp")
+    Utc.timestamp_opt(secs, 0)
+        .single()
+        .expect("valid timestamp")
 }
 
 fn ulid() -> Ulid {
@@ -161,7 +161,9 @@ fn response_with_ulid() {
 fn problems() {
     golden(
         "problem_invalid_body",
-        &Problem::invalid_body(&DecodeError::Structure(Violation::TrailingBytes { count: 2 })),
+        &Problem::invalid_body(&DecodeError::Structure(Violation::TrailingBytes {
+            count: 2,
+        })),
     );
     golden(
         "problem_duplicate_candidates",

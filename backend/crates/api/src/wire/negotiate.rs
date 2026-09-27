@@ -35,17 +35,22 @@ pub fn accepts_msgpack(headers: &HeaderMap) -> bool {
             let Some((ty, sub)) = media.split_once('/') else {
                 continue;
             };
-            let specificity = if ty.eq_ignore_ascii_case(want_type) && sub.eq_ignore_ascii_case(want_sub) {
-                3
-            } else if ty.eq_ignore_ascii_case(want_type) && sub == "*" {
-                2
-            } else if ty == "*" && sub == "*" {
-                1
-            } else {
-                continue;
-            };
+            let specificity =
+                if ty.eq_ignore_ascii_case(want_type) && sub.eq_ignore_ascii_case(want_sub) {
+                    3
+                } else if ty.eq_ignore_ascii_case(want_type) && sub == "*" {
+                    2
+                } else if ty == "*" && sub == "*" {
+                    1
+                } else {
+                    continue;
+                };
             let q = parts
-                .filter_map(|p| p.trim().strip_prefix("q=").or_else(|| p.trim().strip_prefix("Q=")))
+                .filter_map(|p| {
+                    p.trim()
+                        .strip_prefix("q=")
+                        .or_else(|| p.trim().strip_prefix("Q="))
+                })
                 .find_map(|q| q.trim().parse::<f32>().ok())
                 .unwrap_or(1.0);
             if best.is_none_or(|(s, _)| specificity > s) {
@@ -62,11 +67,15 @@ pub async fn require_msgpack(
     next: Next<impl MessageBody + 'static>,
 ) -> Result<ServiceResponse<EitherBody<impl MessageBody>>, Error> {
     if accepts_msgpack(req.headers()) {
-        next.call(req).await.map(ServiceResponse::map_into_left_body)
+        next.call(req)
+            .await
+            .map(ServiceResponse::map_into_left_body)
     } else {
         let problem = Problem::new(ProblemType::NotAcceptable)
             .with_detail(format!("responses are {MSGPACK}"));
-        Ok(req.into_response(problem.error_response()).map_into_right_body())
+        Ok(req
+            .into_response(problem.error_response())
+            .map_into_right_body())
     }
 }
 
@@ -139,7 +148,11 @@ mod tests {
             (&["garbage"], false),
         ];
         for (values, expected) in cases {
-            assert_eq!(accepts_msgpack(&with_accept(values)), expected, "{values:?}");
+            assert_eq!(
+                accepts_msgpack(&with_accept(values)),
+                expected,
+                "{values:?}"
+            );
         }
     }
 }

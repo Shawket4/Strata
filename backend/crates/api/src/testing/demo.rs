@@ -11,8 +11,8 @@ use std::sync::Mutex;
 use actix_web::http::StatusCode;
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
-use futures_util::StreamExt;
 use chrono::{DateTime, TimeZone, Utc};
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use ulid::Ulid;
@@ -385,7 +385,12 @@ pub async fn ticks(
     };
     let frames = futures_util::stream::iter(frames);
     if hold {
-        ws::start(&req, body, state.ws, frames.chain(futures_util::stream::pending()))
+        ws::start(
+            &req,
+            body,
+            state.ws,
+            frames.chain(futures_util::stream::pending()),
+        )
     } else {
         ws::start(&req, body, state.ws, frames)
     }
@@ -413,7 +418,7 @@ struct DemoDoc;
 pub fn document() -> Value {
     let mut api = ApiDoc::openapi();
     api.merge(DemoDoc::openapi());
-    build(api, STREAMS)
+    build(&api, STREAMS)
 }
 
 /// Demo routes relative to `/api/v1`.

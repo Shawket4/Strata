@@ -118,18 +118,22 @@ pub async fn replace_tags(tx: &mut ScopedTx, note: NoteId, tags: &[String]) -> R
 
 /// A note's tags, sorted.
 pub async fn tags_for(tx: &mut ScopedTx, note: NoteId) -> Result<Vec<String>> {
-    Ok(sqlx::query_scalar("SELECT tag FROM tags WHERE note_id = $1 ORDER BY tag")
-        .bind(note)
-        .fetch_all(tx.conn())
-        .await?)
+    Ok(
+        sqlx::query_scalar("SELECT tag FROM tags WHERE note_id = $1 ORDER BY tag")
+            .bind(note)
+            .fetch_all(tx.conn())
+            .await?,
+    )
 }
 
 /// Notes carrying `tag`, by ID.
 pub async fn notes_with_tag(tx: &mut ScopedTx, tag: &str) -> Result<Vec<NoteId>> {
-    Ok(sqlx::query_scalar("SELECT note_id FROM tags WHERE tag = $1 ORDER BY note_id")
-        .bind(tag)
-        .fetch_all(tx.conn())
-        .await?)
+    Ok(
+        sqlx::query_scalar("SELECT note_id FROM tags WHERE tag = $1 ORDER BY note_id")
+            .bind(tag)
+            .fetch_all(tx.conn())
+            .await?,
+    )
 }
 
 /// Replaces a note's aliases.
@@ -151,10 +155,12 @@ pub async fn replace_aliases(tx: &mut ScopedTx, note: NoteId, aliases: &[String]
 
 /// A note's aliases, sorted.
 pub async fn aliases_for(tx: &mut ScopedTx, note: NoteId) -> Result<Vec<String>> {
-    Ok(sqlx::query_scalar("SELECT alias FROM aliases WHERE note_id = $1 ORDER BY alias")
-        .bind(note)
-        .fetch_all(tx.conn())
-        .await?)
+    Ok(
+        sqlx::query_scalar("SELECT alias FROM aliases WHERE note_id = $1 ORDER BY alias")
+            .bind(note)
+            .fetch_all(tx.conn())
+            .await?,
+    )
 }
 
 // ---- links ----------------------------------------------------------------------------------
@@ -290,7 +296,12 @@ pub async fn add_rejected(
 
 /// True if the AI must not propose this edge: the exact triple was rejected, or — for
 /// `related` — any type between the pair was rejected (§6.5).
-pub async fn is_rejected(tx: &mut ScopedTx, src: NoteId, dst: NoteId, rel_type: &str) -> Result<bool> {
+pub async fn is_rejected(
+    tx: &mut ScopedTx,
+    src: NoteId,
+    dst: NoteId,
+    rel_type: &str,
+) -> Result<bool> {
     Ok(sqlx::query_scalar(
         "SELECT EXISTS (SELECT 1 FROM rejected WHERE src_id = $1 AND dst_id = $2 \
            AND (type = $3 OR $3 = 'related'))",

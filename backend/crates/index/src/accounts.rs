@@ -248,10 +248,12 @@ impl AccountsDb {
 
     /// Looks a user up by normalised username.
     pub async fn user_by_username(&self, username_normalized: &str) -> Result<Option<User>> {
-        Ok(sqlx::query_as(user_query!("WHERE username_normalized = $1"))
-            .bind(username_normalized)
-            .fetch_optional(&self.pool)
-            .await?)
+        Ok(
+            sqlx::query_as(user_query!("WHERE username_normalized = $1"))
+                .bind(username_normalized)
+                .fetch_optional(&self.pool)
+                .await?,
+        )
     }
 
     /// Lists users, optionally filtered by status, oldest first.
@@ -413,12 +415,14 @@ impl AccountsDb {
         role: UserRole,
         now: DateTime<Utc>,
     ) -> Result<Option<User>> {
-        Ok(sqlx::query_as(user_update!("role = $2, updated = $3", "true"))
-            .bind(id)
-            .bind(role)
-            .bind(now)
-            .fetch_optional(&self.pool)
-            .await?)
+        Ok(
+            sqlx::query_as(user_update!("role = $2, updated = $3", "true"))
+                .bind(id)
+                .bind(role)
+                .bind(now)
+                .fetch_optional(&self.pool)
+                .await?,
+        )
     }
 
     /// `deletion_pending` users whose purge time has come.
@@ -485,14 +489,16 @@ impl AccountsDb {
 
     /// Appends an audit entry.
     pub async fn append_audit(&self, entry: &AuditEntry) -> Result<()> {
-        sqlx::query("INSERT INTO audit_log (id, actor_id, action, target, at) VALUES ($1, $2, $3, $4, $5)")
-            .bind(entry.id)
-            .bind(entry.actor_id)
-            .bind(&entry.action)
-            .bind(&entry.target)
-            .bind(entry.at)
-            .execute(&self.pool)
-            .await?;
+        sqlx::query(
+            "INSERT INTO audit_log (id, actor_id, action, target, at) VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(entry.id)
+        .bind(entry.actor_id)
+        .bind(&entry.action)
+        .bind(&entry.target)
+        .bind(entry.at)
+        .execute(&self.pool)
+        .await?;
         Ok(())
     }
 

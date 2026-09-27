@@ -1,0 +1,10 @@
+targets:
+  $default:
+    builders:
+      go_router_builder:
+        generate_for:
+          - lib/src/router/routes.dart
+      riverpod_generator:
+        generate_for:
+          - lib/src/providers.dart
+          - lib/src/router/router.dart

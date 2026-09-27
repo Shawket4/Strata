@@ -23,7 +23,8 @@ pub use codec::{DecodeError, decode, encode};
 pub use extract::{MsgPack, MsgPackConfig};
 pub use limits::DecodeLimits;
 pub use problem::{
-    DuplicateCandidate, MatchLevel, Problem, ProblemFieldError, ProblemType, decode_error_codes,
+    DuplicateCandidate, MatchLevel, Problem, ProblemDetails, ProblemExtensions, ProblemFieldError,
+    ProblemType, decode_error_codes,
 };
 pub use scan::{Violation, scan};
 

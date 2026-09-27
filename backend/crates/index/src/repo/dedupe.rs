@@ -123,8 +123,10 @@ pub async fn is_keep_both(tx: &mut ScopedTx, kind: &str, a: &str, b: &str) -> Re
 /// Every item kept together with `item`, sorted.
 pub async fn keep_both_partners(tx: &mut ScopedTx, kind: &str, item: &str) -> Result<Vec<String>> {
     Ok(sqlx::query_scalar(
-        "SELECT CASE WHEN a_id = $2 THEN b_id ELSE a_id END AS other FROM dedupe_keep_both \
-         WHERE kind = $1 AND (a_id = $2 OR b_id = $2) ORDER BY other COLLATE \"C\"",
+        "SELECT other FROM ( \
+           SELECT CASE WHEN a_id = $2 THEN b_id ELSE a_id END AS other FROM dedupe_keep_both \
+           WHERE kind = $1 AND (a_id = $2 OR b_id = $2)) p \
+         ORDER BY other COLLATE \"C\"",
     )
     .bind(kind)
     .bind(item)

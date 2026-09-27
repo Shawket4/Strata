@@ -1,6 +1,16 @@
 //! Shared backend foundations: configuration, injectable clock and ID generation, typed IDs,
 //! error types, and RFC 7807 problem details (PLAN §7.1 `common/`).
 
+// Tests assert exact values and may `expect` with a message stating the invariant.
+#![cfg_attr(
+    test,
+    allow(
+        clippy::expect_used,
+        clippy::float_cmp,
+        clippy::field_reassign_with_default
+    )
+)]
+
 pub mod clock;
 pub mod config;
 pub mod error;

@@ -273,5 +273,9 @@
   "featureAdmin": "Users",
   "@featureAdmin": {
     "description": "Title of the Users screen."
+  },
+  "errorPageNotFound": "Page not found",
+  "@errorPageNotFound": {
+    "description": "Title of the screen shown for an unknown route or deep link."
   }
 }

@@ -161,14 +161,46 @@ impl ProblemType {
     }
 }
 
-/// RFC 7807 problem details. Extension members are optional and typed per problem type.
+/// RFC 7807 problem details: the error type of every handler.
+///
+/// Kept small (the rarely used extension members sit behind one allocation) so
+/// `Result<T, Problem>` stays cheap. On the wire it is the flat [`ProblemDetails`] map.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(into = "ProblemDetails", from = "ProblemDetails")]
+pub struct Problem {
+    /// Problem type slug (wire field `type`).
+    pub problem_type: String,
+    /// Fixed summary of the problem type.
+    pub title: String,
+    /// HTTP status code.
+    pub status: u16,
+    /// Occurrence-specific explanation. Never contains user content.
+    pub detail: Option<String>,
+    extensions: Option<Box<ProblemExtensions>>,
+}
+
+/// Optional RFC 7807 members and Strata's typed extension members.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ProblemExtensions {
+    /// URI reference identifying the occurrence.
+    pub instance: Option<String>,
+    /// `invalid_body` / `invalid_parameter`: what is wrong, and where.
+    pub errors: Vec<ProblemFieldError>,
+    /// `duplicate_candidates`: the existing items the create resembles.
+    pub candidates: Vec<DuplicateCandidate>,
+    /// `version_conflict`: the server's current version of the resource.
+    pub current_version: Option<String>,
+}
+
+/// Wire shape of [`Problem`] (component schema `Problem`).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[schema(
+    as = Problem,
     description = "RFC 7807 problem details, encoded as `application/problem+msgpack`. \
                    `type` is a problem slug (e.g. `not_found`, `duplicate_candidates`); \
                    clients treat unknown slugs by `status`."
 )]
-pub struct Problem {
+pub struct ProblemDetails {
     /// Problem type slug.
     #[serde(rename = "type")]
     pub problem_type: String,
@@ -192,6 +224,61 @@ pub struct Problem {
     /// `version_conflict`: the server's current version of the resource.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub current_version: Option<String>,
+}
+
+impl From<Problem> for ProblemDetails {
+    fn from(p: Problem) -> Self {
+        let ext = p.extensions.map(|e| *e).unwrap_or_default();
+        Self {
+            problem_type: p.problem_type,
+            title: p.title,
+            status: p.status,
+            detail: p.detail,
+            instance: ext.instance,
+            errors: ext.errors,
+            candidates: ext.candidates,
+            current_version: ext.current_version,
+        }
+    }
+}
+
+impl From<ProblemDetails> for Problem {
+    fn from(d: ProblemDetails) -> Self {
+        let ext = ProblemExtensions {
+            instance: d.instance,
+            errors: d.errors,
+            candidates: d.candidates,
+            current_version: d.current_version,
+        };
+        Self {
+            problem_type: d.problem_type,
+            title: d.title,
+            status: d.status,
+            detail: d.detail,
+            extensions: (ext != ProblemExtensions::default()).then(|| Box::new(ext)),
+        }
+    }
+}
+
+impl utoipa::PartialSchema for Problem {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        <ProblemDetails as utoipa::PartialSchema>::schema()
+    }
+}
+
+impl ToSchema for Problem {
+    fn name() -> std::borrow::Cow<'static, str> {
+        <ProblemDetails as ToSchema>::name()
+    }
+
+    fn schemas(
+        schemas: &mut Vec<(
+            String,
+            utoipa::openapi::RefOr<utoipa::openapi::schema::Schema>,
+        )>,
+    ) {
+        <ProblemDetails as ToSchema>::schemas(schemas);
+    }
 }
 
 /// One validation or decoding failure inside a request.
@@ -246,11 +333,44 @@ impl Problem {
             title: kind.title().to_owned(),
             status: kind.status().as_u16(),
             detail: None,
-            instance: None,
-            errors: Vec::new(),
-            candidates: Vec::new(),
-            current_version: None,
+            extensions: None,
         }
+    }
+
+    /// Optional members; `None` when all are empty.
+    pub fn extensions(&self) -> Option<&ProblemExtensions> {
+        self.extensions.as_deref()
+    }
+
+    fn extensions_mut(&mut self) -> &mut ProblemExtensions {
+        self.extensions.get_or_insert_with(Box::default)
+    }
+
+    /// `instance`, if set.
+    pub fn instance(&self) -> Option<&str> {
+        self.extensions().and_then(|e| e.instance.as_deref())
+    }
+
+    /// `errors` (empty unless `invalid_body` / `invalid_parameter`).
+    pub fn errors(&self) -> &[ProblemFieldError] {
+        self.extensions().map_or(&[], |e| &e.errors)
+    }
+
+    /// `candidates` (empty unless `duplicate_candidates`).
+    pub fn candidates(&self) -> &[DuplicateCandidate] {
+        self.extensions().map_or(&[], |e| &e.candidates)
+    }
+
+    /// `current_version` (only for `version_conflict`).
+    pub fn current_version(&self) -> Option<&str> {
+        self.extensions().and_then(|e| e.current_version.as_deref())
+    }
+
+    /// Sets `instance`.
+    #[must_use]
+    pub fn with_instance(mut self, instance: impl Into<String>) -> Self {
+        self.extensions_mut().instance = Some(instance.into());
+        self
     }
 
     /// Adds an occurrence-specific explanation. Must not contain user content.
@@ -263,7 +383,7 @@ impl Problem {
     /// Adds a field error.
     #[must_use]
     pub fn with_error(mut self, error: ProblemFieldError) -> Self {
-        self.errors.push(error);
+        self.extensions_mut().errors.push(error);
         self
     }
 
@@ -283,14 +403,14 @@ impl Problem {
     pub fn duplicate_candidates(candidates: Vec<DuplicateCandidate>) -> Self {
         let mut p = Self::new(ProblemType::DuplicateCandidates)
             .with_detail("resend with force = true to create it anyway");
-        p.candidates = candidates;
+        p.extensions_mut().candidates = candidates;
         p
     }
 
     /// `409 version_conflict` carrying the server's current version.
     pub fn version_conflict(current_version: impl Into<String>) -> Self {
         let mut p = Self::new(ProblemType::VersionConflict);
-        p.current_version = Some(current_version.into());
+        p.extensions_mut().current_version = Some(current_version.into());
         p
     }
 
@@ -383,5 +503,17 @@ mod tests {
             assert_eq!(Problem::new(kind).status, kind.status().as_u16());
         }
         assert_eq!(ProblemType::from_slug("nope"), None);
+    }
+
+    #[test]
+    fn problem_stays_small_and_extensions_normalise() {
+        assert!(std::mem::size_of::<Problem>() <= 96);
+        let plain = Problem::new(ProblemType::NotFound);
+        let round: Problem = ProblemDetails::from(plain.clone()).into();
+        assert_eq!(round, plain);
+        assert_eq!(round.extensions(), None);
+        let conflict = Problem::version_conflict("v2");
+        assert_eq!(conflict.current_version(), Some("v2"));
+        assert_eq!(conflict.errors(), &[]);
     }
 }

@@ -1,0 +1,46 @@
+# cargo-fuzz targets for vault-format (PLAN §16.2). A standalone workspace, so it is not part
+# of the root workspace build. Run with `cargo +nightly fuzz run <target>` from this directory.
+[package]
+name = "vault-format-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[workspace]
+members = ["."]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+vault-format = { path = ".." }
+chrono = "0.4"
+
+[[bin]]
+name = "document"
+path = "fuzz_targets/document.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "frontmatter"
+path = "fuzz_targets/frontmatter.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "task_line"
+path = "fuzz_targets/task_line.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "body"
+path = "fuzz_targets/body.rs"
+test = false
+doc = false
+bench = false

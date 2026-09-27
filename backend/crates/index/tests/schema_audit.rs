@@ -1,4 +1,5 @@
 //! The schema-enumeration test (PLAN §5.2, §16.3) and proof that the checker catches mistakes.
+#![allow(clippy::expect_used, clippy::float_cmp, clippy::too_many_lines)] // tests: expect with messages, exact asserts
 
 use pretty_assertions::assert_eq;
 use sqlx::AssertSqlSafe;
@@ -12,9 +13,19 @@ async fn every_non_global_table_is_user_owned_with_forced_rls_and_the_standard_p
     assert_eq!(schema_audit::audit(&mut conn).await.expect("audit"), vec![]);
 
     let all = schema_audit::all_tables(&mut conn).await.expect("tables");
-    let global: Vec<&str> = all.iter().map(String::as_str).filter(|t| GLOBAL_TABLES.contains(t)).collect();
+    let global: Vec<&str> = all
+        .iter()
+        .map(String::as_str)
+        .filter(|t| GLOBAL_TABLES.contains(t))
+        .collect();
     assert_eq!(global, GLOBAL_TABLES);
-    assert_eq!(schema_audit::user_owned_tables(&mut conn).await.expect("owned").len(), 34);
+    assert_eq!(
+        schema_audit::user_owned_tables(&mut conn)
+            .await
+            .expect("owned")
+            .len(),
+        34
+    );
 }
 
 #[tokio::test]
@@ -72,7 +83,10 @@ async fn audit_reports_each_kind_of_mistake() {
         "SELECT strata_make_user_owned('rogue_grant')",
         "GRANT SELECT ON rogue_grant TO strata_accounts, PUBLIC",
     ] {
-        sqlx::query(AssertSqlSafe(stmt)).execute(&db.owner).await.expect(stmt);
+        sqlx::query(AssertSqlSafe(stmt))
+            .execute(&db.owner)
+            .await
+            .expect(stmt);
     }
     let mut conn = db.superuser.acquire().await.expect("conn");
     let s = |x: &str| x.to_owned();
@@ -92,5 +106,8 @@ async fn audit_reports_each_kind_of_mistake() {
         Violation::UserIdWrongType(s("rogue_pk")),
     ];
     expected.sort();
-    assert_eq!(schema_audit::audit(&mut conn).await.expect("audit"), expected);
+    assert_eq!(
+        schema_audit::audit(&mut conn).await.expect("audit"),
+        expected
+    );
 }

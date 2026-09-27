@@ -206,4 +206,7 @@ class StrataLocalizationsEn extends StrataLocalizations {
 
   @override
   String get featureAdmin => 'Users';
+
+  @override
+  String get errorPageNotFound => 'Page not found';
 }

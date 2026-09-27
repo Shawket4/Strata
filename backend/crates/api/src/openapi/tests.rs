@@ -97,12 +97,18 @@ fn body_operations_get_body_problem_responses_and_secured_ones_401() {
     keys.sort_unstable();
     assert_eq!(
         keys,
-        ["201", "401", "404", "406", "409", "413", "415", "422", "500"]
+        [
+            "201", "401", "404", "406", "409", "413", "415", "422", "500"
+        ]
     );
     assert_eq!(op["responses"]["422"], response_ref("InvalidBody"));
     assert!(op["requestBody"]["content"].get(MSGPACK).is_some());
     assert!(op["responses"]["201"]["content"].get(MSGPACK).is_some());
-    assert!(op["responses"]["409"]["content"].get(PROBLEM_MSGPACK).is_some());
+    assert!(
+        op["responses"]["409"]["content"]
+            .get(PROBLEM_MSGPACK)
+            .is_some()
+    );
 }
 
 #[test]
@@ -128,7 +134,6 @@ fn lint_reports_each_violation() {
             "GET /api/v1/x: 200 response media type `application/json`".to_owned(),
             "GET /api/v1/x: 404 response media type `application/msgpack`".to_owned(),
             "GET /api/v1/x: missing tags".to_owned(),
-            
             "POST /api/v1/x: body without a 413 response".to_owned(),
             "POST /api/v1/x: body without a 415 response".to_owned(),
             "POST /api/v1/x: body without a 422 response".to_owned(),
@@ -161,7 +166,10 @@ fn tagged_one_of_gets_a_discriminator_with_mapping_for_refs() {
         json!({ "propertyName": "kind", "mapping": {
             "a": "#/components/schemas/A", "b": "#/components/schemas/B" } })
     );
-    assert_eq!(doc["inline"]["discriminator"], json!({ "propertyName": "t" }));
+    assert_eq!(
+        doc["inline"]["discriminator"],
+        json!({ "propertyName": "t" })
+    );
     assert_eq!(doc["option"].get("discriminator"), None);
 }
 
@@ -170,7 +178,10 @@ fn tagged_one_of_gets_a_discriminator_with_mapping_for_refs() {
 fn demo_tagged_enum_and_stream_frames_are_documented() {
     let doc = crate::testing::demo::document();
     let schemas = &doc["components"]["schemas"];
-    assert_eq!(schemas["Shape"]["discriminator"], json!({ "propertyName": "type" }));
+    assert_eq!(
+        schemas["Shape"]["discriminator"],
+        json!({ "propertyName": "type" })
+    );
     assert_eq!(
         schemas["DemoTickFrame"]["discriminator"]["mapping"]["data"],
         json!("#/components/schemas/DemoTickDataFrame")
@@ -179,7 +190,10 @@ fn demo_tagged_enum_and_stream_frames_are_documented() {
         doc["paths"]["/api/v1/demo/ticks"]["get"][STREAM_EXTENSION],
         json!({ "payload": "DemoTick", "frame": "DemoTickFrame" })
     );
-    assert_eq!(schemas["Binary"], json!({
+    assert_eq!(
+        schemas["Binary"],
+        json!({
         "type": "string", "format": "binary",
-        "description": "Raw bytes, carried as MessagePack `bin`." }));
+        "description": "Raw bytes, carried as MessagePack `bin`." })
+    );
 }

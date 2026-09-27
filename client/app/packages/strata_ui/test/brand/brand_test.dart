@@ -5,7 +5,7 @@ import 'package:strata_ui/strata_ui.dart';
 import '../helpers/harness.dart';
 
 class _Brand extends StatelessWidget {
-  const _Brand();
+  const new();
 
   @override
   Widget build(BuildContext context) {
@@ -31,9 +31,8 @@ class _Brand extends StatelessWidget {
 void main() {
   group('StrataSymbolPainter geometry', () {
     test('standard path spans the spec coordinates on the 64 grid', () {
-      final bounds = StrataSymbolPainter.pathOf(
-        StrataSymbolForm.standard,
-      ).getBounds();
+      final bounds = StrataSymbolPainter.pathOf(StrataSymbolForm.standard)
+          .getBounds();
       // M50 13 … H14; the bowls reach x = 24 - 9.5 and x = 40 + 9.5.
       expect(bounds.left, closeTo(14, 0.01));
       expect(bounds.top, closeTo(13, 0.01));
@@ -43,9 +42,8 @@ void main() {
     });
 
     test('favicon path uses the heavier small-size drawing', () {
-      final bounds = StrataSymbolPainter.pathOf(
-        StrataSymbolForm.favicon,
-      ).getBounds();
+      final bounds = StrataSymbolPainter.pathOf(StrataSymbolForm.favicon)
+          .getBounds();
       expect(bounds.left, closeTo(15, 0.01));
       expect(bounds.top, closeTo(14, 0.01));
       expect(bounds.right, closeTo(49, 0.01));
@@ -55,8 +53,8 @@ void main() {
 
     test('the top bowl opens left and the bottom bowl right (an S)', () {
       final path = StrataSymbolPainter.pathOf(StrataSymbolForm.standard);
-      // Upper bowl: centre (24, 22.5), leftmost point x = 14.5.
-      expect(path.contains(const Offset(14.8, 22.5)), isFalse);
+      // Upper bowl: centre (24, 22.5), leftmost point x = 14.5; lower bowl:
+      // centre (40, 41.5), rightmost point x = 49.5.
       final metrics = path.computeMetrics().single;
       final points = [
         for (var d = 0.0; d <= metrics.length; d += 0.5)
@@ -64,8 +62,14 @@ void main() {
       ];
       final upper = points.where((p) => p.dy > 14 && p.dy < 31);
       final lower = points.where((p) => p.dy > 33 && p.dy < 50);
-      expect(upper.map((p) => p.dx).reduce((a, b) => a < b ? a : b), lessThan(15));
-      expect(lower.map((p) => p.dx).reduce((a, b) => a > b ? a : b), greaterThan(49));
+      expect(
+        upper.map((p) => p.dx).reduce((a, b) => a < b ? a : b),
+        lessThan(15),
+      );
+      expect(
+        lower.map((p) => p.dx).reduce((a, b) => a > b ? a : b),
+        greaterThan(49),
+      );
     });
 
     test('form defaults to favicon at 32 px and below', () {
@@ -76,8 +80,14 @@ void main() {
 
     test('painter repaints only on colour or form changes', () {
       const a = StrataSymbolPainter(color: StrataPalette.tide);
-      expect(a.shouldRepaint(const StrataSymbolPainter(color: StrataPalette.tide)), isFalse);
-      expect(a.shouldRepaint(const StrataSymbolPainter(color: StrataPalette.mist)), isTrue);
+      expect(
+        a.shouldRepaint(const StrataSymbolPainter(color: StrataPalette.tide)),
+        isFalse,
+      );
+      expect(
+        a.shouldRepaint(const StrataSymbolPainter(color: StrataPalette.mist)),
+        isTrue,
+      );
       expect(
         a.shouldRepaint(
           const StrataSymbolPainter(

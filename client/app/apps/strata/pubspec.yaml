@@ -26,12 +26,12 @@ dependencies:
   strata_editor: any
   strata_home: any
   strata_inbox: any
+  strata_l10n: any
   strata_maps: any
   strata_notes: any
   strata_settings: any
   strata_sync: any
   strata_tasks: any
-  strata_l10n: any
   strata_ui: any
 
 dev_dependencies:

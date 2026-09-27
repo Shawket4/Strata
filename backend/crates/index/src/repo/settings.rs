@@ -26,10 +26,12 @@ pub struct AiUsage {
 
 /// A setting's `MessagePack` value.
 pub async fn get_setting(tx: &mut ScopedTx, key: &str) -> Result<Option<Vec<u8>>> {
-    Ok(sqlx::query_scalar("SELECT value FROM settings WHERE key = $1")
-        .bind(key)
-        .fetch_optional(tx.conn())
-        .await?)
+    Ok(
+        sqlx::query_scalar("SELECT value FROM settings WHERE key = $1")
+            .bind(key)
+            .fetch_optional(tx.conn())
+            .await?,
+    )
 }
 
 /// Sets a setting.
@@ -53,9 +55,11 @@ pub async fn put_setting(
 
 /// All settings, by key.
 pub async fn list_settings(tx: &mut ScopedTx) -> Result<Vec<(String, Vec<u8>)>> {
-    Ok(sqlx::query_as("SELECT key, value FROM settings ORDER BY key")
-        .fetch_all(tx.conn())
-        .await?)
+    Ok(
+        sqlx::query_as("SELECT key, value FROM settings ORDER BY key")
+            .fetch_all(tx.conn())
+            .await?,
+    )
 }
 
 /// Adds one call's usage to the day's totals and returns the new totals.

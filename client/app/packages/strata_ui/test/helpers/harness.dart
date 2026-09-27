@@ -9,7 +9,7 @@ import 'package:strata_ui/testing.dart';
 /// language/direction × text scale.
 @immutable
 class MatrixVariant {
-  const MatrixVariant({
+  const new({
     required this.sizeName,
     required this.size,
     required this.brightness,
@@ -23,9 +23,8 @@ class MatrixVariant {
   final Locale locale;
   final double textScale;
 
-  TextDirection get direction => locale.languageCode == 'ar'
-      ? TextDirection.rtl
-      : TextDirection.ltr;
+  TextDirection get direction =>
+      locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr;
 
   SizeClass get sizeClass => SizeClass.fromWidth(size.width);
 
@@ -41,7 +40,7 @@ class MatrixVariant {
   String toString() => id;
 }
 
-const _locales = [StrataLocales.english, StrataLocales.arabic];
+const List<Locale> _locales = [StrataLocales.english, StrataLocales.arabic];
 
 /// Every combination of [sizes] × light/dark × LTR/RTL × text scale 1.0/2.0.
 List<MatrixVariant> variants({
@@ -85,9 +84,8 @@ Future<void> pumpVariant(
       supportedLocales: StrataLocalizations.supportedLocales,
       localizationsDelegates: StrataLocalizations.localizationsDelegates,
       builder: (context, app) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(v.textScale)),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(v.textScale)),
         child: app!,
       ),
       home: child,
@@ -97,8 +95,15 @@ Future<void> pumpVariant(
 }
 
 /// Wraps [child] in theme, localizations and media query for [v], sized to
-/// [frame] (for alchemist goldens, which render inside their own app).
-Widget goldenFrame(MatrixVariant v, Widget child, {Size? frame}) {
+/// [frame] (for alchemist goldens, which render inside their own app). With
+/// [intrinsicHeight] the frame keeps [frame]'s width and takes the child's
+/// natural height.
+Widget goldenFrame(
+  MatrixVariant v,
+  Widget child, {
+  Size? frame,
+  bool intrinsicHeight = false,
+}) {
   final size = frame ?? v.size;
   return Localizations(
     locale: v.locale,
@@ -112,8 +117,9 @@ Widget goldenFrame(MatrixVariant v, Widget child, {Size? frame}) {
             textScaler: TextScaler.linear(v.textScale),
             platformBrightness: v.brightness,
           ),
-          child: SizedBox.fromSize(
-            size: size,
+          child: SizedBox(
+            width: size.width,
+            height: intrinsicHeight ? null : size.height,
             child: ColoredBox(
               color: context.strataColors.background,
               child: child,
@@ -139,6 +145,6 @@ void expectNoRenderErrors(WidgetTester tester) {
   expect(tester.takeException(), isNull);
 }
 
-/// The semantics flags of the first node labelled [label].
+/// The semantics data of the node found by [finder].
 SemanticsData semanticsOf(WidgetTester tester, Finder finder) =>
     tester.getSemantics(finder).getSemanticsData();

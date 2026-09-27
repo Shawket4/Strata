@@ -124,10 +124,12 @@ pub async fn replace_note_tasks(tx: &mut ScopedTx, note: NoteId, tasks: &[Task])
 
 /// A task by block ID.
 pub async fn get_task(tx: &mut ScopedTx, id: &str) -> Result<Option<Task>> {
-    Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!("SELECT {COLS} FROM tasks WHERE id = $1")))
-        .bind(id)
-        .fetch_optional(tx.conn())
-        .await?)
+    Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!(
+        "SELECT {COLS} FROM tasks WHERE id = $1"
+    )))
+    .bind(id)
+    .fetch_optional(tx.conn())
+    .await?)
 }
 
 /// Tasks matching `filter`, by due date (undated last), then note and line.

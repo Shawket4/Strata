@@ -418,7 +418,10 @@ impl<P: Clone> ReplayBuffer<P> {
         let Some(after) = resume_from else {
             return Vec::new();
         };
-        let oldest = self.frames.front().map_or(self.last_seq + 1, |(seq, _)| *seq);
+        let oldest = self
+            .frames
+            .front()
+            .map_or(self.last_seq + 1, |(seq, _)| *seq);
         if after > self.last_seq || after.saturating_add(1) < oldest {
             return vec![Frame::Reset { seq: self.last_seq }];
         }

@@ -8,6 +8,16 @@
 //! - [`accounts`]: [`AccountsDb`] over the global and account-bridge tables.
 //! - [`schema_audit`]: the schema-enumeration check behind the CI isolation test.
 
+// Tests assert exact values and may `expect` with a message stating the invariant.
+#![cfg_attr(
+    test,
+    allow(
+        clippy::expect_used,
+        clippy::float_cmp,
+        clippy::field_reassign_with_default
+    )
+)]
+
 pub mod accounts;
 pub mod bootstrap;
 pub mod error;

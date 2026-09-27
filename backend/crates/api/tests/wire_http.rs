@@ -1,5 +1,6 @@
 //! Extractor, responder, negotiation and problem conversion through a real Actix service,
 //! using an in-test router (no production demo code).
+#![allow(clippy::expect_used, clippy::float_cmp, clippy::too_many_lines)] // tests: expect with messages, exact asserts
 
 use actix_web::http::StatusCode;
 use actix_web::http::header::{ACCEPT, CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE};
@@ -290,11 +291,7 @@ async fn type_mismatches_point_at_the_field_without_echoing_content() {
     assert_eq!(reply.status, StatusCode::UNPROCESSABLE_ENTITY);
     assert_eq!(
         reply.problem(),
-        invalid_body(
-            "schema_mismatch",
-            Some("/count"),
-            "invalid type"
-        )
+        invalid_body("schema_mismatch", Some("/count"), "invalid type")
     );
     assert!(!String::from_utf8_lossy(&reply.body).contains("s3cret"));
 

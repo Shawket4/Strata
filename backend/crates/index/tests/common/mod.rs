@@ -1,5 +1,5 @@
 //! Shared helpers for the index integration tests.
-#![allow(dead_code)]
+#![allow(dead_code, clippy::expect_used)]
 
 use sqlx::AssertSqlSafe;
 use strata_common::UserId;
@@ -12,7 +12,7 @@ use strata_testkit::TestDb;
 pub async fn seed_every_table(db: &TestDb, user: UserId) {
     let u = user.as_uuid();
     let sql = format!(
-        r#"
+        r"
 BEGIN;
 SELECT set_config('strata.user_id', '{u}', true);
 INSERT INTO notes (user_id, id, path, title, kind, created, updated, content_hash) VALUES
@@ -58,7 +58,7 @@ INSERT INTO devices VALUES ('{u}', md5('{u}d1')::uuid, 'phone', 'android', '2026
 INSERT INTO sessions VALUES ('{u}', md5('{u}se1')::uuid, md5('{u}d1')::uuid, '2026-09-27T12:00:00Z', '2026-10-27T12:00:00Z', NULL, NULL, false);
 INSERT INTO refresh_tokens VALUES ('{u}', decode(md5('{u}rt1'), 'hex'), md5('{u}se1')::uuid, '2026-09-27T12:00:00Z', '2026-10-27T12:00:00Z', NULL);
 COMMIT;
-"#
+"
     );
     sqlx::raw_sql(AssertSqlSafe(sql))
         .execute(&db.owner)
@@ -69,7 +69,10 @@ COMMIT;
 /// Rows per table for `user`, counted by the superuser (bypasses RLS).
 pub async fn superuser_count(db: &TestDb, table: &str, user: Option<UserId>) -> i64 {
     let sql = match user {
-        Some(u) => format!("SELECT count(*) FROM strata.{table} WHERE user_id = '{}'", u.as_uuid()),
+        Some(u) => format!(
+            "SELECT count(*) FROM strata.{table} WHERE user_id = '{}'",
+            u.as_uuid()
+        ),
         None => format!("SELECT count(*) FROM strata.{table}"),
     };
     sqlx::query_scalar(AssertSqlSafe(sql))

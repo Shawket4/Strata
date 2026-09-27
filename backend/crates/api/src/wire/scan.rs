@@ -94,11 +94,9 @@ pub fn scan(input: &[u8], limits: &DecodeLimits) -> Result<(), Violation> {
     loop {
         let marker = Marker::from_u8(cursor.byte()?);
         let children: u64 = match marker {
-            Marker::FixPos(_)
-            | Marker::FixNeg(_)
-            | Marker::Null
-            | Marker::True
-            | Marker::False => 0,
+            Marker::FixPos(_) | Marker::FixNeg(_) | Marker::Null | Marker::True | Marker::False => {
+                0
+            }
             Marker::U8 | Marker::I8 => cursor.skip(1).map(|()| 0)?,
             Marker::U16 | Marker::I16 => cursor.skip(2).map(|()| 0)?,
             Marker::U32 | Marker::I32 | Marker::F32 => cursor.skip(4).map(|()| 0)?,

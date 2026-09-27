@@ -4,7 +4,7 @@
 //!
 //! Everything here is idempotent: re-running it converges roles and grants to the same state.
 
-use sqlx::{AssertSqlSafe, PgConnection};
+use sqlx::{AssertSqlSafe, Connection, PgConnection};
 
 use crate::error::{IndexError, Result};
 
@@ -48,7 +48,8 @@ pub fn quote_literal(value: &str) -> Result<String> {
     Ok(format!("'{}'", value.replace('\'', "''")))
 }
 
-/// Statements creating/normalising the three cluster-wide roles.
+/// Statements creating/normalising the three cluster-wide roles (the psql form of
+/// [`ensure_roles`], for [`bootstrap_script`]).
 pub fn role_statements(passwords: &RolePasswords) -> Result<Vec<String>> {
     let mut out = Vec::new();
     for (role, password) in [
@@ -129,10 +130,52 @@ pub fn bootstrap_script(database: &str, passwords: &RolePasswords) -> Result<Str
 }
 
 /// Creates the three roles if missing and normalises their attributes. Superuser only.
+///
+/// Safe for concurrent callers on any database of the cluster: it runs in one transaction
+/// holding a `SHARE UPDATE EXCLUSIVE` lock on the shared catalog `pg_authid` (cluster-wide,
+/// self-conflicting, does not block logins), and it only issues `ALTER ROLE` when a role's
+/// attributes differ — so re-runs write nothing.
 pub async fn ensure_roles(conn: &mut PgConnection, passwords: &RolePasswords) -> Result<()> {
-    for stmt in role_statements(passwords)? {
-        sqlx::query(AssertSqlSafe(stmt)).execute(&mut *conn).await?;
+    let mut tx = conn.begin().await?;
+    sqlx::query("LOCK TABLE pg_catalog.pg_authid IN SHARE UPDATE EXCLUSIVE MODE")
+        .execute(&mut *tx)
+        .await?;
+    for (role, password) in [
+        (OWNER_ROLE, &passwords.owner),
+        (APP_ROLE, &passwords.app),
+        (ACCOUNTS_ROLE, &passwords.accounts),
+    ] {
+        let attrs: Option<(bool, bool, bool, bool, bool, bool, bool)> = sqlx::query_as(
+            "SELECT rolcanlogin, rolsuper, rolbypassrls, rolcreatedb, rolcreaterole, rolreplication, rolinherit \
+             FROM pg_catalog.pg_roles WHERE rolname = $1",
+        )
+        .bind(role)
+        .fetch_optional(&mut *tx)
+        .await?;
+        if attrs.is_none() {
+            sqlx::query(AssertSqlSafe(format!("CREATE ROLE {}", quote_ident(role)?)))
+                .execute(&mut *tx)
+                .await?;
+        }
+        if attrs != Some((true, false, false, false, false, false, true)) {
+            sqlx::query(AssertSqlSafe(format!(
+                "ALTER ROLE {} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOREPLICATION INHERIT",
+                quote_ident(role)?
+            )))
+            .execute(&mut *tx)
+            .await?;
+        }
+        if let Some(pw) = password {
+            sqlx::query(AssertSqlSafe(format!(
+                "ALTER ROLE {} PASSWORD {}",
+                quote_ident(role)?,
+                quote_literal(pw)?
+            )))
+            .execute(&mut *tx)
+            .await?;
+        }
     }
+    tx.commit().await?;
     Ok(())
 }
 
@@ -161,18 +204,29 @@ mod tests {
     fn quoting_escapes_embedded_quotes() {
         assert_eq!(quote_ident("strata").expect("valid"), "\"strata\"");
         assert_eq!(quote_ident("we\"ird").expect("valid"), "\"we\"\"ird\"");
-        assert!(matches!(quote_ident(""), Err(IndexError::InvalidIdentifier(_))));
-        assert!(matches!(quote_ident(&"x".repeat(64)), Err(IndexError::InvalidIdentifier(_))));
+        assert!(matches!(
+            quote_ident(""),
+            Err(IndexError::InvalidIdentifier(_))
+        ));
+        assert!(matches!(
+            quote_ident(&"x".repeat(64)),
+            Err(IndexError::InvalidIdentifier(_))
+        ));
         assert_eq!(quote_literal("it's").expect("valid"), "'it''s'");
     }
 
     #[test]
     fn database_statements_are_parameterised_by_name() {
         let stmts = database_statements("strata_prod").expect("valid");
-        assert_eq!(stmts[0], "REVOKE ALL ON DATABASE \"strata_prod\" FROM PUBLIC");
+        assert_eq!(
+            stmts[0],
+            "REVOKE ALL ON DATABASE \"strata_prod\" FROM PUBLIC"
+        );
         assert_eq!(
             stmts.last().map(String::as_str),
-            Some("ALTER ROLE \"strata_accounts\" IN DATABASE \"strata_prod\" SET search_path = strata, public")
+            Some(
+                "ALTER ROLE \"strata_accounts\" IN DATABASE \"strata_prod\" SET search_path = strata, public"
+            )
         );
         assert_eq!(stmts.len(), 13);
     }

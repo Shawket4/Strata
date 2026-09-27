@@ -1,0 +1,16 @@
+---
+source: crates/vault-format/tests/golden.rs
+expression: describe_tasks(TASKS)
+---
+line 2 Todo desc="Make Watanya's ETA invoice [[Watanya]]" prio=None dates=["Due=2026-10-01"] rec=Some("FREQ=MONTHLY;BYMONTHDAY=1") reminders=["(@2026-10-01 09:00)"] id=Some("t-01j9a2")
+line 3 Todo desc="Petrol Arrows invoice [[Petrol Arrows]]" prio=None dates=["Due=2026-09-27"] rec=Some("FREQ=WEEKLY;BYDAY=SU") reminders=["(@2026-09-27 10:00)"] id=Some("t-01j9a3")
+line 4 Done desc="Make Watanya's ETA invoice" prio=None dates=["Due=2026-09-01", "Done=2026-09-01"] rec=Some("FREQ=MONTHLY;BYMONTHDAY=1") reminders=[] id=Some("t-01j8z7")
+line 5 Cancelled desc="Cancelled thing" prio=None dates=["Cancelled=2026-09-20"] rec=None reminders=[] id=Some("t-01j8z8")
+line 6 Other('/') desc="In progress" prio=Some(High) dates=["Created=2026-09-19", "Start=2026-09-20", "Scheduled=2026-09-25", "Due=2026-09-30"] rec=None reminders=[] id=Some("t-01j8z9")
+line 7 Todo desc="Renew licence" prio=None dates=["Due=2027-03-31"] rec=Some("FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=31") reminders=["(@2027-03-24 09:00)", "(@2027-03-30 18:30)"] id=Some("t-01j8za")
+line 8 Todo desc="مهمة بالعربي [[وطنية]]" prio=Some(Low) dates=["Due=2026-10-05"] rec=None reminders=[] id=Some("t-01j8zb")
+line 9 Todo desc="Odd recurrence" prio=None dates=["Due=2026-10-05"] rec=Some("NOT UNDERSTOOD: every blue moon") reminders=[] id=Some("t-01j8zc")
+line 10 Todo desc="Nested subtask" prio=Some(Highest) dates=[] rec=None reminders=[] id=Some("t-01j8zd")
+line 11 Todo desc="Quoted task" prio=None dates=["Due=2026-10-06"] rec=None reminders=[] id=None
+line 12 Todo desc="Numbered task" prio=Some(Lowest) dates=[] rec=None reminders=["(@2026-10-07)"] id=None
+line 13 Done desc="Capital X done" prio=None dates=["Done=2026-09-02"] rec=None reminders=[] id=None

@@ -16,7 +16,11 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-    let doc = if demo { demo_document() } else { Some(strata_api::openapi::document()) };
+    let doc = if demo {
+        demo_document()
+    } else {
+        Some(strata_api::openapi::document())
+    };
     let Some(doc) = doc else {
         eprintln!("--demo requires building with `--features test-support`");
         return ExitCode::from(2);

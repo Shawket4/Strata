@@ -10,6 +10,9 @@
 //! With the `test-support` feature, [`contract`] validates responses against the contract and
 //! [`testing`] provides an in-process server and a demo router exercising the machinery.
 
+// Tests assert exact values and may `expect` with a message stating the invariant.
+#![cfg_attr(test, allow(clippy::expect_used, clippy::float_cmp))]
+
 pub mod app;
 pub mod health;
 pub mod openapi;

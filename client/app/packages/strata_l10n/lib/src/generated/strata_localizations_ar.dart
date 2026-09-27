@@ -212,4 +212,7 @@ class StrataLocalizationsAr extends StrataLocalizations {
 
   @override
   String get featureAdmin => 'المستخدمون';
+
+  @override
+  String get errorPageNotFound => 'الصفحة غير موجودة';
 }

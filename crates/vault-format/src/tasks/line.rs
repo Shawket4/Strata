@@ -639,7 +639,9 @@ impl TaskLine {
         } else {
             " "
         };
-        (at..at, format!("{sep}{field}"))
+        // Content may be empty with the block ID right after it (`- [ ] ^t-1`).
+        let after = if self.text[at..].starts_with(|c: char| !is_ws(c)) { " " } else { "" };
+        (at..at, format!("{sep}{field}{after}"))
     }
 
     /// The span to delete to remove a field: the field plus one adjacent space.
@@ -1026,6 +1028,8 @@ mod tests {
             t.with_date(DateKind::Due, Some(d("2026-01-01"))).as_str(),
             "- [ ] 📅 2026-01-01"
         );
+        let t = p("- [ ] ^t-1");
+        assert_eq!(t.with_date(DateKind::Due, Some(d("2026-01-01"))).as_str(), "- [ ] 📅 2026-01-01 ^t-1");
         let t = p("- [ ] call");
         assert_eq!(t.with_block_id("t-9").as_str(), "- [ ] call ^t-9");
         let r = [Reminder {

@@ -59,7 +59,7 @@ impl TestUser {
     /// Sets the stored password hash.
     #[must_use]
     pub fn password_hash(mut self, hash: &str) -> Self {
-        self.password_hash = hash.to_owned();
+        hash.clone_into(&mut self.password_hash);
         self
     }
 
@@ -111,7 +111,12 @@ impl TempDataRoot {
 
     /// `users/<user_id>/vault`, created if missing.
     pub fn vault_dir(&self, user: UserId) -> Result<PathBuf, TestkitError> {
-        let path = self.dir.path().join("users").join(user.to_string()).join("vault");
+        let path = self
+            .dir
+            .path()
+            .join("users")
+            .join(user.to_string())
+            .join("vault");
         std::fs::create_dir_all(&path)?;
         Ok(path)
     }

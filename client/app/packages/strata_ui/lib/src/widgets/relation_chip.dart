@@ -89,20 +89,22 @@ class RelationChip extends StatelessWidget {
             const SizedBox(width: StrataSpacing.s2),
             Flexible(
               child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: StrataSpacing.s2 - 2,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: StrataSpacing.s2 - 2,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.infoTint,
+                  borderRadius: StrataRadii.pillRadius,
+                ),
+                child: Text(
+                  aiTagText(l10n.aiTag, confidence),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: text.caption
+                      .withWeight(FontWeight.w600)
+                      .copyWith(color: colors.infoText),
+                ),
               ),
-              decoration: BoxDecoration(
-                color: colors.infoTint,
-                borderRadius: StrataRadii.pillRadius,
-              ),
-              child: Text(
-                aiTagText(l10n.aiTag, confidence),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: text.monoSmall.copyWith(color: colors.infoText),
-              ),
-            ),
             ),
           ],
         ],

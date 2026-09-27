@@ -15,6 +15,9 @@
 //! Output is deterministic (components and operations in sorted order) and formatted with
 //! `prettyplease` then `rustfmt`, so `cargo fmt` leaves it untouched.
 
+// Tests assert exact values and may `expect` with a message stating the invariant.
+#![cfg_attr(test, allow(clippy::expect_used, clippy::float_cmp))]
+
 mod emit;
 mod format;
 mod output;

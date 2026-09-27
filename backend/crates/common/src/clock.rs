@@ -72,7 +72,10 @@ mod tests {
 
     #[test]
     fn default_epoch_is_the_documented_instant() {
-        assert_eq!(default_test_epoch().to_rfc3339(), "2026-09-27T12:00:00+00:00");
+        assert_eq!(
+            default_test_epoch().to_rfc3339(),
+            "2026-09-27T12:00:00+00:00"
+        );
     }
 
     #[test]

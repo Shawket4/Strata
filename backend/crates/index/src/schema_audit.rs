@@ -10,7 +10,13 @@ use crate::bootstrap::SCHEMA;
 use crate::error::Result;
 
 /// Tables without per-user RLS. Anything else must pass the user-owned checks.
-pub const GLOBAL_TABLES: &[&str] = &["_sqlx_migrations", "audit_log", "invites", "job_wakeups", "users"];
+pub const GLOBAL_TABLES: &[&str] = &[
+    "_sqlx_migrations",
+    "audit_log",
+    "invites",
+    "job_wakeups",
+    "users",
+];
 
 /// User-owned tables that `strata_accounts` may also reach (login, refresh, revocation).
 pub const ACCOUNT_BRIDGE_TABLES: &[&str] = &["devices", "refresh_tokens", "sessions"];
@@ -182,7 +188,10 @@ async fn check_policies(
     }
     for p in &policies {
         if !(is_standard(p) || (bridge && is_accounts(p))) {
-            violations.push(Violation::UnexpectedPolicy(t.relname.clone(), p.polname.clone()));
+            violations.push(Violation::UnexpectedPolicy(
+                t.relname.clone(),
+                p.polname.clone(),
+            ));
         }
     }
     Ok(())
@@ -199,7 +208,15 @@ async fn check_privileges(
         forbidden.push("strata_accounts");
     }
     for role in forbidden {
-        for privilege in ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"] {
+        for privilege in [
+            "SELECT",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "TRUNCATE",
+            "REFERENCES",
+            "TRIGGER",
+        ] {
             let has: bool = sqlx::query_scalar(
                 "SELECT pg_catalog.has_table_privilege($1, $2, $3) \
                      OR ($3 IN ('SELECT', 'INSERT', 'UPDATE', 'REFERENCES') \

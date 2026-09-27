@@ -148,12 +148,14 @@ pub async fn bump_epoch(tx: &mut ScopedTx, now: DateTime<Utc>) -> Result<SyncPos
 
 /// The stored result for `op_id`, if the op was already applied.
 pub async fn idempotency_get(tx: &mut ScopedTx, op_id: OpId) -> Result<Option<IdempotencyRecord>> {
-    Ok(sqlx::query_as(
-        "SELECT op_id, device_id, result, created FROM idempotency WHERE op_id = $1",
+    Ok(
+        sqlx::query_as(
+            "SELECT op_id, device_id, result, created FROM idempotency WHERE op_id = $1",
+        )
+        .bind(op_id)
+        .fetch_optional(tx.conn())
+        .await?,
     )
-    .bind(op_id)
-    .fetch_optional(tx.conn())
-    .await?)
 }
 
 /// Stores the result for `op_id` unless one exists; returns the record that is stored (the

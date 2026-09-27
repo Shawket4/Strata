@@ -224,14 +224,20 @@ mod tests {
     #[test]
     fn text_values_round_trip() {
         assert_eq!(DocStatus::WithThirdParty.as_str(), "with-third-party");
-        assert_eq!("certified copy".parse::<DocCopy>(), Ok(DocCopy::CertifiedCopy));
+        assert_eq!(
+            "certified copy".parse::<DocCopy>(),
+            Ok(DocCopy::CertifiedCopy)
+        );
         assert_eq!(UserStatus::DeletionPending.to_string(), "deletion_pending");
         for s in UserStatus::ALL {
             assert_eq!(s.as_str().parse::<UserStatus>(), Ok(*s));
         }
         assert_eq!(
             "archived".parse::<JobStatus>(),
-            Err(UnknownVariant { type_name: "JobStatus", value: "archived".into() })
+            Err(UnknownVariant {
+                type_name: "JobStatus",
+                value: "archived".into()
+            })
         );
     }
 }

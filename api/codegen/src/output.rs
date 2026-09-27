@@ -72,7 +72,10 @@ fn stale_files(dir: &Path, files: &[GeneratedFile]) -> Result<Vec<String>, Error
     for entry in entries {
         let name = entry.map_err(|e| io(dir, e))?.file_name();
         let name = name.to_string_lossy().into_owned();
-        if name.ends_with(".rs") && !files.iter().any(|f| f.name == name) {
+        let is_rust = Path::new(&name)
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("rs"));
+        if is_rust && !files.iter().any(|f| f.name == name) {
             stale.push(name);
         }
     }

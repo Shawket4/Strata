@@ -13,7 +13,7 @@ abstract class _Callback {
   void call();
 }
 
-class _MockCallback extends Mock implements _Callback {}
+class _MockCallback extends Mock implements _Callback;
 
 Widget _galleryPage() => const Scaffold(
   body: SingleChildScrollView(
@@ -51,14 +51,15 @@ void main() {
           find.bySemanticsLabel('${l10n.relationPartOf}: Subscription tiers'),
           findsOneWidget,
         );
-        for (final painter in tester
-            .widgetList<CustomPaint>(
-              find.descendant(
-                of: find.byType(RelationLineSample),
-                matching: find.byType(CustomPaint),
-              ),
-            )
-            .map((p) => p.painter! as RelationLinePainter)) {
+        for (final painter
+            in tester
+                .widgetList<CustomPaint>(
+                  find.descendant(
+                    of: find.byType(RelationLineSample),
+                    matching: find.byType(CustomPaint),
+                  ),
+                )
+                .map((p) => p.painter! as RelationLinePainter)) {
           expect(painter.textDirection, v.direction);
         }
 
@@ -182,7 +183,10 @@ void main() {
           height: 600,
           child: Column(
             children: [
-              SyncPill(status: const SyncConflict(count: 1), onPressed: sync.call),
+              SyncPill(
+                status: const SyncConflict(count: 1),
+                onPressed: sync.call,
+              ),
               CitationChip(label: 'Churn notes', onPressed: cite.call),
               Expanded(
                 child: StrataEmptyState(
@@ -246,25 +250,25 @@ void main() {
     });
 
     test('sync status maps to tone and icon', () {
-      expect(SyncPill.toneOf(const SyncSynced(lastSync: '14:32')), StatusTone.success);
+      expect(
+        SyncPill.toneOf(const SyncSynced(lastSync: '14:32')),
+        StatusTone.success,
+      );
       expect(SyncPill.toneOf(const SyncOffline(queued: 3)), StatusTone.warning);
       expect(
         SyncPill.toneOf(const SyncInProgress(done: 1, total: 2)),
         StatusTone.info,
       );
       expect(SyncPill.toneOf(const SyncConflict(count: 1)), StatusTone.danger);
-      expect(
-        {
-          for (final s in const <SyncStatus>[
-            SyncSynced(lastSync: ''),
-            SyncOffline(queued: 0),
-            SyncInProgress(done: 0, total: 0),
-            SyncConflict(count: 0),
-          ])
-            SyncPill.iconOf(s),
-        },
-        hasLength(4),
-      );
+      expect({
+        for (final s in const <SyncStatus>[
+          SyncSynced(lastSync: ''),
+          SyncOffline(queued: 0),
+          SyncInProgress(done: 0, total: 0),
+          SyncConflict(count: 0),
+        ])
+          SyncPill.iconOf(s),
+      }, hasLength(4));
     });
   });
 }
