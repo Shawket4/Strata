@@ -669,6 +669,13 @@ dependencies = [
 [[package]]
 name = "domain"
 version = "0.1.0"
+dependencies = [
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "text-normalize",
+ "thiserror",
+]
 
 [[package]]
 name = "dotenvy"
@@ -833,6 +840,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "futures"
+version = "0.3.34"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a31d2a3fbaaeb2af2368bbdd904aa8e812d3c04a1ee10d3171f52d556e5d0a3"
+dependencies = [
+ "futures-channel",
+ "futures-core",
+ "futures-executor",
+ "futures-io",
+ "futures-sink",
+ "futures-task",
+ "futures-util",
+]
+
+[[package]]
 name = "futures-channel"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -905,6 +927,7 @@ version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d50a92467f8ba5dd6e3ee5d4bd04d73ab2e4e1c44474a0674821dfce14b79bc"
 dependencies = [
+ "futures-channel",
  "futures-core",
  "futures-io",
  "futures-macro",
@@ -1586,6 +1609,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b4f627cb1b25917193a259e49bdad08f671f8d9708acfd5fe0a8c1455d87220"
 
 [[package]]
+name = "pgvector"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3673cba5b9a124916096a423b806a9f29620972c6c97b08db5f2053e9428b481"
+dependencies = [
+ "sqlx",
+]
+
+[[package]]
 name = "phf"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1891,6 +1923,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a4e1d4b9b938a26d2996af33229f0ca0956c652c1375067f0b45291c1df8417"
 dependencies = [
  "rmp",
+ "serde",
+ "serde_bytes",
 ]
 
 [[package]]
@@ -2471,6 +2505,18 @@ version = "0.1.0"
 [[package]]
 name = "strata-index"
 version = "0.1.0"
+dependencies = [
+ "chrono",
+ "futures",
+ "pgvector",
+ "pretty_assertions",
+ "sqlx",
+ "strata-common",
+ "strata-testkit",
+ "thiserror",
+ "tokio",
+ "uuid",
+]
 
 [[package]]
 name = "strata-jobs"

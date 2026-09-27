@@ -6,6 +6,18 @@ license.workspace = true
 publish = false
 
 [dependencies]
+strata-common = { workspace = true, features = ["sqlx"] }
+sqlx = { workspace = true }
+pgvector = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+strata-testkit = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+pretty_assertions = { workspace = true }
 
 [lints]
 workspace = true

@@ -13,6 +13,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  strata_l10n: any
 
 dev_dependencies:
   alchemist: ^0.14.0
@@ -22,6 +23,7 @@ dev_dependencies:
   very_good_analysis: ^11.0.0
 
 flutter:
+  uses-material-design: true
   assets:
     - assets/fonts/licenses/
   fonts:
