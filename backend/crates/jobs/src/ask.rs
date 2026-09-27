@@ -7,7 +7,7 @@
 //! 2. **Cite**: every source is cited through the chunk's first block. A block that already
 //!    has an ID keeps it; otherwise a fresh ID is chosen now and given to the model in the
 //!    source's `ref` (`Link#^id`), and only the IDs the answer actually cites are appended
-//!    afterwards, all in one `ai: ask cite …` commit.
+//!    afterwards, all in one `ai: ask <path>` commit.
 //! 3. **Answer**: the `ask` prompt with the question (and its `asked_at` time in the user's
 //!    time zone) and the sources, streamed from the provider; the caller forwards token
 //!    batches as they arrive.
@@ -41,7 +41,7 @@ use vault_format::body::{self, BlockKind};
 use crate::chunk::{self, content_range};
 use crate::retrieval::{RetrievalError, Retriever};
 
-/// Job label of the citation commit (`ai: ask cite …`).
+/// Job label of the citation commit (`ai: ask <path>`).
 pub const ASK_JOB: &str = "ask";
 
 /// Ask settings.

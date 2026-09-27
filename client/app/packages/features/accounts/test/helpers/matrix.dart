@@ -99,17 +99,27 @@ Future<FakeCoreApi> pumpVariant(
 
 /// Pumps a few frames (spinners never settle).
 Future<void> settle(WidgetTester tester) async {
-  for (var i = 0; i < 4; i++) {
+  for (var i = 0; i < 10; i++) {
     await tester.pump(const Duration(milliseconds: 100));
   }
 }
 
 /// Tap-target, labelled-tap-target and text-contrast guidelines.
-Future<void> expectAccessible(WidgetTester tester) async {
+///
+/// [contrast] can be turned off where a scroll view clips a line at its
+/// edge at 2x text: the guideline samples a text's whole paint bounds, so
+/// the clipped part reads the pixels outside the viewport (the colours are
+/// the same as at 1x, where contrast is checked).
+Future<void> expectAccessible(
+  WidgetTester tester, {
+  bool contrast = true,
+}) async {
   final handle = tester.ensureSemantics();
   await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
   await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
-  await expectLater(tester, meetsGuideline(textContrastGuideline));
+  if (contrast) {
+    await expectLater(tester, meetsGuideline(textContrastGuideline));
+  }
   handle.dispose();
 }
 
@@ -160,4 +170,12 @@ void goldens(
       builder: () => builder(v),
     );
   }
+}
+
+/// Scrolls [finder] into view, then taps it and lets the result land.
+Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await settle(tester);
+  await tester.tap(finder);
+  await settle(tester);
 }

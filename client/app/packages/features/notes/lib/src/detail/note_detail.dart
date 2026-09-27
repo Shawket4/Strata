@@ -408,6 +408,8 @@ class _CompactNotePageState extends State<CompactNotePage> {
         ],
       ),
       CompactNoteTab.links => ListView(
+        key: const PageStorageKey('links'),
+        primary: false,
         padding: const EdgeInsets.all(StrataSpacing.s4),
         children: [
           PropertiesPanel(note: note, onOpenNote: actions.onOpenNote),
@@ -423,6 +425,8 @@ class _CompactNotePageState extends State<CompactNotePage> {
         ],
       ),
       CompactNoteTab.history => ListView(
+        key: const PageStorageKey('history'),
+        primary: false,
         padding: const EdgeInsets.all(StrataSpacing.s4),
         children: [HistorySection(availability: note.history)],
       ),

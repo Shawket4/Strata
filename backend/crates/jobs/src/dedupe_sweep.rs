@@ -6,7 +6,9 @@
 //! 2. **Decisions.** Within each block, `dedupe::sweep` finds exact and near pairs, and
 //!    `dedupe::check` with the cosines as [`dedupe::SemanticEvidence`] finds semantic ones:
 //!    at or above the confirmed threshold directly, borderline ones after one
-//!    `duplicate_confirm` LLM call each (at most [`DedupeHandler::max_confirmations`] per run).
+//!    `duplicate_confirm` LLM call each (at most [`DedupeHandler::max_confirmations`] per run;
+//!    the verdict is remembered per pair and item text in `dedupe_verdicts`, so a pair is
+//!    asked about once, not every night).
 //!    Keep-both pairs are never reported (the shared `dedupe` crate suppresses them).
 //! 3. **Suggestions.** Every new pair becomes one `duplicates` suggestion (never an automatic
 //!    merge). Pairs already suggested (whatever their status) are skipped, so a run interrupted
@@ -119,7 +121,7 @@ impl DedupeHandler {
         new: &dedupe::Item,
         existing: &dedupe::Item,
         cosine: f32,
-    ) -> Result<Option<String>, JobError> {
+    ) -> Result<Option<(DuplicateVerdict, String)>, JobError> {
         let prompt = prompts::latest(ids::DUPLICATE_CONFIRM)
             .ok_or_else(|| JobError::Fatal("duplicate_confirm prompt missing".into()))?;
         let input = ConfirmInput {
@@ -147,10 +149,8 @@ impl DedupeHandler {
             .complete::<DuplicateConfirmation>(caller, prompt, &input, 300)
             .await
         {
-            Ok(out) if out.value.verdict == DuplicateVerdict::Duplicate => {
-                Ok(Some(out.value.reason))
-            }
-            Ok(_) | Err(AiError::Disabled | AiError::ProviderNotConfigured(_)) => Ok(None),
+            Ok(out) => Ok(Some((out.value.verdict, out.value.reason))),
+            Err(AiError::Disabled | AiError::ProviderNotConfigured(_)) => Ok(None),
             Err(e) => Err(e.into()),
         }
     }
@@ -246,11 +246,20 @@ impl DedupeHandler {
                 if suggested.contains(&key) || found.contains_key(&key) {
                     continue;
                 }
-                if confirmations >= self.max_confirmations {
-                    break;
-                }
-                confirmations += 1;
-                if let Some(reason) = self.confirm(ctx, &it.item, &n.item.item, n.similarity).await? {
+                let hashes = pair_hashes(&model, (&it.item_id, &it.item), (&n.item.item_id, &n.item.item));
+                let verdict = match self.stored_verdict(ctx, &key, &hashes).await? {
+                    Some(v) => Some(v),
+                    None if confirmations < self.max_confirmations => {
+                        confirmations += 1;
+                        let v = self.confirm(ctx, &it.item, &n.item.item, n.similarity).await?;
+                        if let Some((verdict, reason)) = &v {
+                            self.store_verdict(ctx, &key, &hashes, *verdict, reason).await?;
+                        }
+                        v
+                    }
+                    None => None,
+                };
+                if let Some((DuplicateVerdict::Duplicate, reason)) = verdict {
                     insert_pair(
                         &mut found,
                         &suggested,
@@ -293,6 +302,85 @@ impl DedupeHandler {
             }
         }
         Ok(found.into_values().collect())
+    }
+}
+
+/// Text hashes of the pair's items, in the order of `ordered(a, b)`.
+fn pair_hashes(
+    model: &str,
+    a: (&str, &dedupe::Item),
+    b: (&str, &dedupe::Item),
+) -> (String, String) {
+    let (x, y) = if a.0 <= b.0 { (a, b) } else { (b, a) };
+    (
+        vectors::text_hash(model, vectors::item_text(x.1)),
+        vectors::text_hash(model, vectors::item_text(y.1)),
+    )
+}
+
+impl DedupeHandler {
+    /// The remembered verdict on the pair, if both items still have the judged text.
+    async fn stored_verdict(
+        &self,
+        ctx: &JobContext,
+        key: &(String, String),
+        hashes: &(String, String),
+    ) -> Result<Option<(DuplicateVerdict, String)>, JobError> {
+        let mut tx = self.db.begin(&ctx.scope).await?;
+        let row: Option<(String, String)> = sqlx::query_as(
+            "SELECT verdict, reason FROM dedupe_verdicts \
+             WHERE a_id = $1 AND b_id = $2 AND a_hash = $3 AND b_hash = $4",
+        )
+        .bind(&key.0)
+        .bind(&key.1)
+        .bind(&hashes.0)
+        .bind(&hashes.1)
+        .fetch_optional(tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(row.map(|(v, reason)| {
+            let verdict = match v.as_str() {
+                "duplicate" => DuplicateVerdict::Duplicate,
+                "distinct" => DuplicateVerdict::Distinct,
+                _ => DuplicateVerdict::Uncertain,
+            };
+            (verdict, reason)
+        }))
+    }
+
+    /// Remembers an LLM verdict on the pair for the judged texts.
+    async fn store_verdict(
+        &self,
+        ctx: &JobContext,
+        key: &(String, String),
+        hashes: &(String, String),
+        verdict: DuplicateVerdict,
+        reason: &str,
+    ) -> Result<(), JobError> {
+        let v = match verdict {
+            DuplicateVerdict::Duplicate => "duplicate",
+            DuplicateVerdict::Distinct => "distinct",
+            DuplicateVerdict::Uncertain => "uncertain",
+        };
+        let mut tx = self.db.begin(&ctx.scope).await?;
+        sqlx::query(
+            "INSERT INTO dedupe_verdicts (user_id, a_id, b_id, a_hash, b_hash, verdict, reason, at) \
+             VALUES (strata_current_user(), $1, $2, $3, $4, $5, $6, $7) \
+             ON CONFLICT (user_id, a_id, b_id) DO UPDATE SET a_hash = EXCLUDED.a_hash, \
+               b_hash = EXCLUDED.b_hash, verdict = EXCLUDED.verdict, reason = EXCLUDED.reason, \
+               at = EXCLUDED.at",
+        )
+        .bind(&key.0)
+        .bind(&key.1)
+        .bind(&hashes.0)
+        .bind(&hashes.1)
+        .bind(v)
+        .bind(reason)
+        .bind(ctx.now)
+        .execute(tx.conn())
+        .await?;
+        tx.commit().await?;
+        Ok(())
     }
 }
 

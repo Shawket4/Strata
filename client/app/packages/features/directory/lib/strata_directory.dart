@@ -1,30 +1,23 @@
 /// Strata directory feature (UI only; view-models come from the Rust core,
-/// PLAN L15).
+/// PLAN L15): the [DirectoryScreen] (People / Companies / Documents /
+/// Places) and the person / company [EntityScreen] (which also renders
+/// document and place pages for their IDs).
 library;
 
-import 'package:flutter/material.dart';
-import 'package:strata_l10n/strata_l10n.dart';
-import 'package:strata_ui/strata_ui.dart';
+import 'package:strata_directory/src/directory/directory_screen.dart';
+import 'package:strata_directory/src/entity/entity_screen.dart';
 
-/// Entry widget of the directory feature. Directory: people, companies,
-/// documents and places (PLAN §11 screen 7).
-///
-/// Until the Rust core streams this screen's view-model it renders the
-/// design-system placeholder state.
-class DirectoryScreen extends StatelessWidget {
-  /// Creates the directory entry widget.
-  const new({super.key});
+export 'package:strata_documents/strata_documents.dart'
+    show DocumentScreen, EntityLinks, OpenNoteAt, PlaceScreen;
 
-  /// The icon that represents this feature.
-  static const IconData icon = Icons.people_outline;
+export 'src/common/l10n.dart'
+    show DirectoryLocalizationScope, DirectoryLocalizations;
+export 'src/directory/directory_screen.dart' show DirectoryRow, DirectoryScreen;
+export 'src/directory/new_entity.dart';
+export 'src/directory/suggestions.dart';
+export 'src/entity/entity_screen.dart'
+    show EntityDetail, EntityPage, EntityScreen, entityKindOf;
+export 'src/entity/sections.dart';
 
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return StrataEmptyState(
-      icon: icon,
-      title: l10n.navDirectory,
-      message: l10n.featurePlaceholderMessage,
-    );
-  }
-}
+/// The route shell's former name for the directory entry widget.
+typedef PeopleScreen = DirectoryScreen;

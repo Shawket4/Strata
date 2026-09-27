@@ -2,7 +2,12 @@
 //! IDs, the note vector as the normalised mean of the chunk vectors, idempotency on an
 //! unchanged content hash, re-embedding on change, a model change as a resumable full
 //! re-embed with progress, duplicate-check item vectors, and trashed notes.
-#![allow(clippy::expect_used, clippy::too_many_lines, clippy::float_cmp)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
 
 mod common;
 
@@ -270,10 +275,7 @@ async fn a_model_change_triggers_a_resumable_full_re_embed_with_progress() {
     tx.commit().await.expect("commit");
 
     // First pass: a batch of two (most recently updated first), then the backfill waits.
-    let dbg_jobs = w.jobs(a).await;
-    let wk: Vec<(uuid::Uuid, chrono::DateTime<chrono::Utc>)> = sqlx::query_as("SELECT user_id, run_after FROM job_wakeups").fetch_all(&w.db.superuser).await.expect("wk");
-    let c = runner.run_until_idle().await;
-    eprintln!("DEBUGPASS now={} jobs={dbg_jobs:?} wk={wk:?} claimed={c:?} after={:?}", w.db.clock.now(), w.jobs(a).await);
+    runner.run_until_idle().await;
     let mut tx = w.db.begin(a).await.expect("tx");
     assert_eq!(
         strata_jobs::vectors::coverage(&mut tx, "fake-embed@2").await.expect("coverage"),

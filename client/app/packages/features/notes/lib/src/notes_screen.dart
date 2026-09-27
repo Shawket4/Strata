@@ -157,7 +157,7 @@ class _NotesScreenState extends State<NotesScreen> {
               ? _drawerOpen
               : _panelVisible;
           final detail = selected == null
-              ? ColoredBox(
+              ? Material(
                   color: context.strataColors.surface,
                   child: Center(
                     child: SingleChildScrollView(
@@ -202,14 +202,17 @@ class _NotesScreenState extends State<NotesScreen> {
               ): () =>
                   _toggleContext(sizeClass),
             },
-            child: StrataPanes(
-              list: list,
-              detail: detail,
-              contextPanel: panel,
-              contextPanelOpen: panel != null,
-              contextPanelLabel: l10n.contextLabel,
-              dismissLabel: l10n.hideContext,
-              onContextPanelClosed: () => setState(() => _drawerOpen = false),
+            child: Focus(
+              autofocus: true,
+              child: StrataPanes(
+                list: list,
+                detail: detail,
+                contextPanel: panel,
+                contextPanelOpen: panel != null,
+                contextPanelLabel: l10n.contextLabel,
+                dismissLabel: l10n.hideContext,
+                onContextPanelClosed: () => setState(() => _drawerOpen = false),
+              ),
             ),
           );
         },

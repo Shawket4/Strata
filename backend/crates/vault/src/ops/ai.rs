@@ -265,7 +265,7 @@ impl VaultService {
         .await
     }
 
-    /// Appends the requested block IDs where blocks have none, in one `ai: <job> cite …`
+    /// Appends the requested block IDs where blocks have none, in one `ai: <job> <path>`
     /// commit (no commit when nothing needed an ID). Outcomes are in request order.
     pub async fn ai_cite_blocks(
         &self,

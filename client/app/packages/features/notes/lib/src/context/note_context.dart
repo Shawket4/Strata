@@ -44,34 +44,36 @@ class BacklinksSection extends StatelessWidget {
             for (final item in group.items)
               Padding(
                 padding: const EdgeInsets.only(bottom: StrataSpacing.s1 + 2),
-                child: Material(
-                  color: colors.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: StrataRadii.inputRadius,
-                    side: BorderSide(color: colors.border),
-                  ),
-                  child: InkWell(
-                    borderRadius: StrataRadii.inputRadius,
-                    onTap: onOpenNote == null
-                        ? null
-                        : () => onOpenNote!(item.noteId),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minHeight: StrataLayout.minTouchTarget,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: StrataSpacing.s3,
-                          vertical: StrataSpacing.s2,
+                child: MergeSemantics(
+                  child: Material(
+                    color: colors.surface,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: StrataRadii.inputRadius,
+                      side: BorderSide(color: colors.border),
+                    ),
+                    child: InkWell(
+                      borderRadius: StrataRadii.inputRadius,
+                      onTap: onOpenNote == null
+                          ? null
+                          : () => onOpenNote!(item.noteId),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          minHeight: StrataLayout.minTouchTarget,
                         ),
-                        child: Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: Text(
-                            item.title,
-                            textAlign: TextAlign.start,
-                            style: text.bodySmall.copyWith(
-                              color: colors.text,
-                              fontWeight: FontWeight.w600,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: StrataSpacing.s3,
+                            vertical: StrataSpacing.s2,
+                          ),
+                          child: Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              item.title,
+                              textAlign: TextAlign.start,
+                              style: text.bodySmall.copyWith(
+                                color: colors.text,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
@@ -353,7 +355,7 @@ class _NoteContextPanelState extends State<NoteContextPanel> {
       ],
       ContextTab.history => [HistorySection(availability: note.history)],
     };
-    return ColoredBox(
+    return Material(
       color: close == null ? colors.background : colors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

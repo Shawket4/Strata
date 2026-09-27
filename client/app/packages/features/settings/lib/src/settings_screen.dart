@@ -186,7 +186,7 @@ class _Loaded extends ConsumerWidget {
       children: [
         SizedBox(
           width: 224,
-          child: ColoredBox(
+          child: Material(
             color: colors.surface,
             child: _SettingsNav(
               view: view,

@@ -134,11 +134,12 @@ class _Group extends StatelessWidget {
                 bottom: StrataSpacing.s2,
               ),
             ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.surface,
+          Material(
+            color: colors.surface,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
               borderRadius: StrataRadii.cardRadius,
-              border: Border.all(color: colors.border),
+              side: BorderSide(color: colors.border),
             ),
             child: Column(
               children: [
@@ -172,16 +173,18 @@ class _ValueRow extends StatelessWidget {
           horizontal: StrataSpacing.s4,
           vertical: StrataSpacing.s3,
         ),
-        child: Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          spacing: StrataSpacing.s3,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: text.body),
-            Text(
-              value,
-              textDirection: mono ? TextDirection.ltr : null,
-              style: (mono ? text.monoSmall : text.bodySmall).copyWith(
-                color: colors.text2,
+            Expanded(child: Text(label, style: text.body)),
+            const SizedBox(width: StrataSpacing.s3),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                style: (mono ? text.monoSmall : text.bodySmall).copyWith(
+                  color: colors.text2,
+                ),
               ),
             ),
           ],

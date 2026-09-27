@@ -275,6 +275,7 @@ class DetailLayout extends StatefulWidget {
     this.menu = const [],
     this.contextPanel = const [],
     this.compactFooter,
+    this.compactBody,
   });
 
   /// The list this page belongs to ("Documents", "People").
@@ -303,6 +304,9 @@ class DetailLayout extends StatefulWidget {
 
   /// A bar pinned under the compact page (primary action).
   final Widget? compactFooter;
+
+  /// Replaces the compact scrolling column (e.g. a tabbed page).
+  final Widget? compactBody;
 
   @override
   State<DetailLayout> createState() => _DetailLayoutState();
@@ -367,18 +371,20 @@ class _DetailLayoutState extends State<DetailLayout> {
               ),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  StrataSpacing.s4,
-                  0,
-                  StrataSpacing.s4,
-                  StrataSpacing.s8,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [...widget.main, ...widget.contextPanel],
-                ),
-              ),
+              child:
+                  widget.compactBody ??
+                  SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      StrataSpacing.s4,
+                      0,
+                      StrataSpacing.s4,
+                      StrataSpacing.s8,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [...widget.main, ...widget.contextPanel],
+                    ),
+                  ),
             ),
             if (footer != null)
               DecoratedBox(
@@ -446,14 +452,24 @@ class _DetailLayoutState extends State<DetailLayout> {
               ),
             ),
           ),
-          ...widget.actions,
-          if (!expanded && widget.contextPanel.isNotEmpty)
-            IconButton(
-              tooltip: l10n.showContext,
-              onPressed: () => setState(() => _contextOpen = true),
-              icon: const Icon(Icons.view_sidebar_outlined),
+          Flexible(
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: StrataSpacing.s1,
+              runSpacing: StrataSpacing.s1,
+              children: [
+                ...widget.actions,
+                if (!expanded && widget.contextPanel.isNotEmpty)
+                  IconButton(
+                    tooltip: l10n.showContext,
+                    onPressed: () => setState(() => _contextOpen = true),
+                    icon: const Icon(Icons.view_sidebar_outlined),
+                  ),
+                if (widget.menu.isNotEmpty) _menuButton(context),
+              ],
             ),
-          if (widget.menu.isNotEmpty) _menuButton(context),
+          ),
         ],
       ),
     );

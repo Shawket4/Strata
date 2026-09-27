@@ -53,11 +53,8 @@ void main() {
         goldenTest(
           'notes list $v',
           fileName: 'notes_list_${v.id}',
-          builder: () => goldenFrame(
-            v,
-            _fake(),
-            const NotesScreen(folder: 'notes/sales'),
-          ),
+          builder: () =>
+              goldenFrame(v, _fake(), const NotesScreen(folder: 'notes/sales')),
         ),
       );
       unawaited(

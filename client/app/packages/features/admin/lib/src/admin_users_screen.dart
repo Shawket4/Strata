@@ -609,8 +609,8 @@ class ScheduleDeletionDialog extends StatelessWidget {
         ),
         FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: colors.danger,
-            foregroundColor: colors.onAccent,
+            backgroundColor: colors.dangerTint,
+            foregroundColor: colors.dangerText,
           ),
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(l10n.scheduleDeletion),

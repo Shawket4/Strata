@@ -58,3 +58,21 @@ CREATE TABLE dedupe_vectors (
 CREATE INDEX dedupe_vectors_note ON dedupe_vectors (user_id, note_id);
 CREATE INDEX dedupe_vectors_model ON dedupe_vectors (user_id, model, kind);
 SELECT strata_make_user_owned('dedupe_vectors');
+
+-- LLM verdicts on borderline semantic pairs (§9.7), so the nightly sweep asks once per pair
+-- and item text: a verdict applies while both items still have the text it judged (SHA-256
+-- of model + text, as in `dedupe_vectors.text_hash`). IDs are ordered (`a_id < b_id`, byte
+-- order).
+CREATE TABLE dedupe_verdicts (
+    user_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    a_id    text NOT NULL,
+    b_id    text NOT NULL,
+    a_hash  text NOT NULL,
+    b_hash  text NOT NULL,
+    verdict text NOT NULL CHECK (verdict IN ('duplicate', 'distinct', 'uncertain')),
+    reason  text NOT NULL DEFAULT '',
+    at      timestamptz NOT NULL,
+    PRIMARY KEY (user_id, a_id, b_id),
+    CHECK (a_id < b_id COLLATE "C")
+);
+SELECT strata_make_user_owned('dedupe_verdicts');

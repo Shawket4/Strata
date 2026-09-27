@@ -28,6 +28,7 @@ INSERT INTO rejected VALUES ('{u}', md5('{u}n1')::uuid, md5('{u}n2')::uuid, 'sup
 INSERT INTO blocks VALUES ('{u}', md5('{u}n1')::uuid, 'b1', '', 'text', 0, 4);
 INSERT INTO chunks VALUES ('{u}', md5('{u}c1')::uuid, md5('{u}n1')::uuid, 'b1', 'text', 1, array_fill(0.1::real, ARRAY[384])::vector, 'model');
 INSERT INTO note_vectors VALUES ('{u}', md5('{u}n1')::uuid, 'model', 'sha256:a', array_fill(0.1::real, ARRAY[384])::vector, 1, '2026-09-27T12:00:00Z');
+INSERT INTO dedupe_verdicts VALUES ('{u}', 'a', 'b', 'h1', 'h2', 'distinct', 'r', '2026-09-27T12:00:00Z');
 INSERT INTO dedupe_vectors VALUES ('{u}', 'note', 'x', md5('{u}n1')::uuid, 'model', 'h', array_fill(0.1::real, ARRAY[384])::vector, '2026-09-27T12:00:00Z');
 INSERT INTO entities VALUES
   ('{u}', md5('{u}n2')::uuid, 'person', 'P', NULL, NULL),

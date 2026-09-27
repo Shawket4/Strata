@@ -1,1 +1,558 @@
-{"@@locale": "en", "loading": "Loading…"}
+{
+  "@@locale": "en",
+  "directoryTitle": "Directory",
+  "@directoryTitle": {
+    "description": "Directory title."
+  },
+  "tabsLabel": "Directory",
+  "@tabsLabel": {
+    "description": "Tab bar label."
+  },
+  "tabPeople": "People",
+  "@tabPeople": {
+    "description": "Tab."
+  },
+  "tabCompanies": "Companies",
+  "@tabCompanies": {
+    "description": "Tab."
+  },
+  "tabDocuments": "Documents",
+  "@tabDocuments": {
+    "description": "Tab."
+  },
+  "tabPlaces": "Places",
+  "@tabPlaces": {
+    "description": "Tab."
+  },
+  "tabWithCount": "{tab} · {count}",
+  "@tabWithCount": {
+    "description": "Tab label with count (wide).",
+    "placeholders": {
+      "tab": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchPeople": "Search people",
+  "@searchPeople": {
+    "description": "Search label."
+  },
+  "searchCompanies": "Search companies",
+  "@searchCompanies": {
+    "description": "Search label."
+  },
+  "searchDocuments": "Find a document or ask where it is",
+  "@searchDocuments": {
+    "description": "Search label."
+  },
+  "searchPlaces": "Search places",
+  "@searchPlaces": {
+    "description": "Search label."
+  },
+  "searchHint": "Search in English or العربية",
+  "@searchHint": {
+    "description": "Search placeholder."
+  },
+  "searchHintDocuments": "Where is…? / فين…؟",
+  "@searchHintDocuments": {
+    "description": "Documents search placeholder."
+  },
+  "filtersLabel": "Filters",
+  "@filtersLabel": {
+    "description": "Filters group label."
+  },
+  "filterTag": "Tag",
+  "@filterTag": {
+    "description": "Filter."
+  },
+  "filterRole": "Role",
+  "@filterRole": {
+    "description": "Filter."
+  },
+  "filterCompany": "Company",
+  "@filterCompany": {
+    "description": "Filter."
+  },
+  "filterIndustry": "Industry",
+  "@filterIndustry": {
+    "description": "Filter."
+  },
+  "filterType": "Type",
+  "@filterType": {
+    "description": "Filter."
+  },
+  "filterStatus": "Status",
+  "@filterStatus": {
+    "description": "Filter."
+  },
+  "filterPlace": "Place",
+  "@filterPlace": {
+    "description": "Filter."
+  },
+  "filterExpiring": "Expiring",
+  "@filterExpiring": {
+    "description": "Filter."
+  },
+  "filterHolder": "Holder",
+  "@filterHolder": {
+    "description": "Filter."
+  },
+  "filtersUnavailable": "Filters aren't available yet",
+  "@filtersUnavailable": {
+    "description": "Tooltip of disabled filters."
+  },
+  "peopleCount": "{count, plural, =0{No people} =1{1 person} other{{count} people}}",
+  "@peopleCount": {
+    "description": "Count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "companiesCount": "{count, plural, =0{No companies} =1{1 company} other{{count} companies}}",
+  "@companiesCount": {
+    "description": "Count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "documentsCount": "{count, plural, =0{No documents} =1{1 document} other{{count} documents}}",
+  "@documentsCount": {
+    "description": "Count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "placesCount": "{count, plural, =0{No places} =1{1 place} other{{count} places}}",
+  "@placesCount": {
+    "description": "Count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "emptyPeople": "No people yet",
+  "@emptyPeople": {
+    "description": "Empty tab."
+  },
+  "emptyCompanies": "No companies yet",
+  "@emptyCompanies": {
+    "description": "Empty tab."
+  },
+  "emptyDocuments": "No documents yet",
+  "@emptyDocuments": {
+    "description": "Empty tab."
+  },
+  "emptyPlaces": "No places yet",
+  "@emptyPlaces": {
+    "description": "Empty tab."
+  },
+  "emptyMessage": "Mentions in your notes and captures create them.",
+  "@emptyMessage": {
+    "description": "Empty tab body."
+  },
+  "noMatches": "No matches for “{query}”",
+  "@noMatches": {
+    "description": "Search without results.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "noMatchesMessage": "Search looks at names and aliases in both scripts.",
+  "@noMatchesMessage": {
+    "description": "Search without results body."
+  },
+  "suggestions": "Suggestions",
+  "@suggestions": {
+    "description": "Suggestion strip title."
+  },
+  "suggestionsHint": "Nothing changes until you accept",
+  "@suggestionsHint": {
+    "description": "Suggestion strip caption."
+  },
+  "whoIs": "Who is “{mention}”?",
+  "@whoIs": {
+    "description": "Link-or-create suggestion.",
+    "placeholders": {
+      "mention": {
+        "type": "String"
+      }
+    }
+  },
+  "whoIsCandidates": "{count, plural, =0{No matching person} =1{1 possible match} other{{count} possible matches}}",
+  "@whoIsCandidates": {
+    "description": "Link-or-create detail.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "possibleDuplicate": "Possible duplicate",
+  "@possibleDuplicate": {
+    "description": "Duplicate suggestion."
+  },
+  "custodySuggestion": "Custody update to confirm",
+  "@custodySuggestion": {
+    "description": "Custody suggestion."
+  },
+  "relationSuggestion": "Relation to review",
+  "@relationSuggestion": {
+    "description": "Relation suggestion."
+  },
+  "taskSuggestion": "Task from a capture",
+  "@taskSuggestion": {
+    "description": "Task suggestion."
+  },
+  "filingSuggestion": "Filing to review",
+  "@filingSuggestion": {
+    "description": "Filing suggestion."
+  },
+  "otherSuggestion": "Suggestion",
+  "@otherSuggestion": {
+    "description": "Unsupported suggestion."
+  },
+  "accept": "Accept",
+  "@accept": {
+    "description": "Accept a suggestion."
+  },
+  "dismiss": "Dismiss",
+  "@dismiss": {
+    "description": "Reject a suggestion."
+  },
+  "createPerson": "Create person…",
+  "@createPerson": {
+    "description": "Create person from a link-or-create suggestion."
+  },
+  "aiConfidence": "AI · {value}",
+  "@aiConfidence": {
+    "description": "AI confidence tag.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "newPerson": "New person",
+  "@newPerson": {
+    "description": "Create button."
+  },
+  "newCompany": "New company",
+  "@newCompany": {
+    "description": "Create button."
+  },
+  "nameField": "Name",
+  "@nameField": {
+    "description": "Create dialog field."
+  },
+  "aliasesField": "Aliases (one per line)",
+  "@aliasesField": {
+    "description": "Create dialog field."
+  },
+  "create": "Create",
+  "@create": {
+    "description": "Create."
+  },
+  "createAnyway": "Create anyway",
+  "@createAnyway": {
+    "description": "Create despite duplicates."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel."
+  },
+  "alreadyExists": "Already exists",
+  "@alreadyExists": {
+    "description": "Duplicate prompt title."
+  },
+  "matchScore": "{level} · {score}",
+  "@matchScore": {
+    "description": "Candidate match.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "openExisting": "Open existing",
+  "@openExisting": {
+    "description": "Open the duplicate."
+  },
+  "colName": "Name",
+  "@colName": {
+    "description": "Column."
+  },
+  "colAliases": "Aliases",
+  "@colAliases": {
+    "description": "Column."
+  },
+  "colDetails": "Details",
+  "@colDetails": {
+    "description": "Column."
+  },
+  "tableCaption": "{tab}, by name",
+  "@tableCaption": {
+    "description": "Table caption.",
+    "placeholders": {
+      "tab": {
+        "type": "String"
+      }
+    }
+  },
+  "keyboardHint": "move · open page",
+  "@keyboardHint": {
+    "description": "Keyboard hint after the arrow keys."
+  },
+  "preview": "Preview",
+  "@preview": {
+    "description": "Preview panel title."
+  },
+  "previewOf": "Preview: {title}",
+  "@previewOf": {
+    "description": "Preview panel label.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "closePreview": "Close preview",
+  "@closePreview": {
+    "description": "Close preview."
+  },
+  "openPage": "Open page",
+  "@openPage": {
+    "description": "Open the entity page."
+  },
+  "merge": "Merge…",
+  "@merge": {
+    "description": "Merge action."
+  },
+  "mergeUnavailable": "Merging isn't available yet",
+  "@mergeUnavailable": {
+    "description": "Tooltip of disabled merge."
+  },
+  "refreshInsights": "Refresh insights",
+  "@refreshInsights": {
+    "description": "Asks the AI to re-read the notes."
+  },
+  "refreshQueued": "Insights refresh queued",
+  "@refreshQueued": {
+    "description": "Snack bar after refresh."
+  },
+  "summary": "Summary",
+  "@summary": {
+    "description": "Section."
+  },
+  "aiMaintained": "AI-maintained",
+  "@aiMaintained": {
+    "description": "Section caption."
+  },
+  "insights": "Insights",
+  "@insights": {
+    "description": "Section."
+  },
+  "openItems": "Open items",
+  "@openItems": {
+    "description": "Section."
+  },
+  "timeline": "Timeline",
+  "@timeline": {
+    "description": "Section."
+  },
+  "noSummary": "No summary yet.",
+  "@noSummary": {
+    "description": "Empty summary."
+  },
+  "nothingYet": "Nothing yet.",
+  "@nothingYet": {
+    "description": "Empty AI section."
+  },
+  "relatedEntities": "Related entities",
+  "@relatedEntities": {
+    "description": "Section."
+  },
+  "noRelated": "No related people or companies yet.",
+  "@noRelated": {
+    "description": "Empty related."
+  },
+  "rejectRelation": "Reject relation {type} {title}",
+  "@rejectRelation": {
+    "description": "Reject button label.",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "repointRelation": "Repoint {title}",
+  "@repointRelation": {
+    "description": "Repoint button label.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "repointUnavailable": "Repointing isn't available yet",
+  "@repointUnavailable": {
+    "description": "Tooltip of disabled repoint."
+  },
+  "mentioningNotes": "Mentioning notes",
+  "@mentioningNotes": {
+    "description": "Section."
+  },
+  "newestFirst": "Newest first",
+  "@newestFirst": {
+    "description": "Caption."
+  },
+  "noMentions": "No notes mention this yet.",
+  "@noMentions": {
+    "description": "Empty mentions."
+  },
+  "documentsSection": "Documents",
+  "@documentsSection": {
+    "description": "Section: documents held / owned."
+  },
+  "entityGraph": "Entity graph",
+  "@entityGraph": {
+    "description": "Section."
+  },
+  "yourNotes": "Your notes",
+  "@yourNotes": {
+    "description": "User section."
+  },
+  "yourNotesHint": "Only you edit this section · ## Notes",
+  "@yourNotesHint": {
+    "description": "User section caption."
+  },
+  "yourNotesUnavailable": "Editing your notes here isn't available yet. Open the note to edit its ## Notes section.",
+  "@yourNotesUnavailable": {
+    "description": "Placeholder."
+  },
+  "tabOverview": "Overview",
+  "@tabOverview": {
+    "description": "Entity tab."
+  },
+  "tabNotes": "Notes · {count}",
+  "@tabNotes": {
+    "description": "Entity tab.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tabGraph": "Graph",
+  "@tabGraph": {
+    "description": "Entity tab."
+  },
+  "entityViews": "Entity views",
+  "@entityViews": {
+    "description": "Entity tab bar label."
+  },
+  "kindPerson": "Person",
+  "@kindPerson": {
+    "description": "Kind."
+  },
+  "kindCompany": "Company",
+  "@kindCompany": {
+    "description": "Kind."
+  },
+  "entitySubtitle": "{kind} · {count, plural, =0{no mentioning notes} =1{1 mentioning note} other{{count} mentioning notes}}",
+  "@entitySubtitle": {
+    "description": "Entity header subtitle.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "backToPeople": "Back to People",
+  "@backToPeople": {
+    "description": "Back button."
+  },
+  "backToCompanies": "Back to Companies",
+  "@backToCompanies": {
+    "description": "Back button."
+  },
+  "openNote": "Open markdown file",
+  "@openNote": {
+    "description": "Menu item."
+  },
+  "pendingSync": "Not synced yet",
+  "@pendingSync": {
+    "description": "Local changes."
+  },
+  "loading": "Loading…",
+  "@loading": {
+    "description": "Loading."
+  },
+  "errorTitle": "This couldn't be loaded",
+  "@errorTitle": {
+    "description": "Error title."
+  },
+  "errorMessage": "The app's local data returned an error ({code}).",
+  "@errorMessage": {
+    "description": "Error body.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "notFoundTitle": "This page isn't in the vault any more",
+  "@notFoundTitle": {
+    "description": "Unknown entity."
+  },
+  "notFoundMessage": "It may have been deleted or merged on another device.",
+  "@notFoundMessage": {
+    "description": "Unknown entity body."
+  },
+  "selectSomething": "Select an item to see it here",
+  "@selectSomething": {
+    "description": "Empty detail pane."
+  },
+  "dateShort": "{date}",
+  "@dateShort": {
+    "description": "Date.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM y",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "mentionDate": "{date}",
+  "@mentionDate": {
+    "description": "Mention date.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM",
+        "isCustomDateFormat": "true"
+      }
+    }
+  }
+}

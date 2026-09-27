@@ -66,7 +66,7 @@ class _NotesListPaneState extends ConsumerState<NotesListPane> {
       label: l10n.notesInFolderLabel(
         folder: widget.folder.isEmpty ? l10n.notesRoot : widget.folder,
       ),
-      child: ColoredBox(
+      child: Material(
         color: colors.surface,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -469,79 +469,81 @@ class NoteRow extends ConsumerWidget {
       child: Material(
         color: selected ? colors.accentTint : Colors.transparent,
         borderRadius: StrataRadii.inputRadius,
-        child: GestureDetector(
-          onSecondaryTapUp: (details) =>
-              unawaited(_menu(context, ref, details.globalPosition)),
-          child: InkWell(
-            borderRadius: StrataRadii.inputRadius,
-            onTap: onTap,
-            onLongPress: () {
-              final box = context.findRenderObject()! as RenderBox;
-              unawaited(
-                _menu(
-                  context,
-                  ref,
-                  box.localToGlobal(box.size.center(Offset.zero)),
-                ),
-              );
-            },
-            child: Semantics(
-              selected: selected,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: StrataLayout.minTouchTarget,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: StrataSpacing.s3,
-                    vertical: StrataSpacing.s2 + 2,
+        child: MergeSemantics(
+          child: GestureDetector(
+            onSecondaryTapUp: (details) =>
+                unawaited(_menu(context, ref, details.globalPosition)),
+            child: InkWell(
+              borderRadius: StrataRadii.inputRadius,
+              onTap: onTap,
+              onLongPress: () {
+                final box = context.findRenderObject()! as RenderBox;
+                unawaited(
+                  _menu(
+                    context,
+                    ref,
+                    box.localToGlobal(box.size.center(Offset.zero)),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.start,
-                              style: text.body.copyWith(
-                                color: colors.text,
-                                fontSize: StrataTypeScale.bodyDense,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          if (pendingSync) ...[
-                            const SizedBox(width: StrataSpacing.s2),
-                            Semantics(
-                              label: l10n.notSyncedYet,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  color: colors.warning,
-                                  shape: BoxShape.circle,
+                );
+              },
+              child: Semantics(
+                selected: selected,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: StrataLayout.minTouchTarget,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: StrataSpacing.s3,
+                      vertical: StrataSpacing.s2 + 2,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.start,
+                                style: text.body.copyWith(
+                                  color: colors.text,
+                                  fontSize: StrataTypeScale.bodyDense,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
+                            if (pendingSync) ...[
+                              const SizedBox(width: StrataSpacing.s2),
+                              Semantics(
+                                label: l10n.notSyncedYet,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: colors.warning,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                      if (snippet.isNotEmpty)
-                        Text(
-                          snippet,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.start,
-                          style: text.bodySmall.copyWith(
-                            color: colors.text2,
-                            fontSize: 13,
-                          ),
                         ),
-                    ],
+                        if (snippet.isNotEmpty)
+                          Text(
+                            snippet,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.start,
+                            style: text.bodySmall.copyWith(
+                              color: colors.text2,
+                              fontSize: 13,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

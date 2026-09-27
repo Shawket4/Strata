@@ -45,6 +45,7 @@ async fn seed_covers_every_user_owned_table_for_both_users() {
             "dedupe_keep_both",
             "dedupe_keys",
             "dedupe_vectors",
+            "dedupe_verdicts",
             "devices",
             "disambiguation_hints",
             "documents",

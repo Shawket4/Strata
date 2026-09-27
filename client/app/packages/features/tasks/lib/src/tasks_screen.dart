@@ -527,7 +527,7 @@ class _TaskTable extends StatelessWidget {
               _Hint(keys: const ['X'], label: l10n.tasksShortcutDone),
               _Hint(keys: const ['R'], label: l10n.tasksShortcutRepeat),
               _Hint(keys: const ['D'], label: l10n.tasksShortcutDue),
-              _Hint(keys: const ['↵'], label: l10n.tasksShortcutOpen),
+              _Hint(keys: const ['Enter'], label: l10n.tasksShortcutOpen),
             ],
           ),
         ),

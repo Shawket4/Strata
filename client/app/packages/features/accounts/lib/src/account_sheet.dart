@@ -285,9 +285,13 @@ class SignOutWarningDialog extends ConsumerWidget {
                             style: text.bodySmall.withWeight(FontWeight.w600),
                           ),
                         ),
-                        Text(
-                          SyncLabels.kind(sync, item.kind),
-                          style: text.caption.copyWith(color: colors.text2),
+                        const SizedBox(width: StrataSpacing.s2),
+                        Flexible(
+                          child: Text(
+                            SyncLabels.kind(sync, item.kind),
+                            textAlign: TextAlign.end,
+                            style: text.caption.copyWith(color: colors.text2),
+                          ),
                         ),
                       ],
                     ),

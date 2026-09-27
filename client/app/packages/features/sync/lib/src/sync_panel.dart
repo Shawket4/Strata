@@ -329,16 +329,23 @@ class _DetailRow extends StatelessWidget {
     final text = context.strataText;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s1),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        spacing: StrataSpacing.s3,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: text.bodySmall.copyWith(color: colors.text2)),
-          Text(
-            value,
-            textDirection: mono ? TextDirection.ltr : null,
-            style: (mono ? text.monoSmall : text.bodySmall).copyWith(
-              color: colors.text,
+          Expanded(
+            child: Text(
+              label,
+              style: text.bodySmall.copyWith(color: colors.text2),
+            ),
+          ),
+          const SizedBox(width: StrataSpacing.s3),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: (mono ? text.monoSmall : text.bodySmall).copyWith(
+                color: colors.text,
+              ),
             ),
           ),
         ],

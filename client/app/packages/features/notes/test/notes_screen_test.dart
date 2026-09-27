@@ -55,6 +55,17 @@ Future<FakeCoreApi> pumpNotes(
   return api;
 }
 
+/// Scrolls the note's scroll view until [finder] is built (large text
+/// scales push it below the fold).
+Future<void> revealInScroll(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isNotEmpty) return;
+  await tester.dragUntilVisible(
+    finder,
+    find.byType(CustomScrollView).first,
+    const Offset(0, -300),
+  );
+}
+
 List<CoreCall> callsOf(FakeCoreApi fake, String method) =>
     fake.calls.where((c) => c.method == method).toList();
 
@@ -63,19 +74,15 @@ void main() {
     for (final v in variants()) {
       testWidgets('list $v', (tester) async {
         final fake = fakeWith();
-        await pumpVariant(
-          tester,
-          v,
-          const NotesScreen(folder: _folder),
-          fake,
-        );
+        await pumpVariant(tester, v, const NotesScreen(folder: _folder), fake);
         expect(find.byType(NotesListPane), findsOneWidget);
         expect(find.text('Pricing experiments'), findsOneWidget);
         expect(find.text('archive'), findsOneWidget);
         expect(find.text(_folder), findsOneWidget);
-        expect(fake.calls.first, const CoreCall('watchNotesList', {
-          'folder': _folder,
-        }));
+        expect(
+          fake.calls.first,
+          const CoreCall('watchNotesList', {'folder': _folder}),
+        );
         expect(find.byType(NoteDetailPane), findsNothing);
         expect(find.byType(CompactNotePage), findsNothing);
         expect(
@@ -110,7 +117,8 @@ void main() {
         expect(
           find.byType(NoteContextPanel),
           v.sizeClass == SizeClass.expanded ? findsOneWidget : findsNothing,
-          reason: 'context: panel on expanded, drawer (closed) on medium, '
+          reason:
+              'context: panel on expanded, drawer (closed) on medium, '
               'tab on compact',
         );
         expect(
@@ -118,6 +126,7 @@ void main() {
           compact ? findsOneWidget : findsNothing,
         );
         expect(find.byType(PropertiesPanel), findsOneWidget);
+        await revealInScroll(tester, find.byType(StrataNoteEditor));
         expect(find.byType(StrataNoteEditor), findsOneWidget);
         expect(
           fake.calls,
@@ -173,6 +182,7 @@ void main() {
           const NotesScreen(folder: _folder, selectedNoteId: _pricing),
           fake,
         );
+        await revealInScroll(tester, find.byType(NoteConflictBanner));
         expect(find.byType(NoteConflictBanner), findsOneWidget);
         if (v.sizeClass == SizeClass.expanded) {
           expect(
@@ -205,7 +215,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.bySemanticsLabel('Not synced yet'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('Not synced yet')), findsOneWidget);
       final rows = tester.widgetList<NoteRow>(find.byType(NoteRow)).toList();
       expect(rows.map((r) => r.selected), [true, false, false, false]);
     });
@@ -221,10 +231,7 @@ void main() {
     });
 
     testWidgets('keeps the selection itself without a host', (tester) async {
-      final fake = await pumpNotes(
-        tester,
-        const NotesScreen(folder: _folder),
-      );
+      final fake = await pumpNotes(tester, const NotesScreen(folder: _folder));
       await tester.tap(find.text('Pricing experiments'));
       await tester.pump();
       await tester.pump();
@@ -258,19 +265,17 @@ void main() {
       await tester.enterText(find.byType(TextField), 'churn');
       await tester.pump();
       await tester.pump();
-      expect(
-        callsOf(fake, 'search'),
-        [
-          const CoreCall('search', {
-            'query': 'churn',
-            'mode': SearchMode.keyword,
-          }),
-        ],
-      );
+      expect(callsOf(fake, 'search'), [
+        const CoreCall('search', {
+          'query': 'churn',
+          'mode': SearchMode.keyword,
+        }),
+      ]);
       expect(find.text('Most exits happen at the first renewal.'), findsOne);
       await tester.tap(find.text('Churn notes'));
       expect(host.notes, ['n-churn-notes']);
       await tester.tap(find.byTooltip('Clear search'));
+      await tester.pump();
       await tester.pump();
       expect(find.text('Weekly invoicing proposal'), findsOneWidget);
     });
@@ -302,9 +307,7 @@ void main() {
       expect(field.focusNode!.hasFocus, isTrue);
     });
 
-    testWidgets('right-click → Delete note asks, then deletes', (
-      tester,
-    ) async {
+    testWidgets('right-click → Delete note asks, then deletes', (tester) async {
       final fake = await pumpNotes(tester, const NotesScreen(folder: _folder));
       await tester.tap(
         find.text('Churn notes'),
@@ -343,12 +346,12 @@ void main() {
       );
       expect(
         find.bySemanticsLabel(
-          RegExp(r'^Contradicts: Discount policy, .*0\.72'),
+          RegExp(r'^contradicts: Discount policy, .*0\.72'),
         ),
         findsOneWidget,
       );
       expect(
-        find.bySemanticsLabel('Part of: Subscription tiers'),
+        find.bySemanticsLabel('part of: Subscription tiers'),
         findsOneWidget,
       );
       expect(find.text('AI · 0.81'), findsOneWidget);
@@ -404,12 +407,12 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(SimpleDialog),
-          matching: find.text('Contradicts'),
+          matching: find.text('contradicts'),
         ),
         findsNothing,
         reason: 'the current type is not offered',
       );
-      await tester.tap(find.text('Supports'));
+      await tester.tap(find.text('supports'));
       await tester.pumpAndSettle();
       expect(callsOf(fake, 'retypeRelation'), [
         const CoreCall('retypeRelation', {
@@ -459,7 +462,7 @@ void main() {
         sizeClass: SizeClass.compact,
       );
       await tester.longPress(find.text('Subscription tiers'));
-      await tester.pumpAndSettle();
+      await tester.pump();
       expect(find.text('Suggested by AI'), findsNothing);
     });
   });
@@ -469,7 +472,7 @@ void main() {
       final host = Host();
       await pumpNotes(tester, host.screen(selected: _pricing));
       final panel = find.byType(NoteContextPanel);
-      for (final label in ['Supports', 'Follows up', 'body links']) {
+      for (final label in ['supports', 'follows up', 'body links']) {
         expect(
           find.descendant(of: panel, matching: find.text(label)),
           findsOneWidget,
@@ -499,6 +502,8 @@ void main() {
       await tester.tap(find.byTooltip('Hide context panel'));
       await tester.pump();
       expect(find.byType(NoteContextPanel), findsNothing);
+      await tester.tap(find.byType(TextField));
+      await tester.pump();
       await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
       await tester.sendKeyEvent(LogicalKeyboardKey.period);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
@@ -522,37 +527,29 @@ void main() {
       expect(find.byType(NoteContextPanel), findsNothing);
     });
 
-    testWidgets('history renders each availability state', (tester) async {
-      const messages = {
-        Availability.available: 'Versions of this note appear here.',
-        Availability.offline:
-            "History needs a connection. It's back when you're online.",
-        Availability.notYetAvailable: "History isn't available yet.",
-        Availability.notAllowed: "History isn't available for this account.",
-      };
-      for (final entry in messages.entries) {
+    const historyMessages = {
+      Availability.available: 'Versions of this note appear here.',
+      Availability.offline:
+          "History needs a connection. It's back when you're online.",
+      Availability.notYetAvailable: "History isn't available yet.",
+      Availability.notAllowed: "History isn't available for this account.",
+    };
+    for (final entry in historyMessages.entries) {
+      testWidgets('history renders ${entry.key.name}', (tester) async {
         await pumpNotes(
           tester,
-          NotesScreen(
-            key: ValueKey(entry.key),
-            folder: _folder,
-            selectedNoteId: _pricing,
-          ),
-          fake: fakeWith(
-            note: NotesFixtures.pricingNote(history: entry.key),
-          ),
+          const NotesScreen(folder: _folder, selectedNoteId: _pricing),
+          fake: fakeWith(note: NotesFixtures.pricingNote(history: entry.key)),
         );
         await tester.tap(find.text('History').first);
         await tester.pump();
         expect(find.text(entry.value), findsOneWidget);
-      }
-    });
+      });
+    }
   });
 
   group('compact note page', () {
-    testWidgets('tabs switch between note, links and history', (
-      tester,
-    ) async {
+    testWidgets('tabs switch between note, links and history', (tester) async {
       await pumpNotes(
         tester,
         const NotesScreen(folder: _folder, selectedNoteId: _pricing),
@@ -562,6 +559,7 @@ void main() {
       await tester.tap(find.text('Links'));
       await tester.pump();
       expect(find.byType(BacklinksSection), findsOneWidget);
+      await tester.scrollUntilVisible(find.byType(LocalGraphSlot), 200);
       expect(find.byType(LocalGraphSlot), findsOneWidget);
       expect(find.byType(StrataNoteEditor), findsNothing);
       await tester.tap(find.text('History'));

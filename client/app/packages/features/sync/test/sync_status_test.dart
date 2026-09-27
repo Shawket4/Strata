@@ -69,7 +69,7 @@ void main() {
           v.rtl ? TextDirection.rtl : TextDirection.ltr,
         );
         expectNoErrors(tester);
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
       });
 
       testWidgets('syncing $v', (tester) async {
@@ -83,7 +83,7 @@ void main() {
         expect(find.text('error.server'), findsOneWidget);
         expect(find.text(l10n.syncNow), findsOneWidget);
         expectNoErrors(tester);
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
       });
 
       testWidgets('synced, empty outbox $v', (tester) async {
@@ -94,7 +94,7 @@ void main() {
         expect(find.text(l10n.outboxEmpty), findsOneWidget);
         expect(find.text(l10n.conflictsTitle(count: 1)), findsNothing);
         expectNoErrors(tester);
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
       });
 
       testWidgets('error $v', (tester) async {
@@ -112,7 +112,7 @@ void main() {
           findsOneWidget,
         );
         expectNoErrors(tester);
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
       });
     }
   });

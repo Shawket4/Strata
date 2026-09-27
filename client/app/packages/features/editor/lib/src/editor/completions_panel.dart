@@ -215,46 +215,48 @@ class _SuggestionTile extends StatelessWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final sub = subtitle;
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: StrataLayout.minTouchTarget,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: StrataSpacing.s4,
-            vertical: StrataSpacing.s1,
+    return MergeSemantics(
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: StrataLayout.minTouchTarget,
           ),
-          child: Row(
-            children: [
-              NodeKindGlyph(kind: kind, decorative: true),
-              const SizedBox(width: StrataSpacing.s3),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: text.bodySmall.copyWith(
-                        color: colors.text,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (sub != null)
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: StrataSpacing.s4,
+              vertical: StrataSpacing.s1,
+            ),
+            child: Row(
+              children: [
+                NodeKindGlyph(kind: kind, decorative: true),
+                const SizedBox(width: StrataSpacing.s3),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        sub,
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: text.caption.copyWith(color: colors.text2),
+                        style: text.bodySmall.copyWith(
+                          color: colors.text,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                  ],
+                      if (sub != null)
+                        Text(
+                          sub,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.caption.copyWith(color: colors.text2),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

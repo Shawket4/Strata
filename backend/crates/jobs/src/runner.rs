@@ -315,10 +315,12 @@ impl Runner {
         // Nothing claimable: refresh the wakeup hint. When the hint stays due only because of
         // jobs of kinds this process does not run, skip the user until its next job of a kind
         // we run is due, or for a while (it would otherwise be looked at on every pass).
+        // The wakeup row is locked first, so the checks below see every job committed by
+        // then (a job running concurrently may just have queued follow-up work).
         let handled: Vec<String> = self.kinds().iter().map(|k| (*k).to_owned()).collect();
+        let earliest = jobs::refresh_wakeup(&mut tx).await?;
         let blocked = repo::any_due(&mut tx, now, &handled).await?;
         let next = repo::next_due(&mut tx, &handled).await?;
-        let earliest = jobs::refresh_wakeup(&mut tx).await?;
         tx.commit().await?;
         if !blocked && earliest.is_some_and(|e| e <= now) {
             let recheck = now + self.inner.config.idle_recheck;
@@ -374,7 +376,7 @@ impl Runner {
                         }
                     }
                     Ok(None) => {}
-                    Err(e) => { eprintln!("DEBUGCLAIM {e}"); tracing::error!(user = %user, error = %e, "claiming a job failed") },
+                    Err(e) => tracing::error!(user = %user, error = %e, "claiming a job failed"),
                 }
             }
             if !progressed || next_round.is_empty() {
@@ -504,7 +506,7 @@ impl Runner {
             ),
             Ok(None) => {}
             Err(e) => {
-                eprintln!("DEBUGFINISH {e}"); tracing::error!(job = %job.id, error = %e, "recording a job outcome failed");
+                tracing::error!(job = %job.id, error = %e, "recording a job outcome failed");
             }
         }
     }

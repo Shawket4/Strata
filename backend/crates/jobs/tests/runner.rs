@@ -2,7 +2,7 @@
 //! claiming under concurrency, retries with exponential backoff, pauses that wait, debounce,
 //! events, unhandled kinds, the daily limit, graceful shutdown, and the scheduler — all with
 //! the fake clock.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(clippy::expect_used, clippy::too_many_lines, clippy::many_single_char_names)]
 
 mod common;
 

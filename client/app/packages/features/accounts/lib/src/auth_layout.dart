@@ -326,8 +326,8 @@ class PrimaryButton extends StatelessWidget {
       onPressed: busy ? null : onPressed,
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(StrataLayout.minTouchTarget),
-        backgroundColor: danger ? colors.danger : null,
-        foregroundColor: danger ? colors.onAccent : null,
+        backgroundColor: danger ? colors.dangerTint : null,
+        foregroundColor: danger ? colors.dangerText : null,
       ),
       child: busy
           ? SizedBox.square(

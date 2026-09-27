@@ -229,10 +229,11 @@ class ProposalContent extends ConsumerWidget {
                     detail.line,
                     style: text.bodySmall.withWeight(FontWeight.w500),
                   ),
+                  if (confidence != null)
+                    AiConfidenceTag(confidence: confidence),
                 ],
               ),
             ),
-            if (confidence != null) AiConfidenceTag(confidence: confidence),
           ],
         );
       case SuggestionKind.entityLinkOrCreate:

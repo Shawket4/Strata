@@ -136,7 +136,7 @@ class CaptureComposer extends HookConsumerWidget {
                         if (desktop) ...[
                           const SizedBox(width: StrataSpacing.s2),
                           const KeyboardHintChip(
-                            keys: [KeyboardHintChip.commandKey, '↵'],
+                            keys: [KeyboardHintChip.commandKey, 'Enter'],
                             onAccent: true,
                           ),
                         ],

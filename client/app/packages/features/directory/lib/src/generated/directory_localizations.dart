@@ -101,11 +101,671 @@ abstract class DirectoryLocalizations {
     Locale('en'),
   ];
 
-  /// No description provided for @loading.
+  /// Directory title.
+  ///
+  /// In en, this message translates to:
+  /// **'Directory'**
+  String get directoryTitle;
+
+  /// Tab bar label.
+  ///
+  /// In en, this message translates to:
+  /// **'Directory'**
+  String get tabsLabel;
+
+  /// Tab.
+  ///
+  /// In en, this message translates to:
+  /// **'People'**
+  String get tabPeople;
+
+  /// Tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Companies'**
+  String get tabCompanies;
+
+  /// Tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get tabDocuments;
+
+  /// Tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Places'**
+  String get tabPlaces;
+
+  /// Tab label with count (wide).
+  ///
+  /// In en, this message translates to:
+  /// **'{tab} · {count}'**
+  String tabWithCount({required String tab, required int count});
+
+  /// Search label.
+  ///
+  /// In en, this message translates to:
+  /// **'Search people'**
+  String get searchPeople;
+
+  /// Search label.
+  ///
+  /// In en, this message translates to:
+  /// **'Search companies'**
+  String get searchCompanies;
+
+  /// Search label.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a document or ask where it is'**
+  String get searchDocuments;
+
+  /// Search label.
+  ///
+  /// In en, this message translates to:
+  /// **'Search places'**
+  String get searchPlaces;
+
+  /// Search placeholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Search in English or العربية'**
+  String get searchHint;
+
+  /// Documents search placeholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Where is…? / فين…؟'**
+  String get searchHintDocuments;
+
+  /// Filters group label.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get filtersLabel;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get filterTag;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get filterRole;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get filterCompany;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Industry'**
+  String get filterIndustry;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get filterType;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get filterStatus;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Place'**
+  String get filterPlace;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiring'**
+  String get filterExpiring;
+
+  /// Filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Holder'**
+  String get filterHolder;
+
+  /// Tooltip of disabled filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters aren\'t available yet'**
+  String get filtersUnavailable;
+
+  /// Count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No people} =1{1 person} other{{count} people}}'**
+  String peopleCount({required int count});
+
+  /// Count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No companies} =1{1 company} other{{count} companies}}'**
+  String companiesCount({required int count});
+
+  /// Count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No documents} =1{1 document} other{{count} documents}}'**
+  String documentsCount({required int count});
+
+  /// Count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No places} =1{1 place} other{{count} places}}'**
+  String placesCount({required int count});
+
+  /// Empty tab.
+  ///
+  /// In en, this message translates to:
+  /// **'No people yet'**
+  String get emptyPeople;
+
+  /// Empty tab.
+  ///
+  /// In en, this message translates to:
+  /// **'No companies yet'**
+  String get emptyCompanies;
+
+  /// Empty tab.
+  ///
+  /// In en, this message translates to:
+  /// **'No documents yet'**
+  String get emptyDocuments;
+
+  /// Empty tab.
+  ///
+  /// In en, this message translates to:
+  /// **'No places yet'**
+  String get emptyPlaces;
+
+  /// Empty tab body.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentions in your notes and captures create them.'**
+  String get emptyMessage;
+
+  /// Search without results.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches for “{query}”'**
+  String noMatches({required String query});
+
+  /// Search without results body.
+  ///
+  /// In en, this message translates to:
+  /// **'Search looks at names and aliases in both scripts.'**
+  String get noMatchesMessage;
+
+  /// Suggestion strip title.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestions'**
+  String get suggestions;
+
+  /// Suggestion strip caption.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing changes until you accept'**
+  String get suggestionsHint;
+
+  /// Link-or-create suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Who is “{mention}”?'**
+  String whoIs({required String mention});
+
+  /// Link-or-create detail.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No matching person} =1{1 possible match} other{{count} possible matches}}'**
+  String whoIsCandidates({required int count});
+
+  /// Duplicate suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Possible duplicate'**
+  String get possibleDuplicate;
+
+  /// Custody suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Custody update to confirm'**
+  String get custodySuggestion;
+
+  /// Relation suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Relation to review'**
+  String get relationSuggestion;
+
+  /// Task suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Task from a capture'**
+  String get taskSuggestion;
+
+  /// Filing suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Filing to review'**
+  String get filingSuggestion;
+
+  /// Unsupported suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestion'**
+  String get otherSuggestion;
+
+  /// Accept a suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get accept;
+
+  /// Reject a suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// Create person from a link-or-create suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Create person…'**
+  String get createPerson;
+
+  /// AI confidence tag.
+  ///
+  /// In en, this message translates to:
+  /// **'AI · {value}'**
+  String aiConfidence({required String value});
+
+  /// Create button.
+  ///
+  /// In en, this message translates to:
+  /// **'New person'**
+  String get newPerson;
+
+  /// Create button.
+  ///
+  /// In en, this message translates to:
+  /// **'New company'**
+  String get newCompany;
+
+  /// Create dialog field.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get nameField;
+
+  /// Create dialog field.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliases (one per line)'**
+  String get aliasesField;
+
+  /// Create.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// Create despite duplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Create anyway'**
+  String get createAnyway;
+
+  /// Cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// Duplicate prompt title.
+  ///
+  /// In en, this message translates to:
+  /// **'Already exists'**
+  String get alreadyExists;
+
+  /// Candidate match.
+  ///
+  /// In en, this message translates to:
+  /// **'{level} · {score}'**
+  String matchScore({required String level, required String score});
+
+  /// Open the duplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Open existing'**
+  String get openExisting;
+
+  /// Column.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get colName;
+
+  /// Column.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliases'**
+  String get colAliases;
+
+  /// Column.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get colDetails;
+
+  /// Table caption.
+  ///
+  /// In en, this message translates to:
+  /// **'{tab}, by name'**
+  String tableCaption({required String tab});
+
+  /// Keyboard hint after the arrow keys.
+  ///
+  /// In en, this message translates to:
+  /// **'move · open page'**
+  String get keyboardHint;
+
+  /// Preview panel title.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get preview;
+
+  /// Preview panel label.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview: {title}'**
+  String previewOf({required String title});
+
+  /// Close preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Close preview'**
+  String get closePreview;
+
+  /// Open the entity page.
+  ///
+  /// In en, this message translates to:
+  /// **'Open page'**
+  String get openPage;
+
+  /// Merge action.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge…'**
+  String get merge;
+
+  /// Tooltip of disabled merge.
+  ///
+  /// In en, this message translates to:
+  /// **'Merging isn\'t available yet'**
+  String get mergeUnavailable;
+
+  /// Asks the AI to re-read the notes.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh insights'**
+  String get refreshInsights;
+
+  /// Snack bar after refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights refresh queued'**
+  String get refreshQueued;
+
+  /// Section.
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get summary;
+
+  /// Section caption.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-maintained'**
+  String get aiMaintained;
+
+  /// Section.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get insights;
+
+  /// Section.
+  ///
+  /// In en, this message translates to:
+  /// **'Open items'**
+  String get openItems;
+
+  /// Section.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get timeline;
+
+  /// Empty summary.
+  ///
+  /// In en, this message translates to:
+  /// **'No summary yet.'**
+  String get noSummary;
+
+  /// Empty AI section.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing yet.'**
+  String get nothingYet;
+
+  /// Section.
+  ///
+  /// In en, this message translates to:
+  /// **'Related entities'**
+  String get relatedEntities;
+
+  /// Empty related.
+  ///
+  /// In en, this message translates to:
+  /// **'No related people or companies yet.'**
+  String get noRelated;
+
+  /// Reject button label.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject relation {type} {title}'**
+  String rejectRelation({required String type, required String title});
+
+  /// Repoint button label.
+  ///
+  /// In en, this message translates to:
+  /// **'Repoint {title}'**
+  String repointRelation({required String title});
+
+  /// Tooltip of disabled repoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Repointing isn\'t available yet'**
+  String get repointUnavailable;
+
+  /// Section.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentioning notes'**
+  String get mentioningNotes;
+
+  /// Caption.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest first'**
+  String get newestFirst;
+
+  /// Empty mentions.
+  ///
+  /// In en, this message translates to:
+  /// **'No notes mention this yet.'**
+  String get noMentions;
+
+  /// Section: documents held / owned.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get documentsSection;
+
+  /// Section.
+  ///
+  /// In en, this message translates to:
+  /// **'Entity graph'**
+  String get entityGraph;
+
+  /// User section.
+  ///
+  /// In en, this message translates to:
+  /// **'Your notes'**
+  String get yourNotes;
+
+  /// User section caption.
+  ///
+  /// In en, this message translates to:
+  /// **'Only you edit this section · ## Notes'**
+  String get yourNotesHint;
+
+  /// Placeholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Editing your notes here isn\'t available yet. Open the note to edit its ## Notes section.'**
+  String get yourNotesUnavailable;
+
+  /// Entity tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get tabOverview;
+
+  /// Entity tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes · {count}'**
+  String tabNotes({required int count});
+
+  /// Entity tab.
+  ///
+  /// In en, this message translates to:
+  /// **'Graph'**
+  String get tabGraph;
+
+  /// Entity tab bar label.
+  ///
+  /// In en, this message translates to:
+  /// **'Entity views'**
+  String get entityViews;
+
+  /// Kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Person'**
+  String get kindPerson;
+
+  /// Kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Company'**
+  String get kindCompany;
+
+  /// Entity header subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{kind} · {count, plural, =0{no mentioning notes} =1{1 mentioning note} other{{count} mentioning notes}}'**
+  String entitySubtitle({required String kind, required int count});
+
+  /// Back button.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to People'**
+  String get backToPeople;
+
+  /// Back button.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Companies'**
+  String get backToCompanies;
+
+  /// Menu item.
+  ///
+  /// In en, this message translates to:
+  /// **'Open markdown file'**
+  String get openNote;
+
+  /// Local changes.
+  ///
+  /// In en, this message translates to:
+  /// **'Not synced yet'**
+  String get pendingSync;
+
+  /// Loading.
   ///
   /// In en, this message translates to:
   /// **'Loading…'**
   String get loading;
+
+  /// Error title.
+  ///
+  /// In en, this message translates to:
+  /// **'This couldn\'t be loaded'**
+  String get errorTitle;
+
+  /// Error body.
+  ///
+  /// In en, this message translates to:
+  /// **'The app\'s local data returned an error ({code}).'**
+  String errorMessage({required String code});
+
+  /// Unknown entity.
+  ///
+  /// In en, this message translates to:
+  /// **'This page isn\'t in the vault any more'**
+  String get notFoundTitle;
+
+  /// Unknown entity body.
+  ///
+  /// In en, this message translates to:
+  /// **'It may have been deleted or merged on another device.'**
+  String get notFoundMessage;
+
+  /// Empty detail pane.
+  ///
+  /// In en, this message translates to:
+  /// **'Select an item to see it here'**
+  String get selectSomething;
+
+  /// Date.
+  ///
+  /// In en, this message translates to:
+  /// **'{date}'**
+  String dateShort({required DateTime date});
+
+  /// Mention date.
+  ///
+  /// In en, this message translates to:
+  /// **'{date}'**
+  String mentionDate({required DateTime date});
 }
 
 class _DirectoryLocalizationsDelegate

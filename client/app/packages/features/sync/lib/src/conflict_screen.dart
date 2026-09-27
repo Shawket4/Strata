@@ -615,7 +615,7 @@ class _Footer extends StatelessWidget {
             if (wide) ...[
               const SizedBox(width: StrataSpacing.s2),
               const KeyboardHintChip(
-                keys: [KeyboardHintChip.commandKey, '↵'],
+                keys: [KeyboardHintChip.commandKey, 'Enter'],
                 onAccent: true,
               ),
             ],

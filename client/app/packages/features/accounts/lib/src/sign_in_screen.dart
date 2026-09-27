@@ -157,8 +157,9 @@ class SignInScreen extends HookConsumerWidget {
             ),
             if (wide) ...[
               const SizedBox(height: StrataSpacing.s2),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   const KeyboardHintChip(keys: ['Enter']),
                   const SizedBox(width: StrataSpacing.s2),

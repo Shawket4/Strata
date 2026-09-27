@@ -107,10 +107,11 @@ class RestrictedLayout extends StatelessWidget {
 }
 
 class _Illustration extends StatelessWidget {
-  const new({required this.icon, required this.danger});
+  const new({required this.icon, required this.danger, this.aligned = true});
 
   final IconData icon;
   final bool danger;
+  final bool aligned;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +119,7 @@ class _Illustration extends StatelessWidget {
     return ExcludeSemantics(
       child: Align(
         alignment: AlignmentDirectional.centerStart,
+        widthFactor: aligned ? null : 1,
         child: Container(
           width: 56,
           height: 56,
@@ -344,13 +346,16 @@ class DeletionPendingScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          Wrap(
+            spacing: StrataSpacing.s3,
+            runSpacing: StrataSpacing.s2,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               const _Illustration(
                 icon: Icons.auto_delete_outlined,
                 danger: false,
+                aligned: false,
               ),
-              const SizedBox(width: StrataSpacing.s3),
               if (days != null)
                 StatusPill(
                   label: l10n.daysLeft(count: days),

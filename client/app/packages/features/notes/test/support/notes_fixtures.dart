@@ -139,9 +139,7 @@ abstract final class NotesFixtures {
     ),
     BacklinkGroup(
       kind: 'link',
-      items: [
-        BacklinkItem(noteId: 'n-q4-hiring', title: 'Q4 hiring plan'),
-      ],
+      items: [BacklinkItem(noteId: 'n-q4-hiring', title: 'Q4 hiring plan')],
     ),
   ];
 
@@ -197,7 +195,12 @@ abstract final class NotesFixtures {
       pendingOps: 0,
     ),
     Availability history = Availability.available,
-    List<RelationChip> relations = const [contradicts, partOf, related, concept],
+    List<RelationChip> relations = const [
+      contradicts,
+      partOf,
+      related,
+      concept,
+    ],
     List<BacklinkGroup> groups = backlinks,
   }) => NoteView(
     id: pricingId,
