@@ -230,20 +230,17 @@ impl FakeServer {
                 .ok_or_else(|| problem("not_found", 404));
         }
         Ok(match op {
-            Op::TaskCreate(p) => match p.note_id {
-                Some(n) => Some(n),
-                None => {
-                    let home = s
-                        .notes
-                        .iter()
-                        .find(|(_, n)| n.path == crate::store::write::TASK_HOME)
-                        .map(|(id, _)| *id);
-                    Some(home.unwrap_or_else(|| {
-                        s.next_id += 1;
-                        Ulid::from_parts(0x0000_5E2F_E000, s.next_id)
-                    }))
-                }
-            },
+            Op::TaskCreate(p) => Some(p.note_id.unwrap_or_else(|| {
+                let home = s
+                    .notes
+                    .iter()
+                    .find(|(_, n)| n.path == crate::store::write::TASK_HOME)
+                    .map(|(id, _)| *id);
+                home.unwrap_or_else(|| {
+                    s.next_id += 1;
+                    Ulid::from_parts(0x0000_5E2F_E000, s.next_id)
+                })
+            })),
             Op::NoteCreate(p) => Some(p.id),
             Op::Capture(p) => Some(p.id),
             Op::EntityCreate(p) => Some(p.id),

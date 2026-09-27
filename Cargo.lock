@@ -4422,6 +4422,7 @@ dependencies = [
  "caseless",
  "chrono",
  "chrono-tz",
+ "domain",
  "ed25519-dalek",
  "futures-util",
  "getrandom 0.3.4",
@@ -4445,6 +4446,7 @@ dependencies = [
  "strata-common",
  "strata-index",
  "strata-testkit",
+ "strata-vault",
  "tempfile",
  "thiserror",
  "tokio",
@@ -4454,6 +4456,7 @@ dependencies = [
  "unicode-normalization",
  "unicode-security",
  "utoipa",
+ "vault-format",
  "zip",
 ]
 

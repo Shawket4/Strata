@@ -18,6 +18,7 @@ pub mod auth;
 pub mod health;
 pub mod openapi;
 pub mod routes;
+pub mod vault;
 pub mod wire;
 
 #[cfg(feature = "test-support")]

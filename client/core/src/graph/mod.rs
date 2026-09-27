@@ -4,6 +4,9 @@
 //! layout for the global map (D3), warm-started from positions cached in the account database
 //! so the map stays stable between openings.
 
+// SQL rows are read into tuples right where the query is written.
+#![allow(clippy::type_complexity)]
+
 use std::collections::HashMap;
 
 use domain::{

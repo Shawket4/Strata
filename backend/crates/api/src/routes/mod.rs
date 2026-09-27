@@ -5,3 +5,12 @@ pub mod admin;
 pub mod auth;
 pub mod devices;
 pub mod me;
+// The vault store (mounted and documented by `crate::vault`).
+pub mod documents;
+pub mod entities;
+pub mod inbox;
+pub mod notes;
+pub mod relations;
+pub mod search;
+pub mod tasks;
+pub mod vault_ops;

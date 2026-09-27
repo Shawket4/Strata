@@ -96,7 +96,9 @@ pub const STREAMS: &[StreamOperation] = &[];
 
 /// The production contract.
 pub fn document() -> Value {
-    build(&ApiDoc::openapi(), STREAMS)
+    let mut api = ApiDoc::openapi();
+    api.merge(<crate::vault::VaultApiDoc as OpenApi>::openapi());
+    build(&api, STREAMS)
 }
 
 /// Canonical pretty JSON of `doc`, newline-terminated.
