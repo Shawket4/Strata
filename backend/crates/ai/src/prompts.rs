@@ -160,7 +160,18 @@ mod tests {
         assert_eq!(hashes, PINNED);
     }
 
-    const PINNED: &[(&str, u32, &str)] = &[];
+    const PINNED: &[(&str, u32, &str)] = &[
+        ("ask", 1, "7828fd7bda4076beb6246ec7291bfa6c8457c45b32c76a1a9bffd3ae38c30e06"),
+        ("cluster_naming", 1, "a9e34462b8c6dfa7dc31e8bea0bc72c87796927d3e1640e42de450684cee1a69"),
+        ("correction", 1, "38dcf73e884f16e096ec05c616bfc1a769266518c5ae339d840574990f152bb1"),
+        ("custody", 1, "4ffb5157c4219b61bd330638aab66845de02bd40d0f666e28f6e4c4f46ae61b7"),
+        ("digest", 1, "8c28ef004e2a5b6e317c8f27303547abfd8a311908ed330361366466d49b72de"),
+        ("duplicate_confirm", 1, "9ec1636954ae691f213e41d0b0d654042c76046c36be7229f42d90ff642a289f"),
+        ("entity_insights", 1, "ca5eb04464f4485661d185789fb64053d00872660bde52836f1662022b5ac356"),
+        ("inbox_filing", 1, "7e0bece88d09c5d7e16ee88eabd978b9b70b483775e0b1d5a5ddac82c3e16622"),
+        ("linking", 1, "6efb5ab1bf13e9557cb866826d949c1e331e2a366f765d185a2f9557c0ca4dcc"),
+        ("summary", 1, "2bb737594d4a58e51b21daab25de1c1aaf76e5b27e88a7cb2a1b8b9616713b64"),
+    ];
 
     #[test]
     fn build_time_hash_matches_the_embedded_text() {

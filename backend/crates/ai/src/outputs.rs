@@ -524,7 +524,7 @@ mod tests {
         let errs = crate::schema::validate(&v, &value).expect_err("uncited");
         assert_eq!(
             errs.iter().map(crate::schema::Violation::summary).collect::<Vec<_>>(),
-            vec!["/insights/0/citations: array has less than 1 item".to_owned()]
+            vec!["/insights/0/citations: value has less than 1 item".to_owned()]
         );
     }
 
