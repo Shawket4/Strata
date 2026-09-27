@@ -21,9 +21,7 @@ Future<FakeCoreApi> _pump(
   VoidCallback? onClose,
 }) async {
   final fake = FakeCoreApi();
-  if (error != null) {
-    fake.conflict[_op].addError(error);
-  } else if (emit) {
+  if (emit && error == null) {
     fake.conflict[_op].add(ConflictScreen(opId: _op, conflict: detail));
   }
   await pumpVariant(
@@ -38,6 +36,10 @@ Future<FakeCoreApi> _pump(
     ),
     fake: fake,
   );
+  if (error != null) {
+    fake.conflict[_op].addError(error);
+    await settle(tester);
+  }
   return fake;
 }
 

@@ -105,14 +105,16 @@ class _MiniGraph extends HookConsumerWidget {
             child: Row(
               children: [
                 Expanded(
-                  child: Semantics(
-                    header: true,
-                    container: true,
-                    child: Text(
-                      l10n.entityGraph,
-                      style: context.strataText.caption
-                          .withWeight(FontWeight.w700)
-                          .copyWith(color: colors.text2, letterSpacing: 0.4),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Semantics(
+                      header: true,
+                      child: Text(
+                        l10n.entityGraph,
+                        style: context.strataText.caption
+                            .withWeight(FontWeight.w700)
+                            .copyWith(color: colors.text2, letterSpacing: 0.4),
+                      ),
                     ),
                   ),
                 ),

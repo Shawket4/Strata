@@ -35,7 +35,6 @@ class EntityLinks {
 
   /// Leaves a full-screen page (compact).
   final VoidCallback? onBack;
-
 }
 
 /// Provides [EntityLinks] to a page's widgets.
@@ -368,14 +367,17 @@ class _DetailLayoutState extends State<DetailLayout> {
               ),
             ),
             Expanded(
-              child: ListView(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(
                   StrataSpacing.s4,
                   0,
                   StrataSpacing.s4,
                   StrataSpacing.s8,
                 ),
-                children: [...widget.main, ...widget.contextPanel],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [...widget.main, ...widget.contextPanel],
+                ),
               ),
             ),
             if (footer != null)
@@ -463,7 +465,13 @@ class _DetailLayoutState extends State<DetailLayout> {
           header,
           Divider(height: 1, color: colors.border),
           Expanded(
-            child: ListView(padding: pagePadding, children: widget.main),
+            child: SingleChildScrollView(
+              padding: pagePadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: widget.main,
+              ),
+            ),
           ),
         ],
       ),
@@ -474,9 +482,12 @@ class _DetailLayoutState extends State<DetailLayout> {
       label: l10n.contextLabel,
       child: ColoredBox(
         color: colors.background,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(StrataSpacing.s4),
-          children: widget.contextPanel,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: widget.contextPanel,
+          ),
         ),
       ),
     );

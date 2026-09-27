@@ -4,6 +4,7 @@ import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
+import 'package:strata_ui/testing.dart';
 
 import 'helpers/fixtures.dart';
 import 'helpers/hosts.dart';

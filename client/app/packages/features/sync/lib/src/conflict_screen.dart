@@ -496,47 +496,49 @@ class _HunkCard extends StatelessWidget {
                   style: text.monoSmall.copyWith(color: colors.text),
                 ),
         );
-    return Container(
-      padding: const EdgeInsets.all(StrataSpacing.s3),
-      decoration: BoxDecoration(
-        color: colors.warningTint,
+    return Material(
+      color: colors.warningTint,
+      shape: RoundedRectangleBorder(
         borderRadius: StrataRadii.cardRadius,
-        border: Border.all(color: colors.warning.withValues(alpha: 0.4)),
+        side: BorderSide(color: colors.warning.withValues(alpha: 0.4)),
       ),
-      child: RadioGroup<HunkChoiceKind>(
-        groupValue: choice,
-        onChanged: (value) {
-          if (value != null) onChoice(value);
-        },
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Semantics(
-              header: true,
-              container: true,
-              child: Text(
-                l10n.hunkTitle(location: hunk.location),
-                style: text.bodyStrong.copyWith(color: colors.warningText),
-              ),
-            ),
-            option(HunkChoiceKind.ours, l10n.hunkOurs, hunk.ours),
-            option(HunkChoiceKind.theirs, l10n.hunkTheirs, hunk.theirs),
-            option(HunkChoiceKind.base, l10n.hunkBase, hunk.base),
-            if (body) ...[
-              option(HunkChoiceKind.oursThenTheirs, l10n.hunkBoth),
-              option(HunkChoiceKind.text, l10n.hunkOwn),
-              if (choice == HunkChoiceKind.text)
-                TextField(
-                  controller: own,
-                  minLines: 2,
-                  maxLines: null,
-                  style: text.mono,
-                  decoration: InputDecoration(
-                    labelText: l10n.hunkOwnField(location: hunk.location),
-                  ),
+      child: Padding(
+        padding: const EdgeInsets.all(StrataSpacing.s3),
+        child: RadioGroup<HunkChoiceKind>(
+          groupValue: choice,
+          onChanged: (value) {
+            if (value != null) onChoice(value);
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                header: true,
+                container: true,
+                child: Text(
+                  l10n.hunkTitle(location: hunk.location),
+                  style: text.bodyStrong.copyWith(color: colors.warningText),
                 ),
+              ),
+              option(HunkChoiceKind.ours, l10n.hunkOurs, hunk.ours),
+              option(HunkChoiceKind.theirs, l10n.hunkTheirs, hunk.theirs),
+              option(HunkChoiceKind.base, l10n.hunkBase, hunk.base),
+              if (body) ...[
+                option(HunkChoiceKind.oursThenTheirs, l10n.hunkBoth),
+                option(HunkChoiceKind.text, l10n.hunkOwn),
+                if (choice == HunkChoiceKind.text)
+                  TextField(
+                    controller: own,
+                    minLines: 2,
+                    maxLines: null,
+                    style: text.mono,
+                    decoration: InputDecoration(
+                      labelText: l10n.hunkOwnField(location: hunk.location),
+                    ),
+                  ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

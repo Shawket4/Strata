@@ -163,6 +163,9 @@ class _TaskDetailBody extends ConsumerWidget {
       children: [
         Expanded(
           child: ListView(
+            // Only laid-out rows carry semantics: nothing hidden under the
+            // action bar is announced.
+            cacheExtent: 0,
             padding: const EdgeInsets.all(StrataSpacing.s4),
             children: [
               Row(
@@ -372,10 +375,13 @@ class _TaskDetailBody extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: StrataSpacing.s4),
-              Semantics(
-                header: true,
-                container: true,
-                child: Text(l10n.tasksHistoryTitle, style: text.titleSmall),
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Semantics(
+                  header: true,
+                  container: true,
+                  child: Text(l10n.tasksHistoryTitle, style: text.titleSmall),
+                ),
               ),
               Text(
                 l10n.tasksHistorySubtitle,
