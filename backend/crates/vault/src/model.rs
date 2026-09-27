@@ -221,6 +221,8 @@ pub struct TaskItem {
     pub note_path: String,
     /// The raw line.
     pub line: String,
+    /// The task's version (hash of its line) for `If-Match`.
+    pub version: String,
     /// Reminder instants.
     pub reminders: Vec<DateTime<Utc>>,
 }

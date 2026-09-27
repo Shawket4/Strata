@@ -996,15 +996,25 @@ pub struct AskView {
     pub messages: Vec<AskMessage>,
 }
 
-/// A node of a local graph.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// A node of a graph view, with its position.
+#[derive(Debug, Clone, PartialEq)]
 pub struct GraphNode {
     /// Note ID.
     pub id: String,
     /// Title.
     pub title: String,
-    /// Kind.
+    /// Kind (`note`, `person`, …).
     pub kind: String,
+    /// Ring (local graph: 0 = the focused note) or 0.
+    pub depth: u8,
+    /// Cluster (global map).
+    pub cluster_id: Option<String>,
+    /// Links + relations touching the node.
+    pub degree: u32,
+    /// Position (layout units; the renderer scales).
+    pub x: f64,
+    /// Position.
+    pub y: f64,
 }
 
 /// An edge of a local graph.
@@ -1014,7 +1024,7 @@ pub struct GraphEdge {
     pub src: String,
     /// Target note.
     pub dst: String,
-    /// `link`, `embed` or `relation:<type>`.
+    /// `graph-algo` edge kind (`link`, `embed`, `relation:<type>`, `mention`, …).
     pub kind: String,
     /// `user` | `ai` (relations).
     pub by: Option<String>,
@@ -1022,17 +1032,48 @@ pub struct GraphEdge {
     pub confidence: Option<f64>,
 }
 
-/// A note's neighbourhood (depth 1) from cached links and relations.
+/// A note's neighbourhood (depth 1–3) from cached links and relations, laid out radially
+/// (local mind map, D4).
 #[derive(Debug, Clone, PartialEq)]
-pub struct LocalGraphView {
-    /// The focused note.
-    pub center: String,
-    /// Nodes (center first, then by title).
+pub enum LocalGraphView {
+    /// Unknown note.
+    NotFound {
+        /// ID asked for.
+        id: String,
+    },
+    /// The neighbourhood.
+    Ready {
+        /// The focused note.
+        center: String,
+        /// Depth used.
+        depth: u8,
+        /// Nodes, focus first, then by ring.
+        nodes: Vec<GraphNode>,
+        /// Edges.
+        edges: Vec<GraphEdge>,
+    },
+}
+
+/// A cluster region label.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClusterLabel {
+    /// Cluster ID.
+    pub id: String,
+    /// Name (AI-named or user-named).
+    pub name: String,
+    /// Member count.
+    pub size: u32,
+}
+
+/// The global map (D3): every note with force-layout positions (cached and warm-started).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GlobalGraphView {
+    /// Nodes.
     pub nodes: Vec<GraphNode>,
     /// Edges.
     pub edges: Vec<GraphEdge>,
-    /// Positions come from `graph-algo` layouts, which are not built yet.
-    pub layout: Availability,
+    /// Cluster labels, by name.
+    pub clusters: Vec<ClusterLabel>,
 }
 
 // ---------------------------------------------------------------------------------------------

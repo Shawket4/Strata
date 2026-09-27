@@ -1,22 +1,28 @@
-//! Test support (headless tests, PLAN §16.4): an in-memory fake sync server with idempotent
-//! pushes, epochs and scripted results, and a fake account API. Deterministic: versions are
-//! counters, no clock, no network.
+//! Test support (headless tests, PLAN §16.4): an in-memory fake sync server speaking the
+//! `sync-model` types with idempotent pushes, epochs, the D19 update decision and scripted
+//! results, and a fake account API. Deterministic: no clock, no network.
 //!
 //! The fake server applies ops with the same pure function the client uses
-//! ([`crate::store::write::apply_to_note`], i.e. `vault-format`), which is what the real server
-//! does through the shared crates (L16).
+//! ([`crate::store::write::apply_to_note`], i.e. `sync-model` rules and `vault-format`), which
+//! is what the real server does through the shared crates (L16). Versions are content hashes
+//! (`sync_model::Version`), exactly as on the real server.
 
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use chrono::{DateTime, Utc};
 use futures::future::BoxFuture;
+use sync_model::changes::NoteRecord;
+use sync_model::{UpdateDecision, decide_update};
+use ulid::Ulid;
+use vault_format::PathIndex;
 
 use crate::net::{AccountApi, MeInfo, NetError, SessionTokens, SyncApi, Tokens};
 use crate::store::notes::NoteState;
-use crate::store::write::apply_to_note;
+use crate::store::write::{Links, apply_to_note, task_op_id};
 use crate::sync::model::{
-    BootstrapPage, Change, ChangeRecord, ChangesPage, OpOutcome, OpPayload, OpResult, PushOp,
+    BootstrapPage, ChangeRecord, ChangesPage, ConflictResolution, EntityType, Op, OpOutcome,
+    OpResult, Problem, Record, SyncOp, Version,
 };
 use crate::view::model::{AdminUserItem, Platform};
 
@@ -31,26 +37,52 @@ pub struct ServerNote {
     pub path: String,
     /// Content.
     pub content: String,
-    /// Version.
-    pub version: String,
+}
+
+impl ServerNote {
+    /// Its version.
+    pub fn version(&self) -> Version {
+        Version::of_text(&self.content)
+    }
 }
 
 #[derive(Debug, Default)]
 struct State {
     epoch: u64,
     seq: u64,
-    version: u64,
-    notes: BTreeMap<String, ServerNote>,
-    extra: BTreeMap<String, ChangeRecord>,
-    log: Vec<(u64, ChangeRecord)>,
-    results: HashMap<String, OpResult>,
+    next_id: u128,
+    notes: BTreeMap<Ulid, ServerNote>,
+    history: HashMap<Version, String>,
+    extra: BTreeMap<String, Record>,
+    log: Vec<ChangeRecord>,
+    results: HashMap<Ulid, OpResult>,
     scripted: VecDeque<(String, OpResult)>,
     offline: bool,
     page_size: usize,
-    pushes: Vec<Vec<PushOp>>,
-    applied_ops: Vec<String>,
+    pushes: Vec<Vec<SyncOp>>,
+    applied_ops: Vec<Ulid>,
     bootstrap_calls: u32,
     changes_calls: Vec<(u64, u64)>,
+}
+
+struct ServerLinks<'a>(&'a BTreeMap<Ulid, ServerNote>);
+
+impl Links for ServerLinks<'_> {
+    fn link_for(&self, id: Ulid) -> Option<String> {
+        let index = PathIndex::new(self.0.values().map(|n| n.path.as_str()));
+        self.0.get(&id).map(|n| index.link_text_for(&n.path))
+    }
+}
+
+fn problem(problem_type: &str, status: u16) -> OpResult {
+    OpResult::Rejected {
+        problem: Problem {
+            problem_type: problem_type.to_owned(),
+            title: problem_type.to_owned(),
+            status,
+            detail: None,
+        },
+    }
 }
 
 /// An in-memory sync server.
@@ -72,29 +104,41 @@ impl FakeServer {
             state: Arc::new(Mutex::new(State {
                 epoch: 1,
                 page_size: 2,
+                next_id: 1,
                 ..State::default()
             })),
         }
     }
 
-    fn next_version(s: &mut State) -> String {
-        s.version += 1;
-        format!("v{}", s.version)
-    }
-
-    fn log(s: &mut State, record: ChangeRecord) {
+    fn log(s: &mut State, change: impl FnOnce(u64, u64) -> ChangeRecord) {
         s.seq += 1;
-        let seq = s.seq;
-        s.log.push((seq, record));
+        let c = change(s.seq, s.epoch);
+        s.log.push(c);
     }
 
-    fn upsert_record(id: &str, n: &ServerNote) -> ChangeRecord {
-        ChangeRecord::NoteUpsert {
-            id: id.to_owned(),
+    fn note_record(id: Ulid, n: &ServerNote) -> Record {
+        Record::Note(NoteRecord {
+            id,
             path: n.path.clone(),
             content: n.content.clone(),
-            version: n.version.clone(),
-        }
+            version: n.version(),
+            kind: crate::format::parse_note(&n.path, &n.content).kind,
+            summary: None,
+        })
+    }
+
+    fn put(s: &mut State, id: Ulid, n: ServerNote) {
+        s.history.insert(n.version(), n.content.clone());
+        let record = Self::note_record(id, &n);
+        s.notes.insert(id, n);
+        Self::log(s, |seq, epoch| ChangeRecord::upsert(seq, epoch, record));
+    }
+
+    fn remove(s: &mut State, id: Ulid) {
+        s.notes.remove(&id);
+        Self::log(s, |seq, epoch| {
+            ChangeRecord::delete(seq, epoch, EntityType::Note, &id.to_string())
+        });
     }
 
     /// Bootstrap page size.
@@ -108,35 +152,35 @@ impl FakeServer {
     }
 
     /// A change made by another device: creates or replaces a note. Returns its version.
-    pub fn remote_upsert(&self, id: &str, path: &str, content: &str) -> String {
+    pub fn remote_upsert(&self, id: &str, path: &str, content: &str) -> Version {
         let mut s = lock(&self.state);
-        let version = Self::next_version(&mut s);
         let n = ServerNote {
             path: path.to_owned(),
             content: content.to_owned(),
-            version: version.clone(),
         };
-        let record = Self::upsert_record(id, &n);
-        s.notes.insert(id.to_owned(), n);
-        Self::log(&mut s, record);
-        version
+        let v = n.version();
+        let id = Ulid::from_string(id).unwrap_or_default();
+        Self::put(&mut s, id, n);
+        v
     }
 
     /// A deletion by another device.
     pub fn remote_delete(&self, id: &str) {
         let mut s = lock(&self.state);
-        s.notes.remove(id);
-        Self::log(&mut s, ChangeRecord::NoteDelete { id: id.to_owned() });
+        Self::remove(&mut s, Ulid::from_string(id).unwrap_or_default());
     }
 
     /// Adds a non-note record (suggestion, cluster, …) to the snapshot and the change log.
-    pub fn remote_record(&self, key: &str, record: ChangeRecord) {
+    pub fn remote_record(&self, record: Record) {
         let mut s = lock(&self.state);
-        s.extra.insert(key.to_owned(), record.clone());
-        Self::log(&mut s, record);
+        s.extra.insert(
+            format!("{}/{}", record.entity_type().as_str(), record.entity_id()),
+            record.clone(),
+        );
+        Self::log(&mut s, |seq, epoch| ChangeRecord::upsert(seq, epoch, record));
     }
 
-    /// The server rebuilt its index without preserving seqs: clients must re-bootstrap.
+    /// The server rebuilt without preserving seqs: clients must re-bootstrap.
     pub fn bump_epoch(&self) {
         let mut s = lock(&self.state);
         s.epoch += 1;
@@ -151,17 +195,17 @@ impl FakeServer {
     }
 
     /// The server's notes.
-    pub fn notes(&self) -> BTreeMap<String, ServerNote> {
+    pub fn notes(&self) -> BTreeMap<Ulid, ServerNote> {
         lock(&self.state).notes.clone()
     }
 
     /// Every push request received.
-    pub fn pushes(&self) -> Vec<Vec<PushOp>> {
+    pub fn pushes(&self) -> Vec<Vec<SyncOp>> {
         lock(&self.state).pushes.clone()
     }
 
     /// Op IDs actually applied (each at most once, however often replayed).
-    pub fn applied_ops(&self) -> Vec<String> {
+    pub fn applied_ops(&self) -> Vec<Ulid> {
         lock(&self.state).applied_ops.clone()
     }
 
@@ -175,85 +219,119 @@ impl FakeServer {
         lock(&self.state).bootstrap_calls
     }
 
-    fn apply(s: &mut State, op: &PushOp) -> OpResult {
+    fn target_note(s: &mut State, op: &Op) -> Result<Option<Ulid>, OpResult> {
+        if let Some(task) = task_op_id(op) {
+            let found = s.notes.iter().find(|(_, n)| {
+                let doc = vault_format::Document::parse(&n.content);
+                sync_model::apply::find_task(doc.body(), task).is_some()
+            });
+            return found
+                .map(|(id, _)| Some(*id))
+                .ok_or_else(|| problem("not_found", 404));
+        }
+        Ok(match op {
+            Op::TaskCreate(p) => match p.note_id {
+                Some(n) => Some(n),
+                None => {
+                    let home = s
+                        .notes
+                        .iter()
+                        .find(|(_, n)| n.path == crate::store::write::TASK_HOME)
+                        .map(|(id, _)| *id);
+                    Some(home.unwrap_or_else(|| {
+                        s.next_id += 1;
+                        Ulid::from_parts(0x0000_5E2F_E000, s.next_id)
+                    }))
+                }
+            },
+            Op::NoteCreate(p) => Some(p.id),
+            Op::Capture(p) => Some(p.id),
+            Op::EntityCreate(p) => Some(p.id),
+            Op::DocumentCreate(p) => Some(p.id),
+            Op::PlaceCreate(p) => Some(p.id),
+            Op::NoteUpdate(p) => Some(p.id),
+            Op::NoteMove(p) => Some(p.id),
+            Op::NoteDelete(p) => Some(p.id),
+            Op::RelationAdd(r) | Op::RelationRemove(r) => Some(r.src_id),
+            Op::RelationRetype(r) => Some(r.src_id),
+            Op::EntityPatch(p) | Op::DocumentPatch(p) | Op::PlacePatch(p) => Some(p.id),
+            _ => None,
+        })
+    }
+
+    fn apply(s: &mut State, op: &SyncOp) -> OpResult {
         if let Some(i) = s.scripted.iter().position(|(e, _)| *e == op.entity_id)
             && let Some((_, r)) = s.scripted.remove(i)
         {
             return r;
         }
-        let note_id = match &op.payload {
-            OpPayload::TaskCreate { note_id, .. } => note_id.clone(),
-            OpPayload::TaskUpdate { .. }
-            | OpPayload::TaskComplete { .. }
-            | OpPayload::TaskCancel { .. }
-            | OpPayload::TaskReopen
-            | OpPayload::TaskDelete => {
-                let found = s.notes.iter().find(|(_, n)| {
-                    vault_format::tasks::extract_tasks(&n.content)
-                        .iter()
-                        .any(|t| t.task.block_id() == Some(op.entity_id.as_str()))
-                });
-                match found {
-                    Some((id, _)) => id.clone(),
-                    None => {
-                        return OpResult::Rejected {
-                            problem_type: "not_found".into(),
-                            status: 404,
-                        };
-                    }
-                }
+        let note_id = match Self::target_note(s, &op.op) {
+            Ok(Some(id)) => id,
+            Ok(None) => {
+                return OpResult::Applied {
+                    new_version: None,
+                    merged: false,
+                };
             }
-            OpPayload::SuggestionAccept
-            | OpPayload::SuggestionReject
-            | OpPayload::RelinkRequest => {
-                return OpResult::Applied { new_version: None };
-            }
-            _ => op.entity_id.clone(),
+            Err(r) => return r,
         };
         let current = s.notes.get(&note_id).cloned();
-        let is_update = matches!(op.payload, OpPayload::NoteUpdate { .. });
-        if is_update
-            && let (Some(cur), Some(base)) = (&current, &op.base_version)
-            && &cur.version != base
-        {
-            return OpResult::Conflict {
-                server_version: cur.version.clone(),
-                server_content: Some(cur.content.clone()),
-                resolution: "needs_user".into(),
-            };
+        let mut merged = false;
+        let mut effective = op.op.clone();
+        if let (Op::NoteUpdate(u), Some(cur), Some(base)) = (&op.op, &current, &op.base_version) {
+            let base_text = s.history.get(base).cloned();
+            match decide_update(base, base_text.as_deref(), &cur.content, &u.content) {
+                UpdateDecision::FastForward => {}
+                UpdateDecision::AlreadyApplied => {
+                    return OpResult::Applied {
+                        new_version: Some(cur.version()),
+                        merged: false,
+                    };
+                }
+                UpdateDecision::Merged(text) => {
+                    merged = true;
+                    effective = Op::NoteUpdate(sync_model::ops::NoteUpdate {
+                        id: u.id,
+                        content: text,
+                    });
+                }
+                UpdateDecision::Conflict(_) => {
+                    return OpResult::Conflict {
+                        server_version: Some(cur.version()),
+                        resolution: ConflictResolution::ServerKept {
+                            reason: "overlapping_edits".to_owned(),
+                        },
+                    };
+                }
+            }
         }
         let state = current.map(|n| NoteState {
             path: n.path,
             content: n.content,
         });
-        match apply_to_note(&note_id, &op.entity_id, state, &op.payload) {
+        let links = ServerLinks(&s.notes);
+        match apply_to_note(state, &effective, &links) {
             Ok(Some(next)) => {
-                let version = Self::next_version(s);
                 let n = ServerNote {
                     path: next.path,
                     content: next.content,
-                    version: version.clone(),
                 };
-                let record = Self::upsert_record(&note_id, &n);
-                s.notes.insert(note_id, n);
-                Self::log(s, record);
+                let v = n.version();
+                Self::put(s, note_id, n);
                 OpResult::Applied {
-                    new_version: Some(version),
+                    new_version: Some(v),
+                    merged,
                 }
             }
             Ok(None) => {
-                s.notes.remove(&note_id);
-                Self::log(s, ChangeRecord::NoteDelete { id: note_id });
-                OpResult::Applied { new_version: None }
+                Self::remove(s, note_id);
+                OpResult::Applied {
+                    new_version: None,
+                    merged: false,
+                }
             }
-            Err(crate::CoreError::NotFound { .. }) => OpResult::Rejected {
-                problem_type: "not_found".into(),
-                status: 404,
-            },
-            Err(_) => OpResult::Rejected {
-                problem_type: "invalid_body".into(),
-                status: 422,
-            },
+            Err(crate::CoreError::NotFound { .. }) => problem("not_found", 404),
+            Err(_) => problem("invalid_body", 422),
         }
     }
 }
@@ -266,27 +344,30 @@ impl SyncApi for FakeServer {
                 return Err(NetError::Offline("fake".into()));
             }
             s.bootstrap_calls += 1;
-            let mut all: Vec<ChangeRecord> = s
+            let mut all: Vec<Record> = s
                 .notes
                 .iter()
-                .map(|(id, n)| Self::upsert_record(id, n))
+                .map(|(id, n)| Self::note_record(*id, n))
                 .collect();
             all.extend(s.extra.values().cloned());
             let start = cursor.and_then(|c| c.parse::<usize>().ok()).unwrap_or(0);
             let end = (start + s.page_size).min(all.len());
-            let total = u32::try_from(all.len().div_ceil(s.page_size).max(1)).unwrap_or(1);
             Ok(BootstrapPage {
                 epoch: s.epoch,
-                start_seq: s.seq,
+                seq: s.seq,
                 records: all[start.min(end)..end].to_vec(),
                 next_cursor: (end < all.len()).then(|| end.to_string()),
-                total_pages: Some(total),
             })
         })();
         Box::pin(async move { r })
     }
 
-    fn changes(&self, since: u64, epoch: u64, limit: u32) -> BoxFuture<'_, Result<ChangesPage, NetError>> {
+    fn changes(
+        &self,
+        since: u64,
+        epoch: u64,
+        limit: u32,
+    ) -> BoxFuture<'_, Result<ChangesPage, NetError>> {
         let r = (|| {
             let mut s = lock(&self.state);
             if s.offline {
@@ -297,17 +378,10 @@ impl SyncApi for FakeServer {
                 return Err(NetError::EpochChanged);
             }
             let limit = usize::try_from(limit).unwrap_or(usize::MAX);
-            let after: Vec<&(u64, ChangeRecord)> =
-                s.log.iter().filter(|(seq, _)| *seq > since).collect();
-            let page: Vec<Change> = after
-                .iter()
-                .take(limit)
-                .map(|(seq, record)| Change {
-                    seq: *seq,
-                    record: record.clone(),
-                })
-                .collect();
+            let after: Vec<&ChangeRecord> = s.log.iter().filter(|c| c.seq > since).collect();
+            let page: Vec<ChangeRecord> = after.iter().take(limit).map(|c| (*c).clone()).collect();
             Ok(ChangesPage {
+                epoch: s.epoch,
                 next_seq: page.last().map_or(since.max(s.seq), |c| c.seq),
                 has_more: after.len() > page.len(),
                 changes: page,
@@ -316,7 +390,7 @@ impl SyncApi for FakeServer {
         Box::pin(async move { r })
     }
 
-    fn push(&self, ops: Vec<PushOp>) -> BoxFuture<'_, Result<Vec<OpOutcome>, NetError>> {
+    fn push(&self, ops: Vec<SyncOp>) -> BoxFuture<'_, Result<Vec<OpOutcome>, NetError>> {
         let r = (|| {
             let mut s = lock(&self.state);
             if s.offline {
@@ -328,15 +402,18 @@ impl SyncApi for FakeServer {
                 let result = if let Some(r) = s.results.get(&op.op_id) {
                     r.clone()
                 } else {
-                    let r = Self::apply(&mut s, op);
-                    s.results.insert(op.op_id.clone(), r.clone());
+                    let r = match op.validate() {
+                        Ok(()) => Self::apply(&mut s, op),
+                        Err(_) => problem("invalid_body", 422),
+                    };
+                    s.results.insert(op.op_id, r.clone());
                     if matches!(r, OpResult::Applied { .. }) {
-                        s.applied_ops.push(op.op_id.clone());
+                        s.applied_ops.push(op.op_id);
                     }
                     r
                 };
                 out.push(OpOutcome {
-                    op_id: op.op_id.clone(),
+                    op_id: op.op_id,
                     result,
                 });
             }
@@ -380,6 +457,20 @@ impl FakeAccountApi {
                 password_change_required: false,
             },
         );
+    }
+
+    /// Changes a user's profile (status, role, deletion date, …).
+    pub fn update_user(&self, username: &str, f: impl Fn(&mut MeInfo)) {
+        for ((u, _), me) in lock(&self.users).iter_mut() {
+            if u == username {
+                f(me);
+            }
+        }
+        for me in lock(&self.by_token).values_mut() {
+            if me.username == username {
+                f(me);
+            }
+        }
     }
 
     fn tokens(&self, me: &MeInfo) -> SessionTokens {
@@ -438,7 +529,11 @@ impl AccountApi for FakeAccountApi {
         Box::pin(async move { r })
     }
 
-    fn refresh(&self, _server_url: String, refresh_token: String) -> BoxFuture<'_, Result<SessionTokens, NetError>> {
+    fn refresh(
+        &self,
+        _server_url: String,
+        refresh_token: String,
+    ) -> BoxFuture<'_, Result<SessionTokens, NetError>> {
         self.call(format!("refresh:{refresh_token}"));
         let r = if let Some(e) = lock(&self.refresh_error).take() {
             Err(e)
@@ -486,7 +581,11 @@ impl AccountApi for FakeAccountApi {
         Box::pin(async { Ok(()) })
     }
 
-    fn admin_users(&self, _server_url: String, _tokens: Tokens) -> BoxFuture<'_, Result<Vec<AdminUserItem>, NetError>> {
+    fn admin_users(
+        &self,
+        _server_url: String,
+        _tokens: Tokens,
+    ) -> BoxFuture<'_, Result<Vec<AdminUserItem>, NetError>> {
         self.call("admin_users".to_owned());
         Box::pin(async { Ok(Vec::new()) })
     }

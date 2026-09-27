@@ -147,3 +147,77 @@ Spec: L16, PLAN §5.1. Pure Rust crates under `/crates` used by both the backend
 - **Force layout** (`ForceLayout`): Fruchterman–Reingold forces with Barnes–Hut repulsion (θ = 0.9), a spring to the origin, displacement capped by a cooling temperature; `step()` returns positions for streaming; `warm()` keeps previous positions, places new nodes near their placed neighbours and starts at 0.25·k; positions are clamped to a bound and never NaN. `energy()` gives the potential of the force field for tests.
 - **Radial layout** (`radial_layout`): focus at the origin, rings by BFS depth, wedges proportional to BFS-subtree leaves, children ordered by a barycenter sweep that is undone whenever it does not reduce edge crossings (never worse than node order).
 - Benchmarks (`cargo bench -p graph-algo`, planted-partition graph with 10k nodes / 40k edges, dev container): one force step ≈ 16 ms, a full Leiden run ≈ 110 ms, projection build ≈ 5 ms.
+
+## AI foundation
+
+Implemented in `backend/crates/ai` (`strata-ai`); spec: PLAN §9, L5, L18, L19, D9, D20, D23. Pure
+infrastructure: the filing, linking, entity, custody and ask jobs build on it.
+
+```
+job / handler ──► AiService::complete::<T>(caller, prompt, input) ──► ProviderRouter (per username)
+                    │ BudgetGuard.check ─► provider.complete_json ─► BudgetGuard.record        │
+                    │ validate against the prompt's schema; invalid → retry ≤ 2 with feedback ▼
+                    └─► Structured<T> { value, provider, model, prompt id+version, attempts }
+                                                  ClaudeCliProvider  |  AnthropicApiProvider  |  FakeLlmProvider
+```
+
+- **`LlmProvider`** (`complete_json`, `stream`, `health`) is transport only. `complete_json`
+  returns the value *with* its usage and model (`JsonCompletion`), because every call is budgeted.
+  Requests (`JsonRequest`, `ChatRequest`) carry the prompt id + version, system prompt, user
+  content (JSON input), schema, max tokens, and the `AiCaller` (the user's `UserScope` for budget
+  writes — never a raw user ID — and the username for routing).
+- **`ClaudeCliProvider`** (default, D20 = a): one `claude -p` process per call through a
+  configurable launcher (production: `sudo -u strata-ai` + a root-owned wrapper, RUNBOOK §9),
+  cleared environment (API keys and bare mode refused), empty scratch directory, all tools, MCP
+  servers, settings files and slash commands off, Strata's prompt as the system prompt, content on
+  stdin. Both call kinds use `--output-format stream-json --verbose` because only that format
+  reports `rate_limit_event`s (reset times); `complete_json` adds `--json-schema` (the
+  `$schema` URI is dropped: the CLI rejects draft 2020-12's) and reads `structured_output`,
+  `stream` adds `--include-partial-messages` and relays top-level `text_delta`s. Usage limits
+  become `Paused { until }` (event reset time, epoch in the message, or `resets 3pm (Zone)`,
+  else 30 min) and no process starts until then. Timeouts SIGTERM then SIGKILL the process
+  group. A semaphore (default 1) limits processes; stderr is captured (bounded) only to classify
+  failures and never logged or returned.
+- **`AnthropicApiProvider`** (D23 alternative): Messages API over reqwest, structured output via
+  `output_config.format` with the schema reduced to what the API accepts
+  (`schema::api_compatible`: numeric/length/pattern/array-size keywords are stripped and enforced
+  locally instead), SSE streaming with an incremental parser, retries with backoff and
+  `retry-after` via an injectable `Sleeper`; a persisting 429 becomes a pause. Cost estimates use
+  per-model prices (cache writes 1.25×, reads 0.1×).
+- **Validation and retries**: `AiService` compiles the request schema (jsonschema, draft 2020-12),
+  validates each reply, and on a violation or non-JSON reply retries at most
+  `MAX_INVALID_OUTPUT_RETRIES = 2` times, appending the violations to the user content; then
+  `AiError::InvalidOutput` with content-free violation summaries. Provider failures other than
+  invalid output are not retried here.
+- **Budget guard**: per-user daily token/cost caps and a global token/cost cap, days in one
+  budget timezone. Usage goes to `ai_usage` (user-owned, RLS) and `ai_usage_global` (global,
+  per-day counters only; migration `…008`, on the audit allow-list) in one scoped transaction. A
+  reached cap returns `AiError::Paused { reason: UserBudget | GlobalBudget, until: next day }`;
+  jobs reschedule, never fail. The check runs before each call, so a day may exceed its cap by
+  the calls already in flight.
+- **`AiStatus`** (for `GET /ai/status`): provider name/model/health, the effective pause (budget
+  first, then provider), `queue_depth` (filled by the job runner), today's user and global usage,
+  the caps, and the embedding model.
+- **Prompts**: `prompts/<id>.v<N>.md` (+ `.schema.json`), embedded and SHA-256-hashed by
+  `build.rs` into `prompts::PROMPTS`; the build fails if a prompt lacks the shared language
+  instruction (`prompts/_language.md`). A test pins every (id, version, hash), so a prompt edit
+  without a version bump fails CI. Prompts: `inbox_filing`, `linking` (relations, concepts,
+  mentions, entity relations, custody, task suggestions), `summary`, `entity_insights`,
+  `custody`, `correction`, `duplicate_confirm`, `ask` (streamed markdown with `[[ref]]`
+  citations, no schema), `cluster_naming`, `digest`. Typed outputs are in `outputs`; every schema
+  closes every object and lists every property as required (optional values are nullable).
+- **`FakeLlmProvider`** (feature `test-support`, re-exported by `strata-testkit`): replays
+  fixtures keyed by (prompt id, version, SHA-256 of system + NUL + user); a missing fixture fails
+  with the hash and the path to record it at; `FixtureRecorder` records from a real provider.
+- **Embeddings**: `Embedder` → `Embedding { model_id, vector }`. `OnnxEmbedder` (feature `onnx`)
+  runs `ort` (ONNX Runtime loaded at run time) + `tokenizers` on one worker thread at nice 19 with
+  single-threaded ONNX Runtime, CLS pooling + L2 normalisation (granite-embedding r2, per its model
+  card), truncation to 2048 tokens, and batching only of equal-length texts (the quint8 export is
+  not padding-invariant). Each `embed` call holds the exclusive side of `CpuGate`; each `claude -p`
+  process holds the shared side, so embeddings never overlap a CLI call (§9.1b).
+
+Verified against real binaries in the dev container: Claude Code 2.1.283 (flags, JSON and
+stream-JSON shapes, `--json-schema` behaviour, a real summary + streamed ask with citation through
+`AiService`), and the granite quint8 ONNX export with ONNX Runtime 1.30.0 (Rust vectors match the
+Python reference to cosine > 0.9999). The Messages API is exercised only against a local mock with
+the documented shapes.

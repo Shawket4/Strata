@@ -11,7 +11,7 @@ use crate::store::index::Reindex;
 use crate::store::notes::{self, NoteBase};
 use crate::store::outbox::{self, OpStatus, OutboxOp};
 use crate::store::write::{self, DbLinks, LocalEntity};
-use crate::store::{settings, to_msgpack};
+use crate::store::settings;
 use crate::sync::model::{Op, OpResult, Version};
 use crate::view::Topics;
 
@@ -493,6 +493,5 @@ pub fn resolve_duplicate(
     }
     write::rebuild(conn, &LocalEntity::parse(&op.local_entity), now, re)?;
     re.topics(Topics::SYNC);
-    let _ = to_msgpack::<u8>;
     Ok(())
 }

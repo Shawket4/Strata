@@ -1,6 +1,6 @@
 //! `PgUsageStore` on a real per-test `PostgreSQL` database: per-user rows stay isolated by RLS,
 //! the global day total sums every user, and the budget guard pauses on the global cap.
-#![allow(clippy::expect_used)] // tests: expect with messages
+#![allow(clippy::expect_used, clippy::too_many_lines)] // tests: expect with messages, one scenario
 
 use std::sync::Arc;
 

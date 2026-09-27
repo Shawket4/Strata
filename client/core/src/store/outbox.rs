@@ -64,7 +64,7 @@ impl OpStatus {
 }
 
 /// One outbox row.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OutboxOp {
     /// Idempotency key.
     pub op_id: String,

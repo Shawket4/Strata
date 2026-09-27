@@ -7,7 +7,7 @@ use crate::store::{from_msgpack, to_msgpack};
 use crate::sync::model::{ConflictResolution, Op, OpKind};
 
 /// A `conflict` push result (D19).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConflictRow {
     /// The conflicting op.
     pub op_id: String,

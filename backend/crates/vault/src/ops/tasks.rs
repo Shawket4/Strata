@@ -477,6 +477,7 @@ impl VaultService {
             out.push(TaskItem {
                 note_path: paths.get(&t.note_id).cloned().unwrap_or_default(),
                 task: t,
+                version: task_line_version(&line).as_str().to_owned(),
                 line,
                 reminders: r,
             });
@@ -504,6 +505,7 @@ impl VaultService {
         Ok(TaskItem {
             task: t,
             note_path: note.path,
+            version: task_line_version(&line).as_str().to_owned(),
             line,
             reminders,
         })
