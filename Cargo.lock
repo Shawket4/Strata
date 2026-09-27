@@ -4598,7 +4598,6 @@ dependencies = [
  "domain",
  "futures-util",
  "git2",
- "hex",
  "pretty_assertions",
  "rmp-serde",
  "serde",

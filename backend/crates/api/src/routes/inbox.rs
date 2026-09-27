@@ -263,7 +263,10 @@ pub async fn capture(
     get, path = "/inbox", tag = "inbox", operation_id = "get_inbox",
     responses((status = 200, description = "The inbox.", body = Inbox)),
 )]
-pub async fn inbox(auth: Authenticated, vault: web::Data<VaultService>) -> Result<MsgPack<Inbox>, Problem> {
+pub async fn inbox(
+    auth: Authenticated,
+    vault: web::Data<VaultService>,
+) -> Result<MsgPack<Inbox>, Problem> {
     let items = vault.inbox(auth.scope()).await.or_problem()?;
     let out = items
         .into_iter()
@@ -349,7 +352,11 @@ pub async fn reply_suggestion(
     body: MsgPack<ReplyRequest>,
 ) -> Result<MsgPack<Suggestion>, Problem> {
     let v = vault
-        .reply_suggestion(auth.scope(), SuggestionId::from_ulid(*id), body.into_inner().body)
+        .reply_suggestion(
+            auth.scope(),
+            SuggestionId::from_ulid(*id),
+            body.into_inner().body,
+        )
         .await
         .or_problem()?;
     Ok(MsgPack(v.into()))
@@ -364,7 +371,13 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     )
     .route("/inbox", web::get().to(inbox))
     .route("/suggestions", web::get().to(list_suggestions))
-    .route("/suggestions/{id}/accept", web::post().to(accept_suggestion))
-    .route("/suggestions/{id}/reject", web::post().to(reject_suggestion))
+    .route(
+        "/suggestions/{id}/accept",
+        web::post().to(accept_suggestion),
+    )
+    .route(
+        "/suggestions/{id}/reject",
+        web::post().to(reject_suggestion),
+    )
     .route("/suggestions/{id}/reply", web::post().to(reply_suggestion));
 }

@@ -244,8 +244,7 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
     let dir = core.dir.clone();
     let inner = core.inner.clone();
     let at = core.now();
-    let scanned =
-        blocking(move || scan_and_recover(&dir, inner.ids.as_ref(), at, !dry)).await?;
+    let scanned = blocking(move || scan_and_recover(&dir, inner.ids.as_ref(), at, !dry)).await?;
     let mut state = build_state(&scanned.files, &scanned.texts);
     let mut report = Report {
         temp_files_removed: scanned.temp.clone(),

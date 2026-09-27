@@ -71,7 +71,10 @@ pub async fn export_vault(
     let bytes = vault.export(auth.scope()).await.or_problem()?;
     Ok(HttpResponse::Ok()
         .insert_header((CONTENT_TYPE, ZIP))
-        .insert_header((CONTENT_DISPOSITION, "attachment; filename=\"strata-vault.zip\""))
+        .insert_header((
+            CONTENT_DISPOSITION,
+            "attachment; filename=\"strata-vault.zip\"",
+        ))
         .body(bytes))
 }
 

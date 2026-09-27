@@ -20,7 +20,9 @@ use utoipa::ToSchema;
 use vault_format::custody::CustodyEventType;
 
 use crate::auth::Authenticated;
-use crate::routes::entities::{CreateEntityRequest, EntityKind, PatchEntityRequest, entity_patch, new_entity};
+use crate::routes::entities::{
+    CreateEntityRequest, EntityKind, PatchEntityRequest, entity_patch, new_entity,
+};
 use crate::routes::notes::Note;
 use crate::vault::OrProblem;
 use crate::wire::{MsgPack, Problem};
@@ -514,7 +516,11 @@ pub struct PatchPlaceRequest {
     pub force: bool,
 }
 
-async fn document_page(vault: &VaultService, auth: &Authenticated, id: NoteId) -> Result<Document, Problem> {
+async fn document_page(
+    vault: &VaultService,
+    auth: &Authenticated,
+    id: NoteId,
+) -> Result<Document, Problem> {
     let d = vault.document(auth.scope(), id).await.or_problem()?;
     let note: Note = d.note.into();
     let aliases = note
@@ -536,7 +542,11 @@ async fn document_page(vault: &VaultService, auth: &Authenticated, id: NoteId) -
     })
 }
 
-async fn place_page(vault: &VaultService, auth: &Authenticated, id: NoteId) -> Result<Place, Problem> {
+async fn place_page(
+    vault: &VaultService,
+    auth: &Authenticated,
+    id: NoteId,
+) -> Result<Place, Problem> {
     let (note, tree) = vault.place(auth.scope(), id).await.or_problem()?;
     let note: Note = note.into();
     let aliases = note
@@ -555,7 +565,7 @@ async fn place_page(vault: &VaultService, auth: &Authenticated, id: NoteId) -> R
             name: note.title.clone(),
             path: note.path.clone(),
             aliases,
-            parent_id: tree.ancestors.first().map(|p| p.as_ulid()),
+            parent_id: tree.ancestors.first().map(strata_common::NoteId::as_ulid),
         },
         ancestors: tree.ancestors.into_iter().map(|i| i.as_ulid()).collect(),
         children: tree.children.into_iter().map(|i| i.as_ulid()).collect(),
@@ -583,7 +593,10 @@ pub async fn list_documents(
         expiring_before: q.expiring_before,
         query: q.q,
     };
-    let docs = vault.list_documents(auth.scope(), filter).await.or_problem()?;
+    let docs = vault
+        .list_documents(auth.scope(), filter)
+        .await
+        .or_problem()?;
     Ok(MsgPack(DocumentList {
         items: docs
             .into_iter()
@@ -646,7 +659,9 @@ pub async fn get_document(
     vault: web::Data<VaultService>,
     id: web::Path<Ulid>,
 ) -> Result<MsgPack<Document>, Problem> {
-    Ok(MsgPack(document_page(&vault, &auth, NoteId::from_ulid(*id)).await?))
+    Ok(MsgPack(
+        document_page(&vault, &auth, NoteId::from_ulid(*id)).await?,
+    ))
 }
 
 /// Edit a document's user fields (not location/holder/status: those follow custody events).
@@ -761,7 +776,10 @@ pub async fn list_places(
     vault: web::Data<VaultService>,
     q: web::Query<PlacesQuery>,
 ) -> Result<MsgPack<PlaceList>, Problem> {
-    let items = vault.places(auth.scope(), q.q.as_deref()).await.or_problem()?;
+    let items = vault
+        .places(auth.scope(), q.q.as_deref())
+        .await
+        .or_problem()?;
     Ok(MsgPack(PlaceList {
         items: items
             .into_iter()
@@ -824,7 +842,9 @@ pub async fn get_place(
     vault: web::Data<VaultService>,
     id: web::Path<Ulid>,
 ) -> Result<MsgPack<Place>, Problem> {
-    Ok(MsgPack(place_page(&vault, &auth, NoteId::from_ulid(*id)).await?))
+    Ok(MsgPack(
+        place_page(&vault, &auth, NoteId::from_ulid(*id)).await?,
+    ))
 }
 
 /// Edit a place (name, aliases, tags, address, enclosing place).

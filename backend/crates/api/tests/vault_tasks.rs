@@ -1,7 +1,11 @@
 //! Tasks over HTTP (PLAN §6.11, §7.5 Tasks, §9.7, §16.3 Tasks): default home and month
 //! heading, exact lines, views, recurring completion writing exactly two lines, cancel and
 //! reopen, span edits with `If-Match`, entity filter, and the duplicate check with `force`.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod vault_harness;
 
@@ -83,7 +87,9 @@ async fn recurring_completion_writes_exactly_two_lines_in_one_commit() {
     assert_eq!(h.log(alice.id)[0], "user: task create tasks/Tasks.md");
     let commits = h.log(alice.id).len();
 
-    let done = ops::complete_task(c, &task.id, None).await.expect("complete");
+    let done = ops::complete_task(c, &task.id, None)
+        .await
+        .expect("complete");
     let next = done.next.clone().expect("next occurrence");
     let next_line = format!(
         "- [ ] Make Watanya's ETA invoice [[Watanya]] (@2026-11-01 09:00) 🔁 every month on the 1st 📅 2026-11-01 ^{}",
@@ -104,7 +110,12 @@ async fn recurring_completion_writes_exactly_two_lines_in_one_commit() {
         (types::TaskStatus::Done, Some(d(2026, 9, 27)), done_line)
     );
     assert_eq!(
-        (next.status, next.due, next.reminders.clone(), next.line.clone()),
+        (
+            next.status,
+            next.due,
+            next.reminders.clone(),
+            next.line.clone()
+        ),
         (
             types::TaskStatus::Open,
             Some(d(2026, 11, 1)),
@@ -145,28 +156,62 @@ async fn views_edits_cancel_reopen_and_entity_filter() {
     )
     .await
     .expect("company");
-    let mk = |text: &str, due: Option<NaiveDate>, recurrence: Option<&str>| types::CreateTaskRequest {
-        due,
-        recurrence: recurrence.map(str::to_owned),
-        ..new_task(text)
-    };
-    let today = ops::create_task(c, &mk("Pay rent", Some(d(2026, 9, 27)), None)).await.expect("t");
-    let overdue = ops::create_task(c, &mk("Call bank", Some(d(2026, 9, 20)), None)).await.expect("t");
-    let upcoming = ops::create_task(c, &mk("Send [[Watanya]] invoice", Some(d(2026, 10, 5)), None)).await.expect("t");
-    let recurring = ops::create_task(c, &mk("Petrol Arrows invoice", Some(d(2026, 10, 4)), Some("every week on Sunday"))).await.expect("t");
-    let undated = ops::create_task(c, &mk("Read the contract", None, None)).await.expect("t");
+    let mk =
+        |text: &str, due: Option<NaiveDate>, recurrence: Option<&str>| types::CreateTaskRequest {
+            due,
+            recurrence: recurrence.map(str::to_owned),
+            ..new_task(text)
+        };
+    let today = ops::create_task(c, &mk("Pay rent", Some(d(2026, 9, 27)), None))
+        .await
+        .expect("t");
+    let overdue = ops::create_task(c, &mk("Call bank", Some(d(2026, 9, 20)), None))
+        .await
+        .expect("t");
+    let upcoming = ops::create_task(
+        c,
+        &mk("Send [[Watanya]] invoice", Some(d(2026, 10, 5)), None),
+    )
+    .await
+    .expect("t");
+    let recurring = ops::create_task(
+        c,
+        &mk(
+            "Petrol Arrows invoice",
+            Some(d(2026, 10, 4)),
+            Some("every week on Sunday"),
+        ),
+    )
+    .await
+    .expect("t");
+    let undated = ops::create_task(c, &mk("Read the contract", None, None))
+        .await
+        .expect("t");
     let ids = |l: types::TaskList| l.items.into_iter().map(|t| t.id).collect::<Vec<_>>();
     let view = |v: types::TaskViewKind| {
         let c = c.clone();
-        async move { ids(ops::list_tasks(&c, Some(&v), None, None).await.expect("view")) }
+        async move {
+            ids(ops::list_tasks(&c, Some(&v), None, None)
+                .await
+                .expect("view"))
+        }
     };
-    assert_eq!(view(types::TaskViewKind::Today).await, vec![today.id.clone()]);
-    assert_eq!(view(types::TaskViewKind::Overdue).await, vec![overdue.id.clone()]);
+    assert_eq!(
+        view(types::TaskViewKind::Today).await,
+        vec![today.id.clone()]
+    );
+    assert_eq!(
+        view(types::TaskViewKind::Overdue).await,
+        vec![overdue.id.clone()]
+    );
     assert_eq!(
         view(types::TaskViewKind::Upcoming).await,
         vec![recurring.id.clone(), upcoming.id.clone()]
     );
-    assert_eq!(view(types::TaskViewKind::Recurring).await, vec![recurring.id.clone()]);
+    assert_eq!(
+        view(types::TaskViewKind::Recurring).await,
+        vec![recurring.id.clone()]
+    );
     assert_eq!(view(types::TaskViewKind::Done).await, Vec::<String>::new());
     assert_eq!(
         view(types::TaskViewKind::All).await,
@@ -179,7 +224,9 @@ async fn views_edits_cancel_reopen_and_entity_filter() {
         ]
     );
     assert_eq!(
-        ids(ops::list_tasks(c, None, Some(watanya.id), None).await.expect("entity")),
+        ids(ops::list_tasks(c, None, Some(watanya.id), None)
+            .await
+            .expect("entity")),
         vec![upcoming.id.clone()]
     );
 
@@ -250,16 +297,26 @@ async fn views_edits_cancel_reopen_and_entity_filter() {
     );
 
     // Cancel and reopen.
-    let cancelled = ops::cancel_task(c, &overdue.id, None).await.expect("cancel");
+    let cancelled = ops::cancel_task(c, &overdue.id, None)
+        .await
+        .expect("cancel");
     assert_eq!(
         cancelled.task.line,
         format!("- [ ] Call bank 📅 2026-09-20 ^{}", overdue.id)
             .replace("- [ ]", "- [-]")
             .replace(" ^", " ❌ 2026-09-27 ^")
     );
-    assert_eq!(view(types::TaskViewKind::Overdue).await, Vec::<String>::new());
-    assert_eq!(view(types::TaskViewKind::Done).await, vec![overdue.id.clone()]);
-    let reopened = ops::reopen_task(c, &overdue.id, None).await.expect("reopen");
+    assert_eq!(
+        view(types::TaskViewKind::Overdue).await,
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        view(types::TaskViewKind::Done).await,
+        vec![overdue.id.clone()]
+    );
+    let reopened = ops::reopen_task(c, &overdue.id, None)
+        .await
+        .expect("reopen");
     assert_eq!(reopened.task.line, overdue.line);
     assert_problem(
         ops::reopen_task(c, &overdue.id, None).await,

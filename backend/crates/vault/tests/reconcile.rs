@@ -62,7 +62,7 @@ async fn crash_leftovers_never_become_notes() {
     .expect("write");
     let log_before = w.log(u);
     w.vault.evict(u);
-    let report = w.vault.verify(&s).await.expect("verify");
+    let report = w.vault.reconcile_now(&s).await.expect("reconcile");
     assert_eq!(
         report,
         Report {
@@ -130,7 +130,35 @@ async fn reconciliation_repairs_out_of_band_edits_uncommitted_state_and_sidecar_
     )
     .expect("sidecar");
     w.vault.evict(u);
-    let report = w.vault.verify(&s).await.expect("verify");
+    // `verify` reports the same findings but changes nothing.
+    let log_before = w.log(u);
+    let dry = w.vault.verify(&s).await.expect("verify");
+    assert_eq!(
+        dry,
+        Report {
+            temp_files_removed: vec![],
+            recovered: vec![
+                sidecar.clone(),
+                "notes/A.md".into(),
+                "notes/B.md".into(),
+                "notes/New.md".into()
+            ],
+            ids_assigned: vec!["notes/New.md".into()],
+            recovery_commit: None,
+            sidecars_repaired: vec![sidecar.clone()],
+            out_of_band: vec!["notes/A.md".into()],
+            missing: vec!["notes/B.md".into()],
+            reindexed: 0,
+        }
+    );
+    assert_eq!(w.log(u), log_before);
+    assert!(w.exists(u, &sidecar));
+    assert!(
+        !std::fs::read_to_string(dir.join("notes/New.md"))
+            .expect("read")
+            .starts_with("---")
+    );
+    let report = w.vault.reconcile_now(&s).await.expect("reconcile");
     assert_eq!(
         report,
         Report {
@@ -370,7 +398,12 @@ async fn a_full_reindex_equals_the_incremental_state() {
                 text: "Petrol Arrows invoice".into(),
                 recurrence: Some("every week on Sunday".into()),
                 due: NaiveDate::from_ymd_opt(2026, 9, 27),
-                reminders: vec![NaiveDate::from_ymd_opt(2026, 9, 27).expect("d").and_hms_opt(9, 0, 0).expect("t")],
+                reminders: vec![
+                    NaiveDate::from_ymd_opt(2026, 9, 27)
+                        .expect("d")
+                        .and_hms_opt(9, 0, 0)
+                        .expect("t"),
+                ],
                 ..NewTask::default()
             },
         )

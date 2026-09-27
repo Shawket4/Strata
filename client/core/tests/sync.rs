@@ -22,7 +22,7 @@ use strata_core::sync::model::{
 };
 use strata_core::view::hub::Recorder;
 use strata_core::view::model::{
-    Connectivity, DuplicateChoice, NoteSyncKind, ResolutionKind, SyncPhase, ConflictResolution,
+    ConflictResolution, Connectivity, DuplicateChoice, NoteSyncKind, ResolutionKind, SyncPhase,
 };
 use strata_core::view::{Topics, build};
 use ulid::Ulid;
@@ -64,15 +64,21 @@ fn server_view(h: &Harness) -> BTreeMap<String, (String, String, Option<String>)
 }
 
 fn seed(h: &Harness) {
-    h.server
-        .remote_upsert(N1, "notes/Churn notes.md", "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1A\n---\nChurn is up.\n");
+    h.server.remote_upsert(
+        N1,
+        "notes/Churn notes.md",
+        "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1A\n---\nChurn is up.\n",
+    );
     h.server.remote_upsert(
         N2,
         "notes/Pricing experiments.md",
         "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1B\n---\nTry 5% off. [[Churn notes]]\nSecond line.\nThird line.\n",
     );
-    h.server
-        .remote_upsert(N3, "people/Ahmed Samir.md", "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1C\nkind: person\naliases: [أحمد سمير]\n---\n");
+    h.server.remote_upsert(
+        N3,
+        "people/Ahmed Samir.md",
+        "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1C\nkind: person\naliases: [أحمد سمير]\n---\n",
+    );
 }
 
 fn suggestion() -> Record {
@@ -107,10 +113,18 @@ async fn bootstrap_pages_the_snapshot_then_pulls_incrementally() {
     assert_eq!(local_notes(&s), server_view(&h));
     let state = s.read(|c, _| sync_state::get(c)).expect("state");
     assert_eq!(
-        (state.epoch, state.cursor_seq, state.bootstrap_complete, state.bootstrap_cursor),
+        (
+            state.epoch,
+            state.cursor_seq,
+            state.bootstrap_complete,
+            state.bootstrap_cursor
+        ),
         (Some(1), 4, true, None)
     );
-    assert_eq!(state.last_pull_at.as_deref(), Some("2026-09-27T10:00:00+00:00"));
+    assert_eq!(
+        state.last_pull_at.as_deref(),
+        Some("2026-09-27T10:00:00+00:00")
+    );
     // The first incremental pull asks from the snapshot's seq.
     assert_eq!(h.server.changes_calls(), vec![(4, 1)]);
     // The pill went Idle → Bootstrapping (pages 0, 1, 2) → Pulling → Idle, and Online.
@@ -155,8 +169,11 @@ async fn bootstrap_pages_the_snapshot_then_pulls_incrementally() {
     assert_eq!(inbox.suggestions[0].detail.line, "- [ ] Call Ahmed");
 
     // Incremental: another device edits and deletes.
-    h.server
-        .remote_upsert(N1, "notes/Churn notes.md", "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1A\n---\nChurn is down.\n");
+    h.server.remote_upsert(
+        N1,
+        "notes/Churn notes.md",
+        "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1A\n---\nChurn is down.\n",
+    );
     h.server.remote_delete(N3);
     let report = s.sync(Trigger::EventsFrame).await.expect("sync");
     assert_eq!(report, synced(0, 2, false));
@@ -193,8 +210,11 @@ async fn epoch_change_rebootstraps_and_keeps_live_local_ops() {
     // The server rebuilds: N3 is gone from the new snapshot, N1 changed.
     h.server.bump_epoch();
     h.server.remote_delete(N3);
-    h.server
-        .remote_upsert(N1, "notes/Churn notes.md", "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1A\n---\nRebuilt.\n");
+    h.server.remote_upsert(
+        N1,
+        "notes/Churn notes.md",
+        "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1A\n---\nRebuilt.\n",
+    );
 
     let report = s.sync(Trigger::Resume).await.expect("sync");
 
@@ -248,7 +268,10 @@ async fn applied_creates_become_the_verified_base() {
     );
     assert_eq!(local_notes(&s), server_view(&h));
     assert_eq!(s.read(|c, _| outbox::all(c)).expect("outbox"), Vec::new());
-    assert_eq!(h.server.applied_ops(), vec![Ulid::from_string(&seq_id(2)).expect("op")]);
+    assert_eq!(
+        h.server.applied_ops(),
+        vec![Ulid::from_string(&seq_id(2)).expect("op")]
+    );
     let pushed: Vec<(String, Option<Version>)> = h
         .server
         .pushes()
@@ -265,7 +288,9 @@ async fn stale_edits_merge_or_conflict_per_d19() {
     seed(&h);
     let s = h.sign_in_a().await;
     s.sync(Trigger::Start).await.expect("bootstrap");
-    let base = h.server.notes()[&Ulid::from_string(N2).expect("id")].content.clone();
+    let base = h.server.notes()[&Ulid::from_string(N2).expect("id")]
+        .content
+        .clone();
 
     // Non-overlapping: another device edits the third line, we edit the first.
     h.server.remote_upsert(
@@ -280,7 +305,10 @@ async fn stale_edits_merge_or_conflict_per_d19() {
     let merged = base
         .replace("Try 5% off.", "Try 10% off.")
         .replace("Third line.", "Third line, edited remotely.");
-    assert_eq!(local_notes(&s).get(N2).map(|n| n.1.clone()), Some(merged.clone()));
+    assert_eq!(
+        local_notes(&s).get(N2).map(|n| n.1.clone()),
+        Some(merged.clone())
+    );
     assert_eq!(local_notes(&s), server_view(&h));
 
     // Overlapping: both change the same line.
@@ -296,7 +324,10 @@ async fn stale_edits_merge_or_conflict_per_d19() {
 
     // The local edit stays visible, the note is marked conflicting, and the preview uses
     // sync-model's merge with the pulled server content.
-    assert_eq!(local_notes(&s).get(N2).map(|n| n.1.clone()), Some(mine.clone()));
+    assert_eq!(
+        local_notes(&s).get(N2).map(|n| n.1.clone()),
+        Some(mine.clone())
+    );
     let note = s
         .read(|c, ctx| build::note_screen(c, ctx, N2))
         .expect("note")
@@ -315,7 +346,10 @@ async fn stale_edits_merge_or_conflict_per_d19() {
     assert_eq!(detail.merge_clean, Some(false));
     assert_eq!(detail.hunks.len(), 1);
     assert_eq!(
-        (detail.hunks[0].ours.as_str(), detail.hunks[0].theirs.as_str()),
+        (
+            detail.hunks[0].ours.as_str(),
+            detail.hunks[0].theirs.as_str()
+        ),
         ("Second line (mine).\n", "Second line (theirs).\n")
     );
     let status = s.read(build::sync_status).expect("status");
@@ -425,7 +459,10 @@ async fn rejected_ops_roll_back_and_leave_a_typed_notice() {
     s.sync(Trigger::Start).await.expect("bootstrap");
     let before = local_notes(&s);
     let op = s
-        .update_note(N1, "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1A\n---\nLocal edit.\n")
+        .update_note(
+            N1,
+            "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1A\n---\nLocal edit.\n",
+        )
         .expect("edit");
     h.server.script(
         N1,
@@ -448,11 +485,19 @@ async fn rejected_ops_roll_back_and_leave_a_typed_notice() {
     assert_eq!(status.rejections.len(), 1);
     let r = &status.rejections[0];
     assert_eq!(
-        (r.op_id.as_str(), r.kind.as_str(), r.problem_type.as_str(), r.message_key.as_str()),
+        (
+            r.op_id.as_str(),
+            r.kind.as_str(),
+            r.problem_type.as_str(),
+            r.message_key.as_str()
+        ),
         (op.as_str(), "note.update", "not_found", "error.not_found")
     );
     s.dismiss_rejection(&op).expect("dismiss");
-    assert_eq!(s.read(build::sync_status).expect("status").rejections, Vec::new());
+    assert_eq!(
+        s.read(build::sync_status).expect("status").rejections,
+        Vec::new()
+    );
 }
 
 #[tokio::test]
@@ -482,7 +527,9 @@ async fn offline_cycles_keep_the_outbox_and_back_off() {
 
     s.sync(Trigger::Retry).await.expect("sync");
     assert_eq!(
-        s.read(|c, _| sync_state::get(c)).expect("state").consecutive_failures,
+        s.read(|c, _| sync_state::get(c))
+            .expect("state")
+            .consecutive_failures,
         2
     );
 
@@ -503,7 +550,10 @@ async fn replays_after_a_lost_response_are_idempotent() {
         .expect("capture");
     let mut engine = s.engine().clone();
     engine.crash_after = Some(Step::Pushed);
-    let report = s.sync_with(&engine, Trigger::AfterWrite).await.expect("sync");
+    let report = s
+        .sync_with(&engine, Trigger::AfterWrite)
+        .await
+        .expect("sync");
     assert_eq!(report.outcome, CycleOutcome::Crashed(Step::Pushed));
     drop(s);
 
@@ -511,12 +561,19 @@ async fn replays_after_a_lost_response_are_idempotent() {
     let s = h.core.session().expect("session survives");
     let ops = s.read(|c, _| outbox::all(c)).expect("outbox");
     assert_eq!(ops.len(), 1);
-    assert_eq!(ops[0].status, outbox::OpStatus::Pending, "inflight requeued at open");
+    assert_eq!(
+        ops[0].status,
+        outbox::OpStatus::Pending,
+        "inflight requeued at open"
+    );
     let report = s.sync(Trigger::Start).await.expect("sync");
     assert_eq!(report, synced(1, 1, false));
     let pushes = h.server.pushes();
     assert_eq!(pushes.len(), 2);
-    assert_eq!(pushes[0][0].op_id, pushes[1][0].op_id, "same op ID replayed");
+    assert_eq!(
+        pushes[0][0].op_id, pushes[1][0].op_id,
+        "same op ID replayed"
+    );
     assert_eq!(h.server.applied_ops().len(), 1, "applied once");
     assert_eq!(local_notes(&s), server_view(&h));
 }
@@ -604,7 +661,10 @@ async fn run(
         if !crashed {
             engine.crash_after = crash;
         }
-        let report = s.sync_with(&engine, Trigger::AfterWrite).await.expect("sync");
+        let report = s
+            .sync_with(&engine, Trigger::AfterWrite)
+            .await
+            .expect("sync");
         if let CycleOutcome::Crashed(_) = report.outcome {
             crashed = true;
             drop(s);
@@ -637,5 +697,34 @@ proptest! {
         let (clean_local, clean_server) = rt.block_on(run(&actions, None));
         prop_assert_eq!(server, clean_server);
         prop_assert_eq!(local, clean_local);
+    }
+}
+
+#[tokio::test]
+async fn a_crash_mid_bootstrap_resumes_from_the_saved_cursor() {
+    for (step, calls_before_crash, calls_after) in [
+        (Step::BootstrapFetched, 1, 2 + 1),
+        (Step::BootstrapApplied, 1, 1 + 1),
+    ] {
+        let mut h = Harness::new();
+        seed(&h);
+        h.server.remote_record(suggestion());
+        let s = h.sign_in_a().await;
+        let mut engine = s.engine().clone();
+        engine.crash_after = Some(step);
+        let report = s.sync_with(&engine, Trigger::Start).await.expect("sync");
+        assert_eq!(report.outcome, CycleOutcome::Crashed(step));
+        assert_eq!(h.server.bootstrap_calls(), calls_before_crash);
+        drop(s);
+
+        h.restart();
+        let s = h.core.session().expect("session");
+        let report = s.sync(Trigger::Start).await.expect("sync");
+        assert_eq!(report.outcome, CycleOutcome::Synced);
+        // A page fetched but not applied is fetched again; an applied page is not.
+        assert_eq!(h.server.bootstrap_calls(), calls_after, "{step:?}");
+        assert_eq!(local_notes(&s), server_view(&h));
+        let state = s.read(|c, _| sync_state::get(c)).expect("state");
+        assert_eq!((state.bootstrap_complete, state.cursor_seq), (true, 4));
     }
 }

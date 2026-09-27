@@ -71,8 +71,10 @@ impl H {
     pub async fn new() -> Self {
         let db = TestDb::new().await.expect("test database");
         let data = TempDataRoot::new().expect("data root");
-        let mut config = Config::default();
-        config.data_root = data.path().to_path_buf();
+        let mut config = Config {
+            data_root: data.path().to_path_buf(),
+            ..Config::default()
+        };
         config.auth.argon2 = Argon2Config {
             memory_kib: 64,
             iterations: 1,
@@ -228,10 +230,10 @@ impl H {
             .map(str::to_owned);
         let bytes = resp.bytes().await.expect("body").to_vec();
         if let Some(op) = operation
-            && let Err(e) = self
-                .conformance
-                .contract
-                .validate_response(op, status, ct.as_deref(), &bytes)
+            && let Err(e) =
+                self.conformance
+                    .contract
+                    .validate_response(op, status, ct.as_deref(), &bytes)
         {
             self.conformance
                 .violations

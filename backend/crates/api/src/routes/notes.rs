@@ -333,9 +333,7 @@ fn note_id(id: &web::Path<Ulid>) -> NoteId {
 }
 
 fn created(note: Note) -> impl Responder {
-    MsgPack(note)
-        .customize()
-        .with_status(StatusCode::CREATED)
+    MsgPack(note).customize().with_status(StatusCode::CREATED)
 }
 
 /// The vault tree: folders, notes and other files (hidden folders excluded).
@@ -343,7 +341,10 @@ fn created(note: Note) -> impl Responder {
     get, path = "/tree", tag = "notes", operation_id = "get_tree",
     responses((status = 200, description = "Every folder, note and file, sorted by path.", body = Tree)),
 )]
-pub async fn tree(auth: Authenticated, vault: web::Data<VaultService>) -> Result<MsgPack<Tree>, Problem> {
+pub async fn tree(
+    auth: Authenticated,
+    vault: web::Data<VaultService>,
+) -> Result<MsgPack<Tree>, Problem> {
     let entries = vault.tree(auth.scope()).await.or_problem()?;
     Ok(MsgPack(Tree {
         entries: entries
@@ -351,7 +352,13 @@ pub async fn tree(auth: Authenticated, vault: web::Data<VaultService>) -> Result
             .map(|e| match e {
                 TreeEntry::Folder { path } => TreeItem::Folder { path },
                 TreeEntry::File { path } => TreeItem::File { path },
-                TreeEntry::Note { path, id, title, kind, updated } => TreeItem::Note {
+                TreeEntry::Note {
+                    path,
+                    id,
+                    title,
+                    kind,
+                    updated,
+                } => TreeItem::Note {
                     path,
                     id: id.as_ulid(),
                     title,
@@ -405,7 +412,13 @@ pub async fn get_note(
     vault: web::Data<VaultService>,
     id: web::Path<Ulid>,
 ) -> Result<MsgPack<Note>, Problem> {
-    Ok(MsgPack(vault.note(auth.scope(), note_id(&id)).await.or_problem()?.into()))
+    Ok(MsgPack(
+        vault
+            .note(auth.scope(), note_id(&id))
+            .await
+            .or_problem()?
+            .into(),
+    ))
 }
 
 /// A live note by vault path.
@@ -422,7 +435,13 @@ pub async fn get_note_by_path(
     vault: web::Data<VaultService>,
     q: web::Query<ByPathQuery>,
 ) -> Result<MsgPack<Note>, Problem> {
-    Ok(MsgPack(vault.note_by_path(auth.scope(), &q.path).await.or_problem()?.into()))
+    Ok(MsgPack(
+        vault
+            .note_by_path(auth.scope(), &q.path)
+            .await
+            .or_problem()?
+            .into(),
+    ))
 }
 
 /// Replace a note's content (`If-Match`: its current version).
@@ -447,7 +466,12 @@ pub async fn update_note(
 ) -> Result<MsgPack<Note>, Problem> {
     let version = required_if_match(req.headers())?;
     let note = vault
-        .update_note(auth.scope(), note_id(&id), body.into_inner().content, version)
+        .update_note(
+            auth.scope(),
+            note_id(&id),
+            body.into_inner().content,
+            version,
+        )
         .await
         .or_problem()?;
     Ok(MsgPack(note.into()))
@@ -475,7 +499,12 @@ pub async fn move_note(
 ) -> Result<MsgPack<Note>, Problem> {
     let version = crate::vault::if_match(req.headers())?;
     let note = vault
-        .move_note(auth.scope(), note_id(&id), body.into_inner().new_path, version)
+        .move_note(
+            auth.scope(),
+            note_id(&id),
+            body.into_inner().new_path,
+            version,
+        )
         .await
         .or_problem()?;
     Ok(MsgPack(note.into()))
@@ -492,7 +521,13 @@ pub async fn delete_note(
     vault: web::Data<VaultService>,
     id: web::Path<Ulid>,
 ) -> Result<MsgPack<Note>, Problem> {
-    Ok(MsgPack(vault.delete_note(auth.scope(), note_id(&id)).await.or_problem()?.into()))
+    Ok(MsgPack(
+        vault
+            .delete_note(auth.scope(), note_id(&id))
+            .await
+            .or_problem()?
+            .into(),
+    ))
 }
 
 /// Restore a trashed note to its original path (or a free name next to it).
@@ -506,7 +541,13 @@ pub async fn restore_note(
     vault: web::Data<VaultService>,
     id: web::Path<Ulid>,
 ) -> Result<MsgPack<Note>, Problem> {
-    Ok(MsgPack(vault.restore_note(auth.scope(), note_id(&id)).await.or_problem()?.into()))
+    Ok(MsgPack(
+        vault
+            .restore_note(auth.scope(), note_id(&id))
+            .await
+            .or_problem()?
+            .into(),
+    ))
 }
 
 /// Permanently delete a trashed note and its sidecar (history keeps it).
@@ -520,7 +561,10 @@ pub async fn purge_note(
     vault: web::Data<VaultService>,
     id: web::Path<Ulid>,
 ) -> Result<HttpResponse, Problem> {
-    vault.purge_note(auth.scope(), note_id(&id)).await.or_problem()?;
+    vault
+        .purge_note(auth.scope(), note_id(&id))
+        .await
+        .or_problem()?;
     Ok(HttpResponse::NoContent().finish())
 }
 
@@ -535,7 +579,10 @@ pub async fn backlinks(
     vault: web::Data<VaultService>,
     id: web::Path<Ulid>,
 ) -> Result<MsgPack<Backlinks>, Problem> {
-    let groups = vault.backlinks(auth.scope(), note_id(&id)).await.or_problem()?;
+    let groups = vault
+        .backlinks(auth.scope(), note_id(&id))
+        .await
+        .or_problem()?;
     Ok(MsgPack(Backlinks {
         groups: groups.into_iter().map(group).collect(),
     }))
@@ -571,7 +618,10 @@ pub async fn note_history(
     vault: web::Data<VaultService>,
     id: web::Path<Ulid>,
 ) -> Result<MsgPack<History>, Problem> {
-    let revs = vault.history(auth.scope(), note_id(&id)).await.or_problem()?;
+    let revs = vault
+        .history(auth.scope(), note_id(&id))
+        .await
+        .or_problem()?;
     Ok(MsgPack(History {
         revisions: revs
             .into_iter()

@@ -292,6 +292,15 @@ impl VaultService {
         ))
     }
 
+    /// Reconciles the vault now (as on load: repairs, commits, warnings) and returns what
+    /// was found.
+    pub async fn reconcile_now(&self, scope: &UserScope) -> Result<Report> {
+        self.exec_unloaded(scope, |core, s| {
+            Box::pin(async move { reconcile::reconcile(core, s, false).await })
+        })
+        .await
+    }
+
     /// `stratad verify --user`: what reconciliation would find and repair, changing nothing.
     pub async fn verify(&self, scope: &UserScope) -> Result<Report> {
         self.exec_unloaded(scope, |core, s| {

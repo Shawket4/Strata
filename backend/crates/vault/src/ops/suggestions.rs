@@ -31,7 +31,7 @@ pub struct SuggestionView {
 pub enum Payload {
     /// `duplicate`.
     Duplicate(DuplicatePayload),
-    /// Any other kind (opaque MessagePack).
+    /// Any other kind (opaque `MessagePack`).
     Opaque(Vec<u8>),
 }
 
@@ -39,8 +39,10 @@ impl SuggestionView {
     /// The payload, decoded when the kind is known.
     pub fn payload(&self) -> Payload {
         match self.suggestion.kind.as_str() {
-            "duplicate" => rmp_serde::from_slice(&self.suggestion.payload)
-                .map_or_else(|_| Payload::Opaque(self.suggestion.payload.clone()), Payload::Duplicate),
+            "duplicate" => rmp_serde::from_slice(&self.suggestion.payload).map_or_else(
+                |_| Payload::Opaque(self.suggestion.payload.clone()),
+                Payload::Duplicate,
+            ),
             _ => Payload::Opaque(self.suggestion.payload.clone()),
         }
     }
@@ -98,8 +100,11 @@ impl VaultService {
                     && let Some(note) = s.note_id
                     && let Ok(p) = rmp_serde::from_slice::<DuplicatePayload>(&s.payload)
                 {
-                    let candidates: Vec<_> =
-                        p.candidates.iter().filter_map(|c| c.candidate()).collect();
+                    let candidates: Vec<_> = p
+                        .candidates
+                        .iter()
+                        .filter_map(super::notes::DuplicatePayloadItem::candidate)
+                        .collect();
                     if core.state()?.note(note).is_some() && !candidates.is_empty() {
                         core.keep_both_notes(scope, note, &candidates, Author::User)
                             .await?;
@@ -187,7 +192,11 @@ impl VaultService {
     }
 
     /// Pending suggestions of a note.
-    pub async fn note_suggestions(&self, scope: &UserScope, note: NoteId) -> Result<Vec<SuggestionView>> {
+    pub async fn note_suggestions(
+        &self,
+        scope: &UserScope,
+        note: NoteId,
+    ) -> Result<Vec<SuggestionView>> {
         Ok(self
             .suggestions(scope, SuggestionStatus::Pending)
             .await?

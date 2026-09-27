@@ -12,13 +12,12 @@ use strata_index::UserScope;
 use strata_index::repo::notes;
 use strata_index::repo::tasks as trepo;
 use strata_index::repo::vault::{self as vrepo, TaskView};
-use vault_format::Document;
-use vault_format::sidecar::NoteSidecar;
 use sync_model::Op;
 use sync_model::apply::{ApplyError, apply_task_op, task_line_version};
+use vault_format::Document;
+use vault_format::sidecar::NoteSidecar;
 use vault_format::tasks::{
-    DateKind, Priority, Reminder, TaskError, TaskLine, TaskSpec,
-    parse_recurrence,
+    DateKind, Priority, Reminder, TaskError, TaskLine, TaskSpec, parse_recurrence,
 };
 
 use crate::dup;
@@ -185,7 +184,9 @@ pub fn find_task(body: &str, id: &str) -> Option<(std::ops::Range<usize>, TaskLi
 impl Core {
     async fn locate_task(&self, scope: &UserScope, id: &str) -> Result<(NoteId, String)> {
         let mut tx = self.begin(scope).await?;
-        let row = trepo::get_task(&mut tx, id).await?.ok_or(VaultError::NotFound)?;
+        let row = trepo::get_task(&mut tx, id)
+            .await?
+            .ok_or(VaultError::NotFound)?;
         tx.commit().await?;
         let (path, _) = self.live(row.note_id)?;
         Ok((row.note_id, path))

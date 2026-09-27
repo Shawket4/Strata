@@ -461,6 +461,7 @@ impl Core {
     /// written, reverted, imported or found changed): re-derives every note whose file
     /// changed and every note whose links may now resolve differently, purges notes that are
     /// gone, appends the change log and enqueues jobs. Runs in `tx`.
+    #[allow(clippy::too_many_lines)] // one linear pass over the changed paths
     pub(crate) async fn sync_paths(
         &mut self,
         tx: &mut ScopedTx,

@@ -139,7 +139,10 @@ pub fn spawn_reconciliation(prepared: &Prepared) -> JoinHandle<()> {
             }
         };
         for user in users {
-            if !matches!(user.status, UserStatus::Active | UserStatus::DeletionPending) {
+            if !matches!(
+                user.status,
+                UserStatus::Active | UserStatus::DeletionPending
+            ) {
                 continue;
             }
             if let Err(err) = vault.ready(&issuer.issue(user.id)).await {

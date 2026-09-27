@@ -343,7 +343,10 @@ async fn verify_and_reindex_work_on_a_created_users_vault() {
         "verify changes nothing"
     );
     // Reindex reconciles first (ID + recovery commit) and derives every note.
-    assert_eq!(commands::reindex(&config, "owner").await.expect("reindex"), 1);
+    assert_eq!(
+        commands::reindex(&config, "owner").await.expect("reindex"),
+        1
+    );
     assert!(
         commands::verify(&config, "owner")
             .await

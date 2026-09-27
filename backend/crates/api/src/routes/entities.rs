@@ -361,7 +361,11 @@ impl From<VView> for Entity {
                     rel_type: r.rel,
                     other_id: r.other.as_ulid(),
                     other_title: r.title,
-                    direction: if r.outgoing { Direction::Out } else { Direction::In },
+                    direction: if r.outgoing {
+                        Direction::Out
+                    } else {
+                        Direction::In
+                    },
                     by: r.by,
                 })
                 .collect(),
@@ -455,7 +459,10 @@ pub async fn create_entity(
         .create_entity(auth.scope(), new_entity(b.kind, b))
         .await
         .or_problem()?;
-    let view = vault.entity(auth.scope(), note.id, MENTION_PAGE).await.or_problem()?;
+    let view = vault
+        .entity(auth.scope(), note.id, MENTION_PAGE)
+        .await
+        .or_problem()?;
     Ok(MsgPack(Entity::from(view))
         .customize()
         .with_status(StatusCode::CREATED))
@@ -505,7 +512,10 @@ pub async fn patch_entity(
         .patch_entity(auth.scope(), id, entity_patch(body.into_inner(), if_match))
         .await
         .or_problem()?;
-    let view = vault.entity(auth.scope(), id, MENTION_PAGE).await.or_problem()?;
+    let view = vault
+        .entity(auth.scope(), id, MENTION_PAGE)
+        .await
+        .or_problem()?;
     Ok(MsgPack(view.into()))
 }
 
@@ -528,7 +538,10 @@ pub async fn merge_entity(
         .merge_entities(auth.scope(), NoteId::from_ulid(*id), into)
         .await
         .or_problem()?;
-    let view = vault.entity(auth.scope(), into, MENTION_PAGE).await.or_problem()?;
+    let view = vault
+        .entity(auth.scope(), into, MENTION_PAGE)
+        .await
+        .or_problem()?;
     Ok(MsgPack(view.into()))
 }
 

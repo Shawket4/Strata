@@ -132,7 +132,11 @@ async fn note_create_update_move_delete_ops_and_note_view() {
     let h = Harness::new();
     let s = h.sign_in_a().await;
     let created = s
-        .create_note("notes/sales/Pricing experiments.md", "# Pricing\nTry 5% off #pricing [[Churn notes]]\n", false)
+        .create_note(
+            "notes/sales/Pricing experiments.md",
+            "# Pricing\nTry 5% off #pricing [[Churn notes]]\n",
+            false,
+        )
         .expect("create");
     let id = seq_id(1);
     assert_eq!(
@@ -142,9 +146,7 @@ async fn note_create_update_move_delete_ops_and_note_view() {
             candidates: Vec::new()
         }
     );
-    let v1 = format!(
-        "---\nid: {id}\n---\n# Pricing\nTry 5% off #pricing [[Churn notes]]\n"
-    );
+    let v1 = format!("---\nid: {id}\n---\n# Pricing\nTry 5% off #pricing [[Churn notes]]\n");
     assert_eq!(content(&s, &id), v1);
 
     let notes = Recorder::new();
@@ -229,7 +231,8 @@ async fn note_create_update_move_delete_ops_and_note_view() {
     assert_eq!(last.op, Op::NoteDelete(ops::NoteRef { id: ulid(&id) }));
     // A note that never reached the server disappears from the table entirely once deleted.
     assert_eq!(
-        s.read(|c, _| strata_core::store::notes::get(c, &id)).expect("read"),
+        s.read(|c, _| strata_core::store::notes::get(c, &id))
+            .expect("read"),
         None
     );
 }
@@ -405,7 +408,12 @@ async fn tasks_create_complete_recurring_and_sections() {
     assert_eq!(views[0].sections, TaskSections::default());
     assert_eq!(
         views[1].sections.upcoming,
-        vec![task(&t1, &home_id, "Send weekly invoicing proposal to Ahmed", "2026-09-29")]
+        vec![task(
+            &t1,
+            &home_id,
+            "Send weekly invoicing proposal to Ahmed",
+            "2026-09-29"
+        )]
     );
     let reminder_at = DateTime::parse_from_rfc3339("2026-09-27T07:00:00Z")
         .expect("ts")
@@ -438,7 +446,11 @@ async fn tasks_create_complete_recurring_and_sections() {
             .iter()
             .map(|t| (t.id.clone(), t.state, t.done))
             .collect::<Vec<_>>(),
-        vec![(t2.clone(), TaskState::Done, NaiveDate::from_ymd_opt(2026, 9, 27))]
+        vec![(
+            t2.clone(),
+            TaskState::Done,
+            NaiveDate::from_ymd_opt(2026, 9, 27)
+        )]
     );
     // Completing a done task is refused by the shared task rules and writes nothing.
     assert_eq!(
@@ -486,10 +498,7 @@ async fn relations_edit_frontmatter_through_shared_rules() {
         content(&s, &pricing),
         format!("---\nid: {pricing}\n---\nTry 5% off.\n")
     );
-    let kinds: Vec<&str> = outbox(&s)
-        .iter()
-        .map(|o| o.op.kind().as_str())
-        .collect();
+    let kinds: Vec<&str> = outbox(&s).iter().map(|o| o.op.kind().as_str()).collect();
     assert_eq!(
         kinds,
         vec![
@@ -524,8 +533,20 @@ async fn offline_duplicate_check_prompts_before_queuing_a_create() {
     assert_eq!(outcome.candidates.len(), 1);
     let c = &outcome.candidates[0];
     assert_eq!(
-        (c.id.as_str(), c.kind.as_str(), c.title.as_str(), c.match_level.as_str(), c.score),
-        (existing.as_str(), "note", "Pricing experiments", "exact", 1.0)
+        (
+            c.id.as_str(),
+            c.kind.as_str(),
+            c.title.as_str(),
+            c.match_level.as_str(),
+            c.score
+        ),
+        (
+            existing.as_str(),
+            "note",
+            "Pricing experiments",
+            "exact",
+            1.0
+        )
     );
     assert_eq!(outbox(&s).len(), 1, "nothing queued");
 

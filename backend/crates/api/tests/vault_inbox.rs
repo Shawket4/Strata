@@ -2,7 +2,11 @@
 //! §16.3): capture is never refused, likely duplicates become a `duplicate` suggestion that
 //! can be replied to, accepted (keep both) or rejected; user edges are added, retyped and
 //! removed; removing an AI edge records a rejection the AI respects.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod vault_harness;
 
@@ -47,7 +51,10 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
             first.note.id
         )
     );
-    assert_eq!(h.log(alice.id)[0], "user: capture inbox/2026-09-27-120000.md");
+    assert_eq!(
+        h.log(alice.id)[0],
+        "user: capture inbox/2026-09-27-120000.md"
+    );
 
     // The same text again: saved anyway (same second → a free name), with a suggestion.
     let second = ops::capture(c, &types::CaptureRequest { text: text.into() })
@@ -65,7 +72,10 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
         inbox
             .items
             .iter()
-            .map(|i| (i.note.id, i.suggestions.iter().map(|s| s.id).collect::<Vec<_>>()))
+            .map(|i| (
+                i.note.id,
+                i.suggestions.iter().map(|s| s.id).collect::<Vec<_>>()
+            ))
             .collect::<Vec<_>>(),
         vec![(second.note.id, vec![sid]), (first.note.id, vec![])]
     );
@@ -81,9 +91,15 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
     );
 
     // Reply, then accept (keep both): never flagged against each other again.
-    let replied = ops::reply_suggestion(c, sid, &types::ReplyRequest { body: "They differ: one is for November".into() })
-        .await
-        .expect("reply");
+    let replied = ops::reply_suggestion(
+        c,
+        sid,
+        &types::ReplyRequest {
+            body: "They differ: one is for November".into(),
+        },
+    )
+    .await
+    .expect("reply");
     assert_eq!(replied.replies.len(), 1);
     assert_eq!(replied.replies[0].body, "They differ: one is for November");
     assert_eq!(replied.status, types::SuggestionStatus::Pending);
@@ -92,7 +108,10 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
     assert_eq!(accepted.decided_at, Some(h.now()));
     let again = ops::accept_suggestion(c, sid).await.expect_err("decided");
     let p = vault_harness::problem(&again);
-    assert_eq!((p.status, p.detail.as_deref()), (422, Some("the suggestion was already decided")));
+    assert_eq!(
+        (p.status, p.detail.as_deref()),
+        (422, Some("the suggestion was already decided"))
+    );
     let pending = ops::list_suggestions(c, Some(&types::SuggestionStatus::Pending))
         .await
         .expect("pending");
@@ -132,17 +151,29 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
         .await
         .expect("reject");
     assert_eq!(rejected.status, types::SuggestionStatus::Rejected);
-    assert_eq!(ops::get_note(c, third.note.id).await.expect("kept").trashed, false);
+    assert_eq!(
+        ops::get_note(c, third.note.id).await.expect("kept").trashed,
+        false
+    );
     let accepted = ops::list_suggestions(c, Some(&types::SuggestionStatus::Accepted))
         .await
         .expect("accepted");
-    assert_eq!(accepted.items.iter().map(|s| s.id).collect::<Vec<_>>(), vec![sid]);
+    assert_eq!(
+        accepted.items.iter().map(|s| s.id).collect::<Vec<_>>(),
+        vec![sid]
+    );
     let rejected = ops::list_suggestions(c, Some(&types::SuggestionStatus::Rejected))
         .await
         .expect("rejected");
     assert_eq!(rejected.items.len(), 1);
-    assert_eq!(ops::list_suggestions(c, None).await.expect("pending").items, vec![]);
-    assert_problem(ops::accept_suggestion(c, ulid::Ulid::new()).await, &not_found());
+    assert_eq!(
+        ops::list_suggestions(c, None).await.expect("pending").items,
+        vec![]
+    );
+    assert_problem(
+        ops::accept_suggestion(c, ulid::Ulid::new()).await,
+        &not_found(),
+    );
     let _ = scope;
     h.finish().await;
 }
@@ -152,11 +183,19 @@ async fn relations_add_retype_remove_and_ai_rejections_stick() {
     let h = H::new().await;
     let alice = h.user("alice").await;
     let c = &alice.client;
-    let a = ops::create_note(c, &note("notes/Plan.md", "The plan.\n")).await.expect("a");
-    let b = ops::create_note(c, &note("notes/Budget.md", "The budget.\n")).await.expect("b");
-    let x = ops::create_note(c, &note("notes/Risks.md", "Risks.\n")).await.expect("x");
+    let a = ops::create_note(c, &note("notes/Plan.md", "The plan.\n"))
+        .await
+        .expect("a");
+    let b = ops::create_note(c, &note("notes/Budget.md", "The budget.\n"))
+        .await
+        .expect("b");
+    let x = ops::create_note(c, &note("notes/Risks.md", "Risks.\n"))
+        .await
+        .expect("x");
 
-    let added = ops::add_relation(c, &edge(a.id, b.id, "supports")).await.expect("add");
+    let added = ops::add_relation(c, &edge(a.id, b.id, "supports"))
+        .await
+        .expect("add");
     assert_eq!(
         added,
         types::RelationResult {
@@ -175,7 +214,9 @@ async fn relations_add_retype_remove_and_ai_rejections_stick() {
             a.id
         )
     );
-    let again = ops::add_relation(c, &edge(a.id, b.id, "supports")).await.expect("no-op");
+    let again = ops::add_relation(c, &edge(a.id, b.id, "supports"))
+        .await
+        .expect("no-op");
     assert!(!again.changed);
     assert_eq!(h.log(alice.id).len(), 5, "a no-op add writes nothing");
     let backlinks = ops::get_backlinks(c, b.id).await.expect("backlinks");
@@ -194,13 +235,27 @@ async fn relations_add_retype_remove_and_ai_rejections_stick() {
     .expect("retype");
     assert_eq!(retyped.type_, "part-of");
     let plan = ops::get_note(c, a.id).await.expect("plan");
-    assert!(plan.content.contains("part-of: [\"[[Budget]]\"]\n"), "{}", plan.content);
+    assert!(
+        plan.content.contains("part-of: [\"[[Budget]]\"]\n"),
+        "{}",
+        plan.content
+    );
     assert!(!plan.content.contains("supports:"), "{}", plan.content);
-    let removed = ops::remove_relation(c, &edge(a.id, b.id, "part-of")).await.expect("remove");
+    let removed = ops::remove_relation(c, &edge(a.id, b.id, "part-of"))
+        .await
+        .expect("remove");
     assert!(!removed.changed, "a user edge is not recorded as rejected");
-    assert_problem(ops::remove_relation(c, &edge(a.id, b.id, "part-of")).await, &not_found());
-    let bad = ops::add_relation(c, &edge(a.id, b.id, "likes")).await.expect_err("unknown");
-    assert_eq!(vault_harness::problem(&bad).errors[0].code, "unknown_relation_type");
+    assert_problem(
+        ops::remove_relation(c, &edge(a.id, b.id, "part-of")).await,
+        &not_found(),
+    );
+    let bad = ops::add_relation(c, &edge(a.id, b.id, "likes"))
+        .await
+        .expect_err("unknown");
+    assert_eq!(
+        vault_harness::problem(&bad).errors[0].code,
+        "unknown_relation_type"
+    );
 
     // An AI edge with provenance, removed by the user → rejected, never re-added.
     let scope = h.db.scope(alice.id);
@@ -213,15 +268,25 @@ async fn relations_add_retype_remove_and_ai_rejections_stick() {
     };
     let commit = h
         .vault
-        .ai_add_relations(&scope, "link".into(), NoteId::from_ulid(a.id), vec![ai(x.id)])
+        .ai_add_relations(
+            &scope,
+            "link".into(),
+            NoteId::from_ulid(a.id),
+            vec![ai(x.id)],
+        )
         .await
         .expect("ai")
         .expect("changed");
     assert_eq!(h.log(alice.id)[0], "ai: link notes/Plan.md");
-    let removed = ops::remove_relation(c, &edge(a.id, x.id, "related")).await.expect("remove");
+    let removed = ops::remove_relation(c, &edge(a.id, x.id, "related"))
+        .await
+        .expect("remove");
     assert!(removed.changed, "an AI edge is recorded as rejected");
     let sidecar = h.read(alice.id, &format!(".meta/notes/{}.json", a.id));
-    assert!(sidecar.contains(&format!("\"target_id\": \"{}\"", x.id)), "{sidecar}");
+    assert!(
+        sidecar.contains(&format!("\"target_id\": \"{}\"", x.id)),
+        "{sidecar}"
+    );
     assert!(sidecar.contains("\"rejected\": [\n"), "{sidecar}");
     let mut tx = h.db.begin(alice.id).await.expect("tx");
     let blocked = strata_index::repo::graph::is_rejected(
@@ -236,7 +301,12 @@ async fn relations_add_retype_remove_and_ai_rejections_stick() {
     assert!(blocked);
     let readded = h
         .vault
-        .ai_add_relations(&scope, "link".into(), NoteId::from_ulid(a.id), vec![ai(x.id)])
+        .ai_add_relations(
+            &scope,
+            "link".into(),
+            NoteId::from_ulid(a.id),
+            vec![ai(x.id)],
+        )
         .await
         .expect("ai");
     assert_eq!(readded, None, "a rejected edge is never re-added");

@@ -1,7 +1,11 @@
 //! Export, import and integrity over HTTP (PLAN §6.10, §7.3, §16.3 Vault store): an
 //! Obsidian vault imports in one revertible commit and export → import → export is
 //! byte-identical; hostile archives are rejected whole; reconciliation warnings are listed.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod vault_harness;
 
@@ -11,7 +15,10 @@ use pretty_assertions::assert_eq;
 use strata_client::{operations as ops, types};
 use vault_harness::{H, plain};
 
-const FIXTURES: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../../crates/vault-format/tests/fixtures");
+const FIXTURES: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../../crates/vault-format/tests/fixtures"
+);
 
 fn fixture(rel: &str) -> Vec<u8> {
     std::fs::read(format!("{FIXTURES}/{rel}")).expect("fixture")
@@ -33,7 +40,9 @@ fn zip_of(entries: &[(&str, &[u8])]) -> Vec<u8> {
 /// A small but messy Obsidian vault: hand-written frontmatter, both scripts, CRLF, tasks
 /// without block IDs, a canvas, a binary attachment and Obsidian's own config.
 fn obsidian_vault() -> Vec<u8> {
-    let png: Vec<u8> = (0u8..=255).chain([0x89, b'P', b'N', b'G', 0, 0xff]).collect();
+    let png: Vec<u8> = (0u8..=255)
+        .chain([0x89, b'P', b'N', b'G', 0, 0xff])
+        .collect();
     zip_of(&[
         (".obsidian/app.json", b"{\"legacyEditor\": false}"),
         (".obsidian/workspace.json", b"{}"),
@@ -56,7 +65,9 @@ async fn obsidian_vault_imports_revertibly_and_round_trips_byte_identical() {
     let h = H::new().await;
     let alice = h.user("alice").await;
     let bob = h.user("bob").await;
-    let before = ops::export_vault(&alice.client).await.expect("empty export");
+    let before = ops::export_vault(&alice.client)
+        .await
+        .expect("empty export");
 
     let report = ops::import_vault(&alice.client, obsidian_vault().into())
         .await
@@ -64,7 +75,10 @@ async fn obsidian_vault_imports_revertibly_and_round_trips_byte_identical() {
     let commit = report.commit.clone().expect("commit");
     assert_eq!(
         report.skipped,
-        vec![".obsidian/app.json".to_owned(), ".obsidian/workspace.json".to_owned()]
+        vec![
+            ".obsidian/app.json".to_owned(),
+            ".obsidian/workspace.json".to_owned()
+        ]
     );
     assert_eq!(
         report.imported,
@@ -91,12 +105,22 @@ async fn obsidian_vault_imports_revertibly_and_round_trips_byte_identical() {
         fixture("maps/Pricing.canvas")
     );
     let kickoff = h.read(alice.id, "projects/Alpha/Kickoff.md");
-    assert!(report.ids_assigned.contains(&"projects/Alpha/Kickoff.md".to_owned()));
+    assert!(
+        report
+            .ids_assigned
+            .contains(&"projects/Alpha/Kickoff.md".to_owned())
+    );
     assert!(kickoff.contains("status: active"), "{kickoff}");
     assert!(kickoff.contains("- [ ] Book the room ^t-"), "{kickoff}");
-    let found = ops::search(&alice.client, "Kickoff", None, None).await.expect("search");
+    let found = ops::search(&alice.client, "Kickoff", None, None)
+        .await
+        .expect("search");
     assert_eq!(
-        found.hits.iter().map(|i| i.path.clone()).collect::<Vec<_>>(),
+        found
+            .hits
+            .iter()
+            .map(|i| i.path.clone())
+            .collect::<Vec<_>>(),
         vec!["projects/Alpha/Kickoff.md".to_owned()]
     );
 
@@ -104,19 +128,31 @@ async fn obsidian_vault_imports_revertibly_and_round_trips_byte_identical() {
     let first = ops::export_vault(&alice.client).await.expect("export");
     let again = ops::export_vault(&alice.client).await.expect("export");
     assert_eq!(first, again);
-    let into_bob = ops::import_vault(&bob.client, first.clone()).await.expect("import");
+    let into_bob = ops::import_vault(&bob.client, first.clone())
+        .await
+        .expect("import");
     assert_eq!(into_bob.ids_assigned, Vec::<String>::new());
     assert_eq!(into_bob.skipped, vec![".obsidian/app.json".to_owned()]);
     let second = ops::export_vault(&bob.client).await.expect("export");
-    assert!(first == second, "export → import → export is byte-identical");
+    assert!(
+        first == second,
+        "export → import → export is byte-identical"
+    );
     // Re-importing the same export into the same vault changes nothing.
-    let noop = ops::import_vault(&alice.client, first.clone()).await.expect("import");
+    let noop = ops::import_vault(&alice.client, first.clone())
+        .await
+        .expect("import");
     assert_eq!(noop.commit, None);
     assert_eq!(h.log(alice.id).len(), 2);
 
     // Reverting the import commit restores the vault as it was.
-    let reverted = ops::revert_commit(&alice.client, &commit).await.expect("revert");
-    assert_eq!(h.log(alice.id)[0], reverted_message(&reverted, &h, alice.id));
+    let reverted = ops::revert_commit(&alice.client, &commit)
+        .await
+        .expect("revert");
+    assert_eq!(
+        h.log(alice.id)[0],
+        reverted_message(&reverted, &h, alice.id)
+    );
     let after = ops::export_vault(&alice.client).await.expect("export");
     assert!(after == before, "the revert undoes the whole import");
     assert_eq!(
@@ -162,7 +198,10 @@ async fn hostile_archives_are_rejected_whole() {
             zip_of(&[("notes\\..\\evil.md", ok)]),
             invalid("an entry path contains a backslash"),
         ),
-        (zip_of(&[("C:/evil.md", ok)]), invalid("an entry path has a drive prefix")),
+        (
+            zip_of(&[("C:/evil.md", ok)]),
+            invalid("an entry path has a drive prefix"),
+        ),
         (
             {
                 let mut z = zip::ZipWriter::new(Cursor::new(Vec::new()));
@@ -199,7 +238,9 @@ async fn hostile_archives_are_rejected_whole() {
         ),
     ];
     for (body, expected) in cases {
-        let err = ops::import_vault(c, body.into()).await.expect_err("rejected");
+        let err = ops::import_vault(c, body.into())
+            .await
+            .expect_err("rejected");
         assert_eq!(vault_harness::problem(&err), expected);
         assert_eq!(h.log(alice.id).len(), 1, "nothing written");
     }
@@ -239,11 +280,16 @@ async fn out_of_band_edits_are_reconciled_and_reported() {
     )
     .await
     .expect("note");
-    assert_eq!(ops::get_integrity(c).await.expect("integrity").warnings, vec![]);
+    assert_eq!(
+        ops::get_integrity(c).await.expect("integrity").warnings,
+        vec![]
+    );
     // Obsidian (or a crash) touched the vault while the server was away.
     let dir = h.dir(alice.id);
     std::fs::write(dir.join("notes/Outside.md"), "Written by Obsidian.\n").expect("write");
-    let edited = h.read(alice.id, "notes/Edited.md").replace("Original.", "Edited outside.");
+    let edited = h
+        .read(alice.id, "notes/Edited.md")
+        .replace("Original.", "Edited outside.");
     std::fs::write(dir.join("notes/Edited.md"), edited).expect("write");
     std::fs::write(dir.join("notes/.strata-tmp-crashed"), "partial").expect("write");
     h.vault.evict(alice.id);
@@ -258,19 +304,38 @@ async fn out_of_band_edits_are_reconciled_and_reported() {
     assert_eq!(
         kinds,
         vec![
-            ("id_assigned".to_owned(), Some("notes/Outside.md".to_owned())),
-            ("out_of_band_edit".to_owned(), Some("notes/Edited.md".to_owned())),
-            ("temp_file_removed".to_owned(), Some("notes/.strata-tmp-crashed".to_owned())),
+            (
+                "id_assigned".to_owned(),
+                Some("notes/Outside.md".to_owned())
+            ),
+            (
+                "out_of_band_edit".to_owned(),
+                Some("notes/Edited.md".to_owned())
+            ),
+            (
+                "temp_file_removed".to_owned(),
+                Some("notes/.strata-tmp-crashed".to_owned())
+            ),
             ("uncommitted_changes".to_owned(), None),
         ]
     );
     assert_eq!(h.log(alice.id)[0], "system: recovered changes");
     assert!(!dir.join("notes/.strata-tmp-crashed").exists());
     let note = ops::get_note(c, n.id).await.expect("note");
-    assert!(note.content.ends_with("Edited outside.\n"), "{}", note.content);
-    let found = ops::search(c, "Obsidian", None, None).await.expect("search");
+    assert!(
+        note.content.ends_with("Edited outside.\n"),
+        "{}",
+        note.content
+    );
+    let found = ops::search(c, "Obsidian", None, None)
+        .await
+        .expect("search");
     assert_eq!(
-        found.hits.iter().map(|i| i.path.clone()).collect::<Vec<_>>(),
+        found
+            .hits
+            .iter()
+            .map(|i| i.path.clone())
+            .collect::<Vec<_>>(),
         vec!["notes/Outside.md".to_owned()]
     );
     // A clean vault verifies clean.

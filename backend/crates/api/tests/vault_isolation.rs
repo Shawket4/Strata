@@ -1,7 +1,11 @@
 //! Isolation (PLAN §5 principle 7, §16.3 Isolation): a second user with overlapping titles
 //! sees nothing of the first — no duplicate flags, no search hits, no list entries, nothing in
 //! the export — and every foreign ID answers exactly like a nonexistent one (404).
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod vault_harness;
 
@@ -193,7 +197,9 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
     let c = &bob.client;
 
     // Lists and searches hold only bob's own items.
-    let found = ops::search(c, "quarterly plan", None, None).await.expect("search");
+    let found = ops::search(c, "quarterly plan", None, None)
+        .await
+        .expect("search");
     let mut hit_ids: Vec<_> = found.hits.iter().map(|x| x.id).collect();
     hit_ids.sort();
     assert!(!hit_ids.contains(&a.note.id), "{hit_ids:?}");
@@ -205,8 +211,14 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
         people.items.iter().map(|e| e.id).collect::<Vec<_>>(),
         vec![b.person.id]
     );
-    let all = ops::list_entities(c, None, None, None, None).await.expect("all");
-    assert!(all.items.iter().all(|e| e.id != a.person.id && e.id != a.company.id));
+    let all = ops::list_entities(c, None, None, None, None)
+        .await
+        .expect("all");
+    assert!(
+        all.items
+            .iter()
+            .all(|e| e.id != a.person.id && e.id != a.company.id)
+    );
     assert_eq!(
         ops::list_documents(c, None, None, None, None, None)
             .await
@@ -239,7 +251,12 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
     );
     let inbox = ops::get_inbox(c).await.expect("inbox");
     assert_eq!(inbox.items.len(), 2);
-    assert!(inbox.items.iter().all(|i| i.suggestions.iter().all(|s| s.id != a.suggestion)));
+    assert!(
+        inbox
+            .items
+            .iter()
+            .all(|i| i.suggestions.iter().all(|s| s.id != a.suggestion))
+    );
     let pending = ops::list_suggestions(c, None).await.expect("suggestions");
     assert_eq!(
         pending.items.iter().map(|s| s.id).collect::<Vec<_>>(),
@@ -248,7 +265,10 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
     let tree = paths(&ops::get_tree(c).await.expect("tree"));
     assert!(tree.contains(&"notes/Bob only.md".to_owned()));
     assert!(!tree.contains(&"notes/Alice only.md".to_owned()));
-    assert_eq!(ops::get_integrity(c).await.expect("integrity").warnings, vec![]);
+    assert_eq!(
+        ops::get_integrity(c).await.expect("integrity").warnings,
+        vec![]
+    );
     let export = ops::export_vault(c).await.expect("export");
     let names: Vec<String> = {
         let z = zip::ZipArchive::new(std::io::Cursor::new(export.to_vec())).expect("zip");
@@ -268,7 +288,10 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
         .flat_map(|g| g.items.iter().map(|i| i.source_id))
         .collect();
     assert!(!from.contains(&a.note.id));
-    nf("by path", ops::get_note_by_path(c, "notes/Alice only.md").await);
+    nf(
+        "by path",
+        ops::get_note_by_path(c, "notes/Alice only.md").await,
+    );
 
     // Every endpoint taking an ID answers 404 for alice's IDs.
     let an = a.note.id;
@@ -302,14 +325,24 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
     nf("purge_note", ops::purge_note(c, a.only.id).await);
     nf("get_backlinks", ops::get_backlinks(c, an).await);
     nf("get_note_history", ops::get_note_history(c, an).await);
-    nf("get_note_revision", ops::get_note_revision(c, an, &a.commit).await);
+    nf(
+        "get_note_revision",
+        ops::get_note_revision(c, an, &a.commit).await,
+    );
     nf(
         "get_note_revision (own note, foreign commit)",
         ops::get_note_revision(c, b.note.id, &a.commit).await,
     );
     nf(
         "revert_note",
-        ops::revert_note(c, an, &types::RevertNoteRequest { commit: a.commit.clone() }).await,
+        ops::revert_note(
+            c,
+            an,
+            &types::RevertNoteRequest {
+                commit: a.commit.clone(),
+            },
+        )
+        .await,
     );
     nf("revert_commit", ops::revert_commit(c, &a.commit).await);
     nf("get_entity", ops::get_entity(c, a.person.id).await);
@@ -326,17 +359,40 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
         )
         .await,
     );
-    nf("get_entity_notes", ops::get_entity_notes(c, a.person.id).await);
-    nf("get_entity_documents", ops::get_entity_documents(c, a.person.id).await);
+    nf(
+        "get_entity_notes",
+        ops::get_entity_notes(c, a.person.id).await,
+    );
+    nf(
+        "get_entity_documents",
+        ops::get_entity_documents(c, a.person.id).await,
+    );
     nf(
         "merge into foreign",
-        ops::merge_entity(c, b.person.id, &types::MergeRequest { into_id: a.person.id }).await,
+        ops::merge_entity(
+            c,
+            b.person.id,
+            &types::MergeRequest {
+                into_id: a.person.id,
+            },
+        )
+        .await,
     );
     nf(
         "merge foreign",
-        ops::merge_entity(c, a.person.id, &types::MergeRequest { into_id: b.person.id }).await,
+        ops::merge_entity(
+            c,
+            a.person.id,
+            &types::MergeRequest {
+                into_id: b.person.id,
+            },
+        )
+        .await,
     );
-    nf("get_document", ops::get_document(c, a.doc.document.id).await);
+    nf(
+        "get_document",
+        ops::get_document(c, a.doc.document.id).await,
+    );
     nf(
         "patch_document",
         ops::patch_document(
@@ -350,7 +406,7 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
         )
         .await,
     );
-    let custody = |doc: ulid::Ulid, place: ulid::Ulid| types::CustodyEventRequest {
+    let custody = |place: ulid::Ulid| types::CustodyEventRequest {
         at: chrono::NaiveDate::from_ymd_opt(2026, 9, 2).expect("date"),
         counterparty_id: None,
         person_id: None,
@@ -360,13 +416,11 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
     };
     nf(
         "custody on foreign document",
-        ops::add_custody_event(c, a.doc.document.id, &custody(a.doc.document.id, b.place.place.id))
-            .await,
+        ops::add_custody_event(c, a.doc.document.id, &custody(b.place.place.id)).await,
     );
     nf(
         "custody with foreign place",
-        ops::add_custody_event(c, b.doc.document.id, &custody(b.doc.document.id, a.place.place.id))
-            .await,
+        ops::add_custody_event(c, b.doc.document.id, &custody(a.place.place.id)).await,
     );
     nf("get_place", ops::get_place(c, a.place.place.id).await);
     nf(
@@ -395,11 +449,20 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
         )
         .await,
     );
-    nf("complete_task", ops::complete_task(c, &a.task.id, None).await);
+    nf(
+        "complete_task",
+        ops::complete_task(c, &a.task.id, None).await,
+    );
     nf("cancel_task", ops::cancel_task(c, &a.task.id, None).await);
     nf("reopen_task", ops::reopen_task(c, &a.task.id, None).await);
-    nf("accept_suggestion", ops::accept_suggestion(c, a.suggestion).await);
-    nf("reject_suggestion", ops::reject_suggestion(c, a.suggestion).await);
+    nf(
+        "accept_suggestion",
+        ops::accept_suggestion(c, a.suggestion).await,
+    );
+    nf(
+        "reject_suggestion",
+        ops::reject_suggestion(c, a.suggestion).await,
+    );
     nf(
         "reply_suggestion",
         ops::reply_suggestion(c, a.suggestion, &types::ReplyRequest { body: "hi".into() }).await,
@@ -409,9 +472,18 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
         src_id: src,
         type_: "related".into(),
     };
-    nf("relation to foreign", ops::add_relation(c, &rel(b.note.id, an)).await);
-    nf("relation from foreign", ops::add_relation(c, &rel(an, b.note.id)).await);
-    nf("remove foreign relation", ops::remove_relation(c, &rel(an, b.note.id)).await);
+    nf(
+        "relation to foreign",
+        ops::add_relation(c, &rel(b.note.id, an)).await,
+    );
+    nf(
+        "relation from foreign",
+        ops::add_relation(c, &rel(an, b.note.id)).await,
+    );
+    nf(
+        "remove foreign relation",
+        ops::remove_relation(c, &rel(an, b.note.id)).await,
+    );
     nf(
         "retype foreign relation",
         ops::retype_relation(
@@ -430,7 +502,10 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
         "tasks of a foreign entity",
         ops::list_tasks(c, None, Some(a.person.id), None).await,
     );
-    nf("tasks of a foreign note", ops::list_tasks(c, None, None, Some(an)).await);
+    nf(
+        "tasks of a foreign note",
+        ops::list_tasks(c, None, None, Some(an)).await,
+    );
     assert_eq!(
         ops::list_documents(c, None, Some(a.place.place.id), None, None, None)
             .await
@@ -441,7 +516,10 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
 
     // Alice's vault is untouched by all of it.
     assert_eq!(
-        ops::get_note(&alice.client, an).await.expect("hers").version,
+        ops::get_note(&alice.client, an)
+            .await
+            .expect("hers")
+            .version,
         a.note.version
     );
     assert_eq!(

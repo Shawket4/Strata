@@ -526,7 +526,8 @@ pub fn derive(
         reminders.sort();
         reminders.dedup();
         if task.status().is_open() {
-            out.dedupe.push(crate::dup::rows(&crate::dup::task_item(&tid, task)));
+            out.dedupe
+                .push(crate::dup::rows(&crate::dup::task_item(&tid, task)));
         }
         out.tasks.push((
             Task {
@@ -554,8 +555,11 @@ pub fn derive(
     }
 
     // Duplicate keys of the note itself.
-    out.dedupe
-        .push(crate::dup::rows(&crate::dup::note_item(path, Some(id), &doc)));
+    out.dedupe.push(crate::dup::rows(&crate::dup::note_item(
+        path,
+        Some(id),
+        &doc,
+    )));
     Some(out)
 }
 

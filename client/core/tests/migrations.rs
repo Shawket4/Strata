@@ -148,7 +148,10 @@ fn fts5_is_available_and_matches_normalised_text() {
     let hit: String = conn
         .query_row(
             "SELECT note_id FROM notes_fts WHERE notes_fts MATCH ?1",
-            [format!("\"{}\"*", text_normalize::normalize_for_search("الاسعار"))],
+            [format!(
+                "\"{}\"*",
+                text_normalize::normalize_for_search("الاسعار")
+            )],
             |r| r.get(0),
         )
         .expect("match");

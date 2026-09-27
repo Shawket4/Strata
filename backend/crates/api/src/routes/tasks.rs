@@ -431,7 +431,9 @@ pub async fn patch_task(
         .patch_task(auth.scope(), id.clone(), patch, if_match)
         .await
         .or_problem()?;
-    Ok(MsgPack(vault.task(auth.scope(), &id).await.or_problem()?.into()))
+    Ok(MsgPack(
+        vault.task(auth.scope(), &id).await.or_problem()?.into(),
+    ))
 }
 
 async fn transition(

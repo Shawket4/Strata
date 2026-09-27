@@ -2,7 +2,11 @@
 //! conflicts, move/rename, trash, backlinks, history and revert, keyword search with Arabic
 //! normalisation, and path traversal on every path parameter. Every response is validated
 //! against the contract.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod vault_harness;
 
@@ -205,7 +209,11 @@ async fn notes_crud_move_trash_history_and_revert() {
     .await
     .expect("move");
     assert_eq!(
-        (moved.path.as_str(), moved.title.as_str(), moved.content == content2),
+        (
+            moved.path.as_str(),
+            moved.title.as_str(),
+            moved.content == content2
+        ),
         ("archive/Pricing 2026.md", "Pricing 2026", true)
     );
     assert_eq!(
@@ -338,7 +346,9 @@ async fn notes_crud_move_trash_history_and_revert() {
         (".trash/archive/Pricing 2026.md", true)
     );
     assert_eq!(
-        ops::get_backlinks(c, refs.id).await.expect("refs backlinks"),
+        ops::get_backlinks(c, refs.id)
+            .await
+            .expect("refs backlinks"),
         types::Backlinks { groups: vec![] }
     );
     assert_problem(ops::get_backlinks(c, created.id).await, &not_found());
@@ -411,7 +421,10 @@ async fn whole_commit_revert_over_http() {
     let reverted = ops::revert_commit(c, &ai).await.expect("revert");
     assert_eq!(
         reverted.paths,
-        vec![format!(".meta/notes/{}.json", n.id), "notes/N.md".to_owned()]
+        vec![
+            format!(".meta/notes/{}.json", n.id),
+            "notes/N.md".to_owned()
+        ]
     );
     assert_eq!(ops::get_note(c, n.id).await.expect("n").content, n.content);
     assert_problem(
@@ -494,11 +507,17 @@ async fn path_traversal_is_rejected_on_every_path_parameter() {
     let invalid = |detail: &str| plain("invalid_name", "Invalid name", 422, Some(detail));
     for (path, detail) in [
         ("../evil.md", "a path segment starts with a dot"),
-        ("notes/../../etc/passwd.md", "a path segment starts with a dot"),
+        (
+            "notes/../../etc/passwd.md",
+            "a path segment starts with a dot",
+        ),
         ("/etc/passwd.md", "the path must be relative to the vault"),
         (".meta/notes/x.md", "a path segment starts with a dot"),
         (".git/config.md", "a path segment starts with a dot"),
-        ("notes\\..\\x.md", "the name contains a character Obsidian forbids"),
+        (
+            "notes\\..\\x.md",
+            "the name contains a character Obsidian forbids",
+        ),
         ("notes/x.txt", "a note path must end in .md"),
     ] {
         assert_problem(
@@ -540,7 +559,12 @@ async fn path_traversal_is_rejected_on_every_path_parameter() {
         &invalid("a path segment starts with a dot"),
     );
     // Path segments that are not IDs (or not commit IDs) are 404 on every route.
-    let bad_ids = ["..%2F..%2Fetc%2Fpasswd", "%2E%2E", "notes%2FA.md", "01J8ZK3M4X7Q9W2E5R6T8Y0V1H%2F.."];
+    let bad_ids = [
+        "..%2F..%2Fetc%2Fpasswd",
+        "%2E%2E",
+        "notes%2FA.md",
+        "01J8ZK3M4X7Q9W2E5R6T8Y0V1H%2F..",
+    ];
     let routes: [(Method, &str, &str); 9] = [
         (Method::GET, "/api/v1/notes/{}", "get_note"),
         (Method::GET, "/api/v1/notes/{}/history", "get_note_history"),
@@ -574,10 +598,20 @@ async fn path_traversal_is_rejected_on_every_path_parameter() {
             );
         }
         for (method, route, op) in [
-            (Method::GET, format!("/api/v1/notes/{}/history/{bad}", n.id), "get_note_revision"),
-            (Method::POST, format!("/api/v1/commits/{bad}/revert"), "revert_commit"),
+            (
+                Method::GET,
+                format!("/api/v1/notes/{}/history/{bad}", n.id),
+                "get_note_revision",
+            ),
+            (
+                Method::POST,
+                format!("/api/v1/commits/{bad}/revert"),
+                "revert_commit",
+            ),
         ] {
-            let (status, _, body) = h.raw(&alice.token, method, &route, Some(op), &[], None).await;
+            let (status, _, body) = h
+                .raw(&alice.token, method, &route, Some(op), &[], None)
+                .await;
             let p: types::Problem = rmp_serde::from_slice(&body).expect("problem");
             assert!(
                 status == 404 && matches!(p.type_.as_str(), "not_found" | "route_not_found"),

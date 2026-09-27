@@ -1,7 +1,11 @@
 //! Entities, documents and places over HTTP (PLAN §6.6–§6.8, §7.5, §16.3 Entities /
 //! Documents): creation in both scripts, the duplicate check (409 payloads, `force`,
 //! keep-both never re-flagged), field edits, merge, custody sequences and nested places.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod vault_harness;
 
@@ -219,28 +223,47 @@ async fn entities_in_both_scripts_duplicates_force_keep_both_and_merge() {
         mentions.items.iter().map(|m| m.id).collect::<Vec<_>>(),
         vec![note.id]
     );
-    let merged = ops::merge_entity(c, forced.id, &types::MergeRequest { into_id: watanya.id })
-        .await
-        .expect("merge");
+    let merged = ops::merge_entity(
+        c,
+        forced.id,
+        &types::MergeRequest {
+            into_id: watanya.id,
+        },
+    )
+    .await
+    .expect("merge");
     assert_eq!(merged.id, watanya.id);
     assert_eq!(merged.aliases, vec!["W.".to_owned(), "واتانيا".to_owned()]);
-    assert_eq!(h.log(alice.id)[0], "user: merge people/واتانيا.md -> people/Watanya.md");
+    assert_eq!(
+        h.log(alice.id)[0],
+        "user: merge people/واتانيا.md -> people/Watanya.md"
+    );
     let meeting = ops::get_note(c, note.id).await.expect("note");
     assert!(
-        meeting.content.ends_with("Met [[Watanya]] about the invoice.\n"),
+        meeting
+            .content
+            .ends_with("Met [[Watanya]] about the invoice.\n"),
         "{}",
         meeting.content
     );
     assert_problem(ops::get_entity(c, forced.id).await, &not_found());
-    let mentions = ops::get_entity_notes(c, watanya.id).await.expect("mentions");
+    let mentions = ops::get_entity_notes(c, watanya.id)
+        .await
+        .expect("mentions");
     assert_eq!(
         mentions.items.iter().map(|m| m.id).collect::<Vec<_>>(),
         vec![note.id]
     );
     // Merging across kinds is refused.
-    let refused = ops::merge_entity(c, acme.id, &types::MergeRequest { into_id: watanya.id })
-        .await
-        .expect_err("kinds differ");
+    let refused = ops::merge_entity(
+        c,
+        acme.id,
+        &types::MergeRequest {
+            into_id: watanya.id,
+        },
+    )
+    .await
+    .expect_err("kinds differ");
     assert_eq!(vault_harness::problem(&refused).status, 422);
     h.finish().await;
 }
@@ -250,14 +273,18 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     let h = H::new().await;
     let alice = h.user("alice").await;
     let c = &alice.client;
-    let home = ops::create_place(c, &place("Home", None)).await.expect("home");
+    let home = ops::create_place(c, &place("Home", None))
+        .await
+        .expect("home");
     let study = ops::create_place(c, &place("Study", Some(home.place.id)))
         .await
         .expect("study");
     let safe = ops::create_place(c, &place("Safe", Some(study.place.id)))
         .await
         .expect("safe");
-    let office = ops::create_place(c, &place("Office", None)).await.expect("office");
+    let office = ops::create_place(c, &place("Office", None))
+        .await
+        .expect("office");
     assert_eq!(safe.ancestors, ids(&[study.place.id, home.place.id]));
     let home_view = ops::get_place(c, home.place.id).await.expect("home");
     assert_eq!(home_view.children, ids(&[study.place.id]));
@@ -283,7 +310,9 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
         name: name.to_owned(),
         tags: vec![],
     };
-    let passport = ops::create_document(c, &new_doc("Passport")).await.expect("doc");
+    let passport = ops::create_document(c, &new_doc("Passport"))
+        .await
+        .expect("doc");
     assert_eq!(passport.document.path, "documents/Passport.md");
     assert_eq!(passport.document.status, types::DocumentStatus::Stored);
     assert_eq!(passport.document.location_id, None);
@@ -317,7 +346,13 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     let doc = ops::add_custody_event(
         c,
         pid,
-        &event(types::CustodyEventKind::StoredAt, d(2026, 1, 10), Some(safe.place.id), None, None),
+        &event(
+            types::CustodyEventKind::StoredAt,
+            d(2026, 1, 10),
+            Some(safe.place.id),
+            None,
+            None,
+        ),
     )
     .await
     .expect("stored");
@@ -349,13 +384,21 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     let doc = ops::add_custody_event(
         c,
         pid,
-        &event(types::CustodyEventKind::HandedTo, d(2026, 3, 1), None, Some(watanya.id), None),
+        &event(
+            types::CustodyEventKind::HandedTo,
+            d(2026, 3, 1),
+            None,
+            Some(watanya.id),
+            None,
+        ),
     )
     .await
     .expect("handed");
     assert_eq!(doc.document.status, types::DocumentStatus::CheckedOut);
     assert_eq!(doc.document.holder_id, Some(watanya.id));
-    let held = ops::get_entity_documents(c, watanya.id).await.expect("held");
+    let held = ops::get_entity_documents(c, watanya.id)
+        .await
+        .expect("held");
     assert_eq!(held.holds, ids(&[pid]));
     let by_holder = ops::list_documents(c, None, None, Some(watanya.id), None, None)
         .await
@@ -387,14 +430,22 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     assert_eq!(doc.document.holder_id, None);
     assert_eq!(doc.document.last_holder_id, Some(watanya.id));
     assert_eq!(doc.document.location_id, Some(safe.place.id));
-    let held = ops::get_entity_documents(c, watanya.id).await.expect("held");
+    let held = ops::get_entity_documents(c, watanya.id)
+        .await
+        .expect("held");
     assert_eq!(held.holds, Vec::<String>::new());
     assert_eq!(held.last_handled, ids(&[pid]));
     // sent-to the bank: with a third party, the bank holds it.
     let doc = ops::add_custody_event(
         c,
         pid,
-        &event(types::CustodyEventKind::SentTo, d(2026, 4, 2), None, None, Some(bank.id)),
+        &event(
+            types::CustodyEventKind::SentTo,
+            d(2026, 4, 2),
+            None,
+            None,
+            Some(bank.id),
+        ),
     )
     .await
     .expect("sent");
@@ -404,13 +455,22 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     let with_bank = ops::get_entity_documents(c, bank.id).await.expect("bank");
     assert_eq!(with_bank.holds, ids(&[pid]));
     assert_eq!(
-        ops::get_entity_documents(c, watanya.id).await.expect("w").last_handled,
+        ops::get_entity_documents(c, watanya.id)
+            .await
+            .expect("w")
+            .last_handled,
         Vec::<String>::new()
     );
     let doc = ops::add_custody_event(
         c,
         pid,
-        &event(types::CustodyEventKind::StoredAt, d(2026, 5, 20), Some(office.place.id), None, None),
+        &event(
+            types::CustodyEventKind::StoredAt,
+            d(2026, 5, 20),
+            Some(office.place.id),
+            None,
+            None,
+        ),
     )
     .await
     .expect("stored again");
@@ -421,7 +481,13 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     let doc = ops::add_custody_event(
         c,
         pid,
-        &event(types::CustodyEventKind::Lost, d(2025, 12, 1), None, None, None),
+        &event(
+            types::CustodyEventKind::Lost,
+            d(2025, 12, 1),
+            None,
+            None,
+            None,
+        ),
     )
     .await
     .expect("older");
@@ -433,7 +499,13 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     let wrong = ops::add_custody_event(
         c,
         pid,
-        &event(types::CustodyEventKind::StoredAt, d(2026, 6, 1), Some(watanya.id), None, None),
+        &event(
+            types::CustodyEventKind::StoredAt,
+            d(2026, 6, 1),
+            Some(watanya.id),
+            None,
+            None,
+        ),
     )
     .await
     .expect_err("a person is not a place");
@@ -443,10 +515,20 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     let expiring = ops::list_documents(c, None, None, None, None, Some("2027-02-01"))
         .await
         .expect("expiring");
-    assert_eq!(expiring.items.iter().map(|d| d.id).collect::<Vec<_>>(), vec![pid]);
-    let stored = ops::list_documents(c, None, None, None, Some(&types::DocumentStatus::Stored), None)
-        .await
-        .expect("stored");
+    assert_eq!(
+        expiring.items.iter().map(|d| d.id).collect::<Vec<_>>(),
+        vec![pid]
+    );
+    let stored = ops::list_documents(
+        c,
+        None,
+        None,
+        None,
+        Some(&types::DocumentStatus::Stored),
+        None,
+    )
+    .await
+    .expect("stored");
     let mut got: Vec<_> = stored.items.iter().map(|d| d.id).collect();
     got.sort();
     let mut want = vec![pid, deed.document.id];

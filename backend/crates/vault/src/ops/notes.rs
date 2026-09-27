@@ -298,7 +298,11 @@ impl Core {
                 .sidecar(id)
                 .await?
                 .unwrap_or_else(|| NoteSidecar::new(id.as_ulid()));
-            self.keep_both(&mut sc, &dup::note_item(&req.path, Some(id), &doc), &candidates);
+            self.keep_both(
+                &mut sc,
+                &dup::note_item(&req.path, Some(id), &doc),
+                &candidates,
+            );
             changes.push(Core::sidecar_change(&sc)?);
         }
         let text = doc.render();

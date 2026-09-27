@@ -7,7 +7,6 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-
 use crate::paths::{GIT_DIR, TEMP_PREFIX};
 
 static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);

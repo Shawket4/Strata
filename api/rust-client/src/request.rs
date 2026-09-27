@@ -114,8 +114,8 @@ impl Request {
 
     /// Sets a raw `application/zip` body (vault import).
     #[must_use]
-    pub fn zip_body(mut self, body: bytes::Bytes) -> Self {
-        self.body = Some(body.to_vec());
+    pub fn zip_body(mut self, body: impl Into<Vec<u8>>) -> Self {
+        self.body = Some(body.into());
         self.content_type = Some(crate::ZIP);
         self
     }

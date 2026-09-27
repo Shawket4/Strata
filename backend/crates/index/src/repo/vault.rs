@@ -148,7 +148,7 @@ pub struct DedupeKeyRow {
     pub trigram_text: String,
     /// Transliteration key.
     pub phonetic_key: Option<String>,
-    /// The whole item (MessagePack `dedupe::Item`).
+    /// The whole item (`MessagePack`-encoded `dedupe::Item`).
     pub item: Vec<u8>,
 }
 
@@ -184,7 +184,7 @@ pub async fn replace_item_keys(
 
 /// Stored items of `kinds` sharing an exact or phonetic key with the query, or whose trigram
 /// text has similarity ≥ `floor` with one of `trigram_texts` (one row per item, by kind and
-/// ID). Returns the MessagePack items.
+/// ID). Returns the `MessagePack`-encoded items.
 pub async fn dedupe_candidates(
     tx: &mut ScopedTx,
     kinds: &[String],

@@ -94,7 +94,12 @@ pub async fn add_relation(
     let b = body.into_inner();
     let rel = relation_key("/type", &b.rel_type)?;
     let added = vault
-        .add_relation(auth.scope(), NoteId::from_ulid(b.src_id), NoteId::from_ulid(b.dst_id), rel)
+        .add_relation(
+            auth.scope(),
+            NoteId::from_ulid(b.src_id),
+            NoteId::from_ulid(b.dst_id),
+            rel,
+        )
         .await
         .or_problem()?;
     Ok(MsgPack(RelationResult {
@@ -159,7 +164,12 @@ pub async fn remove_relation(
     let b = body.into_inner();
     let rel = relation_key("/type", &b.rel_type)?;
     let was_ai = vault
-        .remove_relation(auth.scope(), NoteId::from_ulid(b.src_id), NoteId::from_ulid(b.dst_id), rel)
+        .remove_relation(
+            auth.scope(),
+            NoteId::from_ulid(b.src_id),
+            NoteId::from_ulid(b.dst_id),
+            rel,
+        )
         .await
         .or_problem()?;
     Ok(MsgPack(RelationResult {

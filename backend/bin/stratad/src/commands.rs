@@ -6,14 +6,14 @@ use std::path::Path;
 use std::sync::Arc;
 
 use sqlx::Connection;
+use strata_api::auth::SigningKeys;
 use strata_api::auth::password::PasswordHasher;
 use strata_api::auth::service::{NewAccount, create_active_account};
 use strata_api::auth::tokens::generate_key_pem;
-use strata_api::auth::SigningKeys;
 use strata_common::{Clock, Config, SystemClock, SystemIdGenerator, UserId};
-use strata_index::{AccountsDb, AppDb};
 use strata_index::bootstrap::{self, RolePasswords};
 use strata_index::types::UserRole;
+use strata_index::{AccountsDb, AppDb};
 
 use crate::checks::StartupError;
 
@@ -112,7 +112,9 @@ pub async fn create_user(config: &Config, input: &CreateUser<'_>) -> Result<User
     // lazy so `create-user` still needs only the accounts role.
     let app = sqlx::postgres::PgPoolOptions::new()
         .max_connections(1)
-        .connect_lazy_with(strata_index::pool::connect_options(&config.database.app_url)?);
+        .connect_lazy_with(strata_index::pool::connect_options(
+            &config.database.app_url,
+        )?);
     let vaults = crate::serve::vault_service(
         config,
         AppDb::new(app).0,
@@ -215,6 +217,60 @@ pub async fn bootstrap_roles(config: &Config, superuser_url: &str) -> Result<(),
     Ok(())
 }
 
+/// Opens the vault store and resolves `user` (a user ID or a username).
+async fn vault_command(
+    config: &Config,
+    user: &str,
+) -> Result<(strata_vault::VaultService, strata_index::UserScope), CommandError> {
+    let app = strata_index::pool::connect(
+        strata_index::pool::connect_options(&config.database.app_url)?,
+        2,
+    )
+    .await?;
+    let accounts = AccountsDb::new(
+        strata_index::pool::connect(
+            strata_index::pool::connect_options(&config.database.accounts_url)?,
+            1,
+        )
+        .await?,
+    );
+    let found = match user.parse::<UserId>() {
+        Ok(id) => accounts.user_by_id(id).await?,
+        Err(_) => {
+            accounts
+                .user_by_username(&strata_api::auth::username::login_key(user))
+                .await?
+        }
+    };
+    let found = found.ok_or_else(|| CommandError::Invalid(format!("no such user: {user}")))?;
+    let (db, issuer) = AppDb::new(app);
+    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
+    let ids = Arc::new(SystemIdGenerator::new(clock.clone()));
+    let vault = crate::serve::vault_service(config, db, clock, ids);
+    Ok((vault, issuer.issue(found.id)))
+}
+
+/// `stratad verify --user`: what reconciliation would repair, without repairing it.
+pub async fn verify(
+    config: &Config,
+    user: &str,
+) -> Result<strata_vault::reconcile::Report, CommandError> {
+    let (vault, scope) = vault_command(config, user).await?;
+    vault
+        .verify(&scope)
+        .await
+        .map_err(|e| CommandError::Invalid(e.to_string()))
+}
+
+/// `stratad reindex --user`: rebuilds the user's derived rows; returns how many notes.
+pub async fn reindex(config: &Config, user: &str) -> Result<usize, CommandError> {
+    let (vault, scope) = vault_command(config, user).await?;
+    vault
+        .reindex(&scope)
+        .await
+        .map_err(|e| CommandError::Invalid(e.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -266,55 +322,4 @@ mod tests {
             strata_api::openapi::to_pretty_json(&strata_api::openapi::document())
         );
     }
-}
-
-/// Opens the vault store and resolves `user` (a user ID or a username).
-async fn vault_command(
-    config: &Config,
-    user: &str,
-) -> Result<(strata_vault::VaultService, strata_index::UserScope), CommandError> {
-    let app = strata_index::pool::connect(
-        strata_index::pool::connect_options(&config.database.app_url)?,
-        2,
-    )
-    .await?;
-    let accounts = AccountsDb::new(
-        strata_index::pool::connect(
-            strata_index::pool::connect_options(&config.database.accounts_url)?,
-            1,
-        )
-        .await?,
-    );
-    let found = match user.parse::<UserId>() {
-        Ok(id) => accounts.user_by_id(id).await?,
-        Err(_) => {
-            accounts
-                .user_by_username(&strata_api::auth::username::login_key(user))
-                .await?
-        }
-    };
-    let found = found.ok_or_else(|| CommandError::Invalid(format!("no such user: {user}")))?;
-    let (db, issuer) = AppDb::new(app);
-    let clock: Arc<dyn Clock> = Arc::new(SystemClock);
-    let ids = Arc::new(SystemIdGenerator::new(clock.clone()));
-    let vault = crate::serve::vault_service(config, db, clock, ids);
-    Ok((vault, issuer.issue(found.id)))
-}
-
-/// `stratad verify --user`: what reconciliation would repair, without repairing it.
-pub async fn verify(config: &Config, user: &str) -> Result<strata_vault::reconcile::Report, CommandError> {
-    let (vault, scope) = vault_command(config, user).await?;
-    vault
-        .verify(&scope)
-        .await
-        .map_err(|e| CommandError::Invalid(e.to_string()))
-}
-
-/// `stratad reindex --user`: rebuilds the user's derived rows; returns how many notes.
-pub async fn reindex(config: &Config, user: &str) -> Result<usize, CommandError> {
-    let (vault, scope) = vault_command(config, user).await?;
-    vault
-        .reindex(&scope)
-        .await
-        .map_err(|e| CommandError::Invalid(e.to_string()))
 }

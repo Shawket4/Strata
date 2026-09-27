@@ -87,11 +87,19 @@ pub fn if_match(headers: &HeaderMap) -> Result<Option<String>, Problem> {
         return Ok(None);
     };
     let value = value.to_str().map_err(|_| {
-        invalid_parameter("If-Match", "invalid_header", "If-Match is not visible ASCII")
+        invalid_parameter(
+            "If-Match",
+            "invalid_header",
+            "If-Match is not visible ASCII",
+        )
     })?;
     let v = value.trim().trim_start_matches("W/").trim_matches('"');
     if v.is_empty() {
-        return Err(invalid_parameter("If-Match", "invalid_header", "If-Match is empty"));
+        return Err(invalid_parameter(
+            "If-Match",
+            "invalid_header",
+            "If-Match is empty",
+        ));
     }
     Ok(Some(v.to_owned()))
 }
@@ -99,7 +107,11 @@ pub fn if_match(headers: &HeaderMap) -> Result<Option<String>, Problem> {
 /// The `If-Match` header, required.
 pub fn required_if_match(headers: &HeaderMap) -> Result<String, Problem> {
     if_match(headers)?.ok_or_else(|| {
-        invalid_parameter("If-Match", "missing_header", "If-Match with the current version is required")
+        invalid_parameter(
+            "If-Match",
+            "missing_header",
+            "If-Match with the current version is required",
+        )
     })
 }
 

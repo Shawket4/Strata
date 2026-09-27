@@ -188,11 +188,10 @@ impl Core {
         let id = req.id.unwrap_or_else(|| NoteId::generate(self.ids()));
         let id_text = id.to_string();
         let alias_refs: Vec<&str> = aliases.iter().map(String::as_str).collect();
-        let dkind: dedupe::DedupeKind = req
-            .kind
-            .as_str()
-            .parse()
-            .map_err(|_| VaultError::invalid("kind must be person, company, document or place"))?;
+        let dkind: dedupe::DedupeKind =
+            req.kind.as_str().parse().map_err(|_| {
+                VaultError::invalid("kind must be person, company, document or place")
+            })?;
         let item = dedupe::Item::entity(dkind, Some(&id_text), name, &alias_refs);
         let candidates = dup::find(&mut tx, &item, &self.inner.config.near_thresholds).await?;
         if !candidates.is_empty() && !req.force {
@@ -325,7 +324,9 @@ impl Core {
                     .collect();
                 for a in &ep.add_aliases {
                     let alias = dedupe::Item::alias(Some(&id_text), a);
-                    keep.extend(dup::find(&mut tx, &alias, &self.inner.config.near_thresholds).await?);
+                    keep.extend(
+                        dup::find(&mut tx, &alias, &self.inner.config.near_thresholds).await?,
+                    );
                 }
                 keep.sort_by(|a, b| a.item.cmp(&b.item));
                 keep.dedup_by(|a, b| a.item == b.item);
@@ -1189,7 +1190,9 @@ impl VaultService {
         let mut tx = self.inner.db.begin(scope).await?;
         let mut out = Vec::with_capacity(list.len());
         for s in list {
-            let parent = erepo::place_parent(&mut tx, s.entity.note_id).await?.flatten();
+            let parent = erepo::place_parent(&mut tx, s.entity.note_id)
+                .await?
+                .flatten();
             out.push((s, parent));
         }
         tx.commit().await?;
