@@ -4,6 +4,11 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-27
 
+### D29 — Documents and places: (b), extended
+- New entity kinds `document` and `place`. Places nest (`part-of`), so "the safe at the Nasr City office" is two places. Documents track `location` (a place), `holder` (who has it now), `last-holder` (derived), `status`, copies (`copy-of`), expiry, and a cited **Custody** history; frontmatter always reflects the newest custody event (PLAN §6.12).
+### D30 — Custody updates: (a) automatic, with (b) as fallback
+- Applied automatically when confidence ≥ the custody threshold (default 0.85) and every entity resolves unambiguously; otherwise, or on conflict with a newer event, it becomes an inbox suggestion. Every automatic change is one revertible `ai:` commit.
+
 ### Scope: tasks, reminders, duplicate detection
 - **D26 = (b):** tasks are Obsidian Tasks checklist lines (`- [ ] … 🔁 every month on the 1st 📅 … (@… 09:00) ^t-<ulid>`); recurrence phrase kept verbatim and compiled to RRULE; completion follows Tasks-plugin semantics (done line + new next line); default home `tasks/Tasks.md` (PLAN §6.11).
 - **D27 = (b), (c) later:** reminders pushed by the server (FCM Android, APNs iOS/macOS, WNS Windows; live event stream on Linux); local-notification fallback to be added later (PLAN §12.5b).

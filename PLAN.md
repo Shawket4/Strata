@@ -31,6 +31,7 @@ Client:
 - AI automatically files, links, and relates notes; relations are visible as a graph.
 - **Multiple isolated user accounts**: each user has a private vault, index, AI jobs, settings, and devices. No user can see or reach another user's data.
 - **People and companies are first-class objects**: each has its own page aggregating every note that mentions it, AI-maintained insights, a timeline, and its relations to other people/companies.
+- **Documents and places are first-class**: where every document is (places nested inside places), who holds it or last had it, and its full custody history — kept current by AI from captures, each change cited and revertible.
 - **Tasks with recurrence and reminders**, written as Obsidian Tasks checklist lines inside notes, with reminders pushed to the user's devices.
 - **Duplicates are caught everywhere**: every create (note, capture, task, entity, concept, alias) is checked; the user can open the existing item or force-create.
 - Markdown is the single source of truth; all derived data is rebuildable.
@@ -112,6 +113,8 @@ Client:
 | D26 | Task storage format | (a) One note per task in `tasks/`. (b) Obsidian Tasks checklist lines inside notes. (c) Both. **Decided 2026-09-27: (b)** (§6.11). | Phase 1 |
 | D27 | Reminder delivery | (a) Local notifications scheduled by each device. (b) Server push (FCM / APNs / WNS; event stream on Linux). (c) Both. **Decided 2026-09-27: (b), extending to (c) later** (§12.5b). | Phase 1 |
 | D28 | Tasks in navigation | (a) Replace Notes in the bottom bar. (b) "More" tab. (c) On Home only on compact. **Decided 2026-09-27: (c), plus a Tasks destination in the rail and sidebar.** | Phase 0 |
+| D29 | Documents model | (a) Documents as an entity kind with free-text location. (b) Documents plus places as entity kinds. **Decided 2026-09-27: (b), with nested places, separate location / holder / last-holder, copies, and a custody history** (§6.12). | Phase 1 |
+| D30 | Who updates document location/holder | (a) AI automatically from notes. (b) AI suggestion, user accepts. **Decided 2026-09-27: (a), falling back to (b) below the custody confidence threshold or on ambiguity/conflict** (§6.12). | Phase 4 |
 | D24 | Streaming transport for `/events` and `/ask` (MessagePack frames) | (a) WebSocket with one binary MessagePack frame per event/token batch. (b) Long-lived HTTP response streaming length-prefixed MessagePack frames. (c) Server-Sent Events carrying base64-encoded MessagePack (keeps SSE semantics and reconnection behaviour; ~33% size overhead from base64). | Phase 1 |
 
 Withdrawn with the Angular PWA (2026-09-27): D5 (nginx `/api` proxy vs subdomain — no browser client, CORS no longer applies), D16 (TypeScript client generator), D17 (Angular toolchain), D18 (Angular data layer). The old D2–D4 (web editor and web graph libraries) are replaced by the Flutter versions above.
@@ -210,6 +213,8 @@ vault/
   concepts/              AI-created concept notes (ideas, topics)
   people/                person entities (one note per person)
   companies/             company/organisation entities (one note per company)
+  documents/             document entities: contracts, IDs, licences, deeds (one note per document or copy) (§6.12)
+  places/                place entities: offices, rooms, safes, drawers, people's homes (nestable) (§6.12)
   attachments/YYYY/MM/   raw files (deferred capture, uploads)
   tasks/                 default home for tasks not attached to another note (`tasks/Tasks.md`); tasks may live in any note (§6.11)
   maps/                  saved mind-map layouts (.canvas, JSON Canvas)
@@ -378,6 +383,57 @@ website: ""
 
 ---
 
+### 6.12 Documents and places (D29 = b)
+
+Physical and digital documents, and the places they're kept, are entities like people and companies: ordinary notes with a `kind` and structured properties.
+
+**Place** — `places/<Name>.md`
+```yaml
+---
+id: 01J...
+kind: place
+aliases: [مكتب مدينة نصر, Nasr City]
+part-of: ["[[Nasr City office]]"]   # nesting: safe → office → (optionally) city/building
+address: ""                          # user-entered only
+---
+```
+e.g. `places/Nasr City office.md`, and `places/Safe — Nasr City office.md` with `part-of: ["[[Nasr City office]]"]`.
+
+**Document** — `documents/<Name>.md`
+```yaml
+---
+id: 01J...
+kind: document
+aliases: [عقد وطنية]
+doc-type: contract                  # contract | id | licence | deed | invoice | certificate | other (free text allowed)
+copy: original                      # original | certified copy | copy | digital
+companies: ["[[Watanya]]"]          # whose document it is / who it concerns
+people: []
+location: "[[Safe — Nasr City office]]"   # where it is now (a place), or empty if unknown
+holder: ""                          # person who has it right now, if anyone (can be set together with location: "with Shady at the office")
+last-holder: "[[Shady]]"            # derived from custody history; kept in frontmatter so Obsidian can query it
+expires: 2027-03-31                 # optional
+status: stored                      # stored | checked-out | with-third-party | lost | destroyed
+---
+```
+
+**Body** (AI-maintained sections, same citation rules as §6.7):
+```markdown
+## Summary
+## Custody            ← dated events, newest first, each cited: "2026-09-20 — returned to Safe — Nasr City office by [[Shady]] [[Capture 2026-09-20#^c1d2]]"
+## Notes              ← user-owned
+```
+- Custody event types: `stored-at`, `moved-to`, `handed-to`, `returned-by`, `sent-to` (third party), `received-from`, `lost`, `found`, `destroyed`. The frontmatter (`location`, `holder`, `last-holder`, `status`) is always the result of the newest event; the index recomputes it and the backend keeps them consistent.
+- Several copies of the same document are separate notes linked with `copy-of: ["[[Watanya contract]]"]`, so "the original is in the safe, a copy is with the accountant" works.
+- **Queries this must answer** (Ask and the directory): where is X; what's in a place **including everything in places nested inside it** ("what's at the Nasr City office?"); what does a person hold now; what did a person last handle; which documents expire soon; the custody history of X.
+- Dates in custody events follow the §6.7 timeline-date rules (explicit date, else relative date resolved against the note's `created`, else `created`).
+- No speculation: a custody event is only recorded when a note states it.
+
+**AI updates (D30 = a, falling back to b):** captures like "Watanya's contract is at the Nasr City office in the safe, last with Shady" or "gave the Watanya contract to Shady" are resolved to a document, places, and people, and produce a custody event.
+- Confidence **≥ custody threshold** (setting, default 0.85, stricter than relations) and every referenced entity resolved unambiguously → applied automatically: custody line + frontmatter update in one `ai:` commit, revertible, shown in the activity feed.
+- Confidence below the threshold, an ambiguous or unknown document/place/person, or a statement that conflicts with a newer recorded event → **suggestion** in the inbox (accept / edit / reject). Unknown places and documents are proposed as new entities (nickname rules from §6.7 apply to people).
+- Location and holder fields are never guessed from context; they change only through custody events.
+
 ### 6.11 Tasks (D26 = b: Obsidian Tasks checklist lines)
 
 Tasks are checklist lines inside any note, in the syntax of the Obsidian **Tasks** plugin, so they keep working in Obsidian after export. Tasks created without a home note (e.g. accepted from a capture) go to `tasks/Tasks.md`, under a heading per month of creation.
@@ -447,6 +503,9 @@ entities*     (note_id PK, kind[person|company], display_name, role, industry)
 entity_aliases* (note_id, alias, alias_normalized)   -- normalized: Arabic normalisation + lowercase + transliteration key
 mentions*     (entity_id, note_id, block_id, first_seen, last_seen)   -- from people:/companies: keys + AI mention spans
 clusters*     (note_id, cluster_id), cluster_names* (cluster_id, name)
+places*       (note_id PK, parent_id NULL)       -- part-of nesting; queries use recursive CTEs
+documents*    (note_id PK, doc_type, copy, copy_of NULL, location_id NULL, holder_id NULL, last_holder_id NULL, status, expires NULL)
+custody_events* (id, document_id, type, at, place_id NULL, person_id NULL, counterparty_id NULL, by[user|ai], confidence, source_note_id, source_block_id)
 -- global tables (no user_id; strata_accounts role only)
 users         (id, username, display_name, password_hash, role[admin|member], status[pending|active|disabled|rejected|deletion_pending], created, approved_by, approved_at, deletion_at, export_downloaded_at)
 invites       (id, token_hash, role, created_by, expires, used_at)
@@ -542,6 +601,14 @@ Schema changes go through versioned, forward-only migrations, each with a test t
 - `POST /sync/push` {ops[]} — each op: `{op_id (ULID, idempotency key), kind, entity_id, base_version, payload}`; kinds mirror the granular mutations (note.create/update/move/delete, capture, relation.add/remove/retype, suggestion.accept/reject, entity.create/patch/merge, relink.request). Per-op result: `applied{new_version}` | `conflict{server_version, resolution}` | `duplicate{candidates}` (create ops without `force`) | `rejected{problem}`. Task ops: task.create/update/complete/cancel/reopen/delete. Ops apply in order; results are stored under `op_id` so replays are safe.
 - Creates accept **client-generated ULIDs** so offline-created notes keep their IDs.
 
+**Documents & places**
+- `GET /documents?q=&place=&holder=&status=&expiring_before=` — `place` includes nested places
+- `GET /documents/{id}` — properties, custody history (cited), copies
+- `POST /documents`, `PATCH /documents/{id}` (user fields), `POST /documents/{id}/custody` {type, at, place_id?, person_id?} — manual custody event
+- `GET /places`, `GET /places/{id}` — nested places and every document inside (recursively), `POST /places`, `PATCH /places/{id}`
+- `GET /entities/{id}/documents` — documents a person holds now / last handled, or a company's documents
+- All create endpoints run the duplicate check (§9.7); a custody-event suggestion is a normal suggestion (§7.5 Suggestions).
+
 **Tasks & reminders**
 - `GET /tasks?view=today|upcoming|overdue|recurring|done&entity=&note=` — task list (parsed from checklist lines)
 - `POST /tasks` {text, due?, recurrence?, reminders?, note_id? (default `tasks/Tasks.md`), force?} → task (duplicate check §9.7)
@@ -636,6 +703,7 @@ trait Embedder    { async fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f3
 | `link` | after `summarize`, debounced 30s after last edit | §9.4 |
 | `file_inbox` | capture into `inbox/` | §9.3 |
 | `concepts` | inside `link` call | extract concepts; create/update concept notes |
+| `custody` | inside `link` call | extract document custody statements, resolve document/place/person, apply or suggest per §6.12 (D30) |
 | `entities` | inside `link` call | extract person/company mentions, resolve (§6.7), write `people:`/`companies:` and entity-to-entity relations |
 | `entity_insights` | debounced (≈5 min) after any note mentioning the entity changes; nightly sweep | regenerate Summary / Insights / Open items / Timeline from mentioning notes, with citations; skip if inputs unchanged |
 | `cluster` | nightly + manual | community detection, name clusters, write `.meta/clusters.json` |
@@ -690,8 +758,8 @@ One engine checks every kind of item: notes, captures, tasks, people, companies,
 
 ## 10. Graph model
 
-- **Node kinds:** `note`, `concept`, `person`, `company`, `attachment` (deferred), `tag` (optional toggle), `cluster` (virtual, for region labels).
-- **Edge kinds:** `link` (body wikilink), `embed`, `relation:<type>` (with `by`, confidence, reason), `similarity` (ephemeral), `concept` (note→concept), `mention` (note→person/company), `entity:<type>` (works-at, client-of, …).
+- **Node kinds:** `note`, `concept`, `person`, `company`, `document`, `place`, `attachment` (deferred), `tag` (optional toggle), `cluster` (virtual, for region labels).
+- **Edge kinds:** `link` (body wikilink), `embed`, `relation:<type>` (with `by`, confidence, reason), `similarity` (ephemeral), `concept` (note→concept), `mention` (note→person/company), `entity:<type>` (works-at, client-of, …), `custody:<location|holder|last-holder>` (document→place/person), `part-of-place` (place→place).
 - **Entity lens:** the graph API accepts `lens=people|companies` to return an entity-centred graph (entities as nodes, edges = entity relations + co-mention strength), so the owner can see the network of people and companies directly.
 - Node payload: id, title, kind, cluster_id, degree, lang, updated, short summary (for hover).
 - Positions are computed client-side; only user-pinned layouts are saved (JSON Canvas in `maps/`).
@@ -722,7 +790,9 @@ One engine checks every kind of item: notes, captures, tasks, people, companies,
 4. **Note view/editor** — editor, frontmatter properties panel (relations shown as typed chips), backlinks panel grouped by relation type, history panel with diff and revert, local mini-graph.
 5. **Global map** — whole vault, clusters as coloured labelled regions, zoom-dependent labels, filters (edge types, node kinds, similarity toggle, cluster focus), search-to-focus.
 6. **Local mind map** — focused note centre, relations radial, edge labels by type, tap/click to recentre, drag node onto node to create relation (AI proposes type), hover/long-press edge for AI reason, delete/retype edge, "save layout" → `.canvas`.
-7. **People & Companies** — directory with search (both scripts), filters by tag/role/industry, recently active; tabs for People and Companies.
+7. **Directory** — People, Companies, Documents, Places as tabs, with search (both scripts), filters (tag/role/industry; document type, status, place, holder, expiring), recently active.
+7a. **Document page** — properties, where it is now (place breadcrumb, e.g. Nasr City office › Safe), holder / last holder, custody timeline (cited), copies, expiry; "Record a move" action.
+7b. **Place page** — nested places, everything stored here and in sub-places, recent movements.
 8. **Entity page** — header with properties and aliases; Summary, Insights, Open items, Timeline (each bullet opens its source block); mentioning notes feed; related entities; local entity graph; merge action; user `## Notes` editor.
 9. **Search** — keyword/semantic/hybrid, results with snippets.
 10. **Ask** — chat-like Q&A over the vault with tappable citations; "save as note"; unavailable offline.
@@ -894,6 +964,7 @@ The bar is a polished product, not a demo. Tests are part of every feature, writ
 - **Entities:** alias matching across Arabic/Latin spellings; nickname/kinship mention → suggestion, never auto-created; accepting adds the alias and the next mention resolves automatically; relative dates in Timeline resolved against `created`; ambiguous match → suggestion; merge rewrites links and preserves user `## Notes`; AI sections regenerate without touching user sections; uncited insight bullets rejected; speculative insights from a one-line capture rejected; contact fields never written by AI.
 - **Search:** Arabic normalisation cases end to end (index + query).
 - **Account deletion (D25):** scheduling revokes all sessions; a new login yields an export-only session; every non-allowed endpoint returns `403 account_deletion_pending`; `GET /me/export` contains exactly the user's vault and nothing of any other user; admins have no route to the export; cancel restores `active`; the purge job (fake clock past the grace period, and early confirm) removes the directory and every row of that user across all tables and nothing else; audit entry written.
+- **Documents & places (§6.12):** nested-place queries return documents in sub-places; frontmatter always equals the newest custody event after any sequence of events (proptest); copies tracked separately; the example capture "Watanya's contract is at the Nasr City office in the safe, last with Shady" produces exactly: location = Safe — Nasr City office (part-of Nasr City office), holder empty, last-holder Shady, status stored, one cited custody event; confidence below threshold, ambiguous entities, unknown places, and conflicts with a newer event each produce a suggestion instead of an update; relative dates resolved per §6.7; AI never sets location/holder without a custody event; revert of the `ai:` commit restores the previous state.
 - **Tasks (§6.11):** parse/serialise round-trip of every signifier, reminder markers, and block IDs (golden + proptest); recurrence grammar → RRULE table tests (monthly on the 1st, every Sunday, every 2 weeks, end of month, leap years, DST transitions in the user's timezone); completion of a recurring task writes exactly the expected two lines; unsupported recurrence preserved byte-for-byte and flagged; tasks survive note rename/move.
 - **Reminders:** fake clock + fake push providers; each reminder sent exactly once per device even with job retries and restarts; timezone and DST correctness; token removal on sign-out/deletion; Linux event-stream delivery.
 - **Duplicates (§9.7):** exact/near/semantic detection per kind, Arabic and English variants ("Watanya's ETA invoice" vs "ETA invoice for Watanya", "ووتانيا"/"وطنية" spelling variants as configured aliases); `409 duplicate_candidates` payload asserted exactly; `force` creates and records keep-both; keep-both pairs never re-flagged by create checks or the nightly sweep; captures never refused; offline local check and server `duplicate{}` push result; AI-off path still runs exact + near.
@@ -933,10 +1004,10 @@ Every phase's acceptance includes: all tests required by §16 for its scope writ
 | Phase | Scope | Acceptance |
 |-------|-------|------------|
 | **0 Design** | §13 | Owner approves design; D2–D4 recorded |
-| **1 Foundation** | Monorepo, CI with all gates, `testkit`, shared crates (`vault-format`, `text-normalize`, `domain`), backend skeleton, config, **multi-user foundations (L20, L22, D21, D22: PostgreSQL schema with RLS and the three roles, per-user vault directories, `UserScope` transactions, signup/approval and admin endpoints)**, auth + devices (D6, D7), MessagePack wire layer (L21) and streaming transport (D24), vault store (parse/serialise/atomic write/git), notes CRUD, manual entity CRUD + merge, tree, move with link rewrite, soft delete, history/revert, export/import, reconciliation, change log + idempotency + sync endpoints (D19), tasks (§6.11: parsing, recurrence, completion, API), duplicate detection exact + near (§9.7) with `force`, reminders job + push providers (D27), utoipa OpenAPI + generated Rust client (D15), deploy scripts | Golden, property, fuzz-smoke, contract-conformance, and isolation suites pass; deployed to VPS behind nginx |
+| **1 Foundation** | Monorepo, CI with all gates, `testkit`, shared crates (`vault-format`, `text-normalize`, `domain`), backend skeleton, config, **multi-user foundations (L20, L22, D21, D22: PostgreSQL schema with RLS and the three roles, per-user vault directories, `UserScope` transactions, signup/approval and admin endpoints)**, auth + devices (D6, D7), MessagePack wire layer (L21) and streaming transport (D24), vault store (parse/serialise/atomic write/git), notes CRUD, manual entity CRUD + merge, tree, move with link rewrite, soft delete, history/revert, export/import, reconciliation, change log + idempotency + sync endpoints (D19), tasks (§6.11: parsing, recurrence, completion, API), documents & places with manual custody events (§6.12), duplicate detection exact + near (§9.7) with `force`, reminders job + push providers (D27), utoipa OpenAPI + generated Rust client (D15), deploy scripts | Golden, property, fuzz-smoke, contract-conformance, and isolation suites pass; deployed to VPS behind nginx |
 | **2 Client core** | Rust client core (§12.1–12.5, 12.7): local DB per account, outbox, sync engine, local search/graph, auth + token storage (D14), view-models, frb facade — tested headless | Sync convergence and conflict tests pass; full offline edit → reconnect → sync works in tests; 10k-note bootstrap within budget |
 | **3 App core** | Flutter app (§11, D11, D2): adaptive shell at all size classes, login, capture, inbox (manual), note view/editor, backlinks, People & Companies + entity pages (manual data), `@` mentions, search, history/revert, sync status & conflicts, settings, Admin → Users, RTL; CI Dart logic guard; builds for all five platforms | Owner uses the app on phone and desktop, fully offline and back; widget + golden tests at every size class pass; E2E suite green on Linux desktop and Android |
-| **4 AI linking** | Semantic duplicate detection and task suggestions from captures, provider layer (`claude -p` per L18 for the owner, D23 for other users, local granite embeddings per L19, runtime D9), jobs, embeddings, summaries, auto-linking, concepts, entity extraction/resolution (D13, nickname rules), entity insights (no-speculation and timeline-date rules), inbox filing, suggestions UI, ask with citations, budget/status | New notes get typed relations and people/company links automatically; entity pages show cited insights, open items, timeline; rejected edges stay rejected; ask cites real blocks |
+| **4 AI linking** | Semantic duplicate detection, task suggestions and document custody extraction (D30) from captures, provider layer (`claude -p` per L18 for the owner, D23 for other users, local granite embeddings per L19, runtime D9), jobs, embeddings, summaries, auto-linking, concepts, entity extraction/resolution (D13, nickname rules), entity insights (no-speculation and timeline-date rules), inbox filing, suggestions UI, ask with citations, budget/status | New notes get typed relations and people/company links automatically; entity pages show cited insights, open items, timeline; rejected edges stay rejected; ask cites real blocks |
 | **5 Graph** | Graph APIs, similarity, clustering (D10) + names, global map (D3), local mind map (D4), edge edit interactions, entity lens, saved `.canvas` layouts, live animations | Map reflects vault live; saved maps open in Obsidian after export; map performance budget met at 10k notes |
 | **6 Hardening** | Digests, dedupe suggestions, performance with 10k-note synthetic vault, security checklist, store/release pipelines | Checklist passes; signed releases for every platform |
 | **7 Deferred** | §18, when the owner starts it | Per §18 |
