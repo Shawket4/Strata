@@ -91,6 +91,7 @@ pub(crate) struct Inner {
     pub(crate) clock: Arc<dyn Clock>,
     pub(crate) ids: Arc<dyn IdGenerator>,
     actors: Mutex<HashMap<UserId, mpsc::UnboundedSender<Job>>>,
+    pub(crate) loaded: Mutex<std::collections::HashSet<UserId>>,
     runtime: Option<tokio::runtime::Handle>,
 }
 
@@ -124,6 +125,7 @@ impl VaultService {
                 clock,
                 ids,
                 actors: Mutex::new(HashMap::new()),
+                loaded: Mutex::new(std::collections::HashSet::new()),
                 runtime: tokio::runtime::Handle::try_current().ok(),
             }),
         }
@@ -206,6 +208,11 @@ impl VaultService {
     pub fn evict(&self, user: UserId) {
         self.inner
             .actors
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&user);
+        self.inner
+            .loaded
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .remove(&user);
@@ -587,7 +594,7 @@ impl Core {
 
     /// Appends change-log rows and enqueues the AI jobs for changed notes (Phase 4 runs them;
     /// the rows are written now so nothing is lost).
-    async fn log_changes(&self, tx: &mut ScopedTx, synced: &Synced) -> Result<()> {
+    pub(crate) async fn log_changes(&self, tx: &mut ScopedTx, synced: &Synced) -> Result<()> {
         let now = self.now();
         let state = self.state()?;
         for id in &synced.changed {
@@ -648,32 +655,6 @@ impl Core {
         Ok(())
     }
 
-    /// Writes, commits and indexes in one step: the common tail of every write. Returns the
-    /// commit ID (if anything changed) and the sync outcome.
-    pub(crate) async fn commit_and_sync(
-        &mut self,
-        scope: &UserScope,
-        changes: Vec<FileChange>,
-        message: String,
-    ) -> Result<(Option<String>, Synced)> {
-        let paths: BTreeSet<String> = changes.iter().map(|(p, _)| p.clone()).collect();
-        let mut tx = self.begin(scope).await?;
-        let commit = self.apply(changes, message).await?;
-        let synced = match self.sync_paths(&mut tx, &paths).await {
-            Ok(s) => s,
-            Err(e) => {
-                self.state = None;
-                self.repair = true;
-                return Err(e);
-            }
-        };
-        if let Err(e) = tx.commit().await {
-            self.state = None;
-            self.repair = true;
-            return Err(e.into());
-        }
-        Ok((commit, synced))
-    }
 }
 
 /// The note ID of a sidecar path `.meta/notes/<id>.json`.

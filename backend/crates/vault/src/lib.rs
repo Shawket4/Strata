@@ -1,1 +1,39 @@
-//! Placeholder; implemented in its build step.
+//! Strata vault store (PLAN §7.1 `vault/`, §7.2, §7.3).
+//!
+//! Each user's vault is a directory of Obsidian-compatible markdown (plus `.meta/` sidecars
+//! and `.trash/`) that is also a git repository. [`VaultService`] owns all of them:
+//!
+//! - one **single-writer actor** per user serialises writes ([`store`]); reads are
+//!   concurrent;
+//! - every write is **atomic** on disk ([`fsio`]) and **one git commit** ([`git`]) with a
+//!   `user:`/`ai:`/`system:` message;
+//! - optimistic concurrency by **content-hash versions**;
+//! - moves/renames **rewrite every inbound link and relation** in the same commit;
+//! - after each write the **index is updated synchronously** ([`derive`], [`indexer`]) in the
+//!   user's scoped transaction, the change log is appended and AI jobs are enqueued;
+//! - **reconciliation** ([`reconcile`]) repairs crashes and out-of-band edits and can rebuild
+//!   a user's derived rows from the vault;
+//! - duplicate checks on create ([`dup`]), export/import ([`archive`]).
+//!
+//! The design is written up in `docs/ARCHITECTURE.md`, section "Vault store".
+
+// Tests assert exact values and may `expect` with a message stating the invariant.
+#![cfg_attr(test, allow(clippy::expect_used, clippy::float_cmp))]
+
+pub mod archive;
+pub mod derive;
+pub mod dup;
+pub mod error;
+pub mod fsio;
+pub mod git;
+pub mod indexer;
+pub mod model;
+pub mod ops;
+pub mod paths;
+pub mod prepare;
+pub mod reconcile;
+pub mod state;
+pub mod store;
+
+pub use error::{Candidate, MatchLevel, Result, VaultError};
+pub use store::{Author, Core, ImportLimits, VaultConfig, VaultService};

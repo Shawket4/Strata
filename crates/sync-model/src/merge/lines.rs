@@ -73,12 +73,19 @@ fn restyle(line: &str, style: Style) -> String {
     }
 }
 
-/// Removes the terminator of the last line of `text`, if any.
+/// Removes the terminator of the last line of `text` when that line has content. (A text
+/// that lacks a final newline always ends in a non-empty line, so an empty last line in a
+/// merge result came from elsewhere, and stripping it would delete a line.)
 pub(crate) fn strip_final_terminator(text: &mut String) {
-    if text.ends_with("\r\n") {
-        text.truncate(text.len() - 2);
+    let content_len = if text.ends_with("\r\n") {
+        text.len() - 2
     } else if text.ends_with('\n') {
-        text.truncate(text.len() - 1);
+        text.len() - 1
+    } else {
+        return;
+    };
+    if content_len > 0 && !text[..content_len].ends_with('\n') {
+        text.truncate(content_len);
     }
 }
 

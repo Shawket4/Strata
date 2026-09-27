@@ -138,6 +138,16 @@ git2 = { version = "0.21", default-features = false, features = ["vendored-libgi
 # (runtime pinned to the exact flutter_rust_bridge_codegen version)
 rusqlite = { version = "0.39", features = ["bundled"] }
 flutter_rust_bridge = { version = "=2.13.0", features = ["chrono"] }
+# AI (strata-ai): object-safe async provider traits; thread nice value + process-group signals
+# for the claude CLI (safe API, no `unsafe`); in-process ONNX embeddings (D9) — ort loads
+# libonnxruntime at run time (`load-dynamic`, no binary download at build time; minimum
+# onnxruntime 1.22) and tokenizers uses the pure-Rust regex backend; wiremock mocks the
+# Anthropic API in tests.
+async-trait = "0.1.89"
+rustix = { version = "1.1", features = ["process", "thread"] }
+ort = { version = "=2.0.0-rc.13", default-features = false, features = ["std", "load-dynamic", "api-22"] }
+tokenizers = { version = "0.23.2", default-features = false, features = ["fancy-regex"] }
+wiremock = "0.6.5"
 
 [profile.dev]
 debug = "line-tables-only"

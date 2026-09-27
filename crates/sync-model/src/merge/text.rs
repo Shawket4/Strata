@@ -210,13 +210,13 @@ fn trim_insertion(
     theirs: &mut Range<usize>,
 ) -> (Vec<String>, Vec<String>) {
     let mut prefix = Vec::new();
-    while !ours.is_empty() && !theirs.is_empty() && p.ours.lines[ours.start] == p.theirs.lines[theirs.start] {
+    while ours.start < ours.end && theirs.start < theirs.end && p.ours.lines[ours.start] == p.theirs.lines[theirs.start] {
         prefix.push(p.ours.lines[ours.start].clone());
         ours.start += 1;
         theirs.start += 1;
     }
     let mut suffix = Vec::new();
-    while !ours.is_empty() && !theirs.is_empty() && p.ours.lines[ours.end - 1] == p.theirs.lines[theirs.end - 1] {
+    while ours.start < ours.end && theirs.start < theirs.end && p.ours.lines[ours.end - 1] == p.theirs.lines[theirs.end - 1] {
         suffix.push(p.ours.lines[ours.end - 1].clone());
         ours.end -= 1;
         theirs.end -= 1;
@@ -232,7 +232,7 @@ pub(crate) fn merge_text(base: &str, ours: &str, theirs: &str) -> TextMerge {
     let mut segments: Vec<Segment> = Vec::new();
     let mut hunks = Vec::new();
     let mut auto = Vec::new();
-    let mut push_text = |segments: &mut Vec<Segment>, text: String| {
+    let push_text = |segments: &mut Vec<Segment>, text: String| {
         if text.is_empty() {
             return;
         }

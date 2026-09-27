@@ -377,6 +377,25 @@ pub fn base_after_applied(
     }))
 }
 
+/// `(kind, title)` of the item a create op creates (duplicate prompts).
+pub fn describe_create(conn: &Connection, op: &outbox::OutboxOp) -> CoreResult<(String, String)> {
+    let _ = conn;
+    Ok(match &op.payload {
+        OpPayload::NoteCreate { path, .. } => ("note".to_owned(), crate::format::title_of(path)),
+        OpPayload::Capture { text, .. } => {
+            ("capture".to_owned(), text.lines().next().unwrap_or_default().chars().take(80).collect())
+        }
+        OpPayload::EntityCreate { kind, name, .. } => (kind.clone(), name.clone()),
+        OpPayload::TaskCreate { line, .. } => (
+            "task".to_owned(),
+            vault_format::tasks::TaskLine::parse(line)
+                .map(|t| t.description().to_owned())
+                .unwrap_or_default(),
+        ),
+        other => (other.kind().as_str().to_owned(), String::new()),
+    })
+}
+
 /// A fresh op ID string.
 pub fn op_id(id: Ulid) -> String {
     id.to_string()

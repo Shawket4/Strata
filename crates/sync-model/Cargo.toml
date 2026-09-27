@@ -23,7 +23,9 @@ similar = { workspace = true }
 [dev-dependencies]
 proptest = { workspace = true }
 pretty_assertions = { workspace = true }
+ulid = { workspace = true }
 serde_json = { workspace = true }
+rmp-serde = { workspace = true }
 
 [lints]
 workspace = true
