@@ -19,21 +19,44 @@ EditorHint hintOf(
   return EditorHint(kind: kind, start: start, end: start + text.length);
 }
 
-/// The frontmatter hint of [content] (up to and including the closing
-/// `---` line), or none.
+/// The frontmatter hint of [content] as the core emits it: from the opening
+/// `---` line up to and including the closing `---` line (and its
+/// terminator), or none.
 List<EditorHint> frontmatterHint(String content) {
-  if (!content.startsWith('---')) return const [];
-  final eol = content.contains('\r\n') ? '\r\n' : '\n';
-  final close = content.indexOf('$eol---$eol', 3);
-  if (close < 0) return const [];
-  return [
-    EditorHint(
-      kind: HintKind.frontmatter,
-      start: 0,
-      end: close + eol.length + 3 + eol.length,
-    ),
-  ];
+  final firstEol = content.indexOf('\n');
+  if (firstEol < 0) return const [];
+  final first = content.substring(0, firstEol).replaceAll('\r', '');
+  if (first != '---') return const [];
+  var start = firstEol + 1;
+  while (start <= content.length) {
+    final eol = content.indexOf('\n', start);
+    final end = eol < 0 ? content.length : eol;
+    if (content.substring(start, end).replaceAll('\r', '') == '---') {
+      return [
+        EditorHint(
+          kind: HintKind.frontmatter,
+          start: 0,
+          end: eol < 0 ? content.length : eol + 1,
+        ),
+      ];
+    }
+    if (eol < 0) return const [];
+    start = eol + 1;
+  }
+  return const [];
 }
+
+/// [hints] after [delta] UTF-16 units were inserted at [offset] (what the
+/// core returns for the edited content).
+List<EditorHint> shiftedHints(List<EditorHint> hints, int offset, int delta) =>
+    [
+      for (final h in hints)
+        EditorHint(
+          kind: h.kind,
+          start: h.start >= offset ? h.start + delta : h.start,
+          end: h.end > offset ? h.end + delta : h.end,
+        ),
+    ];
 
 /// Fixed IDs and texts of the sample note.
 abstract final class EditorFixtures {

@@ -169,21 +169,23 @@ class _NoteEditorPaneState extends State<NoteEditorPane> {
             onBack: widget.onBack,
             onSave: save,
           ),
-          if (note.sync_.kind == NoteSyncKind.conflict)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                StrataSpacing.s4,
-                StrataSpacing.s3,
-                StrataSpacing.s4,
-                0,
-              ),
-              child: NoteConflictBanner(
-                onResolve: _conflictAction(note, widget.onOpenConflict),
-              ),
-            ),
           Expanded(
             child: CustomScrollView(
               slivers: [
+                if (note.sync_.kind == NoteSyncKind.conflict)
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      StrataSpacing.s4,
+                      StrataSpacing.s3,
+                      StrataSpacing.s4,
+                      0,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: NoteConflictBanner(
+                        onResolve: _conflictAction(note, widget.onOpenConflict),
+                      ),
+                    ),
+                  ),
                 SliverPadding(
                   padding: EdgeInsets.symmetric(
                     horizontal: compact ? StrataSpacing.s5 : StrataSpacing.s8,
@@ -294,6 +296,7 @@ class NoteEditorHeader extends StatelessWidget {
               children: [
                 Semantics(
                   header: true,
+                  container: true,
                   child: Text(
                     note.title,
                     maxLines: 1,

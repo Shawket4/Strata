@@ -202,6 +202,7 @@ class _UnsyncedList extends ConsumerWidget {
             children: [
               Semantics(
                 header: true,
+                container: true,
                 child: Text(
                   l10n.unsyncedCount(count: count),
                   style: text.bodyStrong,
@@ -279,6 +280,7 @@ class AccountDisabledScreen extends HookConsumerWidget {
             const SizedBox(height: StrataSpacing.s4),
             Semantics(
               header: true,
+              container: true,
               child: Text(l10n.disabledTitle, style: text.display),
             ),
             const SizedBox(height: StrataSpacing.s2),
@@ -360,6 +362,7 @@ class DeletionPendingScreen extends ConsumerWidget {
           const SizedBox(height: StrataSpacing.s4),
           Semantics(
             header: true,
+            container: true,
             child: Text(l10n.deletionTitle, style: text.display),
           ),
           const SizedBox(height: StrataSpacing.s2),
@@ -392,6 +395,7 @@ class DeletionPendingScreen extends ConsumerWidget {
                 children: [
                   Semantics(
                     header: true,
+                    container: true,
                     child: Text(
                       l10n.unsyncedNotInExport(count: unsynced),
                       style: text.bodyStrong.copyWith(
@@ -455,6 +459,7 @@ class PasswordChangeRequiredScreen extends HookConsumerWidget {
           const SizedBox(height: StrataSpacing.s4),
           Semantics(
             header: true,
+            container: true,
             child: Text(l10n.passwordChangeTitle, style: text.display),
           ),
           const SizedBox(height: StrataSpacing.s2),

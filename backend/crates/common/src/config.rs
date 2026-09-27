@@ -677,6 +677,18 @@ impl Config {
             u64::from(emb.idle_unload_secs),
         )?;
         self.budget_tz()?;
+        self.validate_jobs()
+    }
+
+    fn validate_jobs(&self) -> Result<(), ConfigError> {
+        let invalid = |m: String| Err(ConfigError::Invalid(m));
+        let positive = |name: &str, v: u64| {
+            if v == 0 {
+                invalid(format!("{name} must be at least 1"))
+            } else {
+                Ok(())
+            }
+        };
         let jobs = &self.jobs;
         positive("jobs.max_concurrency", u64::from(jobs.max_concurrency))?;
         positive("jobs.poll_interval_secs", u64::from(jobs.poll_interval_secs))?;

@@ -1,1 +1,532 @@
-{"@@locale": "en", "loading": "Loading…"}
+{
+  "@@locale": "en",
+  "documents": "Documents",
+  "@documents": {
+    "description": "Section / back target: documents."
+  },
+  "places": "Places",
+  "@places": {
+    "description": "Section / back target: places."
+  },
+  "backToDocuments": "Back to Directory",
+  "@backToDocuments": {
+    "description": "Back button of a compact document page."
+  },
+  "backToPlaces": "Back to Places",
+  "@backToPlaces": {
+    "description": "Back button of a compact place page."
+  },
+  "moreActions": "More actions",
+  "@moreActions": {
+    "description": "More actions menu button."
+  },
+  "showContext": "Show context",
+  "@showContext": {
+    "description": "Opens the context drawer (medium)."
+  },
+  "contextLabel": "Context",
+  "@contextLabel": {
+    "description": "Context panel label."
+  },
+  "breadcrumb": "Breadcrumb",
+  "@breadcrumb": {
+    "description": "Breadcrumb navigation label."
+  },
+  "locationLabel": "Location",
+  "@locationLabel": {
+    "description": "Place breadcrumb label."
+  },
+  "notFoundTitle": "This page isn't in the vault any more",
+  "@notFoundTitle": {
+    "description": "Unknown document or place."
+  },
+  "notFoundMessage": "It may have been deleted or merged on another device.",
+  "@notFoundMessage": {
+    "description": "Unknown page body."
+  },
+  "loading": "Loading…",
+  "@loading": {
+    "description": "Loading state."
+  },
+  "errorTitle": "This couldn't be loaded",
+  "@errorTitle": {
+    "description": "Error state title."
+  },
+  "errorMessage": "The app's local data returned an error ({code}).",
+  "@errorMessage": {
+    "description": "Error state body.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "pendingSync": "Not synced yet",
+  "@pendingSync": {
+    "description": "A page with local changes."
+  },
+  "documentKind": "Document",
+  "@documentKind": {
+    "description": "Kind label."
+  },
+  "placeKind": "Place",
+  "@placeKind": {
+    "description": "Kind label."
+  },
+  "docSubtitle": "{type} · {copy}",
+  "@docSubtitle": {
+    "description": "Type and copy line.",
+    "placeholders": {
+      "type": {
+        "type": "String"
+      },
+      "copy": {
+        "type": "String"
+      }
+    }
+  },
+  "expiresOn": "Expires {date}",
+  "@expiresOn": {
+    "description": "Expiry.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM y",
+        "isCustomDateFormat": "true"
+      }
+    }
+  },
+  "expiresLabel": "Expires",
+  "@expiresLabel": {
+    "description": "Property label."
+  },
+  "renewalLabel": "Renewal",
+  "@renewalLabel": {
+    "description": "Property label."
+  },
+  "reminderLabel": "Reminder",
+  "@reminderLabel": {
+    "description": "Property label."
+  },
+  "typeLabel": "Type",
+  "@typeLabel": {
+    "description": "Property label."
+  },
+  "concernsLabel": "Concerns",
+  "@concernsLabel": {
+    "description": "Property label: companies/people the document concerns."
+  },
+  "copiesLabel": "Copies",
+  "@copiesLabel": {
+    "description": "Property / section label."
+  },
+  "copiesCount": "{count, plural, =0{No copies} =1{1 copy} other{{count} copies}}",
+  "@copiesCount": {
+    "description": "Copies count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "notAvailableYet": "Not available yet",
+  "@notAvailableYet": {
+    "description": "Placeholder for a value the app cannot show yet."
+  },
+  "whereItIs": "Where it is",
+  "@whereItIs": {
+    "description": "Where-it-is card title."
+  },
+  "locationUnknown": "Location unknown",
+  "@locationUnknown": {
+    "description": "No location recorded."
+  },
+  "withHolder": "With {name}",
+  "@withHolder": {
+    "description": "Current holder.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nobodyHasIt": "Nobody has it now",
+  "@nobodyHasIt": {
+    "description": "No current holder."
+  },
+  "lastWith": "· last with",
+  "@lastWith": {
+    "description": "Precedes the last holder link."
+  },
+  "withLabel": "With",
+  "@withLabel": {
+    "description": "Precedes the current holder link."
+  },
+  "custodyHeading": "{date} · {kind}",
+  "@custodyHeading": {
+    "description": "Custody event heading.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM y",
+        "isCustomDateFormat": "true"
+      },
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "recordMove": "Record a move",
+  "@recordMove": {
+    "description": "Record a move action."
+  },
+  "custodyHistory": "Custody history",
+  "@custodyHistory": {
+    "description": "Custody section title."
+  },
+  "custodyHint": "Location and holder change only through these events",
+  "@custodyHint": {
+    "description": "Custody section helper."
+  },
+  "custodyCount": "{count, plural, =0{No events} =1{1 event · newest first} other{{count} events · newest first}}",
+  "@custodyCount": {
+    "description": "Custody count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noCustody": "No custody events recorded yet.",
+  "@noCustody": {
+    "description": "Empty custody."
+  },
+  "custodyStoredAt": "Stored at",
+  "@custodyStoredAt": {
+    "description": "Custody event type."
+  },
+  "custodyMovedTo": "Moved to",
+  "@custodyMovedTo": {
+    "description": "Custody event type."
+  },
+  "custodyHandedTo": "Handed to",
+  "@custodyHandedTo": {
+    "description": "Custody event type."
+  },
+  "custodyReturnedBy": "Returned by",
+  "@custodyReturnedBy": {
+    "description": "Custody event type."
+  },
+  "custodySentTo": "Sent to",
+  "@custodySentTo": {
+    "description": "Custody event type."
+  },
+  "custodyReceivedFrom": "Received from",
+  "@custodyReceivedFrom": {
+    "description": "Custody event type."
+  },
+  "custodyLost": "Lost",
+  "@custodyLost": {
+    "description": "Custody event type."
+  },
+  "custodyFound": "Found",
+  "@custodyFound": {
+    "description": "Custody event type."
+  },
+  "custodyDestroyed": "Destroyed",
+  "@custodyDestroyed": {
+    "description": "Custody event type."
+  },
+  "statusStored": "Stored",
+  "@statusStored": {
+    "description": "Document status."
+  },
+  "statusCheckedOut": "Checked out",
+  "@statusCheckedOut": {
+    "description": "Document status."
+  },
+  "statusThirdParty": "Third party",
+  "@statusThirdParty": {
+    "description": "Document status."
+  },
+  "statusLost": "Lost",
+  "@statusLost": {
+    "description": "Document status."
+  },
+  "statusDestroyed": "Destroyed",
+  "@statusDestroyed": {
+    "description": "Document status."
+  },
+  "typeContract": "Contract",
+  "@typeContract": {
+    "description": "Document type."
+  },
+  "typeId": "ID",
+  "@typeId": {
+    "description": "Document type."
+  },
+  "typeLicence": "Licence",
+  "@typeLicence": {
+    "description": "Document type."
+  },
+  "typeDeed": "Deed",
+  "@typeDeed": {
+    "description": "Document type."
+  },
+  "typeInvoice": "Invoice",
+  "@typeInvoice": {
+    "description": "Document type."
+  },
+  "typeCertificate": "Certificate",
+  "@typeCertificate": {
+    "description": "Document type."
+  },
+  "typeOther": "Other",
+  "@typeOther": {
+    "description": "Document type."
+  },
+  "copyOriginal": "Original",
+  "@copyOriginal": {
+    "description": "Copy kind."
+  },
+  "copyCertified": "Certified copy",
+  "@copyCertified": {
+    "description": "Copy kind."
+  },
+  "copyCopy": "Copy",
+  "@copyCopy": {
+    "description": "Copy kind."
+  },
+  "copyDigital": "Digital",
+  "@copyDigital": {
+    "description": "Copy kind."
+  },
+  "yourNotes": "Your notes",
+  "@yourNotes": {
+    "description": "User-owned notes section."
+  },
+  "yourNotesHint": "Only you edit this",
+  "@yourNotesHint": {
+    "description": "User notes helper."
+  },
+  "yourNotesUnavailable": "Editing your notes here isn't available yet. Open the note to edit its ## Notes section.",
+  "@yourNotesUnavailable": {
+    "description": "User notes placeholder until the core streams the section."
+  },
+  "openNote": "Open note",
+  "@openNote": {
+    "description": "Opens the markdown note."
+  },
+  "undoAi": "Undo",
+  "@undoAi": {
+    "description": "Undo an AI custody change."
+  },
+  "graph": "Graph",
+  "@graph": {
+    "description": "Graph section."
+  },
+  "placesTree": "Places",
+  "@placesTree": {
+    "description": "Places tree title."
+  },
+  "placesTreeLabel": "{place} and places inside it",
+  "@placesTreeLabel": {
+    "description": "Tree accessibility label.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "noSubPlaces": "No places inside",
+  "@noSubPlaces": {
+    "description": "Empty sub-places."
+  },
+  "topLevelPlace": "Top level",
+  "@topLevelPlace": {
+    "description": "Place without a parent."
+  },
+  "partOf": "part of {place}",
+  "@partOf": {
+    "description": "Place parent line.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "everythingHere": "Everything here",
+  "@everythingHere": {
+    "description": "Documents at a place incl. nested places."
+  },
+  "everythingHereCaption": "Documents at {place}, including places inside it",
+  "@everythingHereCaption": {
+    "description": "Table caption.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "documentsCount": "{count, plural, =0{No documents} =1{1 document} other{{count} documents}}",
+  "@documentsCount": {
+    "description": "Documents count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDocumentsHere": "Nothing is stored here yet.",
+  "@noDocumentsHere": {
+    "description": "Empty place."
+  },
+  "colDocument": "Document",
+  "@colDocument": {
+    "description": "Table column."
+  },
+  "colWhere": "Where",
+  "@colWhere": {
+    "description": "Table column."
+  },
+  "colHolder": "Holder",
+  "@colHolder": {
+    "description": "Table column."
+  },
+  "colStatus": "Status",
+  "@colStatus": {
+    "description": "Table column."
+  },
+  "recentMovements": "Recent movements",
+  "@recentMovements": {
+    "description": "Place movements section."
+  },
+  "noMovements": "No movements recorded here yet.",
+  "@noMovements": {
+    "description": "Empty movements."
+  },
+  "aliases": "Aliases",
+  "@aliases": {
+    "description": "Aliases label."
+  },
+  "recordMoveSubtitle": "{document} · now in {place}",
+  "@recordMoveSubtitle": {
+    "description": "Record-a-move subtitle.",
+    "placeholders": {
+      "document": {
+        "type": "String"
+      },
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "recordMoveSubtitleUnknown": "{document}",
+  "@recordMoveSubtitleUnknown": {
+    "description": "Record-a-move subtitle without location.",
+    "placeholders": {
+      "document": {
+        "type": "String"
+      }
+    }
+  },
+  "whatHappened": "What happened",
+  "@whatHappened": {
+    "description": "Event type group."
+  },
+  "eventMovedTo": "Moved to",
+  "@eventMovedTo": {
+    "description": "Move event."
+  },
+  "eventHandedTo": "Handed to",
+  "@eventHandedTo": {
+    "description": "Move event."
+  },
+  "eventReturned": "Returned",
+  "@eventReturned": {
+    "description": "Move event."
+  },
+  "eventSentTo": "Sent to third party",
+  "@eventSentTo": {
+    "description": "Move event."
+  },
+  "eventLost": "Lost",
+  "@eventLost": {
+    "description": "Move event."
+  },
+  "toPlace": "To place",
+  "@toPlace": {
+    "description": "Place picker label."
+  },
+  "holderAfter": "Holder after",
+  "@holderAfter": {
+    "description": "Person picker label."
+  },
+  "nobody": "Nobody",
+  "@nobody": {
+    "description": "No holder."
+  },
+  "documentField": "Document",
+  "@documentField": {
+    "description": "Document picker label."
+  },
+  "dateField": "Date",
+  "@dateField": {
+    "description": "Date field label."
+  },
+  "dateToday": "Today",
+  "@dateToday": {
+    "description": "Date not chosen: today."
+  },
+  "pickDate": "Choose a date",
+  "@pickDate": {
+    "description": "Date picker button."
+  },
+  "noteField": "Note (optional)",
+  "@noteField": {
+    "description": "Note field."
+  },
+  "recordMoveFooter": "Adds a cited event to ## Custody",
+  "@recordMoveFooter": {
+    "description": "Record-a-move footer."
+  },
+  "recordMoveSubmit": "Record move",
+  "@recordMoveSubmit": {
+    "description": "Submit."
+  },
+  "recordMoveUnavailable": "Recording a move from the app isn't available yet.",
+  "@recordMoveUnavailable": {
+    "description": "Shown until the core has a custody intent."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel."
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Close."
+  },
+  "searchPlaces": "Search places",
+  "@searchPlaces": {
+    "description": "Place picker search."
+  },
+  "searchPeople": "Search people",
+  "@searchPeople": {
+    "description": "Person picker search."
+  },
+  "mentionsUnavailable": "Mentioning notes will appear here.",
+  "@mentionsUnavailable": {
+    "description": "Placeholder until the core streams document mentions."
+  },
+  "dateShort": "{date}",
+  "@dateShort": {
+    "description": "A custody date.",
+    "placeholders": {
+      "date": {
+        "type": "DateTime",
+        "format": "EEE d MMM y",
+        "isCustomDateFormat": "true"
+      }
+    }
+  }
+}

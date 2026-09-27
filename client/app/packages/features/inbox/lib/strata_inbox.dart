@@ -6,5 +6,9 @@ library;
 export 'src/capture_card.dart';
 export 'src/inbox_screen.dart';
 export 'src/l10n.dart'
-    show InboxL10nContext, InboxL10nScope, InboxLocalizations;
+    show
+        InboxL10nContext,
+        InboxL10nScope,
+        InboxLocalizations,
+        lookupInboxLocalizations;
 export 'src/proposals.dart';

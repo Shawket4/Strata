@@ -20,9 +20,7 @@ void main() {
 
   FakeCoreApi fakeWith(NoteEditorFixture fixture) {
     final fake = FakeCoreApi();
-    fake.note[EditorFixtures.noteId].add(
-      EditorFixtures.screenOf(fixture.note),
-    );
+    fake.note[EditorFixtures.noteId].add(EditorFixtures.screenOf(fixture.note));
     return fake;
   }
 

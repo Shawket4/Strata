@@ -97,18 +97,38 @@ class _MiniGraph extends HookConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (showHeader)
-          StrataSectionHeader(
-            title: l10n.entityGraph,
+          Padding(
             padding: const EdgeInsetsDirectional.only(
               start: StrataSpacing.s4,
               end: StrataSpacing.s2,
             ),
-            trailing: open == null
-                ? null
-                : TextButton(
-                    onPressed: () => open(noteId),
-                    child: Text(l10n.openInMap),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    header: true,
+                    container: true,
+                    child: Text(
+                      l10n.entityGraph,
+                      style: context.strataText.caption
+                          .withWeight(FontWeight.w700)
+                          .copyWith(color: colors.text2, letterSpacing: 0.4),
+                    ),
                   ),
+                ),
+                if (open != null)
+                  Flexible(
+                    child: TextButton(
+                      onPressed: () => open(noteId),
+                      child: Text(
+                        l10n.openInMap,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s4),

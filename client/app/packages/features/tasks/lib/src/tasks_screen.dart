@@ -318,7 +318,7 @@ class _TaskKeyboard extends ConsumerWidget {
           if (task != null && open != null) open(task.noteId);
         },
       },
-      child: Focus(autofocus: true, child: child),
+      child: Focus(autofocus: true, includeSemantics: false, child: child),
     );
   }
 }
@@ -363,18 +363,26 @@ class _TabbedList extends StatelessWidget {
             StrataSpacing.s3,
             StrataSpacing.s1,
           ),
-          child: Row(
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: StrataSpacing.s3,
+            runSpacing: StrataSpacing.s2,
             children: [
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(l10n.tasksTitle, style: text.title),
-                ),
+              Semantics(
+                header: true,
+                container: true,
+                child: Text(l10n.tasksTitle, style: text.title),
               ),
-              FilledButton.tonalIcon(
+              FilledButton.icon(
+                style: tallFilledButton,
                 onPressed: onNewTask,
                 icon: const Icon(Icons.add),
-                label: Text(l10n.tasksNewTask),
+                label: Text(
+                  l10n.tasksNewTask,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -480,6 +488,7 @@ class _TaskTable extends StatelessWidget {
           children: [
             Semantics(
               header: true,
+              container: true,
               child: Text(l10n.tasksTitle, style: text.display),
             ),
             SegmentedButton<TasksTableTab>(
@@ -492,6 +501,7 @@ class _TaskTable extends StatelessWidget {
               onSelectionChanged: (s) => onTab(s.first),
             ),
             FilledButton.icon(
+              style: tallFilledButton,
               onPressed: onNewTask,
               icon: const Icon(Icons.add),
               label: Row(
@@ -578,6 +588,7 @@ class _TaskTable extends StatelessWidget {
                     ),
                     child: Semantics(
                       header: true,
+                      container: true,
                       child: Text(
                         title(l10n),
                         style: header.copyWith(

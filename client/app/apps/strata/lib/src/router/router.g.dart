@@ -8,17 +8,23 @@ part of 'router.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// The app's [GoRouter] with the generated typed routes.
+/// The app's [GoRouter] with the generated typed routes, routed by the
+/// session state (§12.7): signed out → sign in, disabled / deletion pending
+/// / password change → their restricted screen, active → the shell.
 
 @ProviderFor(appRouter)
 final appRouterProvider = AppRouterProvider._();
 
-/// The app's [GoRouter] with the generated typed routes.
+/// The app's [GoRouter] with the generated typed routes, routed by the
+/// session state (§12.7): signed out → sign in, disabled / deletion pending
+/// / password change → their restricted screen, active → the shell.
 
 final class AppRouterProvider
     extends $FunctionalProvider<GoRouter, GoRouter, GoRouter>
     with $Provider<GoRouter> {
-  /// The app's [GoRouter] with the generated typed routes.
+  /// The app's [GoRouter] with the generated typed routes, routed by the
+  /// session state (§12.7): signed out → sign in, disabled / deletion pending
+  /// / password change → their restricted screen, active → the shell.
   AppRouterProvider._()
     : super(
         from: null,
@@ -52,4 +58,4 @@ final class AppRouterProvider
   }
 }
 
-String _$appRouterHash() => r'6a91b5832a324947c63c555435a95a585ad97489';
+String _$appRouterHash() => r'059def4bf6983a8e9a1055f1ddbaaffabb38baf9';

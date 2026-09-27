@@ -78,6 +78,7 @@ class NodeAside extends ConsumerWidget {
                 ),
                 Semantics(
                   header: true,
+                  container: true,
                   child: Text(node.title, style: text.title),
                 ),
                 if (note != null) ...[

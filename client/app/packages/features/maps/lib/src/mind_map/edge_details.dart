@@ -78,6 +78,7 @@ class EdgeDetails extends ConsumerWidget {
             const SizedBox(height: StrataSpacing.s2),
             Semantics(
               header: true,
+              container: true,
               child: Text(
                 l10n.edgeFromTo(from: from, to: to),
                 style: text.bodyStrong,
@@ -116,49 +117,42 @@ class EdgeDetails extends ConsumerWidget {
               Row(
                 children: [
                   Expanded(
-                    child: PopupMenuButton<String>(
-                      tooltip: l10n.retypeTitle,
-                      onSelected: (newType) {
-                        unawaited(
-                          ref
-                              .read(coreApiProvider)
-                              .retypeRelation(
-                                srcId: edge.src,
-                                dstId: edge.dst,
-                                relType: wire,
-                                newType: newType,
-                              ),
-                        );
-                        onClose();
-                      },
-                      itemBuilder: (context) => [
+                    child: MenuAnchor(
+                      menuChildren: [
                         for (final entry in relationWireTypes.entries)
                           if (entry.value != wire)
-                            PopupMenuItem(
-                              value: entry.value,
-                              child: Row(
-                                children: [
-                                  RelationLineSample(
-                                    type: relationTypeOf(entry.key),
-                                  ),
-                                  const SizedBox(width: StrataSpacing.s2),
-                                  Text(
-                                    shared.relationTypeLabel(
-                                      relationTypeOf(entry.key),
-                                    ),
-                                  ),
-                                ],
+                            MenuItemButton(
+                              leadingIcon: RelationLineSample(
+                                type: relationTypeOf(entry.key),
+                              ),
+                              onPressed: () {
+                                unawaited(
+                                  ref
+                                      .read(coreApiProvider)
+                                      .retypeRelation(
+                                        srcId: edge.src,
+                                        dstId: edge.dst,
+                                        relType: wire,
+                                        newType: entry.value,
+                                      ),
+                                );
+                                onClose();
+                              },
+                              child: Text(
+                                shared.relationTypeLabel(
+                                  relationTypeOf(entry.key),
+                                ),
                               ),
                             ),
                       ],
-                      child: IgnorePointer(
-                        child: OutlinedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.swap_horiz, size: 20),
-                          label: Text(l10n.retype),
-                          style: OutlinedButton.styleFrom(
-                            minimumSize: const Size.fromHeight(48),
-                          ),
+                      builder: (context, controller, _) => OutlinedButton.icon(
+                        onPressed: () => controller.isOpen
+                            ? controller.close()
+                            : controller.open(),
+                        icon: const Icon(Icons.swap_horiz, size: 20),
+                        label: Text(l10n.retype),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
                         ),
                       ),
                     ),

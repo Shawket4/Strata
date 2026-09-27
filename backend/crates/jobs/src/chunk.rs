@@ -89,58 +89,66 @@ struct Unit {
     tokens: usize,
 }
 
-/// Splits `text` (at body offset `base`) into pieces of at most `max` estimated tokens.
+/// Splits `text` (at body offset `base`) into pieces of at most `max` estimated tokens, cut
+/// after a line or sentence end when one falls in the piece, else between words.
 fn split_ranges(text: &str, base: usize, max: usize) -> Vec<(usize, usize)> {
-    // Candidate cut points: after line ends, then after sentence ends, then after words.
-    let mut pieces: Vec<(usize, usize)> = Vec::new();
-    let mut start = 0;
-    let mut last_good: Option<usize> = None;
-    let bytes: Vec<(usize, char)> = text.char_indices().collect();
-    let mut i = 0;
-    while i < bytes.len() {
-        let (pos, c) = bytes[i];
-        let next = bytes.get(i + 1).map_or(text.len(), |(p, _)| *p);
-        let boundary = c == '\n'
-            || (matches!(c, '.' | '!' | '?' | '؟' | '۔' | '。')
-                && text[next..].starts_with([' ', '\n']))
-            || c.is_whitespace();
-        if boundary {
-            let cut = next;
-            if estimate_tokens(&text[start..cut]) > max {
-                let at = last_good.filter(|g| *g > start).unwrap_or(cut);
-                pieces.push((start, at));
-                start = at;
-                last_good = None;
-                // Re-examine from the new start.
-                if at < cut {
-                    continue_from(&bytes, at, &mut i);
-                    continue;
-                }
-            } else {
-                last_good = Some(cut);
+    let mut words: Vec<(usize, usize)> = Vec::new();
+    let mut at = None;
+    for (i, c) in text.char_indices() {
+        match (c.is_whitespace(), at) {
+            (false, None) => at = Some(i),
+            (true, Some(s)) => {
+                words.push((s, i));
+                at = None;
             }
+            _ => {}
         }
-        let _ = pos;
-        i += 1;
     }
-    if start < text.len() {
-        pieces.push((start, text.len()));
+    if let Some(s) = at {
+        words.push((s, text.len()));
     }
-    pieces
-        .into_iter()
-        .map(|(s, e)| {
-            // Trim whitespace at the piece edges.
-            let piece = &text[s..e];
-            let lead = piece.len() - piece.trim_start().len();
-            let trail = piece.len() - piece.trim_end().len();
-            (base + s + lead, base + e - trail)
-        })
-        .filter(|(s, e)| e > s)
-        .collect()
+    let tokens_of = |w: &(usize, usize)| estimate_tokens(&text[w.0..w.1]);
+    let preferred = |i: usize| {
+        let (s, e) = words[i];
+        let ends_sentence = text[s..e].ends_with(['.', '!', '?', '؟', '۔', '。']);
+        let ends_line = words
+            .get(i + 1)
+            .is_some_and(|next| text[e..next.0].contains('\n'));
+        ends_sentence || ends_line
+    };
+    let mut pieces = Vec::new();
+    let mut first = 0;
+    let mut tokens = 0;
+    let mut cut_after: Option<usize> = None;
+    for i in 0..words.len() {
+        let t = tokens_of(&words[i]);
+        if tokens + t > max && i > first {
+            let cut = cut_after.filter(|c| *c > first && *c <= i).unwrap_or(i);
+            pieces.push((words[first].0, words[cut - 1].1));
+            first = cut;
+            tokens = words[first..i].iter().map(tokens_of).sum();
+            cut_after = None;
+        }
+        tokens += t;
+        if preferred(i) {
+            cut_after = Some(i + 1);
+        }
+    }
+    if first < words.len() {
+        pieces.push((words[first].0, words[words.len() - 1].1));
+    }
+    pieces.into_iter().map(|(s, e)| (base + s, base + e)).collect()
 }
 
-fn continue_from(bytes: &[(usize, char)], at: usize, i: &mut usize) {
-    *i = bytes.partition_point(|(p, _)| *p < at);
+/// The block's content: its span without a trailing `^id` (and the whitespace before it).
+pub fn content_range(body_text: &str, b: &body::Block) -> std::ops::Range<usize> {
+    match &b.id {
+        Some(id) if id.span.start >= b.span.start && id.span.end <= b.span.end => {
+            let before = body_text[b.span.start..id.span.start].trim_end();
+            b.span.start..b.span.start + before.len()
+        }
+        _ => b.span.clone(),
+    }
 }
 
 fn units(body_text: &str) -> Vec<Unit> {
@@ -150,7 +158,8 @@ fn units(body_text: &str) -> Vec<Unit> {
         if b.kind == BlockKind::Heading {
             continue;
         }
-        let text = &body_text[b.span.clone()];
+        let content = content_range(body_text, b);
+        let text = &body_text[content.clone()];
         if text.trim().is_empty() {
             continue;
         }
@@ -158,8 +167,8 @@ fn units(body_text: &str) -> Vec<Unit> {
         let tokens = estimate_tokens(text);
         if tokens <= MAX_TOKENS {
             out.push(Unit {
-                start: b.span.start,
-                end: b.span.end,
+                start: content.start,
+                end: content.end,
                 heading_path,
                 block_id: b.id.as_ref().map(|i| i.id.clone()),
                 whole: true,
@@ -167,7 +176,7 @@ fn units(body_text: &str) -> Vec<Unit> {
             });
             continue;
         }
-        for (i, (s, e)) in split_ranges(text, b.span.start, MAX_TOKENS)
+        for (i, (s, e)) in split_ranges(text, content.start, MAX_TOKENS)
             .into_iter()
             .enumerate()
         {
@@ -176,7 +185,7 @@ fn units(body_text: &str) -> Vec<Unit> {
                 end: e,
                 heading_path: heading_path.clone(),
                 block_id: b.id.as_ref().map(|id| id.id.clone()),
-                whole: i == 0 && s == b.span.start && e == b.span.end,
+                whole: i == 0 && s == content.start && e == content.end,
                 tokens: estimate_tokens(&body_text[s..e]),
             });
         }
@@ -313,7 +322,8 @@ mod tests {
         assert!(chunks.iter().all(|c| c.token_count <= MAX_TOKENS));
 
         let body = format!("# One\n\n{a}\n\n{b}\n\n## Two\n\n{d}\n");
-        let summary: Vec<(&str, usize)> = chunk_body(&body)
+        let chunks = chunk_body(&body);
+        let summary: Vec<(&str, usize)> = chunks
             .iter()
             .map(|c| (c.heading_path.as_str(), c.token_count))
             .collect();

@@ -6,10 +6,12 @@ import 'package:strata_state/strata_state.dart'
 import 'package:strata_ui/strata_ui.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   registerStrataFontLicenses();
   runApp(
     ProviderScope(
-      // Every core provider reads the Rust core through the bridge.
+      // Every core provider reads the Rust core through the bridge; the core
+      // itself is loaded behind the splash (`coreStartupProvider`).
       overrides: [coreApiProvider.overrideWithValue(const BridgeCoreApi())],
       child: const StrataApp(),
     ),

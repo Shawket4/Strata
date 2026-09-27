@@ -1,0 +1,261 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:strata_maps/src/generated/maps_localizations.dart';
+import 'package:strata_maps/src/mind_map/mind_map_canvas.dart';
+import 'package:strata_maps/strata_maps.dart';
+import 'package:strata_state/strata_state.dart';
+import 'package:strata_state/testing.dart';
+import 'package:strata_ui/strata_ui.dart';
+
+import 'helpers/fixtures.dart';
+import 'helpers/matrix.dart';
+
+const _id = 'n-pricing-experiments';
+
+FakeCoreApi _fake() {
+  final fake = FakeCoreApi();
+  for (final depth in const [1, 2, 3]) {
+    fake.localGraph[(_id, depth)].add(MapFixtures.pricingLocal);
+  }
+  return fake;
+}
+
+int _initialDepth(Variant v) => v.sizeClass == SizeClass.compact ? 1 : 2;
+
+void main() {
+  group('MindMapScreen matrix', () {
+    for (final v in variants()) {
+      testWidgets('content $v', (tester) async {
+        final fake = _fake();
+        var back = 0;
+        await pumpVariant(
+          tester,
+          v,
+          MindMapScreen(_id, onBack: () => back++),
+          fake,
+        );
+        final l10n = lookupMapsLocalizations(v.locale);
+        expectNoErrors(tester);
+        expect(
+          fake.calls,
+          contains(
+            CoreCall('watchLocalGraph', {'id': _id, 'depth': _initialDepth(v)}),
+          ),
+        );
+        expect(find.byType(InteractiveViewer), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            l10n.mindMapSemantics(title: 'Pricing experiments'),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Discount policy'), findsOneWidget);
+        expect(find.text('Acme Logistics'), findsOneWidget);
+        expect(
+          find.text(l10n.mindMapCounts(depth: 1, nodes: 9, edges: 8)),
+          findsOneWidget,
+        );
+        if (v.sizeClass == SizeClass.compact) {
+          expect(find.byTooltip(l10n.backToNote), findsOneWidget);
+          await tester.tap(find.byTooltip(l10n.backToNote));
+          expect(back, 1);
+          expect(
+            find.textContaining(l10n.dragHint, findRichText: true),
+            findsNothing,
+          );
+        } else {
+          expect(
+            find.textContaining(l10n.dragHint, findRichText: true),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.saveLayout), findsOneWidget);
+          expect(find.byTooltip(l10n.saveLayoutUnavailable), findsOneWidget);
+        }
+        if (v.textScale == 1) await expectAccessible(tester);
+      });
+    }
+  });
+
+  group('MindMapScreen states', () {
+    for (final v in variants(scales: const [1])) {
+      testWidgets('loading $v', (tester) async {
+        await pumpVariant(tester, v, const MindMapScreen(_id), FakeCoreApi());
+        expect(
+          find.bySemanticsLabel(lookupMapsLocalizations(v.locale).loading),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('not found $v', (tester) async {
+        final fake = FakeCoreApi();
+        fake.localGraph[('n-gone', _initialDepth(v))].add(
+          MapFixtures.missingLocal,
+        );
+        await pumpVariant(tester, v, const MindMapScreen('n-gone'), fake);
+        expect(
+          find.text(lookupMapsLocalizations(v.locale).mindMapNotFound),
+          findsOneWidget,
+        );
+        await expectAccessible(tester);
+      });
+
+      testWidgets('error $v', (tester) async {
+        final fake = FakeCoreApi();
+        await pumpVariant(tester, v, const MindMapScreen(_id), fake);
+        fake.localGraph[(_id, _initialDepth(v))].addError(
+          const CoreFailure(code: 'store', messageKey: 'error.store'),
+        );
+        await tester.pump();
+        expect(
+          find.text(lookupMapsLocalizations(v.locale).errorTitle),
+          findsOneWidget,
+        );
+      });
+    }
+  });
+
+  group('MindMapScreen interaction', () {
+    final compact = variants(
+      sizes: const {'compact': Size(390, 844)},
+      scales: const [1],
+    ).first;
+    final expanded = variants(
+      sizes: const {'expanded': Size(1440, 900)},
+      scales: const [1],
+    ).first;
+
+    testWidgets('depth control re-subscribes at the chosen depth', (
+      tester,
+    ) async {
+      final fake = _fake();
+      await pumpVariant(tester, compact, const MindMapScreen(_id), fake);
+      await tester.tap(find.bySemanticsLabel('Depth 3'));
+      await tester.pump();
+      await tester.pump();
+      expect(
+        fake.calls.last,
+        const CoreCall('watchLocalGraph', {'id': _id, 'depth': 3}),
+      );
+    });
+
+    testWidgets('compact: tapping a node recentres on it', (tester) async {
+      final fake = _fake();
+      fake.localGraph[('n-discount-policy', 1)].add(MapFixtures.pricingLocal);
+      await pumpVariant(tester, compact, const MindMapScreen(_id), fake);
+      await tester.tap(find.text('Discount policy'));
+      await tester.pump();
+      expect(
+        fake.calls.last,
+        const CoreCall('watchLocalGraph', {
+          'id': 'n-discount-policy',
+          'depth': 1,
+        }),
+      );
+    });
+
+    testWidgets('compact: the edge sheet rejects an AI relation', (
+      tester,
+    ) async {
+      final fake = _fake();
+      await pumpVariant(tester, compact, const MindMapScreen(_id), fake);
+      await tester.tap(
+        find.bySemanticsLabel(
+          'contradicts: Pricing experiments to Discount policy',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Pricing experiments → Discount policy'),
+        findsOneWidget,
+      );
+      expect(find.text('Why AI suggested this'), findsOneWidget);
+      await expectAccessible(tester);
+      await tester.tap(find.text('Reject'));
+      await tester.pumpAndSettle();
+      expect(
+        fake.calls.last,
+        const CoreCall('removeRelation', {
+          'srcId': _id,
+          'dstId': 'n-discount-policy',
+          'relType': 'contradicts',
+        }),
+      );
+      expect(find.text('Why AI suggested this'), findsNothing);
+    });
+
+    testWidgets('expanded: retype from the edge card', (tester) async {
+      final fake = _fake();
+      await pumpVariant(tester, expanded, const MindMapScreen(_id), fake);
+      await tester.tap(
+        find.bySemanticsLabel('supports: Churn notes to Pricing experiments'),
+      );
+      await tester.pump();
+      expect(find.text('Churn notes → Pricing experiments'), findsOneWidget);
+      await tester.tap(find.text('Retype'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('part of').last);
+      await tester.pumpAndSettle();
+      expect(
+        fake.calls.last,
+        const CoreCall('retypeRelation', {
+          'srcId': 'n-churn-notes',
+          'dstId': _id,
+          'relType': 'supports',
+          'newType': 'part-of',
+        }),
+      );
+    });
+
+    testWidgets('expanded: selecting a node opens its panel', (tester) async {
+      final fake = _fake();
+      fake.note['n-churn-notes'].add(
+        NoteScreen(id: 'n-churn-notes', note: StrataFixtures.noteView),
+      );
+      final opened = <String>[];
+      await pumpVariant(
+        tester,
+        expanded,
+        MindMapScreen(_id, onOpenNote: opened.add),
+        fake,
+      );
+      await tester.tap(find.text('Churn notes'));
+      await tester.pump();
+      await tester.pump();
+      expect(
+        fake.calls,
+        contains(const CoreCall('watchNote', {'id': 'n-churn-notes'})),
+      );
+      expect(find.bySemanticsLabel('Selected node'), findsOneWidget);
+      await expectAccessible(tester);
+      await tester.tap(find.widgetWithText(FilledButton, 'Open note'));
+      expect(opened, ['n-churn-notes']);
+      fake.localGraph[('n-churn-notes', 2)].add(MapFixtures.pricingLocal);
+      await tester.tap(find.text('Centre map on Churn notes'));
+      await tester.pump();
+      expect(
+        fake.calls.last,
+        const CoreCall('watchLocalGraph', {'id': 'n-churn-notes', 'depth': 2}),
+      );
+    });
+
+    testWidgets('edge type chips hide edges', (tester) async {
+      await pumpVariant(tester, expanded, const MindMapScreen(_id), _fake());
+      expect(
+        find.bySemanticsLabel(
+          'contradicts: Pricing experiments to Discount policy',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.widgetWithText(FilterChip, 'contradicts'));
+      await tester.pump();
+      expect(
+        find.bySemanticsLabel(
+          'contradicts: Pricing experiments to Discount policy',
+        ),
+        findsNothing,
+      );
+      final canvas = tester.widget<MindMapCanvas>(find.byType(MindMapCanvas));
+      expect(canvas.hiddenEdges, {EdgeClass.contradicts});
+    });
+  });
+}

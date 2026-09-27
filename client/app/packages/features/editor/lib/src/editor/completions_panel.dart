@@ -169,14 +169,10 @@ class _MentionSuggestions extends ConsumerWidget {
 class _Loading extends StatelessWidget {
   const new();
 
+  // A static label (no spinner): results usually arrive within a frame.
   @override
-  Widget build(BuildContext context) => const Padding(
-    padding: EdgeInsets.all(StrataSpacing.s4),
-    child: SizedBox.square(
-      dimension: 20,
-      child: CircularProgressIndicator(strokeWidth: 2),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      _Message(EditorLocalizations.of(context).suggestionsLoading);
 }
 
 class _SectionLabel extends StatelessWidget {

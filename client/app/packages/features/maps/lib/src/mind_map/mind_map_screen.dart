@@ -444,7 +444,9 @@ class _DepthControl extends StatelessWidget {
         const SizedBox(width: StrataSpacing.s2),
         SegmentedButton<int>(
           showSelectedIcon: false,
-          style: const ButtonStyle(visualDensity: VisualDensity.compact),
+          style: const ButtonStyle(
+            minimumSize: WidgetStatePropertyAll(Size(48, 48)),
+          ),
           segments: [
             for (final value in const [1, 2, 3])
               ButtonSegment(
@@ -503,6 +505,7 @@ class _CompactBar extends StatelessWidget {
                   children: [
                     Semantics(
                       header: true,
+                      container: true,
                       child: Text(
                         title,
                         maxLines: 1,
@@ -569,6 +572,7 @@ class _Toolbar extends StatelessWidget {
                   ),
                   Semantics(
                     header: true,
+                    container: true,
                     child: Text(title, style: text.titleSmall),
                   ),
                 ],

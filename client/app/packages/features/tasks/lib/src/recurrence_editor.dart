@@ -129,6 +129,7 @@ class RecurrenceEditor extends HookConsumerWidget {
                       Expanded(
                         child: Semantics(
                           header: true,
+                          container: true,
                           child: Text(
                             l10n.recurrenceTitle,
                             style: text.titleSmall,
@@ -235,15 +236,28 @@ class RecurrenceEditor extends HookConsumerWidget {
                       if (task.recurrence != null)
                         TextButton(
                           onPressed: stop,
-                          child: Text(l10n.recurrenceStop),
+                          child: Text(
+                            l10n.recurrenceStop,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       OutlinedButton(
                         onPressed: () => Navigator.maybePop(context),
-                        child: Text(l10n.commonCancel),
+                        child: Text(
+                          l10n.commonCancel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       FilledButton(
+                        style: tallFilledButton,
                         onPressed: value.text.isEmpty ? null : save,
-                        child: Text(l10n.recurrenceSave),
+                        child: Text(
+                          l10n.recurrenceSave,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),

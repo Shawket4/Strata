@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:alchemist/alchemist.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hooks_riverpod/misc.dart' show Override;
 import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
@@ -131,7 +131,6 @@ void screenGoldens(
       goldenTest(
         '$name ${v.id}',
         fileName: '${name}_${v.id}',
-        tags: const ['golden'],
         constraints: BoxConstraints.tight(v.size),
         pumpBeforeTest: (tester) async {
           await tester.pump();

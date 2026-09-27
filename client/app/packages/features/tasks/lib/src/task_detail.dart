@@ -197,6 +197,7 @@ class _TaskDetailBody extends ConsumerWidget {
                       padding: const EdgeInsets.only(top: StrataSpacing.s2),
                       child: Semantics(
                         header: true,
+                        container: true,
                         child: Text(
                           task.description,
                           textAlign: TextAlign.start,
@@ -267,7 +268,11 @@ class _TaskDetailBody extends ConsumerWidget {
                     task: task,
                     line: screen.line,
                   ),
-                  child: Text(l10n.tasksActionEditRule),
+                  child: Text(
+                    l10n.tasksActionEditRule,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               _Field(
@@ -318,7 +323,11 @@ class _TaskDetailBody extends ConsumerWidget {
                   child: TextButton.icon(
                     onPressed: null,
                     icon: const Icon(Icons.add),
-                    label: Text(l10n.tasksActionAddReminder),
+                    label: Text(
+                      l10n.tasksActionAddReminder,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ),
@@ -345,7 +354,11 @@ class _TaskDetailBody extends ConsumerWidget {
                     onPressed: openNote == null
                         ? null
                         : () => openNote(task.noteId),
-                    child: Text(task.noteTitle),
+                    child: Text(
+                      task.noteTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ),
               ),
@@ -426,9 +439,14 @@ class _TaskDetailBody extends ConsumerWidget {
                             api.cancelTask(taskId: task.id),
                           ),
                         ),
-                        child: Text(l10n.tasksActionCancelTask),
+                        child: Text(
+                          l10n.tasksActionCancelTask,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       FilledButton.icon(
+                        style: tallFilledButton,
                         onPressed: () => unawaited(
                           forwardIntent(
                             context,
@@ -436,11 +454,16 @@ class _TaskDetailBody extends ConsumerWidget {
                           ),
                         ),
                         icon: const Icon(Icons.check),
-                        label: Text(l10n.tasksActionMarkDone),
+                        label: Text(
+                          l10n.tasksActionMarkDone,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ]
                   : [
                       FilledButton.icon(
+                        style: tallFilledButton,
                         onPressed: () => unawaited(
                           forwardIntent(
                             context,
@@ -448,7 +471,11 @@ class _TaskDetailBody extends ConsumerWidget {
                           ),
                         ),
                         icon: const Icon(Icons.undo),
-                        label: Text(l10n.tasksActionReopen),
+                        label: Text(
+                          l10n.tasksActionReopen,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
             ),
@@ -498,11 +525,20 @@ class _EditTextDialog extends HookWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: Text(l10n.commonCancel),
+                child: Text(
+                  l10n.commonCancel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               FilledButton(
+                style: tallFilledButton,
                 onPressed: () => Navigator.pop(context, controller.text),
-                child: Text(l10n.commonSave),
+                child: Text(
+                  l10n.commonSave,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           );
@@ -547,10 +583,14 @@ class _Field extends StatelessWidget {
                 Text(label, style: text.caption.copyWith(color: colors.text2)),
                 const SizedBox(height: 2),
                 value,
+                if (trailing != null)
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: trailing,
+                  ),
               ],
             ),
           ),
-          ?trailing,
         ],
       ),
     );

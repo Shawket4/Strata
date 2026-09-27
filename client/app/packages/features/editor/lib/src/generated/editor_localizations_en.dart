@@ -126,6 +126,9 @@ class EditorLocalizationsEn extends EditorLocalizations {
   String get suggestionsNotes => 'Notes';
 
   @override
+  String get suggestionsLoading => 'Searching…';
+
+  @override
   String get suggestionsNone => 'No matches';
 
   @override

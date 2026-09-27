@@ -22,6 +22,7 @@ dependencies:
   strata_accounts: any
   strata_admin: any
   strata_ask: any
+  strata_bridge: any
   strata_directory: any
   strata_documents: any
   strata_editor: any
@@ -47,3 +48,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  generate: true

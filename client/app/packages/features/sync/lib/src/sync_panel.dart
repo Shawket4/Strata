@@ -134,6 +134,7 @@ class SyncStatusContent extends StatelessWidget {
                 children: [
                   Semantics(
                     header: true,
+                    container: true,
                     child: Text(
                       SyncLabels.pill(l10n, pill),
                       style: surface == SyncSurface.popover
@@ -383,6 +384,7 @@ class _Outbox extends StatelessWidget {
             Expanded(
               child: Semantics(
                 header: true,
+                container: true,
                 child: Text(
                   l10n.outboxTitle(count: items.length),
                   style: text.bodyStrong,
@@ -507,6 +509,7 @@ class _Conflicts extends StatelessWidget {
               Expanded(
                 child: Semantics(
                   header: true,
+                  container: true,
                   child: Text(
                     l10n.conflictsTitle(count: conflicts.length),
                     style: text.bodyStrong.copyWith(color: colors.dangerText),
@@ -571,6 +574,7 @@ class _Rejections extends StatelessWidget {
         children: [
           Semantics(
             header: true,
+            container: true,
             child: Text(
               l10n.rejectionsTitle,
               style: text.bodyStrong.copyWith(color: colors.warningText),

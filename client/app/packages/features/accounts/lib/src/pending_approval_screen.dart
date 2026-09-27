@@ -109,6 +109,7 @@ class PendingApprovalScreen extends HookConsumerWidget {
             const SizedBox(height: StrataSpacing.s3),
             Semantics(
               header: true,
+              container: true,
               child: Text(l10n.pendingTitle, style: text.display),
             ),
             const SizedBox(height: StrataSpacing.s2),
@@ -170,6 +171,7 @@ class _Rejected extends StatelessWidget {
               children: [
                 Semantics(
                   header: true,
+                  container: true,
                   child: Text(
                     l10n.rejectedTitle,
                     style: text.bodyStrong.copyWith(color: colors.dangerText),

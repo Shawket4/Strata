@@ -101,6 +101,7 @@ class SignInScreen extends HookConsumerWidget {
             ],
             Semantics(
               header: true,
+              container: true,
               child: Text(l10n.signInTitle, style: text.display),
             ),
             const SizedBox(height: StrataSpacing.s1),

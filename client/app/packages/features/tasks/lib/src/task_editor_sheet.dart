@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_tasks/src/duplicate_prompt.dart';
 import 'package:strata_tasks/src/l10n.dart';
+import 'package:strata_tasks/src/labels.dart';
 import 'package:strata_ui/strata_ui.dart';
 
 /// The new-task sheet: the task text as typed, the details the user sets
@@ -203,6 +204,7 @@ class TaskEditorSheet extends HookConsumerWidget {
                       Expanded(
                         child: Semantics(
                           header: true,
+                          container: true,
                           child: Text(
                             l10n.editorNewTaskTitle,
                             style: style.titleSmall,
@@ -214,8 +216,13 @@ class TaskEditorSheet extends HookConsumerWidget {
                           end: StrataSpacing.s2,
                         ),
                         child: FilledButton(
+                          style: tallFilledButton,
                           onPressed: text.text.isEmpty ? null : save,
-                          child: Text(l10n.commonSave),
+                          child: Text(
+                            l10n.commonSave,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
                     ],
@@ -261,7 +268,11 @@ class TaskEditorSheet extends HookConsumerWidget {
                           actions: [
                             TextButton(
                               onPressed: pickDue,
-                              child: Text(l10n.editorPickDate),
+                              child: Text(
+                                l10n.editorPickDate,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                             if (dueValue != null)
                               IconButton(
@@ -292,7 +303,11 @@ class TaskEditorSheet extends HookConsumerWidget {
                             TextButton.icon(
                               onPressed: addReminder,
                               icon: const Icon(Icons.add),
-                              label: Text(l10n.editorAddReminder),
+                              label: Text(
+                                l10n.editorAddReminder,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
                           ],
                         ),

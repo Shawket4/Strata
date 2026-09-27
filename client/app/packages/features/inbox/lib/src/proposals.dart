@@ -348,7 +348,14 @@ class SuggestionCard extends HookConsumerWidget {
       case SuggestionKind.entityLinkOrCreate:
         body = _LinkOrCreate(suggestion: suggestion);
         actions = [
-          TextButton(onPressed: reject, child: Text(l10n.inboxReject)),
+          TextButton(
+            onPressed: reject,
+            child: Text(
+              l10n.inboxReject,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ];
       case SuggestionKind.custody:
         body = _Custody(suggestion: suggestion, onOpenEntity: onOpenEntity);
@@ -357,19 +364,43 @@ class SuggestionCard extends HookConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: reject,
                   icon: const Icon(Icons.undo),
-                  label: Text(l10n.inboxUndo),
+                  label: Text(
+                    l10n.inboxUndo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ]
             : [
-                TextButton(onPressed: reject, child: Text(l10n.inboxReject)),
+                TextButton(
+                  onPressed: reject,
+                  child: Text(
+                    l10n.inboxReject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 if (detail.candidates.isEmpty)
-                  FilledButton(onPressed: accept, child: Text(l10n.inboxAccept))
+                  FilledButton(
+                    style: tallFilledButton,
+                    onPressed: accept,
+                    child: Text(
+                      l10n.inboxAccept,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )
                 else
                   Tooltip(
                     message: l10n.inboxChoiceUnavailable,
                     child: FilledButton(
+                      style: tallFilledButton,
                       onPressed: null,
-                      child: Text(l10n.inboxAccept),
+                      child: Text(
+                        l10n.inboxAccept,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
               ];
@@ -393,8 +424,23 @@ class SuggestionCard extends HookConsumerWidget {
           onOpenEntity: onOpenEntity,
         );
         actions = [
-          TextButton(onPressed: reject, child: Text(l10n.inboxReject)),
-          FilledButton(onPressed: accept, child: Text(l10n.inboxAccept)),
+          TextButton(
+            onPressed: reject,
+            child: Text(
+              l10n.inboxReject,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          FilledButton(
+            style: tallFilledButton,
+            onPressed: accept,
+            child: Text(
+              l10n.inboxAccept,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ];
       case SuggestionKind.unsupported:
         body = Text(
@@ -402,7 +448,14 @@ class SuggestionCard extends HookConsumerWidget {
           style: text.bodySmall.copyWith(color: colors.text2),
         );
         actions = [
-          TextButton(onPressed: reject, child: Text(l10n.inboxDismiss)),
+          TextButton(
+            onPressed: reject,
+            child: Text(
+              l10n.inboxDismiss,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ];
     }
 
@@ -477,6 +530,7 @@ class _LinkOrCreate extends ConsumerWidget {
       children: [
         Semantics(
           header: true,
+          container: true,
           child: Text(
             l10n.inboxWhoIs(mention: detail.mention),
             style: text.titleSmall,
@@ -510,14 +564,23 @@ class _LinkOrCreate extends ConsumerWidget {
               child: OutlinedButton.icon(
                 onPressed: null,
                 icon: const Icon(Icons.link),
-                label: Text(l10n.inboxLinkExisting),
+                label: Text(
+                  l10n.inboxLinkExisting,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
             FilledButton.tonalIcon(
+              style: tallFilledButton,
               onPressed: () =>
                   CreatePersonSheet.show(context, suggestion: suggestion),
               icon: const Icon(Icons.person_add_alt),
-              label: Text(l10n.inboxCreatePerson),
+              label: Text(
+                l10n.inboxCreatePerson,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -559,6 +622,7 @@ class _Custody extends StatelessWidget {
           const SizedBox(height: StrataSpacing.s3),
           Semantics(
             header: true,
+            container: true,
             child: Text(l10n.inboxWhichDocument, style: text.titleSmall),
           ),
           const SizedBox(height: StrataSpacing.s1),
@@ -704,6 +768,7 @@ class CreatePersonSheet extends HookConsumerWidget {
               children: [
                 Semantics(
                   header: true,
+                  container: true,
                   child: Text(l10n.inboxCreatePersonTitle, style: text.title),
                 ),
                 const SizedBox(height: StrataSpacing.s4),
@@ -735,13 +800,22 @@ class CreatePersonSheet extends HookConsumerWidget {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.maybePop(context),
-                      child: Text(l10n.inboxCancel),
+                      child: Text(
+                        l10n.inboxCancel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     FilledButton(
+                      style: tallFilledButton,
                       onPressed: value.text.isEmpty
                           ? null
                           : () => unawaited(create(force: false)),
-                      child: Text(l10n.inboxCreatePersonSave),
+                      child: Text(
+                        l10n.inboxCreatePersonSave,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

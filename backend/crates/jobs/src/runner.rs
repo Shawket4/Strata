@@ -293,7 +293,6 @@ impl Runner {
             .into_iter()
             .enumerate()
             .filter(|(_, u)| s.skip_until.get(u).is_none_or(|t| *t <= now))
-            .map(|(i, u)| (i, u))
             .collect();
         users.sort_by_key(|(i, u)| (s.last_served.get(u).copied().unwrap_or(0), *i));
         users.into_iter().map(|(_, u)| u).collect()
@@ -464,7 +463,7 @@ impl Runner {
                 }
             };
             tx.commit().await?;
-            Ok::<_, strata_index::IndexError>(outcome)
+            Ok::<_, JobError>(outcome)
         }
         .await;
         match outcome {

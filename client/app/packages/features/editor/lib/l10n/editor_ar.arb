@@ -34,6 +34,7 @@
   "suggestionsPeople": "أشخاص",
   "suggestionsCompanies": "شركات",
   "suggestionsNotes": "ملاحظات",
+  "suggestionsLoading": "بندوّر…",
   "suggestionsNone": "مفيش نتائج",
   "suggestionsTypeToSearch": "اكتب عشان تدور",
   "suggestionsTagsUnavailable": "اقتراحات الوسوم مش متاحة لسه.",

@@ -240,6 +240,15 @@ impl Core {
 }
 
 impl VaultService {
+    /// The sidecar of note `id` as stored (`None` when absent or unreadable).
+    pub async fn note_sidecar(&self, scope: &UserScope, id: NoteId) -> Result<Option<NoteSidecar>> {
+        self.ready(scope).await?;
+        let dir = self.vault_dir(scope.user_id());
+        let rel = NoteSidecar::path_for(id.as_ulid());
+        let bytes = crate::store::blocking(move || Ok(crate::fsio::read(&dir, &rel)?)).await?;
+        Ok(bytes.and_then(|b| NoteSidecar::from_json(&String::from_utf8_lossy(&b)).ok()))
+    }
+
     /// Stores `summary` in the sidecar of note `id` if the note is still at `version`
     /// (`ai: summarize <path>`, sidecar only).
     pub async fn ai_set_summary(

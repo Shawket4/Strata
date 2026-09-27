@@ -154,6 +154,10 @@
   "@suggestionsNotes": {
     "description": "Autocomplete section: notes."
   },
+  "suggestionsLoading": "Searching…",
+  "@suggestionsLoading": {
+    "description": "Autocomplete: results are loading."
+  },
   "suggestionsNone": "No matches",
   "@suggestionsNone": {
     "description": "Autocomplete: nothing matches."

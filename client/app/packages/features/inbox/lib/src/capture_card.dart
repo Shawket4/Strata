@@ -138,6 +138,7 @@ class CaptureCard extends ConsumerWidget {
               Expanded(
                 child: Semantics(
                   header: true,
+                  container: true,
                   child: Text(
                     l10n.inboxAiProposal,
                     style: text.caption
@@ -170,17 +171,30 @@ class CaptureCard extends ConsumerWidget {
               onPressed: hasProposal
                   ? () => unawaited(rejectCapture(context, api, item))
                   : null,
-              child: Text(l10n.inboxReject),
+              child: Text(
+                l10n.inboxReject,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             OutlinedButton(
               onPressed: open == null ? null : () => open(item.noteId),
-              child: Text(l10n.inboxEdit),
+              child: Text(
+                l10n.inboxEdit,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
             FilledButton(
+              style: tallFilledButton,
               onPressed: hasProposal
                   ? () => unawaited(acceptCapture(context, api, item))
                   : null,
-              child: Text(l10n.inboxAccept),
+              child: Text(
+                l10n.inboxAccept,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),

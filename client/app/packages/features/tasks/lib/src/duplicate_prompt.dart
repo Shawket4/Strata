@@ -96,6 +96,7 @@ class DuplicateCandidatesView extends StatelessWidget {
                 const SizedBox(height: StrataSpacing.s3),
                 Semantics(
                   header: true,
+                  container: true,
                   child: Text(l10n.dupTitle, style: text.titleSmall),
                 ),
                 const SizedBox(height: StrataSpacing.s1),
@@ -132,8 +133,13 @@ class DuplicateCandidatesView extends StatelessWidget {
                     ),
                     if (best != null)
                       FilledButton(
+                        style: tallFilledButton,
                         onPressed: () => onOpenExisting(best),
-                        child: Text(l10n.dupOpenExisting),
+                        child: Text(
+                          l10n.dupOpenExisting,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                   ],
                 ),

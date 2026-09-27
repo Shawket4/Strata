@@ -89,13 +89,14 @@ final class HintStylePhase extends SingleColumnLayoutStylePhase {
       if (end <= start) continue;
       text.addAttribution(
         HintAttribution(span.kind),
-        SpanRange(start, end),
+        // Attribution ranges are end-inclusive.
+        SpanRange(start, end - 1),
         overwriteConflictingSpans: true,
       );
     }
     final task = controller.taskOf(component.nodeId);
     if (task != null && task.state != TaskState.open && length > 0) {
-      text.addAttribution(taskClosedAttribution, SpanRange(0, length));
+      text.addAttribution(taskClosedAttribution, SpanRange(0, length - 1));
     }
     textModel.text = text;
     return copy;

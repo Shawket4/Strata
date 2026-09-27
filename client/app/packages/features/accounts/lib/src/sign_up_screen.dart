@@ -96,6 +96,7 @@ class SignUpScreen extends HookConsumerWidget {
           children: [
             Semantics(
               header: true,
+              container: true,
               child: Text(l10n.createAccount, style: text.display),
             ),
             const SizedBox(height: StrataSpacing.s1),

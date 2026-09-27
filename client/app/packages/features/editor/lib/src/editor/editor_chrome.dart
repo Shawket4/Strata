@@ -58,6 +58,12 @@ class FormattingToolbar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s1),
           child: Row(
             children: [
+              if (link != null)
+                tool(
+                  Icons.open_in_new,
+                  l10n.toolOpenLink,
+                  () => onOpenLink?.call(link),
+                ),
               tool(Icons.undo, l10n.toolUndo, controller.undo),
               separator(),
               tool(
@@ -100,12 +106,6 @@ class FormattingToolbar extends StatelessWidget {
                 l10n.toolTag,
                 () => controller.insertAtCaret('#'),
               ),
-              if (link != null)
-                tool(
-                  Icons.open_in_new,
-                  l10n.toolOpenLink,
-                  () => onOpenLink?.call(link),
-                ),
               separator(),
               tool(
                 Icons.keyboard_hide_outlined,
@@ -236,17 +236,22 @@ class NoteConflictBanner extends StatelessWidget {
                     l10n.conflictBannerMessage,
                     style: text.caption.copyWith(color: colors.warningText),
                   ),
+                  Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: TextButton(
+                      onPressed: onResolve,
+                      style: TextButton.styleFrom(
+                        foregroundColor: colors.warningText,
+                        minimumSize: const Size(
+                          64,
+                          StrataLayout.minTouchTarget,
+                        ),
+                      ),
+                      child: Text(l10n.conflictResolve),
+                    ),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(width: StrataSpacing.s2),
-            TextButton(
-              onPressed: onResolve,
-              style: TextButton.styleFrom(
-                foregroundColor: colors.warningText,
-                minimumSize: const Size(64, StrataLayout.minTouchTarget),
-              ),
-              child: Text(l10n.conflictResolve),
             ),
           ],
         ),

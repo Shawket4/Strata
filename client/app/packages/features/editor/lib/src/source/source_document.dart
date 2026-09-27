@@ -3,32 +3,50 @@ import 'package:strata_editor/src/source/markdown_source.dart';
 import 'package:strata_state/strata_state.dart' show EditorHint, HintKind;
 import 'package:super_editor/super_editor.dart';
 
-/// Node metadata key holding the line terminator of a body line.
-const String lineEolKey = 'strataEol';
+/// Node metadata key holding the line terminator that precedes a body line
+/// in the source (`''` for the first line).
+///
+/// Keeping the terminator on the line *after* it makes edits local: when a
+/// line is split, the new line gets a new terminator while the terminator
+/// before the next line stays with that line; when two lines are merged,
+/// exactly the terminator between them disappears. Mixed `\n` / `\r\n`
+/// files therefore keep every terminator the user did not touch.
+const String lineEolKey = 'strataEolBefore';
 
 /// Builds the `super_editor` document of [source]: one paragraph per body
 /// line, holding the line's exact text (no markdown parsing: styling comes
 /// from the core's hints, see `MarkdownSource`).
 MutableDocument documentOf(MarkdownSource source) => MutableDocument(
   nodes: [
-    for (final line in source.lines)
+    for (var i = 0; i < source.lines.length; i++)
       ParagraphNode(
         id: Editor.createNodeId(),
-        text: AttributedText(line.text),
-        metadata: {lineEolKey: line.eol},
+        text: AttributedText(source.lines[i].text),
+        metadata: {lineEolKey: i == 0 ? '' : source.lines[i - 1].eol},
       ),
   ],
 );
 
-/// The body lines of [document], in order (a non-text node, which the
-/// editor never creates from a note, is an empty line).
-List<SourceLine> linesOf(Document document) => [
-  for (final node in document)
-    SourceLine(
-      node is TextNode ? node.text.toPlainText() : '',
-      (node.getMetadataValue(lineEolKey) as String?) ?? '',
-    ),
-];
+/// The body lines of [document], in order: each line's text and the
+/// terminator that follows it (the next line's preceding terminator; `''`
+/// when the next line was created in the editor, which `joinLines` replaces
+/// with the note's newline). A non-text node, which the editor never
+/// creates from a note, is an empty line.
+List<SourceLine> linesOf(Document document) {
+  final nodes = document.toList();
+  return [
+    for (var i = 0; i < nodes.length; i++)
+      SourceLine(
+        switch (nodes[i]) {
+          final TextNode node => node.text.toPlainText(),
+          _ => '',
+        },
+        i == nodes.length - 1
+            ? ''
+            : (nodes[i + 1].getMetadataValue(lineEolKey) as String?) ?? '',
+      ),
+  ];
+}
 
 /// A hint span inside one line (UTF-16 offsets relative to the line).
 @immutable

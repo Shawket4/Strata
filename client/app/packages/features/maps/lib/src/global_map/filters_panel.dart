@@ -91,7 +91,11 @@ class MapFiltersPanel extends StatelessWidget {
         StrataSpacing.s4,
         StrataSpacing.s1,
       ),
-      child: Semantics(header: true, child: Text(label, style: legend)),
+      child: Semantics(
+        header: true,
+        container: true,
+        child: Text(label, style: legend),
+      ),
     );
     String edgeLabel(EdgeClass edge) => edge == EdgeClass.bodyLink
         ? l10n.edgeBodyLinks
@@ -113,6 +117,7 @@ class MapFiltersPanel extends StatelessWidget {
                 Expanded(
                   child: Semantics(
                     header: true,
+                    container: true,
                     child: Text(
                       close == null ? l10n.filters : l10n.mapFilters,
                       style: text.titleSmall,

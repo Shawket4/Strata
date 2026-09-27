@@ -198,20 +198,18 @@ impl Embedder for LazyEmbedder {
         if texts.is_empty() {
             return Ok(Vec::new());
         }
-        let embedder = match self.enter() {
-            Some(e) => e,
-            None => {
-                let _loading = self.load_lock.lock().await;
-                match self.enter() {
-                    Some(e) => e,
-                    None => {
-                        let e = self.load().await?;
-                        let mut slot = self.lock();
-                        slot.embedder = Some(e.clone());
-                        slot.in_flight += 1;
-                        e
-                    }
-                }
+        let embedder = if let Some(e) = self.enter() {
+            e
+        } else {
+            let _loading = self.load_lock.lock().await;
+            if let Some(e) = self.enter() {
+                e
+            } else {
+                let e = self.load().await?;
+                let mut slot = self.lock();
+                slot.embedder = Some(e.clone());
+                slot.in_flight += 1;
+                e
             }
         };
         let _in_flight = InFlight(self);

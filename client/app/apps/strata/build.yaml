@@ -6,5 +6,5 @@ targets:
           - lib/src/router/routes.dart
       riverpod_generator:
         generate_for:
-          - lib/src/providers.dart
+          - lib/src/boot/core_bootstrap.dart
           - lib/src/router/router.dart

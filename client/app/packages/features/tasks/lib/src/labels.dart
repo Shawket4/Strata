@@ -138,3 +138,11 @@ class EntityRefChip extends StatelessWidget {
     );
   }
 }
+
+/// A filled button whose visible fill covers its whole 48 dp hit area, so the
+/// label is measured against the fill (text-contrast guideline) and the
+/// target never grows past the painted shape.
+final ButtonStyle tallFilledButton = FilledButton.styleFrom(
+  minimumSize: const Size(64, StrataLayout.minTouchTarget),
+  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+);

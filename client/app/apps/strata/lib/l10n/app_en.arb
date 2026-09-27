@@ -1,0 +1,64 @@
+{
+  "@@locale": "en",
+  "splashLoading": "Opening Strata",
+  "@splashLoading": {
+    "description": "Splash accessibility label while the core loads."
+  },
+  "bootFailedTitle": "Strata couldn't start",
+  "@bootFailedTitle": {
+    "description": "The core failed to load."
+  },
+  "bootFailedBody": "The local database could not be opened ({code}).",
+  "@bootFailedBody": {
+    "description": "Boot failure details.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Retries the start."
+  },
+  "notificationDone": "Done",
+  "@notificationDone": {
+    "description": "Reminder notification action: mark done."
+  },
+  "notificationSnooze": "Snooze",
+  "@notificationSnooze": {
+    "description": "Reminder notification action: snooze."
+  },
+  "notificationOpen": "Open",
+  "@notificationOpen": {
+    "description": "Default action of a Linux notification."
+  },
+  "channelName": "Reminders",
+  "@channelName": {
+    "description": "Android notification channel name."
+  },
+  "channelDescription": "Task reminders from Strata",
+  "@channelDescription": {
+    "description": "Android notification channel description."
+  },
+  "pinnedTitle": "Folders",
+  "@pinnedTitle": {
+    "description": "Sidebar folder tree heading."
+  },
+  "folderSemantics": "{name}, {count} notes",
+  "@folderSemantics": {
+    "description": "Accessibility label of a sidebar folder.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "accountLabel": "Account",
+  "@accountLabel": {
+    "description": "App bar account button tooltip."
+  }
+}

@@ -44,6 +44,7 @@ class MapHeader extends StatelessWidget {
             children: [
               Semantics(
                 header: true,
+                container: true,
                 child: Text(l10n.mapTitle, style: text.titleSmall),
               ),
               Text(counts, style: text.caption.copyWith(color: colors.text2)),

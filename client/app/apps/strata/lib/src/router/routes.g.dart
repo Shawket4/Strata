@@ -6,7 +6,16 @@ part of 'routes.dart';
 // GoRouterGenerator
 // **************************************************************************
 
-List<RouteBase> get $appRoutes => [$appShellRoute, $syncRoute, $signInRoute];
+List<RouteBase> get $appRoutes => [
+  $appShellRoute,
+  $syncRoute,
+  $signInRoute,
+  $signUpRoute,
+  $approvalRoute,
+  $accountDisabledRoute,
+  $deletionPendingRoute,
+  $passwordChangeRoute,
+];
 
 RouteBase get $appShellRoute => StatefulShellRouteData.$route(
   factory: $AppShellRouteExtension._fromState,
@@ -35,6 +44,13 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           path: '/tasks',
           hasOverriddenOnExit: false,
           factory: $TasksRoute._fromState,
+          routes: [
+            GoRouteData.$route(
+              path: ':taskId',
+              hasOverriddenOnExit: false,
+              factory: $TaskRoute._fromState,
+            ),
+          ],
         ),
       ],
     ),
@@ -46,9 +62,21 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           factory: $NotesRoute._fromState,
           routes: [
             GoRouteData.$route(
+              path: 'conflicts/:opId',
+              hasOverriddenOnExit: false,
+              factory: $ConflictRoute._fromState,
+            ),
+            GoRouteData.$route(
               path: ':noteId',
               hasOverriddenOnExit: false,
               factory: $NoteEditorRoute._fromState,
+              routes: [
+                GoRouteData.$route(
+                  path: 'map',
+                  hasOverriddenOnExit: false,
+                  factory: $MindMapRoute._fromState,
+                ),
+              ],
             ),
           ],
         ),
@@ -99,6 +127,11 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
               path: 'admin/users',
               hasOverriddenOnExit: false,
               factory: $AdminUsersRoute._fromState,
+            ),
+            GoRouteData.$route(
+              path: ':section',
+              hasOverriddenOnExit: false,
+              factory: $SettingsSectionRoute._fromState,
             ),
           ],
         ),
@@ -171,11 +204,60 @@ mixin $TasksRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+mixin $TaskRoute on GoRouteData {
+  static TaskRoute _fromState(GoRouterState state) =>
+      TaskRoute(taskId: state.pathParameters['taskId']!);
+
+  TaskRoute get _self => this as TaskRoute;
+
+  @override
+  String get location =>
+      GoRouteData.$location('/tasks/${Uri.encodeComponent(_self.taskId)}');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
 mixin $NotesRoute on GoRouteData {
   static NotesRoute _fromState(GoRouterState state) => const NotesRoute();
 
   @override
   String get location => GoRouteData.$location('/notes');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $ConflictRoute on GoRouteData {
+  static ConflictRoute _fromState(GoRouterState state) =>
+      ConflictRoute(opId: state.pathParameters['opId']!);
+
+  ConflictRoute get _self => this as ConflictRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/notes/conflicts/${Uri.encodeComponent(_self.opId)}',
+  );
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -200,6 +282,30 @@ mixin $NoteEditorRoute on GoRouteData {
   @override
   String get location =>
       GoRouteData.$location('/notes/${Uri.encodeComponent(_self.noteId)}');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+mixin $MindMapRoute on GoRouteData {
+  static MindMapRoute _fromState(GoRouterState state) =>
+      MindMapRoute(noteId: state.pathParameters['noteId']!);
+
+  MindMapRoute get _self => this as MindMapRoute;
+
+  @override
+  String get location =>
+      GoRouteData.$location('/notes/${Uri.encodeComponent(_self.noteId)}/map');
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -338,6 +444,30 @@ mixin $AdminUsersRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+mixin $SettingsSectionRoute on GoRouteData {
+  static SettingsSectionRoute _fromState(GoRouterState state) =>
+      SettingsSectionRoute(section: state.pathParameters['section']!);
+
+  SettingsSectionRoute get _self => this as SettingsSectionRoute;
+
+  @override
+  String get location =>
+      GoRouteData.$location('/settings/${Uri.encodeComponent(_self.section)}');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
 RouteBase get $syncRoute => GoRouteData.$route(
   path: '/sync',
   hasOverriddenOnExit: false,
@@ -375,6 +505,183 @@ mixin $SignInRoute on GoRouteData {
 
   @override
   String get location => GoRouteData.$location('/sign-in');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $signUpRoute => GoRouteData.$route(
+  path: '/sign-up',
+  hasOverriddenOnExit: false,
+  factory: $SignUpRoute._fromState,
+);
+
+mixin $SignUpRoute on GoRouteData {
+  static SignUpRoute _fromState(GoRouterState state) =>
+      SignUpRoute(server: state.uri.queryParameters['server']);
+
+  SignUpRoute get _self => this as SignUpRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/sign-up',
+    queryParams: {if (_self.server != null) 'server': _self.server},
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $approvalRoute => GoRouteData.$route(
+  path: '/approval',
+  hasOverriddenOnExit: false,
+  factory: $ApprovalRoute._fromState,
+);
+
+mixin $ApprovalRoute on GoRouteData {
+  static ApprovalRoute _fromState(GoRouterState state) => ApprovalRoute(
+    rejected:
+        _$convertMapValue(
+          'rejected',
+          state.uri.queryParameters,
+          _$boolConverter,
+        ) ??
+        false,
+    $extra: state.extra as SignInRequest?,
+  );
+
+  ApprovalRoute get _self => this as ApprovalRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/approval',
+    queryParams: {
+      if (_self.rejected != false) 'rejected': _self.rejected.toString(),
+    },
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location, extra: _self.$extra);
+
+  @override
+  Future<T?> push<T>(BuildContext context) =>
+      context.push<T>(location, extra: _self.$extra);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location, extra: _self.$extra);
+
+  @override
+  void replace(BuildContext context) =>
+      context.replace(location, extra: _self.$extra);
+}
+
+T? _$convertMapValue<T>(
+  String key,
+  Map<String, String> map,
+  T? Function(String) converter,
+) {
+  final value = map[key];
+  return value == null ? null : converter(value);
+}
+
+bool _$boolConverter(String value) {
+  switch (value) {
+    case 'true':
+      return true;
+    case 'false':
+      return false;
+    default:
+      throw UnsupportedError('Cannot convert "$value" into a bool.');
+  }
+}
+
+RouteBase get $accountDisabledRoute => GoRouteData.$route(
+  path: '/account-disabled',
+  hasOverriddenOnExit: false,
+  factory: $AccountDisabledRoute._fromState,
+);
+
+mixin $AccountDisabledRoute on GoRouteData {
+  static AccountDisabledRoute _fromState(GoRouterState state) =>
+      const AccountDisabledRoute();
+
+  @override
+  String get location => GoRouteData.$location('/account-disabled');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $deletionPendingRoute => GoRouteData.$route(
+  path: '/deletion-pending',
+  hasOverriddenOnExit: false,
+  factory: $DeletionPendingRoute._fromState,
+);
+
+mixin $DeletionPendingRoute on GoRouteData {
+  static DeletionPendingRoute _fromState(GoRouterState state) =>
+      const DeletionPendingRoute();
+
+  @override
+  String get location => GoRouteData.$location('/deletion-pending');
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
+RouteBase get $passwordChangeRoute => GoRouteData.$route(
+  path: '/password-change',
+  hasOverriddenOnExit: false,
+  factory: $PasswordChangeRoute._fromState,
+);
+
+mixin $PasswordChangeRoute on GoRouteData {
+  static PasswordChangeRoute _fromState(GoRouterState state) =>
+      const PasswordChangeRoute();
+
+  @override
+  String get location => GoRouteData.$location('/password-change');
 
   @override
   void go(BuildContext context) => context.go(location);

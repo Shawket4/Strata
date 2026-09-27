@@ -130,6 +130,9 @@ class EditorLocalizationsAr extends EditorLocalizations {
   String get suggestionsNotes => 'ملاحظات';
 
   @override
+  String get suggestionsLoading => 'بندوّر…';
+
+  @override
   String get suggestionsNone => 'مفيش نتائج';
 
   @override

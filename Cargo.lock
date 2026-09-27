@@ -4573,6 +4573,34 @@ dependencies = [
 [[package]]
 name = "strata-jobs"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "chrono-tz",
+ "dedupe",
+ "domain",
+ "futures",
+ "hex",
+ "pgvector",
+ "pretty_assertions",
+ "rmp-serde",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "strata-ai",
+ "strata-common",
+ "strata-index",
+ "strata-testkit",
+ "strata-vault",
+ "tempfile",
+ "text-normalize",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "ulid",
+ "vault-format",
+]
 
 [[package]]
 name = "strata-testkit"

@@ -171,7 +171,6 @@ abstract final class MapFixtures {
         'note',
         60,
         70,
-        degree: 3,
         cluster: 'k-pricing',
       ),
       _n(
@@ -225,7 +224,6 @@ abstract final class MapFixtures {
         'note',
         400,
         70,
-        degree: 3,
         cluster: 'k-clients',
       ),
       _n(
@@ -234,7 +232,6 @@ abstract final class MapFixtures {
         'document',
         180,
         260,
-        degree: 3,
         cluster: 'k-docs',
       ),
       _n(

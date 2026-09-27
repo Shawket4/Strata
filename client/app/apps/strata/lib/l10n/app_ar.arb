@@ -1,0 +1,15 @@
+{
+  "@@locale": "ar",
+  "splashLoading": "جارٍ فتح Strata",
+  "bootFailedTitle": "Strata ماقدرش يبدأ",
+  "bootFailedBody": "ماقدرناش نفتح قاعدة البيانات المحلية ({code}).",
+  "retry": "أعد المحاولة",
+  "notificationDone": "تم",
+  "notificationSnooze": "تأجيل",
+  "notificationOpen": "فتح",
+  "channelName": "التذكيرات",
+  "channelDescription": "تذكيرات المهام من Strata",
+  "pinnedTitle": "المجلدات",
+  "folderSemantics": "{name}، {count} ملاحظة",
+  "accountLabel": "الحساب"
+}

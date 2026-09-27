@@ -99,6 +99,7 @@ class AccountSheet extends ConsumerWidget {
                       children: [
                         Semantics(
                           header: true,
+                          container: true,
                           child: Text(
                             account.displayName,
                             style: text.title.copyWith(

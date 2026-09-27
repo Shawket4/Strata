@@ -13,7 +13,7 @@ test-support = ["strata-ai/test-support"]
 [dependencies]
 strata-common = { workspace = true, features = ["sqlx"] }
 strata-index = { workspace = true }
-strata-ai = { workspace = true, default-features = false }
+strata-ai = { workspace = true }
 strata-vault = { workspace = true }
 vault-format = { workspace = true }
 text-normalize = { workspace = true }
@@ -37,7 +37,7 @@ ulid = { workspace = true }
 
 [dev-dependencies]
 strata-testkit = { workspace = true }
-strata-ai = { workspace = true, default-features = false, features = ["test-support"] }
+strata-ai = { workspace = true, features = ["test-support"] }
 tempfile = { workspace = true }
 pretty_assertions = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }

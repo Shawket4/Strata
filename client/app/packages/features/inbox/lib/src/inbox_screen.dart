@@ -232,7 +232,7 @@ class _InboxKeyboard extends ConsumerWidget {
           if (noteId != null) open(noteId);
         },
       },
-      child: Focus(autofocus: true, child: child),
+      child: Focus(autofocus: true, includeSemantics: false, child: child),
     );
   }
 }
@@ -285,6 +285,7 @@ class _InboxList extends ConsumerWidget {
           ),
           child: Semantics(
             header: true,
+            container: true,
             child: Text(l10n.inboxTitle, style: text.title),
           ),
         ),
@@ -325,13 +326,21 @@ class _InboxList extends ConsumerWidget {
                     onPressed: checkedCaptures.isEmpty
                         ? null
                         : () => unawaited(bulkAct(accept: true)),
-                    child: Text(l10n.inboxAccept),
+                    child: Text(
+                      l10n.inboxAccept,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   TextButton(
                     onPressed: checkedCaptures.isEmpty
                         ? null
                         : () => unawaited(bulkAct(accept: false)),
-                    child: Text(l10n.inboxReject),
+                    child: Text(
+                      l10n.inboxReject,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   IconButton(
                     tooltip: l10n.inboxClearSelection,

@@ -129,6 +129,7 @@ class AdminUsersContent extends StatelessWidget {
               Expanded(
                 child: Semantics(
                   header: true,
+                  container: true,
                   child: Text(l10n.usersTitle, style: text.display),
                 ),
               ),
@@ -458,6 +459,7 @@ class UserTile extends StatelessWidget {
               children: [
                 Semantics(
                   header: true,
+                  container: true,
                   child: Text(
                     l10n.userActions(name: user.displayName),
                     style: text.titleSmall,
@@ -502,8 +504,9 @@ class UsersTable extends StatelessWidget {
       ),
       child: child,
     );
-    Widget header(String label) =>
-        cell(Semantics(header: true, child: Text(label, style: head)));
+    Widget header(String label) => cell(
+      Semantics(header: true, container: true, child: Text(label, style: head)),
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: colors.surface,

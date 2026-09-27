@@ -6,7 +6,11 @@ library;
 export 'src/async_body.dart';
 export 'src/duplicate_prompt.dart';
 export 'src/l10n.dart'
-    show TasksL10nContext, TasksL10nScope, TasksLocalizations;
+    show
+        TasksL10nContext,
+        TasksL10nScope,
+        TasksLocalizations,
+        lookupTasksLocalizations;
 export 'src/labels.dart';
 export 'src/recurrence_editor.dart';
 export 'src/task_detail.dart';

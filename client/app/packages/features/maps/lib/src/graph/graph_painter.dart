@@ -232,7 +232,7 @@ class GraphPainter extends CustomPainter {
   static const double dimOpacity = 0.3;
 
   /// World radius of the soft region drawn around every clustered node.
-  static const double clusterHalo = 34;
+  static const double clusterHalo = 60;
 
   /// Most labels drawn in one frame.
   static const int labelBudget = 300;
@@ -257,6 +257,7 @@ class GraphPainter extends CustomPainter {
     final minY = -margin;
     final maxX = size.width + margin;
     final maxY = size.height + margin;
+    final clip = Rect.fromLTRB(minX, minY, maxX, maxY);
     final xs = scene.xs;
     final ys = scene.ys;
     final kinds = scene.kinds;
@@ -368,10 +369,10 @@ class GraphPainter extends CustomPainter {
       if (styled && style.doubleLine) {
         final nx = -uy * 1.75;
         final ny = ux * 1.75;
-        _segment(batch, x1 + nx, y1 + ny, x2 + nx, y2 + ny, pattern);
-        _segment(batch, x1 - nx, y1 - ny, x2 - nx, y2 - ny, pattern);
+        _segment(batch, x1 + nx, y1 + ny, x2 + nx, y2 + ny, pattern, clip);
+        _segment(batch, x1 - nx, y1 - ny, x2 - nx, y2 - ny, pattern, clip);
       } else {
-        _segment(batch, x1, y1, x2, y2, pattern);
+        _segment(batch, x1, y1, x2, y2, pattern, clip);
       }
       if (details) {
         final head = _lineBatch(key + 1000000);
@@ -539,6 +540,9 @@ class GraphPainter extends CustomPainter {
         stroke: c.stroke.withValues(alpha: c.stroke.a * alpha),
       );
 
+  /// Adds the part of segment (x1,y1)–(x2,y2) inside [clip] to [batch],
+  /// dashed with [pattern] (dash phase anchored at the segment start, so
+  /// dashes don't crawl while panning).
   static void _segment(
     _Batch batch,
     double x1,
@@ -546,23 +550,54 @@ class GraphPainter extends CustomPainter {
     double x2,
     double y2,
     List<double>? pattern,
+    Rect clip,
   ) {
-    if (pattern == null) {
-      batch.add4(x1, y1, x2, y2);
-      return;
-    }
     final dx = x2 - x1;
     final dy = y2 - y1;
+    // Liang–Barsky clipping against the viewport.
+    var t0 = 0.0;
+    var t1 = 1.0;
+    bool edge(double p, double q) {
+      if (p == 0) return q >= 0;
+      final r = q / p;
+      if (p < 0) {
+        if (r > t1) return false;
+        if (r > t0) t0 = r;
+      } else {
+        if (r < t0) return false;
+        if (r < t1) t1 = r;
+      }
+      return true;
+    }
+
+    if (!edge(-dx, x1 - clip.left) ||
+        !edge(dx, clip.right - x1) ||
+        !edge(-dy, y1 - clip.top) ||
+        !edge(dy, clip.bottom - y1)) {
+      return;
+    }
+    if (pattern == null) {
+      batch.add4(x1 + dx * t0, y1 + dy * t0, x1 + dx * t1, y1 + dy * t1);
+      return;
+    }
     final length = math.sqrt(dx * dx + dy * dy);
+    if (length == 0) return;
     final ux = dx / length;
     final uy = dy / length;
-    var d = 0.0;
+    var period = 0.0;
+    for (final p in pattern) {
+      period += p;
+    }
+    final from = t0 * length;
+    final to = t1 * length;
+    var d = (from / period).floor() * period;
     var k = 0;
-    while (d < length) {
+    while (d < to) {
       final seg = pattern[k % pattern.length];
-      if (k.isEven) {
-        final end = math.min(d + seg, length);
-        batch.add4(x1 + ux * d, y1 + uy * d, x1 + ux * end, y1 + uy * end);
+      if (k.isEven && d + seg > from) {
+        final a = math.max(d, from);
+        final b = math.min(d + seg, to);
+        batch.add4(x1 + ux * a, y1 + uy * a, x1 + ux * b, y1 + uy * b);
       }
       d += seg;
       k++;

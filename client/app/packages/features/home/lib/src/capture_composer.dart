@@ -4,6 +4,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_home/src/l10n.dart';
 import 'package:strata_state/strata_state.dart';
+import 'package:strata_tasks/strata_tasks.dart';
 import 'package:strata_ui/strata_ui.dart';
 
 /// The capture composer: a multi-line, dictation-friendly field (typed or
@@ -126,6 +127,7 @@ class CaptureComposer extends HookConsumerWidget {
                     const SizedBox(width: StrataSpacing.s3),
                   ],
                   FilledButton(
+                    style: tallFilledButton,
                     onPressed: value.text.isEmpty || saving.value ? null : save,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,

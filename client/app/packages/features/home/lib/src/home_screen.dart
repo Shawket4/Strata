@@ -59,6 +59,7 @@ class HomeScreen extends HookConsumerWidget {
         },
         child: Focus(
           autofocus: true,
+          includeSemantics: false,
           child: Builder(
             builder: (context) {
               final view = value.value;
@@ -176,6 +177,7 @@ class _MediumHome extends StatelessWidget {
       children: [
         Semantics(
           header: true,
+          container: true,
           child: Text(l10n.homeTitle, style: context.strataText.display),
         ),
         const SizedBox(height: StrataSpacing.s4),
@@ -248,6 +250,7 @@ class _ExpandedHome extends StatelessWidget {
             children: [
               Semantics(
                 header: true,
+                container: true,
                 child: Text(l10n.homeTitle, style: context.strataText.display),
               ),
               const SizedBox(height: StrataSpacing.s4),
@@ -416,7 +419,11 @@ class _TaskSections extends StatelessWidget {
                 ? null
                 : TextButton(
                     onPressed: onOpenTasks,
-                    child: Text(l10n.homeAllTasks),
+                    child: Text(
+                      l10n.homeAllTasks,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
             children: [
               for (final task in sections.upcoming)
@@ -460,7 +467,14 @@ class _TodayBlock extends StatelessWidget {
       icon: Icons.check_circle_outline,
       action: onOpenTasks == null
           ? null
-          : TextButton(onPressed: onOpenTasks, child: Text(l10n.homeAllTasks)),
+          : TextButton(
+              onPressed: onOpenTasks,
+              child: Text(
+                l10n.homeAllTasks,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
       children: [
         if (empty)
           Padding(
@@ -568,7 +582,14 @@ class _RecentNotes extends StatelessWidget {
       title: l10n.homeRecentNotes,
       action: onOpenNotes == null
           ? null
-          : TextButton(onPressed: onOpenNotes, child: Text(l10n.homeAllNotes)),
+          : TextButton(
+              onPressed: onOpenNotes,
+              child: Text(
+                l10n.homeAllNotes,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
       children: [
         if (notes.isEmpty)
           Padding(

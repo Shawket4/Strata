@@ -53,6 +53,7 @@ class TaskMeta extends StatelessWidget {
     this.overdue = false,
     this.showLinks = true,
     this.showRecurrence = true,
+    this.showReminders = true,
   });
 
   /// The task.
@@ -66,6 +67,9 @@ class TaskMeta extends StatelessWidget {
 
   /// Whether the recurrence phrase is shown.
   final bool showRecurrence;
+
+  /// Whether the reminder bell is shown.
+  final bool showReminders;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +122,8 @@ class TaskMeta extends StatelessWidget {
                 Flexible(child: Text(link.title, style: style)),
               ],
             ),
+        if (showReminders && task.reminders.isNotEmpty)
+          TaskReminderBell(reminders: task.reminders),
         if (task.pendingSync) const NotSyncedMarker(),
       ],
     );
@@ -177,10 +183,12 @@ class TaskReminderBell extends StatelessWidget {
                   color: colors.text2,
                 ),
                 const SizedBox(width: 2),
-                Text(
-                  reminder.local,
-                  style: style,
-                  textDirection: TextDirection.ltr,
+                Flexible(
+                  child: Text(
+                    reminder.local,
+                    style: style,
+                    textDirection: TextDirection.ltr,
+                  ),
                 ),
               ],
             ),
@@ -262,14 +270,6 @@ class TaskRow extends StatelessWidget {
                   ),
                 ),
               ),
-              if (task.reminders.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    start: StrataSpacing.s2,
-                    top: StrataSpacing.s3,
-                  ),
-                  child: TaskReminderBell(reminders: task.reminders),
-                ),
             ],
           ),
         ),

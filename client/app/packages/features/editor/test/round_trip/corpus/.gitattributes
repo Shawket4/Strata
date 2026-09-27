@@ -1,0 +1,2 @@
+# Round-trip corpus: bytes are the golden; never normalise line endings.
+* -text

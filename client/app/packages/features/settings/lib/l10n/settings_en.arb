@@ -1,0 +1,305 @@
+{
+  "@@locale": "en",
+  "title": "Settings",
+  "@title": {
+    "description": "Settings title."
+  },
+  "groupYou": "YOU",
+  "@groupYou": {
+    "description": "Settings nav group."
+  },
+  "groupApp": "APP",
+  "@groupApp": {
+    "description": "Settings nav group."
+  },
+  "groupAdmin": "ADMIN",
+  "@groupAdmin": {
+    "description": "Settings nav group."
+  },
+  "sectionAccount": "Account",
+  "@sectionAccount": {
+    "description": "Section."
+  },
+  "sectionDevices": "Devices",
+  "@sectionDevices": {
+    "description": "Section."
+  },
+  "sectionReminders": "Reminders",
+  "@sectionReminders": {
+    "description": "Section."
+  },
+  "sectionAi": "AI",
+  "@sectionAi": {
+    "description": "Section."
+  },
+  "sectionIntegrity": "Integrity",
+  "@sectionIntegrity": {
+    "description": "Section."
+  },
+  "sectionData": "Export & import",
+  "@sectionData": {
+    "description": "Section."
+  },
+  "sectionSync": "Sync",
+  "@sectionSync": {
+    "description": "Section."
+  },
+  "sectionAdmin": "Users",
+  "@sectionAdmin": {
+    "description": "Section: Admin → Users."
+  },
+  "sectionAbout": "About",
+  "@sectionAbout": {
+    "description": "Section."
+  },
+  "settingsNav": "Settings sections",
+  "@settingsNav": {
+    "description": "Accessibility label of the settings navigation."
+  },
+  "openAccount": "Account and sign out",
+  "@openAccount": {
+    "description": "Opens the account sheet."
+  },
+  "atUsernameRole": "@{username} · {role}",
+  "@atUsernameRole": {
+    "description": "Account header subtitle.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "roleAdmin": "Admin",
+  "@roleAdmin": {
+    "description": "Role admin."
+  },
+  "roleMember": "Member",
+  "@roleMember": {
+    "description": "Role member."
+  },
+  "displayName": "Display name",
+  "@displayName": {
+    "description": "Label."
+  },
+  "username": "Username",
+  "@username": {
+    "description": "Label."
+  },
+  "role": "Role",
+  "@role": {
+    "description": "Label."
+  },
+  "server": "Server",
+  "@server": {
+    "description": "Label."
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Label."
+  },
+  "languageEn": "English",
+  "@languageEn": {
+    "description": "The English UI language (in its own script)."
+  },
+  "languageAr": "العربية",
+  "@languageAr": {
+    "description": "The Arabic UI language (in its own script)."
+  },
+  "timezone": "Time zone",
+  "@timezone": {
+    "description": "Label."
+  },
+  "changePasswordTitle": "Change password",
+  "@changePasswordTitle": {
+    "description": "Password change group."
+  },
+  "currentPassword": "Current password",
+  "@currentPassword": {
+    "description": "Field."
+  },
+  "newPassword": "New password",
+  "@newPassword": {
+    "description": "Field."
+  },
+  "notAvailableYet": "Not available yet",
+  "@notAvailableYet": {
+    "description": "Tooltip / state for an action the app cannot perform yet."
+  },
+  "signOut": "Sign out",
+  "@signOut": {
+    "description": "Sign out."
+  },
+  "thisDevice": "This device",
+  "@thisDevice": {
+    "description": "Label."
+  },
+  "deviceListNote": "Renaming and revoking devices comes with the device list.",
+  "@deviceListNote": {
+    "description": "Explains the missing device list."
+  },
+  "rename": "Rename",
+  "@rename": {
+    "description": "Renames a device."
+  },
+  "revoke": "Revoke",
+  "@revoke": {
+    "description": "Revokes a device."
+  },
+  "remindersOnDevice": "Reminders on this device",
+  "@remindersOnDevice": {
+    "description": "Switch label."
+  },
+  "remindersOnDeviceHelp": "Every device with reminders on notifies you.",
+  "@remindersOnDeviceHelp": {
+    "description": "Switch helper."
+  },
+  "remindersOffPermission": "Reminders are off on this device",
+  "@remindersOffPermission": {
+    "description": "Permission denied banner title."
+  },
+  "remindersOffPermissionBody": "Allow notifications (and exact alarms on Android) for Strata in the system settings.",
+  "@remindersOffPermissionBody": {
+    "description": "Permission denied banner body."
+  },
+  "remindersPermissionUnknown": "Notification permission not checked yet",
+  "@remindersPermissionUnknown": {
+    "description": "Permission unknown."
+  },
+  "remindersPermissionGranted": "Notifications allowed",
+  "@remindersPermissionGranted": {
+    "description": "Permission granted."
+  },
+  "deliveryOs": "Delivered by the system, even when Strata is closed",
+  "@deliveryOs": {
+    "description": "Notification mode OS scheduled."
+  },
+  "deliveryWhileRunning": "Delivered while Strata is running",
+  "@deliveryWhileRunning": {
+    "description": "Notification mode while running (Linux)."
+  },
+  "scheduledCount": "{count, plural, =0{No reminders scheduled} =1{1 reminder scheduled} other{{count} reminders scheduled}}",
+  "@scheduledCount": {
+    "description": "Reminders scheduled with the OS.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "defaultTime": "Default reminder time",
+  "@defaultTime": {
+    "description": "Label."
+  },
+  "defaultTimeHelp": "For tasks with a date but no time",
+  "@defaultTimeHelp": {
+    "description": "Helper."
+  },
+  "remindersSyncNote": "Marking a reminder Done or Snoozed on one device clears it on the others at the next sync.",
+  "@remindersSyncNote": {
+    "description": "Footnote."
+  },
+  "aiBody": "AI provider status, thresholds, auto-filing and the daily budget.",
+  "@aiBody": {
+    "description": "AI section description."
+  },
+  "integrityBody": "Warnings about files the server couldn't read or index.",
+  "@integrityBody": {
+    "description": "Integrity section description."
+  },
+  "dataBody": "Download your whole vault as a zip, or import markdown files.",
+  "@dataBody": {
+    "description": "Export & import description."
+  },
+  "exportVault": "Export vault (.zip)",
+  "@exportVault": {
+    "description": "Export action."
+  },
+  "importFiles": "Import markdown…",
+  "@importFiles": {
+    "description": "Import action."
+  },
+  "available": "Available",
+  "@available": {
+    "description": "Availability available."
+  },
+  "unavailableOffline": "Needs a connection",
+  "@unavailableOffline": {
+    "description": "Availability offline."
+  },
+  "unavailableNotYet": "Not available yet",
+  "@unavailableNotYet": {
+    "description": "Availability not yet available."
+  },
+  "unavailableNotAllowed": "Not available for this account",
+  "@unavailableNotAllowed": {
+    "description": "Availability not allowed."
+  },
+  "offlineBody": "This needs your server. Connect and try again.",
+  "@offlineBody": {
+    "description": "Offline state body."
+  },
+  "notYetBody": "Your server doesn't offer this yet.",
+  "@notYetBody": {
+    "description": "Not yet available body."
+  },
+  "notAllowedBody": "This account can't use this.",
+  "@notAllowedBody": {
+    "description": "Not allowed body."
+  },
+  "syncBody": "Sync status, the outbox and conflicts.",
+  "@syncBody": {
+    "description": "Sync section description."
+  },
+  "openSyncStatus": "Open sync status",
+  "@openSyncStatus": {
+    "description": "Opens the sync status."
+  },
+  "adminBody": "Approve new accounts, disable users, reset passwords and schedule deletions.",
+  "@adminBody": {
+    "description": "Admin section description."
+  },
+  "openAdminUsers": "Open Admin → Users",
+  "@openAdminUsers": {
+    "description": "Opens Admin → Users."
+  },
+  "aboutBody": "Strata keeps your notes as markdown on your own server, with a copy on each device.",
+  "@aboutBody": {
+    "description": "About text."
+  },
+  "licences": "Licences",
+  "@licences": {
+    "description": "Opens the licences page (incl. the bundled fonts)."
+  },
+  "fontsNote": "Cairo, IBM Plex Mono and Quicksand are bundled under the SIL Open Font License.",
+  "@fontsNote": {
+    "description": "Font credits."
+  },
+  "back": "Back",
+  "@back": {
+    "description": "Back button."
+  },
+  "loading": "Loading settings",
+  "@loading": {
+    "description": "Loading label."
+  },
+  "loadFailed": "Settings could not be loaded",
+  "@loadFailed": {
+    "description": "Error title."
+  },
+  "errorGeneric": "Something went wrong ({code}).",
+  "@errorGeneric": {
+    "description": "Any core error.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "errorOffline": "You're offline.",
+  "@errorOffline": {
+    "description": "Core error offline."
+  }
+}

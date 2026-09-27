@@ -302,6 +302,12 @@ abstract class EditorLocalizations {
   /// **'Notes'**
   String get suggestionsNotes;
 
+  /// Autocomplete: results are loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Searching…'**
+  String get suggestionsLoading;
+
   /// Autocomplete: nothing matches.
   ///
   /// In en, this message translates to:

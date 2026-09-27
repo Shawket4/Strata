@@ -304,6 +304,7 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: StrataSpacing.s1),
                 Semantics(
                   header: true,
+                  container: true,
                   child: Text(detail.title, style: text.title),
                 ),
                 const SizedBox(height: StrataSpacing.s1),
@@ -341,6 +342,7 @@ class _ColumnTitle extends StatelessWidget {
     final extra = suffix;
     return Semantics(
       header: true,
+      container: true,
       child: Text.rich(
         TextSpan(
           children: [
@@ -511,6 +513,7 @@ class _HunkCard extends StatelessWidget {
           children: [
             Semantics(
               header: true,
+              container: true,
               child: Text(
                 l10n.hunkTitle(location: hunk.location),
                 style: text.bodyStrong.copyWith(color: colors.warningText),

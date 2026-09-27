@@ -34,7 +34,7 @@ pub enum Payload {
     /// `duplicate`.
     Duplicate(DuplicatePayload),
     /// `duplicates` (nightly semantic sweep, §9.7).
-    Duplicates(crate::ops::ai::DuplicatesPayload),
+    Duplicates(Box<crate::ops::ai::DuplicatesPayload>),
     /// Any other kind (opaque `MessagePack`).
     Opaque(Vec<u8>),
 }
@@ -49,7 +49,7 @@ impl SuggestionView {
             ),
             "duplicates" => rmp_serde::from_slice(&self.suggestion.payload).map_or_else(
                 |_| Payload::Opaque(self.suggestion.payload.clone()),
-                Payload::Duplicates,
+                |p| Payload::Duplicates(Box::new(p)),
             ),
             _ => Payload::Opaque(self.suggestion.payload.clone()),
         }

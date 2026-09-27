@@ -4,4 +4,9 @@ library;
 
 export 'src/capture_composer.dart';
 export 'src/home_screen.dart';
-export 'src/l10n.dart' show HomeL10nContext, HomeL10nScope, HomeLocalizations;
+export 'src/l10n.dart'
+    show
+        HomeL10nContext,
+        HomeL10nScope,
+        HomeLocalizations,
+        lookupHomeLocalizations;
