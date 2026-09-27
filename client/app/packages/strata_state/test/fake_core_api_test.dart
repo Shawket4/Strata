@@ -23,16 +23,12 @@ void main() {
     ),
     (
       invoke: (api) => api.signUp(request: StrataFixtures.signUpRequest),
-      call: const CoreCall('signUp', {
-        'request': StrataFixtures.signUpRequest,
-      }),
+      call: const CoreCall('signUp', {'request': StrataFixtures.signUpRequest}),
       answer: StrataFixtures.signUpOutcome,
     ),
     (
       invoke: (api) => api.signIn(request: StrataFixtures.signInRequest),
-      call: const CoreCall('signIn', {
-        'request': StrataFixtures.signInRequest,
-      }),
+      call: const CoreCall('signIn', {'request': StrataFixtures.signInRequest}),
       answer: StrataFixtures.sessionActive,
     ),
     (
@@ -342,27 +338,30 @@ void main() {
   });
 
   group('FakeStream', () {
-    test('replays the latest value to a new subscriber, then live ones', () async {
-      final fake = FakeCoreApi();
-      addTearDown(fake.dispose);
-      fake.home
-        ..add(StrataFixtures.homeView)
-        ..add(StrataFixtures.homeView);
-      final seen = <HomeView>[];
-      final sub = fake.watchHome().listen(seen.add);
-      addTearDown(sub.cancel);
-      await Future<void>.delayed(Duration.zero);
-      expect(seen, [same(StrataFixtures.homeView)]);
-      final empty = HomeView(
-        recentNotes: const [],
-        inboxCount: 0,
-        tasks: StrataFixtures.taskSections,
-        sync_: StrataFixtures.syncPill,
-      );
-      fake.home.add(empty);
-      await Future<void>.delayed(Duration.zero);
-      expect(seen, [same(StrataFixtures.homeView), same(empty)]);
-    });
+    test(
+      'replays the latest value to a new subscriber, then live ones',
+      () async {
+        final fake = FakeCoreApi();
+        addTearDown(fake.dispose);
+        fake.home
+          ..add(StrataFixtures.homeView)
+          ..add(StrataFixtures.homeView);
+        final seen = <HomeView>[];
+        final sub = fake.watchHome().listen(seen.add);
+        addTearDown(sub.cancel);
+        await Future<void>.delayed(Duration.zero);
+        expect(seen, [same(StrataFixtures.homeView)]);
+        final empty = HomeView(
+          recentNotes: const [],
+          inboxCount: 0,
+          tasks: StrataFixtures.taskSections,
+          sync_: StrataFixtures.syncPill,
+        );
+        fake.home.add(empty);
+        await Future<void>.delayed(Duration.zero);
+        expect(seen, [same(StrataFixtures.homeView), same(empty)]);
+      },
+    );
 
     test('forwards errors and closes', () async {
       final fake = FakeCoreApi();

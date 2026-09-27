@@ -26,9 +26,8 @@ void main() {
     bridgeSource = File('$lib/src/bridge_core_api.dart').readAsStringSync();
     librarySource = File('$lib/strata_state.dart').readAsStringSync();
     fixturesSource = File('$lib/src/testing/fixtures.dart').readAsStringSync();
-    modelSource = File(
-      '$bridgeLib/src/generated/view/model.dart',
-    ).readAsStringSync();
+    modelSource = File('$bridgeLib/src/generated/view/model.dart')
+        .readAsStringSync();
   });
 
   group('CoreApi mirrors the generated facade', () {
@@ -36,7 +35,12 @@ void main() {
       final files = (await facadeFiles())
           .map((f) => f.uri.pathSegments.last)
           .toList();
-      expect(files, ['app.dart', 'intents.dart', 'reminders.dart', 'views.dart']);
+      expect(files, [
+        'app.dart',
+        'intents.dart',
+        'reminders.dart',
+        'views.dart',
+      ]);
       expect(facade, hasLength(53));
       expect(
         facade['watchDirectory']!.signature,
@@ -61,9 +65,11 @@ void main() {
     });
 
     test('strata_state.dart hides every facade function from its export', () {
-      final hide = RegExp(
-        r'hide\s+([^;]+);',
-      ).firstMatch(librarySource)!.group(1)!.split(',').map((s) => s.trim());
+      final hide = RegExp(r'hide\s+([^;]+);')
+          .firstMatch(librarySource)!
+          .group(1)!
+          .split(',')
+          .map((s) => s.trim());
       expect(hide.toSet(), containsAll(facade.keys));
     });
 

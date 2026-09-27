@@ -22,7 +22,11 @@ List<AsyncValue<T>> _record<T>(
   ProviderListenable<AsyncValue<T>> provider,
 ) {
   final seen = <AsyncValue<T>>[];
-  container.listen(provider, (_, next) => seen.add(next), fireImmediately: true);
+  container.listen(
+    provider,
+    (_, next) => seen.add(next),
+    fireImmediately: true,
+  );
   return seen;
 }
 
@@ -90,7 +94,8 @@ void main() {
     });
 
     test('each container reads its own override', () async {
-      final signedOut = FakeCoreApi()..session.add(StrataFixtures.sessionSignedOut);
+      final signedOut = FakeCoreApi()
+        ..session.add(StrataFixtures.sessionSignedOut);
       final active = FakeCoreApi()..session.add(StrataFixtures.sessionActive);
       final first = _record(_container(signedOut), sessionProvider);
       final second = _record(_container(active), sessionProvider);

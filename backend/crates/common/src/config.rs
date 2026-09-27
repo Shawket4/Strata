@@ -344,6 +344,50 @@ pub const DEFAULT_DEDUPE_THRESHOLDS: &[(&str, f64, f64)] = &[
     ("task", 0.6, 0.88),
 ];
 
+impl Default for AiConfig {
+    fn default() -> Self {
+        Self {
+            default_provider: AiProviderKind::ClaudeCli,
+            user_providers: BTreeMap::new(),
+            daily_job_limit: 0,
+            claude_cli: ClaudeCliSettings {
+                command: vec!["/usr/local/bin/claude".to_owned()],
+                scratch_dir: PathBuf::from("/var/lib/strata-ai/scratch"),
+                model: None,
+                max_concurrency: 1,
+                timeout_secs: 300,
+                kill_grace_secs: 5,
+                usage_limit_pause_secs: 1800,
+            },
+            anthropic_api: AnthropicApiSettings {
+                api_key_file: None,
+                model: DEFAULT_ANTHROPIC_MODEL.to_owned(),
+                base_url: "https://api.anthropic.com".to_owned(),
+                effort: None,
+                max_retries: 3,
+                timeout_secs: 600,
+                input_micros_per_mtok: 4_000_000,
+                output_micros_per_mtok: 20_000_000,
+            },
+            embedding: EmbeddingSettings {
+                model_dir: None,
+                onnxruntime_lib: None,
+                model_file: PathBuf::from("onnx/model_quint8_avx2.onnx"),
+                tokenizer_file: PathBuf::from("tokenizer.json"),
+                model_id:
+                    "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"
+                        .to_owned(),
+                dims: 384,
+                pooling: EmbeddingPooling::Cls,
+                max_tokens: 2048,
+                max_batch_tokens: 8192,
+                pad_batches: false,
+                nice: 19,
+            },
+        }
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -356,45 +400,7 @@ impl Default for Config {
                 accounts_url: "postgres://strata_accounts@localhost/strata".to_owned(),
                 max_connections: 5,
             },
-            ai: AiConfig {
-                default_provider: AiProviderKind::ClaudeCli,
-                user_providers: BTreeMap::new(),
-                daily_job_limit: 0,
-                claude_cli: ClaudeCliSettings {
-                    command: vec!["/usr/local/bin/claude".to_owned()],
-                    scratch_dir: PathBuf::from("/var/lib/strata-ai/scratch"),
-                    model: None,
-                    max_concurrency: 1,
-                    timeout_secs: 300,
-                    kill_grace_secs: 5,
-                    usage_limit_pause_secs: 1800,
-                },
-                anthropic_api: AnthropicApiSettings {
-                    api_key_file: None,
-                    model: DEFAULT_ANTHROPIC_MODEL.to_owned(),
-                    base_url: "https://api.anthropic.com".to_owned(),
-                    effort: None,
-                    max_retries: 3,
-                    timeout_secs: 600,
-                    input_micros_per_mtok: 4_000_000,
-                    output_micros_per_mtok: 20_000_000,
-                },
-                embedding: EmbeddingSettings {
-                    model_dir: None,
-                    onnxruntime_lib: None,
-                    model_file: PathBuf::from("onnx/model_quint8_avx2.onnx"),
-                    tokenizer_file: PathBuf::from("tokenizer.json"),
-                    model_id:
-                        "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"
-                            .to_owned(),
-                    dims: 384,
-                    pooling: EmbeddingPooling::Cls,
-                    max_tokens: 2048,
-                    max_batch_tokens: 8192,
-                    pad_batches: false,
-                    nice: 19,
-                },
-            },
+            ai: AiConfig::default(),
             thresholds: Thresholds {
                 relation: 0.7,
                 custody: 0.85,

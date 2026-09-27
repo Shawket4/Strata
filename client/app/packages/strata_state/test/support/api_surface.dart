@@ -14,7 +14,7 @@ import 'dart:isolate';
 /// One function: return type, name and normalised parameter list.
 final class ApiFunction {
   /// Creates a parsed function.
-  const ApiFunction(this.returnType, this.name, this.parameters);
+  const new(this.returnType, this.name, this.parameters);
 
   /// `Future<SessionState>`, `Stream<HomeView>`, …
   final String returnType;
@@ -37,7 +37,7 @@ final class ApiFunction {
 /// Thrown when a source does not have the expected shape.
 final class SurfaceParseError extends Error {
   /// Creates the error.
-  SurfaceParseError(this.message);
+  new(this.message);
 
   /// What went wrong.
   final String message;
@@ -60,10 +60,7 @@ String _normaliseParameters(String raw) {
   return text;
 }
 
-Map<String, ApiFunction> _collect(
-  Iterable<RegExpMatch> matches,
-  String where,
-) {
+Map<String, ApiFunction> _collect(Iterable<RegExpMatch> matches, String where) {
   final functions = <String, ApiFunction>{};
   for (final m in matches) {
     final function = ApiFunction(
@@ -105,9 +102,8 @@ Map<String, ApiFunction> parseInterface(
   String className = 'CoreApi',
 }) {
   final code = _stripComments(source);
-  final header = RegExp(
-    'abstract interface class $className\\s*\\{',
-  ).firstMatch(code);
+  final header = RegExp('abstract interface class $className\\s*\\{')
+      .firstMatch(code);
   if (header == null) throw SurfaceParseError('no interface $className');
   final end = code.indexOf('\n}', header.end);
   final body = code.substring(header.end, end);
@@ -151,9 +147,8 @@ List<String> checkDelegation(
   Map<String, ApiFunction> facade,
 ) {
   final code = _stripComments(bridgeSource);
-  final forwards = RegExp(
-    r'(\w+)\(([^)]*)\)\s*=>\s*bridge\.(\w+)\(([^)]*)\)',
-  ).allMatches(code);
+  final forwards = RegExp(r'(\w+)\(([^)]*)\)\s*=>\s*bridge\.(\w+)\(([^)]*)\)')
+      .allMatches(code);
   final problems = <String>[];
   final seen = <String>{};
   for (final m in forwards) {
@@ -164,9 +159,9 @@ List<String> checkDelegation(
       problems.add('$method forwards to bridge.$target');
       continue;
     }
-    final names = RegExp(
-      r'(\w+)\s*(?:,|$|})',
-    ).allMatches(_normaliseParameters(m.group(2)!)).map((p) => p.group(1));
+    final names = RegExp(r'(\w+)\s*(?:,|$|})')
+        .allMatches(_normaliseParameters(m.group(2)!))
+        .map((p) => p.group(1));
     final expected = names.map((n) => '$n: $n').join(', ');
     final actual = _normaliseParameters(m.group(4)!);
     if (expected != actual) {
@@ -191,9 +186,15 @@ Future<Directory> packageLib(String package) async {
 
 /// The generated facade files of `strata_bridge`.
 Future<List<File>> facadeFiles() async {
-  final api = Directory('${(await packageLib('strata_bridge')).path}'
-      '/src/generated/api');
-  return api.listSync().whereType<File>().where((f) => f.path.endsWith('.dart')).toList()
+  final api = Directory(
+    '${(await packageLib('strata_bridge')).path}'
+    '/src/generated/api',
+  );
+  return api
+      .listSync()
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.dart'))
+      .toList()
     ..sort((a, b) => a.path.compareTo(b.path));
 }
 
