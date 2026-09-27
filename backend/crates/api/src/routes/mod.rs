@@ -4,7 +4,9 @@
 pub mod admin;
 pub mod auth;
 pub mod devices;
+pub mod events;
 pub mod me;
+pub mod sync;
 // The vault store (mounted and documented by `crate::vault`).
 pub mod documents;
 pub mod entities;

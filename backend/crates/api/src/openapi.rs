@@ -55,6 +55,9 @@ use crate::wire::{
         crate::routes::admin::update_user,
         crate::routes::admin::delete_user,
         crate::routes::admin::cancel_deletion,
+        crate::routes::sync::bootstrap,
+        crate::routes::sync::changes,
+        crate::routes::sync::push_ops,
     ),
     components(schemas(
         Problem,
@@ -62,7 +65,9 @@ use crate::wire::{
         DuplicateCandidate,
         MatchLevel,
         Binary,
-        FrameKind
+        FrameKind,
+        crate::events::Event,
+        crate::events::AccountClosure
     )),
     tags(
         (name = "system", description = "Service status."),
@@ -70,6 +75,8 @@ use crate::wire::{
         (name = "account", description = "The signed-in user's account, settings, export and deletion."),
         (name = "devices", description = "The signed-in user's devices."),
         (name = "admin", description = "Account administration (admins only)."),
+        (name = "sync", description = "Offline-first sync: bootstrap, changes feed and op push (PLAN §7.5 Sync, D19)."),
+        (name = "events", description = "The caller's event stream (WebSocket, D24)."),
     )
 )]
 pub struct ApiDoc;
@@ -92,7 +99,7 @@ pub struct StreamOperation {
 }
 
 /// Production stream endpoints.
-pub const STREAMS: &[StreamOperation] = &[];
+pub const STREAMS: &[StreamOperation] = &[crate::routes::events::STREAM];
 
 /// The production contract.
 pub fn document() -> Value {

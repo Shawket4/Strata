@@ -15,9 +15,11 @@
 
 pub mod app;
 pub mod auth;
+pub mod events;
 pub mod health;
 pub mod openapi;
 pub mod routes;
+pub mod sync;
 pub mod vault;
 pub mod wire;
 

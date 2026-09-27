@@ -4422,6 +4422,7 @@ dependencies = [
  "caseless",
  "chrono",
  "chrono-tz",
+ "dedupe",
  "domain",
  "ed25519-dalek",
  "futures-util",
@@ -4447,6 +4448,7 @@ dependencies = [
  "strata-index",
  "strata-testkit",
  "strata-vault",
+ "sync-model",
  "tempfile",
  "thiserror",
  "tokio",
@@ -4456,6 +4458,7 @@ dependencies = [
  "unicode-normalization",
  "unicode-security",
  "utoipa",
+ "uuid",
  "vault-format",
  "zip",
 ]

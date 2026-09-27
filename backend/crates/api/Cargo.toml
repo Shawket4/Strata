@@ -39,6 +39,9 @@ strata-index = { workspace = true }
 strata-vault = { workspace = true }
 vault-format = { workspace = true }
 domain = { workspace = true }
+sync-model = { workspace = true }
+dedupe = { workspace = true }
+uuid = { workspace = true }
 sqlx = { workspace = true }
 jsonwebtoken = { workspace = true }
 ed25519-dalek = { workspace = true }

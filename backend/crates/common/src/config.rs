@@ -1136,6 +1136,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)] // one assertion per rule
     fn ai_settings_are_validated() {
         let invalid = |text: &str, message: &str| {
             assert_eq!(
@@ -1246,6 +1247,21 @@ mod tests {
     /// commented out, under its section.
     #[test]
     fn example_file_documents_every_key_with_its_default() {
+        fn leaves(prefix: &str, table: &toml::Table, out: &mut Vec<(String, String)>) {
+            for (key, value) in table {
+                match value {
+                    toml::Value::Table(t) => {
+                        let p = if prefix.is_empty() {
+                            key.clone()
+                        } else {
+                            format!("{prefix}.{key}")
+                        };
+                        leaves(&p, t, out);
+                    }
+                    _ => out.push((prefix.to_owned(), key.clone())),
+                }
+            }
+        }
         let path = concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/../../../deploy/stratad.example.toml"
@@ -1266,21 +1282,6 @@ mod tests {
                 && !key.contains(' ')
             {
                 documented.insert((section.clone(), key.to_owned()));
-            }
-        }
-        fn leaves(prefix: &str, table: &toml::Table, out: &mut Vec<(String, String)>) {
-            for (key, value) in table {
-                match value {
-                    toml::Value::Table(t) => {
-                        let p = if prefix.is_empty() {
-                            key.clone()
-                        } else {
-                            format!("{prefix}.{key}")
-                        };
-                        leaves(&p, t, out);
-                    }
-                    _ => out.push((prefix.to_owned(), key.clone())),
-                }
             }
         }
         let mut expected = Vec::new();
