@@ -118,14 +118,14 @@ void main() {
       await go(tester, app, const SettingsRoute().location);
       final folder = StrataFixtures.notesListView.folders.first;
       expect(find.text(folder.name), findsWidgets);
-      await tester.tap(find.byType(SidebarItem).at(2));
-      await settle(tester);
-      expect(app.router.state.uri.path, '/tasks');
       await tester.tap(
         find.bySemanticsLabel('${folder.name}, ${folder.noteCount} notes'),
       );
       await settle(tester);
       expect(app.router.state.uri.path, '/notes');
+      await tester.tap(find.byType(SidebarItem).at(2));
+      await settle(tester);
+      expect(app.router.state.uri.path, '/tasks');
     });
 
     testWidgets('Cmd/Ctrl-N opens capture (Home)', (tester) async {

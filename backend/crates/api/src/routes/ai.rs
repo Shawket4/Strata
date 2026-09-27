@@ -275,7 +275,7 @@ async fn username(api: &AiApi, auth: &Authenticated) -> Result<String, Problem> 
 }
 
 fn ai_api(api: Option<&web::Data<AiApi>>) -> Result<&AiApi, Problem> {
-    api.map(|a| a.get_ref())
+    api.map(web::Data::get_ref)
         .ok_or_else(|| unavailable_problem("the AI subsystem is not configured on this server"))
 }
 

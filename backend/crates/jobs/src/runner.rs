@@ -240,7 +240,7 @@ impl Runner {
             match result {
                 Ok(n) => total += n,
                 Err(e) => {
-                    tracing::error!(user = %user, error = %e, "re-queueing stale jobs failed")
+                    tracing::error!(user = %user, error = %e, "re-queueing stale jobs failed");
                 }
             }
         }

@@ -89,9 +89,9 @@ pub enum SuggestionPayload {
     /// rejecting keeps both for good. Never merged automatically.
     Duplicates {
         /// The first item.
-        a: DuplicateCandidate,
+        a: Box<DuplicateCandidate>,
         /// The second item.
-        b: DuplicateCandidate,
+        b: Box<DuplicateCandidate>,
         /// Why the model confirmed a borderline pair.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
@@ -194,8 +194,8 @@ impl From<SuggestionView> for Suggestion {
             },
             Payload::Duplicates(p) => match (pair_item(&p.a), pair_item(&p.b)) {
                 (Some(a), Some(b)) => SuggestionPayload::Duplicates {
-                    a,
-                    b,
+                    a: Box::new(a),
+                    b: Box::new(b),
                     reason: p.reason.clone(),
                 },
                 _ => SuggestionPayload::Opaque {

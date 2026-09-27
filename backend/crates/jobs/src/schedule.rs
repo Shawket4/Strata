@@ -162,7 +162,7 @@ impl Scheduler {
                     Ok(true) => added += 1,
                     Ok(false) => {}
                     Err(e) => {
-                        tracing::error!(user = %user, kind = p.kind, error = %e, "scheduling failed")
+                        tracing::error!(user = %user, kind = p.kind, error = %e, "scheduling failed");
                     }
                 }
             }
