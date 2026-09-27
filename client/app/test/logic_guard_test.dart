@@ -145,6 +145,57 @@ void main() {
       ]);
     });
 
+    test('timezone is allowed in the app shell only', () {
+      final root = _workspace(
+        members: {
+          'apps/strata': _pubspec(
+            'strata',
+            deps:
+                '  flutter_local_notifications: ^22.3.1\n'
+                '  timezone: ^0.11.0\n',
+          ),
+          'packages/features/tasks': _pubspec(
+            'strata_tasks',
+            deps: '  timezone: ^0.11.0\n',
+          ),
+          'packages/strata_state': _pubspec(
+            'strata_state',
+            deps: '  timezone: ^0.11.0\n',
+          ),
+        },
+      );
+      expect(runGuard(root), [
+        const Violation(
+          'strata_state',
+          'dependencies "timezone" is not allowed: '
+              'not in the §11.1 allow-list',
+        ),
+        const Violation(
+          'strata_tasks',
+          'dependencies "timezone" is not allowed: '
+              'not in the §11.1 allow-list',
+        ),
+      ]);
+    });
+
+    test('timezone is not an allowed dev dependency', () {
+      final root = _workspace(
+        members: {
+          'apps/strata': _pubspec(
+            'strata',
+            devDeps: '  timezone: ^0.11.0\n',
+          ),
+        },
+      );
+      expect(runGuard(root), [
+        const Violation(
+          'strata',
+          'dev_dependencies "timezone" is not allowed: '
+              'not in the §11.1 allow-list',
+        ),
+      ]);
+    });
+
     test('refuses path/git dependencies, unknown SDK packages, overrides', () {
       final root = _workspace(
         members: {

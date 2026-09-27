@@ -33,11 +33,14 @@ const Map<String, String> allowedRuntime = {
 /// Runtime dependencies allowed only in the named package.
 const Map<String, Set<String>> scopedRuntime = {
   // App shell: routing, localisation delegates, notifications (D27).
+  // `timezone` only types the instant handed to the plugin's
+  // `zonedSchedule` (`TZDateTime`); no time maths in Dart (L15).
   'strata': {
     'flutter_localizations',
     'go_router',
     'firebase_messaging',
     'flutter_local_notifications',
+    'timezone',
   },
   // gen-l10n output needs intl and the SDK localisations.
   'strata_l10n': {'flutter_localizations', 'intl'},

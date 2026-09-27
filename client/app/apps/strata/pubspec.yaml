@@ -36,6 +36,7 @@ dependencies:
   strata_sync: any
   strata_tasks: any
   strata_ui: any
+  timezone: ^0.11.1
 
 dev_dependencies:
   alchemist: ^0.14.0
