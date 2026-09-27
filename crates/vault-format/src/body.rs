@@ -159,18 +159,57 @@ pub fn tags(body: &str) -> Vec<InlineTag> {
 
 /// Runs the CommonMark parser defensively.
 ///
-/// pulldown-cmark 0.13.4 panics on some inputs containing a vertical tab (found by fuzzing:
-/// `"- [n]:`\n\u{b}"`). Vertical tab and form feed are whitespace to CommonMark, so they are
-/// mapped to spaces (same byte length, so every offset stays valid). Should the parser still
-/// panic on some other input, the body is treated as plain text (no code spans, headings or
-/// blocks) instead of taking the caller down.
+/// pulldown-cmark 0.13.4 panics when a list item that starts with a link reference definition
+/// is followed by certain whitespace-only lines (found by fuzzing: `"- [a]: b\n        "`,
+/// `"- [n]:`\n\u{b}"`). A whitespace-only line is a blank line to CommonMark, so the parser
+/// is given a copy with those lines emptied (and vertical tab / form feed, which CommonMark
+/// treats as whitespace, turned into spaces); every range it reports is mapped back to the
+/// original text. Should the parser still panic on some other input, the body is treated as
+/// plain text (no code spans, headings or blocks) instead of taking the caller down.
 fn collect_guarded(body: &str) -> Structure {
-    let text: std::borrow::Cow<'_, str> = if body.contains(['\u{b}', '\u{c}']) {
-        body.replace(['\u{b}', '\u{c}'], " ").into()
-    } else {
-        body.into()
-    };
-    std::panic::catch_unwind(|| Structure::collect(&text)).unwrap_or_default()
+    let prepared = Prepared::new(body);
+    std::panic::catch_unwind(|| Structure::collect(body, &prepared)).unwrap_or_default()
+}
+
+/// The text given to the markdown parser and the map back to the original offsets.
+struct Prepared<'a> {
+    text: std::borrow::Cow<'a, str>,
+    /// (offset in `text`, bytes removed from the original before that offset), ascending.
+    removed: Vec<(usize, usize)>,
+}
+
+impl<'a> Prepared<'a> {
+    fn new(body: &'a str) -> Self {
+        let blank = |l: &str| !l.is_empty() && l.chars().all(|c| matches!(c, ' ' | '\t' | '\u{b}' | '\u{c}'));
+        let needs_work = body.contains(['\u{b}', '\u{c}']) || crate::line::lines(body).any(|l| blank(l.content));
+        if !needs_work {
+            return Self { text: body.into(), removed: Vec::new() };
+        }
+        let mut text = String::with_capacity(body.len());
+        let mut removed = Vec::new();
+        let mut total = 0;
+        for l in crate::line::lines(body) {
+            if blank(l.content) {
+                total += l.content.len();
+                removed.push((text.len(), total));
+            } else {
+                text.extend(l.content.chars().map(|c| if matches!(c, '\u{b}' | '\u{c}') { ' ' } else { c }));
+            }
+            text.push_str(l.eol);
+        }
+        Self { text: text.into(), removed }
+    }
+
+    /// Maps an offset in the parsed text to the original (a position at an emptied line maps
+    /// to that line's start).
+    fn map(&self, pos: usize) -> usize {
+        let i = self.removed.partition_point(|(at, _)| *at < pos);
+        pos + i.checked_sub(1).map_or(0, |j| self.removed[j].1)
+    }
+
+    fn map_range(&self, r: Range<usize>) -> Range<usize> {
+        self.map(r.start)..self.map(r.end)
+    }
 }
 
 fn merge(ranges: Vec<Range<usize>>) -> Vec<Range<usize>> {
@@ -200,12 +239,13 @@ struct Structure {
 }
 
 impl Structure {
-    fn collect(body: &str) -> Self {
+    fn collect(body: &str, prepared: &Prepared<'_>) -> Self {
         let mut s = Self::default();
         let mut stack: Vec<Container> = Vec::new();
         let mut path: Vec<(u8, String)> = Vec::new();
-        let parser = Parser::new_ext(body, markdown_options()).into_offset_iter();
+        let parser = Parser::new_ext(&prepared.text, markdown_options()).into_offset_iter();
         for (event, range) in parser {
+            let range = prepared.map_range(range);
             let nested = stack.iter().any(|c| {
                 matches!(
                     c,
@@ -589,6 +629,32 @@ mod tests {
         assert!(a.tags.is_empty());
         assert!(a.in_code(8));
         assert!(!a.in_code(body.find("real").unwrap_or(0)));
+    }
+
+    #[test]
+    fn prepared_text_maps_offsets_back() {
+        let body = "a\n  \t\nb\n\n   \r\nc\u{b}d";
+        let p = Prepared::new(body);
+        assert_eq!(p.text, "a\n\nb\n\n\r\nc d");
+        // Positions at an emptied line map to the start of that line.
+        assert_eq!(p.map(2), 2);
+        assert_eq!(p.map(6), 9);
+        for (parsed, orig) in [(0, 0), (1, 1), (3, 6), (4, 7), (5, 8), (7, 13), (8, 14), (9, 15), (10, 16)] {
+            assert_eq!(p.map(parsed), orig, "{parsed}");
+            let expect = if &body[orig..=orig] == "\u{b}" { " " } else { &body[orig..=orig] };
+            assert_eq!(expect, &p.text[parsed..=parsed], "{parsed}");
+        }
+        assert!(Prepared::new("plain\n").removed.is_empty());
+    }
+
+    #[test]
+    fn whitespace_lines_after_link_definitions() {
+        // Fuzz regressions: pulldown-cmark 0.13.4 panics on these unless blank lines are emptied.
+        for body in ["- [a]: b\n        \n[[x]]", "- [\0]::\n\t\t\n[[x]]", "1. [a]:x\n\u{b}\n[[x]]"] {
+            let a = analyze(body);
+            assert_eq!(a.links.len(), 1, "{body:?}");
+            assert_eq!(a.blocks.len(), 2, "{body:?}");
+        }
     }
 
     #[test]

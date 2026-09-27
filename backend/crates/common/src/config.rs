@@ -44,6 +44,8 @@ pub struct Config {
     pub accounts: AccountsConfig,
     /// Push provider credentials (D27).
     pub push: PushConfig,
+    /// Tokens, passwords and rate limits (PLAN §8, D6).
+    pub auth: AuthConfig,
 }
 
 /// One connection URL per database role.
@@ -138,6 +140,72 @@ pub struct AccountsConfig {
     pub deletion_grace_days: u32,
     /// Maximum accounts waiting in `pending` (§15 signup cap).
     pub max_pending_signups: u32,
+    /// How often the purge job looks for accounts whose grace period ended (seconds).
+    pub purge_interval_secs: u32,
+}
+
+/// Authentication settings (PLAN §8, D6 = b).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthConfig {
+    /// Ed25519 signing key for access tokens: PKCS#8 PEM, mode 0600, created by
+    /// `stratad keygen`. Read at startup, never logged.
+    pub signing_key_file: PathBuf,
+    /// `iss` claim of access tokens.
+    pub issuer: String,
+    /// `aud` claim of access tokens.
+    pub audience: String,
+    /// Access-token lifetime in seconds (PLAN §8: 15 minutes).
+    pub access_token_ttl_secs: u32,
+    /// Absolute lifetime of a device session and its refresh tokens, in days.
+    pub session_ttl_days: u32,
+    /// Period of the revocation-set reload from the database, in seconds.
+    pub revocation_reload_secs: u32,
+    /// Take the client IP from `X-Forwarded-For`/`Forwarded` (only behind nginx, which sets
+    /// them); otherwise the socket peer address is used.
+    pub trust_forwarded_for: bool,
+    /// Minimum password length in characters.
+    pub min_password_length: u32,
+    /// Argon2id cost parameters for new password hashes.
+    pub argon2: Argon2Config,
+    /// Login and signup rate limits (§15).
+    pub rate_limits: RateLimits,
+}
+
+/// Argon2id parameters (RFC 9106; defaults are OWASP's 19 MiB, 2 passes, 1 lane).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Argon2Config {
+    /// Memory cost in KiB.
+    pub memory_kib: u32,
+    /// Number of passes.
+    pub iterations: u32,
+    /// Degree of parallelism.
+    pub parallelism: u32,
+}
+
+/// At most `max` events per `window_secs` (sliding window).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RateLimit {
+    /// Allowed events per window.
+    pub max: u32,
+    /// Window length in seconds.
+    pub window_secs: u32,
+}
+
+/// Rate limits for the unauthenticated account endpoints.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RateLimits {
+    /// Login attempts per client IP.
+    pub login_per_ip: RateLimit,
+    /// Login attempts per (normalised) username.
+    pub login_per_username: RateLimit,
+    /// Sign-ups per client IP.
+    pub signup_per_ip: RateLimit,
+    /// Sign-ups across all clients.
+    pub signup_global: RateLimit,
 }
 
 /// Push provider credentials (paths only; files are read at startup and never logged).
@@ -217,8 +285,42 @@ impl Default for Config {
             accounts: AccountsConfig {
                 deletion_grace_days: 14,
                 max_pending_signups: 20,
+                purge_interval_secs: 300,
             },
             push: PushConfig::default(),
+            auth: AuthConfig {
+                signing_key_file: PathBuf::from("/etc/strata/token-signing-key.pem"),
+                issuer: "strata".to_owned(),
+                audience: "strata-api".to_owned(),
+                access_token_ttl_secs: 900,
+                session_ttl_days: 90,
+                revocation_reload_secs: 30,
+                trust_forwarded_for: false,
+                min_password_length: 10,
+                argon2: Argon2Config {
+                    memory_kib: 19 * 1024,
+                    iterations: 2,
+                    parallelism: 1,
+                },
+                rate_limits: RateLimits {
+                    login_per_ip: RateLimit {
+                        max: 30,
+                        window_secs: 900,
+                    },
+                    login_per_username: RateLimit {
+                        max: 10,
+                        window_secs: 900,
+                    },
+                    signup_per_ip: RateLimit {
+                        max: 5,
+                        window_secs: 3600,
+                    },
+                    signup_global: RateLimit {
+                        max: 30,
+                        window_secs: 3600,
+                    },
+                },
+            },
         }
     }
 }
@@ -292,6 +394,7 @@ impl Config {
                 "ai.max_concurrency must be at least 1".into(),
             ));
         }
+        self.validate_auth()?;
         for (name, url) in [
             ("database.owner_url", &self.database.owner_url),
             ("database.app_url", &self.database.app_url),
@@ -302,6 +405,47 @@ impl Config {
                     "{name} must be a postgres:// URL"
                 )));
             }
+        }
+        Ok(())
+    }
+
+    fn validate_auth(&self) -> Result<(), ConfigError> {
+        let auth = &self.auth;
+        let positive = |name: &str, v: u32| {
+            if v == 0 {
+                Err(ConfigError::Invalid(format!("{name} must be at least 1")))
+            } else {
+                Ok(())
+            }
+        };
+        positive("auth.access_token_ttl_secs", auth.access_token_ttl_secs)?;
+        positive("auth.session_ttl_days", auth.session_ttl_days)?;
+        positive("auth.revocation_reload_secs", auth.revocation_reload_secs)?;
+        positive("auth.min_password_length", auth.min_password_length)?;
+        positive("accounts.purge_interval_secs", self.accounts.purge_interval_secs)?;
+        positive("auth.argon2.iterations", auth.argon2.iterations)?;
+        positive("auth.argon2.parallelism", auth.argon2.parallelism)?;
+        if auth.argon2.memory_kib < 8 * auth.argon2.parallelism {
+            return Err(ConfigError::Invalid(
+                "auth.argon2.memory_kib must be at least 8 × parallelism".into(),
+            ));
+        }
+        for (name, limit) in [
+            ("login_per_ip", auth.rate_limits.login_per_ip),
+            ("login_per_username", auth.rate_limits.login_per_username),
+            ("signup_per_ip", auth.rate_limits.signup_per_ip),
+            ("signup_global", auth.rate_limits.signup_global),
+        ] {
+            positive(&format!("auth.rate_limits.{name}.max"), limit.max)?;
+            positive(
+                &format!("auth.rate_limits.{name}.window_secs"),
+                limit.window_secs,
+            )?;
+        }
+        if auth.issuer.is_empty() || auth.audience.is_empty() {
+            return Err(ConfigError::Invalid(
+                "auth.issuer and auth.audience must not be empty".into(),
+            ));
         }
         Ok(())
     }
@@ -510,6 +654,34 @@ mod tests {
         assert_eq!(config.thresholds.dedupe["note"].semantic, 0.9);
     }
 
+    #[test]
+    fn auth_settings_have_documented_defaults_and_overrides() {
+        let config = Config::from_sources(
+            "[auth]\nsigning_key_file = \"/k.pem\"\n[auth.rate_limits.login_per_ip]\nmax = 3\nwindow_secs = 60\n",
+            env(&[("STRATA__AUTH__ACCESS_TOKEN_TTL_SECS", "600")]),
+        )
+        .expect("valid");
+        assert_eq!(config.auth.signing_key_file, PathBuf::from("/k.pem"));
+        assert_eq!(config.auth.access_token_ttl_secs, 600);
+        assert_eq!(
+            config.auth.rate_limits.login_per_ip,
+            RateLimit {
+                max: 3,
+                window_secs: 60
+            }
+        );
+        assert_eq!(config.auth.rate_limits.login_per_username.max, 10);
+        assert_eq!(
+            config.auth.argon2,
+            Argon2Config {
+                memory_kib: 19_456,
+                iterations: 2,
+                parallelism: 1
+            }
+        );
+        assert_eq!(config.accounts.purge_interval_secs, 300);
+    }
+
     /// Keys that are unset by default have no type to guide parsing, so a numeric-looking value
     /// becomes an integer and fails to deserialise into `Option<String>`; such values belong in
     /// the TOML file (quoted). The failure is loud, never a silent misconfiguration.
@@ -550,6 +722,30 @@ mod tests {
             Config::from_sources("[thresholds]\ncustody = 1.5", env(&[])),
             Err(ConfigError::Invalid(
                 "thresholds.custody must be within 0..=1, got 1.5".into()
+            ))
+        );
+        assert_eq!(
+            Config::from_sources("[auth]\naccess_token_ttl_secs = 0", env(&[])),
+            Err(ConfigError::Invalid(
+                "auth.access_token_ttl_secs must be at least 1".into()
+            ))
+        );
+        assert_eq!(
+            Config::from_sources("[auth.rate_limits.signup_global]\nmax = 0", env(&[])),
+            Err(ConfigError::Invalid(
+                "auth.rate_limits.signup_global.max must be at least 1".into()
+            ))
+        );
+        assert_eq!(
+            Config::from_sources("[auth.argon2]\nmemory_kib = 7", env(&[])),
+            Err(ConfigError::Invalid(
+                "auth.argon2.memory_kib must be at least 8 × parallelism".into()
+            ))
+        );
+        assert_eq!(
+            Config::from_sources("[auth]\nissuer = \"\"", env(&[])),
+            Err(ConfigError::Invalid(
+                "auth.issuer and auth.audience must not be empty".into()
             ))
         );
         assert_eq!(

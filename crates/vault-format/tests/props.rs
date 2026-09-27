@@ -114,6 +114,34 @@ proptest! {
         let _ = analyze(&s);
     }
 
+    /// Every span from body analysis lies inside the text on character boundaries, and link
+    /// spans slice back to the link. Bodies mix markdown structure, blank lines with
+    /// whitespace, tabs and control characters.
+    #[test]
+    fn analysis_spans_are_sound(parts in prop::collection::vec(prop_oneof![
+        Just("- [a]: b".to_owned()), Just("        ".to_owned()), Just("\t\t".to_owned()),
+        Just("\u{b}".to_owned()), Just("```".to_owned()), Just("> q".to_owned()),
+        Just("# H".to_owned()), Just("| a |\n|---|".to_owned()), Just("text ^id1".to_owned()),
+        "[a-z ]{0,6}\\[\\[[a-zء-ي]{1,4}\\]\\][a-z #]{0,6}", "[ \t]{0,5}", any::<String>(),
+    ], 0..12), crlf in any::<bool>()) {
+        let s = parts.join(if crlf { "\r\n" } else { "\n" });
+        let a = analyze(&s);
+        let spans = a.links.iter().map(|l| l.span.clone())
+            .chain(a.tags.iter().map(|t| t.span.clone()))
+            .chain(a.headings.iter().map(|h| h.span.clone()))
+            .chain(a.blocks.iter().map(|b| b.span.clone()))
+            .chain(a.blocks.iter().filter_map(|b| b.id.as_ref().map(|i| i.span.clone())))
+            .chain(a.code_spans.iter().cloned());
+        for r in spans {
+            prop_assert!(r.start <= r.end && r.end <= s.len());
+            prop_assert!(s.is_char_boundary(r.start) && s.is_char_boundary(r.end));
+        }
+        for l in &a.links {
+            let text = &s[l.span.clone()];
+            prop_assert!(text.starts_with("[[") || text.starts_with("![["));
+        }
+    }
+
     /// Any text inside frontmatter delimiters round-trips too (valid YAML or not).
     #[test]
     fn arbitrary_frontmatter_round_trips(
