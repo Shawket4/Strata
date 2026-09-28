@@ -462,7 +462,7 @@ impl Session {
         let (task_id, remind_at) = self
             .read(|c, _| crate::notify::lookup(c, id))?
             .ok_or_else(|| CoreError::not_found("notification"))?;
-        let minutes = action.minutes;
+        let minutes = self.read(|c, _| settings::snooze_minutes(c))?;
         match action.kind {
             NotificationActionKind::Done => self.complete_task(&task_id),
             NotificationActionKind::Snooze => {
