@@ -7938,6 +7938,16 @@
           "422": {
             "$ref": "#/components/responses/InvalidBody"
           },
+          "429": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`: too many questions from this user (`auth.rate_limits.ask_per_user`). See `Retry-After`."
+          },
           "500": {
             "$ref": "#/components/responses/Internal"
           },
@@ -8385,6 +8395,16 @@
           },
           "422": {
             "$ref": "#/components/responses/InvalidBody"
+          },
+          "429": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`: too many captures from this user (`auth.rate_limits.capture_per_user`). See `Retry-After`."
           },
           "500": {
             "$ref": "#/components/responses/Internal"

@@ -230,3 +230,33 @@ pub async fn jobs_of(w: &World, user: UserId, kind: &str) -> Vec<(String, i32, D
 pub fn at(secs: i64) -> DateTime<Utc> {
     strata_testkit::default_test_epoch() + chrono::Duration::seconds(secs)
 }
+
+/// Asserts that the last call of prompt `id` had exactly `input` (a readable diff when a
+/// fixture did not match).
+pub fn assert_input<T: Serialize>(w: &World, id: &str, input: &T) {
+    let want = prompts::render_input(input).expect("render");
+    let got = w
+        .llm
+        .calls()
+        .into_iter()
+        .filter(|c| c.prompt.id == id)
+        .last()
+        .map(|c| c.user)
+        .unwrap_or_default();
+    pretty_assertions::assert_eq!(got, want);
+}
+
+/// Sets the user's auto-file setting.
+pub async fn set_auto_file(w: &World, user: UserId, on: bool) {
+    let mut tx = w.db.begin(user).await.expect("tx");
+    let now = w.db.clock.now();
+    strata_index::repo::settings::put_setting(
+        &mut tx,
+        "auto_file",
+        &rmp_serde::to_vec(&on).expect("bool"),
+        now,
+    )
+    .await
+    .expect("setting");
+    tx.commit().await.expect("commit");
+}

@@ -146,7 +146,10 @@ fn emphasis(line: &str, base: usize, blocked: &[Range<usize>]) -> Vec<(SpanKind,
             let content = &line[content_start..close];
             let range = base + open..base + close + delim.len();
             let word_ok = delim != "_"
-                || (!line[..open].chars().next_back().is_some_and(char::is_alphanumeric)
+                || (!line[..open]
+                    .chars()
+                    .next_back()
+                    .is_some_and(char::is_alphanumeric)
                     && !line[close + 1..]
                         .chars()
                         .next()
@@ -188,7 +191,11 @@ pub fn editor_hints(content: &str) -> Vec<Span> {
     for h in &a.headings {
         push(Span {
             level: h.level,
-            ..Span::plain(SpanKind::Heading, u(off + h.span.start), u(off + h.span.end))
+            ..Span::plain(
+                SpanKind::Heading,
+                u(off + h.span.start),
+                u(off + h.span.end),
+            )
         });
     }
     let mut blocked: Vec<Range<usize>> = a
@@ -231,7 +238,11 @@ pub fn editor_hints(content: &str) -> Vec<Span> {
         }
     }
     for c in &a.code_spans {
-        push(Span::plain(SpanKind::Code, u(off + c.start), u(off + c.end)));
+        push(Span::plain(
+            SpanKind::Code,
+            u(off + c.start),
+            u(off + c.end),
+        ));
     }
     for t in vault_format::tasks::extract_tasks(doc.body()) {
         push(Span {

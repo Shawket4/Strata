@@ -167,14 +167,16 @@ impl SuggestionPayload {
                     b: d.b,
                     reason: d.reason,
                 }),
-            "conflict" => rmp_serde::from_slice::<ConflictWire>(bytes)
-                .ok()
-                .map(|c| Self::Conflict {
-                    op_id: c.op_id,
-                    copy_id: c.copy_id,
-                    copy_path: c.copy_path,
-                    hunks: c.hunks,
-                }),
+            "conflict" => {
+                rmp_serde::from_slice::<ConflictWire>(bytes)
+                    .ok()
+                    .map(|c| Self::Conflict {
+                        op_id: c.op_id,
+                        copy_id: c.copy_id,
+                        copy_path: c.copy_path,
+                        hunks: c.hunks,
+                    })
+            }
             _ => None,
         };
         server

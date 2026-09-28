@@ -125,7 +125,8 @@ impl Registry {
 
     /// Removes a device-wide value.
     pub fn remove_device_value(&self, key: &str) -> CoreResult<()> {
-        self.conn.execute("DELETE FROM device WHERE key = ?1", [key])?;
+        self.conn
+            .execute("DELETE FROM device WHERE key = ?1", [key])?;
         Ok(())
     }
 

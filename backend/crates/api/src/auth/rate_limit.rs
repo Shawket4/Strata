@@ -1,5 +1,5 @@
 //! In-process sliding-window rate limiter (PLAN §8, §15: login per IP and per username;
-//! signup per IP and globally).
+//! signup per IP and globally; capture and ask per user).
 //!
 //! A limiter allows at most `max` events per key in any window of `window` length. It keeps
 //! the timestamps of the admitted events per key, so the check is exact rather than
@@ -68,7 +68,7 @@ impl RateLimiter {
     }
 }
 
-/// The limiters of the account endpoints.
+/// The limiters of the account endpoints and the per-user capture/ask limits.
 #[derive(Debug)]
 pub struct AuthLimiters {
     /// Login attempts per client IP.
@@ -79,6 +79,10 @@ pub struct AuthLimiters {
     pub signup_ip: RateLimiter,
     /// Sign-ups overall.
     pub signup_global: RateLimiter,
+    /// `POST /capture` per user.
+    pub capture_user: RateLimiter,
+    /// `POST /ask` per user.
+    pub ask_user: RateLimiter,
 }
 
 impl AuthLimiters {
@@ -89,6 +93,8 @@ impl AuthLimiters {
             login_user: RateLimiter::new(limits.login_per_username, clock.clone()),
             signup_ip: RateLimiter::new(limits.signup_per_ip, clock.clone()),
             signup_global: RateLimiter::new(limits.signup_global, clock.clone()),
+            capture_user: RateLimiter::new(limits.capture_per_user, clock.clone()),
+            ask_user: RateLimiter::new(limits.ask_per_user, clock.clone()),
         }
     }
 }

@@ -80,9 +80,7 @@ pub fn log_entries(conn: &Connection) -> CoreResult<Vec<(String, String, String)
 /// Pinned note IDs in pin order.
 pub fn pinned(conn: &Connection) -> CoreResult<Vec<String>> {
     let mut st = conn.prepare("SELECT note_id FROM pinned_notes ORDER BY ord, note_id")?;
-    Ok(st
-        .query_map([], |r| r.get(0))?
-        .collect::<Result<_, _>>()?)
+    Ok(st.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?)
 }
 
 /// Pins (at the end) or unpins a note. Returns whether anything changed.

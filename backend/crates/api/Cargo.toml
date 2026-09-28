@@ -75,6 +75,10 @@ strata-ai = { workspace = true, features = ["test-support"] }
 strata-vault = { workspace = true, features = ["fault-injection"] }
 reqwest = { workspace = true }
 zip = { workspace = true }
+# Hardening suites (PLAN §15, §16.3, §16.7): the production startup checks and request
+# logger, log capture, and the synthetic vault generator.
+stratad = { path = "../../bin/stratad" }
+tracing-subscriber = { workspace = true }
 
 [[bin]]
 name = "emit-openapi"

@@ -39,6 +39,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   DateTime dco_decode_Chrono_Utc(dynamic raw);
 
   @protected
+  RustStreamSink<AskView> dco_decode_StreamSink_ask_view_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<ConflictScreen> dco_decode_StreamSink_conflict_screen_Sse(
     dynamic raw,
   );
@@ -69,6 +72,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  RustStreamSink<NavView> dco_decode_StreamSink_nav_view_Sse(dynamic raw);
+
+  @protected
   RustStreamSink<NoteScreen> dco_decode_StreamSink_note_screen_Sse(dynamic raw);
 
   @protected
@@ -78,6 +84,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   RustStreamSink<NotificationOp> dco_decode_StreamSink_notification_op_Sse(
+    dynamic raw,
+  );
+
+  @protected
+  RustStreamSink<RecentNotesView> dco_decode_StreamSink_recent_notes_view_Sse(
     dynamic raw,
   );
 
@@ -93,6 +104,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   RustStreamSink<SyncStatusView> dco_decode_StreamSink_sync_status_view_Sse(
+    dynamic raw,
+  );
+
+  @protected
+  RustStreamSink<TaskHomesView> dco_decode_StreamSink_task_homes_view_Sse(
     dynamic raw,
   );
 
@@ -115,10 +131,31 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   AdminUsersView dco_decode_admin_users_view(dynamic raw);
 
   @protected
+  AiActivityItem dco_decode_ai_activity_item(dynamic raw);
+
+  @protected
+  AiStatusView dco_decode_ai_status_view(dynamic raw);
+
+  @protected
+  AnnotatedLine dco_decode_annotated_line(dynamic raw);
+
+  @protected
   AppLifecycle dco_decode_app_lifecycle(dynamic raw);
 
   @protected
   AskMessage dco_decode_ask_message(dynamic raw);
+
+  @protected
+  AskScope dco_decode_ask_scope(dynamic raw);
+
+  @protected
+  AskScopeKind dco_decode_ask_scope_kind(dynamic raw);
+
+  @protected
+  AskSource dco_decode_ask_source(dynamic raw);
+
+  @protected
+  AskSpan dco_decode_ask_span(dynamic raw);
 
   @protected
   AskView dco_decode_ask_view(dynamic raw);
@@ -133,6 +170,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   BacklinkItem dco_decode_backlink_item(dynamic raw);
 
   @protected
+  BlockItem dco_decode_block_item(dynamic raw);
+
+  @protected
   bool dco_decode_bool(dynamic raw);
 
   @protected
@@ -145,7 +185,16 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   AccountSummary dco_decode_box_autoadd_account_summary(dynamic raw);
 
   @protected
+  AiStatusView dco_decode_box_autoadd_ai_status_view(dynamic raw);
+
+  @protected
+  AskScope dco_decode_box_autoadd_ask_scope(dynamic raw);
+
+  @protected
   bool dco_decode_box_autoadd_bool(dynamic raw);
+
+  @protected
+  Citation dco_decode_box_autoadd_citation(dynamic raw);
 
   @protected
   ConflictDetail dco_decode_box_autoadd_conflict_detail(dynamic raw);
@@ -155,6 +204,18 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   CoreConfig dco_decode_box_autoadd_core_config(dynamic raw);
+
+  @protected
+  CustodyDraft dco_decode_box_autoadd_custody_draft(dynamic raw);
+
+  @protected
+  DeviceItem dco_decode_box_autoadd_device_item(dynamic raw);
+
+  @protected
+  DirectoryFilter dco_decode_box_autoadd_directory_filter(dynamic raw);
+
+  @protected
+  DocumentDraft dco_decode_box_autoadd_document_draft(dynamic raw);
 
   @protected
   DocumentView dco_decode_box_autoadd_document_view(dynamic raw);
@@ -169,19 +230,40 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
+  GraphFilter dco_decode_box_autoadd_graph_filter(dynamic raw);
+
+  @protected
+  LinkOrCreateChoice dco_decode_box_autoadd_link_or_create_choice(dynamic raw);
+
+  @protected
+  NewUserRequest dco_decode_box_autoadd_new_user_request(dynamic raw);
+
+  @protected
   NoteView dco_decode_box_autoadd_note_view(dynamic raw);
 
   @protected
   NotificationAction dco_decode_box_autoadd_notification_action(dynamic raw);
 
   @protected
+  PendingApproval dco_decode_box_autoadd_pending_approval(dynamic raw);
+
+  @protected
+  PlaceDraft dco_decode_box_autoadd_place_draft(dynamic raw);
+
+  @protected
   PlaceView dco_decode_box_autoadd_place_view(dynamic raw);
+
+  @protected
+  RecurrenceForm dco_decode_box_autoadd_recurrence_form(dynamic raw);
 
   @protected
   SignInRequest dco_decode_box_autoadd_sign_in_request(dynamic raw);
 
   @protected
   SignUpRequest dco_decode_box_autoadd_sign_up_request(dynamic raw);
+
+  @protected
+  SuggestionEdits dco_decode_box_autoadd_suggestion_edits(dynamic raw);
 
   @protected
   TaskDraft dco_decode_box_autoadd_task_draft(dynamic raw);
@@ -193,10 +275,19 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   TaskPatch dco_decode_box_autoadd_task_patch(dynamic raw);
 
   @protected
+  TimelineChip dco_decode_box_autoadd_timeline_chip(dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_u_16(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  WeekdayKind dco_decode_box_autoadd_weekday_kind(dynamic raw);
 
   @protected
   CandidateItem dco_decode_candidate_item(dynamic raw);
@@ -205,10 +296,22 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   Citation dco_decode_citation(dynamic raw);
 
   @protected
+  CitationPreview dco_decode_citation_preview(dynamic raw);
+
+  @protected
   CitedBullet dco_decode_cited_bullet(dynamic raw);
 
   @protected
   ClusterLabel dco_decode_cluster_label(dynamic raw);
+
+  @protected
+  CompletionItem dco_decode_completion_item(dynamic raw);
+
+  @protected
+  CompletionKind dco_decode_completion_kind(dynamic raw);
+
+  @protected
+  Completions dco_decode_completions(dynamic raw);
 
   @protected
   ConflictDetail dco_decode_conflict_detail(dynamic raw);
@@ -238,13 +341,34 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   CreateOutcome dco_decode_create_outcome(dynamic raw);
 
   @protected
+  CustodyDraft dco_decode_custody_draft(dynamic raw);
+
+  @protected
   CustodyItem dco_decode_custody_item(dynamic raw);
+
+  @protected
+  DeviceItem dco_decode_device_item(dynamic raw);
+
+  @protected
+  DiffLine dco_decode_diff_line(dynamic raw);
+
+  @protected
+  DiffLineKind dco_decode_diff_line_kind(dynamic raw);
 
   @protected
   DirectoryCounts dco_decode_directory_counts(dynamic raw);
 
   @protected
+  DirectoryFilter dco_decode_directory_filter(dynamic raw);
+
+  @protected
   DirectoryItem dco_decode_directory_item(dynamic raw);
+
+  @protected
+  DirectorySection dco_decode_directory_section(dynamic raw);
+
+  @protected
+  DirectorySort dco_decode_directory_sort(dynamic raw);
 
   @protected
   DirectoryTab dco_decode_directory_tab(dynamic raw);
@@ -254,6 +378,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   DocumentBrief dco_decode_document_brief(dynamic raw);
+
+  @protected
+  DocumentDraft dco_decode_document_draft(dynamic raw);
 
   @protected
   DocumentView dco_decode_document_view(dynamic raw);
@@ -283,7 +410,13 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   EntityView dco_decode_entity_view(dynamic raw);
 
   @protected
+  ExportSummary dco_decode_export_summary(dynamic raw);
+
+  @protected
   double dco_decode_f_64(dynamic raw);
+
+  @protected
+  FilterOption dco_decode_filter_option(dynamic raw);
 
   @protected
   FolderItem dco_decode_folder_item(dynamic raw);
@@ -295,10 +428,22 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   GraphEdge dco_decode_graph_edge(dynamic raw);
 
   @protected
+  GraphFilter dco_decode_graph_filter(dynamic raw);
+
+  @protected
+  GraphLens dco_decode_graph_lens(dynamic raw);
+
+  @protected
   GraphNode dco_decode_graph_node(dynamic raw);
 
   @protected
+  GraphPoint dco_decode_graph_point(dynamic raw);
+
+  @protected
   HintKind dco_decode_hint_kind(dynamic raw);
+
+  @protected
+  HistoryEntry dco_decode_history_entry(dynamic raw);
 
   @protected
   HomeView dco_decode_home_view(dynamic raw);
@@ -316,13 +461,37 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   PlatformInt64 dco_decode_i_64(dynamic raw);
 
   @protected
+  ImportSummary dco_decode_import_summary(dynamic raw);
+
+  @protected
+  InboxFilter dco_decode_inbox_filter(dynamic raw);
+
+  @protected
   InboxItem dco_decode_inbox_item(dynamic raw);
+
+  @protected
+  InboxPreviewItem dco_decode_inbox_preview_item(dynamic raw);
 
   @protected
   InboxView dco_decode_inbox_view(dynamic raw);
 
   @protected
+  IntegrityItem dco_decode_integrity_item(dynamic raw);
+
+  @protected
+  KindCount dco_decode_kind_count(dynamic raw);
+
+  @protected
   KnownAccountItem dco_decode_known_account_item(dynamic raw);
+
+  @protected
+  LineChange dco_decode_line_change(dynamic raw);
+
+  @protected
+  LinkOrCreateChoice dco_decode_link_or_create_choice(dynamic raw);
+
+  @protected
+  LinkOrCreateKind dco_decode_link_or_create_kind(dynamic raw);
 
   @protected
   List<DateTime> dco_decode_list_Chrono_NaiveDateTime(dynamic raw);
@@ -334,13 +503,31 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<AdminUserItem> dco_decode_list_admin_user_item(dynamic raw);
 
   @protected
+  List<AiActivityItem> dco_decode_list_ai_activity_item(dynamic raw);
+
+  @protected
+  List<AnnotatedLine> dco_decode_list_annotated_line(dynamic raw);
+
+  @protected
   List<AskMessage> dco_decode_list_ask_message(dynamic raw);
+
+  @protected
+  List<AskScope> dco_decode_list_ask_scope(dynamic raw);
+
+  @protected
+  List<AskSource> dco_decode_list_ask_source(dynamic raw);
+
+  @protected
+  List<AskSpan> dco_decode_list_ask_span(dynamic raw);
 
   @protected
   List<BacklinkGroup> dco_decode_list_backlink_group(dynamic raw);
 
   @protected
   List<BacklinkItem> dco_decode_list_backlink_item(dynamic raw);
+
+  @protected
+  List<BlockItem> dco_decode_list_block_item(dynamic raw);
 
   @protected
   List<CandidateItem> dco_decode_list_candidate_item(dynamic raw);
@@ -355,6 +542,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<ClusterLabel> dco_decode_list_cluster_label(dynamic raw);
 
   @protected
+  List<CompletionItem> dco_decode_list_completion_item(dynamic raw);
+
+  @protected
   List<ConflictHunkView> dco_decode_list_conflict_hunk_view(dynamic raw);
 
   @protected
@@ -364,7 +554,16 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<CustodyItem> dco_decode_list_custody_item(dynamic raw);
 
   @protected
+  List<DeviceItem> dco_decode_list_device_item(dynamic raw);
+
+  @protected
+  List<DiffLine> dco_decode_list_diff_line(dynamic raw);
+
+  @protected
   List<DirectoryItem> dco_decode_list_directory_item(dynamic raw);
+
+  @protected
+  List<DirectorySection> dco_decode_list_directory_section(dynamic raw);
 
   @protected
   List<DocumentBrief> dco_decode_list_document_brief(dynamic raw);
@@ -379,6 +578,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<EntityRef> dco_decode_list_entity_ref(dynamic raw);
 
   @protected
+  List<FilterOption> dco_decode_list_filter_option(dynamic raw);
+
+  @protected
   List<FolderItem> dco_decode_list_folder_item(dynamic raw);
 
   @protected
@@ -388,10 +590,28 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<GraphNode> dco_decode_list_graph_node(dynamic raw);
 
   @protected
+  List<GraphPoint> dco_decode_list_graph_point(dynamic raw);
+
+  @protected
+  List<HistoryEntry> dco_decode_list_history_entry(dynamic raw);
+
+  @protected
   List<HunkChoice> dco_decode_list_hunk_choice(dynamic raw);
 
   @protected
+  List<HunkChoiceKind> dco_decode_list_hunk_choice_kind(dynamic raw);
+
+  @protected
   List<InboxItem> dco_decode_list_inbox_item(dynamic raw);
+
+  @protected
+  List<InboxPreviewItem> dco_decode_list_inbox_preview_item(dynamic raw);
+
+  @protected
+  List<IntegrityItem> dco_decode_list_integrity_item(dynamic raw);
+
+  @protected
+  List<KindCount> dco_decode_list_kind_count(dynamic raw);
 
   @protected
   List<KnownAccountItem> dco_decode_list_known_account_item(dynamic raw);
@@ -400,7 +620,19 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<NoteListItem> dco_decode_list_note_list_item(dynamic raw);
 
   @protected
+  List<OpenItem> dco_decode_list_open_item(dynamic raw);
+
+  @protected
   List<OutboxItem> dco_decode_list_outbox_item(dynamic raw);
+
+  @protected
+  List<PlaceNode> dco_decode_list_place_node(dynamic raw);
+
+  @protected
+  List<PlaceOption> dco_decode_list_place_option(dynamic raw);
+
+  @protected
+  Uint32List dco_decode_list_prim_u_32_strict(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -409,10 +641,18 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<PropertyItem> dco_decode_list_property_item(dynamic raw);
 
   @protected
+  List<RecurrencePreviewItem> dco_decode_list_recurrence_preview_item(
+    dynamic raw,
+  );
+
+  @protected
   List<RejectionItem> dco_decode_list_rejection_item(dynamic raw);
 
   @protected
   List<RelationChip> dco_decode_list_relation_chip(dynamic raw);
+
+  @protected
+  List<RelationTypeItem> dco_decode_list_relation_type_item(dynamic raw);
 
   @protected
   List<ReminderItem> dco_decode_list_reminder_item(dynamic raw);
@@ -421,13 +661,58 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<SearchHit> dco_decode_list_search_hit(dynamic raw);
 
   @protected
+  List<SearchMode> dco_decode_list_search_mode(dynamic raw);
+
+  @protected
   List<SuggestionItem> dco_decode_list_suggestion_item(dynamic raw);
+
+  @protected
+  List<SyncLogItem> dco_decode_list_sync_log_item(dynamic raw);
+
+  @protected
+  List<TagItem> dco_decode_list_tag_item(dynamic raw);
+
+  @protected
+  List<TaskChip> dco_decode_list_task_chip(dynamic raw);
+
+  @protected
+  List<TaskGroup> dco_decode_list_task_group(dynamic raw);
+
+  @protected
+  List<TaskHomeItem> dco_decode_list_task_home_item(dynamic raw);
 
   @protected
   List<TaskItem> dco_decode_list_task_item(dynamic raw);
 
   @protected
+  List<TextSpan> dco_decode_list_text_span(dynamic raw);
+
+  @protected
+  List<ThreadMessage> dco_decode_list_thread_message(dynamic raw);
+
+  @protected
+  List<WeekdayKind> dco_decode_list_weekday_kind(dynamic raw);
+
+  @protected
   LocalGraphView dco_decode_local_graph_view(dynamic raw);
+
+  @protected
+  MentionEdit dco_decode_mention_edit(dynamic raw);
+
+  @protected
+  MergePreview dco_decode_merge_preview(dynamic raw);
+
+  @protected
+  MonthDayMode dco_decode_month_day_mode(dynamic raw);
+
+  @protected
+  NavView dco_decode_nav_view(dynamic raw);
+
+  @protected
+  NewUserRequest dco_decode_new_user_request(dynamic raw);
+
+  @protected
+  NoteDiffView dco_decode_note_diff_view(dynamic raw);
 
   @protected
   NoteListItem dco_decode_note_list_item(dynamic raw);
@@ -469,6 +754,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   NotificationResult dco_decode_notification_result(dynamic raw);
 
   @protected
+  OpenItem dco_decode_open_item(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -481,10 +769,19 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   AccountSummary? dco_decode_opt_box_autoadd_account_summary(dynamic raw);
 
   @protected
+  AiStatusView? dco_decode_opt_box_autoadd_ai_status_view(dynamic raw);
+
+  @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
+  Citation? dco_decode_opt_box_autoadd_citation(dynamic raw);
+
+  @protected
   ConflictDetail? dco_decode_opt_box_autoadd_conflict_detail(dynamic raw);
+
+  @protected
+  DeviceItem? dco_decode_opt_box_autoadd_device_item(dynamic raw);
 
   @protected
   DocumentView? dco_decode_opt_box_autoadd_document_view(dynamic raw);
@@ -502,10 +799,19 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   NoteView? dco_decode_opt_box_autoadd_note_view(dynamic raw);
 
   @protected
+  PendingApproval? dco_decode_opt_box_autoadd_pending_approval(dynamic raw);
+
+  @protected
   PlaceView? dco_decode_opt_box_autoadd_place_view(dynamic raw);
 
   @protected
+  RecurrenceForm? dco_decode_opt_box_autoadd_recurrence_form(dynamic raw);
+
+  @protected
   TaskItem? dco_decode_opt_box_autoadd_task_item(dynamic raw);
+
+  @protected
+  TimelineChip? dco_decode_opt_box_autoadd_timeline_chip(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
@@ -514,13 +820,40 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
 
   @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  WeekdayKind? dco_decode_opt_box_autoadd_weekday_kind(dynamic raw);
+
+  @protected
   List<DateTime>? dco_decode_opt_list_Chrono_NaiveDateTime(dynamic raw);
+
+  @protected
+  List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
   OutboxItem dco_decode_outbox_item(dynamic raw);
 
   @protected
   OutboxStatus dco_decode_outbox_status(dynamic raw);
+
+  @protected
+  PasswordLevel dco_decode_password_level(dynamic raw);
+
+  @protected
+  PasswordStrength dco_decode_password_strength(dynamic raw);
+
+  @protected
+  PendingApproval dco_decode_pending_approval(dynamic raw);
+
+  @protected
+  PlaceDraft dco_decode_place_draft(dynamic raw);
+
+  @protected
+  PlaceNode dco_decode_place_node(dynamic raw);
+
+  @protected
+  PlaceOption dco_decode_place_option(dynamic raw);
 
   @protected
   PlaceView dco_decode_place_view(dynamic raw);
@@ -532,10 +865,31 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   PropertyItem dco_decode_property_item(dynamic raw);
 
   @protected
+  RecentFilter dco_decode_recent_filter(dynamic raw);
+
+  @protected
+  RecentNotesView dco_decode_recent_notes_view(dynamic raw);
+
+  @protected
+  RecurrenceCompose dco_decode_recurrence_compose(dynamic raw);
+
+  @protected
+  RecurrenceForm dco_decode_recurrence_form(dynamic raw);
+
+  @protected
+  RecurrenceFrequency dco_decode_recurrence_frequency(dynamic raw);
+
+  @protected
+  RecurrencePreviewItem dco_decode_recurrence_preview_item(dynamic raw);
+
+  @protected
   RejectionItem dco_decode_rejection_item(dynamic raw);
 
   @protected
   RelationChip dco_decode_relation_chip(dynamic raw);
+
+  @protected
+  RelationTypeItem dco_decode_relation_type_item(dynamic raw);
 
   @protected
   ReminderItem dco_decode_reminder_item(dynamic raw);
@@ -580,6 +934,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   SuggestionDetail dco_decode_suggestion_detail(dynamic raw);
 
   @protected
+  SuggestionEdits dco_decode_suggestion_edits(dynamic raw);
+
+  @protected
   SuggestionItem dco_decode_suggestion_item(dynamic raw);
 
   @protected
@@ -589,16 +946,43 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   SyncActivity dco_decode_sync_activity(dynamic raw);
 
   @protected
+  SyncLogItem dco_decode_sync_log_item(dynamic raw);
+
+  @protected
   SyncPhase dco_decode_sync_phase(dynamic raw);
 
   @protected
   SyncPill dco_decode_sync_pill(dynamic raw);
 
   @protected
+  SyncPillKind dco_decode_sync_pill_kind(dynamic raw);
+
+  @protected
   SyncStatusView dco_decode_sync_status_view(dynamic raw);
 
   @protected
+  TagItem dco_decode_tag_item(dynamic raw);
+
+  @protected
+  TaskChip dco_decode_task_chip(dynamic raw);
+
+  @protected
+  TaskChipKind dco_decode_task_chip_kind(dynamic raw);
+
+  @protected
   TaskDraft dco_decode_task_draft(dynamic raw);
+
+  @protected
+  TaskDraftPreview dco_decode_task_draft_preview(dynamic raw);
+
+  @protected
+  TaskGroup dco_decode_task_group(dynamic raw);
+
+  @protected
+  TaskHomeItem dco_decode_task_home_item(dynamic raw);
+
+  @protected
+  TaskHomesView dco_decode_task_homes_view(dynamic raw);
 
   @protected
   TaskItem dco_decode_task_item(dynamic raw);
@@ -619,16 +1003,34 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   TasksView dco_decode_tasks_view(dynamic raw);
 
   @protected
+  TextDir dco_decode_text_dir(dynamic raw);
+
+  @protected
+  TextSpan dco_decode_text_span(dynamic raw);
+
+  @protected
+  ThreadMessage dco_decode_thread_message(dynamic raw);
+
+  @protected
+  TimelineChip dco_decode_timeline_chip(dynamic raw);
+
+  @protected
   int dco_decode_u_16(dynamic raw);
 
   @protected
   int dco_decode_u_32(dynamic raw);
 
   @protected
+  BigInt dco_decode_u_64(dynamic raw);
+
+  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  WeekdayKind dco_decode_weekday_kind(dynamic raw);
 
   @protected
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
@@ -641,6 +1043,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   DateTime sse_decode_Chrono_Utc(SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<AskView> sse_decode_StreamSink_ask_view_Sse(
+    SseDeserializer deserializer,
+  );
 
   @protected
   RustStreamSink<ConflictScreen> sse_decode_StreamSink_conflict_screen_Sse(
@@ -679,6 +1086,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  RustStreamSink<NavView> sse_decode_StreamSink_nav_view_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<NoteScreen> sse_decode_StreamSink_note_screen_Sse(
     SseDeserializer deserializer,
   );
@@ -694,6 +1106,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  RustStreamSink<RecentNotesView> sse_decode_StreamSink_recent_notes_view_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<SessionState> sse_decode_StreamSink_session_state_Sse(
     SseDeserializer deserializer,
   );
@@ -705,6 +1122,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   RustStreamSink<SyncStatusView> sse_decode_StreamSink_sync_status_view_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<TaskHomesView> sse_decode_StreamSink_task_homes_view_Sse(
     SseDeserializer deserializer,
   );
 
@@ -731,10 +1153,31 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   AdminUsersView sse_decode_admin_users_view(SseDeserializer deserializer);
 
   @protected
+  AiActivityItem sse_decode_ai_activity_item(SseDeserializer deserializer);
+
+  @protected
+  AiStatusView sse_decode_ai_status_view(SseDeserializer deserializer);
+
+  @protected
+  AnnotatedLine sse_decode_annotated_line(SseDeserializer deserializer);
+
+  @protected
   AppLifecycle sse_decode_app_lifecycle(SseDeserializer deserializer);
 
   @protected
   AskMessage sse_decode_ask_message(SseDeserializer deserializer);
+
+  @protected
+  AskScope sse_decode_ask_scope(SseDeserializer deserializer);
+
+  @protected
+  AskScopeKind sse_decode_ask_scope_kind(SseDeserializer deserializer);
+
+  @protected
+  AskSource sse_decode_ask_source(SseDeserializer deserializer);
+
+  @protected
+  AskSpan sse_decode_ask_span(SseDeserializer deserializer);
 
   @protected
   AskView sse_decode_ask_view(SseDeserializer deserializer);
@@ -747,6 +1190,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   BacklinkItem sse_decode_backlink_item(SseDeserializer deserializer);
+
+  @protected
+  BlockItem sse_decode_block_item(SseDeserializer deserializer);
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
@@ -765,7 +1211,18 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  AiStatusView sse_decode_box_autoadd_ai_status_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  AskScope sse_decode_box_autoadd_ask_scope(SseDeserializer deserializer);
+
+  @protected
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
+
+  @protected
+  Citation sse_decode_box_autoadd_citation(SseDeserializer deserializer);
 
   @protected
   ConflictDetail sse_decode_box_autoadd_conflict_detail(
@@ -779,6 +1236,24 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   CoreConfig sse_decode_box_autoadd_core_config(SseDeserializer deserializer);
+
+  @protected
+  CustodyDraft sse_decode_box_autoadd_custody_draft(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  DeviceItem sse_decode_box_autoadd_device_item(SseDeserializer deserializer);
+
+  @protected
+  DirectoryFilter sse_decode_box_autoadd_directory_filter(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  DocumentDraft sse_decode_box_autoadd_document_draft(
+    SseDeserializer deserializer,
+  );
 
   @protected
   DocumentView sse_decode_box_autoadd_document_view(
@@ -795,6 +1270,19 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
+  GraphFilter sse_decode_box_autoadd_graph_filter(SseDeserializer deserializer);
+
+  @protected
+  LinkOrCreateChoice sse_decode_box_autoadd_link_or_create_choice(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NewUserRequest sse_decode_box_autoadd_new_user_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NoteView sse_decode_box_autoadd_note_view(SseDeserializer deserializer);
 
   @protected
@@ -803,7 +1291,20 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  PendingApproval sse_decode_box_autoadd_pending_approval(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  PlaceDraft sse_decode_box_autoadd_place_draft(SseDeserializer deserializer);
+
+  @protected
   PlaceView sse_decode_box_autoadd_place_view(SseDeserializer deserializer);
+
+  @protected
+  RecurrenceForm sse_decode_box_autoadd_recurrence_form(
+    SseDeserializer deserializer,
+  );
 
   @protected
   SignInRequest sse_decode_box_autoadd_sign_in_request(
@@ -812,6 +1313,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   SignUpRequest sse_decode_box_autoadd_sign_up_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  SuggestionEdits sse_decode_box_autoadd_suggestion_edits(
     SseDeserializer deserializer,
   );
 
@@ -825,10 +1331,21 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   TaskPatch sse_decode_box_autoadd_task_patch(SseDeserializer deserializer);
 
   @protected
+  TimelineChip sse_decode_box_autoadd_timeline_chip(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  WeekdayKind sse_decode_box_autoadd_weekday_kind(SseDeserializer deserializer);
 
   @protected
   CandidateItem sse_decode_candidate_item(SseDeserializer deserializer);
@@ -837,10 +1354,22 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   Citation sse_decode_citation(SseDeserializer deserializer);
 
   @protected
+  CitationPreview sse_decode_citation_preview(SseDeserializer deserializer);
+
+  @protected
   CitedBullet sse_decode_cited_bullet(SseDeserializer deserializer);
 
   @protected
   ClusterLabel sse_decode_cluster_label(SseDeserializer deserializer);
+
+  @protected
+  CompletionItem sse_decode_completion_item(SseDeserializer deserializer);
+
+  @protected
+  CompletionKind sse_decode_completion_kind(SseDeserializer deserializer);
+
+  @protected
+  Completions sse_decode_completions(SseDeserializer deserializer);
 
   @protected
   ConflictDetail sse_decode_conflict_detail(SseDeserializer deserializer);
@@ -872,13 +1401,34 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   CreateOutcome sse_decode_create_outcome(SseDeserializer deserializer);
 
   @protected
+  CustodyDraft sse_decode_custody_draft(SseDeserializer deserializer);
+
+  @protected
   CustodyItem sse_decode_custody_item(SseDeserializer deserializer);
+
+  @protected
+  DeviceItem sse_decode_device_item(SseDeserializer deserializer);
+
+  @protected
+  DiffLine sse_decode_diff_line(SseDeserializer deserializer);
+
+  @protected
+  DiffLineKind sse_decode_diff_line_kind(SseDeserializer deserializer);
 
   @protected
   DirectoryCounts sse_decode_directory_counts(SseDeserializer deserializer);
 
   @protected
+  DirectoryFilter sse_decode_directory_filter(SseDeserializer deserializer);
+
+  @protected
   DirectoryItem sse_decode_directory_item(SseDeserializer deserializer);
+
+  @protected
+  DirectorySection sse_decode_directory_section(SseDeserializer deserializer);
+
+  @protected
+  DirectorySort sse_decode_directory_sort(SseDeserializer deserializer);
 
   @protected
   DirectoryTab sse_decode_directory_tab(SseDeserializer deserializer);
@@ -888,6 +1438,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   DocumentBrief sse_decode_document_brief(SseDeserializer deserializer);
+
+  @protected
+  DocumentDraft sse_decode_document_draft(SseDeserializer deserializer);
 
   @protected
   DocumentView sse_decode_document_view(SseDeserializer deserializer);
@@ -919,7 +1472,13 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   EntityView sse_decode_entity_view(SseDeserializer deserializer);
 
   @protected
+  ExportSummary sse_decode_export_summary(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  FilterOption sse_decode_filter_option(SseDeserializer deserializer);
 
   @protected
   FolderItem sse_decode_folder_item(SseDeserializer deserializer);
@@ -931,10 +1490,22 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   GraphEdge sse_decode_graph_edge(SseDeserializer deserializer);
 
   @protected
+  GraphFilter sse_decode_graph_filter(SseDeserializer deserializer);
+
+  @protected
+  GraphLens sse_decode_graph_lens(SseDeserializer deserializer);
+
+  @protected
   GraphNode sse_decode_graph_node(SseDeserializer deserializer);
 
   @protected
+  GraphPoint sse_decode_graph_point(SseDeserializer deserializer);
+
+  @protected
   HintKind sse_decode_hint_kind(SseDeserializer deserializer);
+
+  @protected
+  HistoryEntry sse_decode_history_entry(SseDeserializer deserializer);
 
   @protected
   HomeView sse_decode_home_view(SseDeserializer deserializer);
@@ -952,13 +1523,39 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
   @protected
+  ImportSummary sse_decode_import_summary(SseDeserializer deserializer);
+
+  @protected
+  InboxFilter sse_decode_inbox_filter(SseDeserializer deserializer);
+
+  @protected
   InboxItem sse_decode_inbox_item(SseDeserializer deserializer);
+
+  @protected
+  InboxPreviewItem sse_decode_inbox_preview_item(SseDeserializer deserializer);
 
   @protected
   InboxView sse_decode_inbox_view(SseDeserializer deserializer);
 
   @protected
+  IntegrityItem sse_decode_integrity_item(SseDeserializer deserializer);
+
+  @protected
+  KindCount sse_decode_kind_count(SseDeserializer deserializer);
+
+  @protected
   KnownAccountItem sse_decode_known_account_item(SseDeserializer deserializer);
+
+  @protected
+  LineChange sse_decode_line_change(SseDeserializer deserializer);
+
+  @protected
+  LinkOrCreateChoice sse_decode_link_or_create_choice(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  LinkOrCreateKind sse_decode_link_or_create_kind(SseDeserializer deserializer);
 
   @protected
   List<DateTime> sse_decode_list_Chrono_NaiveDateTime(
@@ -974,7 +1571,26 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  List<AiActivityItem> sse_decode_list_ai_activity_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<AnnotatedLine> sse_decode_list_annotated_line(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<AskMessage> sse_decode_list_ask_message(SseDeserializer deserializer);
+
+  @protected
+  List<AskScope> sse_decode_list_ask_scope(SseDeserializer deserializer);
+
+  @protected
+  List<AskSource> sse_decode_list_ask_source(SseDeserializer deserializer);
+
+  @protected
+  List<AskSpan> sse_decode_list_ask_span(SseDeserializer deserializer);
 
   @protected
   List<BacklinkGroup> sse_decode_list_backlink_group(
@@ -985,6 +1601,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<BacklinkItem> sse_decode_list_backlink_item(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<BlockItem> sse_decode_list_block_item(SseDeserializer deserializer);
 
   @protected
   List<CandidateItem> sse_decode_list_candidate_item(
@@ -1003,6 +1622,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  List<CompletionItem> sse_decode_list_completion_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ConflictHunkView> sse_decode_list_conflict_hunk_view(
     SseDeserializer deserializer,
   );
@@ -1016,7 +1640,18 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<CustodyItem> sse_decode_list_custody_item(SseDeserializer deserializer);
 
   @protected
+  List<DeviceItem> sse_decode_list_device_item(SseDeserializer deserializer);
+
+  @protected
+  List<DiffLine> sse_decode_list_diff_line(SseDeserializer deserializer);
+
+  @protected
   List<DirectoryItem> sse_decode_list_directory_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<DirectorySection> sse_decode_list_directory_section(
     SseDeserializer deserializer,
   );
 
@@ -1037,6 +1672,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<EntityRef> sse_decode_list_entity_ref(SseDeserializer deserializer);
 
   @protected
+  List<FilterOption> sse_decode_list_filter_option(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<FolderItem> sse_decode_list_folder_item(SseDeserializer deserializer);
 
   @protected
@@ -1046,10 +1686,36 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<GraphNode> sse_decode_list_graph_node(SseDeserializer deserializer);
 
   @protected
+  List<GraphPoint> sse_decode_list_graph_point(SseDeserializer deserializer);
+
+  @protected
+  List<HistoryEntry> sse_decode_list_history_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<HunkChoice> sse_decode_list_hunk_choice(SseDeserializer deserializer);
 
   @protected
+  List<HunkChoiceKind> sse_decode_list_hunk_choice_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<InboxItem> sse_decode_list_inbox_item(SseDeserializer deserializer);
+
+  @protected
+  List<InboxPreviewItem> sse_decode_list_inbox_preview_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<IntegrityItem> sse_decode_list_integrity_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<KindCount> sse_decode_list_kind_count(SseDeserializer deserializer);
 
   @protected
   List<KnownAccountItem> sse_decode_list_known_account_item(
@@ -1062,13 +1728,30 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  List<OpenItem> sse_decode_list_open_item(SseDeserializer deserializer);
+
+  @protected
   List<OutboxItem> sse_decode_list_outbox_item(SseDeserializer deserializer);
+
+  @protected
+  List<PlaceNode> sse_decode_list_place_node(SseDeserializer deserializer);
+
+  @protected
+  List<PlaceOption> sse_decode_list_place_option(SseDeserializer deserializer);
+
+  @protected
+  Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
   List<PropertyItem> sse_decode_list_property_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<RecurrencePreviewItem> sse_decode_list_recurrence_preview_item(
     SseDeserializer deserializer,
   );
 
@@ -1083,6 +1766,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  List<RelationTypeItem> sse_decode_list_relation_type_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<ReminderItem> sse_decode_list_reminder_item(
     SseDeserializer deserializer,
   );
@@ -1091,7 +1779,27 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<SearchHit> sse_decode_list_search_hit(SseDeserializer deserializer);
 
   @protected
+  List<SearchMode> sse_decode_list_search_mode(SseDeserializer deserializer);
+
+  @protected
   List<SuggestionItem> sse_decode_list_suggestion_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<SyncLogItem> sse_decode_list_sync_log_item(SseDeserializer deserializer);
+
+  @protected
+  List<TagItem> sse_decode_list_tag_item(SseDeserializer deserializer);
+
+  @protected
+  List<TaskChip> sse_decode_list_task_chip(SseDeserializer deserializer);
+
+  @protected
+  List<TaskGroup> sse_decode_list_task_group(SseDeserializer deserializer);
+
+  @protected
+  List<TaskHomeItem> sse_decode_list_task_home_item(
     SseDeserializer deserializer,
   );
 
@@ -1099,7 +1807,36 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<TaskItem> sse_decode_list_task_item(SseDeserializer deserializer);
 
   @protected
+  List<TextSpan> sse_decode_list_text_span(SseDeserializer deserializer);
+
+  @protected
+  List<ThreadMessage> sse_decode_list_thread_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<WeekdayKind> sse_decode_list_weekday_kind(SseDeserializer deserializer);
+
+  @protected
   LocalGraphView sse_decode_local_graph_view(SseDeserializer deserializer);
+
+  @protected
+  MentionEdit sse_decode_mention_edit(SseDeserializer deserializer);
+
+  @protected
+  MergePreview sse_decode_merge_preview(SseDeserializer deserializer);
+
+  @protected
+  MonthDayMode sse_decode_month_day_mode(SseDeserializer deserializer);
+
+  @protected
+  NavView sse_decode_nav_view(SseDeserializer deserializer);
+
+  @protected
+  NewUserRequest sse_decode_new_user_request(SseDeserializer deserializer);
+
+  @protected
+  NoteDiffView sse_decode_note_diff_view(SseDeserializer deserializer);
 
   @protected
   NoteListItem sse_decode_note_list_item(SseDeserializer deserializer);
@@ -1151,6 +1888,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  OpenItem sse_decode_open_item(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -1167,10 +1907,23 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  AiStatusView? sse_decode_opt_box_autoadd_ai_status_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
+  Citation? sse_decode_opt_box_autoadd_citation(SseDeserializer deserializer);
+
+  @protected
   ConflictDetail? sse_decode_opt_box_autoadd_conflict_detail(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  DeviceItem? sse_decode_opt_box_autoadd_device_item(
     SseDeserializer deserializer,
   );
 
@@ -1196,12 +1949,27 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   NoteView? sse_decode_opt_box_autoadd_note_view(SseDeserializer deserializer);
 
   @protected
+  PendingApproval? sse_decode_opt_box_autoadd_pending_approval(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   PlaceView? sse_decode_opt_box_autoadd_place_view(
     SseDeserializer deserializer,
   );
 
   @protected
+  RecurrenceForm? sse_decode_opt_box_autoadd_recurrence_form(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   TaskItem? sse_decode_opt_box_autoadd_task_item(SseDeserializer deserializer);
+
+  @protected
+  TimelineChip? sse_decode_opt_box_autoadd_timeline_chip(
+    SseDeserializer deserializer,
+  );
 
   @protected
   int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
@@ -1210,15 +1978,44 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  WeekdayKind? sse_decode_opt_box_autoadd_weekday_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<DateTime>? sse_decode_opt_list_Chrono_NaiveDateTime(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
   OutboxItem sse_decode_outbox_item(SseDeserializer deserializer);
 
   @protected
   OutboxStatus sse_decode_outbox_status(SseDeserializer deserializer);
+
+  @protected
+  PasswordLevel sse_decode_password_level(SseDeserializer deserializer);
+
+  @protected
+  PasswordStrength sse_decode_password_strength(SseDeserializer deserializer);
+
+  @protected
+  PendingApproval sse_decode_pending_approval(SseDeserializer deserializer);
+
+  @protected
+  PlaceDraft sse_decode_place_draft(SseDeserializer deserializer);
+
+  @protected
+  PlaceNode sse_decode_place_node(SseDeserializer deserializer);
+
+  @protected
+  PlaceOption sse_decode_place_option(SseDeserializer deserializer);
 
   @protected
   PlaceView sse_decode_place_view(SseDeserializer deserializer);
@@ -1230,10 +2027,35 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   PropertyItem sse_decode_property_item(SseDeserializer deserializer);
 
   @protected
+  RecentFilter sse_decode_recent_filter(SseDeserializer deserializer);
+
+  @protected
+  RecentNotesView sse_decode_recent_notes_view(SseDeserializer deserializer);
+
+  @protected
+  RecurrenceCompose sse_decode_recurrence_compose(SseDeserializer deserializer);
+
+  @protected
+  RecurrenceForm sse_decode_recurrence_form(SseDeserializer deserializer);
+
+  @protected
+  RecurrenceFrequency sse_decode_recurrence_frequency(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RecurrencePreviewItem sse_decode_recurrence_preview_item(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RejectionItem sse_decode_rejection_item(SseDeserializer deserializer);
 
   @protected
   RelationChip sse_decode_relation_chip(SseDeserializer deserializer);
+
+  @protected
+  RelationTypeItem sse_decode_relation_type_item(SseDeserializer deserializer);
 
   @protected
   ReminderItem sse_decode_reminder_item(SseDeserializer deserializer);
@@ -1278,6 +2100,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   SuggestionDetail sse_decode_suggestion_detail(SseDeserializer deserializer);
 
   @protected
+  SuggestionEdits sse_decode_suggestion_edits(SseDeserializer deserializer);
+
+  @protected
   SuggestionItem sse_decode_suggestion_item(SseDeserializer deserializer);
 
   @protected
@@ -1287,16 +2112,43 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   SyncActivity sse_decode_sync_activity(SseDeserializer deserializer);
 
   @protected
+  SyncLogItem sse_decode_sync_log_item(SseDeserializer deserializer);
+
+  @protected
   SyncPhase sse_decode_sync_phase(SseDeserializer deserializer);
 
   @protected
   SyncPill sse_decode_sync_pill(SseDeserializer deserializer);
 
   @protected
+  SyncPillKind sse_decode_sync_pill_kind(SseDeserializer deserializer);
+
+  @protected
   SyncStatusView sse_decode_sync_status_view(SseDeserializer deserializer);
 
   @protected
+  TagItem sse_decode_tag_item(SseDeserializer deserializer);
+
+  @protected
+  TaskChip sse_decode_task_chip(SseDeserializer deserializer);
+
+  @protected
+  TaskChipKind sse_decode_task_chip_kind(SseDeserializer deserializer);
+
+  @protected
   TaskDraft sse_decode_task_draft(SseDeserializer deserializer);
+
+  @protected
+  TaskDraftPreview sse_decode_task_draft_preview(SseDeserializer deserializer);
+
+  @protected
+  TaskGroup sse_decode_task_group(SseDeserializer deserializer);
+
+  @protected
+  TaskHomeItem sse_decode_task_home_item(SseDeserializer deserializer);
+
+  @protected
+  TaskHomesView sse_decode_task_homes_view(SseDeserializer deserializer);
 
   @protected
   TaskItem sse_decode_task_item(SseDeserializer deserializer);
@@ -1317,16 +2169,34 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   TasksView sse_decode_tasks_view(SseDeserializer deserializer);
 
   @protected
+  TextDir sse_decode_text_dir(SseDeserializer deserializer);
+
+  @protected
+  TextSpan sse_decode_text_span(SseDeserializer deserializer);
+
+  @protected
+  ThreadMessage sse_decode_thread_message(SseDeserializer deserializer);
+
+  @protected
+  TimelineChip sse_decode_timeline_chip(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_16(SseDeserializer deserializer);
 
   @protected
   int sse_decode_u_32(SseDeserializer deserializer);
 
   @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  WeekdayKind sse_decode_weekday_kind(SseDeserializer deserializer);
 
   @protected
   void sse_encode_AnyhowException(
@@ -1342,6 +2212,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   void sse_encode_Chrono_Utc(DateTime self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_ask_view_Sse(
+    RustStreamSink<AskView> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_StreamSink_conflict_screen_Sse(
@@ -1386,6 +2262,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_nav_view_Sse(
+    RustStreamSink<NavView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_note_screen_Sse(
     RustStreamSink<NoteScreen> self,
     SseSerializer serializer,
@@ -1404,6 +2286,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_recent_notes_view_Sse(
+    RustStreamSink<RecentNotesView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_session_state_Sse(
     RustStreamSink<SessionState> self,
     SseSerializer serializer,
@@ -1418,6 +2306,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   @protected
   void sse_encode_StreamSink_sync_status_view_Sse(
     RustStreamSink<SyncStatusView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_task_homes_view_Sse(
+    RustStreamSink<TaskHomesView> self,
     SseSerializer serializer,
   );
 
@@ -1452,10 +2346,34 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_ai_activity_item(
+    AiActivityItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_ai_status_view(AiStatusView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_annotated_line(AnnotatedLine self, SseSerializer serializer);
+
+  @protected
   void sse_encode_app_lifecycle(AppLifecycle self, SseSerializer serializer);
 
   @protected
   void sse_encode_ask_message(AskMessage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ask_scope(AskScope self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ask_scope_kind(AskScopeKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ask_source(AskSource self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ask_span(AskSpan self, SseSerializer serializer);
 
   @protected
   void sse_encode_ask_view(AskView self, SseSerializer serializer);
@@ -1468,6 +2386,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   void sse_encode_backlink_item(BacklinkItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_block_item(BlockItem self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
@@ -1491,7 +2412,22 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_ai_status_view(
+    AiStatusView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_ask_scope(
+    AskScope self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_citation(Citation self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_conflict_detail(
@@ -1508,6 +2444,30 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   @protected
   void sse_encode_box_autoadd_core_config(
     CoreConfig self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_custody_draft(
+    CustodyDraft self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_device_item(
+    DeviceItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_directory_filter(
+    DirectoryFilter self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_document_draft(
+    DocumentDraft self,
     SseSerializer serializer,
   );
 
@@ -1533,6 +2493,24 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_graph_filter(
+    GraphFilter self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_link_or_create_choice(
+    LinkOrCreateChoice self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_new_user_request(
+    NewUserRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_note_view(
     NoteView self,
     SseSerializer serializer,
@@ -1545,8 +2523,26 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_pending_approval(
+    PendingApproval self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_place_draft(
+    PlaceDraft self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_place_view(
     PlaceView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_recurrence_form(
+    RecurrenceForm self,
     SseSerializer serializer,
   );
 
@@ -1559,6 +2555,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   @protected
   void sse_encode_box_autoadd_sign_up_request(
     SignUpRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_suggestion_edits(
+    SuggestionEdits self,
     SseSerializer serializer,
   );
 
@@ -1581,10 +2583,25 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_timeline_chip(
+    TimelineChip self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_weekday_kind(
+    WeekdayKind self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_candidate_item(CandidateItem self, SseSerializer serializer);
@@ -1593,10 +2610,31 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_citation(Citation self, SseSerializer serializer);
 
   @protected
+  void sse_encode_citation_preview(
+    CitationPreview self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_cited_bullet(CitedBullet self, SseSerializer serializer);
 
   @protected
   void sse_encode_cluster_label(ClusterLabel self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_completion_item(
+    CompletionItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_completion_kind(
+    CompletionKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_completions(Completions self, SseSerializer serializer);
 
   @protected
   void sse_encode_conflict_detail(
@@ -1638,7 +2676,19 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_create_outcome(CreateOutcome self, SseSerializer serializer);
 
   @protected
+  void sse_encode_custody_draft(CustodyDraft self, SseSerializer serializer);
+
+  @protected
   void sse_encode_custody_item(CustodyItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_device_item(DeviceItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_diff_line(DiffLine self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_diff_line_kind(DiffLineKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_directory_counts(
@@ -1647,7 +2697,22 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_directory_filter(
+    DirectoryFilter self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_directory_item(DirectoryItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_directory_section(
+    DirectorySection self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_directory_sort(DirectorySort self, SseSerializer serializer);
 
   @protected
   void sse_encode_directory_tab(DirectoryTab self, SseSerializer serializer);
@@ -1657,6 +2722,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   void sse_encode_document_brief(DocumentBrief self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_document_draft(DocumentDraft self, SseSerializer serializer);
 
   @protected
   void sse_encode_document_view(DocumentView self, SseSerializer serializer);
@@ -1698,7 +2766,13 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_entity_view(EntityView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_export_summary(ExportSummary self, SseSerializer serializer);
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_filter_option(FilterOption self, SseSerializer serializer);
 
   @protected
   void sse_encode_folder_item(FolderItem self, SseSerializer serializer);
@@ -1713,10 +2787,22 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_graph_edge(GraphEdge self, SseSerializer serializer);
 
   @protected
+  void sse_encode_graph_filter(GraphFilter self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_graph_lens(GraphLens self, SseSerializer serializer);
+
+  @protected
   void sse_encode_graph_node(GraphNode self, SseSerializer serializer);
 
   @protected
+  void sse_encode_graph_point(GraphPoint self, SseSerializer serializer);
+
+  @protected
   void sse_encode_hint_kind(HintKind self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_history_entry(HistoryEntry self, SseSerializer serializer);
 
   @protected
   void sse_encode_home_view(HomeView self, SseSerializer serializer);
@@ -1737,14 +2823,47 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
 
   @protected
+  void sse_encode_import_summary(ImportSummary self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_inbox_filter(InboxFilter self, SseSerializer serializer);
+
+  @protected
   void sse_encode_inbox_item(InboxItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_inbox_preview_item(
+    InboxPreviewItem self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_inbox_view(InboxView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_integrity_item(IntegrityItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_kind_count(KindCount self, SseSerializer serializer);
+
+  @protected
   void sse_encode_known_account_item(
     KnownAccountItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_line_change(LineChange self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_link_or_create_choice(
+    LinkOrCreateChoice self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_link_or_create_kind(
+    LinkOrCreateKind self,
     SseSerializer serializer,
   );
 
@@ -1764,10 +2883,34 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_ai_activity_item(
+    List<AiActivityItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_annotated_line(
+    List<AnnotatedLine> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_ask_message(
     List<AskMessage> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_list_ask_scope(List<AskScope> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_ask_source(
+    List<AskSource> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_ask_span(List<AskSpan> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_backlink_group(
@@ -1778,6 +2921,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   @protected
   void sse_encode_list_backlink_item(
     List<BacklinkItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_block_item(
+    List<BlockItem> self,
     SseSerializer serializer,
   );
 
@@ -1803,6 +2952,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_completion_item(
+    List<CompletionItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_conflict_hunk_view(
     List<ConflictHunkView> self,
     SseSerializer serializer,
@@ -1821,8 +2976,23 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_device_item(
+    List<DeviceItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_diff_line(List<DiffLine> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_directory_item(
     List<DirectoryItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_directory_section(
+    List<DirectorySection> self,
     SseSerializer serializer,
   );
 
@@ -1851,6 +3021,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_filter_option(
+    List<FilterOption> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_folder_item(
     List<FolderItem> self,
     SseSerializer serializer,
@@ -1869,14 +3045,50 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_graph_point(
+    List<GraphPoint> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_history_entry(
+    List<HistoryEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_hunk_choice(
     List<HunkChoice> self,
     SseSerializer serializer,
   );
 
   @protected
+  void sse_encode_list_hunk_choice_kind(
+    List<HunkChoiceKind> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_inbox_item(
     List<InboxItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_inbox_preview_item(
+    List<InboxPreviewItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_integrity_item(
+    List<IntegrityItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_kind_count(
+    List<KindCount> self,
     SseSerializer serializer,
   );
 
@@ -1893,8 +3105,29 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_open_item(List<OpenItem> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_outbox_item(
     List<OutboxItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_place_node(
+    List<PlaceNode> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_place_option(
+    List<PlaceOption> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_u_32_strict(
+    Uint32List self,
     SseSerializer serializer,
   );
 
@@ -1911,6 +3144,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_recurrence_preview_item(
+    List<RecurrencePreviewItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_rejection_item(
     List<RejectionItem> self,
     SseSerializer serializer,
@@ -1919,6 +3158,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   @protected
   void sse_encode_list_relation_chip(
     List<RelationChip> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_relation_type_item(
+    List<RelationTypeItem> self,
     SseSerializer serializer,
   );
 
@@ -1935,8 +3180,38 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_search_mode(
+    List<SearchMode> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_suggestion_item(
     List<SuggestionItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_sync_log_item(
+    List<SyncLogItem> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_tag_item(List<TagItem> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_task_chip(List<TaskChip> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_task_group(
+    List<TaskGroup> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_task_home_item(
+    List<TaskHomeItem> self,
     SseSerializer serializer,
   );
 
@@ -1944,10 +3219,46 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_list_task_item(List<TaskItem> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_text_span(List<TextSpan> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_thread_message(
+    List<ThreadMessage> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_weekday_kind(
+    List<WeekdayKind> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_local_graph_view(
     LocalGraphView self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_mention_edit(MentionEdit self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_merge_preview(MergePreview self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_month_day_mode(MonthDayMode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_nav_view(NavView self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_new_user_request(
+    NewUserRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_note_diff_view(NoteDiffView self, SseSerializer serializer);
 
   @protected
   void sse_encode_note_list_item(NoteListItem self, SseSerializer serializer);
@@ -2010,6 +3321,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_open_item(OpenItem self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
@@ -2031,11 +3345,29 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_ai_status_view(
+    AiStatusView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_citation(
+    Citation? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_box_autoadd_conflict_detail(
     ConflictDetail? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_device_item(
+    DeviceItem? self,
     SseSerializer serializer,
   );
 
@@ -2067,8 +3399,20 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_pending_approval(
+    PendingApproval? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_place_view(
     PlaceView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_recurrence_form(
+    RecurrenceForm? self,
     SseSerializer serializer,
   );
 
@@ -2079,10 +3423,25 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_timeline_chip(
+    TimelineChip? self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_weekday_kind(
+    WeekdayKind? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_list_Chrono_NaiveDateTime(
@@ -2091,10 +3450,37 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_outbox_item(OutboxItem self, SseSerializer serializer);
 
   @protected
   void sse_encode_outbox_status(OutboxStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_password_level(PasswordLevel self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_password_strength(
+    PasswordStrength self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_pending_approval(
+    PendingApproval self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_place_draft(PlaceDraft self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_place_node(PlaceNode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_place_option(PlaceOption self, SseSerializer serializer);
 
   @protected
   void sse_encode_place_view(PlaceView self, SseSerializer serializer);
@@ -2106,10 +3492,49 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_property_item(PropertyItem self, SseSerializer serializer);
 
   @protected
+  void sse_encode_recent_filter(RecentFilter self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_recent_notes_view(
+    RecentNotesView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_recurrence_compose(
+    RecurrenceCompose self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_recurrence_form(
+    RecurrenceForm self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_recurrence_frequency(
+    RecurrenceFrequency self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_recurrence_preview_item(
+    RecurrencePreviewItem self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_rejection_item(RejectionItem self, SseSerializer serializer);
 
   @protected
   void sse_encode_relation_chip(RelationChip self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_relation_type_item(
+    RelationTypeItem self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_reminder_item(ReminderItem self, SseSerializer serializer);
@@ -2166,6 +3591,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_suggestion_edits(
+    SuggestionEdits self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_suggestion_item(
     SuggestionItem self,
     SseSerializer serializer,
@@ -2181,10 +3612,16 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_sync_activity(SyncActivity self, SseSerializer serializer);
 
   @protected
+  void sse_encode_sync_log_item(SyncLogItem self, SseSerializer serializer);
+
+  @protected
   void sse_encode_sync_phase(SyncPhase self, SseSerializer serializer);
 
   @protected
   void sse_encode_sync_pill(SyncPill self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_sync_pill_kind(SyncPillKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_sync_status_view(
@@ -2193,7 +3630,31 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_tag_item(TagItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_task_chip(TaskChip self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_task_chip_kind(TaskChipKind self, SseSerializer serializer);
+
+  @protected
   void sse_encode_task_draft(TaskDraft self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_task_draft_preview(
+    TaskDraftPreview self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_task_group(TaskGroup self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_task_home_item(TaskHomeItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_task_homes_view(TaskHomesView self, SseSerializer serializer);
 
   @protected
   void sse_encode_task_item(TaskItem self, SseSerializer serializer);
@@ -2214,16 +3675,34 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_tasks_view(TasksView self, SseSerializer serializer);
 
   @protected
+  void sse_encode_text_dir(TextDir self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_text_span(TextSpan self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_thread_message(ThreadMessage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_timeline_chip(TimelineChip self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_16(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_u_32(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_weekday_kind(WeekdayKind self, SseSerializer serializer);
 }
 
 // Section: wire_class

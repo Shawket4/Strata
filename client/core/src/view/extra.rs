@@ -62,7 +62,7 @@ pub fn blocks(conn: &Connection, note_id: &str) -> CoreResult<Vec<BlockItem>> {
         .filter(|b| {
             !matches!(
                 b.kind,
-                vault_format::BlockKind::Heading | vault_format::BlockKind::CodeBlock
+                vault_format::body::BlockKind::Heading | vault_format::body::BlockKind::CodeBlock
             )
         })
         .map(|b| {
@@ -86,7 +86,10 @@ pub fn blocks(conn: &Connection, note_id: &str) -> CoreResult<Vec<BlockItem>> {
         .collect())
 }
 
-fn note_candidates(conn: &Connection, query: &str) -> CoreResult<Vec<(String, String, String, String)>> {
+fn note_candidates(
+    conn: &Connection,
+    query: &str,
+) -> CoreResult<Vec<(String, String, String, String)>> {
     let q = text_normalize::normalize_for_search(query.trim());
     let mut st = conn.prepare(
         "SELECT id, title, path, kind FROM notes WHERE deleted = 0 ORDER BY local_updated_at DESC, id",
@@ -111,7 +114,11 @@ fn note_candidates(conn: &Connection, query: &str) -> CoreResult<Vec<(String, St
         })
         .collect();
     scored.sort_by(|a, b| a.0.cmp(&b.0));
-    Ok(scored.into_iter().take(COMPLETION_LIMIT).map(|(_, r)| r).collect())
+    Ok(scored
+        .into_iter()
+        .take(COMPLETION_LIMIT)
+        .map(|(_, r)| r)
+        .collect())
 }
 
 /// Editor completions for the token before `cursor` (UTF-16) in `content` of note `note_id`.
@@ -280,7 +287,11 @@ pub fn task_homes(conn: &Connection, ctx: &ViewCtx) -> CoreResult<TaskHomesView>
         )?)
     };
     let mut homes = vec![TaskHomeItem {
-        open_tasks: home.as_ref().map(|h| open_of(&h.0)).transpose()?.unwrap_or(0),
+        open_tasks: home
+            .as_ref()
+            .map(|h| open_of(&h.0))
+            .transpose()?
+            .unwrap_or(0),
         note_id: home.as_ref().map(|h| h.0.clone()),
         title: home
             .map(|h| h.1)
@@ -376,7 +387,15 @@ pub fn place_options(conn: &Connection, document_id: Option<&str>) -> CoreResult
             depth: 0,
             is_current: current.as_deref() == Some(root.as_str()),
         });
-        walk(conn, &rows, Some(root), 1, current.as_deref(), &mut seen, &mut out)?;
+        walk(
+            conn,
+            &rows,
+            Some(root),
+            1,
+            current.as_deref(),
+            &mut seen,
+            &mut out,
+        )?;
     }
     Ok(out)
 }
@@ -475,7 +494,9 @@ pub fn citation_preview(
         note_id: Some(note_id.to_owned()),
         title: parsed.display_title.clone(),
         path: n.path,
-        block_dir: block_text.as_deref().map_or(crate::view::model::TextDir::Neutral, dir_of),
+        block_dir: block_text
+            .as_deref()
+            .map_or(crate::view::model::TextDir::Neutral, dir_of),
         block_text,
         heading,
         date_label,
@@ -485,7 +506,11 @@ pub fn citation_preview(
 
 /// The new-task sheet's "Understood as": the text parsed, `@mentions` resolved to people and
 /// companies (their links written into the description).
-pub fn task_draft_preview(conn: &Connection, ctx: &ViewCtx, text: &str) -> CoreResult<TaskDraftPreview> {
+pub fn task_draft_preview(
+    conn: &Connection,
+    ctx: &ViewCtx,
+    text: &str,
+) -> CoreResult<TaskDraftPreview> {
     let labels = ctx.labels();
     let parsed = task_text::parse(text, labels.today());
     let resolver = LinkResolver::load(conn)?;

@@ -1,14 +1,18 @@
 //! User intents (§12.3): each one changes the local cache immediately, queues an outbox op and
 //! wakes the sync loop. Returns the new item's ID or the op ID.
 
-use super::lift;
+use chrono::NaiveDateTime;
+
 use super::runtime::{self, core};
+use super::{lift, lift_async};
 use crate::error::CoreError;
 use crate::session::{NewTask, Session, TaskEdit};
 use crate::sync::engine::Trigger;
 use crate::view::model::CoreFailure;
 use crate::view::model::{
-    ConflictResolution, CreateOutcome, DuplicateChoice, TaskDraft, TaskPatch,
+    AdminUserItem, AskScope, ConflictResolution, CreateOutcome, CustodyDraft, DocumentDraft,
+    DuplicateChoice, ExportSummary, ImportSummary, LinkOrCreateChoice, MentionEdit, NewUserRequest,
+    PlaceDraft, SuggestionEdits, TaskDraft, TaskPatch,
 };
 
 fn with<T>(f: impl FnOnce(&Session) -> Result<T, CoreError>) -> Result<T, CoreError> {
@@ -77,9 +81,15 @@ pub fn create_note(
     lift(|| with(|s| s.create_note(&path, &content, force)))
 }
 
-/// Saves a note's content.
-pub fn update_note(id: String, content: String) -> Result<String, CoreFailure> {
-    lift(|| with(|s| s.update_note(&id, &content)))
+/// Saves a note's full content made against `base_version` (`NoteView::content_version`
+/// when the editor loaded it; `None` saves unconditionally). A stale base is 3-way merged
+/// with the changes made since, or refused with `stale_edit`.
+pub fn update_note(
+    id: String,
+    content: String,
+    base_version: Option<String>,
+) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.update_note_at(&id, &content, base_version.as_deref())))
 }
 
 /// Moves/renames a note.
@@ -186,6 +196,16 @@ pub fn delete_task(task_id: String) -> Result<String, CoreFailure> {
     lift(|| with(|s| s.delete_task(&task_id)))
 }
 
+/// Adds a reminder to a task (local wall-clock time).
+pub fn add_reminder(task_id: String, at: NaiveDateTime) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.add_reminder(&task_id, at)))
+}
+
+/// Removes a reminder (`ReminderItem::local_at`).
+pub fn remove_reminder(task_id: String, at: NaiveDateTime) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.remove_reminder(&task_id, at)))
+}
+
 /// Resolves a sync conflict (D19).
 pub fn resolve_conflict(op_id: String, resolution: ConflictResolution) -> Result<(), CoreFailure> {
     lift(|| with(|s| s.resolve_conflict(&op_id, resolution)))
@@ -204,4 +224,303 @@ pub fn dismiss_rejection(op_id: String) -> Result<(), CoreFailure> {
 /// Reminders on/off for this device.
 pub fn set_reminders_enabled(enabled: bool) -> Result<(), CoreFailure> {
     lift(|| with(|s| s.set_reminders_enabled(enabled)))
+}
+
+/// Inserts an `@mention` (UTF-16 range `start..end` of the typed `@query`) as a link and adds
+/// the entity to `people:`/`companies:`: the new content and caret, saved with `update_note`.
+pub fn insert_mention(
+    note_id: String,
+    content: String,
+    start: u32,
+    end: u32,
+    entity_id: String,
+) -> Result<MentionEdit, CoreFailure> {
+    lift(|| {
+        let _ = &note_id;
+        core()?
+            .session()?
+            .read(|c, _| crate::view::extra::insert_mention(c, &content, start, end, &entity_id))
+    })
+}
+
+/// Pins a note to the sidebar (this device) or unpins it.
+pub fn pin_note(id: String, pinned: bool) -> Result<(), CoreFailure> {
+    lift(|| core()?.session()?.pin_note(&id, pinned))
+}
+
+/// Accepts what the AI proposed for a capture (every suggestion that needs no choice).
+pub fn accept_capture(note_id: String) -> Result<Vec<String>, CoreFailure> {
+    lift(|| with(|s| s.accept_capture(&note_id)))
+}
+
+/// Rejects every pending suggestion of a capture.
+pub fn reject_capture(note_id: String) -> Result<Vec<String>, CoreFailure> {
+    lift(|| with(|s| s.reject_capture(&note_id)))
+}
+
+/// Accepts the listed captures that are ready (bulk bar).
+pub fn accept_captures(note_ids: Vec<String>) -> Result<Vec<String>, CoreFailure> {
+    lift(|| with(|s| s.accept_captures(&note_ids)))
+}
+
+/// "Accept all ready".
+pub fn accept_all_ready() -> Result<Vec<String>, CoreFailure> {
+    lift(|| with(Session::accept_all_ready))
+}
+
+/// Accepts a proposal with the user's edits.
+pub fn accept_suggestion_with(id: String, edits: SuggestionEdits) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.accept_suggestion_with(&id, edits)))
+}
+
+/// "Who is “بابا”?": link to an existing entity or create one (the mention becomes an alias).
+pub fn resolve_link_or_create(
+    id: String,
+    choice: LinkOrCreateChoice,
+) -> Result<CreateOutcome, CoreFailure> {
+    lift(|| with(|s| s.resolve_link_or_create(&id, &choice)))
+}
+
+/// Picks the document of an ambiguous custody suggestion.
+pub fn accept_suggestion_choice(id: String, document_id: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.accept_suggestion_choice(&id, &document_id)))
+}
+
+/// Undo on a suggestion (rejects a pending one; `not_available` for an AI change applied
+/// automatically until the server's undo endpoint exists).
+pub fn undo_suggestion(id: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.undo_suggestion(&id)))
+}
+
+/// "Looks right" on an AI change applied automatically.
+pub fn acknowledge_suggestion(id: String) -> Result<(), CoreFailure> {
+    lift(|| core()?.session()?.acknowledge_suggestion(&id))
+}
+
+/// A capture flagged as a duplicate: keep it or discard it.
+pub fn resolve_capture_duplicate(
+    id: String,
+    choice: DuplicateChoice,
+) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.resolve_capture_duplicate(&id, choice)))
+}
+
+/// Replies in a suggestion's thread.
+pub fn reply_to_suggestion(id: String, text: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.reply_to_suggestion(&id, &text)))
+}
+
+/// Creates a document (duplicate-checked unless `force`).
+pub fn create_document(draft: DocumentDraft, force: bool) -> Result<CreateOutcome, CoreFailure> {
+    lift(|| with(|s| s.create_document(&draft, force)))
+}
+
+/// Creates a place (duplicate-checked unless `force`).
+pub fn create_place(draft: PlaceDraft, force: bool) -> Result<CreateOutcome, CoreFailure> {
+    lift(|| with(|s| s.create_place(&draft, force)))
+}
+
+/// Merges entity `source_id` into `into_id`.
+pub fn merge_entities(source_id: String, into_id: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.merge_entities(&source_id, &into_id)))
+}
+
+/// Points a relation at another target (D13 "this Ahmed is Ahmed Fathy").
+pub fn repoint_relation(
+    src_id: String,
+    dst_id: String,
+    rel_type: String,
+    new_dst_id: String,
+) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.repoint_relation(&src_id, &dst_id, &rel_type, &new_dst_id)))
+}
+
+/// Rejects a relation (an AI edge is recorded as rejected and never re-proposed; undo with
+/// `add_relation`).
+pub fn reject_relation(
+    src_id: String,
+    dst_id: String,
+    rel_type: String,
+) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.reject_relation(&src_id, &dst_id, &rel_type)))
+}
+
+/// Replaces the user-owned `## Notes` section of an entity, document or place.
+pub fn update_user_notes(id: String, text: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.update_user_notes(&id, &text)))
+}
+
+/// Sets a property of an entity, document or place.
+pub fn set_property(id: String, key: String, value: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.set_property(&id, &key, &value)))
+}
+
+/// Removes a property.
+pub fn remove_property(id: String, key: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.remove_property(&id, &key)))
+}
+
+/// Adds an alias.
+pub fn add_alias(id: String, alias: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.add_alias(&id, &alias)))
+}
+
+/// Removes an alias.
+pub fn remove_alias(id: String, alias: String) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.remove_alias(&id, &alias)))
+}
+
+/// Records a custody event of a document ("Record a move").
+pub fn record_custody(document_id: String, draft: CustodyDraft) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.record_custody(&document_id, &draft)))
+}
+
+/// Time used for date-only reminders (`HH:MM`).
+pub fn set_default_reminder_time(time: String) -> Result<(), CoreFailure> {
+    lift(|| core()?.session()?.set_default_reminder_time(&time))
+}
+
+/// Quiet hours (`HH:MM`).
+pub fn set_quiet_hours(enabled: bool, from: String, until: String) -> Result<(), CoreFailure> {
+    lift(|| core()?.session()?.set_quiet_hours(enabled, &from, &until))
+}
+
+/// The notification's Snooze length (minutes).
+pub fn set_snooze_minutes(minutes: u32) -> Result<(), CoreFailure> {
+    lift(|| core()?.session()?.set_snooze_minutes(minutes))
+}
+
+/// Re-reads devices, AI status, integrity warnings and the approval count (online).
+pub async fn refresh_settings() -> Result<(), CoreFailure> {
+    lift_async(async { core()?.session()?.refresh_settings().await }).await
+}
+
+/// Renames a device.
+pub async fn rename_device(id: String, name: String) -> Result<(), CoreFailure> {
+    lift_async(async { core()?.session()?.rename_device(&id, &name).await }).await
+}
+
+/// Signs another device out.
+pub async fn revoke_device(id: String) -> Result<(), CoreFailure> {
+    lift_async(async { core()?.session()?.revoke_device(&id).await }).await
+}
+
+/// Reminders on/off for a device ("Deliver to").
+pub async fn set_device_reminders(id: String, enabled: bool) -> Result<(), CoreFailure> {
+    lift_async(async {
+        core()?
+            .session()?
+            .set_device_reminders(&id, enabled)
+            .await?;
+        runtime::trigger(Trigger::AfterWrite);
+        Ok(())
+    })
+    .await
+}
+
+/// Fetches a note's history (online).
+pub async fn refresh_history(note_id: String) -> Result<(), CoreFailure> {
+    lift_async(async { core()?.session()?.refresh_history(&note_id).await }).await
+}
+
+/// Reverts a note to a revision (online).
+pub async fn revert_note(note_id: String, commit: String) -> Result<(), CoreFailure> {
+    lift_async(async {
+        core()?.session()?.revert_note(&note_id, &commit).await?;
+        runtime::trigger(Trigger::Manual);
+        Ok(())
+    })
+    .await
+}
+
+/// Downloads the vault export to a file the user chose.
+pub async fn export_vault(path: String) -> Result<ExportSummary, CoreFailure> {
+    lift_async(async { core()?.session()?.export_vault(&path).await }).await
+}
+
+/// Imports a zip archive.
+pub async fn import_vault(path: String) -> Result<ImportSummary, CoreFailure> {
+    lift_async(async {
+        let r = core()?.session()?.import_vault(&path).await?;
+        runtime::trigger(Trigger::Manual);
+        Ok(r)
+    })
+    .await
+}
+
+/// Admin: approves a sign-up.
+pub async fn approve_user(id: String) -> Result<AdminUserItem, CoreFailure> {
+    lift_async(async { core()?.session()?.approve_user(&id).await }).await
+}
+
+/// Admin: rejects a sign-up.
+pub async fn reject_user(id: String) -> Result<AdminUserItem, CoreFailure> {
+    lift_async(async { core()?.session()?.reject_user(&id).await }).await
+}
+
+/// Admin: sets a user's role (`admin` | `member`).
+pub async fn set_user_role(id: String, role: String) -> Result<AdminUserItem, CoreFailure> {
+    lift_async(async { core()?.session()?.set_user_role(&id, &role).await }).await
+}
+
+/// Admin: disables (`enabled = false`) or enables an account.
+pub async fn set_user_enabled(id: String, enabled: bool) -> Result<AdminUserItem, CoreFailure> {
+    lift_async(async { core()?.session()?.set_user_enabled(&id, enabled).await }).await
+}
+
+/// Admin: resets a password; returns the one-time temporary password.
+pub async fn reset_password(id: String) -> Result<String, CoreFailure> {
+    lift_async(async { core()?.session()?.reset_password(&id).await }).await
+}
+
+/// Admin: schedules an account's deletion (D25).
+pub async fn schedule_deletion(id: String) -> Result<AdminUserItem, CoreFailure> {
+    lift_async(async { core()?.session()?.schedule_deletion(&id).await }).await
+}
+
+/// Admin: cancels a scheduled deletion.
+pub async fn cancel_deletion(id: String) -> Result<AdminUserItem, CoreFailure> {
+    lift_async(async { core()?.session()?.cancel_deletion(&id).await }).await
+}
+
+/// Admin: creates an active account.
+pub async fn create_user(request: NewUserRequest) -> Result<AdminUserItem, CoreFailure> {
+    lift_async(async { core()?.session()?.create_user(request).await }).await
+}
+
+/// Ask: asks a question in `scope`; the answer streams into `watch_ask`. Returns the answer's
+/// ID when it ended.
+pub async fn ask(question: String, scope: AskScope) -> Result<String, CoreFailure> {
+    lift_async(async {
+        let session = core()?.session()?;
+        let value = session.read(|c, _| crate::view::build::ask_scope_value(c, &scope))?;
+        session.ask(&question, value, &scope.label).await
+    })
+    .await
+}
+
+/// Ask: stops the streaming answer.
+pub fn stop_ask() -> Result<(), CoreFailure> {
+    lift(|| {
+        core()?.session()?.stop_ask();
+        Ok(())
+    })
+}
+
+/// Ask: starts a new conversation.
+pub fn new_conversation() -> Result<(), CoreFailure> {
+    lift(|| {
+        core()?.session()?.new_conversation();
+        Ok(())
+    })
+}
+
+/// Ask: saves an answer as a note (§9.5); returns the note's ID.
+pub async fn save_answer_as_note(message_id: String) -> Result<String, CoreFailure> {
+    lift_async(async {
+        let id = core()?.session()?.save_answer_as_note(&message_id).await?;
+        runtime::trigger(Trigger::Manual);
+        Ok(id)
+    })
+    .await
 }

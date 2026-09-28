@@ -75,7 +75,7 @@ class StrataCore
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -2034691486;
+  int get rustContentHash => 1372952940;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -87,9 +87,34 @@ class StrataCore
 }
 
 abstract class StrataCoreApi extends BaseApi {
+  Future<List<String>> crateApiIntentsAcceptAllReady();
+
+  Future<List<String>> crateApiIntentsAcceptCapture({required String noteId});
+
+  Future<List<String>> crateApiIntentsAcceptCaptures({
+    required List<String> noteIds,
+  });
+
   Future<String> crateApiIntentsAcceptSuggestion({required String id});
 
+  Future<String> crateApiIntentsAcceptSuggestionChoice({
+    required String id,
+    required String documentId,
+  });
+
+  Future<String> crateApiIntentsAcceptSuggestionWith({
+    required String id,
+    required SuggestionEdits edits,
+  });
+
   Future<SessionState> crateApiAppAcknowledgeAccountDisabled();
+
+  Future<void> crateApiIntentsAcknowledgeSuggestion({required String id});
+
+  Future<String> crateApiIntentsAddAlias({
+    required String id,
+    required String alias,
+  });
 
   Future<String> crateApiIntentsAddRelation({
     required String srcId,
@@ -97,15 +122,45 @@ abstract class StrataCoreApi extends BaseApi {
     required String relType,
   });
 
+  Future<String> crateApiIntentsAddReminder({
+    required String taskId,
+    required DateTime at,
+  });
+
   Future<void> crateApiAppAppLifecycle({required AppLifecycle state});
 
+  Future<AdminUserItem> crateApiIntentsApproveUser({required String id});
+
+  Future<String> crateApiIntentsAsk({
+    required String question,
+    required AskScope scope,
+  });
+
   Future<AskView> crateApiViewsAskView();
+
+  Future<AdminUserItem> crateApiIntentsCancelDeletion({required String id});
 
   Future<String> crateApiIntentsCancelTask({required String taskId});
 
   Future<String> crateApiIntentsCapture({required String text});
 
+  Future<SessionState> crateApiAppChangePassword({
+    required String current,
+    required String new_,
+  });
+
+  Future<SessionState> crateApiAppCheckApproval();
+
   Future<String> crateApiIntentsCompleteTask({required String taskId});
+
+  Future<RecurrenceCompose> crateApiViewsComposeRecurrence({
+    required RecurrenceForm form,
+  });
+
+  Future<CreateOutcome> crateApiIntentsCreateDocument({
+    required DocumentDraft draft,
+    required bool force,
+  });
 
   Future<CreateOutcome> crateApiIntentsCreateEntity({
     required String kind,
@@ -120,10 +175,21 @@ abstract class StrataCoreApi extends BaseApi {
     required bool force,
   });
 
+  Future<CreateOutcome> crateApiIntentsCreatePlace({
+    required PlaceDraft draft,
+    required bool force,
+  });
+
   Future<CreateOutcome> crateApiIntentsCreateTask({
     required TaskDraft draft,
     required bool force,
   });
+
+  Future<AdminUserItem> crateApiIntentsCreateUser({
+    required NewUserRequest request,
+  });
+
+  Future<SessionState> crateApiAppDeleteAccountNow({required bool force});
 
   Future<String> crateApiIntentsDeleteNote({required String id});
 
@@ -131,21 +197,70 @@ abstract class StrataCoreApi extends BaseApi {
 
   Future<DirectoryCounts> crateViewModelDirectoryCountsDefault();
 
+  Future<DirectoryFilter> crateViewModelDirectoryFilterDefault();
+
+  Future<SessionState> crateApiAppDismissPending();
+
   Future<void> crateApiIntentsDismissRejection({required String opId});
+
+  Future<ExportSummary> crateApiAppDownloadExport({required String path});
+
+  Future<Completions> crateApiViewsEditorCompletions({
+    required String noteId,
+    required String content,
+    required int cursor,
+  });
 
   Future<List<EditorHint>> crateApiViewsEditorHints({required String content});
 
+  Future<int> crateApiAppExportUnsynced({required String path});
+
+  Future<ExportSummary> crateApiIntentsExportVault({required String path});
+
   Future<GlobalGraphView> crateApiViewsGlobalGraph();
+
+  Future<GlobalGraphView> crateApiViewsGlobalGraphFiltered({
+    required GraphFilter filter,
+  });
+
+  Future<ImportSummary> crateApiIntentsImportVault({required String path});
 
   Future<void> crateApiAppInitApp();
 
   Future<SessionState> crateApiAppInitCore({required CoreConfig config});
 
-  Future<AdminUsersView> crateApiViewsLoadAdminUsers();
+  Future<MentionEdit> crateApiIntentsInsertMention({
+    required String noteId,
+    required String content,
+    required int start,
+    required int end,
+    required String entityId,
+  });
+
+  Future<AdminUsersView> crateApiViewsLoadAdminUsers({required String query});
+
+  Future<String> crateApiIntentsMergeEntities({
+    required String sourceId,
+    required String intoId,
+  });
+
+  Future<MergePreview> crateApiViewsMergePreview({
+    required String sourceId,
+    required String intoId,
+  });
 
   Future<String> crateApiIntentsMoveNote({
     required String id,
     required String newPath,
+  });
+
+  Future<void> crateApiIntentsNewConversation();
+
+  Future<List<BlockItem>> crateApiViewsNoteBlocks({required String noteId});
+
+  Future<NoteDiffView> crateApiViewsNoteRevisionDiff({
+    required String noteId,
+    required String commit,
   });
 
   Future<String> crateApiRemindersNotificationAction({
@@ -155,9 +270,61 @@ abstract class StrataCoreApi extends BaseApi {
 
   Future<NotificationOp> crateViewModelNotificationOpCancel({required int id});
 
+  Future<TaskDraftPreview> crateApiViewsParseTaskText({required String text});
+
+  Future<PasswordStrength> crateApiAppPasswordStrength({
+    required String password,
+  });
+
+  Future<void> crateApiIntentsPinNote({
+    required String id,
+    required bool pinned,
+  });
+
+  Future<List<PlaceOption>> crateApiViewsPlaceOptions({String? documentId});
+
+  Future<String> crateApiIntentsRecordCustody({
+    required String documentId,
+    required CustodyDraft draft,
+  });
+
+  Future<RecurrenceForm?> crateApiViewsRecurrenceForm({required String phrase});
+
+  Future<List<RecurrencePreviewItem>> crateApiViewsRecurrencePreview({
+    required String phrase,
+    required DateTime from,
+    required int count,
+  });
+
   Future<void> crateApiAppRefreshAccount();
 
+  Future<void> crateApiIntentsRefreshHistory({required String noteId});
+
+  Future<void> crateApiIntentsRefreshSettings();
+
+  Future<List<String>> crateApiIntentsRejectCapture({required String noteId});
+
+  Future<String> crateApiIntentsRejectRelation({
+    required String srcId,
+    required String dstId,
+    required String relType,
+  });
+
   Future<String> crateApiIntentsRejectSuggestion({required String id});
+
+  Future<AdminUserItem> crateApiIntentsRejectUser({required String id});
+
+  Future<List<RelationTypeItem>> crateApiViewsRelationTypes();
+
+  Future<String> crateApiIntentsRemoveAlias({
+    required String id,
+    required String alias,
+  });
+
+  Future<String> crateApiIntentsRemoveProperty({
+    required String id,
+    required String key,
+  });
 
   Future<String> crateApiIntentsRemoveRelation({
     required String srcId,
@@ -165,7 +332,29 @@ abstract class StrataCoreApi extends BaseApi {
     required String relType,
   });
 
+  Future<String> crateApiIntentsRemoveReminder({
+    required String taskId,
+    required DateTime at,
+  });
+
+  Future<void> crateApiIntentsRenameDevice({
+    required String id,
+    required String name,
+  });
+
   Future<String> crateApiIntentsReopenTask({required String taskId});
+
+  Future<String> crateApiIntentsReplyToSuggestion({
+    required String id,
+    required String text,
+  });
+
+  Future<String> crateApiIntentsRepointRelation({
+    required String srcId,
+    required String dstId,
+    required String relType,
+    required String newDstId,
+  });
 
   Future<void> crateApiRemindersReportNotificationResult({
     required int id,
@@ -173,6 +362,18 @@ abstract class StrataCoreApi extends BaseApi {
   });
 
   Future<String> crateApiIntentsRequestRelink({required String noteId});
+
+  Future<String> crateApiIntentsResetPassword({required String id});
+
+  Future<String> crateApiIntentsResolveCaptureDuplicate({
+    required String id,
+    required DuplicateChoice choice,
+  });
+
+  Future<CitationPreview> crateApiViewsResolveCitation({
+    required String noteId,
+    String? anchor,
+  });
 
   Future<void> crateApiIntentsResolveConflict({
     required String opId,
@@ -184,6 +385,11 @@ abstract class StrataCoreApi extends BaseApi {
     required DuplicateChoice choice,
   });
 
+  Future<CreateOutcome> crateApiIntentsResolveLinkOrCreate({
+    required String id,
+    required LinkOrCreateChoice choice,
+  });
+
   Future<String> crateApiIntentsRetypeRelation({
     required String srcId,
     required String dstId,
@@ -191,16 +397,72 @@ abstract class StrataCoreApi extends BaseApi {
     required String newType,
   });
 
+  Future<void> crateApiIntentsRevertNote({
+    required String noteId,
+    required String commit,
+  });
+
+  Future<void> crateApiIntentsRevokeDevice({required String id});
+
+  Future<String> crateApiIntentsSaveAnswerAsNote({required String messageId});
+
+  Future<AdminUserItem> crateApiIntentsScheduleDeletion({required String id});
+
   Future<SearchView> crateApiViewsSearch({
     required String query,
     required SearchMode mode,
+  });
+
+  Future<SearchView> crateApiViewsSearchInFolder({
+    required String query,
+    required SearchMode mode,
+    String? folder,
   });
 
   Future<SessionState> crateViewModelSessionStateOf({
     required SessionKind kind,
   });
 
+  Future<void> crateApiIntentsSetDefaultReminderTime({required String time});
+
+  Future<void> crateApiIntentsSetDeviceReminders({
+    required String id,
+    required bool enabled,
+  });
+
+  Future<void> crateApiAppSetDisplayName({required String name});
+
+  Future<String> crateApiIntentsSetProperty({
+    required String id,
+    required String key,
+    required String value,
+  });
+
+  Future<void> crateApiIntentsSetQuietHours({
+    required bool enabled,
+    required String from,
+    required String until,
+  });
+
   Future<void> crateApiIntentsSetRemindersEnabled({required bool enabled});
+
+  Future<void> crateApiIntentsSetSnoozeMinutes({required int minutes});
+
+  Future<void> crateApiAppSetSyncPaused({required bool paused});
+
+  Future<void> crateApiAppSetTimezone({required String iana});
+
+  Future<void> crateApiAppSetUiLanguage({required String code});
+
+  Future<AdminUserItem> crateApiIntentsSetUserEnabled({
+    required String id,
+    required bool enabled,
+  });
+
+  Future<AdminUserItem> crateApiIntentsSetUserRole({
+    required String id,
+    required String role,
+  });
 
   Future<SessionState> crateApiAppSignIn({required SignInRequest request});
 
@@ -208,9 +470,13 @@ abstract class StrataCoreApi extends BaseApi {
 
   Future<SignUpOutcome> crateApiAppSignUp({required SignUpRequest request});
 
+  Future<void> crateApiIntentsStopAsk();
+
   Future<SuggestionDetail> crateViewModelSuggestionDetailOf({
     required SuggestionKind kind,
   });
+
+  Future<SuggestionEdits> crateViewModelSuggestionEditsDefault();
 
   Future<SessionState> crateApiAppSwitchAccount({required String userId});
 
@@ -220,13 +486,18 @@ abstract class StrataCoreApi extends BaseApi {
 
   Future<SyncPhase> crateViewModelSyncPhaseDefault();
 
+  Future<List<TagItem>> crateApiViewsTags({required String prefix});
+
   Future<TaskPatch> crateViewModelTaskPatchDefault();
 
   Future<TaskSections> crateViewModelTaskSectionsDefault();
 
+  Future<String> crateApiIntentsUndoSuggestion({required String id});
+
   Future<String> crateApiIntentsUpdateNote({
     required String id,
     required String content,
+    String? baseVersion,
   });
 
   Future<String> crateApiIntentsUpdateTask({
@@ -234,11 +505,25 @@ abstract class StrataCoreApi extends BaseApi {
     required TaskPatch patch,
   });
 
+  Future<String> crateApiIntentsUpdateUserNotes({
+    required String id,
+    required String text,
+  });
+
+  Stream<AskView> crateApiViewsWatchAsk();
+
   Stream<ConflictScreen> crateApiViewsWatchConflict({required String opId});
 
   Stream<DirectoryView> crateApiViewsWatchDirectory({
     required DirectoryTab tab,
     required String query,
+  });
+
+  Stream<DirectoryView> crateApiViewsWatchDirectoryFiltered({
+    required DirectoryTab tab,
+    required String query,
+    required DirectoryFilter filter,
+    required DirectorySort sort,
   });
 
   Stream<DuplicatePromptsView> crateApiViewsWatchDuplicatePrompts();
@@ -249,16 +534,26 @@ abstract class StrataCoreApi extends BaseApi {
 
   Stream<InboxView> crateApiViewsWatchInbox();
 
+  Stream<InboxView> crateApiViewsWatchInboxFiltered({
+    required InboxFilter filter,
+  });
+
   Stream<LocalGraphView> crateApiViewsWatchLocalGraph({
     required String id,
     required int depth,
   });
+
+  Stream<NavView> crateApiViewsWatchNav();
 
   Stream<NoteScreen> crateApiViewsWatchNote({required String id});
 
   Stream<NotesListView> crateApiViewsWatchNotesList({required String folder});
 
   Stream<NotificationOp> crateApiRemindersWatchNotificationOps();
+
+  Stream<RecentNotesView> crateApiViewsWatchRecent({
+    required RecentFilter filter,
+  });
 
   Stream<SessionState> crateApiAppWatchSession();
 
@@ -267,6 +562,8 @@ abstract class StrataCoreApi extends BaseApi {
   Stream<SyncStatusView> crateApiViewsWatchSyncStatus();
 
   Stream<TaskScreen> crateApiViewsWatchTask({required String id});
+
+  Stream<TaskHomesView> crateApiViewsWatchTaskHomes();
 
   Stream<TasksView> crateApiViewsWatchTasks();
 }
@@ -281,6 +578,91 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   });
 
   @override
+  Future<List<String>> crateApiIntentsAcceptAllReady() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAcceptAllReadyConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAcceptAllReadyConstMeta =>
+      const TaskConstMeta(debugName: "accept_all_ready", argNames: []);
+
+  @override
+  Future<List<String>> crateApiIntentsAcceptCapture({required String noteId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAcceptCaptureConstMeta,
+        argValues: [noteId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAcceptCaptureConstMeta =>
+      const TaskConstMeta(debugName: "accept_capture", argNames: ["noteId"]);
+
+  @override
+  Future<List<String>> crateApiIntentsAcceptCaptures({
+    required List<String> noteIds,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_String(noteIds, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAcceptCapturesConstMeta,
+        argValues: [noteIds],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAcceptCapturesConstMeta =>
+      const TaskConstMeta(debugName: "accept_captures", argNames: ["noteIds"]);
+
+  @override
   Future<String> crateApiIntentsAcceptSuggestion({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -290,7 +672,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 4,
             port: port_,
           );
         },
@@ -309,6 +691,76 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "accept_suggestion", argNames: ["id"]);
 
   @override
+  Future<String> crateApiIntentsAcceptSuggestionChoice({
+    required String id,
+    required String documentId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(documentId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAcceptSuggestionChoiceConstMeta,
+        argValues: [id, documentId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAcceptSuggestionChoiceConstMeta =>
+      const TaskConstMeta(
+        debugName: "accept_suggestion_choice",
+        argNames: ["id", "documentId"],
+      );
+
+  @override
+  Future<String> crateApiIntentsAcceptSuggestionWith({
+    required String id,
+    required SuggestionEdits edits,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_box_autoadd_suggestion_edits(edits, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAcceptSuggestionWithConstMeta,
+        argValues: [id, edits],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAcceptSuggestionWithConstMeta =>
+      const TaskConstMeta(
+        debugName: "accept_suggestion_with",
+        argNames: ["id", "edits"],
+      );
+
+  @override
   Future<SessionState> crateApiAppAcknowledgeAccountDisabled() {
     return handler.executeNormal(
       NormalTask(
@@ -317,7 +769,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 7,
             port: port_,
           );
         },
@@ -339,6 +791,69 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<void> crateApiIntentsAcknowledgeSuggestion({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAcknowledgeSuggestionConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAcknowledgeSuggestionConstMeta =>
+      const TaskConstMeta(
+        debugName: "acknowledge_suggestion",
+        argNames: ["id"],
+      );
+
+  @override
+  Future<String> crateApiIntentsAddAlias({
+    required String id,
+    required String alias,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(alias, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAddAliasConstMeta,
+        argValues: [id, alias],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAddAliasConstMeta =>
+      const TaskConstMeta(debugName: "add_alias", argNames: ["id", "alias"]);
+
+  @override
   Future<String> crateApiIntentsAddRelation({
     required String srcId,
     required String dstId,
@@ -354,7 +869,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 10,
             port: port_,
           );
         },
@@ -375,6 +890,40 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   );
 
   @override
+  Future<String> crateApiIntentsAddReminder({
+    required String taskId,
+    required DateTime at,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(taskId, serializer);
+          sse_encode_Chrono_NaiveDateTime(at, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAddReminderConstMeta,
+        argValues: [taskId, at],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAddReminderConstMeta => const TaskConstMeta(
+    debugName: "add_reminder",
+    argNames: ["taskId", "at"],
+  );
+
+  @override
   Future<void> crateApiAppAppLifecycle({required AppLifecycle state}) {
     return handler.executeNormal(
       NormalTask(
@@ -384,7 +933,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 12,
             port: port_,
           );
         },
@@ -403,6 +952,66 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "app_lifecycle", argNames: ["state"]);
 
   @override
+  Future<AdminUserItem> crateApiIntentsApproveUser({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_admin_user_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsApproveUserConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsApproveUserConstMeta =>
+      const TaskConstMeta(debugName: "approve_user", argNames: ["id"]);
+
+  @override
+  Future<String> crateApiIntentsAsk({
+    required String question,
+    required AskScope scope,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(question, serializer);
+          sse_encode_box_autoadd_ask_scope(scope, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsAskConstMeta,
+        argValues: [question, scope],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsAskConstMeta =>
+      const TaskConstMeta(debugName: "ask", argNames: ["question", "scope"]);
+
+  @override
   Future<AskView> crateApiViewsAskView() {
     return handler.executeNormal(
       NormalTask(
@@ -411,7 +1020,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 15,
             port: port_,
           );
         },
@@ -430,6 +1039,34 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "ask_view", argNames: []);
 
   @override
+  Future<AdminUserItem> crateApiIntentsCancelDeletion({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_admin_user_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsCancelDeletionConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsCancelDeletionConstMeta =>
+      const TaskConstMeta(debugName: "cancel_deletion", argNames: ["id"]);
+
+  @override
   Future<String> crateApiIntentsCancelTask({required String taskId}) {
     return handler.executeNormal(
       NormalTask(
@@ -439,7 +1076,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 17,
             port: port_,
           );
         },
@@ -467,7 +1104,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 18,
             port: port_,
           );
         },
@@ -486,6 +1123,67 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "capture", argNames: ["text"]);
 
   @override
+  Future<SessionState> crateApiAppChangePassword({
+    required String current,
+    required String new_,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(current, serializer);
+          sse_encode_String(new_, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_session_state,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppChangePasswordConstMeta,
+        argValues: [current, new_],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppChangePasswordConstMeta => const TaskConstMeta(
+    debugName: "change_password",
+    argNames: ["current", "new_"],
+  );
+
+  @override
+  Future<SessionState> crateApiAppCheckApproval() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_session_state,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppCheckApprovalConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppCheckApprovalConstMeta =>
+      const TaskConstMeta(debugName: "check_approval", argNames: []);
+
+  @override
   Future<String> crateApiIntentsCompleteTask({required String taskId}) {
     return handler.executeNormal(
       NormalTask(
@@ -495,7 +1193,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 21,
             port: port_,
           );
         },
@@ -512,6 +1210,71 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
 
   TaskConstMeta get kCrateApiIntentsCompleteTaskConstMeta =>
       const TaskConstMeta(debugName: "complete_task", argNames: ["taskId"]);
+
+  @override
+  Future<RecurrenceCompose> crateApiViewsComposeRecurrence({
+    required RecurrenceForm form,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_recurrence_form(form, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_recurrence_compose,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsComposeRecurrenceConstMeta,
+        argValues: [form],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsComposeRecurrenceConstMeta =>
+      const TaskConstMeta(debugName: "compose_recurrence", argNames: ["form"]);
+
+  @override
+  Future<CreateOutcome> crateApiIntentsCreateDocument({
+    required DocumentDraft draft,
+    required bool force,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_document_draft(draft, serializer);
+          sse_encode_bool(force, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_create_outcome,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsCreateDocumentConstMeta,
+        argValues: [draft, force],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsCreateDocumentConstMeta =>
+      const TaskConstMeta(
+        debugName: "create_document",
+        argNames: ["draft", "force"],
+      );
 
   @override
   Future<CreateOutcome> crateApiIntentsCreateEntity({
@@ -531,7 +1294,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 24,
             port: port_,
           );
         },
@@ -568,7 +1331,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 25,
             port: port_,
           );
         },
@@ -589,6 +1352,40 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   );
 
   @override
+  Future<CreateOutcome> crateApiIntentsCreatePlace({
+    required PlaceDraft draft,
+    required bool force,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_place_draft(draft, serializer);
+          sse_encode_bool(force, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 26,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_create_outcome,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsCreatePlaceConstMeta,
+        argValues: [draft, force],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsCreatePlaceConstMeta => const TaskConstMeta(
+    debugName: "create_place",
+    argNames: ["draft", "force"],
+  );
+
+  @override
   Future<CreateOutcome> crateApiIntentsCreateTask({
     required TaskDraft draft,
     required bool force,
@@ -602,7 +1399,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 27,
             port: port_,
           );
         },
@@ -623,6 +1420,64 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   );
 
   @override
+  Future<AdminUserItem> crateApiIntentsCreateUser({
+    required NewUserRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_new_user_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 28,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_admin_user_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsCreateUserConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsCreateUserConstMeta =>
+      const TaskConstMeta(debugName: "create_user", argNames: ["request"]);
+
+  @override
+  Future<SessionState> crateApiAppDeleteAccountNow({required bool force}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(force, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 29,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_session_state,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppDeleteAccountNowConstMeta,
+        argValues: [force],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppDeleteAccountNowConstMeta =>
+      const TaskConstMeta(debugName: "delete_account_now", argNames: ["force"]);
+
+  @override
   Future<String> crateApiIntentsDeleteNote({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -632,7 +1487,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 30,
             port: port_,
           );
         },
@@ -660,7 +1515,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 31,
             port: port_,
           );
         },
@@ -687,7 +1542,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 32,
             port: port_,
           );
         },
@@ -706,6 +1561,60 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "directory_counts_default", argNames: []);
 
   @override
+  Future<DirectoryFilter> crateViewModelDirectoryFilterDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 33,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_directory_filter,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateViewModelDirectoryFilterDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateViewModelDirectoryFilterDefaultConstMeta =>
+      const TaskConstMeta(debugName: "directory_filter_default", argNames: []);
+
+  @override
+  Future<SessionState> crateApiAppDismissPending() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 34,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_session_state,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppDismissPendingConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppDismissPendingConstMeta =>
+      const TaskConstMeta(debugName: "dismiss_pending", argNames: []);
+
+  @override
   Future<void> crateApiIntentsDismissRejection({required String opId}) {
     return handler.executeNormal(
       NormalTask(
@@ -715,7 +1624,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 35,
             port: port_,
           );
         },
@@ -734,6 +1643,71 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "dismiss_rejection", argNames: ["opId"]);
 
   @override
+  Future<ExportSummary> crateApiAppDownloadExport({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 36,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_export_summary,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppDownloadExportConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppDownloadExportConstMeta =>
+      const TaskConstMeta(debugName: "download_export", argNames: ["path"]);
+
+  @override
+  Future<Completions> crateApiViewsEditorCompletions({
+    required String noteId,
+    required String content,
+    required int cursor,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          sse_encode_String(content, serializer);
+          sse_encode_u_32(cursor, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 37,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_completions,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsEditorCompletionsConstMeta,
+        argValues: [noteId, content, cursor],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsEditorCompletionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "editor_completions",
+        argNames: ["noteId", "content", "cursor"],
+      );
+
+  @override
   Future<List<EditorHint>> crateApiViewsEditorHints({required String content}) {
     return handler.executeNormal(
       NormalTask(
@@ -743,7 +1717,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 38,
             port: port_,
           );
         },
@@ -762,6 +1736,62 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "editor_hints", argNames: ["content"]);
 
   @override
+  Future<int> crateApiAppExportUnsynced({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 39,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_32,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppExportUnsyncedConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppExportUnsyncedConstMeta =>
+      const TaskConstMeta(debugName: "export_unsynced", argNames: ["path"]);
+
+  @override
+  Future<ExportSummary> crateApiIntentsExportVault({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 40,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_export_summary,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsExportVaultConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsExportVaultConstMeta =>
+      const TaskConstMeta(debugName: "export_vault", argNames: ["path"]);
+
+  @override
   Future<GlobalGraphView> crateApiViewsGlobalGraph() {
     return handler.executeNormal(
       NormalTask(
@@ -770,7 +1800,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 41,
             port: port_,
           );
         },
@@ -789,6 +1819,67 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "global_graph", argNames: []);
 
   @override
+  Future<GlobalGraphView> crateApiViewsGlobalGraphFiltered({
+    required GraphFilter filter,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_graph_filter(filter, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 42,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_global_graph_view,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsGlobalGraphFilteredConstMeta,
+        argValues: [filter],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsGlobalGraphFilteredConstMeta =>
+      const TaskConstMeta(
+        debugName: "global_graph_filtered",
+        argNames: ["filter"],
+      );
+
+  @override
+  Future<ImportSummary> crateApiIntentsImportVault({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 43,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_import_summary,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsImportVaultConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsImportVaultConstMeta =>
+      const TaskConstMeta(debugName: "import_vault", argNames: ["path"]);
+
+  @override
   Future<void> crateApiAppInitApp() {
     return handler.executeNormal(
       NormalTask(
@@ -797,7 +1888,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 44,
             port: port_,
           );
         },
@@ -825,7 +1916,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 45,
             port: port_,
           );
         },
@@ -844,15 +1935,57 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "init_core", argNames: ["config"]);
 
   @override
-  Future<AdminUsersView> crateApiViewsLoadAdminUsers() {
+  Future<MentionEdit> crateApiIntentsInsertMention({
+    required String noteId,
+    required String content,
+    required int start,
+    required int end,
+    required String entityId,
+  }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          sse_encode_String(content, serializer);
+          sse_encode_u_32(start, serializer);
+          sse_encode_u_32(end, serializer);
+          sse_encode_String(entityId, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 46,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_mention_edit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsInsertMentionConstMeta,
+        argValues: [noteId, content, start, end, entityId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsInsertMentionConstMeta =>
+      const TaskConstMeta(
+        debugName: "insert_mention",
+        argNames: ["noteId", "content", "start", "end", "entityId"],
+      );
+
+  @override
+  Future<AdminUsersView> crateApiViewsLoadAdminUsers({required String query}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(query, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 47,
             port: port_,
           );
         },
@@ -861,14 +1994,83 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           decodeErrorData: sse_decode_core_failure,
         ),
         constMeta: kCrateApiViewsLoadAdminUsersConstMeta,
-        argValues: [],
+        argValues: [query],
         apiImpl: this,
       ),
     );
   }
 
   TaskConstMeta get kCrateApiViewsLoadAdminUsersConstMeta =>
-      const TaskConstMeta(debugName: "load_admin_users", argNames: []);
+      const TaskConstMeta(debugName: "load_admin_users", argNames: ["query"]);
+
+  @override
+  Future<String> crateApiIntentsMergeEntities({
+    required String sourceId,
+    required String intoId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sourceId, serializer);
+          sse_encode_String(intoId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 48,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsMergeEntitiesConstMeta,
+        argValues: [sourceId, intoId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsMergeEntitiesConstMeta =>
+      const TaskConstMeta(
+        debugName: "merge_entities",
+        argNames: ["sourceId", "intoId"],
+      );
+
+  @override
+  Future<MergePreview> crateApiViewsMergePreview({
+    required String sourceId,
+    required String intoId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(sourceId, serializer);
+          sse_encode_String(intoId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 49,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_merge_preview,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsMergePreviewConstMeta,
+        argValues: [sourceId, intoId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsMergePreviewConstMeta => const TaskConstMeta(
+    debugName: "merge_preview",
+    argNames: ["sourceId", "intoId"],
+  );
 
   @override
   Future<String> crateApiIntentsMoveNote({
@@ -884,7 +2086,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 50,
             port: port_,
           );
         },
@@ -903,6 +2105,96 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "move_note", argNames: ["id", "newPath"]);
 
   @override
+  Future<void> crateApiIntentsNewConversation() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 51,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsNewConversationConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsNewConversationConstMeta =>
+      const TaskConstMeta(debugName: "new_conversation", argNames: []);
+
+  @override
+  Future<List<BlockItem>> crateApiViewsNoteBlocks({required String noteId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 52,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_block_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsNoteBlocksConstMeta,
+        argValues: [noteId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsNoteBlocksConstMeta =>
+      const TaskConstMeta(debugName: "note_blocks", argNames: ["noteId"]);
+
+  @override
+  Future<NoteDiffView> crateApiViewsNoteRevisionDiff({
+    required String noteId,
+    required String commit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          sse_encode_String(commit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 53,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_note_diff_view,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsNoteRevisionDiffConstMeta,
+        argValues: [noteId, commit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsNoteRevisionDiffConstMeta =>
+      const TaskConstMeta(
+        debugName: "note_revision_diff",
+        argNames: ["noteId", "commit"],
+      );
+
+  @override
   Future<String> crateApiRemindersNotificationAction({
     required int id,
     required NotificationAction action,
@@ -916,7 +2208,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 54,
             port: port_,
           );
         },
@@ -947,7 +2239,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 55,
             port: port_,
           );
         },
@@ -969,6 +2261,229 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<TaskDraftPreview> crateApiViewsParseTaskText({required String text}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(text, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 56,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_task_draft_preview,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsParseTaskTextConstMeta,
+        argValues: [text],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsParseTaskTextConstMeta =>
+      const TaskConstMeta(debugName: "parse_task_text", argNames: ["text"]);
+
+  @override
+  Future<PasswordStrength> crateApiAppPasswordStrength({
+    required String password,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(password, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 57,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_password_strength,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiAppPasswordStrengthConstMeta,
+        argValues: [password],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppPasswordStrengthConstMeta =>
+      const TaskConstMeta(
+        debugName: "password_strength",
+        argNames: ["password"],
+      );
+
+  @override
+  Future<void> crateApiIntentsPinNote({
+    required String id,
+    required bool pinned,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_bool(pinned, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 58,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsPinNoteConstMeta,
+        argValues: [id, pinned],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsPinNoteConstMeta =>
+      const TaskConstMeta(debugName: "pin_note", argNames: ["id", "pinned"]);
+
+  @override
+  Future<List<PlaceOption>> crateApiViewsPlaceOptions({String? documentId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_opt_String(documentId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 59,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_place_option,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsPlaceOptionsConstMeta,
+        argValues: [documentId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsPlaceOptionsConstMeta =>
+      const TaskConstMeta(debugName: "place_options", argNames: ["documentId"]);
+
+  @override
+  Future<String> crateApiIntentsRecordCustody({
+    required String documentId,
+    required CustodyDraft draft,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(documentId, serializer);
+          sse_encode_box_autoadd_custody_draft(draft, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 60,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRecordCustodyConstMeta,
+        argValues: [documentId, draft],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRecordCustodyConstMeta =>
+      const TaskConstMeta(
+        debugName: "record_custody",
+        argNames: ["documentId", "draft"],
+      );
+
+  @override
+  Future<RecurrenceForm?> crateApiViewsRecurrenceForm({
+    required String phrase,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(phrase, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 61,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_recurrence_form,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiViewsRecurrenceFormConstMeta,
+        argValues: [phrase],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsRecurrenceFormConstMeta =>
+      const TaskConstMeta(debugName: "recurrence_form", argNames: ["phrase"]);
+
+  @override
+  Future<List<RecurrencePreviewItem>> crateApiViewsRecurrencePreview({
+    required String phrase,
+    required DateTime from,
+    required int count,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(phrase, serializer);
+          sse_encode_Chrono_NaiveDate(from, serializer);
+          sse_encode_u_32(count, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 62,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_recurrence_preview_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsRecurrencePreviewConstMeta,
+        argValues: [phrase, from, count],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsRecurrencePreviewConstMeta =>
+      const TaskConstMeta(
+        debugName: "recurrence_preview",
+        argNames: ["phrase", "from", "count"],
+      );
+
+  @override
   Future<void> crateApiAppRefreshAccount() {
     return handler.executeNormal(
       NormalTask(
@@ -977,7 +2492,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 63,
             port: port_,
           );
         },
@@ -996,6 +2511,126 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "refresh_account", argNames: []);
 
   @override
+  Future<void> crateApiIntentsRefreshHistory({required String noteId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 64,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRefreshHistoryConstMeta,
+        argValues: [noteId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRefreshHistoryConstMeta =>
+      const TaskConstMeta(debugName: "refresh_history", argNames: ["noteId"]);
+
+  @override
+  Future<void> crateApiIntentsRefreshSettings() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 65,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRefreshSettingsConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRefreshSettingsConstMeta =>
+      const TaskConstMeta(debugName: "refresh_settings", argNames: []);
+
+  @override
+  Future<List<String>> crateApiIntentsRejectCapture({required String noteId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 66,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRejectCaptureConstMeta,
+        argValues: [noteId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRejectCaptureConstMeta =>
+      const TaskConstMeta(debugName: "reject_capture", argNames: ["noteId"]);
+
+  @override
+  Future<String> crateApiIntentsRejectRelation({
+    required String srcId,
+    required String dstId,
+    required String relType,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(srcId, serializer);
+          sse_encode_String(dstId, serializer);
+          sse_encode_String(relType, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 67,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRejectRelationConstMeta,
+        argValues: [srcId, dstId, relType],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRejectRelationConstMeta =>
+      const TaskConstMeta(
+        debugName: "reject_relation",
+        argNames: ["srcId", "dstId", "relType"],
+      );
+
+  @override
   Future<String> crateApiIntentsRejectSuggestion({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -1005,7 +2640,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 68,
             port: port_,
           );
         },
@@ -1024,6 +2659,128 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "reject_suggestion", argNames: ["id"]);
 
   @override
+  Future<AdminUserItem> crateApiIntentsRejectUser({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 69,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_admin_user_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRejectUserConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRejectUserConstMeta =>
+      const TaskConstMeta(debugName: "reject_user", argNames: ["id"]);
+
+  @override
+  Future<List<RelationTypeItem>> crateApiViewsRelationTypes() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 70,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_relation_type_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsRelationTypesConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsRelationTypesConstMeta =>
+      const TaskConstMeta(debugName: "relation_types", argNames: []);
+
+  @override
+  Future<String> crateApiIntentsRemoveAlias({
+    required String id,
+    required String alias,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(alias, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 71,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRemoveAliasConstMeta,
+        argValues: [id, alias],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRemoveAliasConstMeta =>
+      const TaskConstMeta(debugName: "remove_alias", argNames: ["id", "alias"]);
+
+  @override
+  Future<String> crateApiIntentsRemoveProperty({
+    required String id,
+    required String key,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(key, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 72,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRemovePropertyConstMeta,
+        argValues: [id, key],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRemovePropertyConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_property",
+        argNames: ["id", "key"],
+      );
+
+  @override
   Future<String> crateApiIntentsRemoveRelation({
     required String srcId,
     required String dstId,
@@ -1039,7 +2796,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 73,
             port: port_,
           );
         },
@@ -1061,6 +2818,73 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<String> crateApiIntentsRemoveReminder({
+    required String taskId,
+    required DateTime at,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(taskId, serializer);
+          sse_encode_Chrono_NaiveDateTime(at, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 74,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRemoveReminderConstMeta,
+        argValues: [taskId, at],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRemoveReminderConstMeta =>
+      const TaskConstMeta(
+        debugName: "remove_reminder",
+        argNames: ["taskId", "at"],
+      );
+
+  @override
+  Future<void> crateApiIntentsRenameDevice({
+    required String id,
+    required String name,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 75,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRenameDeviceConstMeta,
+        argValues: [id, name],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRenameDeviceConstMeta =>
+      const TaskConstMeta(debugName: "rename_device", argNames: ["id", "name"]);
+
+  @override
   Future<String> crateApiIntentsReopenTask({required String taskId}) {
     return handler.executeNormal(
       NormalTask(
@@ -1070,7 +2894,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 76,
             port: port_,
           );
         },
@@ -1089,6 +2913,80 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "reopen_task", argNames: ["taskId"]);
 
   @override
+  Future<String> crateApiIntentsReplyToSuggestion({
+    required String id,
+    required String text,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(text, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 77,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsReplyToSuggestionConstMeta,
+        argValues: [id, text],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsReplyToSuggestionConstMeta =>
+      const TaskConstMeta(
+        debugName: "reply_to_suggestion",
+        argNames: ["id", "text"],
+      );
+
+  @override
+  Future<String> crateApiIntentsRepointRelation({
+    required String srcId,
+    required String dstId,
+    required String relType,
+    required String newDstId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(srcId, serializer);
+          sse_encode_String(dstId, serializer);
+          sse_encode_String(relType, serializer);
+          sse_encode_String(newDstId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 78,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRepointRelationConstMeta,
+        argValues: [srcId, dstId, relType, newDstId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRepointRelationConstMeta =>
+      const TaskConstMeta(
+        debugName: "repoint_relation",
+        argNames: ["srcId", "dstId", "relType", "newDstId"],
+      );
+
+  @override
   Future<void> crateApiRemindersReportNotificationResult({
     required int id,
     required NotificationResult result,
@@ -1102,7 +3000,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 79,
             port: port_,
           );
         },
@@ -1133,7 +3031,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 80,
             port: port_,
           );
         },
@@ -1152,6 +3050,104 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "request_relink", argNames: ["noteId"]);
 
   @override
+  Future<String> crateApiIntentsResetPassword({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 81,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsResetPasswordConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsResetPasswordConstMeta =>
+      const TaskConstMeta(debugName: "reset_password", argNames: ["id"]);
+
+  @override
+  Future<String> crateApiIntentsResolveCaptureDuplicate({
+    required String id,
+    required DuplicateChoice choice,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_duplicate_choice(choice, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 82,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsResolveCaptureDuplicateConstMeta,
+        argValues: [id, choice],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsResolveCaptureDuplicateConstMeta =>
+      const TaskConstMeta(
+        debugName: "resolve_capture_duplicate",
+        argNames: ["id", "choice"],
+      );
+
+  @override
+  Future<CitationPreview> crateApiViewsResolveCitation({
+    required String noteId,
+    String? anchor,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          sse_encode_opt_String(anchor, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 83,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_citation_preview,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsResolveCitationConstMeta,
+        argValues: [noteId, anchor],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsResolveCitationConstMeta =>
+      const TaskConstMeta(
+        debugName: "resolve_citation",
+        argNames: ["noteId", "anchor"],
+      );
+
+  @override
   Future<void> crateApiIntentsResolveConflict({
     required String opId,
     required ConflictResolution resolution,
@@ -1165,7 +3161,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 84,
             port: port_,
           );
         },
@@ -1200,7 +3196,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 31,
+            funcId: 85,
             port: port_,
           );
         },
@@ -1222,6 +3218,41 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<CreateOutcome> crateApiIntentsResolveLinkOrCreate({
+    required String id,
+    required LinkOrCreateChoice choice,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_box_autoadd_link_or_create_choice(choice, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 86,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_create_outcome,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsResolveLinkOrCreateConstMeta,
+        argValues: [id, choice],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsResolveLinkOrCreateConstMeta =>
+      const TaskConstMeta(
+        debugName: "resolve_link_or_create",
+        argNames: ["id", "choice"],
+      );
+
+  @override
   Future<String> crateApiIntentsRetypeRelation({
     required String srcId,
     required String dstId,
@@ -1239,7 +3270,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 87,
             port: port_,
           );
         },
@@ -1261,6 +3292,127 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<void> crateApiIntentsRevertNote({
+    required String noteId,
+    required String commit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(noteId, serializer);
+          sse_encode_String(commit, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 88,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRevertNoteConstMeta,
+        argValues: [noteId, commit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRevertNoteConstMeta => const TaskConstMeta(
+    debugName: "revert_note",
+    argNames: ["noteId", "commit"],
+  );
+
+  @override
+  Future<void> crateApiIntentsRevokeDevice({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 89,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRevokeDeviceConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRevokeDeviceConstMeta =>
+      const TaskConstMeta(debugName: "revoke_device", argNames: ["id"]);
+
+  @override
+  Future<String> crateApiIntentsSaveAnswerAsNote({required String messageId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(messageId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 90,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSaveAnswerAsNoteConstMeta,
+        argValues: [messageId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSaveAnswerAsNoteConstMeta =>
+      const TaskConstMeta(
+        debugName: "save_answer_as_note",
+        argNames: ["messageId"],
+      );
+
+  @override
+  Future<AdminUserItem> crateApiIntentsScheduleDeletion({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 91,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_admin_user_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsScheduleDeletionConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsScheduleDeletionConstMeta =>
+      const TaskConstMeta(debugName: "schedule_deletion", argNames: ["id"]);
+
+  @override
   Future<SearchView> crateApiViewsSearch({
     required String query,
     required SearchMode mode,
@@ -1274,7 +3426,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 92,
             port: port_,
           );
         },
@@ -1293,6 +3445,43 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "search", argNames: ["query", "mode"]);
 
   @override
+  Future<SearchView> crateApiViewsSearchInFolder({
+    required String query,
+    required SearchMode mode,
+    String? folder,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(query, serializer);
+          sse_encode_search_mode(mode, serializer);
+          sse_encode_opt_String(folder, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 93,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_search_view,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsSearchInFolderConstMeta,
+        argValues: [query, mode, folder],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsSearchInFolderConstMeta =>
+      const TaskConstMeta(
+        debugName: "search_in_folder",
+        argNames: ["query", "mode", "folder"],
+      );
+
+  @override
   Future<SessionState> crateViewModelSessionStateOf({
     required SessionKind kind,
   }) {
@@ -1304,7 +3493,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 94,
             port: port_,
           );
         },
@@ -1323,6 +3512,173 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "session_state_of", argNames: ["kind"]);
 
   @override
+  Future<void> crateApiIntentsSetDefaultReminderTime({required String time}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(time, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 95,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSetDefaultReminderTimeConstMeta,
+        argValues: [time],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSetDefaultReminderTimeConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_default_reminder_time",
+        argNames: ["time"],
+      );
+
+  @override
+  Future<void> crateApiIntentsSetDeviceReminders({
+    required String id,
+    required bool enabled,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_bool(enabled, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 96,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSetDeviceRemindersConstMeta,
+        argValues: [id, enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSetDeviceRemindersConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_device_reminders",
+        argNames: ["id", "enabled"],
+      );
+
+  @override
+  Future<void> crateApiAppSetDisplayName({required String name}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(name, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 97,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppSetDisplayNameConstMeta,
+        argValues: [name],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppSetDisplayNameConstMeta =>
+      const TaskConstMeta(debugName: "set_display_name", argNames: ["name"]);
+
+  @override
+  Future<String> crateApiIntentsSetProperty({
+    required String id,
+    required String key,
+    required String value,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(key, serializer);
+          sse_encode_String(value, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 98,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSetPropertyConstMeta,
+        argValues: [id, key, value],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSetPropertyConstMeta => const TaskConstMeta(
+    debugName: "set_property",
+    argNames: ["id", "key", "value"],
+  );
+
+  @override
+  Future<void> crateApiIntentsSetQuietHours({
+    required bool enabled,
+    required String from,
+    required String until,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(enabled, serializer);
+          sse_encode_String(from, serializer);
+          sse_encode_String(until, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 99,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSetQuietHoursConstMeta,
+        argValues: [enabled, from, until],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSetQuietHoursConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_quiet_hours",
+        argNames: ["enabled", "from", "until"],
+      );
+
+  @override
   Future<void> crateApiIntentsSetRemindersEnabled({required bool enabled}) {
     return handler.executeNormal(
       NormalTask(
@@ -1332,7 +3688,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 100,
             port: port_,
           );
         },
@@ -1354,6 +3710,188 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<void> crateApiIntentsSetSnoozeMinutes({required int minutes}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_u_32(minutes, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 101,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSetSnoozeMinutesConstMeta,
+        argValues: [minutes],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSetSnoozeMinutesConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_snooze_minutes",
+        argNames: ["minutes"],
+      );
+
+  @override
+  Future<void> crateApiAppSetSyncPaused({required bool paused}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_bool(paused, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 102,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppSetSyncPausedConstMeta,
+        argValues: [paused],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppSetSyncPausedConstMeta =>
+      const TaskConstMeta(debugName: "set_sync_paused", argNames: ["paused"]);
+
+  @override
+  Future<void> crateApiAppSetTimezone({required String iana}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(iana, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 103,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppSetTimezoneConstMeta,
+        argValues: [iana],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppSetTimezoneConstMeta =>
+      const TaskConstMeta(debugName: "set_timezone", argNames: ["iana"]);
+
+  @override
+  Future<void> crateApiAppSetUiLanguage({required String code}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(code, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 104,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiAppSetUiLanguageConstMeta,
+        argValues: [code],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiAppSetUiLanguageConstMeta =>
+      const TaskConstMeta(debugName: "set_ui_language", argNames: ["code"]);
+
+  @override
+  Future<AdminUserItem> crateApiIntentsSetUserEnabled({
+    required String id,
+    required bool enabled,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_bool(enabled, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 105,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_admin_user_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSetUserEnabledConstMeta,
+        argValues: [id, enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSetUserEnabledConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_user_enabled",
+        argNames: ["id", "enabled"],
+      );
+
+  @override
+  Future<AdminUserItem> crateApiIntentsSetUserRole({
+    required String id,
+    required String role,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(role, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 106,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_admin_user_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSetUserRoleConstMeta,
+        argValues: [id, role],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSetUserRoleConstMeta =>
+      const TaskConstMeta(debugName: "set_user_role", argNames: ["id", "role"]);
+
+  @override
   Future<SessionState> crateApiAppSignIn({required SignInRequest request}) {
     return handler.executeNormal(
       NormalTask(
@@ -1363,7 +3901,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 36,
+            funcId: 107,
             port: port_,
           );
         },
@@ -1391,7 +3929,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 37,
+            funcId: 108,
             port: port_,
           );
         },
@@ -1419,7 +3957,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 38,
+            funcId: 109,
             port: port_,
           );
         },
@@ -1438,6 +3976,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "sign_up", argNames: ["request"]);
 
   @override
+  Future<void> crateApiIntentsStopAsk() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 110,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsStopAskConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsStopAskConstMeta =>
+      const TaskConstMeta(debugName: "stop_ask", argNames: []);
+
+  @override
   Future<SuggestionDetail> crateViewModelSuggestionDetailOf({
     required SuggestionKind kind,
   }) {
@@ -1449,7 +4014,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 39,
+            funcId: 111,
             port: port_,
           );
         },
@@ -1471,6 +4036,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<SuggestionEdits> crateViewModelSuggestionEditsDefault() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 112,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_suggestion_edits,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateViewModelSuggestionEditsDefaultConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateViewModelSuggestionEditsDefaultConstMeta =>
+      const TaskConstMeta(debugName: "suggestion_edits_default", argNames: []);
+
+  @override
   Future<SessionState> crateApiAppSwitchAccount({required String userId}) {
     return handler.executeNormal(
       NormalTask(
@@ -1480,7 +4072,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 40,
+            funcId: 113,
             port: port_,
           );
         },
@@ -1507,7 +4099,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 41,
+            funcId: 114,
             port: port_,
           );
         },
@@ -1534,7 +4126,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 42,
+            funcId: 115,
             port: port_,
           );
         },
@@ -1561,7 +4153,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 43,
+            funcId: 116,
             port: port_,
           );
         },
@@ -1580,6 +4172,34 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "sync_phase_default", argNames: []);
 
   @override
+  Future<List<TagItem>> crateApiViewsTags({required String prefix}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(prefix, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 117,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_tag_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsTagsConstMeta,
+        argValues: [prefix],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsTagsConstMeta =>
+      const TaskConstMeta(debugName: "tags", argNames: ["prefix"]);
+
+  @override
   Future<TaskPatch> crateViewModelTaskPatchDefault() {
     return handler.executeNormal(
       NormalTask(
@@ -1588,7 +4208,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 44,
+            funcId: 118,
             port: port_,
           );
         },
@@ -1615,7 +4235,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 45,
+            funcId: 119,
             port: port_,
           );
         },
@@ -1634,9 +4254,38 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "task_sections_default", argNames: []);
 
   @override
+  Future<String> crateApiIntentsUndoSuggestion({required String id}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 120,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsUndoSuggestionConstMeta,
+        argValues: [id],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsUndoSuggestionConstMeta =>
+      const TaskConstMeta(debugName: "undo_suggestion", argNames: ["id"]);
+
+  @override
   Future<String> crateApiIntentsUpdateNote({
     required String id,
     required String content,
+    String? baseVersion,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -1644,10 +4293,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_String(id, serializer);
           sse_encode_String(content, serializer);
+          sse_encode_opt_String(baseVersion, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 46,
+            funcId: 121,
             port: port_,
           );
         },
@@ -1656,7 +4306,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           decodeErrorData: sse_decode_core_failure,
         ),
         constMeta: kCrateApiIntentsUpdateNoteConstMeta,
-        argValues: [id, content],
+        argValues: [id, content, baseVersion],
         apiImpl: this,
       ),
     );
@@ -1664,7 +4314,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
 
   TaskConstMeta get kCrateApiIntentsUpdateNoteConstMeta => const TaskConstMeta(
     debugName: "update_note",
-    argNames: ["id", "content"],
+    argNames: ["id", "content", "baseVersion"],
   );
 
   @override
@@ -1681,7 +4331,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 47,
+            funcId: 122,
             port: port_,
           );
         },
@@ -1702,6 +4352,73 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   );
 
   @override
+  Future<String> crateApiIntentsUpdateUserNotes({
+    required String id,
+    required String text,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(text, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 123,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsUpdateUserNotesConstMeta,
+        argValues: [id, text],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsUpdateUserNotesConstMeta =>
+      const TaskConstMeta(
+        debugName: "update_user_notes",
+        argNames: ["id", "text"],
+      );
+
+  @override
+  Stream<AskView> crateApiViewsWatchAsk() {
+    final sink = RustStreamSink<AskView>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_ask_view_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 124,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_core_failure,
+          ),
+          constMeta: kCrateApiViewsWatchAskConstMeta,
+          argValues: [sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiViewsWatchAskConstMeta =>
+      const TaskConstMeta(debugName: "watch_ask", argNames: ["sink"]);
+
+  @override
   Stream<ConflictScreen> crateApiViewsWatchConflict({required String opId}) {
     final sink = RustStreamSink<ConflictScreen>();
     unawaited(
@@ -1714,7 +4431,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 48,
+              funcId: 125,
               port: port_,
             );
           },
@@ -1753,7 +4470,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 49,
+              funcId: 126,
               port: port_,
             );
           },
@@ -1777,6 +4494,50 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Stream<DirectoryView> crateApiViewsWatchDirectoryFiltered({
+    required DirectoryTab tab,
+    required String query,
+    required DirectoryFilter filter,
+    required DirectorySort sort,
+  }) {
+    final sink = RustStreamSink<DirectoryView>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_directory_tab(tab, serializer);
+            sse_encode_String(query, serializer);
+            sse_encode_box_autoadd_directory_filter(filter, serializer);
+            sse_encode_directory_sort(sort, serializer);
+            sse_encode_StreamSink_directory_view_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 127,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_core_failure,
+          ),
+          constMeta: kCrateApiViewsWatchDirectoryFilteredConstMeta,
+          argValues: [tab, query, filter, sort, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiViewsWatchDirectoryFilteredConstMeta =>
+      const TaskConstMeta(
+        debugName: "watch_directory_filtered",
+        argNames: ["tab", "query", "filter", "sort", "sink"],
+      );
+
+  @override
   Stream<DuplicatePromptsView> crateApiViewsWatchDuplicatePrompts() {
     final sink = RustStreamSink<DuplicatePromptsView>();
     unawaited(
@@ -1788,7 +4549,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 50,
+              funcId: 128,
               port: port_,
             );
           },
@@ -1824,7 +4585,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 51,
+              funcId: 129,
               port: port_,
             );
           },
@@ -1856,7 +4617,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 52,
+              funcId: 130,
               port: port_,
             );
           },
@@ -1888,7 +4649,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 53,
+              funcId: 131,
               port: port_,
             );
           },
@@ -1909,6 +4670,44 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "watch_inbox", argNames: ["sink"]);
 
   @override
+  Stream<InboxView> crateApiViewsWatchInboxFiltered({
+    required InboxFilter filter,
+  }) {
+    final sink = RustStreamSink<InboxView>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_inbox_filter(filter, serializer);
+            sse_encode_StreamSink_inbox_view_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 132,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_core_failure,
+          ),
+          constMeta: kCrateApiViewsWatchInboxFilteredConstMeta,
+          argValues: [filter, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiViewsWatchInboxFilteredConstMeta =>
+      const TaskConstMeta(
+        debugName: "watch_inbox_filtered",
+        argNames: ["filter", "sink"],
+      );
+
+  @override
   Stream<LocalGraphView> crateApiViewsWatchLocalGraph({
     required String id,
     required int depth,
@@ -1925,7 +4724,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 54,
+              funcId: 133,
               port: port_,
             );
           },
@@ -1949,6 +4748,38 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Stream<NavView> crateApiViewsWatchNav() {
+    final sink = RustStreamSink<NavView>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_nav_view_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 134,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_core_failure,
+          ),
+          constMeta: kCrateApiViewsWatchNavConstMeta,
+          argValues: [sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiViewsWatchNavConstMeta =>
+      const TaskConstMeta(debugName: "watch_nav", argNames: ["sink"]);
+
+  @override
   Stream<NoteScreen> crateApiViewsWatchNote({required String id}) {
     final sink = RustStreamSink<NoteScreen>();
     unawaited(
@@ -1961,7 +4792,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 55,
+              funcId: 135,
               port: port_,
             );
           },
@@ -1994,7 +4825,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 56,
+              funcId: 136,
               port: port_,
             );
           },
@@ -2029,7 +4860,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 57,
+              funcId: 137,
               port: port_,
             );
           },
@@ -2053,6 +4884,43 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Stream<RecentNotesView> crateApiViewsWatchRecent({
+    required RecentFilter filter,
+  }) {
+    final sink = RustStreamSink<RecentNotesView>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_recent_filter(filter, serializer);
+            sse_encode_StreamSink_recent_notes_view_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 138,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_core_failure,
+          ),
+          constMeta: kCrateApiViewsWatchRecentConstMeta,
+          argValues: [filter, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiViewsWatchRecentConstMeta => const TaskConstMeta(
+    debugName: "watch_recent",
+    argNames: ["filter", "sink"],
+  );
+
+  @override
   Stream<SessionState> crateApiAppWatchSession() {
     final sink = RustStreamSink<SessionState>();
     unawaited(
@@ -2064,7 +4932,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 58,
+              funcId: 139,
               port: port_,
             );
           },
@@ -2096,7 +4964,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 59,
+              funcId: 140,
               port: port_,
             );
           },
@@ -2128,7 +4996,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 60,
+              funcId: 141,
               port: port_,
             );
           },
@@ -2161,7 +5029,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 61,
+              funcId: 142,
               port: port_,
             );
           },
@@ -2182,6 +5050,38 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "watch_task", argNames: ["id", "sink"]);
 
   @override
+  Stream<TaskHomesView> crateApiViewsWatchTaskHomes() {
+    final sink = RustStreamSink<TaskHomesView>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_StreamSink_task_homes_view_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 143,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_core_failure,
+          ),
+          constMeta: kCrateApiViewsWatchTaskHomesConstMeta,
+          argValues: [sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiViewsWatchTaskHomesConstMeta =>
+      const TaskConstMeta(debugName: "watch_task_homes", argNames: ["sink"]);
+
+  @override
   Stream<TasksView> crateApiViewsWatchTasks() {
     final sink = RustStreamSink<TasksView>();
     unawaited(
@@ -2193,7 +5093,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 62,
+              funcId: 144,
               port: port_,
             );
           },
@@ -2235,6 +5135,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   DateTime dco_decode_Chrono_Utc(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dcoDecodeTimestamp(ts: dco_decode_i_64(raw).toInt(), isUtc: true);
+  }
+
+  @protected
+  RustStreamSink<AskView> dco_decode_StreamSink_ask_view_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
   }
 
   @protected
@@ -2289,6 +5195,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  RustStreamSink<NavView> dco_decode_StreamSink_nav_view_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
   RustStreamSink<NoteScreen> dco_decode_StreamSink_note_screen_Sse(
     dynamic raw,
   ) {
@@ -2306,6 +5218,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
 
   @protected
   RustStreamSink<NotificationOp> dco_decode_StreamSink_notification_op_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<RecentNotesView> dco_decode_StreamSink_recent_notes_view_Sse(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -2337,6 +5257,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  RustStreamSink<TaskHomesView> dco_decode_StreamSink_task_homes_view_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
   RustStreamSink<TaskScreen> dco_decode_StreamSink_task_screen_Sse(
     dynamic raw,
   ) {
@@ -2360,8 +5288,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AccountSummary dco_decode_account_summary(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return AccountSummary(
       userId: dco_decode_String(arr[0]),
       username: dco_decode_String(arr[1]),
@@ -2371,6 +5299,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       serverUrl: dco_decode_String(arr[5]),
       timezone: dco_decode_String(arr[6]),
       uiLanguage: dco_decode_String(arr[7]),
+      initials: dco_decode_String(arr[8]),
     );
   }
 
@@ -2378,8 +5307,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AdminUserItem dco_decode_admin_user_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return AdminUserItem(
       id: dco_decode_String(arr[0]),
       username: dco_decode_String(arr[1]),
@@ -2389,6 +5318,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       created: dco_decode_Chrono_Utc(arr[5]),
       deletionAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[6]),
       exportDownloadedAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[7]),
+      initials: dco_decode_String(arr[8]),
+      isSelf: dco_decode_bool(arr[9]),
+      createdLabel: dco_decode_String(arr[10]),
+      deletionLabel: dco_decode_opt_String(arr[11]),
+      passwordChangeRequired: dco_decode_bool(arr[12]),
     );
   }
 
@@ -2396,12 +5330,62 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AdminUsersView dco_decode_admin_users_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return AdminUsersView(
       availability: dco_decode_availability(arr[0]),
       pending: dco_decode_list_admin_user_item(arr[1]),
       users: dco_decode_list_admin_user_item(arr[2]),
+      query: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  AiActivityItem dco_decode_ai_activity_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return AiActivityItem(
+      atLabel: dco_decode_String(arr[0]),
+      kind: dco_decode_String(arr[1]),
+      summary: dco_decode_String(arr[2]),
+      source: dco_decode_opt_box_autoadd_entity_ref(arr[3]),
+      target: dco_decode_opt_box_autoadd_entity_ref(arr[4]),
+      relType: dco_decode_opt_String(arr[5]),
+      confidence: dco_decode_opt_box_autoadd_f_64(arr[6]),
+      undoSuggestionId: dco_decode_opt_String(arr[7]),
+    );
+  }
+
+  @protected
+  AiStatusView dco_decode_ai_status_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return AiStatusView(
+      enabled: dco_decode_bool(arr[0]),
+      provider: dco_decode_opt_String(arr[1]),
+      pausedLabel: dco_decode_opt_String(arr[2]),
+      queueDepth: dco_decode_u_32(arr[3]),
+      budgetUsedPercent: dco_decode_u_32(arr[4]),
+      budgetLabel: dco_decode_String(arr[5]),
+      embeddingPercent: dco_decode_opt_box_autoadd_u_32(arr[6]),
+    );
+  }
+
+  @protected
+  AnnotatedLine dco_decode_annotated_line(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return AnnotatedLine(
+      line: dco_decode_u_32(arr[0]),
+      text: dco_decode_String(arr[1]),
+      change: dco_decode_line_change(arr[2]),
+      dir: dco_decode_text_dir(arr[3]),
     );
   }
 
@@ -2415,12 +5399,68 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AskMessage dco_decode_ask_message(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return AskMessage(
       role: dco_decode_String(arr[0]),
       text: dco_decode_String(arr[1]),
       citations: dco_decode_list_citation(arr[2]),
+      id: dco_decode_String(arr[3]),
+      streaming: dco_decode_bool(arr[4]),
+      spans: dco_decode_list_ask_span(arr[5]),
+      sources: dco_decode_list_ask_source(arr[6]),
+      scopeLabel: dco_decode_String(arr[7]),
+      sourceCount: dco_decode_u_32(arr[8]),
+      createdLabel: dco_decode_String(arr[9]),
+      dir: dco_decode_text_dir(arr[10]),
+      errorKey: dco_decode_opt_String(arr[11]),
+      savedNoteId: dco_decode_opt_String(arr[12]),
+    );
+  }
+
+  @protected
+  AskScope dco_decode_ask_scope(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return AskScope(
+      kind: dco_decode_ask_scope_kind(arr[0]),
+      value: dco_decode_opt_String(arr[1]),
+      label: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  AskScopeKind dco_decode_ask_scope_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AskScopeKind.values[raw as int];
+  }
+
+  @protected
+  AskSource dco_decode_ask_source(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return AskSource(
+      noteId: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      path: dco_decode_String(arr[2]),
+      anchors: dco_decode_list_String(arr[3]),
+      indexes: dco_decode_list_prim_u_32_strict(arr[4]),
+    );
+  }
+
+  @protected
+  AskSpan dco_decode_ask_span(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return AskSpan(
+      text: dco_decode_String(arr[0]),
+      citation: dco_decode_opt_box_autoadd_u_32(arr[1]),
     );
   }
 
@@ -2428,11 +5468,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AskView dco_decode_ask_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return AskView(
       availability: dco_decode_availability(arr[0]),
       messages: dco_decode_list_ask_message(arr[1]),
+      scopes: dco_decode_list_ask_scope(arr[2]),
+      streaming: dco_decode_bool(arr[3]),
+      aiStatus: dco_decode_opt_box_autoadd_ai_status_view(arr[4]),
     );
   }
 
@@ -2446,11 +5489,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   BacklinkGroup dco_decode_backlink_group(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return BacklinkGroup(
       kind: dco_decode_String(arr[0]),
       items: dco_decode_list_backlink_item(arr[1]),
+      label: dco_decode_String(arr[2]),
     );
   }
 
@@ -2458,11 +5502,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   BacklinkItem dco_decode_backlink_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return BacklinkItem(
       noteId: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
+      titleDir: dco_decode_text_dir(arr[2]),
+      snippet: dco_decode_opt_String(arr[3]),
+      snippetDir: dco_decode_text_dir(arr[4]),
+      by: dco_decode_opt_String(arr[5]),
+      confidence: dco_decode_opt_box_autoadd_f_64(arr[6]),
+    );
+  }
+
+  @protected
+  BlockItem dco_decode_block_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return BlockItem(
+      blockId: dco_decode_opt_String(arr[0]),
+      text: dco_decode_String(arr[1]),
+      textDir: dco_decode_text_dir(arr[2]),
+      line: dco_decode_u_32(arr[3]),
     );
   }
 
@@ -2491,9 +5554,27 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  AiStatusView dco_decode_box_autoadd_ai_status_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_ai_status_view(raw);
+  }
+
+  @protected
+  AskScope dco_decode_box_autoadd_ask_scope(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_ask_scope(raw);
+  }
+
+  @protected
   bool dco_decode_box_autoadd_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  Citation dco_decode_box_autoadd_citation(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_citation(raw);
   }
 
   @protected
@@ -2512,6 +5593,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   CoreConfig dco_decode_box_autoadd_core_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_core_config(raw);
+  }
+
+  @protected
+  CustodyDraft dco_decode_box_autoadd_custody_draft(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_custody_draft(raw);
+  }
+
+  @protected
+  DeviceItem dco_decode_box_autoadd_device_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_device_item(raw);
+  }
+
+  @protected
+  DirectoryFilter dco_decode_box_autoadd_directory_filter(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_directory_filter(raw);
+  }
+
+  @protected
+  DocumentDraft dco_decode_box_autoadd_document_draft(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_document_draft(raw);
   }
 
   @protected
@@ -2539,6 +5644,24 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  GraphFilter dco_decode_box_autoadd_graph_filter(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_graph_filter(raw);
+  }
+
+  @protected
+  LinkOrCreateChoice dco_decode_box_autoadd_link_or_create_choice(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_link_or_create_choice(raw);
+  }
+
+  @protected
+  NewUserRequest dco_decode_box_autoadd_new_user_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_new_user_request(raw);
+  }
+
+  @protected
   NoteView dco_decode_box_autoadd_note_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_note_view(raw);
@@ -2551,9 +5674,27 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  PendingApproval dco_decode_box_autoadd_pending_approval(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_pending_approval(raw);
+  }
+
+  @protected
+  PlaceDraft dco_decode_box_autoadd_place_draft(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_place_draft(raw);
+  }
+
+  @protected
   PlaceView dco_decode_box_autoadd_place_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_place_view(raw);
+  }
+
+  @protected
+  RecurrenceForm dco_decode_box_autoadd_recurrence_form(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_recurrence_form(raw);
   }
 
   @protected
@@ -2566,6 +5707,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SignUpRequest dco_decode_box_autoadd_sign_up_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_sign_up_request(raw);
+  }
+
+  @protected
+  SuggestionEdits dco_decode_box_autoadd_suggestion_edits(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_suggestion_edits(raw);
   }
 
   @protected
@@ -2587,6 +5734,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  TimelineChip dco_decode_box_autoadd_timeline_chip(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_timeline_chip(raw);
+  }
+
+  @protected
   int dco_decode_box_autoadd_u_16(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -2599,11 +5752,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_u_64(raw);
+  }
+
+  @protected
+  WeekdayKind dco_decode_box_autoadd_weekday_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_weekday_kind(raw);
+  }
+
+  @protected
   CandidateItem dco_decode_candidate_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return CandidateItem(
       id: dco_decode_String(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -2611,6 +5776,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       snippet: dco_decode_opt_String(arr[3]),
       matchLevel: dco_decode_String(arr[4]),
       score: dco_decode_f_64(arr[5]),
+      path: dco_decode_opt_String(arr[6]),
+      reason: dco_decode_String(arr[7]),
     );
   }
 
@@ -2628,15 +5795,35 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  CitationPreview dco_decode_citation_preview(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return CitationPreview(
+      noteId: dco_decode_opt_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      path: dco_decode_String(arr[2]),
+      blockText: dco_decode_opt_String(arr[3]),
+      blockDir: dco_decode_text_dir(arr[4]),
+      heading: dco_decode_opt_String(arr[5]),
+      dateLabel: dco_decode_opt_String(arr[6]),
+      tags: dco_decode_list_String(arr[7]),
+    );
+  }
+
+  @protected
   CitedBullet dco_decode_cited_bullet(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return CitedBullet(
       text: dco_decode_String(arr[0]),
       date: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[1]),
       citations: dco_decode_list_citation(arr[2]),
+      dir: dco_decode_text_dir(arr[3]),
+      dateLabel: dco_decode_opt_String(arr[4]),
     );
   }
 
@@ -2644,12 +5831,53 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ClusterLabel dco_decode_cluster_label(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return ClusterLabel(
       id: dco_decode_String(arr[0]),
       name: dco_decode_String(arr[1]),
       size: dco_decode_u_32(arr[2]),
+      x: dco_decode_f_64(arr[3]),
+      y: dco_decode_f_64(arr[4]),
+      hull: dco_decode_list_graph_point(arr[5]),
+      radius: dco_decode_f_64(arr[6]),
+    );
+  }
+
+  @protected
+  CompletionItem dco_decode_completion_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return CompletionItem(
+      label: dco_decode_String(arr[0]),
+      detail: dco_decode_String(arr[1]),
+      insertText: dco_decode_String(arr[2]),
+      targetId: dco_decode_opt_String(arr[3]),
+      entityKind: dco_decode_opt_String(arr[4]),
+      labelDir: dco_decode_text_dir(arr[5]),
+    );
+  }
+
+  @protected
+  CompletionKind dco_decode_completion_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return CompletionKind.values[raw as int];
+  }
+
+  @protected
+  Completions dco_decode_completions(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return Completions(
+      kind: dco_decode_completion_kind(arr[0]),
+      replaceStart: dco_decode_u_32(arr[1]),
+      replaceEnd: dco_decode_u_32(arr[2]),
+      query: dco_decode_String(arr[3]),
+      items: dco_decode_list_completion_item(arr[4]),
     );
   }
 
@@ -2657,8 +5885,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ConflictDetail dco_decode_conflict_detail(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 15)
+      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
     return ConflictDetail(
       noteId: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -2668,6 +5896,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       mergedPreview: dco_decode_opt_String(arr[5]),
       mergeClean: dco_decode_opt_box_autoadd_bool(arr[6]),
       hunks: dco_decode_list_conflict_hunk_view(arr[7]),
+      path: dco_decode_String(arr[8]),
+      localOriginLabel: dco_decode_String(arr[9]),
+      serverOriginLabel: dco_decode_String(arr[10]),
+      baseLines: dco_decode_list_annotated_line(arr[11]),
+      localLines: dco_decode_list_annotated_line(arr[12]),
+      serverLines: dco_decode_list_annotated_line(arr[13]),
+      conflictCopyPath: dco_decode_opt_String(arr[14]),
     );
   }
 
@@ -2675,8 +5910,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ConflictHunkView dco_decode_conflict_hunk_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return ConflictHunkView(
       id: dco_decode_u_32(arr[0]),
       location: dco_decode_String(arr[1]),
@@ -2684,6 +5919,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       base: dco_decode_String(arr[3]),
       ours: dco_decode_String(arr[4]),
       theirs: dco_decode_String(arr[5]),
+      locationLabel: dco_decode_String(arr[6]),
+      allowedChoices: dco_decode_list_hunk_choice_kind(arr[7]),
     );
   }
 
@@ -2691,13 +5928,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ConflictItem dco_decode_conflict_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return ConflictItem(
       opId: dco_decode_String(arr[0]),
       noteId: dco_decode_String(arr[1]),
       title: dco_decode_String(arr[2]),
       created: dco_decode_Chrono_Utc(arr[3]),
+      createdLabel: dco_decode_String(arr[4]),
     );
   }
 
@@ -2775,11 +6013,26 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  CustodyDraft dco_decode_custody_draft(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return CustodyDraft(
+      kind: dco_decode_String(arr[0]),
+      placeId: dco_decode_opt_String(arr[1]),
+      personId: dco_decode_opt_String(arr[2]),
+      counterpartyId: dco_decode_opt_String(arr[3]),
+      date: dco_decode_Chrono_NaiveDate(arr[4]),
+    );
+  }
+
+  @protected
   CustodyItem dco_decode_custody_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
     return CustodyItem(
       date: dco_decode_Chrono_NaiveDate(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -2788,7 +6041,56 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       person: dco_decode_opt_box_autoadd_entity_ref(arr[4]),
       counterparty: dco_decode_opt_box_autoadd_entity_ref(arr[5]),
       citations: dco_decode_list_citation(arr[6]),
+      by: dco_decode_String(arr[7]),
+      confidence: dco_decode_opt_box_autoadd_f_64(arr[8]),
+      decisionId: dco_decode_opt_String(arr[9]),
+      sentenceKey: dco_decode_String(arr[10]),
+      actor: dco_decode_opt_box_autoadd_entity_ref(arr[11]),
+      destination: dco_decode_opt_box_autoadd_entity_ref(arr[12]),
+      sentence: dco_decode_String(arr[13]),
+      dateLabel: dco_decode_String(arr[14]),
+      here: dco_decode_bool(arr[15]),
     );
+  }
+
+  @protected
+  DeviceItem dco_decode_device_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return DeviceItem(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      platform: dco_decode_String(arr[2]),
+      lastSeen: dco_decode_Chrono_Utc(arr[3]),
+      lastSeenLabel: dco_decode_String(arr[4]),
+      signedIn: dco_decode_Chrono_Utc(arr[5]),
+      signedInLabel: dco_decode_String(arr[6]),
+      isThisDevice: dco_decode_bool(arr[7]),
+      remindersEnabled: dco_decode_bool(arr[8]),
+    );
+  }
+
+  @protected
+  DiffLine dco_decode_diff_line(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return DiffLine(
+      kind: dco_decode_diff_line_kind(arr[0]),
+      oldLine: dco_decode_opt_box_autoadd_u_32(arr[1]),
+      newLine: dco_decode_opt_box_autoadd_u_32(arr[2]),
+      text: dco_decode_String(arr[3]),
+      dir: dco_decode_text_dir(arr[4]),
+    );
+  }
+
+  @protected
+  DiffLineKind dco_decode_diff_line_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return DiffLineKind.values[raw as int];
   }
 
   @protected
@@ -2806,17 +6108,78 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  DirectoryFilter dco_decode_directory_filter(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return DirectoryFilter(
+      tags: dco_decode_list_String(arr[0]),
+      role: dco_decode_opt_String(arr[1]),
+      companyId: dco_decode_opt_String(arr[2]),
+      industry: dco_decode_opt_String(arr[3]),
+      docType: dco_decode_opt_String(arr[4]),
+      status: dco_decode_opt_String(arr[5]),
+      placeId: dco_decode_opt_String(arr[6]),
+      holderId: dco_decode_opt_String(arr[7]),
+      expiring: dco_decode_bool(arr[8]),
+      hasOpenItems: dco_decode_bool(arr[9]),
+    );
+  }
+
+  @protected
   DirectoryItem dco_decode_directory_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 27)
+      throw Exception('unexpected arr length: expect 27 but see ${arr.length}');
     return DirectoryItem(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
       subtitle: dco_decode_opt_String(arr[2]),
       aliases: dco_decode_list_String(arr[3]),
+      kind: dco_decode_String(arr[4]),
+      titleDir: dco_decode_text_dir(arr[5]),
+      initials: dco_decode_String(arr[6]),
+      mentionCount: dco_decode_u_32(arr[7]),
+      lastActive: dco_decode_opt_box_autoadd_Chrono_Utc(arr[8]),
+      lastActiveLabel: dco_decode_opt_String(arr[9]),
+      role: dco_decode_opt_String(arr[10]),
+      company: dco_decode_opt_box_autoadd_entity_ref(arr[11]),
+      industry: dco_decode_opt_String(arr[12]),
+      tags: dco_decode_list_String(arr[13]),
+      status: dco_decode_opt_String(arr[14]),
+      docType: dco_decode_opt_String(arr[15]),
+      location: dco_decode_list_entity_ref(arr[16]),
+      holder: dco_decode_opt_box_autoadd_entity_ref(arr[17]),
+      lastHolder: dco_decode_opt_box_autoadd_entity_ref(arr[18]),
+      holderLabel: dco_decode_opt_String(arr[19]),
+      copy: dco_decode_opt_String(arr[20]),
+      expires: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[21]),
+      expiresLabel: dco_decode_opt_String(arr[22]),
+      expiringSoon: dco_decode_bool(arr[23]),
+      breadcrumb: dco_decode_list_entity_ref(arr[24]),
+      documentCount: dco_decode_u_32(arr[25]),
+      hasOpenItems: dco_decode_bool(arr[26]),
     );
+  }
+
+  @protected
+  DirectorySection dco_decode_directory_section(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return DirectorySection(
+      label: dco_decode_String(arr[0]),
+      items: dco_decode_list_directory_item(arr[1]),
+    );
+  }
+
+  @protected
+  DirectorySort dco_decode_directory_sort(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return DirectorySort.values[raw as int];
   }
 
   @protected
@@ -2829,13 +6192,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   DirectoryView dco_decode_directory_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return DirectoryView(
       tab: dco_decode_directory_tab(arr[0]),
       query: dco_decode_String(arr[1]),
       items: dco_decode_list_directory_item(arr[2]),
       counts: dco_decode_directory_counts(arr[3]),
+      filter: dco_decode_directory_filter(arr[4]),
+      sort: dco_decode_directory_sort(arr[5]),
+      filterOptions: dco_decode_list_filter_option(arr[6]),
+      sections: dco_decode_list_directory_section(arr[7]),
+      suggestions: dco_decode_list_suggestion_item(arr[8]),
+      expiringCount: dco_decode_u_32(arr[9]),
     );
   }
 
@@ -2843,14 +6212,37 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   DocumentBrief dco_decode_document_brief(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return DocumentBrief(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
       status: dco_decode_opt_String(arr[2]),
       location: dco_decode_opt_box_autoadd_entity_ref(arr[3]),
       holder: dco_decode_opt_box_autoadd_entity_ref(arr[4]),
+      docType: dco_decode_opt_String(arr[5]),
+      lastHolder: dco_decode_opt_box_autoadd_entity_ref(arr[6]),
+      locationPath: dco_decode_list_entity_ref(arr[7]),
+      expiringSoon: dco_decode_bool(arr[8]),
+      titleDir: dco_decode_text_dir(arr[9]),
+    );
+  }
+
+  @protected
+  DocumentDraft dco_decode_document_draft(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return DocumentDraft(
+      name: dco_decode_String(arr[0]),
+      aliases: dco_decode_list_String(arr[1]),
+      docType: dco_decode_opt_String(arr[2]),
+      copy: dco_decode_opt_String(arr[3]),
+      copyOf: dco_decode_opt_String(arr[4]),
+      companies: dco_decode_list_String(arr[5]),
+      people: dco_decode_list_String(arr[6]),
+      expires: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[7]),
     );
   }
 
@@ -2858,8 +6250,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   DocumentView dco_decode_document_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 23)
+      throw Exception('unexpected arr length: expect 23 but see ${arr.length}');
     return DocumentView(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -2874,6 +6266,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       custody: dco_decode_list_custody_item(arr[10]),
       copies: dco_decode_list_entity_ref(arr[11]),
       concerns: dco_decode_list_entity_ref(arr[12]),
+      titleDir: dco_decode_text_dir(arr[13]),
+      path: dco_decode_String(arr[14]),
+      pendingSync: dco_decode_bool(arr[15]),
+      expiresLabel: dco_decode_opt_String(arr[16]),
+      expiringSoon: dco_decode_bool(arr[17]),
+      renewalTask: dco_decode_opt_box_autoadd_task_item(arr[18]),
+      mentions: dco_decode_list_note_list_item(arr[19]),
+      copyBriefs: dco_decode_list_document_brief(arr[20]),
+      userNotes: dco_decode_String(arr[21]),
+      holderLabel: dco_decode_opt_String(arr[22]),
     );
   }
 
@@ -2912,12 +6314,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   EditorHint dco_decode_editor_hint(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return EditorHint(
       kind: dco_decode_hint_kind(arr[0]),
       start: dco_decode_u_32(arr[1]),
       end: dco_decode_u_32(arr[2]),
+      targetId: dco_decode_opt_String(arr[3]),
+      targetAnchor: dco_decode_opt_String(arr[4]),
+      taskId: dco_decode_opt_String(arr[5]),
+      level: dco_decode_u_8(arr[6]),
     );
   }
 
@@ -2931,11 +6337,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   EntityRef dco_decode_entity_ref(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return EntityRef(
       id: dco_decode_opt_String(arr[0]),
       title: dco_decode_String(arr[1]),
+      kind: dco_decode_opt_String(arr[2]),
     );
   }
 
@@ -2958,8 +6365,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   EntityView dco_decode_entity_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 25)
+      throw Exception('unexpected arr length: expect 25 but see ${arr.length}');
     return EntityView(
       id: dco_decode_String(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -2974,6 +6381,32 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       related: dco_decode_list_relation_chip(arr[10]),
       documents: dco_decode_list_document_brief(arr[11]),
       pendingSync: dco_decode_bool(arr[12]),
+      titleDir: dco_decode_text_dir(arr[13]),
+      initials: dco_decode_String(arr[14]),
+      path: dco_decode_String(arr[15]),
+      tags: dco_decode_list_String(arr[16]),
+      userNotes: dco_decode_String(arr[17]),
+      summaryCitations: dco_decode_list_citation(arr[18]),
+      aiUpdatedLabel: dco_decode_opt_String(arr[19]),
+      openCount: dco_decode_u_32(arr[20]),
+      doneCount: dco_decode_u_32(arr[21]),
+      mentionCount: dco_decode_u_32(arr[22]),
+      lastActiveLabel: dco_decode_opt_String(arr[23]),
+      summaryDir: dco_decode_text_dir(arr[24]),
+    );
+  }
+
+  @protected
+  ExportSummary dco_decode_export_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return ExportSummary(
+      path: dco_decode_String(arr[0]),
+      sizeBytes: dco_decode_u_64(arr[1]),
+      noteCount: dco_decode_u_32(arr[2]),
+      label: dco_decode_String(arr[3]),
     );
   }
 
@@ -2981,6 +6414,21 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  FilterOption dco_decode_filter_option(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return FilterOption(
+      facet: dco_decode_String(arr[0]),
+      value: dco_decode_String(arr[1]),
+      label: dco_decode_String(arr[2]),
+      count: dco_decode_u_32(arr[3]),
+      selected: dco_decode_bool(arr[4]),
+    );
   }
 
   @protected
@@ -3000,12 +6448,17 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   GlobalGraphView dco_decode_global_graph_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return GlobalGraphView(
       nodes: dco_decode_list_graph_node(arr[0]),
       edges: dco_decode_list_graph_edge(arr[1]),
       clusters: dco_decode_list_cluster_label(arr[2]),
+      filter: dco_decode_graph_filter(arr[3]),
+      edgeCounts: dco_decode_list_kind_count(arr[4]),
+      nodeCounts: dco_decode_list_kind_count(arr[5]),
+      neighbours: dco_decode_list_String(arr[6]),
+      similarity: dco_decode_availability(arr[7]),
     );
   }
 
@@ -3013,23 +6466,49 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   GraphEdge dco_decode_graph_edge(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return GraphEdge(
       src: dco_decode_String(arr[0]),
       dst: dco_decode_String(arr[1]),
       kind: dco_decode_String(arr[2]),
       by: dco_decode_opt_String(arr[3]),
       confidence: dco_decode_opt_box_autoadd_f_64(arr[4]),
+      id: dco_decode_String(arr[5]),
+      relType: dco_decode_opt_String(arr[6]),
+      label: dco_decode_String(arr[7]),
+      reason: dco_decode_opt_String(arr[8]),
     );
+  }
+
+  @protected
+  GraphFilter dco_decode_graph_filter(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return GraphFilter(
+      edgeKinds: dco_decode_list_String(arr[0]),
+      nodeKinds: dco_decode_list_String(arr[1]),
+      similarity: dco_decode_bool(arr[2]),
+      cluster: dco_decode_opt_String(arr[3]),
+      lens: dco_decode_graph_lens(arr[4]),
+      focus: dco_decode_opt_String(arr[5]),
+    );
+  }
+
+  @protected
+  GraphLens dco_decode_graph_lens(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return GraphLens.values[raw as int];
   }
 
   @protected
   GraphNode dco_decode_graph_node(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return GraphNode(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -3039,7 +6518,21 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       degree: dco_decode_u_32(arr[5]),
       x: dco_decode_f_64(arr[6]),
       y: dco_decode_f_64(arr[7]),
+      titleDir: dco_decode_text_dir(arr[8]),
+      summary: dco_decode_opt_String(arr[9]),
+      updatedLabel: dco_decode_String(arr[10]),
+      labelRank: dco_decode_u_32(arr[11]),
+      isHub: dco_decode_bool(arr[12]),
     );
+  }
+
+  @protected
+  GraphPoint dco_decode_graph_point(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return GraphPoint(x: dco_decode_f_64(arr[0]), y: dco_decode_f_64(arr[1]));
   }
 
   @protected
@@ -3049,16 +6542,46 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  HistoryEntry dco_decode_history_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return HistoryEntry(
+      commit: dco_decode_String(arr[0]),
+      versionLabel: dco_decode_String(arr[1]),
+      message: dco_decode_String(arr[2]),
+      author: dco_decode_String(arr[3]),
+      at: dco_decode_Chrono_Utc(arr[4]),
+      atLabel: dco_decode_String(arr[5]),
+      canRevert: dco_decode_bool(arr[6]),
+    );
+  }
+
+  @protected
   HomeView dco_decode_home_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 17)
+      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
     return HomeView(
       recentNotes: dco_decode_list_note_list_item(arr[0]),
       inboxCount: dco_decode_u_32(arr[1]),
       tasks: dco_decode_task_sections(arr[2]),
       sync_: dco_decode_sync_pill(arr[3]),
+      todayLabel: dco_decode_String(arr[4]),
+      greeting: dco_decode_String(arr[5]),
+      displayName: dco_decode_String(arr[6]),
+      inboxPreview: dco_decode_list_inbox_preview_item(arr[7]),
+      needsYouCount: dco_decode_u_32(arr[8]),
+      contradictionsCount: dco_decode_u_32(arr[9]),
+      inboxSummary: dco_decode_String(arr[10]),
+      aiActivity: dco_decode_availability(arr[11]),
+      aiActivityItems: dco_decode_list_ai_activity_item(arr[12]),
+      aiActivityHeadline: dco_decode_String(arr[13]),
+      openItems: dco_decode_availability(arr[14]),
+      openItemList: dco_decode_list_open_item(arr[15]),
+      pinned: dco_decode_list_note_list_item(arr[16]),
     );
   }
 
@@ -3094,11 +6617,29 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  ImportSummary dco_decode_import_summary(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ImportSummary(
+      imported: dco_decode_u_32(arr[0]),
+      skipped: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
+  InboxFilter dco_decode_inbox_filter(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return InboxFilter.values[raw as int];
+  }
+
+  @protected
   InboxItem dco_decode_inbox_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return InboxItem(
       noteId: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -3106,6 +6647,28 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       created: dco_decode_Chrono_Utc(arr[3]),
       suggestions: dco_decode_list_suggestion_item(arr[4]),
       pendingSync: dco_decode_bool(arr[5]),
+      textDir: dco_decode_text_dir(arr[6]),
+      createdLabel: dco_decode_String(arr[7]),
+      sourceLabel: dco_decode_opt_String(arr[8]),
+      filingConfidence: dco_decode_opt_box_autoadd_f_64(arr[9]),
+      needsYou: dco_decode_bool(arr[10]),
+      ready: dco_decode_bool(arr[11]),
+      isDuplicate: dco_decode_bool(arr[12]),
+    );
+  }
+
+  @protected
+  InboxPreviewItem dco_decode_inbox_preview_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return InboxPreviewItem(
+      noteId: dco_decode_String(arr[0]),
+      text: dco_decode_String(arr[1]),
+      textDir: dco_decode_text_dir(arr[2]),
+      summary: dco_decode_String(arr[3]),
+      needsYou: dco_decode_bool(arr[4]),
     );
   }
 
@@ -3113,11 +6676,44 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   InboxView dco_decode_inbox_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return InboxView(
       captures: dco_decode_list_inbox_item(arr[0]),
       suggestions: dco_decode_list_suggestion_item(arr[1]),
+      filter: dco_decode_inbox_filter(arr[2]),
+      readyCount: dco_decode_u_32(arr[3]),
+      needsYouCount: dco_decode_u_32(arr[4]),
+      conflictsCount: dco_decode_u_32(arr[5]),
+      allCount: dco_decode_u_32(arr[6]),
+    );
+  }
+
+  @protected
+  IntegrityItem dco_decode_integrity_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return IntegrityItem(
+      id: dco_decode_String(arr[0]),
+      kind: dco_decode_String(arr[1]),
+      messageKey: dco_decode_String(arr[2]),
+      path: dco_decode_opt_String(arr[3]),
+      createdLabel: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
+  KindCount dco_decode_kind_count(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return KindCount(
+      kind: dco_decode_String(arr[0]),
+      label: dco_decode_String(arr[1]),
+      count: dco_decode_u_32(arr[2]),
     );
   }
 
@@ -3125,14 +6721,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   KnownAccountItem dco_decode_known_account_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return KnownAccountItem(
       userId: dco_decode_String(arr[0]),
       username: dco_decode_String(arr[1]),
       displayName: dco_decode_String(arr[2]),
       serverUrl: dco_decode_String(arr[3]),
+      initials: dco_decode_String(arr[4]),
     );
+  }
+
+  @protected
+  LineChange dco_decode_line_change(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return LineChange.values[raw as int];
+  }
+
+  @protected
+  LinkOrCreateChoice dco_decode_link_or_create_choice(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return LinkOrCreateChoice(
+      kind: dco_decode_link_or_create_kind(arr[0]),
+      entityId: dco_decode_opt_String(arr[1]),
+      name: dco_decode_opt_String(arr[2]),
+      entityKind: dco_decode_opt_String(arr[3]),
+      force: dco_decode_bool(arr[4]),
+    );
+  }
+
+  @protected
+  LinkOrCreateKind dco_decode_link_or_create_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return LinkOrCreateKind.values[raw as int];
   }
 
   @protected
@@ -3154,9 +6778,39 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<AiActivityItem> dco_decode_list_ai_activity_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ai_activity_item).toList();
+  }
+
+  @protected
+  List<AnnotatedLine> dco_decode_list_annotated_line(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_annotated_line).toList();
+  }
+
+  @protected
   List<AskMessage> dco_decode_list_ask_message(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_ask_message).toList();
+  }
+
+  @protected
+  List<AskScope> dco_decode_list_ask_scope(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ask_scope).toList();
+  }
+
+  @protected
+  List<AskSource> dco_decode_list_ask_source(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ask_source).toList();
+  }
+
+  @protected
+  List<AskSpan> dco_decode_list_ask_span(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_ask_span).toList();
   }
 
   @protected
@@ -3169,6 +6823,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   List<BacklinkItem> dco_decode_list_backlink_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_backlink_item).toList();
+  }
+
+  @protected
+  List<BlockItem> dco_decode_list_block_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_block_item).toList();
   }
 
   @protected
@@ -3196,6 +6856,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<CompletionItem> dco_decode_list_completion_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_completion_item).toList();
+  }
+
+  @protected
   List<ConflictHunkView> dco_decode_list_conflict_hunk_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_conflict_hunk_view).toList();
@@ -3214,9 +6880,27 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<DeviceItem> dco_decode_list_device_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_device_item).toList();
+  }
+
+  @protected
+  List<DiffLine> dco_decode_list_diff_line(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_diff_line).toList();
+  }
+
+  @protected
   List<DirectoryItem> dco_decode_list_directory_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_directory_item).toList();
+  }
+
+  @protected
+  List<DirectorySection> dco_decode_list_directory_section(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_directory_section).toList();
   }
 
   @protected
@@ -3244,6 +6928,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<FilterOption> dco_decode_list_filter_option(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_filter_option).toList();
+  }
+
+  @protected
   List<FolderItem> dco_decode_list_folder_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_folder_item).toList();
@@ -3262,15 +6952,51 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<GraphPoint> dco_decode_list_graph_point(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_graph_point).toList();
+  }
+
+  @protected
+  List<HistoryEntry> dco_decode_list_history_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_history_entry).toList();
+  }
+
+  @protected
   List<HunkChoice> dco_decode_list_hunk_choice(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_hunk_choice).toList();
   }
 
   @protected
+  List<HunkChoiceKind> dco_decode_list_hunk_choice_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_hunk_choice_kind).toList();
+  }
+
+  @protected
   List<InboxItem> dco_decode_list_inbox_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_inbox_item).toList();
+  }
+
+  @protected
+  List<InboxPreviewItem> dco_decode_list_inbox_preview_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_inbox_preview_item).toList();
+  }
+
+  @protected
+  List<IntegrityItem> dco_decode_list_integrity_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_integrity_item).toList();
+  }
+
+  @protected
+  List<KindCount> dco_decode_list_kind_count(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_kind_count).toList();
   }
 
   @protected
@@ -3286,9 +7012,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<OpenItem> dco_decode_list_open_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_open_item).toList();
+  }
+
+  @protected
   List<OutboxItem> dco_decode_list_outbox_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_outbox_item).toList();
+  }
+
+  @protected
+  List<PlaceNode> dco_decode_list_place_node(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_place_node).toList();
+  }
+
+  @protected
+  List<PlaceOption> dco_decode_list_place_option(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_place_option).toList();
+  }
+
+  @protected
+  Uint32List dco_decode_list_prim_u_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint32List;
   }
 
   @protected
@@ -3304,6 +7054,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<RecurrencePreviewItem> dco_decode_list_recurrence_preview_item(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_recurrence_preview_item)
+        .toList();
+  }
+
+  @protected
   List<RejectionItem> dco_decode_list_rejection_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_rejection_item).toList();
@@ -3313,6 +7073,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   List<RelationChip> dco_decode_list_relation_chip(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_relation_chip).toList();
+  }
+
+  @protected
+  List<RelationTypeItem> dco_decode_list_relation_type_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_relation_type_item).toList();
   }
 
   @protected
@@ -3328,9 +7094,45 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<SearchMode> dco_decode_list_search_mode(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_search_mode).toList();
+  }
+
+  @protected
   List<SuggestionItem> dco_decode_list_suggestion_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_suggestion_item).toList();
+  }
+
+  @protected
+  List<SyncLogItem> dco_decode_list_sync_log_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_sync_log_item).toList();
+  }
+
+  @protected
+  List<TagItem> dco_decode_list_tag_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_tag_item).toList();
+  }
+
+  @protected
+  List<TaskChip> dco_decode_list_task_chip(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_task_chip).toList();
+  }
+
+  @protected
+  List<TaskGroup> dco_decode_list_task_group(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_task_group).toList();
+  }
+
+  @protected
+  List<TaskHomeItem> dco_decode_list_task_home_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_task_home_item).toList();
   }
 
   @protected
@@ -3340,17 +7142,119 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<TextSpan> dco_decode_list_text_span(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_text_span).toList();
+  }
+
+  @protected
+  List<ThreadMessage> dco_decode_list_thread_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_thread_message).toList();
+  }
+
+  @protected
+  List<WeekdayKind> dco_decode_list_weekday_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_weekday_kind).toList();
+  }
+
+  @protected
   LocalGraphView dco_decode_local_graph_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return LocalGraphView(
       center: dco_decode_String(arr[0]),
       found: dco_decode_bool(arr[1]),
       depth: dco_decode_u_8(arr[2]),
       nodes: dco_decode_list_graph_node(arr[3]),
       edges: dco_decode_list_graph_edge(arr[4]),
+      relationCount: dco_decode_u_32(arr[5]),
+      aiRelationCount: dco_decode_u_32(arr[6]),
+      relationLabel: dco_decode_String(arr[7]),
+      summary: dco_decode_opt_String(arr[8]),
+      saveLayout: dco_decode_availability(arr[9]),
+      proposeRelation: dco_decode_availability(arr[10]),
+    );
+  }
+
+  @protected
+  MentionEdit dco_decode_mention_edit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return MentionEdit(
+      content: dco_decode_String(arr[0]),
+      cursor: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
+  MergePreview dco_decode_merge_preview(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return MergePreview(
+      source: dco_decode_entity_ref(arr[0]),
+      into: dco_decode_entity_ref(arr[1]),
+      aliases: dco_decode_list_String(arr[2]),
+      mentionCount: dco_decode_u_32(arr[3]),
+      relationCount: dco_decode_u_32(arr[4]),
+    );
+  }
+
+  @protected
+  MonthDayMode dco_decode_month_day_mode(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return MonthDayMode.values[raw as int];
+  }
+
+  @protected
+  NavView dco_decode_nav_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return NavView(
+      inboxCount: dco_decode_u_32(arr[0]),
+      tasksDueCount: dco_decode_u_32(arr[1]),
+      notesCount: dco_decode_u_32(arr[2]),
+      directoryCount: dco_decode_u_32(arr[3]),
+      clusterCount: dco_decode_u_32(arr[4]),
+      pinned: dco_decode_list_note_list_item(arr[5]),
+      sync_: dco_decode_sync_pill(arr[6]),
+    );
+  }
+
+  @protected
+  NewUserRequest dco_decode_new_user_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NewUserRequest(
+      username: dco_decode_String(arr[0]),
+      displayName: dco_decode_String(arr[1]),
+      password: dco_decode_String(arr[2]),
+      role: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  NoteDiffView dco_decode_note_diff_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NoteDiffView(
+      noteId: dco_decode_String(arr[0]),
+      commit: dco_decode_String(arr[1]),
+      summary: dco_decode_String(arr[2]),
+      lines: dco_decode_list_diff_line(arr[3]),
     );
   }
 
@@ -3358,8 +7262,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   NoteListItem dco_decode_note_list_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return NoteListItem(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -3369,6 +7273,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       tags: dco_decode_list_String(arr[5]),
       updatedAt: dco_decode_Chrono_Utc(arr[6]),
       pendingSync: dco_decode_bool(arr[7]),
+      titleDir: dco_decode_text_dir(arr[8]),
+      snippetDir: dco_decode_text_dir(arr[9]),
+      updatedLabel: dco_decode_String(arr[10]),
+      linkCount: dco_decode_u_32(arr[11]),
+      highlights: dco_decode_list_text_span(arr[12]),
     );
   }
 
@@ -3394,12 +7303,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   NoteSyncState dco_decode_note_sync_state(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return NoteSyncState(
       kind: dco_decode_note_sync_kind(arr[0]),
       pendingOps: dco_decode_u_32(arr[1]),
       conflictOpId: dco_decode_opt_String(arr[2]),
+      duplicateOpId: dco_decode_opt_String(arr[3]),
+      label: dco_decode_String(arr[4]),
     );
   }
 
@@ -3407,8 +7318,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   NoteView dco_decode_note_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 24)
+      throw Exception('unexpected arr length: expect 24 but see ${arr.length}');
     return NoteView(
       id: dco_decode_String(arr[0]),
       path: dco_decode_String(arr[1]),
@@ -3424,6 +7335,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       hints: dco_decode_list_editor_hint(arr[11]),
       sync_: dco_decode_note_sync_state(arr[12]),
       history: dco_decode_availability(arr[13]),
+      titleDir: dco_decode_text_dir(arr[14]),
+      contentVersion: dco_decode_String(arr[15]),
+      versionLabel: dco_decode_opt_String(arr[16]),
+      createdLabel: dco_decode_opt_String(arr[17]),
+      editedLabel: dco_decode_opt_String(arr[18]),
+      editedBy: dco_decode_opt_String(arr[19]),
+      wordCount: dco_decode_u_32(arr[20]),
+      backlinkCount: dco_decode_u_32(arr[21]),
+      historyEntries: dco_decode_list_history_entry(arr[22]),
+      pinned: dco_decode_bool(arr[23]),
     );
   }
 
@@ -3431,12 +7352,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   NotesListView dco_decode_notes_list_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return NotesListView(
       folder: dco_decode_String(arr[0]),
       folders: dco_decode_list_folder_item(arr[1]),
       notes: dco_decode_list_note_list_item(arr[2]),
+      breadcrumb: dco_decode_list_folder_item(arr[3]),
+      noteCount: dco_decode_u_32(arr[4]),
     );
   }
 
@@ -3444,11 +7367,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   NotificationAction dco_decode_notification_action(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
     return NotificationAction(
       kind: dco_decode_notification_action_kind(arr[0]),
-      minutes: dco_decode_u_32(arr[1]),
     );
   }
 
@@ -3499,6 +7421,22 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  OpenItem dco_decode_open_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return OpenItem(
+      id: dco_decode_String(arr[0]),
+      text: dco_decode_String(arr[1]),
+      textDir: dco_decode_text_dir(arr[2]),
+      person: dco_decode_entity_ref(arr[3]),
+      citation: dco_decode_opt_box_autoadd_citation(arr[4]),
+      done: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
@@ -3523,15 +7461,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  AiStatusView? dco_decode_opt_box_autoadd_ai_status_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_ai_status_view(raw);
+  }
+
+  @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_bool(raw);
   }
 
   @protected
+  Citation? dco_decode_opt_box_autoadd_citation(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_citation(raw);
+  }
+
+  @protected
   ConflictDetail? dco_decode_opt_box_autoadd_conflict_detail(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_conflict_detail(raw);
+  }
+
+  @protected
+  DeviceItem? dco_decode_opt_box_autoadd_device_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_device_item(raw);
   }
 
   @protected
@@ -3565,15 +7521,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  PendingApproval? dco_decode_opt_box_autoadd_pending_approval(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_pending_approval(raw);
+  }
+
+  @protected
   PlaceView? dco_decode_opt_box_autoadd_place_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_place_view(raw);
   }
 
   @protected
+  RecurrenceForm? dco_decode_opt_box_autoadd_recurrence_form(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_recurrence_form(raw);
+  }
+
+  @protected
   TaskItem? dco_decode_opt_box_autoadd_task_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_task_item(raw);
+  }
+
+  @protected
+  TimelineChip? dco_decode_opt_box_autoadd_timeline_chip(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_timeline_chip(raw);
   }
 
   @protected
@@ -3589,17 +7563,35 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_64(raw);
+  }
+
+  @protected
+  WeekdayKind? dco_decode_opt_box_autoadd_weekday_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_weekday_kind(raw);
+  }
+
+  @protected
   List<DateTime>? dco_decode_opt_list_Chrono_NaiveDateTime(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_list_Chrono_NaiveDateTime(raw);
   }
 
   @protected
+  List<String>? dco_decode_opt_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_String(raw);
+  }
+
+  @protected
   OutboxItem dco_decode_outbox_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return OutboxItem(
       opId: dco_decode_String(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -3607,6 +7599,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       status: dco_decode_outbox_status(arr[3]),
       attempts: dco_decode_u_32(arr[4]),
       created: dco_decode_Chrono_Utc(arr[5]),
+      detail: dco_decode_String(arr[6]),
+      detailDir: dco_decode_text_dir(arr[7]),
+      createdLabel: dco_decode_String(arr[8]),
     );
   }
 
@@ -3617,11 +7612,90 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
-  PlaceView dco_decode_place_view(dynamic raw) {
+  PasswordLevel dco_decode_password_level(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return PasswordLevel.values[raw as int];
+  }
+
+  @protected
+  PasswordStrength dco_decode_password_strength(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PasswordStrength(
+      level: dco_decode_password_level(arr[0]),
+      length: dco_decode_u_32(arr[1]),
+      minLength: dco_decode_u_32(arr[2]),
+    );
+  }
+
+  @protected
+  PendingApproval dco_decode_pending_approval(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
     if (arr.length != 7)
       throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return PendingApproval(
+      username: dco_decode_String(arr[0]),
+      serverUrl: dco_decode_String(arr[1]),
+      requestedAt: dco_decode_Chrono_Utc(arr[2]),
+      requestedLabel: dco_decode_String(arr[3]),
+      lastCheckedAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[4]),
+      lastCheckedLabel: dco_decode_opt_String(arr[5]),
+      canCheck: dco_decode_bool(arr[6]),
+    );
+  }
+
+  @protected
+  PlaceDraft dco_decode_place_draft(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return PlaceDraft(
+      name: dco_decode_String(arr[0]),
+      aliases: dco_decode_list_String(arr[1]),
+      parentId: dco_decode_opt_String(arr[2]),
+      address: dco_decode_opt_String(arr[3]),
+    );
+  }
+
+  @protected
+  PlaceNode dco_decode_place_node(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return PlaceNode(
+      place: dco_decode_entity_ref(arr[0]),
+      depth: dco_decode_u_32(arr[1]),
+      documentCount: dco_decode_u_32(arr[2]),
+      parentId: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  PlaceOption dco_decode_place_option(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return PlaceOption(
+      id: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      breadcrumb: dco_decode_list_entity_ref(arr[2]),
+      depth: dco_decode_u_32(arr[3]),
+      isCurrent: dco_decode_bool(arr[4]),
+    );
+  }
+
+  @protected
+  PlaceView dco_decode_place_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return PlaceView(
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -3630,6 +7704,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       subPlaces: dco_decode_list_entity_ref(arr[4]),
       documents: dco_decode_list_document_brief(arr[5]),
       recentMovements: dco_decode_list_custody_item(arr[6]),
+      titleDir: dco_decode_text_dir(arr[7]),
+      tree: dco_decode_list_place_node(arr[8]),
+      outWithPeople: dco_decode_list_document_brief(arr[9]),
+      userNotes: dco_decode_String(arr[10]),
+      path: dco_decode_String(arr[11]),
     );
   }
 
@@ -3652,6 +7731,75 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  RecentFilter dco_decode_recent_filter(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RecentFilter.values[raw as int];
+  }
+
+  @protected
+  RecentNotesView dco_decode_recent_notes_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return RecentNotesView(
+      filter: dco_decode_recent_filter(arr[0]),
+      notes: dco_decode_list_note_list_item(arr[1]),
+    );
+  }
+
+  @protected
+  RecurrenceCompose dco_decode_recurrence_compose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return RecurrenceCompose(
+      phrase: dco_decode_String(arr[0]),
+      understood: dco_decode_bool(arr[1]),
+      label: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  RecurrenceForm dco_decode_recurrence_form(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return RecurrenceForm(
+      frequency: dco_decode_recurrence_frequency(arr[0]),
+      interval: dco_decode_u_32(arr[1]),
+      weekdays: dco_decode_list_weekday_kind(arr[2]),
+      monthDayMode: dco_decode_month_day_mode(arr[3]),
+      monthDays: dco_decode_list_prim_u_32_strict(arr[4]),
+      nth: dco_decode_i_32(arr[5]),
+      nthWeekday: dco_decode_opt_box_autoadd_weekday_kind(arr[6]),
+      months: dco_decode_list_prim_u_32_strict(arr[7]),
+      whenDone: dco_decode_bool(arr[8]),
+    );
+  }
+
+  @protected
+  RecurrenceFrequency dco_decode_recurrence_frequency(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return RecurrenceFrequency.values[raw as int];
+  }
+
+  @protected
+  RecurrencePreviewItem dco_decode_recurrence_preview_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return RecurrencePreviewItem(
+      date: dco_decode_Chrono_NaiveDate(arr[0]),
+      label: dco_decode_String(arr[1]),
+      isDue: dco_decode_bool(arr[2]),
+    );
+  }
+
+  @protected
   RejectionItem dco_decode_rejection_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3669,14 +7817,29 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   RelationChip dco_decode_relation_chip(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return RelationChip(
       relType: dco_decode_String(arr[0]),
       target: dco_decode_entity_ref(arr[1]),
       by: dco_decode_String(arr[2]),
       confidence: dco_decode_opt_box_autoadd_f_64(arr[3]),
       reason: dco_decode_opt_String(arr[4]),
+      relLabel: dco_decode_String(arr[5]),
+      createdLabel: dco_decode_opt_String(arr[6]),
+      citations: dco_decode_list_citation(arr[7]),
+    );
+  }
+
+  @protected
+  RelationTypeItem dco_decode_relation_type_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return RelationTypeItem(
+      key: dco_decode_String(arr[0]),
+      label: dco_decode_String(arr[1]),
     );
   }
 
@@ -3684,11 +7847,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ReminderItem dco_decode_reminder_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return ReminderItem(
       local: dco_decode_String(arr[0]),
       at: dco_decode_Chrono_Utc(arr[1]),
+      localAt: dco_decode_Chrono_NaiveDateTime(arr[2]),
+      timeLabel: dco_decode_String(arr[3]),
+      offsetLabel: dco_decode_String(arr[4]),
     );
   }
 
@@ -3696,14 +7862,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   RemindersSetting dco_decode_reminders_setting(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return RemindersSetting(
       enabled: dco_decode_bool(arr[0]),
       permission: dco_decode_notification_permission(arr[1]),
       mode: dco_decode_notification_mode(arr[2]),
       scheduled: dco_decode_u_32(arr[3]),
       defaultTime: dco_decode_String(arr[4]),
+      snoozeMinutes: dco_decode_u_32(arr[5]),
+      quietEnabled: dco_decode_bool(arr[6]),
+      quietFrom: dco_decode_String(arr[7]),
+      quietUntil: dco_decode_String(arr[8]),
     );
   }
 
@@ -3717,14 +7887,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SearchHit dco_decode_search_hit(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return SearchHit(
       noteId: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
       path: dco_decode_String(arr[2]),
       kind: dco_decode_String(arr[3]),
       snippet: dco_decode_String(arr[4]),
+      titleDir: dco_decode_text_dir(arr[5]),
+      snippetDir: dco_decode_text_dir(arr[6]),
+      highlights: dco_decode_list_text_span(arr[7]),
+      score: dco_decode_f_64(arr[8]),
     );
   }
 
@@ -3738,13 +7912,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SearchView dco_decode_search_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return SearchView(
       query: dco_decode_String(arr[0]),
       mode: dco_decode_search_mode(arr[1]),
       results: dco_decode_list_search_hit(arr[2]),
       availability: dco_decode_availability(arr[3]),
+      availableModes: dco_decode_list_search_mode(arr[4]),
+      folder: dco_decode_opt_String(arr[5]),
     );
   }
 
@@ -3758,8 +7934,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SessionState dco_decode_session_state(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
     return SessionState(
       kind: dco_decode_session_kind(arr[0]),
       account: dco_decode_opt_box_autoadd_account_summary(arr[1]),
@@ -3769,6 +7945,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       unsyncedOps: dco_decode_u_32(arr[5]),
       deletionAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[6]),
       daysRemaining: dco_decode_opt_box_autoadd_u_32(arr[7]),
+      deletionLabel: dco_decode_opt_String(arr[8]),
+      pending: dco_decode_opt_box_autoadd_pending_approval(arr[9]),
+      exportSizeBytes: dco_decode_opt_box_autoadd_u_64(arr[10]),
+      exportNoteCount: dco_decode_opt_box_autoadd_u_32(arr[11]),
+      exportLabel: dco_decode_opt_String(arr[12]),
+      thisDevice: dco_decode_opt_box_autoadd_device_item(arr[13]),
+      deviceCount: dco_decode_opt_box_autoadd_u_32(arr[14]),
+      pendingApprovals: dco_decode_opt_box_autoadd_u_32(arr[15]),
     );
   }
 
@@ -3776,8 +7960,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SettingsView dco_decode_settings_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return SettingsView(
       account: dco_decode_account_summary(arr[0]),
       reminders: dco_decode_reminders_setting(arr[1]),
@@ -3786,6 +7970,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       export_: dco_decode_availability(arr[4]),
       integrity: dco_decode_availability(arr[5]),
       admin: dco_decode_availability(arr[6]),
+      deviceList: dco_decode_list_device_item(arr[7]),
+      aiStatus: dco_decode_opt_box_autoadd_ai_status_view(arr[8]),
+      integrityWarnings: dco_decode_list_integrity_item(arr[9]),
+      refreshedLabel: dco_decode_opt_String(arr[10]),
     );
   }
 
@@ -3842,8 +8030,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SuggestionDetail dco_decode_suggestion_detail(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
     return SuggestionDetail(
       kind: dco_decode_suggestion_kind(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -3859,6 +8047,28 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       relType: dco_decode_String(arr[11]),
       reason: dco_decode_String(arr[12]),
       serverKind: dco_decode_String(arr[13]),
+      location: dco_decode_opt_box_autoadd_entity_ref(arr[14]),
+      holder: dco_decode_opt_box_autoadd_entity_ref(arr[15]),
+      lastHolder: dco_decode_opt_box_autoadd_entity_ref(arr[16]),
+      documentChoices: dco_decode_list_entity_ref(arr[17]),
+      timeline: dco_decode_opt_box_autoadd_timeline_chip(arr[18]),
+      other: dco_decode_opt_box_autoadd_entity_ref(arr[19]),
+    );
+  }
+
+  @protected
+  SuggestionEdits dco_decode_suggestion_edits(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return SuggestionEdits(
+      title: dco_decode_opt_String(arr[0]),
+      folder: dco_decode_opt_String(arr[1]),
+      tags: dco_decode_opt_list_String(arr[2]),
+      text: dco_decode_opt_String(arr[3]),
+      due: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[4]),
+      recurrence: dco_decode_opt_String(arr[5]),
     );
   }
 
@@ -3866,8 +8076,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SuggestionItem dco_decode_suggestion_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return SuggestionItem(
       id: dco_decode_String(arr[0]),
       noteId: dco_decode_opt_String(arr[1]),
@@ -3875,6 +8085,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       detail: dco_decode_suggestion_detail(arr[3]),
       created: dco_decode_Chrono_Utc(arr[4]),
       pendingSync: dco_decode_bool(arr[5]),
+      createdLabel: dco_decode_String(arr[6]),
+      sourceText: dco_decode_opt_String(arr[7]),
+      sourceDir: dco_decode_text_dir(arr[8]),
+      autoApplied: dco_decode_bool(arr[9]),
+      canAccept: dco_decode_bool(arr[10]),
+      needsYou: dco_decode_bool(arr[11]),
+      thread: dco_decode_list_thread_message(arr[12]),
     );
   }
 
@@ -3888,14 +8105,31 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SyncActivity dco_decode_sync_activity(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return SyncActivity(
       phase: dco_decode_sync_phase(arr[0]),
       pagesDone: dco_decode_u_32(arr[1]),
       pagesTotal: dco_decode_opt_box_autoadd_u_32(arr[2]),
       ops: dco_decode_u_32(arr[3]),
       retryAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[4]),
+      opsDone: dco_decode_u_32(arr[5]),
+      opsTotal: dco_decode_u_32(arr[6]),
+      pulled: dco_decode_u_32(arr[7]),
+    );
+  }
+
+  @protected
+  SyncLogItem dco_decode_sync_log_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return SyncLogItem(
+      at: dco_decode_Chrono_Utc(arr[0]),
+      atLabel: dco_decode_String(arr[1]),
+      kind: dco_decode_String(arr[2]),
+      detail: dco_decode_String(arr[3]),
     );
   }
 
@@ -3909,8 +8143,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SyncPill dco_decode_sync_pill(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return SyncPill(
       connectivity: dco_decode_connectivity(arr[0]),
       activity: dco_decode_sync_activity(arr[1]),
@@ -3918,15 +8152,26 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       conflicts: dco_decode_u_32(arr[3]),
       duplicates: dco_decode_u_32(arr[4]),
       lastSyncAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[5]),
+      display: dco_decode_sync_pill_kind(arr[6]),
+      progressDone: dco_decode_u_32(arr[7]),
+      progressTotal: dco_decode_u_32(arr[8]),
+      lastSyncLabel: dco_decode_opt_String(arr[9]),
+      label: dco_decode_String(arr[10]),
     );
+  }
+
+  @protected
+  SyncPillKind dco_decode_sync_pill_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return SyncPillKind.values[raw as int];
   }
 
   @protected
   SyncStatusView dco_decode_sync_status_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return SyncStatusView(
       pill: dco_decode_sync_pill(arr[0]),
       bootstrapComplete: dco_decode_bool(arr[1]),
@@ -3934,7 +8179,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       outbox: dco_decode_list_outbox_item(arr[3]),
       conflicts: dco_decode_list_conflict_item(arr[4]),
       rejections: dco_decode_list_rejection_item(arr[5]),
+      paused: dco_decode_bool(arr[6]),
+      retryIntervalSecs: dco_decode_opt_box_autoadd_u_32(arr[7]),
+      nextRetryLabel: dco_decode_opt_String(arr[8]),
+      retryLabel: dco_decode_opt_String(arr[9]),
+      log: dco_decode_list_sync_log_item(arr[10]),
     );
+  }
+
+  @protected
+  TagItem dco_decode_tag_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return TagItem(
+      tag: dco_decode_String(arr[0]),
+      count: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
+  TaskChip dco_decode_task_chip(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return TaskChip(
+      kind: dco_decode_task_chip_kind(arr[0]),
+      label: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  TaskChipKind dco_decode_task_chip_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TaskChipKind.values[raw as int];
   }
 
   @protected
@@ -3955,11 +8235,68 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  TaskDraftPreview dco_decode_task_draft_preview(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return TaskDraftPreview(
+      description: dco_decode_String(arr[0]),
+      descriptionDir: dco_decode_text_dir(arr[1]),
+      due: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[2]),
+      dueLabel: dco_decode_opt_String(arr[3]),
+      recurrence: dco_decode_opt_String(arr[4]),
+      reminders: dco_decode_list_Chrono_NaiveDateTime(arr[5]),
+      priority: dco_decode_opt_String(arr[6]),
+      links: dco_decode_list_entity_ref(arr[7]),
+      chips: dco_decode_list_task_chip(arr[8]),
+      draft: dco_decode_task_draft(arr[9]),
+    );
+  }
+
+  @protected
+  TaskGroup dco_decode_task_group(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return TaskGroup(
+      label: dco_decode_String(arr[0]),
+      date: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[1]),
+      tasks: dco_decode_list_task_item(arr[2]),
+    );
+  }
+
+  @protected
+  TaskHomeItem dco_decode_task_home_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return TaskHomeItem(
+      noteId: dco_decode_opt_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      path: dco_decode_String(arr[2]),
+      isDefault: dco_decode_bool(arr[3]),
+      openTasks: dco_decode_u_32(arr[4]),
+    );
+  }
+
+  @protected
+  TaskHomesView dco_decode_task_homes_view(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return TaskHomesView(homes: dco_decode_list_task_home_item(arr[0]));
+  }
+
+  @protected
   TaskItem dco_decode_task_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 23)
+      throw Exception('unexpected arr length: expect 23 but see ${arr.length}');
     return TaskItem(
       id: dco_decode_String(arr[0]),
       noteId: dco_decode_String(arr[1]),
@@ -3975,6 +8312,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       reminders: dco_decode_list_reminder_item(arr[11]),
       links: dco_decode_list_entity_ref(arr[12]),
       pendingSync: dco_decode_bool(arr[13]),
+      descriptionDir: dco_decode_text_dir(arr[14]),
+      notePath: dco_decode_String(arr[15]),
+      lineNumber: dco_decode_u_32(arr[16]),
+      dueLabel: dco_decode_opt_String(arr[17]),
+      latenessLabel: dco_decode_opt_String(arr[18]),
+      completionLabel: dco_decode_opt_String(arr[19]),
+      nextInLabel: dco_decode_opt_String(arr[20]),
+      originLabel: dco_decode_opt_String(arr[21]),
+      isOverdue: dco_decode_bool(arr[22]),
     );
   }
 
@@ -3999,13 +8345,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   TaskScreen dco_decode_task_screen(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return TaskScreen(
       id: dco_decode_String(arr[0]),
       task: dco_decode_opt_box_autoadd_task_item(arr[1]),
       line: dco_decode_String(arr[2]),
       history: dco_decode_list_task_item(arr[3]),
+      locationLabel: dco_decode_String(arr[4]),
+      deliveryLabel: dco_decode_opt_String(arr[5]),
+      nextOccurrenceLabel: dco_decode_opt_String(arr[6]),
+      recurrenceForm: dco_decode_opt_box_autoadd_recurrence_form(arr[7]),
+      recurrencePreview: dco_decode_list_recurrence_preview_item(arr[8]),
     );
   }
 
@@ -4013,14 +8364,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   TaskSections dco_decode_task_sections(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return TaskSections(
       overdue: dco_decode_list_task_item(arr[0]),
       today: dco_decode_list_task_item(arr[1]),
       upcoming: dco_decode_list_task_item(arr[2]),
       recurring: dco_decode_list_task_item(arr[3]),
       noDate: dco_decode_list_task_item(arr[4]),
+      upcomingGroups: dco_decode_list_task_group(arr[5]),
+      todayCount: dco_decode_u_32(arr[6]),
     );
   }
 
@@ -4034,11 +8387,62 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   TasksView dco_decode_tasks_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return TasksView(
       sections: dco_decode_task_sections(arr[0]),
       done: dco_decode_list_task_item(arr[1]),
+      openCount: dco_decode_u_32(arr[2]),
+      doneThisWeek: dco_decode_u_32(arr[3]),
+      doneThisWeekLabel: dco_decode_String(arr[4]),
+      notesWithTasks: dco_decode_u_32(arr[5]),
+    );
+  }
+
+  @protected
+  TextDir dco_decode_text_dir(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return TextDir.values[raw as int];
+  }
+
+  @protected
+  TextSpan dco_decode_text_span(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return TextSpan(
+      start: dco_decode_u_32(arr[0]),
+      end: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
+  ThreadMessage dco_decode_thread_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return ThreadMessage(
+      id: dco_decode_String(arr[0]),
+      author: dco_decode_String(arr[1]),
+      text: dco_decode_String(arr[2]),
+      textDir: dco_decode_text_dir(arr[3]),
+      createdLabel: dco_decode_String(arr[4]),
+      pendingSync: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  TimelineChip dco_decode_timeline_chip(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return TimelineChip(
+      dateLabel: dco_decode_String(arr[0]),
+      sourcePhrase: dco_decode_String(arr[1]),
+      targets: dco_decode_list_entity_ref(arr[2]),
     );
   }
 
@@ -4055,6 +8459,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -4064,6 +8474,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   void dco_decode_unit(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return;
+  }
+
+  @protected
+  WeekdayKind dco_decode_weekday_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return WeekdayKind.values[raw as int];
   }
 
   @protected
@@ -4092,6 +8508,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_64(deserializer);
     return DateTime.fromMicrosecondsSinceEpoch(inner.toInt(), isUtc: true);
+  }
+
+  @protected
+  RustStreamSink<AskView> sse_decode_StreamSink_ask_view_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
   }
 
   @protected
@@ -4152,6 +8576,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  RustStreamSink<NavView> sse_decode_StreamSink_nav_view_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   RustStreamSink<NoteScreen> sse_decode_StreamSink_note_screen_Sse(
     SseDeserializer deserializer,
   ) {
@@ -4176,6 +8608,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  RustStreamSink<RecentNotesView> sse_decode_StreamSink_recent_notes_view_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   RustStreamSink<SessionState> sse_decode_StreamSink_session_state_Sse(
     SseDeserializer deserializer,
   ) {
@@ -4193,6 +8633,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
 
   @protected
   RustStreamSink<SyncStatusView> sse_decode_StreamSink_sync_status_view_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<TaskHomesView> sse_decode_StreamSink_task_homes_view_Sse(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -4233,6 +8681,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_serverUrl = sse_decode_String(deserializer);
     var var_timezone = sse_decode_String(deserializer);
     var var_uiLanguage = sse_decode_String(deserializer);
+    var var_initials = sse_decode_String(deserializer);
     return AccountSummary(
       userId: var_userId,
       username: var_username,
@@ -4242,6 +8691,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       serverUrl: var_serverUrl,
       timezone: var_timezone,
       uiLanguage: var_uiLanguage,
+      initials: var_initials,
     );
   }
 
@@ -4258,6 +8708,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_exportDownloadedAt = sse_decode_opt_box_autoadd_Chrono_Utc(
       deserializer,
     );
+    var var_initials = sse_decode_String(deserializer);
+    var var_isSelf = sse_decode_bool(deserializer);
+    var var_createdLabel = sse_decode_String(deserializer);
+    var var_deletionLabel = sse_decode_opt_String(deserializer);
+    var var_passwordChangeRequired = sse_decode_bool(deserializer);
     return AdminUserItem(
       id: var_id,
       username: var_username,
@@ -4267,6 +8722,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       created: var_created,
       deletionAt: var_deletionAt,
       exportDownloadedAt: var_exportDownloadedAt,
+      initials: var_initials,
+      isSelf: var_isSelf,
+      createdLabel: var_createdLabel,
+      deletionLabel: var_deletionLabel,
+      passwordChangeRequired: var_passwordChangeRequired,
     );
   }
 
@@ -4276,10 +8736,71 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_availability = sse_decode_availability(deserializer);
     var var_pending = sse_decode_list_admin_user_item(deserializer);
     var var_users = sse_decode_list_admin_user_item(deserializer);
+    var var_query = sse_decode_String(deserializer);
     return AdminUsersView(
       availability: var_availability,
       pending: var_pending,
       users: var_users,
+      query: var_query,
+    );
+  }
+
+  @protected
+  AiActivityItem sse_decode_ai_activity_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_atLabel = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_summary = sse_decode_String(deserializer);
+    var var_source = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_target = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_relType = sse_decode_opt_String(deserializer);
+    var var_confidence = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_undoSuggestionId = sse_decode_opt_String(deserializer);
+    return AiActivityItem(
+      atLabel: var_atLabel,
+      kind: var_kind,
+      summary: var_summary,
+      source: var_source,
+      target: var_target,
+      relType: var_relType,
+      confidence: var_confidence,
+      undoSuggestionId: var_undoSuggestionId,
+    );
+  }
+
+  @protected
+  AiStatusView sse_decode_ai_status_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_enabled = sse_decode_bool(deserializer);
+    var var_provider = sse_decode_opt_String(deserializer);
+    var var_pausedLabel = sse_decode_opt_String(deserializer);
+    var var_queueDepth = sse_decode_u_32(deserializer);
+    var var_budgetUsedPercent = sse_decode_u_32(deserializer);
+    var var_budgetLabel = sse_decode_String(deserializer);
+    var var_embeddingPercent = sse_decode_opt_box_autoadd_u_32(deserializer);
+    return AiStatusView(
+      enabled: var_enabled,
+      provider: var_provider,
+      pausedLabel: var_pausedLabel,
+      queueDepth: var_queueDepth,
+      budgetUsedPercent: var_budgetUsedPercent,
+      budgetLabel: var_budgetLabel,
+      embeddingPercent: var_embeddingPercent,
+    );
+  }
+
+  @protected
+  AnnotatedLine sse_decode_annotated_line(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_line = sse_decode_u_32(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_change = sse_decode_line_change(deserializer);
+    var var_dir = sse_decode_text_dir(deserializer);
+    return AnnotatedLine(
+      line: var_line,
+      text: var_text,
+      change: var_change,
+      dir: var_dir,
     );
   }
 
@@ -4296,7 +8817,72 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_role = sse_decode_String(deserializer);
     var var_text = sse_decode_String(deserializer);
     var var_citations = sse_decode_list_citation(deserializer);
-    return AskMessage(role: var_role, text: var_text, citations: var_citations);
+    var var_id = sse_decode_String(deserializer);
+    var var_streaming = sse_decode_bool(deserializer);
+    var var_spans = sse_decode_list_ask_span(deserializer);
+    var var_sources = sse_decode_list_ask_source(deserializer);
+    var var_scopeLabel = sse_decode_String(deserializer);
+    var var_sourceCount = sse_decode_u_32(deserializer);
+    var var_createdLabel = sse_decode_String(deserializer);
+    var var_dir = sse_decode_text_dir(deserializer);
+    var var_errorKey = sse_decode_opt_String(deserializer);
+    var var_savedNoteId = sse_decode_opt_String(deserializer);
+    return AskMessage(
+      role: var_role,
+      text: var_text,
+      citations: var_citations,
+      id: var_id,
+      streaming: var_streaming,
+      spans: var_spans,
+      sources: var_sources,
+      scopeLabel: var_scopeLabel,
+      sourceCount: var_sourceCount,
+      createdLabel: var_createdLabel,
+      dir: var_dir,
+      errorKey: var_errorKey,
+      savedNoteId: var_savedNoteId,
+    );
+  }
+
+  @protected
+  AskScope sse_decode_ask_scope(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_ask_scope_kind(deserializer);
+    var var_value = sse_decode_opt_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    return AskScope(kind: var_kind, value: var_value, label: var_label);
+  }
+
+  @protected
+  AskScopeKind sse_decode_ask_scope_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return AskScopeKind.values[inner];
+  }
+
+  @protected
+  AskSource sse_decode_ask_source(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_noteId = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_anchors = sse_decode_list_String(deserializer);
+    var var_indexes = sse_decode_list_prim_u_32_strict(deserializer);
+    return AskSource(
+      noteId: var_noteId,
+      title: var_title,
+      path: var_path,
+      anchors: var_anchors,
+      indexes: var_indexes,
+    );
+  }
+
+  @protected
+  AskSpan sse_decode_ask_span(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_text = sse_decode_String(deserializer);
+    var var_citation = sse_decode_opt_box_autoadd_u_32(deserializer);
+    return AskSpan(text: var_text, citation: var_citation);
   }
 
   @protected
@@ -4304,7 +8890,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_availability = sse_decode_availability(deserializer);
     var var_messages = sse_decode_list_ask_message(deserializer);
-    return AskView(availability: var_availability, messages: var_messages);
+    var var_scopes = sse_decode_list_ask_scope(deserializer);
+    var var_streaming = sse_decode_bool(deserializer);
+    var var_aiStatus = sse_decode_opt_box_autoadd_ai_status_view(deserializer);
+    return AskView(
+      availability: var_availability,
+      messages: var_messages,
+      scopes: var_scopes,
+      streaming: var_streaming,
+      aiStatus: var_aiStatus,
+    );
   }
 
   @protected
@@ -4319,7 +8914,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_kind = sse_decode_String(deserializer);
     var var_items = sse_decode_list_backlink_item(deserializer);
-    return BacklinkGroup(kind: var_kind, items: var_items);
+    var var_label = sse_decode_String(deserializer);
+    return BacklinkGroup(kind: var_kind, items: var_items, label: var_label);
   }
 
   @protected
@@ -4327,7 +8923,35 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_noteId = sse_decode_String(deserializer);
     var var_title = sse_decode_String(deserializer);
-    return BacklinkItem(noteId: var_noteId, title: var_title);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_snippet = sse_decode_opt_String(deserializer);
+    var var_snippetDir = sse_decode_text_dir(deserializer);
+    var var_by = sse_decode_opt_String(deserializer);
+    var var_confidence = sse_decode_opt_box_autoadd_f_64(deserializer);
+    return BacklinkItem(
+      noteId: var_noteId,
+      title: var_title,
+      titleDir: var_titleDir,
+      snippet: var_snippet,
+      snippetDir: var_snippetDir,
+      by: var_by,
+      confidence: var_confidence,
+    );
+  }
+
+  @protected
+  BlockItem sse_decode_block_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_blockId = sse_decode_opt_String(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_textDir = sse_decode_text_dir(deserializer);
+    var var_line = sse_decode_u_32(deserializer);
+    return BlockItem(
+      blockId: var_blockId,
+      text: var_text,
+      textDir: var_textDir,
+      line: var_line,
+    );
   }
 
   @protected
@@ -4359,9 +8983,29 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  AiStatusView sse_decode_box_autoadd_ai_status_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_ai_status_view(deserializer));
+  }
+
+  @protected
+  AskScope sse_decode_box_autoadd_ask_scope(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_ask_scope(deserializer));
+  }
+
+  @protected
   bool sse_decode_box_autoadd_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_bool(deserializer));
+  }
+
+  @protected
+  Citation sse_decode_box_autoadd_citation(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_citation(deserializer));
   }
 
   @protected
@@ -4384,6 +9028,36 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   CoreConfig sse_decode_box_autoadd_core_config(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_core_config(deserializer));
+  }
+
+  @protected
+  CustodyDraft sse_decode_box_autoadd_custody_draft(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_custody_draft(deserializer));
+  }
+
+  @protected
+  DeviceItem sse_decode_box_autoadd_device_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_device_item(deserializer));
+  }
+
+  @protected
+  DirectoryFilter sse_decode_box_autoadd_directory_filter(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_directory_filter(deserializer));
+  }
+
+  @protected
+  DocumentDraft sse_decode_box_autoadd_document_draft(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_document_draft(deserializer));
   }
 
   @protected
@@ -4413,6 +9087,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  GraphFilter sse_decode_box_autoadd_graph_filter(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_graph_filter(deserializer));
+  }
+
+  @protected
+  LinkOrCreateChoice sse_decode_box_autoadd_link_or_create_choice(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_link_or_create_choice(deserializer));
+  }
+
+  @protected
+  NewUserRequest sse_decode_box_autoadd_new_user_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_new_user_request(deserializer));
+  }
+
+  @protected
   NoteView sse_decode_box_autoadd_note_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_note_view(deserializer));
@@ -4427,9 +9125,31 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  PendingApproval sse_decode_box_autoadd_pending_approval(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_pending_approval(deserializer));
+  }
+
+  @protected
+  PlaceDraft sse_decode_box_autoadd_place_draft(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_place_draft(deserializer));
+  }
+
+  @protected
   PlaceView sse_decode_box_autoadd_place_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_place_view(deserializer));
+  }
+
+  @protected
+  RecurrenceForm sse_decode_box_autoadd_recurrence_form(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_recurrence_form(deserializer));
   }
 
   @protected
@@ -4446,6 +9166,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_sign_up_request(deserializer));
+  }
+
+  @protected
+  SuggestionEdits sse_decode_box_autoadd_suggestion_edits(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_suggestion_edits(deserializer));
   }
 
   @protected
@@ -4467,6 +9195,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  TimelineChip sse_decode_box_autoadd_timeline_chip(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_timeline_chip(deserializer));
+  }
+
+  @protected
   int sse_decode_box_autoadd_u_16(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_u_16(deserializer));
@@ -4479,6 +9215,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_64(deserializer));
+  }
+
+  @protected
+  WeekdayKind sse_decode_box_autoadd_weekday_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_weekday_kind(deserializer));
+  }
+
+  @protected
   CandidateItem sse_decode_candidate_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -4487,6 +9237,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_snippet = sse_decode_opt_String(deserializer);
     var var_matchLevel = sse_decode_String(deserializer);
     var var_score = sse_decode_f_64(deserializer);
+    var var_path = sse_decode_opt_String(deserializer);
+    var var_reason = sse_decode_String(deserializer);
     return CandidateItem(
       id: var_id,
       kind: var_kind,
@@ -4494,6 +9246,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       snippet: var_snippet,
       matchLevel: var_matchLevel,
       score: var_score,
+      path: var_path,
+      reason: var_reason,
     );
   }
 
@@ -4507,15 +9261,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  CitationPreview sse_decode_citation_preview(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_noteId = sse_decode_opt_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_blockText = sse_decode_opt_String(deserializer);
+    var var_blockDir = sse_decode_text_dir(deserializer);
+    var var_heading = sse_decode_opt_String(deserializer);
+    var var_dateLabel = sse_decode_opt_String(deserializer);
+    var var_tags = sse_decode_list_String(deserializer);
+    return CitationPreview(
+      noteId: var_noteId,
+      title: var_title,
+      path: var_path,
+      blockText: var_blockText,
+      blockDir: var_blockDir,
+      heading: var_heading,
+      dateLabel: var_dateLabel,
+      tags: var_tags,
+    );
+  }
+
+  @protected
   CitedBullet sse_decode_cited_bullet(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_text = sse_decode_String(deserializer);
     var var_date = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
     var var_citations = sse_decode_list_citation(deserializer);
+    var var_dir = sse_decode_text_dir(deserializer);
+    var var_dateLabel = sse_decode_opt_String(deserializer);
     return CitedBullet(
       text: var_text,
       date: var_date,
       citations: var_citations,
+      dir: var_dir,
+      dateLabel: var_dateLabel,
     );
   }
 
@@ -4525,7 +9306,62 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_id = sse_decode_String(deserializer);
     var var_name = sse_decode_String(deserializer);
     var var_size = sse_decode_u_32(deserializer);
-    return ClusterLabel(id: var_id, name: var_name, size: var_size);
+    var var_x = sse_decode_f_64(deserializer);
+    var var_y = sse_decode_f_64(deserializer);
+    var var_hull = sse_decode_list_graph_point(deserializer);
+    var var_radius = sse_decode_f_64(deserializer);
+    return ClusterLabel(
+      id: var_id,
+      name: var_name,
+      size: var_size,
+      x: var_x,
+      y: var_y,
+      hull: var_hull,
+      radius: var_radius,
+    );
+  }
+
+  @protected
+  CompletionItem sse_decode_completion_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_label = sse_decode_String(deserializer);
+    var var_detail = sse_decode_String(deserializer);
+    var var_insertText = sse_decode_String(deserializer);
+    var var_targetId = sse_decode_opt_String(deserializer);
+    var var_entityKind = sse_decode_opt_String(deserializer);
+    var var_labelDir = sse_decode_text_dir(deserializer);
+    return CompletionItem(
+      label: var_label,
+      detail: var_detail,
+      insertText: var_insertText,
+      targetId: var_targetId,
+      entityKind: var_entityKind,
+      labelDir: var_labelDir,
+    );
+  }
+
+  @protected
+  CompletionKind sse_decode_completion_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return CompletionKind.values[inner];
+  }
+
+  @protected
+  Completions sse_decode_completions(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_completion_kind(deserializer);
+    var var_replaceStart = sse_decode_u_32(deserializer);
+    var var_replaceEnd = sse_decode_u_32(deserializer);
+    var var_query = sse_decode_String(deserializer);
+    var var_items = sse_decode_list_completion_item(deserializer);
+    return Completions(
+      kind: var_kind,
+      replaceStart: var_replaceStart,
+      replaceEnd: var_replaceEnd,
+      query: var_query,
+      items: var_items,
+    );
   }
 
   @protected
@@ -4539,6 +9375,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_mergedPreview = sse_decode_opt_String(deserializer);
     var var_mergeClean = sse_decode_opt_box_autoadd_bool(deserializer);
     var var_hunks = sse_decode_list_conflict_hunk_view(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_localOriginLabel = sse_decode_String(deserializer);
+    var var_serverOriginLabel = sse_decode_String(deserializer);
+    var var_baseLines = sse_decode_list_annotated_line(deserializer);
+    var var_localLines = sse_decode_list_annotated_line(deserializer);
+    var var_serverLines = sse_decode_list_annotated_line(deserializer);
+    var var_conflictCopyPath = sse_decode_opt_String(deserializer);
     return ConflictDetail(
       noteId: var_noteId,
       title: var_title,
@@ -4548,6 +9391,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       mergedPreview: var_mergedPreview,
       mergeClean: var_mergeClean,
       hunks: var_hunks,
+      path: var_path,
+      localOriginLabel: var_localOriginLabel,
+      serverOriginLabel: var_serverOriginLabel,
+      baseLines: var_baseLines,
+      localLines: var_localLines,
+      serverLines: var_serverLines,
+      conflictCopyPath: var_conflictCopyPath,
     );
   }
 
@@ -4560,6 +9410,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_base = sse_decode_String(deserializer);
     var var_ours = sse_decode_String(deserializer);
     var var_theirs = sse_decode_String(deserializer);
+    var var_locationLabel = sse_decode_String(deserializer);
+    var var_allowedChoices = sse_decode_list_hunk_choice_kind(deserializer);
     return ConflictHunkView(
       id: var_id,
       location: var_location,
@@ -4567,6 +9419,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       base: var_base,
       ours: var_ours,
       theirs: var_theirs,
+      locationLabel: var_locationLabel,
+      allowedChoices: var_allowedChoices,
     );
   }
 
@@ -4577,11 +9431,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_noteId = sse_decode_String(deserializer);
     var var_title = sse_decode_String(deserializer);
     var var_created = sse_decode_Chrono_Utc(deserializer);
+    var var_createdLabel = sse_decode_String(deserializer);
     return ConflictItem(
       opId: var_opId,
       noteId: var_noteId,
       title: var_title,
       created: var_created,
+      createdLabel: var_createdLabel,
     );
   }
 
@@ -4658,6 +9514,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  CustodyDraft sse_decode_custody_draft(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_String(deserializer);
+    var var_placeId = sse_decode_opt_String(deserializer);
+    var var_personId = sse_decode_opt_String(deserializer);
+    var var_counterpartyId = sse_decode_opt_String(deserializer);
+    var var_date = sse_decode_Chrono_NaiveDate(deserializer);
+    return CustodyDraft(
+      kind: var_kind,
+      placeId: var_placeId,
+      personId: var_personId,
+      counterpartyId: var_counterpartyId,
+      date: var_date,
+    );
+  }
+
+  @protected
   CustodyItem sse_decode_custody_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_date = sse_decode_Chrono_NaiveDate(deserializer);
@@ -4667,6 +9540,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_person = sse_decode_opt_box_autoadd_entity_ref(deserializer);
     var var_counterparty = sse_decode_opt_box_autoadd_entity_ref(deserializer);
     var var_citations = sse_decode_list_citation(deserializer);
+    var var_by = sse_decode_String(deserializer);
+    var var_confidence = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_decisionId = sse_decode_opt_String(deserializer);
+    var var_sentenceKey = sse_decode_String(deserializer);
+    var var_actor = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_destination = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_sentence = sse_decode_String(deserializer);
+    var var_dateLabel = sse_decode_String(deserializer);
+    var var_here = sse_decode_bool(deserializer);
     return CustodyItem(
       date: var_date,
       kind: var_kind,
@@ -4675,7 +9557,65 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       person: var_person,
       counterparty: var_counterparty,
       citations: var_citations,
+      by: var_by,
+      confidence: var_confidence,
+      decisionId: var_decisionId,
+      sentenceKey: var_sentenceKey,
+      actor: var_actor,
+      destination: var_destination,
+      sentence: var_sentence,
+      dateLabel: var_dateLabel,
+      here: var_here,
     );
+  }
+
+  @protected
+  DeviceItem sse_decode_device_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_platform = sse_decode_String(deserializer);
+    var var_lastSeen = sse_decode_Chrono_Utc(deserializer);
+    var var_lastSeenLabel = sse_decode_String(deserializer);
+    var var_signedIn = sse_decode_Chrono_Utc(deserializer);
+    var var_signedInLabel = sse_decode_String(deserializer);
+    var var_isThisDevice = sse_decode_bool(deserializer);
+    var var_remindersEnabled = sse_decode_bool(deserializer);
+    return DeviceItem(
+      id: var_id,
+      name: var_name,
+      platform: var_platform,
+      lastSeen: var_lastSeen,
+      lastSeenLabel: var_lastSeenLabel,
+      signedIn: var_signedIn,
+      signedInLabel: var_signedInLabel,
+      isThisDevice: var_isThisDevice,
+      remindersEnabled: var_remindersEnabled,
+    );
+  }
+
+  @protected
+  DiffLine sse_decode_diff_line(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_diff_line_kind(deserializer);
+    var var_oldLine = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_newLine = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_dir = sse_decode_text_dir(deserializer);
+    return DiffLine(
+      kind: var_kind,
+      oldLine: var_oldLine,
+      newLine: var_newLine,
+      text: var_text,
+      dir: var_dir,
+    );
+  }
+
+  @protected
+  DiffLineKind sse_decode_diff_line_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return DiffLineKind.values[inner];
   }
 
   @protected
@@ -4694,18 +9634,106 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  DirectoryFilter sse_decode_directory_filter(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_tags = sse_decode_list_String(deserializer);
+    var var_role = sse_decode_opt_String(deserializer);
+    var var_companyId = sse_decode_opt_String(deserializer);
+    var var_industry = sse_decode_opt_String(deserializer);
+    var var_docType = sse_decode_opt_String(deserializer);
+    var var_status = sse_decode_opt_String(deserializer);
+    var var_placeId = sse_decode_opt_String(deserializer);
+    var var_holderId = sse_decode_opt_String(deserializer);
+    var var_expiring = sse_decode_bool(deserializer);
+    var var_hasOpenItems = sse_decode_bool(deserializer);
+    return DirectoryFilter(
+      tags: var_tags,
+      role: var_role,
+      companyId: var_companyId,
+      industry: var_industry,
+      docType: var_docType,
+      status: var_status,
+      placeId: var_placeId,
+      holderId: var_holderId,
+      expiring: var_expiring,
+      hasOpenItems: var_hasOpenItems,
+    );
+  }
+
+  @protected
   DirectoryItem sse_decode_directory_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
     var var_title = sse_decode_String(deserializer);
     var var_subtitle = sse_decode_opt_String(deserializer);
     var var_aliases = sse_decode_list_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_initials = sse_decode_String(deserializer);
+    var var_mentionCount = sse_decode_u_32(deserializer);
+    var var_lastActive = sse_decode_opt_box_autoadd_Chrono_Utc(deserializer);
+    var var_lastActiveLabel = sse_decode_opt_String(deserializer);
+    var var_role = sse_decode_opt_String(deserializer);
+    var var_company = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_industry = sse_decode_opt_String(deserializer);
+    var var_tags = sse_decode_list_String(deserializer);
+    var var_status = sse_decode_opt_String(deserializer);
+    var var_docType = sse_decode_opt_String(deserializer);
+    var var_location = sse_decode_list_entity_ref(deserializer);
+    var var_holder = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_lastHolder = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_holderLabel = sse_decode_opt_String(deserializer);
+    var var_copy = sse_decode_opt_String(deserializer);
+    var var_expires = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
+    var var_expiresLabel = sse_decode_opt_String(deserializer);
+    var var_expiringSoon = sse_decode_bool(deserializer);
+    var var_breadcrumb = sse_decode_list_entity_ref(deserializer);
+    var var_documentCount = sse_decode_u_32(deserializer);
+    var var_hasOpenItems = sse_decode_bool(deserializer);
     return DirectoryItem(
       id: var_id,
       title: var_title,
       subtitle: var_subtitle,
       aliases: var_aliases,
+      kind: var_kind,
+      titleDir: var_titleDir,
+      initials: var_initials,
+      mentionCount: var_mentionCount,
+      lastActive: var_lastActive,
+      lastActiveLabel: var_lastActiveLabel,
+      role: var_role,
+      company: var_company,
+      industry: var_industry,
+      tags: var_tags,
+      status: var_status,
+      docType: var_docType,
+      location: var_location,
+      holder: var_holder,
+      lastHolder: var_lastHolder,
+      holderLabel: var_holderLabel,
+      copy: var_copy,
+      expires: var_expires,
+      expiresLabel: var_expiresLabel,
+      expiringSoon: var_expiringSoon,
+      breadcrumb: var_breadcrumb,
+      documentCount: var_documentCount,
+      hasOpenItems: var_hasOpenItems,
     );
+  }
+
+  @protected
+  DirectorySection sse_decode_directory_section(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_label = sse_decode_String(deserializer);
+    var var_items = sse_decode_list_directory_item(deserializer);
+    return DirectorySection(label: var_label, items: var_items);
+  }
+
+  @protected
+  DirectorySort sse_decode_directory_sort(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return DirectorySort.values[inner];
   }
 
   @protected
@@ -4722,11 +9750,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_query = sse_decode_String(deserializer);
     var var_items = sse_decode_list_directory_item(deserializer);
     var var_counts = sse_decode_directory_counts(deserializer);
+    var var_filter = sse_decode_directory_filter(deserializer);
+    var var_sort = sse_decode_directory_sort(deserializer);
+    var var_filterOptions = sse_decode_list_filter_option(deserializer);
+    var var_sections = sse_decode_list_directory_section(deserializer);
+    var var_suggestions = sse_decode_list_suggestion_item(deserializer);
+    var var_expiringCount = sse_decode_u_32(deserializer);
     return DirectoryView(
       tab: var_tab,
       query: var_query,
       items: var_items,
       counts: var_counts,
+      filter: var_filter,
+      sort: var_sort,
+      filterOptions: var_filterOptions,
+      sections: var_sections,
+      suggestions: var_suggestions,
+      expiringCount: var_expiringCount,
     );
   }
 
@@ -4738,12 +9778,45 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_status = sse_decode_opt_String(deserializer);
     var var_location = sse_decode_opt_box_autoadd_entity_ref(deserializer);
     var var_holder = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_docType = sse_decode_opt_String(deserializer);
+    var var_lastHolder = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_locationPath = sse_decode_list_entity_ref(deserializer);
+    var var_expiringSoon = sse_decode_bool(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
     return DocumentBrief(
       id: var_id,
       title: var_title,
       status: var_status,
       location: var_location,
       holder: var_holder,
+      docType: var_docType,
+      lastHolder: var_lastHolder,
+      locationPath: var_locationPath,
+      expiringSoon: var_expiringSoon,
+      titleDir: var_titleDir,
+    );
+  }
+
+  @protected
+  DocumentDraft sse_decode_document_draft(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_aliases = sse_decode_list_String(deserializer);
+    var var_docType = sse_decode_opt_String(deserializer);
+    var var_copy = sse_decode_opt_String(deserializer);
+    var var_copyOf = sse_decode_opt_String(deserializer);
+    var var_companies = sse_decode_list_String(deserializer);
+    var var_people = sse_decode_list_String(deserializer);
+    var var_expires = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
+    return DocumentDraft(
+      name: var_name,
+      aliases: var_aliases,
+      docType: var_docType,
+      copy: var_copy,
+      copyOf: var_copyOf,
+      companies: var_companies,
+      people: var_people,
+      expires: var_expires,
     );
   }
 
@@ -4763,6 +9836,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_custody = sse_decode_list_custody_item(deserializer);
     var var_copies = sse_decode_list_entity_ref(deserializer);
     var var_concerns = sse_decode_list_entity_ref(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_pendingSync = sse_decode_bool(deserializer);
+    var var_expiresLabel = sse_decode_opt_String(deserializer);
+    var var_expiringSoon = sse_decode_bool(deserializer);
+    var var_renewalTask = sse_decode_opt_box_autoadd_task_item(deserializer);
+    var var_mentions = sse_decode_list_note_list_item(deserializer);
+    var var_copyBriefs = sse_decode_list_document_brief(deserializer);
+    var var_userNotes = sse_decode_String(deserializer);
+    var var_holderLabel = sse_decode_opt_String(deserializer);
     return DocumentView(
       id: var_id,
       title: var_title,
@@ -4777,6 +9860,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       custody: var_custody,
       copies: var_copies,
       concerns: var_concerns,
+      titleDir: var_titleDir,
+      path: var_path,
+      pendingSync: var_pendingSync,
+      expiresLabel: var_expiresLabel,
+      expiringSoon: var_expiringSoon,
+      renewalTask: var_renewalTask,
+      mentions: var_mentions,
+      copyBriefs: var_copyBriefs,
+      userNotes: var_userNotes,
+      holderLabel: var_holderLabel,
     );
   }
 
@@ -4817,7 +9910,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_kind = sse_decode_hint_kind(deserializer);
     var var_start = sse_decode_u_32(deserializer);
     var var_end = sse_decode_u_32(deserializer);
-    return EditorHint(kind: var_kind, start: var_start, end: var_end);
+    var var_targetId = sse_decode_opt_String(deserializer);
+    var var_targetAnchor = sse_decode_opt_String(deserializer);
+    var var_taskId = sse_decode_opt_String(deserializer);
+    var var_level = sse_decode_u_8(deserializer);
+    return EditorHint(
+      kind: var_kind,
+      start: var_start,
+      end: var_end,
+      targetId: var_targetId,
+      targetAnchor: var_targetAnchor,
+      taskId: var_taskId,
+      level: var_level,
+    );
   }
 
   @protected
@@ -4832,7 +9937,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_opt_String(deserializer);
     var var_title = sse_decode_String(deserializer);
-    return EntityRef(id: var_id, title: var_title);
+    var var_kind = sse_decode_opt_String(deserializer);
+    return EntityRef(id: var_id, title: var_title, kind: var_kind);
   }
 
   @protected
@@ -4868,6 +9974,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_related = sse_decode_list_relation_chip(deserializer);
     var var_documents = sse_decode_list_document_brief(deserializer);
     var var_pendingSync = sse_decode_bool(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_initials = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_tags = sse_decode_list_String(deserializer);
+    var var_userNotes = sse_decode_String(deserializer);
+    var var_summaryCitations = sse_decode_list_citation(deserializer);
+    var var_aiUpdatedLabel = sse_decode_opt_String(deserializer);
+    var var_openCount = sse_decode_u_32(deserializer);
+    var var_doneCount = sse_decode_u_32(deserializer);
+    var var_mentionCount = sse_decode_u_32(deserializer);
+    var var_lastActiveLabel = sse_decode_opt_String(deserializer);
+    var var_summaryDir = sse_decode_text_dir(deserializer);
     return EntityView(
       id: var_id,
       kind: var_kind,
@@ -4882,6 +10000,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       related: var_related,
       documents: var_documents,
       pendingSync: var_pendingSync,
+      titleDir: var_titleDir,
+      initials: var_initials,
+      path: var_path,
+      tags: var_tags,
+      userNotes: var_userNotes,
+      summaryCitations: var_summaryCitations,
+      aiUpdatedLabel: var_aiUpdatedLabel,
+      openCount: var_openCount,
+      doneCount: var_doneCount,
+      mentionCount: var_mentionCount,
+      lastActiveLabel: var_lastActiveLabel,
+      summaryDir: var_summaryDir,
+    );
+  }
+
+  @protected
+  ExportSummary sse_decode_export_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_path = sse_decode_String(deserializer);
+    var var_sizeBytes = sse_decode_u_64(deserializer);
+    var var_noteCount = sse_decode_u_32(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    return ExportSummary(
+      path: var_path,
+      sizeBytes: var_sizeBytes,
+      noteCount: var_noteCount,
+      label: var_label,
     );
   }
 
@@ -4889,6 +10034,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   double sse_decode_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  FilterOption sse_decode_filter_option(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_facet = sse_decode_String(deserializer);
+    var var_value = sse_decode_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_count = sse_decode_u_32(deserializer);
+    var var_selected = sse_decode_bool(deserializer);
+    return FilterOption(
+      facet: var_facet,
+      value: var_value,
+      label: var_label,
+      count: var_count,
+      selected: var_selected,
+    );
   }
 
   @protected
@@ -4906,10 +10068,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_nodes = sse_decode_list_graph_node(deserializer);
     var var_edges = sse_decode_list_graph_edge(deserializer);
     var var_clusters = sse_decode_list_cluster_label(deserializer);
+    var var_filter = sse_decode_graph_filter(deserializer);
+    var var_edgeCounts = sse_decode_list_kind_count(deserializer);
+    var var_nodeCounts = sse_decode_list_kind_count(deserializer);
+    var var_neighbours = sse_decode_list_String(deserializer);
+    var var_similarity = sse_decode_availability(deserializer);
     return GlobalGraphView(
       nodes: var_nodes,
       edges: var_edges,
       clusters: var_clusters,
+      filter: var_filter,
+      edgeCounts: var_edgeCounts,
+      nodeCounts: var_nodeCounts,
+      neighbours: var_neighbours,
+      similarity: var_similarity,
     );
   }
 
@@ -4921,13 +10093,47 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_kind = sse_decode_String(deserializer);
     var var_by = sse_decode_opt_String(deserializer);
     var var_confidence = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_id = sse_decode_String(deserializer);
+    var var_relType = sse_decode_opt_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_reason = sse_decode_opt_String(deserializer);
     return GraphEdge(
       src: var_src,
       dst: var_dst,
       kind: var_kind,
       by: var_by,
       confidence: var_confidence,
+      id: var_id,
+      relType: var_relType,
+      label: var_label,
+      reason: var_reason,
     );
+  }
+
+  @protected
+  GraphFilter sse_decode_graph_filter(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_edgeKinds = sse_decode_list_String(deserializer);
+    var var_nodeKinds = sse_decode_list_String(deserializer);
+    var var_similarity = sse_decode_bool(deserializer);
+    var var_cluster = sse_decode_opt_String(deserializer);
+    var var_lens = sse_decode_graph_lens(deserializer);
+    var var_focus = sse_decode_opt_String(deserializer);
+    return GraphFilter(
+      edgeKinds: var_edgeKinds,
+      nodeKinds: var_nodeKinds,
+      similarity: var_similarity,
+      cluster: var_cluster,
+      lens: var_lens,
+      focus: var_focus,
+    );
+  }
+
+  @protected
+  GraphLens sse_decode_graph_lens(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return GraphLens.values[inner];
   }
 
   @protected
@@ -4941,6 +10147,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_degree = sse_decode_u_32(deserializer);
     var var_x = sse_decode_f_64(deserializer);
     var var_y = sse_decode_f_64(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_summary = sse_decode_opt_String(deserializer);
+    var var_updatedLabel = sse_decode_String(deserializer);
+    var var_labelRank = sse_decode_u_32(deserializer);
+    var var_isHub = sse_decode_bool(deserializer);
     return GraphNode(
       id: var_id,
       title: var_title,
@@ -4950,7 +10161,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       degree: var_degree,
       x: var_x,
       y: var_y,
+      titleDir: var_titleDir,
+      summary: var_summary,
+      updatedLabel: var_updatedLabel,
+      labelRank: var_labelRank,
+      isHub: var_isHub,
     );
+  }
+
+  @protected
+  GraphPoint sse_decode_graph_point(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_x = sse_decode_f_64(deserializer);
+    var var_y = sse_decode_f_64(deserializer);
+    return GraphPoint(x: var_x, y: var_y);
   }
 
   @protected
@@ -4961,17 +10185,64 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  HistoryEntry sse_decode_history_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_commit = sse_decode_String(deserializer);
+    var var_versionLabel = sse_decode_String(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    var var_author = sse_decode_String(deserializer);
+    var var_at = sse_decode_Chrono_Utc(deserializer);
+    var var_atLabel = sse_decode_String(deserializer);
+    var var_canRevert = sse_decode_bool(deserializer);
+    return HistoryEntry(
+      commit: var_commit,
+      versionLabel: var_versionLabel,
+      message: var_message,
+      author: var_author,
+      at: var_at,
+      atLabel: var_atLabel,
+      canRevert: var_canRevert,
+    );
+  }
+
+  @protected
   HomeView sse_decode_home_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_recentNotes = sse_decode_list_note_list_item(deserializer);
     var var_inboxCount = sse_decode_u_32(deserializer);
     var var_tasks = sse_decode_task_sections(deserializer);
     var var_sync_ = sse_decode_sync_pill(deserializer);
+    var var_todayLabel = sse_decode_String(deserializer);
+    var var_greeting = sse_decode_String(deserializer);
+    var var_displayName = sse_decode_String(deserializer);
+    var var_inboxPreview = sse_decode_list_inbox_preview_item(deserializer);
+    var var_needsYouCount = sse_decode_u_32(deserializer);
+    var var_contradictionsCount = sse_decode_u_32(deserializer);
+    var var_inboxSummary = sse_decode_String(deserializer);
+    var var_aiActivity = sse_decode_availability(deserializer);
+    var var_aiActivityItems = sse_decode_list_ai_activity_item(deserializer);
+    var var_aiActivityHeadline = sse_decode_String(deserializer);
+    var var_openItems = sse_decode_availability(deserializer);
+    var var_openItemList = sse_decode_list_open_item(deserializer);
+    var var_pinned = sse_decode_list_note_list_item(deserializer);
     return HomeView(
       recentNotes: var_recentNotes,
       inboxCount: var_inboxCount,
       tasks: var_tasks,
       sync_: var_sync_,
+      todayLabel: var_todayLabel,
+      greeting: var_greeting,
+      displayName: var_displayName,
+      inboxPreview: var_inboxPreview,
+      needsYouCount: var_needsYouCount,
+      contradictionsCount: var_contradictionsCount,
+      inboxSummary: var_inboxSummary,
+      aiActivity: var_aiActivity,
+      aiActivityItems: var_aiActivityItems,
+      aiActivityHeadline: var_aiActivityHeadline,
+      openItems: var_openItems,
+      openItemList: var_openItemList,
+      pinned: var_pinned,
     );
   }
 
@@ -5004,6 +10275,21 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  ImportSummary sse_decode_import_summary(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_imported = sse_decode_u_32(deserializer);
+    var var_skipped = sse_decode_u_32(deserializer);
+    return ImportSummary(imported: var_imported, skipped: var_skipped);
+  }
+
+  @protected
+  InboxFilter sse_decode_inbox_filter(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return InboxFilter.values[inner];
+  }
+
+  @protected
   InboxItem sse_decode_inbox_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_noteId = sse_decode_String(deserializer);
@@ -5012,6 +10298,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_created = sse_decode_Chrono_Utc(deserializer);
     var var_suggestions = sse_decode_list_suggestion_item(deserializer);
     var var_pendingSync = sse_decode_bool(deserializer);
+    var var_textDir = sse_decode_text_dir(deserializer);
+    var var_createdLabel = sse_decode_String(deserializer);
+    var var_sourceLabel = sse_decode_opt_String(deserializer);
+    var var_filingConfidence = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_needsYou = sse_decode_bool(deserializer);
+    var var_ready = sse_decode_bool(deserializer);
+    var var_isDuplicate = sse_decode_bool(deserializer);
     return InboxItem(
       noteId: var_noteId,
       title: var_title,
@@ -5019,6 +10312,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       created: var_created,
       suggestions: var_suggestions,
       pendingSync: var_pendingSync,
+      textDir: var_textDir,
+      createdLabel: var_createdLabel,
+      sourceLabel: var_sourceLabel,
+      filingConfidence: var_filingConfidence,
+      needsYou: var_needsYou,
+      ready: var_ready,
+      isDuplicate: var_isDuplicate,
+    );
+  }
+
+  @protected
+  InboxPreviewItem sse_decode_inbox_preview_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_noteId = sse_decode_String(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_textDir = sse_decode_text_dir(deserializer);
+    var var_summary = sse_decode_String(deserializer);
+    var var_needsYou = sse_decode_bool(deserializer);
+    return InboxPreviewItem(
+      noteId: var_noteId,
+      text: var_text,
+      textDir: var_textDir,
+      summary: var_summary,
+      needsYou: var_needsYou,
     );
   }
 
@@ -5027,7 +10344,46 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_captures = sse_decode_list_inbox_item(deserializer);
     var var_suggestions = sse_decode_list_suggestion_item(deserializer);
-    return InboxView(captures: var_captures, suggestions: var_suggestions);
+    var var_filter = sse_decode_inbox_filter(deserializer);
+    var var_readyCount = sse_decode_u_32(deserializer);
+    var var_needsYouCount = sse_decode_u_32(deserializer);
+    var var_conflictsCount = sse_decode_u_32(deserializer);
+    var var_allCount = sse_decode_u_32(deserializer);
+    return InboxView(
+      captures: var_captures,
+      suggestions: var_suggestions,
+      filter: var_filter,
+      readyCount: var_readyCount,
+      needsYouCount: var_needsYouCount,
+      conflictsCount: var_conflictsCount,
+      allCount: var_allCount,
+    );
+  }
+
+  @protected
+  IntegrityItem sse_decode_integrity_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_messageKey = sse_decode_String(deserializer);
+    var var_path = sse_decode_opt_String(deserializer);
+    var var_createdLabel = sse_decode_String(deserializer);
+    return IntegrityItem(
+      id: var_id,
+      kind: var_kind,
+      messageKey: var_messageKey,
+      path: var_path,
+      createdLabel: var_createdLabel,
+    );
+  }
+
+  @protected
+  KindCount sse_decode_kind_count(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_count = sse_decode_u_32(deserializer);
+    return KindCount(kind: var_kind, label: var_label, count: var_count);
   }
 
   @protected
@@ -5037,12 +10393,49 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_username = sse_decode_String(deserializer);
     var var_displayName = sse_decode_String(deserializer);
     var var_serverUrl = sse_decode_String(deserializer);
+    var var_initials = sse_decode_String(deserializer);
     return KnownAccountItem(
       userId: var_userId,
       username: var_username,
       displayName: var_displayName,
       serverUrl: var_serverUrl,
+      initials: var_initials,
     );
+  }
+
+  @protected
+  LineChange sse_decode_line_change(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return LineChange.values[inner];
+  }
+
+  @protected
+  LinkOrCreateChoice sse_decode_link_or_create_choice(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_link_or_create_kind(deserializer);
+    var var_entityId = sse_decode_opt_String(deserializer);
+    var var_name = sse_decode_opt_String(deserializer);
+    var var_entityKind = sse_decode_opt_String(deserializer);
+    var var_force = sse_decode_bool(deserializer);
+    return LinkOrCreateChoice(
+      kind: var_kind,
+      entityId: var_entityId,
+      name: var_name,
+      entityKind: var_entityKind,
+      force: var_force,
+    );
+  }
+
+  @protected
+  LinkOrCreateKind sse_decode_link_or_create_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return LinkOrCreateKind.values[inner];
   }
 
   @protected
@@ -5086,6 +10479,34 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<AiActivityItem> sse_decode_list_ai_activity_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AiActivityItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ai_activity_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AnnotatedLine> sse_decode_list_annotated_line(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AnnotatedLine>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_annotated_line(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<AskMessage> sse_decode_list_ask_message(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -5093,6 +10514,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var ans_ = <AskMessage>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_ask_message(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AskScope> sse_decode_list_ask_scope(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AskScope>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ask_scope(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AskSource> sse_decode_list_ask_source(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AskSource>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ask_source(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<AskSpan> sse_decode_list_ask_span(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <AskSpan>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_ask_span(deserializer));
     }
     return ans_;
   }
@@ -5121,6 +10578,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var ans_ = <BacklinkItem>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_backlink_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<BlockItem> sse_decode_list_block_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <BlockItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_block_item(deserializer));
     }
     return ans_;
   }
@@ -5178,6 +10647,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<CompletionItem> sse_decode_list_completion_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CompletionItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_completion_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ConflictHunkView> sse_decode_list_conflict_hunk_view(
     SseDeserializer deserializer,
   ) {
@@ -5218,6 +10701,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<DeviceItem> sse_decode_list_device_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DeviceItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_device_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DiffLine> sse_decode_list_diff_line(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DiffLine>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_diff_line(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<DirectoryItem> sse_decode_list_directory_item(
     SseDeserializer deserializer,
   ) {
@@ -5227,6 +10734,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var ans_ = <DirectoryItem>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_directory_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DirectorySection> sse_decode_list_directory_section(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DirectorySection>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_directory_section(deserializer));
     }
     return ans_;
   }
@@ -5284,6 +10805,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<FilterOption> sse_decode_list_filter_option(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <FilterOption>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_filter_option(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<FolderItem> sse_decode_list_folder_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -5320,6 +10855,32 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<GraphPoint> sse_decode_list_graph_point(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <GraphPoint>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_graph_point(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<HistoryEntry> sse_decode_list_history_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <HistoryEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_history_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<HunkChoice> sse_decode_list_hunk_choice(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -5332,6 +10893,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<HunkChoiceKind> sse_decode_list_hunk_choice_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <HunkChoiceKind>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_hunk_choice_kind(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<InboxItem> sse_decode_list_inbox_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -5339,6 +10914,46 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var ans_ = <InboxItem>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_inbox_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<InboxPreviewItem> sse_decode_list_inbox_preview_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <InboxPreviewItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_inbox_preview_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<IntegrityItem> sse_decode_list_integrity_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <IntegrityItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_integrity_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<KindCount> sse_decode_list_kind_count(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <KindCount>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_kind_count(deserializer));
     }
     return ans_;
   }
@@ -5372,6 +10987,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<OpenItem> sse_decode_list_open_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <OpenItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_open_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<OutboxItem> sse_decode_list_outbox_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -5381,6 +11008,37 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       ans_.add(sse_decode_outbox_item(deserializer));
     }
     return ans_;
+  }
+
+  @protected
+  List<PlaceNode> sse_decode_list_place_node(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <PlaceNode>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_place_node(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<PlaceOption> sse_decode_list_place_option(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <PlaceOption>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_place_option(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint32List(len_);
   }
 
   @protected
@@ -5400,6 +11058,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var ans_ = <PropertyItem>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_property_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<RecurrencePreviewItem> sse_decode_list_recurrence_preview_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <RecurrencePreviewItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_recurrence_preview_item(deserializer));
     }
     return ans_;
   }
@@ -5433,6 +11105,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<RelationTypeItem> sse_decode_list_relation_type_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <RelationTypeItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_relation_type_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ReminderItem> sse_decode_list_reminder_item(
     SseDeserializer deserializer,
   ) {
@@ -5459,6 +11145,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<SearchMode> sse_decode_list_search_mode(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SearchMode>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_search_mode(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<SuggestionItem> sse_decode_list_suggestion_item(
     SseDeserializer deserializer,
   ) {
@@ -5468,6 +11166,70 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var ans_ = <SuggestionItem>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_suggestion_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<SyncLogItem> sse_decode_list_sync_log_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <SyncLogItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_sync_log_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<TagItem> sse_decode_list_tag_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TagItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_tag_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<TaskChip> sse_decode_list_task_chip(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TaskChip>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_task_chip(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<TaskGroup> sse_decode_list_task_group(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TaskGroup>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_task_group(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<TaskHomeItem> sse_decode_list_task_home_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TaskHomeItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_task_home_item(deserializer));
     }
     return ans_;
   }
@@ -5485,6 +11247,44 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<TextSpan> sse_decode_list_text_span(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TextSpan>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_text_span(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<ThreadMessage> sse_decode_list_thread_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <ThreadMessage>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_thread_message(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<WeekdayKind> sse_decode_list_weekday_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <WeekdayKind>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_weekday_kind(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   LocalGraphView sse_decode_local_graph_view(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_center = sse_decode_String(deserializer);
@@ -5492,12 +11292,107 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_depth = sse_decode_u_8(deserializer);
     var var_nodes = sse_decode_list_graph_node(deserializer);
     var var_edges = sse_decode_list_graph_edge(deserializer);
+    var var_relationCount = sse_decode_u_32(deserializer);
+    var var_aiRelationCount = sse_decode_u_32(deserializer);
+    var var_relationLabel = sse_decode_String(deserializer);
+    var var_summary = sse_decode_opt_String(deserializer);
+    var var_saveLayout = sse_decode_availability(deserializer);
+    var var_proposeRelation = sse_decode_availability(deserializer);
     return LocalGraphView(
       center: var_center,
       found: var_found,
       depth: var_depth,
       nodes: var_nodes,
       edges: var_edges,
+      relationCount: var_relationCount,
+      aiRelationCount: var_aiRelationCount,
+      relationLabel: var_relationLabel,
+      summary: var_summary,
+      saveLayout: var_saveLayout,
+      proposeRelation: var_proposeRelation,
+    );
+  }
+
+  @protected
+  MentionEdit sse_decode_mention_edit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_content = sse_decode_String(deserializer);
+    var var_cursor = sse_decode_u_32(deserializer);
+    return MentionEdit(content: var_content, cursor: var_cursor);
+  }
+
+  @protected
+  MergePreview sse_decode_merge_preview(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_source = sse_decode_entity_ref(deserializer);
+    var var_into = sse_decode_entity_ref(deserializer);
+    var var_aliases = sse_decode_list_String(deserializer);
+    var var_mentionCount = sse_decode_u_32(deserializer);
+    var var_relationCount = sse_decode_u_32(deserializer);
+    return MergePreview(
+      source: var_source,
+      into: var_into,
+      aliases: var_aliases,
+      mentionCount: var_mentionCount,
+      relationCount: var_relationCount,
+    );
+  }
+
+  @protected
+  MonthDayMode sse_decode_month_day_mode(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return MonthDayMode.values[inner];
+  }
+
+  @protected
+  NavView sse_decode_nav_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_inboxCount = sse_decode_u_32(deserializer);
+    var var_tasksDueCount = sse_decode_u_32(deserializer);
+    var var_notesCount = sse_decode_u_32(deserializer);
+    var var_directoryCount = sse_decode_u_32(deserializer);
+    var var_clusterCount = sse_decode_u_32(deserializer);
+    var var_pinned = sse_decode_list_note_list_item(deserializer);
+    var var_sync_ = sse_decode_sync_pill(deserializer);
+    return NavView(
+      inboxCount: var_inboxCount,
+      tasksDueCount: var_tasksDueCount,
+      notesCount: var_notesCount,
+      directoryCount: var_directoryCount,
+      clusterCount: var_clusterCount,
+      pinned: var_pinned,
+      sync_: var_sync_,
+    );
+  }
+
+  @protected
+  NewUserRequest sse_decode_new_user_request(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_username = sse_decode_String(deserializer);
+    var var_displayName = sse_decode_String(deserializer);
+    var var_password = sse_decode_String(deserializer);
+    var var_role = sse_decode_String(deserializer);
+    return NewUserRequest(
+      username: var_username,
+      displayName: var_displayName,
+      password: var_password,
+      role: var_role,
+    );
+  }
+
+  @protected
+  NoteDiffView sse_decode_note_diff_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_noteId = sse_decode_String(deserializer);
+    var var_commit = sse_decode_String(deserializer);
+    var var_summary = sse_decode_String(deserializer);
+    var var_lines = sse_decode_list_diff_line(deserializer);
+    return NoteDiffView(
+      noteId: var_noteId,
+      commit: var_commit,
+      summary: var_summary,
+      lines: var_lines,
     );
   }
 
@@ -5512,6 +11407,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_tags = sse_decode_list_String(deserializer);
     var var_updatedAt = sse_decode_Chrono_Utc(deserializer);
     var var_pendingSync = sse_decode_bool(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_snippetDir = sse_decode_text_dir(deserializer);
+    var var_updatedLabel = sse_decode_String(deserializer);
+    var var_linkCount = sse_decode_u_32(deserializer);
+    var var_highlights = sse_decode_list_text_span(deserializer);
     return NoteListItem(
       id: var_id,
       title: var_title,
@@ -5521,6 +11421,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       tags: var_tags,
       updatedAt: var_updatedAt,
       pendingSync: var_pendingSync,
+      titleDir: var_titleDir,
+      snippetDir: var_snippetDir,
+      updatedLabel: var_updatedLabel,
+      linkCount: var_linkCount,
+      highlights: var_highlights,
     );
   }
 
@@ -5545,10 +11450,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_kind = sse_decode_note_sync_kind(deserializer);
     var var_pendingOps = sse_decode_u_32(deserializer);
     var var_conflictOpId = sse_decode_opt_String(deserializer);
+    var var_duplicateOpId = sse_decode_opt_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
     return NoteSyncState(
       kind: var_kind,
       pendingOps: var_pendingOps,
       conflictOpId: var_conflictOpId,
+      duplicateOpId: var_duplicateOpId,
+      label: var_label,
     );
   }
 
@@ -5569,6 +11478,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_hints = sse_decode_list_editor_hint(deserializer);
     var var_sync_ = sse_decode_note_sync_state(deserializer);
     var var_history = sse_decode_availability(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_contentVersion = sse_decode_String(deserializer);
+    var var_versionLabel = sse_decode_opt_String(deserializer);
+    var var_createdLabel = sse_decode_opt_String(deserializer);
+    var var_editedLabel = sse_decode_opt_String(deserializer);
+    var var_editedBy = sse_decode_opt_String(deserializer);
+    var var_wordCount = sse_decode_u_32(deserializer);
+    var var_backlinkCount = sse_decode_u_32(deserializer);
+    var var_historyEntries = sse_decode_list_history_entry(deserializer);
+    var var_pinned = sse_decode_bool(deserializer);
     return NoteView(
       id: var_id,
       path: var_path,
@@ -5584,6 +11503,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       hints: var_hints,
       sync_: var_sync_,
       history: var_history,
+      titleDir: var_titleDir,
+      contentVersion: var_contentVersion,
+      versionLabel: var_versionLabel,
+      createdLabel: var_createdLabel,
+      editedLabel: var_editedLabel,
+      editedBy: var_editedBy,
+      wordCount: var_wordCount,
+      backlinkCount: var_backlinkCount,
+      historyEntries: var_historyEntries,
+      pinned: var_pinned,
     );
   }
 
@@ -5593,10 +11522,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_folder = sse_decode_String(deserializer);
     var var_folders = sse_decode_list_folder_item(deserializer);
     var var_notes = sse_decode_list_note_list_item(deserializer);
+    var var_breadcrumb = sse_decode_list_folder_item(deserializer);
+    var var_noteCount = sse_decode_u_32(deserializer);
     return NotesListView(
       folder: var_folder,
       folders: var_folders,
       notes: var_notes,
+      breadcrumb: var_breadcrumb,
+      noteCount: var_noteCount,
     );
   }
 
@@ -5606,8 +11539,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_kind = sse_decode_notification_action_kind(deserializer);
-    var var_minutes = sse_decode_u_32(deserializer);
-    return NotificationAction(kind: var_kind, minutes: var_minutes);
+    return NotificationAction(kind: var_kind);
   }
 
   @protected
@@ -5673,6 +11605,25 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  OpenItem sse_decode_open_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_textDir = sse_decode_text_dir(deserializer);
+    var var_person = sse_decode_entity_ref(deserializer);
+    var var_citation = sse_decode_opt_box_autoadd_citation(deserializer);
+    var var_done = sse_decode_bool(deserializer);
+    return OpenItem(
+      id: var_id,
+      text: var_text,
+      textDir: var_textDir,
+      person: var_person,
+      citation: var_citation,
+      done: var_done,
+    );
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -5723,11 +11674,35 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  AiStatusView? sse_decode_opt_box_autoadd_ai_status_view(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_ai_status_view(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_bool(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  Citation? sse_decode_opt_box_autoadd_citation(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_citation(deserializer));
     } else {
       return null;
     }
@@ -5741,6 +11716,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_conflict_detail(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  DeviceItem? sse_decode_opt_box_autoadd_device_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_device_item(deserializer));
     } else {
       return null;
     }
@@ -5808,6 +11796,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  PendingApproval? sse_decode_opt_box_autoadd_pending_approval(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_pending_approval(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   PlaceView? sse_decode_opt_box_autoadd_place_view(
     SseDeserializer deserializer,
   ) {
@@ -5821,11 +11822,37 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  RecurrenceForm? sse_decode_opt_box_autoadd_recurrence_form(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_recurrence_form(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   TaskItem? sse_decode_opt_box_autoadd_task_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_task_item(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  TimelineChip? sse_decode_opt_box_autoadd_timeline_chip(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_timeline_chip(deserializer));
     } else {
       return null;
     }
@@ -5854,6 +11881,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  WeekdayKind? sse_decode_opt_box_autoadd_weekday_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_weekday_kind(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   List<DateTime>? sse_decode_opt_list_Chrono_NaiveDateTime(
     SseDeserializer deserializer,
   ) {
@@ -5861,6 +11912,17 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_list_Chrono_NaiveDateTime(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  List<String>? sse_decode_opt_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_String(deserializer));
     } else {
       return null;
     }
@@ -5875,6 +11937,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_status = sse_decode_outbox_status(deserializer);
     var var_attempts = sse_decode_u_32(deserializer);
     var var_created = sse_decode_Chrono_Utc(deserializer);
+    var var_detail = sse_decode_String(deserializer);
+    var var_detailDir = sse_decode_text_dir(deserializer);
+    var var_createdLabel = sse_decode_String(deserializer);
     return OutboxItem(
       opId: var_opId,
       kind: var_kind,
@@ -5882,6 +11947,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       status: var_status,
       attempts: var_attempts,
       created: var_created,
+      detail: var_detail,
+      detailDir: var_detailDir,
+      createdLabel: var_createdLabel,
     );
   }
 
@@ -5890,6 +11958,94 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return OutboxStatus.values[inner];
+  }
+
+  @protected
+  PasswordLevel sse_decode_password_level(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return PasswordLevel.values[inner];
+  }
+
+  @protected
+  PasswordStrength sse_decode_password_strength(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_level = sse_decode_password_level(deserializer);
+    var var_length = sse_decode_u_32(deserializer);
+    var var_minLength = sse_decode_u_32(deserializer);
+    return PasswordStrength(
+      level: var_level,
+      length: var_length,
+      minLength: var_minLength,
+    );
+  }
+
+  @protected
+  PendingApproval sse_decode_pending_approval(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_username = sse_decode_String(deserializer);
+    var var_serverUrl = sse_decode_String(deserializer);
+    var var_requestedAt = sse_decode_Chrono_Utc(deserializer);
+    var var_requestedLabel = sse_decode_String(deserializer);
+    var var_lastCheckedAt = sse_decode_opt_box_autoadd_Chrono_Utc(deserializer);
+    var var_lastCheckedLabel = sse_decode_opt_String(deserializer);
+    var var_canCheck = sse_decode_bool(deserializer);
+    return PendingApproval(
+      username: var_username,
+      serverUrl: var_serverUrl,
+      requestedAt: var_requestedAt,
+      requestedLabel: var_requestedLabel,
+      lastCheckedAt: var_lastCheckedAt,
+      lastCheckedLabel: var_lastCheckedLabel,
+      canCheck: var_canCheck,
+    );
+  }
+
+  @protected
+  PlaceDraft sse_decode_place_draft(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_aliases = sse_decode_list_String(deserializer);
+    var var_parentId = sse_decode_opt_String(deserializer);
+    var var_address = sse_decode_opt_String(deserializer);
+    return PlaceDraft(
+      name: var_name,
+      aliases: var_aliases,
+      parentId: var_parentId,
+      address: var_address,
+    );
+  }
+
+  @protected
+  PlaceNode sse_decode_place_node(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_place = sse_decode_entity_ref(deserializer);
+    var var_depth = sse_decode_u_32(deserializer);
+    var var_documentCount = sse_decode_u_32(deserializer);
+    var var_parentId = sse_decode_String(deserializer);
+    return PlaceNode(
+      place: var_place,
+      depth: var_depth,
+      documentCount: var_documentCount,
+      parentId: var_parentId,
+    );
+  }
+
+  @protected
+  PlaceOption sse_decode_place_option(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_breadcrumb = sse_decode_list_entity_ref(deserializer);
+    var var_depth = sse_decode_u_32(deserializer);
+    var var_isCurrent = sse_decode_bool(deserializer);
+    return PlaceOption(
+      id: var_id,
+      title: var_title,
+      breadcrumb: var_breadcrumb,
+      depth: var_depth,
+      isCurrent: var_isCurrent,
+    );
   }
 
   @protected
@@ -5902,6 +12058,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_subPlaces = sse_decode_list_entity_ref(deserializer);
     var var_documents = sse_decode_list_document_brief(deserializer);
     var var_recentMovements = sse_decode_list_custody_item(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_tree = sse_decode_list_place_node(deserializer);
+    var var_outWithPeople = sse_decode_list_document_brief(deserializer);
+    var var_userNotes = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
     return PlaceView(
       id: var_id,
       title: var_title,
@@ -5910,6 +12071,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       subPlaces: var_subPlaces,
       documents: var_documents,
       recentMovements: var_recentMovements,
+      titleDir: var_titleDir,
+      tree: var_tree,
+      outWithPeople: var_outWithPeople,
+      userNotes: var_userNotes,
+      path: var_path,
     );
   }
 
@@ -5926,6 +12092,85 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_key = sse_decode_String(deserializer);
     var var_values = sse_decode_list_String(deserializer);
     return PropertyItem(key: var_key, values: var_values);
+  }
+
+  @protected
+  RecentFilter sse_decode_recent_filter(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return RecentFilter.values[inner];
+  }
+
+  @protected
+  RecentNotesView sse_decode_recent_notes_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_filter = sse_decode_recent_filter(deserializer);
+    var var_notes = sse_decode_list_note_list_item(deserializer);
+    return RecentNotesView(filter: var_filter, notes: var_notes);
+  }
+
+  @protected
+  RecurrenceCompose sse_decode_recurrence_compose(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_phrase = sse_decode_String(deserializer);
+    var var_understood = sse_decode_bool(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    return RecurrenceCompose(
+      phrase: var_phrase,
+      understood: var_understood,
+      label: var_label,
+    );
+  }
+
+  @protected
+  RecurrenceForm sse_decode_recurrence_form(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_frequency = sse_decode_recurrence_frequency(deserializer);
+    var var_interval = sse_decode_u_32(deserializer);
+    var var_weekdays = sse_decode_list_weekday_kind(deserializer);
+    var var_monthDayMode = sse_decode_month_day_mode(deserializer);
+    var var_monthDays = sse_decode_list_prim_u_32_strict(deserializer);
+    var var_nth = sse_decode_i_32(deserializer);
+    var var_nthWeekday = sse_decode_opt_box_autoadd_weekday_kind(deserializer);
+    var var_months = sse_decode_list_prim_u_32_strict(deserializer);
+    var var_whenDone = sse_decode_bool(deserializer);
+    return RecurrenceForm(
+      frequency: var_frequency,
+      interval: var_interval,
+      weekdays: var_weekdays,
+      monthDayMode: var_monthDayMode,
+      monthDays: var_monthDays,
+      nth: var_nth,
+      nthWeekday: var_nthWeekday,
+      months: var_months,
+      whenDone: var_whenDone,
+    );
+  }
+
+  @protected
+  RecurrenceFrequency sse_decode_recurrence_frequency(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return RecurrenceFrequency.values[inner];
+  }
+
+  @protected
+  RecurrencePreviewItem sse_decode_recurrence_preview_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_date = sse_decode_Chrono_NaiveDate(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    var var_isDue = sse_decode_bool(deserializer);
+    return RecurrencePreviewItem(
+      date: var_date,
+      label: var_label,
+      isDue: var_isDue,
+    );
   }
 
   @protected
@@ -5951,13 +12196,27 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_by = sse_decode_String(deserializer);
     var var_confidence = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_reason = sse_decode_opt_String(deserializer);
+    var var_relLabel = sse_decode_String(deserializer);
+    var var_createdLabel = sse_decode_opt_String(deserializer);
+    var var_citations = sse_decode_list_citation(deserializer);
     return RelationChip(
       relType: var_relType,
       target: var_target,
       by: var_by,
       confidence: var_confidence,
       reason: var_reason,
+      relLabel: var_relLabel,
+      createdLabel: var_createdLabel,
+      citations: var_citations,
     );
+  }
+
+  @protected
+  RelationTypeItem sse_decode_relation_type_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_key = sse_decode_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    return RelationTypeItem(key: var_key, label: var_label);
   }
 
   @protected
@@ -5965,7 +12224,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_local = sse_decode_String(deserializer);
     var var_at = sse_decode_Chrono_Utc(deserializer);
-    return ReminderItem(local: var_local, at: var_at);
+    var var_localAt = sse_decode_Chrono_NaiveDateTime(deserializer);
+    var var_timeLabel = sse_decode_String(deserializer);
+    var var_offsetLabel = sse_decode_String(deserializer);
+    return ReminderItem(
+      local: var_local,
+      at: var_at,
+      localAt: var_localAt,
+      timeLabel: var_timeLabel,
+      offsetLabel: var_offsetLabel,
+    );
   }
 
   @protected
@@ -5976,12 +12244,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_mode = sse_decode_notification_mode(deserializer);
     var var_scheduled = sse_decode_u_32(deserializer);
     var var_defaultTime = sse_decode_String(deserializer);
+    var var_snoozeMinutes = sse_decode_u_32(deserializer);
+    var var_quietEnabled = sse_decode_bool(deserializer);
+    var var_quietFrom = sse_decode_String(deserializer);
+    var var_quietUntil = sse_decode_String(deserializer);
     return RemindersSetting(
       enabled: var_enabled,
       permission: var_permission,
       mode: var_mode,
       scheduled: var_scheduled,
       defaultTime: var_defaultTime,
+      snoozeMinutes: var_snoozeMinutes,
+      quietEnabled: var_quietEnabled,
+      quietFrom: var_quietFrom,
+      quietUntil: var_quietUntil,
     );
   }
 
@@ -6000,12 +12276,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_path = sse_decode_String(deserializer);
     var var_kind = sse_decode_String(deserializer);
     var var_snippet = sse_decode_String(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_snippetDir = sse_decode_text_dir(deserializer);
+    var var_highlights = sse_decode_list_text_span(deserializer);
+    var var_score = sse_decode_f_64(deserializer);
     return SearchHit(
       noteId: var_noteId,
       title: var_title,
       path: var_path,
       kind: var_kind,
       snippet: var_snippet,
+      titleDir: var_titleDir,
+      snippetDir: var_snippetDir,
+      highlights: var_highlights,
+      score: var_score,
     );
   }
 
@@ -6023,11 +12307,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_mode = sse_decode_search_mode(deserializer);
     var var_results = sse_decode_list_search_hit(deserializer);
     var var_availability = sse_decode_availability(deserializer);
+    var var_availableModes = sse_decode_list_search_mode(deserializer);
+    var var_folder = sse_decode_opt_String(deserializer);
     return SearchView(
       query: var_query,
       mode: var_mode,
       results: var_results,
       availability: var_availability,
+      availableModes: var_availableModes,
+      folder: var_folder,
     );
   }
 
@@ -6049,6 +12337,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_unsyncedOps = sse_decode_u_32(deserializer);
     var var_deletionAt = sse_decode_opt_box_autoadd_Chrono_Utc(deserializer);
     var var_daysRemaining = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_deletionLabel = sse_decode_opt_String(deserializer);
+    var var_pending = sse_decode_opt_box_autoadd_pending_approval(deserializer);
+    var var_exportSizeBytes = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_exportNoteCount = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_exportLabel = sse_decode_opt_String(deserializer);
+    var var_thisDevice = sse_decode_opt_box_autoadd_device_item(deserializer);
+    var var_deviceCount = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_pendingApprovals = sse_decode_opt_box_autoadd_u_32(deserializer);
     return SessionState(
       kind: var_kind,
       account: var_account,
@@ -6058,6 +12354,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       unsyncedOps: var_unsyncedOps,
       deletionAt: var_deletionAt,
       daysRemaining: var_daysRemaining,
+      deletionLabel: var_deletionLabel,
+      pending: var_pending,
+      exportSizeBytes: var_exportSizeBytes,
+      exportNoteCount: var_exportNoteCount,
+      exportLabel: var_exportLabel,
+      thisDevice: var_thisDevice,
+      deviceCount: var_deviceCount,
+      pendingApprovals: var_pendingApprovals,
     );
   }
 
@@ -6071,6 +12375,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_export_ = sse_decode_availability(deserializer);
     var var_integrity = sse_decode_availability(deserializer);
     var var_admin = sse_decode_availability(deserializer);
+    var var_deviceList = sse_decode_list_device_item(deserializer);
+    var var_aiStatus = sse_decode_opt_box_autoadd_ai_status_view(deserializer);
+    var var_integrityWarnings = sse_decode_list_integrity_item(deserializer);
+    var var_refreshedLabel = sse_decode_opt_String(deserializer);
     return SettingsView(
       account: var_account,
       reminders: var_reminders,
@@ -6079,6 +12387,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       export_: var_export_,
       integrity: var_integrity,
       admin: var_admin,
+      deviceList: var_deviceList,
+      aiStatus: var_aiStatus,
+      integrityWarnings: var_integrityWarnings,
+      refreshedLabel: var_refreshedLabel,
     );
   }
 
@@ -6147,6 +12459,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_relType = sse_decode_String(deserializer);
     var var_reason = sse_decode_String(deserializer);
     var var_serverKind = sse_decode_String(deserializer);
+    var var_location = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_holder = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_lastHolder = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_documentChoices = sse_decode_list_entity_ref(deserializer);
+    var var_timeline = sse_decode_opt_box_autoadd_timeline_chip(deserializer);
+    var var_other = sse_decode_opt_box_autoadd_entity_ref(deserializer);
     return SuggestionDetail(
       kind: var_kind,
       title: var_title,
@@ -6162,6 +12480,31 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       relType: var_relType,
       reason: var_reason,
       serverKind: var_serverKind,
+      location: var_location,
+      holder: var_holder,
+      lastHolder: var_lastHolder,
+      documentChoices: var_documentChoices,
+      timeline: var_timeline,
+      other: var_other,
+    );
+  }
+
+  @protected
+  SuggestionEdits sse_decode_suggestion_edits(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_title = sse_decode_opt_String(deserializer);
+    var var_folder = sse_decode_opt_String(deserializer);
+    var var_tags = sse_decode_opt_list_String(deserializer);
+    var var_text = sse_decode_opt_String(deserializer);
+    var var_due = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
+    var var_recurrence = sse_decode_opt_String(deserializer);
+    return SuggestionEdits(
+      title: var_title,
+      folder: var_folder,
+      tags: var_tags,
+      text: var_text,
+      due: var_due,
+      recurrence: var_recurrence,
     );
   }
 
@@ -6174,6 +12517,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_detail = sse_decode_suggestion_detail(deserializer);
     var var_created = sse_decode_Chrono_Utc(deserializer);
     var var_pendingSync = sse_decode_bool(deserializer);
+    var var_createdLabel = sse_decode_String(deserializer);
+    var var_sourceText = sse_decode_opt_String(deserializer);
+    var var_sourceDir = sse_decode_text_dir(deserializer);
+    var var_autoApplied = sse_decode_bool(deserializer);
+    var var_canAccept = sse_decode_bool(deserializer);
+    var var_needsYou = sse_decode_bool(deserializer);
+    var var_thread = sse_decode_list_thread_message(deserializer);
     return SuggestionItem(
       id: var_id,
       noteId: var_noteId,
@@ -6181,6 +12531,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       detail: var_detail,
       created: var_created,
       pendingSync: var_pendingSync,
+      createdLabel: var_createdLabel,
+      sourceText: var_sourceText,
+      sourceDir: var_sourceDir,
+      autoApplied: var_autoApplied,
+      canAccept: var_canAccept,
+      needsYou: var_needsYou,
+      thread: var_thread,
     );
   }
 
@@ -6199,12 +12556,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_pagesTotal = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_ops = sse_decode_u_32(deserializer);
     var var_retryAt = sse_decode_opt_box_autoadd_Chrono_Utc(deserializer);
+    var var_opsDone = sse_decode_u_32(deserializer);
+    var var_opsTotal = sse_decode_u_32(deserializer);
+    var var_pulled = sse_decode_u_32(deserializer);
     return SyncActivity(
       phase: var_phase,
       pagesDone: var_pagesDone,
       pagesTotal: var_pagesTotal,
       ops: var_ops,
       retryAt: var_retryAt,
+      opsDone: var_opsDone,
+      opsTotal: var_opsTotal,
+      pulled: var_pulled,
+    );
+  }
+
+  @protected
+  SyncLogItem sse_decode_sync_log_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_at = sse_decode_Chrono_Utc(deserializer);
+    var var_atLabel = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_detail = sse_decode_String(deserializer);
+    return SyncLogItem(
+      at: var_at,
+      atLabel: var_atLabel,
+      kind: var_kind,
+      detail: var_detail,
     );
   }
 
@@ -6224,6 +12602,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_conflicts = sse_decode_u_32(deserializer);
     var var_duplicates = sse_decode_u_32(deserializer);
     var var_lastSyncAt = sse_decode_opt_box_autoadd_Chrono_Utc(deserializer);
+    var var_display = sse_decode_sync_pill_kind(deserializer);
+    var var_progressDone = sse_decode_u_32(deserializer);
+    var var_progressTotal = sse_decode_u_32(deserializer);
+    var var_lastSyncLabel = sse_decode_opt_String(deserializer);
+    var var_label = sse_decode_String(deserializer);
     return SyncPill(
       connectivity: var_connectivity,
       activity: var_activity,
@@ -6231,7 +12614,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       conflicts: var_conflicts,
       duplicates: var_duplicates,
       lastSyncAt: var_lastSyncAt,
+      display: var_display,
+      progressDone: var_progressDone,
+      progressTotal: var_progressTotal,
+      lastSyncLabel: var_lastSyncLabel,
+      label: var_label,
     );
+  }
+
+  @protected
+  SyncPillKind sse_decode_sync_pill_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return SyncPillKind.values[inner];
   }
 
   @protected
@@ -6243,6 +12638,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_outbox = sse_decode_list_outbox_item(deserializer);
     var var_conflicts = sse_decode_list_conflict_item(deserializer);
     var var_rejections = sse_decode_list_rejection_item(deserializer);
+    var var_paused = sse_decode_bool(deserializer);
+    var var_retryIntervalSecs = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_nextRetryLabel = sse_decode_opt_String(deserializer);
+    var var_retryLabel = sse_decode_opt_String(deserializer);
+    var var_log = sse_decode_list_sync_log_item(deserializer);
     return SyncStatusView(
       pill: var_pill,
       bootstrapComplete: var_bootstrapComplete,
@@ -6250,7 +12650,35 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       outbox: var_outbox,
       conflicts: var_conflicts,
       rejections: var_rejections,
+      paused: var_paused,
+      retryIntervalSecs: var_retryIntervalSecs,
+      nextRetryLabel: var_nextRetryLabel,
+      retryLabel: var_retryLabel,
+      log: var_log,
     );
+  }
+
+  @protected
+  TagItem sse_decode_tag_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_tag = sse_decode_String(deserializer);
+    var var_count = sse_decode_u_32(deserializer);
+    return TagItem(tag: var_tag, count: var_count);
+  }
+
+  @protected
+  TaskChip sse_decode_task_chip(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_task_chip_kind(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    return TaskChip(kind: var_kind, label: var_label);
+  }
+
+  @protected
+  TaskChipKind sse_decode_task_chip_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TaskChipKind.values[inner];
   }
 
   @protected
@@ -6277,6 +12705,66 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  TaskDraftPreview sse_decode_task_draft_preview(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_description = sse_decode_String(deserializer);
+    var var_descriptionDir = sse_decode_text_dir(deserializer);
+    var var_due = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
+    var var_dueLabel = sse_decode_opt_String(deserializer);
+    var var_recurrence = sse_decode_opt_String(deserializer);
+    var var_reminders = sse_decode_list_Chrono_NaiveDateTime(deserializer);
+    var var_priority = sse_decode_opt_String(deserializer);
+    var var_links = sse_decode_list_entity_ref(deserializer);
+    var var_chips = sse_decode_list_task_chip(deserializer);
+    var var_draft = sse_decode_task_draft(deserializer);
+    return TaskDraftPreview(
+      description: var_description,
+      descriptionDir: var_descriptionDir,
+      due: var_due,
+      dueLabel: var_dueLabel,
+      recurrence: var_recurrence,
+      reminders: var_reminders,
+      priority: var_priority,
+      links: var_links,
+      chips: var_chips,
+      draft: var_draft,
+    );
+  }
+
+  @protected
+  TaskGroup sse_decode_task_group(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_label = sse_decode_String(deserializer);
+    var var_date = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
+    var var_tasks = sse_decode_list_task_item(deserializer);
+    return TaskGroup(label: var_label, date: var_date, tasks: var_tasks);
+  }
+
+  @protected
+  TaskHomeItem sse_decode_task_home_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_noteId = sse_decode_opt_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_isDefault = sse_decode_bool(deserializer);
+    var var_openTasks = sse_decode_u_32(deserializer);
+    return TaskHomeItem(
+      noteId: var_noteId,
+      title: var_title,
+      path: var_path,
+      isDefault: var_isDefault,
+      openTasks: var_openTasks,
+    );
+  }
+
+  @protected
+  TaskHomesView sse_decode_task_homes_view(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_homes = sse_decode_list_task_home_item(deserializer);
+    return TaskHomesView(homes: var_homes);
+  }
+
+  @protected
   TaskItem sse_decode_task_item(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -6295,6 +12783,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_reminders = sse_decode_list_reminder_item(deserializer);
     var var_links = sse_decode_list_entity_ref(deserializer);
     var var_pendingSync = sse_decode_bool(deserializer);
+    var var_descriptionDir = sse_decode_text_dir(deserializer);
+    var var_notePath = sse_decode_String(deserializer);
+    var var_lineNumber = sse_decode_u_32(deserializer);
+    var var_dueLabel = sse_decode_opt_String(deserializer);
+    var var_latenessLabel = sse_decode_opt_String(deserializer);
+    var var_completionLabel = sse_decode_opt_String(deserializer);
+    var var_nextInLabel = sse_decode_opt_String(deserializer);
+    var var_originLabel = sse_decode_opt_String(deserializer);
+    var var_isOverdue = sse_decode_bool(deserializer);
     return TaskItem(
       id: var_id,
       noteId: var_noteId,
@@ -6310,6 +12807,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       reminders: var_reminders,
       links: var_links,
       pendingSync: var_pendingSync,
+      descriptionDir: var_descriptionDir,
+      notePath: var_notePath,
+      lineNumber: var_lineNumber,
+      dueLabel: var_dueLabel,
+      latenessLabel: var_latenessLabel,
+      completionLabel: var_completionLabel,
+      nextInLabel: var_nextInLabel,
+      originLabel: var_originLabel,
+      isOverdue: var_isOverdue,
     );
   }
 
@@ -6341,11 +12847,25 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_task = sse_decode_opt_box_autoadd_task_item(deserializer);
     var var_line = sse_decode_String(deserializer);
     var var_history = sse_decode_list_task_item(deserializer);
+    var var_locationLabel = sse_decode_String(deserializer);
+    var var_deliveryLabel = sse_decode_opt_String(deserializer);
+    var var_nextOccurrenceLabel = sse_decode_opt_String(deserializer);
+    var var_recurrenceForm = sse_decode_opt_box_autoadd_recurrence_form(
+      deserializer,
+    );
+    var var_recurrencePreview = sse_decode_list_recurrence_preview_item(
+      deserializer,
+    );
     return TaskScreen(
       id: var_id,
       task: var_task,
       line: var_line,
       history: var_history,
+      locationLabel: var_locationLabel,
+      deliveryLabel: var_deliveryLabel,
+      nextOccurrenceLabel: var_nextOccurrenceLabel,
+      recurrenceForm: var_recurrenceForm,
+      recurrencePreview: var_recurrencePreview,
     );
   }
 
@@ -6357,12 +12877,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_upcoming = sse_decode_list_task_item(deserializer);
     var var_recurring = sse_decode_list_task_item(deserializer);
     var var_noDate = sse_decode_list_task_item(deserializer);
+    var var_upcomingGroups = sse_decode_list_task_group(deserializer);
+    var var_todayCount = sse_decode_u_32(deserializer);
     return TaskSections(
       overdue: var_overdue,
       today: var_today,
       upcoming: var_upcoming,
       recurring: var_recurring,
       noDate: var_noDate,
+      upcomingGroups: var_upcomingGroups,
+      todayCount: var_todayCount,
     );
   }
 
@@ -6378,7 +12902,65 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_sections = sse_decode_task_sections(deserializer);
     var var_done = sse_decode_list_task_item(deserializer);
-    return TasksView(sections: var_sections, done: var_done);
+    var var_openCount = sse_decode_u_32(deserializer);
+    var var_doneThisWeek = sse_decode_u_32(deserializer);
+    var var_doneThisWeekLabel = sse_decode_String(deserializer);
+    var var_notesWithTasks = sse_decode_u_32(deserializer);
+    return TasksView(
+      sections: var_sections,
+      done: var_done,
+      openCount: var_openCount,
+      doneThisWeek: var_doneThisWeek,
+      doneThisWeekLabel: var_doneThisWeekLabel,
+      notesWithTasks: var_notesWithTasks,
+    );
+  }
+
+  @protected
+  TextDir sse_decode_text_dir(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return TextDir.values[inner];
+  }
+
+  @protected
+  TextSpan sse_decode_text_span(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    return TextSpan(start: var_start, end: var_end);
+  }
+
+  @protected
+  ThreadMessage sse_decode_thread_message(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_author = sse_decode_String(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_textDir = sse_decode_text_dir(deserializer);
+    var var_createdLabel = sse_decode_String(deserializer);
+    var var_pendingSync = sse_decode_bool(deserializer);
+    return ThreadMessage(
+      id: var_id,
+      author: var_author,
+      text: var_text,
+      textDir: var_textDir,
+      createdLabel: var_createdLabel,
+      pendingSync: var_pendingSync,
+    );
+  }
+
+  @protected
+  TimelineChip sse_decode_timeline_chip(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_dateLabel = sse_decode_String(deserializer);
+    var var_sourcePhrase = sse_decode_String(deserializer);
+    var var_targets = sse_decode_list_entity_ref(deserializer);
+    return TimelineChip(
+      dateLabel: var_dateLabel,
+      sourcePhrase: var_sourcePhrase,
+      targets: var_targets,
+    );
   }
 
   @protected
@@ -6394,6 +12976,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
@@ -6402,6 +12990,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   @protected
   void sse_decode_unit(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  WeekdayKind sse_decode_weekday_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return WeekdayKind.values[inner];
   }
 
   @protected
@@ -6439,6 +13034,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_64(
       PlatformInt64Util.from(self.microsecondsSinceEpoch),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_ask_view_Sse(
+    RustStreamSink<AskView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_ask_view,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
       serializer,
     );
   }
@@ -6563,6 +13175,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_StreamSink_nav_view_Sse(
+    RustStreamSink<NavView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_nav_view,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_StreamSink_note_screen_Sse(
     RustStreamSink<NoteScreen> self,
     SseSerializer serializer,
@@ -6614,6 +13243,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_StreamSink_recent_notes_view_Sse(
+    RustStreamSink<RecentNotesView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_recent_notes_view,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_StreamSink_session_state_Sse(
     RustStreamSink<SessionState> self,
     SseSerializer serializer,
@@ -6657,6 +13303,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       self.setupAndSerialize(
         codec: SseCodec(
           decodeSuccessData: sse_decode_sync_status_view,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_task_homes_view_Sse(
+    RustStreamSink<TaskHomesView> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_task_homes_view,
           decodeErrorData: sse_decode_AnyhowException,
         ),
       ),
@@ -6718,6 +13381,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.serverUrl, serializer);
     sse_encode_String(self.timezone, serializer);
     sse_encode_String(self.uiLanguage, serializer);
+    sse_encode_String(self.initials, serializer);
   }
 
   @protected
@@ -6734,6 +13398,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_Chrono_Utc(self.created, serializer);
     sse_encode_opt_box_autoadd_Chrono_Utc(self.deletionAt, serializer);
     sse_encode_opt_box_autoadd_Chrono_Utc(self.exportDownloadedAt, serializer);
+    sse_encode_String(self.initials, serializer);
+    sse_encode_bool(self.isSelf, serializer);
+    sse_encode_String(self.createdLabel, serializer);
+    sse_encode_opt_String(self.deletionLabel, serializer);
+    sse_encode_bool(self.passwordChangeRequired, serializer);
   }
 
   @protected
@@ -6745,6 +13414,44 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_availability(self.availability, serializer);
     sse_encode_list_admin_user_item(self.pending, serializer);
     sse_encode_list_admin_user_item(self.users, serializer);
+    sse_encode_String(self.query, serializer);
+  }
+
+  @protected
+  void sse_encode_ai_activity_item(
+    AiActivityItem self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.atLabel, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.summary, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.source, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.target, serializer);
+    sse_encode_opt_String(self.relType, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.confidence, serializer);
+    sse_encode_opt_String(self.undoSuggestionId, serializer);
+  }
+
+  @protected
+  void sse_encode_ai_status_view(AiStatusView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.enabled, serializer);
+    sse_encode_opt_String(self.provider, serializer);
+    sse_encode_opt_String(self.pausedLabel, serializer);
+    sse_encode_u_32(self.queueDepth, serializer);
+    sse_encode_u_32(self.budgetUsedPercent, serializer);
+    sse_encode_String(self.budgetLabel, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.embeddingPercent, serializer);
+  }
+
+  @protected
+  void sse_encode_annotated_line(AnnotatedLine self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.line, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_line_change(self.change, serializer);
+    sse_encode_text_dir(self.dir, serializer);
   }
 
   @protected
@@ -6759,6 +13466,47 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.role, serializer);
     sse_encode_String(self.text, serializer);
     sse_encode_list_citation(self.citations, serializer);
+    sse_encode_String(self.id, serializer);
+    sse_encode_bool(self.streaming, serializer);
+    sse_encode_list_ask_span(self.spans, serializer);
+    sse_encode_list_ask_source(self.sources, serializer);
+    sse_encode_String(self.scopeLabel, serializer);
+    sse_encode_u_32(self.sourceCount, serializer);
+    sse_encode_String(self.createdLabel, serializer);
+    sse_encode_text_dir(self.dir, serializer);
+    sse_encode_opt_String(self.errorKey, serializer);
+    sse_encode_opt_String(self.savedNoteId, serializer);
+  }
+
+  @protected
+  void sse_encode_ask_scope(AskScope self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_ask_scope_kind(self.kind, serializer);
+    sse_encode_opt_String(self.value, serializer);
+    sse_encode_String(self.label, serializer);
+  }
+
+  @protected
+  void sse_encode_ask_scope_kind(AskScopeKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_ask_source(AskSource self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.noteId, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_list_String(self.anchors, serializer);
+    sse_encode_list_prim_u_32_strict(self.indexes, serializer);
+  }
+
+  @protected
+  void sse_encode_ask_span(AskSpan self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.text, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.citation, serializer);
   }
 
   @protected
@@ -6766,6 +13514,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_availability(self.availability, serializer);
     sse_encode_list_ask_message(self.messages, serializer);
+    sse_encode_list_ask_scope(self.scopes, serializer);
+    sse_encode_bool(self.streaming, serializer);
+    sse_encode_opt_box_autoadd_ai_status_view(self.aiStatus, serializer);
   }
 
   @protected
@@ -6779,6 +13530,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.kind, serializer);
     sse_encode_list_backlink_item(self.items, serializer);
+    sse_encode_String(self.label, serializer);
   }
 
   @protected
@@ -6786,6 +13538,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.noteId, serializer);
     sse_encode_String(self.title, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_opt_String(self.snippet, serializer);
+    sse_encode_text_dir(self.snippetDir, serializer);
+    sse_encode_opt_String(self.by, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.confidence, serializer);
+  }
+
+  @protected
+  void sse_encode_block_item(BlockItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.blockId, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_text_dir(self.textDir, serializer);
+    sse_encode_u_32(self.line, serializer);
   }
 
   @protected
@@ -6822,9 +13588,36 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_box_autoadd_ai_status_view(
+    AiStatusView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_ai_status_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_ask_scope(
+    AskScope self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_ask_scope(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_bool(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_citation(
+    Citation self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_citation(self, serializer);
   }
 
   @protected
@@ -6852,6 +13645,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_core_config(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_custody_draft(
+    CustodyDraft self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_custody_draft(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_device_item(
+    DeviceItem self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_device_item(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_directory_filter(
+    DirectoryFilter self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_directory_filter(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_document_draft(
+    DocumentDraft self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_document_draft(self, serializer);
   }
 
   @protected
@@ -6888,6 +13717,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_box_autoadd_graph_filter(
+    GraphFilter self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_graph_filter(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_link_or_create_choice(
+    LinkOrCreateChoice self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_link_or_create_choice(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_new_user_request(
+    NewUserRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_new_user_request(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_note_view(
     NoteView self,
     SseSerializer serializer,
@@ -6906,12 +13762,39 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_box_autoadd_pending_approval(
+    PendingApproval self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_pending_approval(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_place_draft(
+    PlaceDraft self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_place_draft(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_place_view(
     PlaceView self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_place_view(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_recurrence_form(
+    RecurrenceForm self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_recurrence_form(self, serializer);
   }
 
   @protected
@@ -6930,6 +13813,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_sign_up_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_suggestion_edits(
+    SuggestionEdits self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_suggestion_edits(self, serializer);
   }
 
   @protected
@@ -6960,6 +13852,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_box_autoadd_timeline_chip(
+    TimelineChip self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_timeline_chip(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_16(self, serializer);
@@ -6972,6 +13873,21 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_weekday_kind(
+    WeekdayKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_weekday_kind(self, serializer);
+  }
+
+  @protected
   void sse_encode_candidate_item(CandidateItem self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.id, serializer);
@@ -6980,6 +13896,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.snippet, serializer);
     sse_encode_String(self.matchLevel, serializer);
     sse_encode_f_64(self.score, serializer);
+    sse_encode_opt_String(self.path, serializer);
+    sse_encode_String(self.reason, serializer);
   }
 
   @protected
@@ -6991,11 +13909,29 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_citation_preview(
+    CitationPreview self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.noteId, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_opt_String(self.blockText, serializer);
+    sse_encode_text_dir(self.blockDir, serializer);
+    sse_encode_opt_String(self.heading, serializer);
+    sse_encode_opt_String(self.dateLabel, serializer);
+    sse_encode_list_String(self.tags, serializer);
+  }
+
+  @protected
   void sse_encode_cited_bullet(CitedBullet self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.text, serializer);
     sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.date, serializer);
     sse_encode_list_citation(self.citations, serializer);
+    sse_encode_text_dir(self.dir, serializer);
+    sse_encode_opt_String(self.dateLabel, serializer);
   }
 
   @protected
@@ -7004,6 +13940,43 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.id, serializer);
     sse_encode_String(self.name, serializer);
     sse_encode_u_32(self.size, serializer);
+    sse_encode_f_64(self.x, serializer);
+    sse_encode_f_64(self.y, serializer);
+    sse_encode_list_graph_point(self.hull, serializer);
+    sse_encode_f_64(self.radius, serializer);
+  }
+
+  @protected
+  void sse_encode_completion_item(
+    CompletionItem self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.label, serializer);
+    sse_encode_String(self.detail, serializer);
+    sse_encode_String(self.insertText, serializer);
+    sse_encode_opt_String(self.targetId, serializer);
+    sse_encode_opt_String(self.entityKind, serializer);
+    sse_encode_text_dir(self.labelDir, serializer);
+  }
+
+  @protected
+  void sse_encode_completion_kind(
+    CompletionKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_completions(Completions self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_completion_kind(self.kind, serializer);
+    sse_encode_u_32(self.replaceStart, serializer);
+    sse_encode_u_32(self.replaceEnd, serializer);
+    sse_encode_String(self.query, serializer);
+    sse_encode_list_completion_item(self.items, serializer);
   }
 
   @protected
@@ -7020,6 +13993,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.mergedPreview, serializer);
     sse_encode_opt_box_autoadd_bool(self.mergeClean, serializer);
     sse_encode_list_conflict_hunk_view(self.hunks, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_String(self.localOriginLabel, serializer);
+    sse_encode_String(self.serverOriginLabel, serializer);
+    sse_encode_list_annotated_line(self.baseLines, serializer);
+    sse_encode_list_annotated_line(self.localLines, serializer);
+    sse_encode_list_annotated_line(self.serverLines, serializer);
+    sse_encode_opt_String(self.conflictCopyPath, serializer);
   }
 
   @protected
@@ -7034,6 +14014,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.base, serializer);
     sse_encode_String(self.ours, serializer);
     sse_encode_String(self.theirs, serializer);
+    sse_encode_String(self.locationLabel, serializer);
+    sse_encode_list_hunk_choice_kind(self.allowedChoices, serializer);
   }
 
   @protected
@@ -7043,6 +14025,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.noteId, serializer);
     sse_encode_String(self.title, serializer);
     sse_encode_Chrono_Utc(self.created, serializer);
+    sse_encode_String(self.createdLabel, serializer);
   }
 
   @protected
@@ -7100,6 +14083,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_custody_draft(CustodyDraft self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.kind, serializer);
+    sse_encode_opt_String(self.placeId, serializer);
+    sse_encode_opt_String(self.personId, serializer);
+    sse_encode_opt_String(self.counterpartyId, serializer);
+    sse_encode_Chrono_NaiveDate(self.date, serializer);
+  }
+
+  @protected
   void sse_encode_custody_item(CustodyItem self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_Chrono_NaiveDate(self.date, serializer);
@@ -7109,6 +14102,45 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_box_autoadd_entity_ref(self.person, serializer);
     sse_encode_opt_box_autoadd_entity_ref(self.counterparty, serializer);
     sse_encode_list_citation(self.citations, serializer);
+    sse_encode_String(self.by, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.confidence, serializer);
+    sse_encode_opt_String(self.decisionId, serializer);
+    sse_encode_String(self.sentenceKey, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.actor, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.destination, serializer);
+    sse_encode_String(self.sentence, serializer);
+    sse_encode_String(self.dateLabel, serializer);
+    sse_encode_bool(self.here, serializer);
+  }
+
+  @protected
+  void sse_encode_device_item(DeviceItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.platform, serializer);
+    sse_encode_Chrono_Utc(self.lastSeen, serializer);
+    sse_encode_String(self.lastSeenLabel, serializer);
+    sse_encode_Chrono_Utc(self.signedIn, serializer);
+    sse_encode_String(self.signedInLabel, serializer);
+    sse_encode_bool(self.isThisDevice, serializer);
+    sse_encode_bool(self.remindersEnabled, serializer);
+  }
+
+  @protected
+  void sse_encode_diff_line(DiffLine self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_diff_line_kind(self.kind, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.oldLine, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.newLine, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_text_dir(self.dir, serializer);
+  }
+
+  @protected
+  void sse_encode_diff_line_kind(DiffLineKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -7124,12 +14156,69 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_directory_filter(
+    DirectoryFilter self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_String(self.tags, serializer);
+    sse_encode_opt_String(self.role, serializer);
+    sse_encode_opt_String(self.companyId, serializer);
+    sse_encode_opt_String(self.industry, serializer);
+    sse_encode_opt_String(self.docType, serializer);
+    sse_encode_opt_String(self.status, serializer);
+    sse_encode_opt_String(self.placeId, serializer);
+    sse_encode_opt_String(self.holderId, serializer);
+    sse_encode_bool(self.expiring, serializer);
+    sse_encode_bool(self.hasOpenItems, serializer);
+  }
+
+  @protected
   void sse_encode_directory_item(DirectoryItem self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.id, serializer);
     sse_encode_String(self.title, serializer);
     sse_encode_opt_String(self.subtitle, serializer);
     sse_encode_list_String(self.aliases, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_String(self.initials, serializer);
+    sse_encode_u_32(self.mentionCount, serializer);
+    sse_encode_opt_box_autoadd_Chrono_Utc(self.lastActive, serializer);
+    sse_encode_opt_String(self.lastActiveLabel, serializer);
+    sse_encode_opt_String(self.role, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.company, serializer);
+    sse_encode_opt_String(self.industry, serializer);
+    sse_encode_list_String(self.tags, serializer);
+    sse_encode_opt_String(self.status, serializer);
+    sse_encode_opt_String(self.docType, serializer);
+    sse_encode_list_entity_ref(self.location, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.holder, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.lastHolder, serializer);
+    sse_encode_opt_String(self.holderLabel, serializer);
+    sse_encode_opt_String(self.copy, serializer);
+    sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.expires, serializer);
+    sse_encode_opt_String(self.expiresLabel, serializer);
+    sse_encode_bool(self.expiringSoon, serializer);
+    sse_encode_list_entity_ref(self.breadcrumb, serializer);
+    sse_encode_u_32(self.documentCount, serializer);
+    sse_encode_bool(self.hasOpenItems, serializer);
+  }
+
+  @protected
+  void sse_encode_directory_section(
+    DirectorySection self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.label, serializer);
+    sse_encode_list_directory_item(self.items, serializer);
+  }
+
+  @protected
+  void sse_encode_directory_sort(DirectorySort self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -7145,6 +14234,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.query, serializer);
     sse_encode_list_directory_item(self.items, serializer);
     sse_encode_directory_counts(self.counts, serializer);
+    sse_encode_directory_filter(self.filter, serializer);
+    sse_encode_directory_sort(self.sort, serializer);
+    sse_encode_list_filter_option(self.filterOptions, serializer);
+    sse_encode_list_directory_section(self.sections, serializer);
+    sse_encode_list_suggestion_item(self.suggestions, serializer);
+    sse_encode_u_32(self.expiringCount, serializer);
   }
 
   @protected
@@ -7155,6 +14250,24 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.status, serializer);
     sse_encode_opt_box_autoadd_entity_ref(self.location, serializer);
     sse_encode_opt_box_autoadd_entity_ref(self.holder, serializer);
+    sse_encode_opt_String(self.docType, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.lastHolder, serializer);
+    sse_encode_list_entity_ref(self.locationPath, serializer);
+    sse_encode_bool(self.expiringSoon, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+  }
+
+  @protected
+  void sse_encode_document_draft(DocumentDraft self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_list_String(self.aliases, serializer);
+    sse_encode_opt_String(self.docType, serializer);
+    sse_encode_opt_String(self.copy, serializer);
+    sse_encode_opt_String(self.copyOf, serializer);
+    sse_encode_list_String(self.companies, serializer);
+    sse_encode_list_String(self.people, serializer);
+    sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.expires, serializer);
   }
 
   @protected
@@ -7173,6 +14286,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_custody_item(self.custody, serializer);
     sse_encode_list_entity_ref(self.copies, serializer);
     sse_encode_list_entity_ref(self.concerns, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_bool(self.pendingSync, serializer);
+    sse_encode_opt_String(self.expiresLabel, serializer);
+    sse_encode_bool(self.expiringSoon, serializer);
+    sse_encode_opt_box_autoadd_task_item(self.renewalTask, serializer);
+    sse_encode_list_note_list_item(self.mentions, serializer);
+    sse_encode_list_document_brief(self.copyBriefs, serializer);
+    sse_encode_String(self.userNotes, serializer);
+    sse_encode_opt_String(self.holderLabel, serializer);
   }
 
   @protected
@@ -7211,6 +14334,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_hint_kind(self.kind, serializer);
     sse_encode_u_32(self.start, serializer);
     sse_encode_u_32(self.end, serializer);
+    sse_encode_opt_String(self.targetId, serializer);
+    sse_encode_opt_String(self.targetAnchor, serializer);
+    sse_encode_opt_String(self.taskId, serializer);
+    sse_encode_u_8(self.level, serializer);
   }
 
   @protected
@@ -7227,6 +14354,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_opt_String(self.id, serializer);
     sse_encode_String(self.title, serializer);
+    sse_encode_opt_String(self.kind, serializer);
   }
 
   @protected
@@ -7255,12 +14383,43 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_relation_chip(self.related, serializer);
     sse_encode_list_document_brief(self.documents, serializer);
     sse_encode_bool(self.pendingSync, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_String(self.initials, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_list_String(self.tags, serializer);
+    sse_encode_String(self.userNotes, serializer);
+    sse_encode_list_citation(self.summaryCitations, serializer);
+    sse_encode_opt_String(self.aiUpdatedLabel, serializer);
+    sse_encode_u_32(self.openCount, serializer);
+    sse_encode_u_32(self.doneCount, serializer);
+    sse_encode_u_32(self.mentionCount, serializer);
+    sse_encode_opt_String(self.lastActiveLabel, serializer);
+    sse_encode_text_dir(self.summaryDir, serializer);
+  }
+
+  @protected
+  void sse_encode_export_summary(ExportSummary self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.path, serializer);
+    sse_encode_u_64(self.sizeBytes, serializer);
+    sse_encode_u_32(self.noteCount, serializer);
+    sse_encode_String(self.label, serializer);
   }
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_filter_option(FilterOption self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.facet, serializer);
+    sse_encode_String(self.value, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_u_32(self.count, serializer);
+    sse_encode_bool(self.selected, serializer);
   }
 
   @protected
@@ -7280,6 +14439,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_graph_node(self.nodes, serializer);
     sse_encode_list_graph_edge(self.edges, serializer);
     sse_encode_list_cluster_label(self.clusters, serializer);
+    sse_encode_graph_filter(self.filter, serializer);
+    sse_encode_list_kind_count(self.edgeCounts, serializer);
+    sse_encode_list_kind_count(self.nodeCounts, serializer);
+    sse_encode_list_String(self.neighbours, serializer);
+    sse_encode_availability(self.similarity, serializer);
   }
 
   @protected
@@ -7290,6 +14454,27 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.kind, serializer);
     sse_encode_opt_String(self.by, serializer);
     sse_encode_opt_box_autoadd_f_64(self.confidence, serializer);
+    sse_encode_String(self.id, serializer);
+    sse_encode_opt_String(self.relType, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_opt_String(self.reason, serializer);
+  }
+
+  @protected
+  void sse_encode_graph_filter(GraphFilter self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_String(self.edgeKinds, serializer);
+    sse_encode_list_String(self.nodeKinds, serializer);
+    sse_encode_bool(self.similarity, serializer);
+    sse_encode_opt_String(self.cluster, serializer);
+    sse_encode_graph_lens(self.lens, serializer);
+    sse_encode_opt_String(self.focus, serializer);
+  }
+
+  @protected
+  void sse_encode_graph_lens(GraphLens self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -7303,6 +14488,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_u_32(self.degree, serializer);
     sse_encode_f_64(self.x, serializer);
     sse_encode_f_64(self.y, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_opt_String(self.summary, serializer);
+    sse_encode_String(self.updatedLabel, serializer);
+    sse_encode_u_32(self.labelRank, serializer);
+    sse_encode_bool(self.isHub, serializer);
+  }
+
+  @protected
+  void sse_encode_graph_point(GraphPoint self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.x, serializer);
+    sse_encode_f_64(self.y, serializer);
   }
 
   @protected
@@ -7312,12 +14509,37 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_history_entry(HistoryEntry self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.commit, serializer);
+    sse_encode_String(self.versionLabel, serializer);
+    sse_encode_String(self.message, serializer);
+    sse_encode_String(self.author, serializer);
+    sse_encode_Chrono_Utc(self.at, serializer);
+    sse_encode_String(self.atLabel, serializer);
+    sse_encode_bool(self.canRevert, serializer);
+  }
+
+  @protected
   void sse_encode_home_view(HomeView self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_note_list_item(self.recentNotes, serializer);
     sse_encode_u_32(self.inboxCount, serializer);
     sse_encode_task_sections(self.tasks, serializer);
     sse_encode_sync_pill(self.sync_, serializer);
+    sse_encode_String(self.todayLabel, serializer);
+    sse_encode_String(self.greeting, serializer);
+    sse_encode_String(self.displayName, serializer);
+    sse_encode_list_inbox_preview_item(self.inboxPreview, serializer);
+    sse_encode_u_32(self.needsYouCount, serializer);
+    sse_encode_u_32(self.contradictionsCount, serializer);
+    sse_encode_String(self.inboxSummary, serializer);
+    sse_encode_availability(self.aiActivity, serializer);
+    sse_encode_list_ai_activity_item(self.aiActivityItems, serializer);
+    sse_encode_String(self.aiActivityHeadline, serializer);
+    sse_encode_availability(self.openItems, serializer);
+    sse_encode_list_open_item(self.openItemList, serializer);
+    sse_encode_list_note_list_item(self.pinned, serializer);
   }
 
   @protected
@@ -7350,6 +14572,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_import_summary(ImportSummary self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.imported, serializer);
+    sse_encode_u_32(self.skipped, serializer);
+  }
+
+  @protected
+  void sse_encode_inbox_filter(InboxFilter self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
   void sse_encode_inbox_item(InboxItem self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.noteId, serializer);
@@ -7358,6 +14593,26 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_Chrono_Utc(self.created, serializer);
     sse_encode_list_suggestion_item(self.suggestions, serializer);
     sse_encode_bool(self.pendingSync, serializer);
+    sse_encode_text_dir(self.textDir, serializer);
+    sse_encode_String(self.createdLabel, serializer);
+    sse_encode_opt_String(self.sourceLabel, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.filingConfidence, serializer);
+    sse_encode_bool(self.needsYou, serializer);
+    sse_encode_bool(self.ready, serializer);
+    sse_encode_bool(self.isDuplicate, serializer);
+  }
+
+  @protected
+  void sse_encode_inbox_preview_item(
+    InboxPreviewItem self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.noteId, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_text_dir(self.textDir, serializer);
+    sse_encode_String(self.summary, serializer);
+    sse_encode_bool(self.needsYou, serializer);
   }
 
   @protected
@@ -7365,6 +14620,29 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_inbox_item(self.captures, serializer);
     sse_encode_list_suggestion_item(self.suggestions, serializer);
+    sse_encode_inbox_filter(self.filter, serializer);
+    sse_encode_u_32(self.readyCount, serializer);
+    sse_encode_u_32(self.needsYouCount, serializer);
+    sse_encode_u_32(self.conflictsCount, serializer);
+    sse_encode_u_32(self.allCount, serializer);
+  }
+
+  @protected
+  void sse_encode_integrity_item(IntegrityItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.messageKey, serializer);
+    sse_encode_opt_String(self.path, serializer);
+    sse_encode_String(self.createdLabel, serializer);
+  }
+
+  @protected
+  void sse_encode_kind_count(KindCount self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_u_32(self.count, serializer);
   }
 
   @protected
@@ -7377,6 +14655,35 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.username, serializer);
     sse_encode_String(self.displayName, serializer);
     sse_encode_String(self.serverUrl, serializer);
+    sse_encode_String(self.initials, serializer);
+  }
+
+  @protected
+  void sse_encode_line_change(LineChange self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_link_or_create_choice(
+    LinkOrCreateChoice self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_link_or_create_kind(self.kind, serializer);
+    sse_encode_opt_String(self.entityId, serializer);
+    sse_encode_opt_String(self.name, serializer);
+    sse_encode_opt_String(self.entityKind, serializer);
+    sse_encode_bool(self.force, serializer);
+  }
+
+  @protected
+  void sse_encode_link_or_create_kind(
+    LinkOrCreateKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -7413,6 +14720,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_ai_activity_item(
+    List<AiActivityItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ai_activity_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_annotated_line(
+    List<AnnotatedLine> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_annotated_line(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_ask_message(
     List<AskMessage> self,
     SseSerializer serializer,
@@ -7421,6 +14752,39 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_ask_message(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ask_scope(
+    List<AskScope> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ask_scope(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ask_source(
+    List<AskSource> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ask_source(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_ask_span(List<AskSpan> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_ask_span(item, serializer);
     }
   }
 
@@ -7445,6 +14809,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_backlink_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_block_item(
+    List<BlockItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_block_item(item, serializer);
     }
   }
 
@@ -7494,6 +14870,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_completion_item(
+    List<CompletionItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_completion_item(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_conflict_hunk_view(
     List<ConflictHunkView> self,
     SseSerializer serializer,
@@ -7530,6 +14918,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_device_item(
+    List<DeviceItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_device_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_diff_line(
+    List<DiffLine> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_diff_line(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_directory_item(
     List<DirectoryItem> self,
     SseSerializer serializer,
@@ -7538,6 +14950,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_directory_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_directory_section(
+    List<DirectorySection> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_directory_section(item, serializer);
     }
   }
 
@@ -7590,6 +15014,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_filter_option(
+    List<FilterOption> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_filter_option(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_folder_item(
     List<FolderItem> self,
     SseSerializer serializer,
@@ -7626,6 +15062,30 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_graph_point(
+    List<GraphPoint> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_graph_point(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_history_entry(
+    List<HistoryEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_history_entry(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_hunk_choice(
     List<HunkChoice> self,
     SseSerializer serializer,
@@ -7638,6 +15098,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_hunk_choice_kind(
+    List<HunkChoiceKind> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_hunk_choice_kind(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_inbox_item(
     List<InboxItem> self,
     SseSerializer serializer,
@@ -7646,6 +15118,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_inbox_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_inbox_preview_item(
+    List<InboxPreviewItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_inbox_preview_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_integrity_item(
+    List<IntegrityItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_integrity_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_kind_count(
+    List<KindCount> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_kind_count(item, serializer);
     }
   }
 
@@ -7674,6 +15182,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_open_item(
+    List<OpenItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_open_item(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_outbox_item(
     List<OutboxItem> self,
     SseSerializer serializer,
@@ -7683,6 +15203,40 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     for (final item in self) {
       sse_encode_outbox_item(item, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_list_place_node(
+    List<PlaceNode> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_place_node(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_place_option(
+    List<PlaceOption> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_place_option(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_u_32_strict(
+    Uint32List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint32List(self);
   }
 
   @protected
@@ -7704,6 +15258,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_property_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_recurrence_preview_item(
+    List<RecurrencePreviewItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_recurrence_preview_item(item, serializer);
     }
   }
 
@@ -7732,6 +15298,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_relation_type_item(
+    List<RelationTypeItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_relation_type_item(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_reminder_item(
     List<ReminderItem> self,
     SseSerializer serializer,
@@ -7756,6 +15334,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_search_mode(
+    List<SearchMode> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_search_mode(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_suggestion_item(
     List<SuggestionItem> self,
     SseSerializer serializer,
@@ -7764,6 +15354,63 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_suggestion_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_sync_log_item(
+    List<SyncLogItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_sync_log_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_tag_item(List<TagItem> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_tag_item(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_task_chip(
+    List<TaskChip> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_task_chip(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_task_group(
+    List<TaskGroup> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_task_group(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_task_home_item(
+    List<TaskHomeItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_task_home_item(item, serializer);
     }
   }
 
@@ -7780,6 +15427,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_text_span(
+    List<TextSpan> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_text_span(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_thread_message(
+    List<ThreadMessage> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_thread_message(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_weekday_kind(
+    List<WeekdayKind> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_weekday_kind(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_local_graph_view(
     LocalGraphView self,
     SseSerializer serializer,
@@ -7790,6 +15473,68 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_u_8(self.depth, serializer);
     sse_encode_list_graph_node(self.nodes, serializer);
     sse_encode_list_graph_edge(self.edges, serializer);
+    sse_encode_u_32(self.relationCount, serializer);
+    sse_encode_u_32(self.aiRelationCount, serializer);
+    sse_encode_String(self.relationLabel, serializer);
+    sse_encode_opt_String(self.summary, serializer);
+    sse_encode_availability(self.saveLayout, serializer);
+    sse_encode_availability(self.proposeRelation, serializer);
+  }
+
+  @protected
+  void sse_encode_mention_edit(MentionEdit self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.content, serializer);
+    sse_encode_u_32(self.cursor, serializer);
+  }
+
+  @protected
+  void sse_encode_merge_preview(MergePreview self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_entity_ref(self.source, serializer);
+    sse_encode_entity_ref(self.into, serializer);
+    sse_encode_list_String(self.aliases, serializer);
+    sse_encode_u_32(self.mentionCount, serializer);
+    sse_encode_u_32(self.relationCount, serializer);
+  }
+
+  @protected
+  void sse_encode_month_day_mode(MonthDayMode self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_nav_view(NavView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.inboxCount, serializer);
+    sse_encode_u_32(self.tasksDueCount, serializer);
+    sse_encode_u_32(self.notesCount, serializer);
+    sse_encode_u_32(self.directoryCount, serializer);
+    sse_encode_u_32(self.clusterCount, serializer);
+    sse_encode_list_note_list_item(self.pinned, serializer);
+    sse_encode_sync_pill(self.sync_, serializer);
+  }
+
+  @protected
+  void sse_encode_new_user_request(
+    NewUserRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.username, serializer);
+    sse_encode_String(self.displayName, serializer);
+    sse_encode_String(self.password, serializer);
+    sse_encode_String(self.role, serializer);
+  }
+
+  @protected
+  void sse_encode_note_diff_view(NoteDiffView self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.noteId, serializer);
+    sse_encode_String(self.commit, serializer);
+    sse_encode_String(self.summary, serializer);
+    sse_encode_list_diff_line(self.lines, serializer);
   }
 
   @protected
@@ -7803,6 +15548,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_String(self.tags, serializer);
     sse_encode_Chrono_Utc(self.updatedAt, serializer);
     sse_encode_bool(self.pendingSync, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_text_dir(self.snippetDir, serializer);
+    sse_encode_String(self.updatedLabel, serializer);
+    sse_encode_u_32(self.linkCount, serializer);
+    sse_encode_list_text_span(self.highlights, serializer);
   }
 
   @protected
@@ -7827,6 +15577,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_note_sync_kind(self.kind, serializer);
     sse_encode_u_32(self.pendingOps, serializer);
     sse_encode_opt_String(self.conflictOpId, serializer);
+    sse_encode_opt_String(self.duplicateOpId, serializer);
+    sse_encode_String(self.label, serializer);
   }
 
   @protected
@@ -7846,6 +15598,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_editor_hint(self.hints, serializer);
     sse_encode_note_sync_state(self.sync_, serializer);
     sse_encode_availability(self.history, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_String(self.contentVersion, serializer);
+    sse_encode_opt_String(self.versionLabel, serializer);
+    sse_encode_opt_String(self.createdLabel, serializer);
+    sse_encode_opt_String(self.editedLabel, serializer);
+    sse_encode_opt_String(self.editedBy, serializer);
+    sse_encode_u_32(self.wordCount, serializer);
+    sse_encode_u_32(self.backlinkCount, serializer);
+    sse_encode_list_history_entry(self.historyEntries, serializer);
+    sse_encode_bool(self.pinned, serializer);
   }
 
   @protected
@@ -7857,6 +15619,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.folder, serializer);
     sse_encode_list_folder_item(self.folders, serializer);
     sse_encode_list_note_list_item(self.notes, serializer);
+    sse_encode_list_folder_item(self.breadcrumb, serializer);
+    sse_encode_u_32(self.noteCount, serializer);
   }
 
   @protected
@@ -7866,7 +15630,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_notification_action_kind(self.kind, serializer);
-    sse_encode_u_32(self.minutes, serializer);
   }
 
   @protected
@@ -7929,6 +15692,17 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_open_item(OpenItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_text_dir(self.textDir, serializer);
+    sse_encode_entity_ref(self.person, serializer);
+    sse_encode_opt_box_autoadd_citation(self.citation, serializer);
+    sse_encode_bool(self.done, serializer);
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -7978,12 +15752,38 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_ai_status_view(
+    AiStatusView? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_ai_status_view(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_bool(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_citation(
+    Citation? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_citation(self, serializer);
     }
   }
 
@@ -7997,6 +15797,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_conflict_detail(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_device_item(
+    DeviceItem? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_device_item(self, serializer);
     }
   }
 
@@ -8063,6 +15876,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_pending_approval(
+    PendingApproval? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_pending_approval(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_place_view(
     PlaceView? self,
     SseSerializer serializer,
@@ -8076,6 +15902,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_recurrence_form(
+    RecurrenceForm? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_recurrence_form(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_box_autoadd_task_item(
     TaskItem? self,
     SseSerializer serializer,
@@ -8085,6 +15924,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_task_item(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_timeline_chip(
+    TimelineChip? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_timeline_chip(self, serializer);
     }
   }
 
@@ -8109,6 +15961,29 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_weekday_kind(
+    WeekdayKind? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_weekday_kind(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_list_Chrono_NaiveDateTime(
     List<DateTime>? self,
     SseSerializer serializer,
@@ -8122,6 +15997,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_opt_list_String(
+    List<String>? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_String(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_outbox_item(OutboxItem self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.opId, serializer);
@@ -8130,12 +16018,75 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_outbox_status(self.status, serializer);
     sse_encode_u_32(self.attempts, serializer);
     sse_encode_Chrono_Utc(self.created, serializer);
+    sse_encode_String(self.detail, serializer);
+    sse_encode_text_dir(self.detailDir, serializer);
+    sse_encode_String(self.createdLabel, serializer);
   }
 
   @protected
   void sse_encode_outbox_status(OutboxStatus self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_password_level(PasswordLevel self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_password_strength(
+    PasswordStrength self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_password_level(self.level, serializer);
+    sse_encode_u_32(self.length, serializer);
+    sse_encode_u_32(self.minLength, serializer);
+  }
+
+  @protected
+  void sse_encode_pending_approval(
+    PendingApproval self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.username, serializer);
+    sse_encode_String(self.serverUrl, serializer);
+    sse_encode_Chrono_Utc(self.requestedAt, serializer);
+    sse_encode_String(self.requestedLabel, serializer);
+    sse_encode_opt_box_autoadd_Chrono_Utc(self.lastCheckedAt, serializer);
+    sse_encode_opt_String(self.lastCheckedLabel, serializer);
+    sse_encode_bool(self.canCheck, serializer);
+  }
+
+  @protected
+  void sse_encode_place_draft(PlaceDraft self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_list_String(self.aliases, serializer);
+    sse_encode_opt_String(self.parentId, serializer);
+    sse_encode_opt_String(self.address, serializer);
+  }
+
+  @protected
+  void sse_encode_place_node(PlaceNode self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_entity_ref(self.place, serializer);
+    sse_encode_u_32(self.depth, serializer);
+    sse_encode_u_32(self.documentCount, serializer);
+    sse_encode_String(self.parentId, serializer);
+  }
+
+  @protected
+  void sse_encode_place_option(PlaceOption self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_list_entity_ref(self.breadcrumb, serializer);
+    sse_encode_u_32(self.depth, serializer);
+    sse_encode_bool(self.isCurrent, serializer);
   }
 
   @protected
@@ -8148,6 +16099,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_entity_ref(self.subPlaces, serializer);
     sse_encode_list_document_brief(self.documents, serializer);
     sse_encode_list_custody_item(self.recentMovements, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_list_place_node(self.tree, serializer);
+    sse_encode_list_document_brief(self.outWithPeople, serializer);
+    sse_encode_String(self.userNotes, serializer);
+    sse_encode_String(self.path, serializer);
   }
 
   @protected
@@ -8161,6 +16117,70 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.key, serializer);
     sse_encode_list_String(self.values, serializer);
+  }
+
+  @protected
+  void sse_encode_recent_filter(RecentFilter self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_recent_notes_view(
+    RecentNotesView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_recent_filter(self.filter, serializer);
+    sse_encode_list_note_list_item(self.notes, serializer);
+  }
+
+  @protected
+  void sse_encode_recurrence_compose(
+    RecurrenceCompose self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.phrase, serializer);
+    sse_encode_bool(self.understood, serializer);
+    sse_encode_String(self.label, serializer);
+  }
+
+  @protected
+  void sse_encode_recurrence_form(
+    RecurrenceForm self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_recurrence_frequency(self.frequency, serializer);
+    sse_encode_u_32(self.interval, serializer);
+    sse_encode_list_weekday_kind(self.weekdays, serializer);
+    sse_encode_month_day_mode(self.monthDayMode, serializer);
+    sse_encode_list_prim_u_32_strict(self.monthDays, serializer);
+    sse_encode_i_32(self.nth, serializer);
+    sse_encode_opt_box_autoadd_weekday_kind(self.nthWeekday, serializer);
+    sse_encode_list_prim_u_32_strict(self.months, serializer);
+    sse_encode_bool(self.whenDone, serializer);
+  }
+
+  @protected
+  void sse_encode_recurrence_frequency(
+    RecurrenceFrequency self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_recurrence_preview_item(
+    RecurrencePreviewItem self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_Chrono_NaiveDate(self.date, serializer);
+    sse_encode_String(self.label, serializer);
+    sse_encode_bool(self.isDue, serializer);
   }
 
   @protected
@@ -8180,6 +16200,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.by, serializer);
     sse_encode_opt_box_autoadd_f_64(self.confidence, serializer);
     sse_encode_opt_String(self.reason, serializer);
+    sse_encode_String(self.relLabel, serializer);
+    sse_encode_opt_String(self.createdLabel, serializer);
+    sse_encode_list_citation(self.citations, serializer);
+  }
+
+  @protected
+  void sse_encode_relation_type_item(
+    RelationTypeItem self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.key, serializer);
+    sse_encode_String(self.label, serializer);
   }
 
   @protected
@@ -8187,6 +16220,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.local, serializer);
     sse_encode_Chrono_Utc(self.at, serializer);
+    sse_encode_Chrono_NaiveDateTime(self.localAt, serializer);
+    sse_encode_String(self.timeLabel, serializer);
+    sse_encode_String(self.offsetLabel, serializer);
   }
 
   @protected
@@ -8200,6 +16236,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_notification_mode(self.mode, serializer);
     sse_encode_u_32(self.scheduled, serializer);
     sse_encode_String(self.defaultTime, serializer);
+    sse_encode_u_32(self.snoozeMinutes, serializer);
+    sse_encode_bool(self.quietEnabled, serializer);
+    sse_encode_String(self.quietFrom, serializer);
+    sse_encode_String(self.quietUntil, serializer);
   }
 
   @protected
@@ -8219,6 +16259,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.path, serializer);
     sse_encode_String(self.kind, serializer);
     sse_encode_String(self.snippet, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_text_dir(self.snippetDir, serializer);
+    sse_encode_list_text_span(self.highlights, serializer);
+    sse_encode_f_64(self.score, serializer);
   }
 
   @protected
@@ -8234,6 +16278,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_search_mode(self.mode, serializer);
     sse_encode_list_search_hit(self.results, serializer);
     sse_encode_availability(self.availability, serializer);
+    sse_encode_list_search_mode(self.availableModes, serializer);
+    sse_encode_opt_String(self.folder, serializer);
   }
 
   @protected
@@ -8253,6 +16299,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_u_32(self.unsyncedOps, serializer);
     sse_encode_opt_box_autoadd_Chrono_Utc(self.deletionAt, serializer);
     sse_encode_opt_box_autoadd_u_32(self.daysRemaining, serializer);
+    sse_encode_opt_String(self.deletionLabel, serializer);
+    sse_encode_opt_box_autoadd_pending_approval(self.pending, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.exportSizeBytes, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.exportNoteCount, serializer);
+    sse_encode_opt_String(self.exportLabel, serializer);
+    sse_encode_opt_box_autoadd_device_item(self.thisDevice, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.deviceCount, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.pendingApprovals, serializer);
   }
 
   @protected
@@ -8265,6 +16319,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_availability(self.export_, serializer);
     sse_encode_availability(self.integrity, serializer);
     sse_encode_availability(self.admin, serializer);
+    sse_encode_list_device_item(self.deviceList, serializer);
+    sse_encode_opt_box_autoadd_ai_status_view(self.aiStatus, serializer);
+    sse_encode_list_integrity_item(self.integrityWarnings, serializer);
+    sse_encode_opt_String(self.refreshedLabel, serializer);
   }
 
   @protected
@@ -8330,6 +16388,26 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.relType, serializer);
     sse_encode_String(self.reason, serializer);
     sse_encode_String(self.serverKind, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.location, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.holder, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.lastHolder, serializer);
+    sse_encode_list_entity_ref(self.documentChoices, serializer);
+    sse_encode_opt_box_autoadd_timeline_chip(self.timeline, serializer);
+    sse_encode_opt_box_autoadd_entity_ref(self.other, serializer);
+  }
+
+  @protected
+  void sse_encode_suggestion_edits(
+    SuggestionEdits self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.title, serializer);
+    sse_encode_opt_String(self.folder, serializer);
+    sse_encode_opt_list_String(self.tags, serializer);
+    sse_encode_opt_String(self.text, serializer);
+    sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.due, serializer);
+    sse_encode_opt_String(self.recurrence, serializer);
   }
 
   @protected
@@ -8344,6 +16422,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_suggestion_detail(self.detail, serializer);
     sse_encode_Chrono_Utc(self.created, serializer);
     sse_encode_bool(self.pendingSync, serializer);
+    sse_encode_String(self.createdLabel, serializer);
+    sse_encode_opt_String(self.sourceText, serializer);
+    sse_encode_text_dir(self.sourceDir, serializer);
+    sse_encode_bool(self.autoApplied, serializer);
+    sse_encode_bool(self.canAccept, serializer);
+    sse_encode_bool(self.needsYou, serializer);
+    sse_encode_list_thread_message(self.thread, serializer);
   }
 
   @protected
@@ -8363,6 +16448,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_box_autoadd_u_32(self.pagesTotal, serializer);
     sse_encode_u_32(self.ops, serializer);
     sse_encode_opt_box_autoadd_Chrono_Utc(self.retryAt, serializer);
+    sse_encode_u_32(self.opsDone, serializer);
+    sse_encode_u_32(self.opsTotal, serializer);
+    sse_encode_u_32(self.pulled, serializer);
+  }
+
+  @protected
+  void sse_encode_sync_log_item(SyncLogItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_Chrono_Utc(self.at, serializer);
+    sse_encode_String(self.atLabel, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.detail, serializer);
   }
 
   @protected
@@ -8380,6 +16477,17 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_u_32(self.conflicts, serializer);
     sse_encode_u_32(self.duplicates, serializer);
     sse_encode_opt_box_autoadd_Chrono_Utc(self.lastSyncAt, serializer);
+    sse_encode_sync_pill_kind(self.display, serializer);
+    sse_encode_u_32(self.progressDone, serializer);
+    sse_encode_u_32(self.progressTotal, serializer);
+    sse_encode_opt_String(self.lastSyncLabel, serializer);
+    sse_encode_String(self.label, serializer);
+  }
+
+  @protected
+  void sse_encode_sync_pill_kind(SyncPillKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -8394,6 +16502,31 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_outbox_item(self.outbox, serializer);
     sse_encode_list_conflict_item(self.conflicts, serializer);
     sse_encode_list_rejection_item(self.rejections, serializer);
+    sse_encode_bool(self.paused, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.retryIntervalSecs, serializer);
+    sse_encode_opt_String(self.nextRetryLabel, serializer);
+    sse_encode_opt_String(self.retryLabel, serializer);
+    sse_encode_list_sync_log_item(self.log, serializer);
+  }
+
+  @protected
+  void sse_encode_tag_item(TagItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.tag, serializer);
+    sse_encode_u_32(self.count, serializer);
+  }
+
+  @protected
+  void sse_encode_task_chip(TaskChip self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_task_chip_kind(self.kind, serializer);
+    sse_encode_String(self.label, serializer);
+  }
+
+  @protected
+  void sse_encode_task_chip_kind(TaskChipKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -8406,6 +16539,51 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.recurrence, serializer);
     sse_encode_list_Chrono_NaiveDateTime(self.reminders, serializer);
     sse_encode_opt_String(self.priority, serializer);
+  }
+
+  @protected
+  void sse_encode_task_draft_preview(
+    TaskDraftPreview self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.description, serializer);
+    sse_encode_text_dir(self.descriptionDir, serializer);
+    sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.due, serializer);
+    sse_encode_opt_String(self.dueLabel, serializer);
+    sse_encode_opt_String(self.recurrence, serializer);
+    sse_encode_list_Chrono_NaiveDateTime(self.reminders, serializer);
+    sse_encode_opt_String(self.priority, serializer);
+    sse_encode_list_entity_ref(self.links, serializer);
+    sse_encode_list_task_chip(self.chips, serializer);
+    sse_encode_task_draft(self.draft, serializer);
+  }
+
+  @protected
+  void sse_encode_task_group(TaskGroup self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.label, serializer);
+    sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.date, serializer);
+    sse_encode_list_task_item(self.tasks, serializer);
+  }
+
+  @protected
+  void sse_encode_task_home_item(TaskHomeItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.noteId, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_bool(self.isDefault, serializer);
+    sse_encode_u_32(self.openTasks, serializer);
+  }
+
+  @protected
+  void sse_encode_task_homes_view(
+    TaskHomesView self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_task_home_item(self.homes, serializer);
   }
 
   @protected
@@ -8425,6 +16603,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_reminder_item(self.reminders, serializer);
     sse_encode_list_entity_ref(self.links, serializer);
     sse_encode_bool(self.pendingSync, serializer);
+    sse_encode_text_dir(self.descriptionDir, serializer);
+    sse_encode_String(self.notePath, serializer);
+    sse_encode_u_32(self.lineNumber, serializer);
+    sse_encode_opt_String(self.dueLabel, serializer);
+    sse_encode_opt_String(self.latenessLabel, serializer);
+    sse_encode_opt_String(self.completionLabel, serializer);
+    sse_encode_opt_String(self.nextInLabel, serializer);
+    sse_encode_opt_String(self.originLabel, serializer);
+    sse_encode_bool(self.isOverdue, serializer);
   }
 
   @protected
@@ -8446,6 +16633,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_box_autoadd_task_item(self.task, serializer);
     sse_encode_String(self.line, serializer);
     sse_encode_list_task_item(self.history, serializer);
+    sse_encode_String(self.locationLabel, serializer);
+    sse_encode_opt_String(self.deliveryLabel, serializer);
+    sse_encode_opt_String(self.nextOccurrenceLabel, serializer);
+    sse_encode_opt_box_autoadd_recurrence_form(self.recurrenceForm, serializer);
+    sse_encode_list_recurrence_preview_item(self.recurrencePreview, serializer);
   }
 
   @protected
@@ -8456,6 +16648,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_task_item(self.upcoming, serializer);
     sse_encode_list_task_item(self.recurring, serializer);
     sse_encode_list_task_item(self.noDate, serializer);
+    sse_encode_list_task_group(self.upcomingGroups, serializer);
+    sse_encode_u_32(self.todayCount, serializer);
   }
 
   @protected
@@ -8469,6 +16663,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_task_sections(self.sections, serializer);
     sse_encode_list_task_item(self.done, serializer);
+    sse_encode_u_32(self.openCount, serializer);
+    sse_encode_u_32(self.doneThisWeek, serializer);
+    sse_encode_String(self.doneThisWeekLabel, serializer);
+    sse_encode_u_32(self.notesWithTasks, serializer);
+  }
+
+  @protected
+  void sse_encode_text_dir(TextDir self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_text_span(TextSpan self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+  }
+
+  @protected
+  void sse_encode_thread_message(ThreadMessage self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.author, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_text_dir(self.textDir, serializer);
+    sse_encode_String(self.createdLabel, serializer);
+    sse_encode_bool(self.pendingSync, serializer);
+  }
+
+  @protected
+  void sse_encode_timeline_chip(TimelineChip self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.dateLabel, serializer);
+    sse_encode_String(self.sourcePhrase, serializer);
+    sse_encode_list_entity_ref(self.targets, serializer);
   }
 
   @protected
@@ -8484,6 +16714,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self);
@@ -8492,5 +16728,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_weekday_kind(WeekdayKind self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 }

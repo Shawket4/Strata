@@ -114,14 +114,16 @@ pub fn plan(conn: &Connection, now: DateTime<Utc>, tz: Tz) -> CoreResult<Vec<Pla
 /// Quiet hours `(from, until)` when on.
 fn quiet_window(conn: &Connection) -> CoreResult<Option<(NaiveTime, NaiveTime)>> {
     let (enabled, from, until) = settings::quiet_hours(conn)?;
-    Ok(match (
-        enabled,
-        NaiveTime::parse_from_str(&from, "%H:%M"),
-        NaiveTime::parse_from_str(&until, "%H:%M"),
-    ) {
-        (true, Ok(f), Ok(u)) if f != u => Some((f, u)),
-        _ => None,
-    })
+    Ok(
+        match (
+            enabled,
+            NaiveTime::parse_from_str(&from, "%H:%M"),
+            NaiveTime::parse_from_str(&until, "%H:%M"),
+        ) {
+            (true, Ok(f), Ok(u)) if f != u => Some((f, u)),
+            _ => None,
+        },
+    )
 }
 
 /// The instant a reminder is delivered: inside quiet hours (which may span midnight) it

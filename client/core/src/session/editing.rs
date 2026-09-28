@@ -319,7 +319,11 @@ impl Session {
 
     /// A capture flagged as a duplicate: keep it (the server records "keep both") or discard
     /// it (the suggestion is rejected and the capture deleted).
-    pub fn resolve_capture_duplicate(&self, id: &str, choice: DuplicateChoice) -> CoreResult<String> {
+    pub fn resolve_capture_duplicate(
+        &self,
+        id: &str,
+        choice: DuplicateChoice,
+    ) -> CoreResult<String> {
         let s = self.suggestion(id)?;
         if s.detail.kind != SuggestionKind::Duplicate {
             return Err(CoreError::invalid("suggestion", "not_a_duplicate"));
@@ -424,8 +428,12 @@ impl Session {
             .transpose()?;
         let id = self.env.ids.ulid();
         let refs: Vec<&str> = p.aliases.iter().map(String::as_str).collect();
-        let item =
-            dedupe::Item::entity(domain::DedupeKind::Place, Some(&id.to_string()), name, &refs);
+        let item = dedupe::Item::entity(
+            domain::DedupeKind::Place,
+            Some(&id.to_string()),
+            name,
+            &refs,
+        );
         self.create_item(
             &id.to_string(),
             item,
@@ -689,14 +697,7 @@ impl Session {
         }
         self.write(|c, _| {
             let changed = cache::set_pinned(c, id, pinned)?;
-            Ok((
-                (),
-                if changed {
-                    Topics::NOTES
-                } else {
-                    Topics::NONE
-                },
-            ))
+            Ok(((), if changed { Topics::NOTES } else { Topics::NONE }))
         })
     }
 
@@ -754,7 +755,7 @@ impl Session {
 
     /// Writes the unsynced ops to a readable file (disabled / deletion-pending accounts).
     pub fn export_unsynced(&self, path: &str) -> CoreResult<u32> {
-        self.read(|c, _| super::account::export_unsynced(c, path))
+        self.read(|c, _| super::account_ops::export_unsynced(c, path))
     }
 }
 
@@ -776,7 +777,10 @@ mod tests {
             "---\nid: x\n---\n## Summary\nAI text\n\n## Notes\nmine\n"
         );
         assert_eq!(
-            with_user_notes("## Notes\nold\n## Timeline\n- 2026-09-01 — x [[a]]\n", "new"),
+            with_user_notes(
+                "## Notes\nold\n## Timeline\n- 2026-09-01 — x [[a]]\n",
+                "new"
+            ),
             "## Notes\nnew\n\n## Timeline\n- 2026-09-01 — x [[a]]\n"
         );
     }

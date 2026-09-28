@@ -74,6 +74,8 @@ pub enum CycleOutcome {
     Failed(NetError),
     /// Simulated crash at a step (tests).
     Crashed(Step),
+    /// The user paused sync: nothing was pushed or pulled.
+    Paused,
 }
 
 /// What a cycle did.
@@ -174,6 +176,10 @@ impl SyncEngine {
             bootstrapped: false,
             outcome: CycleOutcome::Synced,
         };
+        if host.db(|c, _| Ok((sync_state::get(c)?.paused, Topics::NONE)))? {
+            report.outcome = CycleOutcome::Paused;
+            return Ok(report);
+        }
         let outcome = match self.push_all(host, &mut report).await? {
             Flow::Stop(o) => o,
             Flow::Go(()) => match self.pull_all(host, &mut report).await? {
@@ -190,6 +196,24 @@ impl SyncEngine {
                     s.last_error = None;
                     s.last_pull_at = Some(now.to_owned());
                 })?;
+                if report.pushed > 0 || report.pulled > 0 {
+                    crate::store::cache::log(
+                        c,
+                        now,
+                        if report.bootstrapped {
+                            "bootstrap"
+                        } else {
+                            "synced"
+                        },
+                        &format!("pushed {} · pulled {}", report.pushed, report.pulled),
+                    )?;
+                }
+                Ok(((), Topics::SYNC))
+            })?;
+        } else if let CycleOutcome::Failed(e) = &outcome {
+            let key = crate::error::CoreError::from(e.clone()).message_key();
+            host.db(|c, now| {
+                crate::store::cache::log(c, now, "failed", &key)?;
                 Ok(((), Topics::SYNC))
             })?;
         }
@@ -202,6 +226,14 @@ impl SyncEngine {
         host: &H,
         report: &mut CycleReport,
     ) -> CoreResult<Flow<()>> {
+        let total = host.db(|c, _| {
+            let n: u32 = c.query_row(
+                "SELECT COUNT(*) FROM outbox WHERE status = 'pending'",
+                [],
+                |r| r.get(0),
+            )?;
+            Ok((n, Topics::NONE))
+        })?;
         loop {
             let batch = host.db(|c, _| {
                 let ops = outbox::next_batch(c, self.batch_size)?;
@@ -219,6 +251,8 @@ impl SyncEngine {
             host.set_activity(SyncActivity {
                 phase: SyncPhase::Pushing,
                 ops: u32::try_from(batch.len()).unwrap_or(u32::MAX),
+                ops_done: report.pushed,
+                ops_total: total.max(report.pushed + u32::try_from(batch.len()).unwrap_or(0)),
                 ..SyncActivity::default()
             });
             let request = batch
@@ -280,6 +314,7 @@ impl SyncEngine {
             };
             host.set_activity(SyncActivity {
                 phase: SyncPhase::Pulling,
+                pulled: report.pulled,
                 ..SyncActivity::default()
             });
             let page = match self

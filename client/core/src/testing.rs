@@ -17,14 +17,14 @@ use sync_model::{UpdateDecision, decide_update};
 use ulid::Ulid;
 use vault_format::PathIndex;
 
-use crate::net::{AccountApi, MeInfo, NetError, SessionTokens, SyncApi, Tokens};
+use crate::net::{AccountApi, AdminUserInfo, MeInfo, NetError, SessionTokens, SyncApi, Tokens};
 use crate::store::notes::NoteState;
 use crate::store::write::{Links, apply_to_note, task_op_id};
 use crate::sync::model::{
     BootstrapPage, ChangeRecord, ChangesPage, ConflictResolution, EntityType, Op, OpOutcome,
     OpResult, Problem, Record, SyncOp, Version,
 };
-use crate::view::model::{AdminUserItem, Platform};
+use crate::view::model::Platform;
 
 fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
     m.lock().unwrap_or_else(PoisonError::into_inner)
@@ -584,7 +584,7 @@ impl AccountApi for FakeAccountApi {
         &self,
         _server_url: String,
         _tokens: Tokens,
-    ) -> BoxFuture<'_, Result<Vec<AdminUserItem>, NetError>> {
+    ) -> BoxFuture<'_, Result<Vec<AdminUserInfo>, NetError>> {
         self.call("admin_users".to_owned());
         Box::pin(async { Ok(Vec::new()) })
     }

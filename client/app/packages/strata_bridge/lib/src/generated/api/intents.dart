@@ -25,9 +25,18 @@ Future<CreateOutcome> createNote({
   force: force,
 );
 
-/// Saves a note's content.
-Future<String> updateNote({required String id, required String content}) =>
-    StrataCore.instance.api.crateApiIntentsUpdateNote(id: id, content: content);
+/// Saves a note's full content made against `base_version` (`NoteView::content_version`
+/// when the editor loaded it; `None` saves unconditionally). A stale base is 3-way merged
+/// with the changes made since, or refused with `stale_edit`.
+Future<String> updateNote({
+  required String id,
+  required String content,
+  String? baseVersion,
+}) => StrataCore.instance.api.crateApiIntentsUpdateNote(
+  id: id,
+  content: content,
+  baseVersion: baseVersion,
+);
 
 /// Moves/renames a note.
 Future<String> moveNote({required String id, required String newPath}) =>
@@ -129,6 +138,17 @@ Future<String> reopenTask({required String taskId}) =>
 Future<String> deleteTask({required String taskId}) =>
     StrataCore.instance.api.crateApiIntentsDeleteTask(taskId: taskId);
 
+/// Adds a reminder to a task (local wall-clock time).
+Future<String> addReminder({required String taskId, required DateTime at}) =>
+    StrataCore.instance.api.crateApiIntentsAddReminder(taskId: taskId, at: at);
+
+/// Removes a reminder (`ReminderItem::local_at`).
+Future<String> removeReminder({required String taskId, required DateTime at}) =>
+    StrataCore.instance.api.crateApiIntentsRemoveReminder(
+      taskId: taskId,
+      at: at,
+    );
+
 /// Resolves a sync conflict (D19).
 Future<void> resolveConflict({
   required String opId,
@@ -156,3 +176,294 @@ Future<void> setRemindersEnabled({required bool enabled}) => StrataCore
     .instance
     .api
     .crateApiIntentsSetRemindersEnabled(enabled: enabled);
+
+/// Inserts an `@mention` (UTF-16 range `start..end` of the typed `@query`) as a link and adds
+/// the entity to `people:`/`companies:`: the new content and caret, saved with `update_note`.
+Future<MentionEdit> insertMention({
+  required String noteId,
+  required String content,
+  required int start,
+  required int end,
+  required String entityId,
+}) => StrataCore.instance.api.crateApiIntentsInsertMention(
+  noteId: noteId,
+  content: content,
+  start: start,
+  end: end,
+  entityId: entityId,
+);
+
+/// Pins a note to the sidebar (this device) or unpins it.
+Future<void> pinNote({required String id, required bool pinned}) =>
+    StrataCore.instance.api.crateApiIntentsPinNote(id: id, pinned: pinned);
+
+/// Accepts what the AI proposed for a capture (every suggestion that needs no choice).
+Future<List<String>> acceptCapture({required String noteId}) =>
+    StrataCore.instance.api.crateApiIntentsAcceptCapture(noteId: noteId);
+
+/// Rejects every pending suggestion of a capture.
+Future<List<String>> rejectCapture({required String noteId}) =>
+    StrataCore.instance.api.crateApiIntentsRejectCapture(noteId: noteId);
+
+/// Accepts the listed captures that are ready (bulk bar).
+Future<List<String>> acceptCaptures({required List<String> noteIds}) =>
+    StrataCore.instance.api.crateApiIntentsAcceptCaptures(noteIds: noteIds);
+
+/// "Accept all ready".
+Future<List<String>> acceptAllReady() =>
+    StrataCore.instance.api.crateApiIntentsAcceptAllReady();
+
+/// Accepts a proposal with the user's edits.
+Future<String> acceptSuggestionWith({
+  required String id,
+  required SuggestionEdits edits,
+}) => StrataCore.instance.api.crateApiIntentsAcceptSuggestionWith(
+  id: id,
+  edits: edits,
+);
+
+/// "Who is “بابا”?": link to an existing entity or create one (the mention becomes an alias).
+Future<CreateOutcome> resolveLinkOrCreate({
+  required String id,
+  required LinkOrCreateChoice choice,
+}) => StrataCore.instance.api.crateApiIntentsResolveLinkOrCreate(
+  id: id,
+  choice: choice,
+);
+
+/// Picks the document of an ambiguous custody suggestion.
+Future<String> acceptSuggestionChoice({
+  required String id,
+  required String documentId,
+}) => StrataCore.instance.api.crateApiIntentsAcceptSuggestionChoice(
+  id: id,
+  documentId: documentId,
+);
+
+/// Undo on a suggestion (rejects a pending one; `not_available` for an AI change applied
+/// automatically until the server's undo endpoint exists).
+Future<String> undoSuggestion({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsUndoSuggestion(id: id);
+
+/// "Looks right" on an AI change applied automatically.
+Future<void> acknowledgeSuggestion({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsAcknowledgeSuggestion(id: id);
+
+/// A capture flagged as a duplicate: keep it or discard it.
+Future<String> resolveCaptureDuplicate({
+  required String id,
+  required DuplicateChoice choice,
+}) => StrataCore.instance.api.crateApiIntentsResolveCaptureDuplicate(
+  id: id,
+  choice: choice,
+);
+
+/// Replies in a suggestion's thread.
+Future<String> replyToSuggestion({required String id, required String text}) =>
+    StrataCore.instance.api.crateApiIntentsReplyToSuggestion(
+      id: id,
+      text: text,
+    );
+
+/// Creates a document (duplicate-checked unless `force`).
+Future<CreateOutcome> createDocument({
+  required DocumentDraft draft,
+  required bool force,
+}) => StrataCore.instance.api.crateApiIntentsCreateDocument(
+  draft: draft,
+  force: force,
+);
+
+/// Creates a place (duplicate-checked unless `force`).
+Future<CreateOutcome> createPlace({
+  required PlaceDraft draft,
+  required bool force,
+}) => StrataCore.instance.api.crateApiIntentsCreatePlace(
+  draft: draft,
+  force: force,
+);
+
+/// Merges entity `source_id` into `into_id`.
+Future<String> mergeEntities({
+  required String sourceId,
+  required String intoId,
+}) => StrataCore.instance.api.crateApiIntentsMergeEntities(
+  sourceId: sourceId,
+  intoId: intoId,
+);
+
+/// Points a relation at another target (D13 "this Ahmed is Ahmed Fathy").
+Future<String> repointRelation({
+  required String srcId,
+  required String dstId,
+  required String relType,
+  required String newDstId,
+}) => StrataCore.instance.api.crateApiIntentsRepointRelation(
+  srcId: srcId,
+  dstId: dstId,
+  relType: relType,
+  newDstId: newDstId,
+);
+
+/// Rejects a relation (an AI edge is recorded as rejected and never re-proposed; undo with
+/// `add_relation`).
+Future<String> rejectRelation({
+  required String srcId,
+  required String dstId,
+  required String relType,
+}) => StrataCore.instance.api.crateApiIntentsRejectRelation(
+  srcId: srcId,
+  dstId: dstId,
+  relType: relType,
+);
+
+/// Replaces the user-owned `## Notes` section of an entity, document or place.
+Future<String> updateUserNotes({required String id, required String text}) =>
+    StrataCore.instance.api.crateApiIntentsUpdateUserNotes(id: id, text: text);
+
+/// Sets a property of an entity, document or place.
+Future<String> setProperty({
+  required String id,
+  required String key,
+  required String value,
+}) => StrataCore.instance.api.crateApiIntentsSetProperty(
+  id: id,
+  key: key,
+  value: value,
+);
+
+/// Removes a property.
+Future<String> removeProperty({required String id, required String key}) =>
+    StrataCore.instance.api.crateApiIntentsRemoveProperty(id: id, key: key);
+
+/// Adds an alias.
+Future<String> addAlias({required String id, required String alias}) =>
+    StrataCore.instance.api.crateApiIntentsAddAlias(id: id, alias: alias);
+
+/// Removes an alias.
+Future<String> removeAlias({required String id, required String alias}) =>
+    StrataCore.instance.api.crateApiIntentsRemoveAlias(id: id, alias: alias);
+
+/// Records a custody event of a document ("Record a move").
+Future<String> recordCustody({
+  required String documentId,
+  required CustodyDraft draft,
+}) => StrataCore.instance.api.crateApiIntentsRecordCustody(
+  documentId: documentId,
+  draft: draft,
+);
+
+/// Time used for date-only reminders (`HH:MM`).
+Future<void> setDefaultReminderTime({required String time}) =>
+    StrataCore.instance.api.crateApiIntentsSetDefaultReminderTime(time: time);
+
+/// Quiet hours (`HH:MM`).
+Future<void> setQuietHours({
+  required bool enabled,
+  required String from,
+  required String until,
+}) => StrataCore.instance.api.crateApiIntentsSetQuietHours(
+  enabled: enabled,
+  from: from,
+  until: until,
+);
+
+/// The notification's Snooze length (minutes).
+Future<void> setSnoozeMinutes({required int minutes}) =>
+    StrataCore.instance.api.crateApiIntentsSetSnoozeMinutes(minutes: minutes);
+
+/// Re-reads devices, AI status, integrity warnings and the approval count (online).
+Future<void> refreshSettings() =>
+    StrataCore.instance.api.crateApiIntentsRefreshSettings();
+
+/// Renames a device.
+Future<void> renameDevice({required String id, required String name}) =>
+    StrataCore.instance.api.crateApiIntentsRenameDevice(id: id, name: name);
+
+/// Signs another device out.
+Future<void> revokeDevice({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsRevokeDevice(id: id);
+
+/// Reminders on/off for a device ("Deliver to").
+Future<void> setDeviceReminders({required String id, required bool enabled}) =>
+    StrataCore.instance.api.crateApiIntentsSetDeviceReminders(
+      id: id,
+      enabled: enabled,
+    );
+
+/// Fetches a note's history (online).
+Future<void> refreshHistory({required String noteId}) =>
+    StrataCore.instance.api.crateApiIntentsRefreshHistory(noteId: noteId);
+
+/// Reverts a note to a revision (online).
+Future<void> revertNote({required String noteId, required String commit}) =>
+    StrataCore.instance.api.crateApiIntentsRevertNote(
+      noteId: noteId,
+      commit: commit,
+    );
+
+/// Downloads the vault export to a file the user chose.
+Future<ExportSummary> exportVault({required String path}) =>
+    StrataCore.instance.api.crateApiIntentsExportVault(path: path);
+
+/// Imports a zip archive.
+Future<ImportSummary> importVault({required String path}) =>
+    StrataCore.instance.api.crateApiIntentsImportVault(path: path);
+
+/// Admin: approves a sign-up.
+Future<AdminUserItem> approveUser({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsApproveUser(id: id);
+
+/// Admin: rejects a sign-up.
+Future<AdminUserItem> rejectUser({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsRejectUser(id: id);
+
+/// Admin: sets a user's role (`admin` | `member`).
+Future<AdminUserItem> setUserRole({required String id, required String role}) =>
+    StrataCore.instance.api.crateApiIntentsSetUserRole(id: id, role: role);
+
+/// Admin: disables (`enabled = false`) or enables an account.
+Future<AdminUserItem> setUserEnabled({
+  required String id,
+  required bool enabled,
+}) => StrataCore.instance.api.crateApiIntentsSetUserEnabled(
+  id: id,
+  enabled: enabled,
+);
+
+/// Admin: resets a password; returns the one-time temporary password.
+Future<String> resetPassword({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsResetPassword(id: id);
+
+/// Admin: schedules an account's deletion (D25).
+Future<AdminUserItem> scheduleDeletion({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsScheduleDeletion(id: id);
+
+/// Admin: cancels a scheduled deletion.
+Future<AdminUserItem> cancelDeletion({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsCancelDeletion(id: id);
+
+/// Admin: creates an active account.
+Future<AdminUserItem> createUser({required NewUserRequest request}) =>
+    StrataCore.instance.api.crateApiIntentsCreateUser(request: request);
+
+/// Ask: asks a question in `scope`; the answer streams into `watch_ask`. Returns the answer's
+/// ID when it ended.
+Future<String> ask({required String question, required AskScope scope}) =>
+    StrataCore.instance.api.crateApiIntentsAsk(
+      question: question,
+      scope: scope,
+    );
+
+/// Ask: stops the streaming answer.
+Future<void> stopAsk() => StrataCore.instance.api.crateApiIntentsStopAsk();
+
+/// Ask: starts a new conversation.
+Future<void> newConversation() =>
+    StrataCore.instance.api.crateApiIntentsNewConversation();
+
+/// Ask: saves an answer as a note (§9.5); returns the note's ID.
+Future<String> saveAnswerAsNote({required String messageId}) => StrataCore
+    .instance
+    .api
+    .crateApiIntentsSaveAnswerAsNote(messageId: messageId);

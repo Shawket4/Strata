@@ -200,6 +200,15 @@ window_secs = 3600
 max = 30
 window_secs = 3600
 
+# Per user (PLAN §8): `POST /capture` and `POST /ask`.
+[auth.rate_limits.capture_per_user]
+max = 60
+window_secs = 60
+
+[auth.rate_limits.ask_per_user]
+max = 20
+window_secs = 60
+
 [jobs]
 # Background jobs (PLAN §5.2, §9.2): fair round-robin across users. Jobs running at once across
 # all users (1 CPU core); embeddings also run one at a time, LLM calls at most

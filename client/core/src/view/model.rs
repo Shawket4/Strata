@@ -679,7 +679,7 @@ pub enum RecentFilter {
 }
 
 /// The "Recent" block with a filter (HomeExpanded).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RecentNotesView {
     /// Filter.
     pub filter: RecentFilter,
@@ -688,7 +688,7 @@ pub struct RecentNotesView {
 }
 
 /// Navigation counts and pinned notes (sidebar, rail, bottom bar).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct NavView {
     /// Inbox items awaiting review.
     pub inbox_count: u32,
@@ -707,7 +707,7 @@ pub struct NavView {
 }
 
 /// Home / Capture.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HomeView {
     /// Most recently changed notes (≤ 10).
     pub recent_notes: Vec<NoteListItem>,
@@ -1333,7 +1333,7 @@ pub struct RelationChip {
 }
 
 /// A note linking here.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BacklinkItem {
     /// Source note.
     pub note_id: String,
@@ -1352,7 +1352,7 @@ pub struct BacklinkItem {
 }
 
 /// Backlinks of one kind (`link` for body links, or a relation type).
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BacklinkGroup {
     /// `link` or the relation type.
     pub kind: String,
@@ -1829,7 +1829,7 @@ pub struct DirectoryCounts {
 }
 
 /// The directory.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DirectoryView {
     /// Tab shown.
     pub tab: DirectoryTab,
@@ -2028,7 +2028,7 @@ pub struct PlaceNode {
 }
 
 /// One custody event.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct CustodyItem {
     /// Date.
     pub date: NaiveDate,
@@ -2066,7 +2066,7 @@ pub struct CustodyItem {
 }
 
 /// A document page.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DocumentView {
     /// ID.
     pub id: String,
@@ -2117,7 +2117,7 @@ pub struct DocumentView {
 }
 
 /// A place page.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PlaceView {
     /// ID.
     pub id: String,
@@ -2189,7 +2189,7 @@ pub enum SearchMode {
 }
 
 /// A search result.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SearchHit {
     /// Note ID.
     pub note_id: String,
@@ -2212,7 +2212,7 @@ pub struct SearchHit {
 }
 
 /// Search results.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SearchView {
     /// Query.
     pub query: String,
@@ -2492,7 +2492,7 @@ pub struct KindCount {
 }
 
 /// A cluster region label.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ClusterLabel {
     /// Cluster ID.
     pub id: String,

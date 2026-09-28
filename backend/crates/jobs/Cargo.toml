@@ -37,6 +37,7 @@ ulid = { workspace = true }
 
 [dev-dependencies]
 strata-testkit = { workspace = true }
+sync-model = { workspace = true }
 strata-ai = { workspace = true, features = ["test-support"] }
 tempfile = { workspace = true }
 pretty_assertions = { workspace = true }

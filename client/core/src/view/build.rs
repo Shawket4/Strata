@@ -126,11 +126,13 @@ pub(crate) fn entity_ref(
 
 /// A reference to an existing note by ID.
 pub(crate) fn note_ref(conn: &Connection, id: &str) -> CoreResult<EntityRef> {
-    Ok(entity_ref(conn, Some(id.to_owned()), None)?.unwrap_or(EntityRef {
-        id: Some(id.to_owned()),
-        title: String::new(),
-        kind: None,
-    }))
+    Ok(
+        entity_ref(conn, Some(id.to_owned()), None)?.unwrap_or(EntityRef {
+            id: Some(id.to_owned()),
+            title: String::new(),
+            kind: None,
+        }),
+    )
 }
 
 fn citation(conn: &Connection, link: &WikiLink) -> CoreResult<Citation> {
@@ -317,8 +319,16 @@ pub fn sync_pill(conn: &Connection, ctx: &ViewCtx) -> CoreResult<SyncPill> {
         last_sync_label: last_sync_at.map(|t| labels.moment_label(t)),
         last_sync_at,
         display,
-        progress_done: if display == SyncPillKind::Syncing { done } else { 0 },
-        progress_total: if display == SyncPillKind::Syncing { total } else { 0 },
+        progress_done: if display == SyncPillKind::Syncing {
+            done
+        } else {
+            0
+        },
+        progress_total: if display == SyncPillKind::Syncing {
+            total
+        } else {
+            0
+        },
         label,
     })
 }
@@ -339,11 +349,7 @@ fn task_description(conn: &Connection, id: &str) -> CoreResult<String> {
 }
 
 /// What an outbox op does, in one line.
-fn op_detail(
-    conn: &Connection,
-    op: &outbox::OutboxOp,
-    lang: Lang,
-) -> CoreResult<String> {
+fn op_detail(conn: &Connection, op: &outbox::OutboxOp, lang: Lang) -> CoreResult<String> {
     use crate::sync::model::Op;
     let title_of = |id: &ulid::Ulid| -> CoreResult<String> {
         Ok(note_title(conn, &id.to_string())?.unwrap_or_default())
@@ -354,7 +360,14 @@ fn op_detail(
             None => tr(lang, "Edited", "تعديل"),
         },
         Op::NoteCreate(p) => format::title_of(&p.path),
-        Op::Capture(c) => c.text.lines().next().unwrap_or_default().chars().take(120).collect(),
+        Op::Capture(c) => c
+            .text
+            .lines()
+            .next()
+            .unwrap_or_default()
+            .chars()
+            .take(120)
+            .collect(),
         Op::NoteMove(m) => format!("→ {}", m.new_path),
         Op::NoteDelete(_) => tr(lang, "Deleted", "حذف"),
         Op::RelationAdd(r) => format!(
@@ -513,7 +526,10 @@ pub fn allowed_choices(
     ];
     if matches!(location, sync_model::Location::Body { .. }) {
         if kind != sync_model::ConflictKind::TaskPlacement {
-            v.extend([HunkChoiceKind::OursThenTheirs, HunkChoiceKind::TheirsThenOurs]);
+            v.extend([
+                HunkChoiceKind::OursThenTheirs,
+                HunkChoiceKind::TheirsThenOurs,
+            ]);
         }
         v.push(HunkChoiceKind::Text);
     }
@@ -521,7 +537,11 @@ pub fn allowed_choices(
 }
 
 /// One conflict.
-pub fn conflict_screen(conn: &Connection, ctx: &ViewCtx, op_id: &str) -> CoreResult<ConflictScreen> {
+pub fn conflict_screen(
+    conn: &Connection,
+    ctx: &ViewCtx,
+    op_id: &str,
+) -> CoreResult<ConflictScreen> {
     let Some(c) = conflicts::conflict(conn, op_id)? else {
         return Ok(ConflictScreen {
             op_id: op_id.to_owned(),
@@ -769,7 +789,11 @@ fn task_item(
             (TaskState::Done, Some(done), Some(due)) => Some(labels.completion(done, due)),
             _ => None,
         },
-        next_in_label: match (open, &row.recurrence_raw, due.or(row.scheduled.as_deref().and_then(date))) {
+        next_in_label: match (
+            open,
+            &row.recurrence_raw,
+            due.or(row.scheduled.as_deref().and_then(date)),
+        ) {
             (true, Some(_), Some(d)) if d >= labels.today() => Some(labels.next_in(d)),
             _ => None,
         },
@@ -960,7 +984,10 @@ pub fn task_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Tas
         .recurrence
         .as_deref()
         .and_then(|r| vault_format::tasks::parse_recurrence(r).ok());
-    let anchor = task.due.or(task.scheduled).unwrap_or_else(|| labels.today());
+    let anchor = task
+        .due
+        .or(task.scheduled)
+        .unwrap_or_else(|| labels.today());
     let location_label = match ctx.lang {
         Lang::En => format!("{} · line {}", task.note_path, task.line_number),
         Lang::Ar => format!("{} · السطر {}", task.note_path, task.line_number),
@@ -1009,7 +1036,10 @@ fn suggestion_summary(d: &SuggestionDetail, lang: Lang) -> String {
         SuggestionKind::Relation => format!(
             "{} → {}",
             labels::relation_label(&d.rel_type, lang),
-            d.target.as_ref().map(|t| t.title.clone()).unwrap_or_default()
+            d.target
+                .as_ref()
+                .map(|t| t.title.clone())
+                .unwrap_or_default()
         ),
         SuggestionKind::Conflict => match lang {
             Lang::En => format!("Conflict copy · {}", d.folder),
@@ -1018,7 +1048,10 @@ fn suggestion_summary(d: &SuggestionDetail, lang: Lang) -> String {
         SuggestionKind::Duplicates => format!(
             "{} ≈ {}",
             d.title,
-            d.other.as_ref().map(|o| o.title.clone()).unwrap_or_default()
+            d.other
+                .as_ref()
+                .map(|o| o.title.clone())
+                .unwrap_or_default()
         ),
         SuggestionKind::Unsupported => String::new(),
     }
@@ -1070,7 +1103,12 @@ fn open_items(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Vec<OpenItem>> {
 pub fn pinned_notes(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Vec<NoteListItem>> {
     let mut out = Vec::new();
     for id in cache::pinned(conn)? {
-        out.extend(note_items(conn, ctx, "WHERE n.id = ?1 AND n.deleted = 0", [&id])?);
+        out.extend(note_items(
+            conn,
+            ctx,
+            "WHERE n.id = ?1 AND n.deleted = 0",
+            [&id],
+        )?);
     }
     Ok(out)
 }
@@ -1100,7 +1138,14 @@ pub fn home(conn: &Connection, ctx: &ViewCtx) -> CoreResult<HomeView> {
         .iter()
         .take(3)
         .map(|c| {
-            let text: String = c.text.lines().next().unwrap_or_default().chars().take(120).collect();
+            let text: String = c
+                .text
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .chars()
+                .take(120)
+                .collect();
             InboxPreviewItem {
                 note_id: c.note_id.clone(),
                 text_dir: dir_of(&text),
@@ -1121,7 +1166,9 @@ pub fn home(conn: &Connection, ctx: &ViewCtx) -> CoreResult<HomeView> {
                 .iter()
                 .flat_map(|c| &c.suggestions)
                 .chain(&inbox_view.suggestions)
-                .filter(|s| s.detail.kind == SuggestionKind::Relation && s.detail.rel_type == "contradicts")
+                .filter(|s| {
+                    s.detail.kind == SuggestionKind::Relation && s.detail.rel_type == "contradicts"
+                })
                 .count(),
         )
         .unwrap_or(0),
@@ -1193,7 +1240,11 @@ pub fn nav(conn: &Connection, ctx: &ViewCtx) -> CoreResult<NavView> {
 }
 
 /// The "Recent" block with a filter.
-pub fn recent(conn: &Connection, ctx: &ViewCtx, filter: RecentFilter) -> CoreResult<RecentNotesView> {
+pub fn recent(
+    conn: &Connection,
+    ctx: &ViewCtx,
+    filter: RecentFilter,
+) -> CoreResult<RecentNotesView> {
     let tail = match filter {
         RecentFilter::Edited => {
             "WHERE n.deleted = 0 AND n.path NOT LIKE 'inbox/%'
@@ -1235,7 +1286,9 @@ pub(crate) fn complete_candidate(
     lang: Lang,
 ) -> CoreResult<CandidateItem> {
     c.path = conn
-        .query_row("SELECT path FROM notes WHERE id = ?1", [&c.id], |r| r.get(0))
+        .query_row("SELECT path FROM notes WHERE id = ?1", [&c.id], |r| {
+            r.get(0)
+        })
         .optional()?;
     c.reason = match_reason(&c.match_level, lang);
     Ok(c)
@@ -1437,7 +1490,16 @@ pub fn suggestion_items(
 ) -> CoreResult<Vec<SuggestionItem>> {
     let pending = pending_entities(conn)?;
     let labels = ctx.labels();
-    let rows: Vec<(String, Option<String>, Vec<u8>, String, String, String, Option<Vec<u8>>, bool)> = {
+    let rows: Vec<(
+        String,
+        Option<String>,
+        Vec<u8>,
+        String,
+        String,
+        String,
+        Option<Vec<u8>>,
+        bool,
+    )> = {
         let mut st = conn.prepare(
             "SELECT s.id, s.note_id, s.payload, s.status, s.created, s.kind, s.replies,
                     EXISTS (SELECT 1 FROM acknowledged_suggestions a WHERE a.id = s.id)
@@ -1591,7 +1653,8 @@ pub fn inbox(conn: &Connection, ctx: &ViewCtx, filter: InboxFilter) -> CoreResul
         })
         .collect();
     let conflicted = |c: &InboxItem| c.suggestions.iter().any(is_conflict);
-    let ready_count = u32_of(i64::try_from(captures.iter().filter(|c| c.ready).count()).unwrap_or(0));
+    let ready_count =
+        u32_of(i64::try_from(captures.iter().filter(|c| c.ready).count()).unwrap_or(0));
     let needs_you_count = u32_of(
         i64::try_from(
             captures.iter().filter(|c| c.needs_you).count()
@@ -1741,7 +1804,15 @@ fn linking_sentence(
 }
 
 fn backlinks(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Vec<BacklinkGroup>> {
-    let rows: Vec<(String, String, String, String, String, Option<String>, Option<f64>)> = {
+    let rows: Vec<(
+        String,
+        String,
+        String,
+        String,
+        String,
+        Option<String>,
+        Option<f64>,
+    )> = {
         let mut st = conn.prepare(
             "SELECT 'link', n.id, n.title, n.path, n.content, NULL, NULL
                FROM links l JOIN notes n ON n.id = l.note_id
@@ -1952,15 +2023,23 @@ pub fn note_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Not
         .map(|c| c.with_timezone(&Utc))
         .unwrap_or_else(|| ts(&n.local_updated_at));
     let edited_label = Some(match lang {
-        Lang::En => format!("Edited {}", labels.moment_with_day(edited_at).to_lowercase_first()),
+        Lang::En => format!(
+            "Edited {}",
+            labels.moment_with_day(edited_at).to_lowercase_first()
+        ),
         Lang::Ar => format!("عُدّلت {}", labels.moment_with_day(edited_at)),
     });
-    let account_name = account::get(conn)?.map(|a| a.display_name).unwrap_or_default();
-    let edited_by = history.as_ref().and_then(|h| h.first()).map(|h| match h.author.as_str() {
-        "user" => account_name.clone(),
-        "ai" => "AI".to_owned(),
-        _ => tr(lang, "System", "النظام"),
-    });
+    let account_name = account::get(conn)?
+        .map(|a| a.display_name)
+        .unwrap_or_default();
+    let edited_by = history
+        .as_ref()
+        .and_then(|h| h.first())
+        .map(|h| match h.author.as_str() {
+            "user" => account_name.clone(),
+            "ai" => "AI".to_owned(),
+            _ => tr(lang, "System", "النظام"),
+        });
     let word_count = u32_of(i64::try_from(parsed.body.split_whitespace().count()).unwrap_or(0));
     let pinned = cache::pinned(conn)?.iter().any(|p| p == id);
     Ok(NoteScreen {
@@ -2044,7 +2123,10 @@ fn hint_of(h: hints::Span) -> EditorHint {
 
 /// Editor highlight spans of `content` (links unresolved: no database).
 pub fn hints_of(content: &str) -> Vec<EditorHint> {
-    hints::editor_hints(content).into_iter().map(hint_of).collect()
+    hints::editor_hints(content)
+        .into_iter()
+        .map(hint_of)
+        .collect()
 }
 
 /// Editor highlight spans with wikilinks resolved to note IDs (as written in the note at
@@ -2076,7 +2158,10 @@ pub fn admin_user_item(ctx: &ViewCtx, me: &str, u: crate::net::AdminUserInfo) ->
         }
     } else {
         match ctx.lang {
-            Lang::En => format!("Joined {}", labels.date_long(labels.local(u.created).date())),
+            Lang::En => format!(
+                "Joined {}",
+                labels.date_long(labels.local(u.created).date())
+            ),
             Lang::Ar => format!("انضم {}", labels.date_long(labels.local(u.created).date())),
         }
     };
@@ -2182,7 +2267,8 @@ pub fn notes_list(conn: &Connection, ctx: &ViewCtx, folder: &str) -> CoreResult<
                 paths
                     .iter()
                     .filter(|(_, path)| {
-                        path.strip_prefix(&pre).is_some_and(|rest| !rest.contains('/'))
+                        path.strip_prefix(&pre)
+                            .is_some_and(|rest| !rest.contains('/'))
                     })
                     .count(),
             )
@@ -2274,18 +2360,20 @@ fn section_body(parsed: &format::ParsedNote, title: &str, own: bool) -> Option<S
         .into_iter()
         .find(|s| s.level == 2 && s.title.eq_ignore_ascii_case(title))
         .map(|s| {
-            let span = if own { s.own_content_span } else { s.content_span };
+            let span = if own {
+                s.own_content_span
+            } else {
+                s.content_span
+            };
             parsed.body[span].to_owned()
         })
 }
 
 fn has_open_items(conn: &Connection, id: &str) -> CoreResult<bool> {
     let row: Option<(String, String)> = conn
-        .query_row(
-            "SELECT path, content FROM notes WHERE id = ?1",
-            [id],
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )
+        .query_row("SELECT path, content FROM notes WHERE id = ?1", [id], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
         .optional()?;
     Ok(row.is_some_and(|(path, content)| {
         section_body(&format::parse_note(&path, &content), "Open items", true)
@@ -2489,11 +2577,7 @@ fn matches_filter(conn: &Connection, i: &DirectoryItem, f: &DirectoryFilter) -> 
         && eq(&i.status, &f.status)
         && match &f.place_id {
             None => true,
-            Some(p) => place_contains(
-                conn,
-                p,
-                i.location.last().and_then(|l| l.id.as_deref()),
-            )?,
+            Some(p) => place_contains(conn, p, i.location.last().and_then(|l| l.id.as_deref()))?,
         }
         && f.holder_id
             .as_ref()
@@ -2624,7 +2708,8 @@ pub fn directory_filtered(
         all.push(directory_item(conn, ctx, tab, id, title, role, industry)?);
     }
     let filter_options = facet_options(&all, tab, filter, lang);
-    let expiring_count = u32_of(i64::try_from(all.iter().filter(|i| i.expiring_soon).count()).unwrap_or(0));
+    let expiring_count =
+        u32_of(i64::try_from(all.iter().filter(|i| i.expiring_soon).count()).unwrap_or(0));
     let mut items = Vec::new();
     for i in all {
         if matches_filter(conn, &i, filter)? {
@@ -2652,7 +2737,8 @@ pub fn directory_filtered(
             items = keyed.into_iter().map(|(_, i)| i).collect();
         }
     }
-    let plain = sort == DirectorySort::Name && q.is_empty() && *filter == DirectoryFilter::default();
+    let plain =
+        sort == DirectorySort::Name && q.is_empty() && *filter == DirectoryFilter::default();
     let all_label = match (tab, lang) {
         (DirectoryTab::People, Lang::En) => "All people · A–Z",
         (DirectoryTab::Companies, Lang::En) => "All companies · A–Z",
@@ -2665,9 +2751,16 @@ pub fn directory_filtered(
     };
     let mut sections = Vec::new();
     if plain && matches!(tab, DirectoryTab::People | DirectoryTab::Companies) && items.len() > 3 {
-        let mut recent: Vec<DirectoryItem> =
-            items.iter().filter(|i| i.last_active.is_some()).cloned().collect();
-        recent.sort_by(|a, b| b.last_active.cmp(&a.last_active).then_with(|| a.id.cmp(&b.id)));
+        let mut recent: Vec<DirectoryItem> = items
+            .iter()
+            .filter(|i| i.last_active.is_some())
+            .cloned()
+            .collect();
+        recent.sort_by(|a, b| {
+            b.last_active
+                .cmp(&a.last_active)
+                .then_with(|| a.id.cmp(&b.id))
+        });
         recent.truncate(3);
         if !recent.is_empty() {
             sections.push(DirectorySection {
@@ -2687,12 +2780,13 @@ pub fn directory_filtered(
     let suggestions = suggestion_items(conn, ctx, true)?
         .into_iter()
         .filter(|s| match (tab, s.detail.kind) {
-            (DirectoryTab::People | DirectoryTab::Companies, SuggestionKind::EntityLinkOrCreate) => true,
-            (_, SuggestionKind::Duplicates) => s
-                .detail
-                .duplicates
-                .first()
-                .is_some_and(|c| c.kind == kind),
+            (
+                DirectoryTab::People | DirectoryTab::Companies,
+                SuggestionKind::EntityLinkOrCreate,
+            ) => true,
+            (_, SuggestionKind::Duplicates) => {
+                s.detail.duplicates.first().is_some_and(|c| c.kind == kind)
+            }
             (DirectoryTab::Documents, SuggestionKind::Custody) => true,
             _ => false,
         })
@@ -2731,7 +2825,14 @@ pub fn directory(
     tab: DirectoryTab,
     query: &str,
 ) -> CoreResult<DirectoryView> {
-    directory_filtered(conn, ctx, tab, query, &DirectoryFilter::default(), DirectorySort::Name)
+    directory_filtered(
+        conn,
+        ctx,
+        tab,
+        query,
+        &DirectoryFilter::default(),
+        DirectorySort::Name,
+    )
 }
 
 fn document_brief(conn: &Connection, id: &str) -> CoreResult<DocumentBrief> {
@@ -2769,8 +2870,18 @@ fn document_brief(conn: &Connection, id: &str) -> CoreResult<DocumentBrief> {
             },
         )
         .optional()?;
-    let Some((title, status, loc_id, loc_raw, holder_id, holder_raw, doc_type, last_id, last_raw, expires)) =
-        row
+    let Some((
+        title,
+        status,
+        loc_id,
+        loc_raw,
+        holder_id,
+        holder_raw,
+        doc_type,
+        last_id,
+        last_raw,
+        expires,
+    )) = row
     else {
         return Ok(DocumentBrief {
             id: id.to_owned(),
@@ -2787,7 +2898,9 @@ fn document_brief(conn: &Connection, id: &str) -> CoreResult<DocumentBrief> {
     };
     let location_path = match &loc_id {
         Some(l) => breadcrumb(conn, l, true)?,
-        None => entity_ref(conn, None, loc_raw.clone())?.into_iter().collect(),
+        None => entity_ref(conn, None, loc_raw.clone())?
+            .into_iter()
+            .collect(),
     };
     let _ = expires;
     Ok(DocumentBrief {
@@ -2809,9 +2922,11 @@ fn document_brief(conn: &Connection, id: &str) -> CoreResult<DocumentBrief> {
 fn brief_in_ctx(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<DocumentBrief> {
     let mut b = document_brief(conn, id)?;
     let expires: Option<Option<String>> = conn
-        .query_row("SELECT expires FROM documents WHERE note_id = ?1", [id], |r| {
-            r.get(0)
-        })
+        .query_row(
+            "SELECT expires FROM documents WHERE note_id = ?1",
+            [id],
+            |r| r.get(0),
+        )
         .optional()?;
     b.expiring_soon = expiring(&ctx.labels(), expires.flatten().as_deref().and_then(date));
     Ok(b)
@@ -2832,7 +2947,11 @@ fn place_parent(conn: &Connection, id: &str) -> CoreResult<Option<EntityRef>> {
 }
 
 /// Enclosing places of `id`, outermost first, including `id` itself when `include_self`.
-pub(crate) fn breadcrumb(conn: &Connection, id: &str, include_self: bool) -> CoreResult<Vec<EntityRef>> {
+pub(crate) fn breadcrumb(
+    conn: &Connection,
+    id: &str,
+    include_self: bool,
+) -> CoreResult<Vec<EntityRef>> {
     let mut chain = Vec::new();
     let mut seen = HashSet::new();
     if include_self {
@@ -3145,7 +3264,10 @@ fn entity_view(
         last_active_label: last_active.map(|t| {
             let d = labels.local(t).date();
             match ctx.lang {
-                Lang::En => format!("last active {}", labels.relative_day(d).to_lowercase_first()),
+                Lang::En => format!(
+                    "last active {}",
+                    labels.relative_day(d).to_lowercase_first()
+                ),
                 Lang::Ar => format!("آخر نشاط {}", labels.relative_day(d)),
             }
         }),
@@ -3367,8 +3489,15 @@ fn place_view(
         out_with_people.push(brief_in_ctx(conn, ctx, &d)?);
     }
     let mut recent = Vec::new();
-    for place in std::iter::once(n.id.clone()).chain(tree.iter().filter_map(|p| p.place.id.clone())) {
-        recent.extend(custody_items(conn, ctx, Some(&n.id), "c.place_id = ?1", [&place])?);
+    for place in std::iter::once(n.id.clone()).chain(tree.iter().filter_map(|p| p.place.id.clone()))
+    {
+        recent.extend(custody_items(
+            conn,
+            ctx,
+            Some(&n.id),
+            "c.place_id = ?1",
+            [&place],
+        )?);
     }
     recent.sort_by(|a, b| b.date.cmp(&a.date));
     recent.truncate(20);
@@ -3694,7 +3823,7 @@ pub fn settings_view(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Option<Sett
     });
     let ai_status = cache::get::<crate::net::AiStatusInfo>(conn, cache::AI_STATUS)?
         .map(|(s, _)| ai_status_view(ctx, &s));
-    let integrity_warnings = cache::get::<Vec<crate::net::IntegrityInfo>>(conn, cache::INTEGRITY)?
+    let integrity_warnings: Vec<IntegrityItem> = cache::get::<Vec<crate::net::IntegrityInfo>>(conn, cache::INTEGRITY)?
         .map(|(mut w, _)| {
             w.sort_by(|a, b| b.created.cmp(&a.created).then_with(|| a.id.cmp(&b.id)));
             w.into_iter()

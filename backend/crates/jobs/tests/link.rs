@@ -22,7 +22,6 @@ use pretty_assertions::assert_eq;
 use serde_json::json;
 use strata_ai::BudgetLimits;
 use strata_ai::prompts::ids;
-use strata_common::Clock;
 use strata_jobs::link::{LinkInput, LinkNote};
 use strata_testkit::Fixture;
 use vault_format::RelationKey;
@@ -128,7 +127,7 @@ async fn edits_are_linked_30_seconds_later_with_relations_at_or_above_the_thresh
             "relations": [{
                 "type": "contradicts", "target_id": caps.to_string(), "by": "ai",
                 "confidence": 0.72, "reason": "Flat 10% versus a 5% cap.", "model": MODEL,
-                "created": "2026-09-27T12:00:30+00:00"
+                "created": "2026-09-27T12:00:30Z"
             }],
             "rejected": [],
             "last_linked_hash": version
@@ -226,7 +225,7 @@ async fn duplicates_become_a_suggestion_and_accepting_merges_the_notes() {
     assert_eq!(
         w.read(a, "notes/ETA invoices.md"),
         format!(
-            "---\nid: {old}\naliases:\n  - Watanya ETA\ntags:\n  - watanya\ncreated: {CREATED}\nupdated: {CREATED}\n---\nWatanya invoices go through ETA.\n\n## Merged from Watanya ETA (2026-09-27)\n\nWatanya invoices go through the ETA portal.\n"
+            "---\nid: {old}\naliases: [Watanya ETA]\ntags: [watanya]\ncreated: {CREATED}\nupdated: {CREATED}\n---\nWatanya invoices go through ETA.\n\n## Merged from Watanya ETA (2026-09-27)\n\nWatanya invoices go through the ETA portal.\n"
         )
     );
     assert!(w.dir(a).join(".trash/notes/Watanya ETA.md").exists());
@@ -279,7 +278,8 @@ async fn rejected_edges_are_never_re_added_and_only_stale_ai_edges_are_removed()
         .await
         .expect("edit");
     let mut i2 = input(note, "Pricing", vec![block("Pricing plan for deals.")]);
-    i2.candidates = vec![cand(c, "Churn"), cand(d, "Deals"), cand(e, "Enterprise")];
+    // Keyword ranking: "deals" now matches too.
+    i2.candidates = vec![cand(d, "Deals"), cand(c, "Churn"), cand(e, "Enterprise")];
     i2.rejected = vec![strata_jobs::pipeline::RejectedInput {
         kind: "related".into(),
         target_id: Some(b.to_string()),
@@ -320,19 +320,46 @@ async fn rejected_edges_are_never_re_added_and_only_stale_ai_edges_are_removed()
     w.finish().await;
 }
 
+/// The user content of a retry after a reply that was not JSON (`AiService` feedback).
+fn not_json_retry(input: &LinkInput) -> String {
+    format!(
+        "{}\n\n---\nYour previous reply was not a JSON value.\nReply again with exactly one JSON object that matches the JSON schema supplied with this request.",
+        strata_ai::prompts::render_input(input).expect("render")
+    )
+}
+
+fn push_raw(w: &World, user: &str, f: Fixture) {
+    let p = strata_ai::prompts::latest(ids::LINKING).expect("prompt");
+    w.llm.push(
+        &p.prompt_ref(),
+        &strata_ai::request::input_hash(p.text, user),
+        f,
+    );
+}
+
 #[tokio::test]
 async fn invalid_output_is_retried_then_the_job_fails_and_retries_later() {
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
     let note = w.create(&sa, "notes/Solo.md", "Solo note.\n").await;
     let i = input(note, "Solo", vec![block("Solo note.")]);
-    // Three replies that are not JSON: the service retries twice, then the job fails and is
-    // queued again with backoff (no commit).
+    // Every reply is not JSON: the service asks twice more with the feedback appended, then
+    // the job fails for now and is queued again with backoff; nothing is written.
     push_fixture(&w, ids::LINKING, &i, Fixture::error("not_json", None));
+    push_raw(&w, &not_json_retry(&i), Fixture::error("not_json", None));
     let r = runner(&w, &["link"]);
     enqueue(&w, a, "link", note).await;
+    let commits = w.log(a).len();
     r.run_until_idle().await;
     assert_eq!(w.llm.calls().len(), 3);
+    assert_eq!(
+        w.llm.calls().iter().map(|c| c.user.clone()).collect::<Vec<_>>(),
+        vec![
+            strata_ai::prompts::render_input(&i).expect("render"),
+            not_json_retry(&i),
+            not_json_retry(&i)
+        ]
+    );
     assert_eq!(jobs_of(&w, a, "link").await, vec![("queued".to_owned(), 1, at(30))]);
     let mut tx = w.db.begin(a).await.expect("tx");
     let err: Option<String> = sqlx::query_scalar("SELECT last_error FROM jobs WHERE kind = 'link'")
@@ -343,15 +370,18 @@ async fn invalid_output_is_retried_then_the_job_fails_and_retries_later() {
     assert_eq!(
         err.as_deref(),
         Some(
-            "retryable failure: output of prompt linking v2 failed schema validation after 3 attempts: [\"/: not JSON\"]"
+            "output of prompt linking v2 failed schema validation after 3 attempts: [\"/: not JSON\"]"
         )
     );
-    let commits = w.log(a).len();
-    // A valid reply on the retry: applied then.
-    push(&w, ids::LINKING, &i, linking(vec![]));
+    assert_eq!(w.log(a).len(), commits);
+    // On the retry the third attempt answers validly (the fake replays the queued not-JSON
+    // reply once more first): applied then (sidecar only).
+    push_raw(&w, &not_json_retry(&i), Fixture::json(linking(vec![])));
     advance(&w, 30);
     r.run_until_idle().await;
+    assert_eq!(w.llm.calls().len(), 6);
     assert_eq!(jobs_of(&w, a, "link").await, vec![("done".to_owned(), 2, at(30))]);
+    assert_eq!(w.log(a)[0], "ai: link notes/Solo.md");
     assert_eq!(w.log(a).len(), commits + 1);
     w.finish().await;
 }

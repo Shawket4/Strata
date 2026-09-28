@@ -8,7 +8,9 @@ import '../view/model.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-/// The notification-ops stream (schedule / update / cancel / show now).
+/// The notification-ops stream (schedule / update / cancel / show now). It does not depend on
+/// a session: while signed out it stays open and receives nothing; the ops of whichever account
+/// signs in arrive on it.
 Stream<NotificationOp> watchNotificationOps() =>
     StrataCore.instance.api.crateApiRemindersWatchNotificationOps();
 

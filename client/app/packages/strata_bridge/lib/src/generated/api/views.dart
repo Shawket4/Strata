@@ -8,7 +8,7 @@ import '../view/model.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `watch`
+// These functions are ignored because they are not marked as `pub`: `labels_now`, `watch`
 
 /// Home: recent notes, inbox count, task sections, sync pill.
 Stream<HomeView> watchHome() =>
@@ -17,6 +17,17 @@ Stream<HomeView> watchHome() =>
 /// Inbox: captures with suggestions, other suggestions.
 Stream<InboxView> watchInbox() =>
     StrataCore.instance.api.crateApiViewsWatchInbox();
+
+/// Inbox with a filter tab (All / Needs you / Conflicts).
+Stream<InboxView> watchInboxFiltered({required InboxFilter filter}) =>
+    StrataCore.instance.api.crateApiViewsWatchInboxFiltered(filter: filter);
+
+/// Navigation counts and pinned notes (sidebar, rail, bottom bar).
+Stream<NavView> watchNav() => StrataCore.instance.api.crateApiViewsWatchNav();
+
+/// The "Recent" block with a filter (Edited / Created / Filed by AI).
+Stream<RecentNotesView> watchRecent({required RecentFilter filter}) =>
+    StrataCore.instance.api.crateApiViewsWatchRecent(filter: filter);
 
 /// A note (editor, properties, relations, backlinks, tasks).
 Stream<NoteScreen> watchNote({required String id}) =>
@@ -33,6 +44,19 @@ Stream<DirectoryView> watchDirectory({
 }) =>
     StrataCore.instance.api.crateApiViewsWatchDirectory(tab: tab, query: query);
 
+/// A directory tab with filters and an order.
+Stream<DirectoryView> watchDirectoryFiltered({
+  required DirectoryTab tab,
+  required String query,
+  required DirectoryFilter filter,
+  required DirectorySort sort,
+}) => StrataCore.instance.api.crateApiViewsWatchDirectoryFiltered(
+  tab: tab,
+  query: query,
+  filter: filter,
+  sort: sort,
+);
+
 /// A person, company, document or place page.
 Stream<EntityScreen> watchEntity({required String id}) =>
     StrataCore.instance.api.crateApiViewsWatchEntity(id: id);
@@ -44,6 +68,10 @@ Stream<TasksView> watchTasks() =>
 /// Task detail.
 Stream<TaskScreen> watchTask({required String id}) =>
     StrataCore.instance.api.crateApiViewsWatchTask(id: id);
+
+/// Candidate homes of a new task.
+Stream<TaskHomesView> watchTaskHomes() =>
+    StrataCore.instance.api.crateApiViewsWatchTaskHomes();
 
 /// Sync status and conflicts.
 Stream<SyncStatusView> watchSyncStatus() =>
@@ -72,17 +100,113 @@ Stream<LocalGraphView> watchLocalGraph({
 Future<GlobalGraphView> globalGraph() =>
     StrataCore.instance.api.crateApiViewsGlobalGraph();
 
-/// Local search.
+/// The global map with filters and a lens applied in the core.
+Future<GlobalGraphView> globalGraphFiltered({required GraphFilter filter}) =>
+    StrataCore.instance.api.crateApiViewsGlobalGraphFiltered(filter: filter);
+
+/// Search: keyword locally (offline too); semantic and hybrid on the server.
 Future<SearchView> search({required String query, required SearchMode mode}) =>
     StrataCore.instance.api.crateApiViewsSearch(query: query, mode: mode);
 
-/// Ask (online only; the `/ask` stream is not in the contract yet).
+/// Search limited to a folder (and its subfolders).
+Future<SearchView> searchInFolder({
+  required String query,
+  required SearchMode mode,
+  String? folder,
+}) => StrataCore.instance.api.crateApiViewsSearchInFolder(
+  query: query,
+  mode: mode,
+  folder: folder,
+);
+
+/// Ask (one-shot read of the conversation).
 Future<AskView> askView() => StrataCore.instance.api.crateApiViewsAskView();
 
-/// Editor highlight spans for text being typed (UTF-16 offsets).
+/// Ask: the conversation as it streams.
+Stream<AskView> watchAsk() => StrataCore.instance.api.crateApiViewsWatchAsk();
+
+/// Editor highlight spans for text being typed (UTF-16 offsets); with a signed-in session,
+/// wikilinks are resolved to note IDs as seen from the note at `path` (`""` = vault root).
 Future<List<EditorHint>> editorHints({required String content}) =>
     StrataCore.instance.api.crateApiViewsEditorHints(content: content);
 
-/// Admin → Users (online, admins only).
-Future<AdminUsersView> loadAdminUsers() =>
-    StrataCore.instance.api.crateApiViewsLoadAdminUsers();
+/// Editor completions at the caret (`[[`, `[[Note#^`, `@`, `#`), UTF-16 `cursor`.
+Future<Completions> editorCompletions({
+  required String noteId,
+  required String content,
+  required int cursor,
+}) => StrataCore.instance.api.crateApiViewsEditorCompletions(
+  noteId: noteId,
+  content: content,
+  cursor: cursor,
+);
+
+/// Vault tags with note counts, filtered by prefix.
+Future<List<TagItem>> tags({required String prefix}) =>
+    StrataCore.instance.api.crateApiViewsTags(prefix: prefix);
+
+/// The blocks of a note (block reference picker).
+Future<List<BlockItem>> noteBlocks({required String noteId}) =>
+    StrataCore.instance.api.crateApiViewsNoteBlocks(noteId: noteId);
+
+/// Relation types the user can pick, with labels in the UI language.
+Future<List<RelationTypeItem>> relationTypes() =>
+    StrataCore.instance.api.crateApiViewsRelationTypes();
+
+/// A recurrence phrase as the editor's form (`None`: outside the grammar).
+Future<RecurrenceForm?> recurrenceForm({required String phrase}) =>
+    StrataCore.instance.api.crateApiViewsRecurrenceForm(phrase: phrase);
+
+/// Compiles the editor's form to its phrase and summary.
+Future<RecurrenceCompose> composeRecurrence({required RecurrenceForm form}) =>
+    StrataCore.instance.api.crateApiViewsComposeRecurrence(form: form);
+
+/// The first `count` occurrences of `phrase` from `from` (the due date).
+Future<List<RecurrencePreviewItem>> recurrencePreview({
+  required String phrase,
+  required DateTime from,
+  required int count,
+}) => StrataCore.instance.api.crateApiViewsRecurrencePreview(
+  phrase: phrase,
+  from: from,
+  count: count,
+);
+
+/// A new task's text as the core understands it ("Understood as" chips).
+Future<TaskDraftPreview> parseTaskText({required String text}) =>
+    StrataCore.instance.api.crateApiViewsParseTaskText(text: text);
+
+/// Places for the custody picker (`document_id` marks the document's current place).
+Future<List<PlaceOption>> placeOptions({String? documentId}) =>
+    StrataCore.instance.api.crateApiViewsPlaceOptions(documentId: documentId);
+
+/// What merging `source_id` into `into_id` moves.
+Future<MergePreview> mergePreview({
+  required String sourceId,
+  required String intoId,
+}) => StrataCore.instance.api.crateApiViewsMergePreview(
+  sourceId: sourceId,
+  intoId: intoId,
+);
+
+/// The block a citation points to (source preview).
+Future<CitationPreview> resolveCitation({
+  required String noteId,
+  String? anchor,
+}) => StrataCore.instance.api.crateApiViewsResolveCitation(
+  noteId: noteId,
+  anchor: anchor,
+);
+
+/// A revision compared with the note's current content (online).
+Future<NoteDiffView> noteRevisionDiff({
+  required String noteId,
+  required String commit,
+}) => StrataCore.instance.api.crateApiViewsNoteRevisionDiff(
+  noteId: noteId,
+  commit: commit,
+);
+
+/// Admin → Users (online, admins only), filtered by `query`.
+Future<AdminUsersView> loadAdminUsers({required String query}) =>
+    StrataCore.instance.api.crateApiViewsLoadAdminUsers(query: query);

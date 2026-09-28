@@ -7,7 +7,8 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `NodePosition`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 /// The signed-in account.
 class AccountSummary {
@@ -35,6 +36,9 @@ class AccountSummary {
   /// UI language (`en` | `ar`).
   final String uiLanguage;
 
+  /// Avatar initials ("SN" for Sara Nabil).
+  final String initials;
+
   const AccountSummary({
     required this.userId,
     required this.username,
@@ -44,6 +48,7 @@ class AccountSummary {
     required this.serverUrl,
     required this.timezone,
     required this.uiLanguage,
+    required this.initials,
   });
 
   @override
@@ -55,7 +60,8 @@ class AccountSummary {
       isAdmin.hashCode ^
       serverUrl.hashCode ^
       timezone.hashCode ^
-      uiLanguage.hashCode;
+      uiLanguage.hashCode ^
+      initials.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -69,7 +75,8 @@ class AccountSummary {
           isAdmin == other.isAdmin &&
           serverUrl == other.serverUrl &&
           timezone == other.timezone &&
-          uiLanguage == other.uiLanguage;
+          uiLanguage == other.uiLanguage &&
+          initials == other.initials;
 }
 
 /// An account in Admin → Users.
@@ -98,6 +105,21 @@ class AdminUserItem {
   /// The user downloaded their export.
   final DateTime? exportDownloadedAt;
 
+  /// Initials.
+  final String initials;
+
+  /// The signed-in admin's own row ("you"; no actions).
+  final bool isSelf;
+
+  /// "Requested 2 hours ago" / "Joined 12 Sep 2026".
+  final String createdLabel;
+
+  /// "Deleted on 11 Oct 2026" when scheduled.
+  final String? deletionLabel;
+
+  /// Must change the password (after a reset).
+  final bool passwordChangeRequired;
+
   const AdminUserItem({
     required this.id,
     required this.username,
@@ -107,6 +129,11 @@ class AdminUserItem {
     required this.created,
     this.deletionAt,
     this.exportDownloadedAt,
+    required this.initials,
+    required this.isSelf,
+    required this.createdLabel,
+    this.deletionLabel,
+    required this.passwordChangeRequired,
   });
 
   @override
@@ -118,7 +145,12 @@ class AdminUserItem {
       status.hashCode ^
       created.hashCode ^
       deletionAt.hashCode ^
-      exportDownloadedAt.hashCode;
+      exportDownloadedAt.hashCode ^
+      initials.hashCode ^
+      isSelf.hashCode ^
+      createdLabel.hashCode ^
+      deletionLabel.hashCode ^
+      passwordChangeRequired.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -132,7 +164,12 @@ class AdminUserItem {
           status == other.status &&
           created == other.created &&
           deletionAt == other.deletionAt &&
-          exportDownloadedAt == other.exportDownloadedAt;
+          exportDownloadedAt == other.exportDownloadedAt &&
+          initials == other.initials &&
+          isSelf == other.isSelf &&
+          createdLabel == other.createdLabel &&
+          deletionLabel == other.deletionLabel &&
+          passwordChangeRequired == other.passwordChangeRequired;
 }
 
 /// Admin → Users (online only, admins only).
@@ -146,14 +183,22 @@ class AdminUsersView {
   /// Every other account, by username.
   final List<AdminUserItem> users;
 
+  /// Search text applied (username / display name, both scripts).
+  final String query;
+
   const AdminUsersView({
     required this.availability,
     required this.pending,
     required this.users,
+    required this.query,
   });
 
   @override
-  int get hashCode => availability.hashCode ^ pending.hashCode ^ users.hashCode;
+  int get hashCode =>
+      availability.hashCode ^
+      pending.hashCode ^
+      users.hashCode ^
+      query.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -162,7 +207,164 @@ class AdminUsersView {
           runtimeType == other.runtimeType &&
           availability == other.availability &&
           pending == other.pending &&
-          users == other.users;
+          users == other.users &&
+          query == other.query;
+}
+
+/// One entry of the AI activity feed.
+class AiActivityItem {
+  /// When ("14:05").
+  final String atLabel;
+
+  /// `relation_added` | `contradiction` | `timeline` | `custody_applied`.
+  final String kind;
+
+  /// One-line summary.
+  final String summary;
+
+  /// Source.
+  final EntityRef? source;
+
+  /// Target.
+  final EntityRef? target;
+
+  /// Relation type.
+  final String? relType;
+
+  /// Confidence.
+  final double? confidence;
+
+  /// Suggestion to undo it.
+  final String? undoSuggestionId;
+
+  const AiActivityItem({
+    required this.atLabel,
+    required this.kind,
+    required this.summary,
+    this.source,
+    this.target,
+    this.relType,
+    this.confidence,
+    this.undoSuggestionId,
+  });
+
+  @override
+  int get hashCode =>
+      atLabel.hashCode ^
+      kind.hashCode ^
+      summary.hashCode ^
+      source.hashCode ^
+      target.hashCode ^
+      relType.hashCode ^
+      confidence.hashCode ^
+      undoSuggestionId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AiActivityItem &&
+          runtimeType == other.runtimeType &&
+          atLabel == other.atLabel &&
+          kind == other.kind &&
+          summary == other.summary &&
+          source == other.source &&
+          target == other.target &&
+          relType == other.relType &&
+          confidence == other.confidence &&
+          undoSuggestionId == other.undoSuggestionId;
+}
+
+/// AI provider state and today's budget (Ask header, Settings → AI).
+class AiStatusView {
+  /// AI is enabled for the account.
+  final bool enabled;
+
+  /// Provider name.
+  final String? provider;
+
+  /// Paused until … ("Paused until 14:00").
+  final String? pausedLabel;
+
+  /// Queued jobs.
+  final int queueDepth;
+
+  /// Share of today's budget used (0–100).
+  final int budgetUsedPercent;
+
+  /// "62% used".
+  final String budgetLabel;
+
+  /// Notes with current embeddings (0–100), when embeddings exist.
+  final int? embeddingPercent;
+
+  const AiStatusView({
+    required this.enabled,
+    this.provider,
+    this.pausedLabel,
+    required this.queueDepth,
+    required this.budgetUsedPercent,
+    required this.budgetLabel,
+    this.embeddingPercent,
+  });
+
+  @override
+  int get hashCode =>
+      enabled.hashCode ^
+      provider.hashCode ^
+      pausedLabel.hashCode ^
+      queueDepth.hashCode ^
+      budgetUsedPercent.hashCode ^
+      budgetLabel.hashCode ^
+      embeddingPercent.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AiStatusView &&
+          runtimeType == other.runtimeType &&
+          enabled == other.enabled &&
+          provider == other.provider &&
+          pausedLabel == other.pausedLabel &&
+          queueDepth == other.queueDepth &&
+          budgetUsedPercent == other.budgetUsedPercent &&
+          budgetLabel == other.budgetLabel &&
+          embeddingPercent == other.embeddingPercent;
+}
+
+/// A line of a conflict column.
+class AnnotatedLine {
+  /// 1-based line number in this column's text.
+  final int line;
+
+  /// The line (no terminator).
+  final String text;
+
+  /// Its change.
+  final LineChange change;
+
+  /// Direction.
+  final TextDir dir;
+
+  const AnnotatedLine({
+    required this.line,
+    required this.text,
+    required this.change,
+    required this.dir,
+  });
+
+  @override
+  int get hashCode =>
+      line.hashCode ^ text.hashCode ^ change.hashCode ^ dir.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AnnotatedLine &&
+          runtimeType == other.runtimeType &&
+          line == other.line &&
+          text == other.text &&
+          change == other.change &&
+          dir == other.dir;
 }
 
 /// App lifecycle events forwarded by Dart (sync and reminder triggers).
@@ -185,14 +387,67 @@ class AskMessage {
   /// Citations of an answer.
   final List<Citation> citations;
 
+  /// Message ID (an answer's ID is the server's Ask ID).
+  final String id;
+
+  /// The answer is still streaming.
+  final bool streaming;
+
+  /// Text runs and citation markers in answer order.
+  final List<AskSpan> spans;
+
+  /// Cited notes, grouped.
+  final List<AskSource> sources;
+
+  /// "Scope: Acme".
+  final String scopeLabel;
+
+  /// Cited notes.
+  final int sourceCount;
+
+  /// "14:05".
+  final String createdLabel;
+
+  /// Direction of `text`.
+  final TextDir dir;
+
+  /// Why the answer stopped early (`error.ai_paused`, `error.ai_unavailable`, `stopped`).
+  final String? errorKey;
+
+  /// Saved as this note (`save_answer_as_note`).
+  final String? savedNoteId;
+
   const AskMessage({
     required this.role,
     required this.text,
     required this.citations,
+    required this.id,
+    required this.streaming,
+    required this.spans,
+    required this.sources,
+    required this.scopeLabel,
+    required this.sourceCount,
+    required this.createdLabel,
+    required this.dir,
+    this.errorKey,
+    this.savedNoteId,
   });
 
   @override
-  int get hashCode => role.hashCode ^ text.hashCode ^ citations.hashCode;
+  int get hashCode =>
+      role.hashCode ^
+      text.hashCode ^
+      citations.hashCode ^
+      id.hashCode ^
+      streaming.hashCode ^
+      spans.hashCode ^
+      sources.hashCode ^
+      scopeLabel.hashCode ^
+      sourceCount.hashCode ^
+      createdLabel.hashCode ^
+      dir.hashCode ^
+      errorKey.hashCode ^
+      savedNoteId.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -201,7 +456,122 @@ class AskMessage {
           runtimeType == other.runtimeType &&
           role == other.role &&
           text == other.text &&
-          citations == other.citations;
+          citations == other.citations &&
+          id == other.id &&
+          streaming == other.streaming &&
+          spans == other.spans &&
+          sources == other.sources &&
+          scopeLabel == other.scopeLabel &&
+          sourceCount == other.sourceCount &&
+          createdLabel == other.createdLabel &&
+          dir == other.dir &&
+          errorKey == other.errorKey &&
+          savedNoteId == other.savedNoteId;
+}
+
+/// A scope the user can pick.
+class AskScope {
+  /// Kind.
+  final AskScopeKind kind;
+
+  /// Entity ID or folder path (`None` for all).
+  final String? value;
+
+  /// "All notes", "Acme", "notes/sales".
+  final String label;
+
+  const AskScope({required this.kind, this.value, required this.label});
+
+  @override
+  int get hashCode => kind.hashCode ^ value.hashCode ^ label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AskScope &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          value == other.value &&
+          label == other.label;
+}
+
+/// What Ask searches.
+enum AskScopeKind {
+  /// The whole vault.
+  all,
+
+  /// One entity and what mentions it.
+  entity,
+
+  /// A folder.
+  folder,
+}
+
+/// A note cited by an answer, with its cited blocks.
+class AskSource {
+  /// Note.
+  final String noteId;
+
+  /// Title.
+  final String title;
+
+  /// Path.
+  final String path;
+
+  /// Block IDs cited in it.
+  final List<String> anchors;
+
+  /// Citation indexes pointing here.
+  final Uint32List indexes;
+
+  const AskSource({
+    required this.noteId,
+    required this.title,
+    required this.path,
+    required this.anchors,
+    required this.indexes,
+  });
+
+  @override
+  int get hashCode =>
+      noteId.hashCode ^
+      title.hashCode ^
+      path.hashCode ^
+      anchors.hashCode ^
+      indexes.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AskSource &&
+          runtimeType == other.runtimeType &&
+          noteId == other.noteId &&
+          title == other.title &&
+          path == other.path &&
+          anchors == other.anchors &&
+          indexes == other.indexes;
+}
+
+/// A piece of an answer: text, or a citation marker at that position.
+class AskSpan {
+  /// Text of the run (empty for a citation marker).
+  final String text;
+
+  /// 1-based citation index (`None` for text).
+  final int? citation;
+
+  const AskSpan({required this.text, this.citation});
+
+  @override
+  int get hashCode => text.hashCode ^ citation.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AskSpan &&
+          runtimeType == other.runtimeType &&
+          text == other.text &&
+          citation == other.citation;
 }
 
 /// Ask (online only, §12.6).
@@ -212,10 +582,30 @@ class AskView {
   /// The conversation.
   final List<AskMessage> messages;
 
-  const AskView({required this.availability, required this.messages});
+  /// Scopes to choose from (All notes, people and companies, top folders).
+  final List<AskScope> scopes;
+
+  /// An answer is streaming (show Stop).
+  final bool streaming;
+
+  /// AI status, once fetched.
+  final AiStatusView? aiStatus;
+
+  const AskView({
+    required this.availability,
+    required this.messages,
+    required this.scopes,
+    required this.streaming,
+    this.aiStatus,
+  });
 
   @override
-  int get hashCode => availability.hashCode ^ messages.hashCode;
+  int get hashCode =>
+      availability.hashCode ^
+      messages.hashCode ^
+      scopes.hashCode ^
+      streaming.hashCode ^
+      aiStatus.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -223,7 +613,10 @@ class AskView {
       other is AskView &&
           runtimeType == other.runtimeType &&
           availability == other.availability &&
-          messages == other.messages;
+          messages == other.messages &&
+          scopes == other.scopes &&
+          streaming == other.streaming &&
+          aiStatus == other.aiStatus;
 }
 
 /// Whether an online-only or not-yet-built feature can be used right now.
@@ -249,10 +642,17 @@ class BacklinkGroup {
   /// Sources, by title.
   final List<BacklinkItem> items;
 
-  const BacklinkGroup({required this.kind, required this.items});
+  /// Localised label of `kind` ("Links", "works at").
+  final String label;
+
+  const BacklinkGroup({
+    required this.kind,
+    required this.items,
+    required this.label,
+  });
 
   @override
-  int get hashCode => kind.hashCode ^ items.hashCode;
+  int get hashCode => kind.hashCode ^ items.hashCode ^ label.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -260,7 +660,8 @@ class BacklinkGroup {
       other is BacklinkGroup &&
           runtimeType == other.runtimeType &&
           kind == other.kind &&
-          items == other.items;
+          items == other.items &&
+          label == other.label;
 }
 
 /// A note linking here.
@@ -271,10 +672,40 @@ class BacklinkItem {
   /// Its title.
   final String title;
 
-  const BacklinkItem({required this.noteId, required this.title});
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// The linking sentence (the line holding the link), ≤ 200 characters.
+  final String? snippet;
+
+  /// Direction of the snippet.
+  final TextDir snippetDir;
+
+  /// `user` | `ai` for relations.
+  final String? by;
+
+  /// AI confidence.
+  final double? confidence;
+
+  const BacklinkItem({
+    required this.noteId,
+    required this.title,
+    required this.titleDir,
+    this.snippet,
+    required this.snippetDir,
+    this.by,
+    this.confidence,
+  });
 
   @override
-  int get hashCode => noteId.hashCode ^ title.hashCode;
+  int get hashCode =>
+      noteId.hashCode ^
+      title.hashCode ^
+      titleDir.hashCode ^
+      snippet.hashCode ^
+      snippetDir.hashCode ^
+      by.hashCode ^
+      confidence.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -282,7 +713,49 @@ class BacklinkItem {
       other is BacklinkItem &&
           runtimeType == other.runtimeType &&
           noteId == other.noteId &&
-          title == other.title;
+          title == other.title &&
+          titleDir == other.titleDir &&
+          snippet == other.snippet &&
+          snippetDir == other.snippetDir &&
+          by == other.by &&
+          confidence == other.confidence;
+}
+
+/// A block of a note (block reference picker).
+class BlockItem {
+  /// Existing block ID (without `^`), or `None` for a block without one (inserting a
+  /// reference to it adds an ID).
+  final String? blockId;
+
+  /// Plain text (≤ 160 characters).
+  final String text;
+
+  /// Direction.
+  final TextDir textDir;
+
+  /// 1-based line of the block's start.
+  final int line;
+
+  const BlockItem({
+    this.blockId,
+    required this.text,
+    required this.textDir,
+    required this.line,
+  });
+
+  @override
+  int get hashCode =>
+      blockId.hashCode ^ text.hashCode ^ textDir.hashCode ^ line.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is BlockItem &&
+          runtimeType == other.runtimeType &&
+          blockId == other.blockId &&
+          text == other.text &&
+          textDir == other.textDir &&
+          line == other.line;
 }
 
 /// An existing item a create resembles.
@@ -305,6 +778,12 @@ class CandidateItem {
   /// Score in `[0, 1]`.
   final double score;
 
+  /// Vault path of the existing item's note, when known locally ("tasks/Tasks.md").
+  final String? path;
+
+  /// Why it matched ("Same title", "Very similar text", "Similar meaning").
+  final String reason;
+
   const CandidateItem({
     required this.id,
     required this.kind,
@@ -312,6 +791,8 @@ class CandidateItem {
     this.snippet,
     required this.matchLevel,
     required this.score,
+    this.path,
+    required this.reason,
   });
 
   @override
@@ -321,7 +802,9 @@ class CandidateItem {
       title.hashCode ^
       snippet.hashCode ^
       matchLevel.hashCode ^
-      score.hashCode;
+      score.hashCode ^
+      path.hashCode ^
+      reason.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -333,7 +816,9 @@ class CandidateItem {
           title == other.title &&
           snippet == other.snippet &&
           matchLevel == other.matchLevel &&
-          score == other.score;
+          score == other.score &&
+          path == other.path &&
+          reason == other.reason;
 }
 
 /// A citation `[[Note#^block]]` resolved for navigation.
@@ -362,6 +847,69 @@ class Citation {
           anchor == other.anchor;
 }
 
+/// The block a citation points to (source preview).
+class CitationPreview {
+  /// Note (`None` when it does not resolve locally).
+  final String? noteId;
+
+  /// Title.
+  final String title;
+
+  /// Path.
+  final String path;
+
+  /// The block's text (`None`: anchor not found).
+  final String? blockText;
+
+  /// Direction of `block_text`.
+  final TextDir blockDir;
+
+  /// Heading above the block.
+  final String? heading;
+
+  /// Note date ("12 Sep 2026", from `created`).
+  final String? dateLabel;
+
+  /// Tags.
+  final List<String> tags;
+
+  const CitationPreview({
+    this.noteId,
+    required this.title,
+    required this.path,
+    this.blockText,
+    required this.blockDir,
+    this.heading,
+    this.dateLabel,
+    required this.tags,
+  });
+
+  @override
+  int get hashCode =>
+      noteId.hashCode ^
+      title.hashCode ^
+      path.hashCode ^
+      blockText.hashCode ^
+      blockDir.hashCode ^
+      heading.hashCode ^
+      dateLabel.hashCode ^
+      tags.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CitationPreview &&
+          runtimeType == other.runtimeType &&
+          noteId == other.noteId &&
+          title == other.title &&
+          path == other.path &&
+          blockText == other.blockText &&
+          blockDir == other.blockDir &&
+          heading == other.heading &&
+          dateLabel == other.dateLabel &&
+          tags == other.tags;
+}
+
 /// A bullet of an AI section with its citations.
 class CitedBullet {
   /// Text without the date prefix and citations.
@@ -373,10 +921,27 @@ class CitedBullet {
   /// Citations.
   final List<Citation> citations;
 
-  const CitedBullet({required this.text, this.date, required this.citations});
+  /// Direction of `text`.
+  final TextDir dir;
+
+  /// `date` as a label ("12 Sep").
+  final String? dateLabel;
+
+  const CitedBullet({
+    required this.text,
+    this.date,
+    required this.citations,
+    required this.dir,
+    this.dateLabel,
+  });
 
   @override
-  int get hashCode => text.hashCode ^ date.hashCode ^ citations.hashCode;
+  int get hashCode =>
+      text.hashCode ^
+      date.hashCode ^
+      citations.hashCode ^
+      dir.hashCode ^
+      dateLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -385,7 +950,9 @@ class CitedBullet {
           runtimeType == other.runtimeType &&
           text == other.text &&
           date == other.date &&
-          citations == other.citations;
+          citations == other.citations &&
+          dir == other.dir &&
+          dateLabel == other.dateLabel;
 }
 
 /// A cluster region label.
@@ -399,14 +966,37 @@ class ClusterLabel {
   /// Member count.
   final int size;
 
+  /// Label anchor (centroid of the members).
+  final double x;
+
+  /// Label anchor.
+  final double y;
+
+  /// Region outline (convex hull of the members, padded), clockwise.
+  final List<GraphPoint> hull;
+
+  /// Region radius around the anchor (for a disc when the hull has < 3 points).
+  final double radius;
+
   const ClusterLabel({
     required this.id,
     required this.name,
     required this.size,
+    required this.x,
+    required this.y,
+    required this.hull,
+    required this.radius,
   });
 
   @override
-  int get hashCode => id.hashCode ^ name.hashCode ^ size.hashCode;
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      size.hashCode ^
+      x.hashCode ^
+      y.hashCode ^
+      hull.hashCode ^
+      radius.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -415,7 +1005,125 @@ class ClusterLabel {
           runtimeType == other.runtimeType &&
           id == other.id &&
           name == other.name &&
-          size == other.size;
+          size == other.size &&
+          x == other.x &&
+          y == other.y &&
+          hull == other.hull &&
+          radius == other.radius;
+}
+
+/// One completion.
+class CompletionItem {
+  /// Shown text.
+  final String label;
+
+  /// Secondary text (path, kind, count, block text).
+  final String detail;
+
+  /// Text replacing `replace_start..replace_end`.
+  final String insertText;
+
+  /// Note/entity the item points to.
+  final String? targetId;
+
+  /// `person` | `company` | … for mentions.
+  final String? entityKind;
+
+  /// Direction of `label`.
+  final TextDir labelDir;
+
+  const CompletionItem({
+    required this.label,
+    required this.detail,
+    required this.insertText,
+    this.targetId,
+    this.entityKind,
+    required this.labelDir,
+  });
+
+  @override
+  int get hashCode =>
+      label.hashCode ^
+      detail.hashCode ^
+      insertText.hashCode ^
+      targetId.hashCode ^
+      entityKind.hashCode ^
+      labelDir.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CompletionItem &&
+          runtimeType == other.runtimeType &&
+          label == other.label &&
+          detail == other.detail &&
+          insertText == other.insertText &&
+          targetId == other.targetId &&
+          entityKind == other.entityKind &&
+          labelDir == other.labelDir;
+}
+
+/// What the token before the caret asks for.
+enum CompletionKind {
+  /// Nothing to complete.
+  none,
+
+  /// `[[query` → notes.
+  wikiLink,
+
+  /// `@query` → people and companies.
+  mention,
+
+  /// `#query` → tags.
+  tag,
+
+  /// `[[Note#^query` → blocks of that note.
+  blockRef,
+}
+
+/// Editor completions at the caret.
+class Completions {
+  /// Kind.
+  final CompletionKind kind;
+
+  /// Replace from (UTF-16, inclusive).
+  final int replaceStart;
+
+  /// Replace to (UTF-16, exclusive).
+  final int replaceEnd;
+
+  /// The typed query.
+  final String query;
+
+  /// Items, best first (≤ 20).
+  final List<CompletionItem> items;
+
+  const Completions({
+    required this.kind,
+    required this.replaceStart,
+    required this.replaceEnd,
+    required this.query,
+    required this.items,
+  });
+
+  @override
+  int get hashCode =>
+      kind.hashCode ^
+      replaceStart.hashCode ^
+      replaceEnd.hashCode ^
+      query.hashCode ^
+      items.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Completions &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          replaceStart == other.replaceStart &&
+          replaceEnd == other.replaceEnd &&
+          query == other.query &&
+          items == other.items;
 }
 
 /// One conflict, for side-by-side resolution (D19).
@@ -444,6 +1152,27 @@ class ConflictDetail {
   /// Conflicting hunks of the preview (resolve with [`ResolutionKind::Hunks`]).
   final List<ConflictHunkView> hunks;
 
+  /// Note path.
+  final String path;
+
+  /// "This device · today 14:41 · edited offline".
+  final String localOriginLabel;
+
+  /// "Server · v8" (or "Server" until pulled).
+  final String serverOriginLabel;
+
+  /// The base, annotated.
+  final List<AnnotatedLine> baseLines;
+
+  /// The local version, annotated against the base.
+  final List<AnnotatedLine> localLines;
+
+  /// The server version, annotated against the base.
+  final List<AnnotatedLine> serverLines;
+
+  /// The server already saved the local edit as a conflict copy (path).
+  final String? conflictCopyPath;
+
   const ConflictDetail({
     required this.noteId,
     required this.title,
@@ -453,6 +1182,13 @@ class ConflictDetail {
     this.mergedPreview,
     this.mergeClean,
     required this.hunks,
+    required this.path,
+    required this.localOriginLabel,
+    required this.serverOriginLabel,
+    required this.baseLines,
+    required this.localLines,
+    required this.serverLines,
+    this.conflictCopyPath,
   });
 
   @override
@@ -464,7 +1200,14 @@ class ConflictDetail {
       server.hashCode ^
       mergedPreview.hashCode ^
       mergeClean.hashCode ^
-      hunks.hashCode;
+      hunks.hashCode ^
+      path.hashCode ^
+      localOriginLabel.hashCode ^
+      serverOriginLabel.hashCode ^
+      baseLines.hashCode ^
+      localLines.hashCode ^
+      serverLines.hashCode ^
+      conflictCopyPath.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -478,7 +1221,14 @@ class ConflictDetail {
           server == other.server &&
           mergedPreview == other.mergedPreview &&
           mergeClean == other.mergeClean &&
-          hunks == other.hunks;
+          hunks == other.hunks &&
+          path == other.path &&
+          localOriginLabel == other.localOriginLabel &&
+          serverOriginLabel == other.serverOriginLabel &&
+          baseLines == other.baseLines &&
+          localLines == other.localLines &&
+          serverLines == other.serverLines &&
+          conflictCopyPath == other.conflictCopyPath;
 }
 
 /// One conflicting hunk of a merge preview.
@@ -501,6 +1251,12 @@ class ConflictHunkView {
   /// Server text.
   final String theirs;
 
+  /// "Line 6", "Property “tags”", "Line endings".
+  final String locationLabel;
+
+  /// Choices valid for this hunk.
+  final List<HunkChoiceKind> allowedChoices;
+
   const ConflictHunkView({
     required this.id,
     required this.location,
@@ -508,6 +1264,8 @@ class ConflictHunkView {
     required this.base,
     required this.ours,
     required this.theirs,
+    required this.locationLabel,
+    required this.allowedChoices,
   });
 
   @override
@@ -517,7 +1275,9 @@ class ConflictHunkView {
       kind.hashCode ^
       base.hashCode ^
       ours.hashCode ^
-      theirs.hashCode;
+      theirs.hashCode ^
+      locationLabel.hashCode ^
+      allowedChoices.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -529,7 +1289,9 @@ class ConflictHunkView {
           kind == other.kind &&
           base == other.base &&
           ours == other.ours &&
-          theirs == other.theirs;
+          theirs == other.theirs &&
+          locationLabel == other.locationLabel &&
+          allowedChoices == other.allowedChoices;
 }
 
 /// A conflict in the list.
@@ -546,16 +1308,24 @@ class ConflictItem {
   /// When it happened.
   final DateTime created;
 
+  /// "14:41".
+  final String createdLabel;
+
   const ConflictItem({
     required this.opId,
     required this.noteId,
     required this.title,
     required this.created,
+    required this.createdLabel,
   });
 
   @override
   int get hashCode =>
-      opId.hashCode ^ noteId.hashCode ^ title.hashCode ^ created.hashCode;
+      opId.hashCode ^
+      noteId.hashCode ^
+      title.hashCode ^
+      created.hashCode ^
+      createdLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -565,7 +1335,8 @@ class ConflictItem {
           opId == other.opId &&
           noteId == other.noteId &&
           title == other.title &&
-          created == other.created;
+          created == other.created &&
+          createdLabel == other.createdLabel;
 }
 
 /// How to resolve a conflict.
@@ -747,6 +1518,52 @@ class CreateOutcome {
           candidates == other.candidates;
 }
 
+/// A recorded custody event (document page → Record a move).
+class CustodyDraft {
+  /// Event type (`stored-at`, `moved-to`, `handed-to`, `returned-by`, `sent-to`,
+  /// `received-from`, `lost`, `found`, `destroyed`).
+  final String kind;
+
+  /// Place.
+  final String? placeId;
+
+  /// Person.
+  final String? personId;
+
+  /// Third party.
+  final String? counterpartyId;
+
+  /// Date.
+  final DateTime date;
+
+  const CustodyDraft({
+    required this.kind,
+    this.placeId,
+    this.personId,
+    this.counterpartyId,
+    required this.date,
+  });
+
+  @override
+  int get hashCode =>
+      kind.hashCode ^
+      placeId.hashCode ^
+      personId.hashCode ^
+      counterpartyId.hashCode ^
+      date.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CustodyDraft &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          placeId == other.placeId &&
+          personId == other.personId &&
+          counterpartyId == other.counterpartyId &&
+          date == other.date;
+}
+
 /// One custody event.
 class CustodyItem {
   /// Date.
@@ -770,6 +1587,34 @@ class CustodyItem {
   /// Citations.
   final List<Citation> citations;
 
+  /// `user` (recorded by the user, no citation) | `ai`.
+  final String by;
+
+  /// AI confidence, when the AI says.
+  final double? confidence;
+
+  /// The AI decision behind it, for "Undo".
+  final String? decisionId;
+
+  /// Localisation key of the sentence (`custody.stored_at`, `custody.handed_to`, …).
+  final String sentenceKey;
+
+  /// Who acted (the person for `handed-to`/`returned-by`, the third party for
+  /// `sent-to`/`received-from`).
+  final EntityRef? actor;
+
+  /// Where it went (the place, or the person/third party it went to).
+  final EntityRef? destination;
+
+  /// Ready sentence in the UI language ("Shady returned it to Safe").
+  final String sentence;
+
+  /// "20 Sep".
+  final String dateLabel;
+
+  /// Place pages: the event happened at this place itself (not a nested one).
+  final bool here;
+
   const CustodyItem({
     required this.date,
     required this.kind,
@@ -778,6 +1623,15 @@ class CustodyItem {
     this.person,
     this.counterparty,
     required this.citations,
+    required this.by,
+    this.confidence,
+    this.decisionId,
+    required this.sentenceKey,
+    this.actor,
+    this.destination,
+    required this.sentence,
+    required this.dateLabel,
+    required this.here,
   });
 
   @override
@@ -788,7 +1642,16 @@ class CustodyItem {
       place.hashCode ^
       person.hashCode ^
       counterparty.hashCode ^
-      citations.hashCode;
+      citations.hashCode ^
+      by.hashCode ^
+      confidence.hashCode ^
+      decisionId.hashCode ^
+      sentenceKey.hashCode ^
+      actor.hashCode ^
+      destination.hashCode ^
+      sentence.hashCode ^
+      dateLabel.hashCode ^
+      here.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -801,7 +1664,142 @@ class CustodyItem {
           place == other.place &&
           person == other.person &&
           counterparty == other.counterparty &&
-          citations == other.citations;
+          citations == other.citations &&
+          by == other.by &&
+          confidence == other.confidence &&
+          decisionId == other.decisionId &&
+          sentenceKey == other.sentenceKey &&
+          actor == other.actor &&
+          destination == other.destination &&
+          sentence == other.sentence &&
+          dateLabel == other.dateLabel &&
+          here == other.here;
+}
+
+/// A device signed in to the account (Settings → Devices, account sheet).
+class DeviceItem {
+  /// Device ID.
+  final String id;
+
+  /// Name.
+  final String name;
+
+  /// Platform (`android`, `ios`, `macos`, `windows`, `linux`).
+  final String platform;
+
+  /// Last request from it.
+  final DateTime lastSeen;
+
+  /// `last_seen` as a label ("Active now", "14:32", "Sat").
+  final String lastSeenLabel;
+
+  /// When it signed in.
+  final DateTime signedIn;
+
+  /// `signed_in` as a label ("12 Sep 2026").
+  final String signedInLabel;
+
+  /// This install.
+  final bool isThisDevice;
+
+  /// Reminders are delivered to it (D27).
+  final bool remindersEnabled;
+
+  const DeviceItem({
+    required this.id,
+    required this.name,
+    required this.platform,
+    required this.lastSeen,
+    required this.lastSeenLabel,
+    required this.signedIn,
+    required this.signedInLabel,
+    required this.isThisDevice,
+    required this.remindersEnabled,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      platform.hashCode ^
+      lastSeen.hashCode ^
+      lastSeenLabel.hashCode ^
+      signedIn.hashCode ^
+      signedInLabel.hashCode ^
+      isThisDevice.hashCode ^
+      remindersEnabled.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DeviceItem &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          platform == other.platform &&
+          lastSeen == other.lastSeen &&
+          lastSeenLabel == other.lastSeenLabel &&
+          signedIn == other.signedIn &&
+          signedInLabel == other.signedInLabel &&
+          isThisDevice == other.isThisDevice &&
+          remindersEnabled == other.remindersEnabled;
+}
+
+/// One line of a diff view.
+class DiffLine {
+  /// Kind.
+  final DiffLineKind kind;
+
+  /// Line number in the older text (1-based).
+  final int? oldLine;
+
+  /// Line number in the newer text (1-based).
+  final int? newLine;
+
+  /// The line (no terminator).
+  final String text;
+
+  /// Its direction.
+  final TextDir dir;
+
+  const DiffLine({
+    required this.kind,
+    this.oldLine,
+    this.newLine,
+    required this.text,
+    required this.dir,
+  });
+
+  @override
+  int get hashCode =>
+      kind.hashCode ^
+      oldLine.hashCode ^
+      newLine.hashCode ^
+      text.hashCode ^
+      dir.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DiffLine &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          oldLine == other.oldLine &&
+          newLine == other.newLine &&
+          text == other.text &&
+          dir == other.dir;
+}
+
+/// A line of a diff.
+enum DiffLineKind {
+  /// Unchanged.
+  same,
+
+  /// Only in the newer text.
+  added,
+
+  /// Only in the older text.
+  removed,
 }
 
 /// Counts per tab.
@@ -846,6 +1844,84 @@ class DirectoryCounts {
           places == other.places;
 }
 
+/// Directory filters (all optional; empty = no filter).
+class DirectoryFilter {
+  /// Every tag must be present.
+  final List<String> tags;
+
+  /// People: role (exact, case-insensitive).
+  final String? role;
+
+  /// People: company ID.
+  final String? companyId;
+
+  /// Companies: industry.
+  final String? industry;
+
+  /// Documents: type.
+  final String? docType;
+
+  /// Documents: status.
+  final String? status;
+
+  /// Documents: stored in this place or a nested one.
+  final String? placeId;
+
+  /// Documents: held by this person.
+  final String? holderId;
+
+  /// Documents: expiring within 60 days.
+  final bool expiring;
+
+  /// People/companies with open items.
+  final bool hasOpenItems;
+
+  const DirectoryFilter({
+    required this.tags,
+    this.role,
+    this.companyId,
+    this.industry,
+    this.docType,
+    this.status,
+    this.placeId,
+    this.holderId,
+    required this.expiring,
+    required this.hasOpenItems,
+  });
+
+  static Future<DirectoryFilter> default_() =>
+      StrataCore.instance.api.crateViewModelDirectoryFilterDefault();
+
+  @override
+  int get hashCode =>
+      tags.hashCode ^
+      role.hashCode ^
+      companyId.hashCode ^
+      industry.hashCode ^
+      docType.hashCode ^
+      status.hashCode ^
+      placeId.hashCode ^
+      holderId.hashCode ^
+      expiring.hashCode ^
+      hasOpenItems.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DirectoryFilter &&
+          runtimeType == other.runtimeType &&
+          tags == other.tags &&
+          role == other.role &&
+          companyId == other.companyId &&
+          industry == other.industry &&
+          docType == other.docType &&
+          status == other.status &&
+          placeId == other.placeId &&
+          holderId == other.holderId &&
+          expiring == other.expiring &&
+          hasOpenItems == other.hasOpenItems;
+}
+
 /// A directory row.
 class DirectoryItem {
   /// Note ID.
@@ -860,16 +1936,134 @@ class DirectoryItem {
   /// Aliases (both scripts).
   final List<String> aliases;
 
+  /// Kind (`person`, `company`, `document`, `place`).
+  final String kind;
+
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// Avatar initials ("AS").
+  final String initials;
+
+  /// Notes mentioning it ("14 mentions").
+  final int mentionCount;
+
+  /// Last time a note mentioning it (or it) changed.
+  final DateTime? lastActive;
+
+  /// "Today" / "Thu 24 Sep".
+  final String? lastActiveLabel;
+
+  /// People: role.
+  final String? role;
+
+  /// People: company (`works-at` / `companies:`).
+  final EntityRef? company;
+
+  /// Companies: industry.
+  final String? industry;
+
+  /// Tags.
+  final List<String> tags;
+
+  /// Documents: `status`.
+  final String? status;
+
+  /// Documents: `doc-type`.
+  final String? docType;
+
+  /// Documents: place breadcrumb, outermost first.
+  final List<EntityRef> location;
+
+  /// Documents: holder.
+  final EntityRef? holder;
+
+  /// Documents: last holder.
+  final EntityRef? lastHolder;
+
+  /// Documents: "Last with Shady · 20 Sep".
+  final String? holderLabel;
+
+  /// Documents: `copy`.
+  final String? copy;
+
+  /// Documents: `expires`.
+  final DateTime? expires;
+
+  /// Documents: "Expires 1 Mar 2027".
+  final String? expiresLabel;
+
+  /// Documents: expires within 60 days (or expired).
+  final bool expiringSoon;
+
+  /// Places: enclosing places, outermost first.
+  final List<EntityRef> breadcrumb;
+
+  /// Places: documents here or in nested places.
+  final int documentCount;
+
+  /// Has open items (people/companies).
+  final bool hasOpenItems;
+
   const DirectoryItem({
     required this.id,
     required this.title,
     this.subtitle,
     required this.aliases,
+    required this.kind,
+    required this.titleDir,
+    required this.initials,
+    required this.mentionCount,
+    this.lastActive,
+    this.lastActiveLabel,
+    this.role,
+    this.company,
+    this.industry,
+    required this.tags,
+    this.status,
+    this.docType,
+    required this.location,
+    this.holder,
+    this.lastHolder,
+    this.holderLabel,
+    this.copy,
+    this.expires,
+    this.expiresLabel,
+    required this.expiringSoon,
+    required this.breadcrumb,
+    required this.documentCount,
+    required this.hasOpenItems,
   });
 
   @override
   int get hashCode =>
-      id.hashCode ^ title.hashCode ^ subtitle.hashCode ^ aliases.hashCode;
+      id.hashCode ^
+      title.hashCode ^
+      subtitle.hashCode ^
+      aliases.hashCode ^
+      kind.hashCode ^
+      titleDir.hashCode ^
+      initials.hashCode ^
+      mentionCount.hashCode ^
+      lastActive.hashCode ^
+      lastActiveLabel.hashCode ^
+      role.hashCode ^
+      company.hashCode ^
+      industry.hashCode ^
+      tags.hashCode ^
+      status.hashCode ^
+      docType.hashCode ^
+      location.hashCode ^
+      holder.hashCode ^
+      lastHolder.hashCode ^
+      holderLabel.hashCode ^
+      copy.hashCode ^
+      expires.hashCode ^
+      expiresLabel.hashCode ^
+      expiringSoon.hashCode ^
+      breadcrumb.hashCode ^
+      documentCount.hashCode ^
+      hasOpenItems.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -879,7 +2073,64 @@ class DirectoryItem {
           id == other.id &&
           title == other.title &&
           subtitle == other.subtitle &&
-          aliases == other.aliases;
+          aliases == other.aliases &&
+          kind == other.kind &&
+          titleDir == other.titleDir &&
+          initials == other.initials &&
+          mentionCount == other.mentionCount &&
+          lastActive == other.lastActive &&
+          lastActiveLabel == other.lastActiveLabel &&
+          role == other.role &&
+          company == other.company &&
+          industry == other.industry &&
+          tags == other.tags &&
+          status == other.status &&
+          docType == other.docType &&
+          location == other.location &&
+          holder == other.holder &&
+          lastHolder == other.lastHolder &&
+          holderLabel == other.holderLabel &&
+          copy == other.copy &&
+          expires == other.expires &&
+          expiresLabel == other.expiresLabel &&
+          expiringSoon == other.expiringSoon &&
+          breadcrumb == other.breadcrumb &&
+          documentCount == other.documentCount &&
+          hasOpenItems == other.hasOpenItems;
+}
+
+/// A labelled group of directory rows.
+class DirectorySection {
+  /// "Recently active", "All people · A–Z".
+  final String label;
+
+  /// Rows.
+  final List<DirectoryItem> items;
+
+  const DirectorySection({required this.label, required this.items});
+
+  @override
+  int get hashCode => label.hashCode ^ items.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DirectorySection &&
+          runtimeType == other.runtimeType &&
+          label == other.label &&
+          items == other.items;
+}
+
+/// Directory order.
+enum DirectorySort {
+  /// A–Z.
+  name,
+
+  /// Most recently active first.
+  lastActive,
+
+  /// Documents: most recently moved first.
+  recentlyMoved,
 }
 
 /// Directory tab.
@@ -911,16 +2162,50 @@ class DirectoryView {
   /// Counts (unfiltered).
   final DirectoryCounts counts;
 
+  /// Filter applied.
+  final DirectoryFilter filter;
+
+  /// Order applied to `items`.
+  final DirectorySort sort;
+
+  /// Filter chips with counts.
+  final List<FilterOption> filterOptions;
+
+  /// Rows split for display: "Recently active" (≤ 3, when sorted by name and no query)
+  /// then everything A–Z.
+  final List<DirectorySection> sections;
+
+  /// Pending entity suggestions for this tab (who-is, merges, custody).
+  final List<SuggestionItem> suggestions;
+
+  /// Documents expiring soon (badge of the "Expiring" chip).
+  final int expiringCount;
+
   const DirectoryView({
     required this.tab,
     required this.query,
     required this.items,
     required this.counts,
+    required this.filter,
+    required this.sort,
+    required this.filterOptions,
+    required this.sections,
+    required this.suggestions,
+    required this.expiringCount,
   });
 
   @override
   int get hashCode =>
-      tab.hashCode ^ query.hashCode ^ items.hashCode ^ counts.hashCode;
+      tab.hashCode ^
+      query.hashCode ^
+      items.hashCode ^
+      counts.hashCode ^
+      filter.hashCode ^
+      sort.hashCode ^
+      filterOptions.hashCode ^
+      sections.hashCode ^
+      suggestions.hashCode ^
+      expiringCount.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -930,7 +2215,13 @@ class DirectoryView {
           tab == other.tab &&
           query == other.query &&
           items == other.items &&
-          counts == other.counts;
+          counts == other.counts &&
+          filter == other.filter &&
+          sort == other.sort &&
+          filterOptions == other.filterOptions &&
+          sections == other.sections &&
+          suggestions == other.suggestions &&
+          expiringCount == other.expiringCount;
 }
 
 /// A document in a list.
@@ -950,12 +2241,32 @@ class DocumentBrief {
   /// Who holds it.
   final EntityRef? holder;
 
+  /// `doc-type`.
+  final String? docType;
+
+  /// Last holder.
+  final EntityRef? lastHolder;
+
+  /// Place breadcrumb, outermost first.
+  final List<EntityRef> locationPath;
+
+  /// Expires within 60 days (or expired).
+  final bool expiringSoon;
+
+  /// Direction of the title.
+  final TextDir titleDir;
+
   const DocumentBrief({
     required this.id,
     required this.title,
     this.status,
     this.location,
     this.holder,
+    this.docType,
+    this.lastHolder,
+    required this.locationPath,
+    required this.expiringSoon,
+    required this.titleDir,
   });
 
   @override
@@ -964,7 +2275,12 @@ class DocumentBrief {
       title.hashCode ^
       status.hashCode ^
       location.hashCode ^
-      holder.hashCode;
+      holder.hashCode ^
+      docType.hashCode ^
+      lastHolder.hashCode ^
+      locationPath.hashCode ^
+      expiringSoon.hashCode ^
+      titleDir.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -975,7 +2291,75 @@ class DocumentBrief {
           title == other.title &&
           status == other.status &&
           location == other.location &&
-          holder == other.holder;
+          holder == other.holder &&
+          docType == other.docType &&
+          lastHolder == other.lastHolder &&
+          locationPath == other.locationPath &&
+          expiringSoon == other.expiringSoon &&
+          titleDir == other.titleDir;
+}
+
+/// A new document (Directory → Add document).
+class DocumentDraft {
+  /// Name.
+  final String name;
+
+  /// Aliases.
+  final List<String> aliases;
+
+  /// `doc-type`.
+  final String? docType;
+
+  /// `original` | `copy` | `certified-copy`.
+  final String? copy;
+
+  /// The original, for a copy.
+  final String? copyOf;
+
+  /// Companies it concerns.
+  final List<String> companies;
+
+  /// People it concerns.
+  final List<String> people;
+
+  /// Expiry.
+  final DateTime? expires;
+
+  const DocumentDraft({
+    required this.name,
+    required this.aliases,
+    this.docType,
+    this.copy,
+    this.copyOf,
+    required this.companies,
+    required this.people,
+    this.expires,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^
+      aliases.hashCode ^
+      docType.hashCode ^
+      copy.hashCode ^
+      copyOf.hashCode ^
+      companies.hashCode ^
+      people.hashCode ^
+      expires.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DocumentDraft &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          aliases == other.aliases &&
+          docType == other.docType &&
+          copy == other.copy &&
+          copyOf == other.copyOf &&
+          companies == other.companies &&
+          people == other.people &&
+          expires == other.expires;
 }
 
 /// A document page.
@@ -1019,6 +2403,36 @@ class DocumentView {
   /// Companies/people it concerns.
   final List<EntityRef> concerns;
 
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// Path.
+  final String path;
+
+  /// Has unsynced changes.
+  final bool pendingSync;
+
+  /// "Expires 1 Mar 2027".
+  final String? expiresLabel;
+
+  /// Expires within 60 days (or expired).
+  final bool expiringSoon;
+
+  /// The open task that renews it (a task linking the document).
+  final TaskItem? renewalTask;
+
+  /// Notes mentioning it, newest first.
+  final List<NoteListItem> mentions;
+
+  /// Copies with their location and holder.
+  final List<DocumentBrief> copyBriefs;
+
+  /// The user-owned `## Notes` body.
+  final String userNotes;
+
+  /// "Last with Shady · 20 Sep".
+  final String? holderLabel;
+
   const DocumentView({
     required this.id,
     required this.title,
@@ -1033,6 +2447,16 @@ class DocumentView {
     required this.custody,
     required this.copies,
     required this.concerns,
+    required this.titleDir,
+    required this.path,
+    required this.pendingSync,
+    this.expiresLabel,
+    required this.expiringSoon,
+    this.renewalTask,
+    required this.mentions,
+    required this.copyBriefs,
+    required this.userNotes,
+    this.holderLabel,
   });
 
   @override
@@ -1049,7 +2473,17 @@ class DocumentView {
       lastHolder.hashCode ^
       custody.hashCode ^
       copies.hashCode ^
-      concerns.hashCode;
+      concerns.hashCode ^
+      titleDir.hashCode ^
+      path.hashCode ^
+      pendingSync.hashCode ^
+      expiresLabel.hashCode ^
+      expiringSoon.hashCode ^
+      renewalTask.hashCode ^
+      mentions.hashCode ^
+      copyBriefs.hashCode ^
+      userNotes.hashCode ^
+      holderLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1068,7 +2502,17 @@ class DocumentView {
           lastHolder == other.lastHolder &&
           custody == other.custody &&
           copies == other.copies &&
-          concerns == other.concerns;
+          concerns == other.concerns &&
+          titleDir == other.titleDir &&
+          path == other.path &&
+          pendingSync == other.pendingSync &&
+          expiresLabel == other.expiresLabel &&
+          expiringSoon == other.expiringSoon &&
+          renewalTask == other.renewalTask &&
+          mentions == other.mentions &&
+          copyBriefs == other.copyBriefs &&
+          userNotes == other.userNotes &&
+          holderLabel == other.holderLabel;
 }
 
 /// The user's answer to a duplicate prompt.
@@ -1145,14 +2589,37 @@ class EditorHint {
   /// End (exclusive).
   final int end;
 
+  /// `WikiLink` / `Embed`: the resolved note.
+  final String? targetId;
+
+  /// `WikiLink` / `Embed`: heading or block (without `^`).
+  final String? targetAnchor;
+
+  /// `TaskLine`: the task's block ID.
+  final String? taskId;
+
+  /// `Heading`: level 1–6 (0 otherwise).
+  final int level;
+
   const EditorHint({
     required this.kind,
     required this.start,
     required this.end,
+    this.targetId,
+    this.targetAnchor,
+    this.taskId,
+    required this.level,
   });
 
   @override
-  int get hashCode => kind.hashCode ^ start.hashCode ^ end.hashCode;
+  int get hashCode =>
+      kind.hashCode ^
+      start.hashCode ^
+      end.hashCode ^
+      targetId.hashCode ^
+      targetAnchor.hashCode ^
+      taskId.hashCode ^
+      level.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1161,7 +2628,11 @@ class EditorHint {
           runtimeType == other.runtimeType &&
           kind == other.kind &&
           start == other.start &&
-          end == other.end;
+          end == other.end &&
+          targetId == other.targetId &&
+          targetAnchor == other.targetAnchor &&
+          taskId == other.taskId &&
+          level == other.level;
 }
 
 /// Which page an ID leads to.
@@ -1187,10 +2658,13 @@ class EntityRef {
   /// Display title.
   final String title;
 
-  const EntityRef({this.id, required this.title});
+  /// The target's kind (`note`, `person`, `company`, `document`, `place`, …) when resolved.
+  final String? kind;
+
+  const EntityRef({this.id, required this.title, this.kind});
 
   @override
-  int get hashCode => id.hashCode ^ title.hashCode;
+  int get hashCode => id.hashCode ^ title.hashCode ^ kind.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1198,7 +2672,8 @@ class EntityRef {
       other is EntityRef &&
           runtimeType == other.runtimeType &&
           id == other.id &&
-          title == other.title;
+          title == other.title &&
+          kind == other.kind;
 }
 
 /// Entity, document or place screen (one of the pages is set, per `kind`).
@@ -1287,6 +2762,42 @@ class EntityView {
   /// Has unsynced changes.
   final bool pendingSync;
 
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// Initials.
+  final String initials;
+
+  /// Path ("people/ahmed-samir.md").
+  final String path;
+
+  /// Tags.
+  final List<String> tags;
+
+  /// The user-owned `## Notes` body (edit with `update_user_notes`).
+  final String userNotes;
+
+  /// Citations in `## Summary`.
+  final List<Citation> summaryCitations;
+
+  /// "AI-maintained · updated 2h ago", when the server says when the AI last wrote.
+  final String? aiUpdatedLabel;
+
+  /// Open items ("2 open · 1 done").
+  final int openCount;
+
+  /// Done open items.
+  final int doneCount;
+
+  /// Notes mentioning it (all, even when `mentions` is truncated).
+  final int mentionCount;
+
+  /// "last active today".
+  final String? lastActiveLabel;
+
+  /// `## Summary` direction.
+  final TextDir summaryDir;
+
   const EntityView({
     required this.id,
     required this.kind,
@@ -1301,6 +2812,18 @@ class EntityView {
     required this.related,
     required this.documents,
     required this.pendingSync,
+    required this.titleDir,
+    required this.initials,
+    required this.path,
+    required this.tags,
+    required this.userNotes,
+    required this.summaryCitations,
+    this.aiUpdatedLabel,
+    required this.openCount,
+    required this.doneCount,
+    required this.mentionCount,
+    this.lastActiveLabel,
+    required this.summaryDir,
   });
 
   @override
@@ -1317,7 +2840,19 @@ class EntityView {
       mentions.hashCode ^
       related.hashCode ^
       documents.hashCode ^
-      pendingSync.hashCode;
+      pendingSync.hashCode ^
+      titleDir.hashCode ^
+      initials.hashCode ^
+      path.hashCode ^
+      tags.hashCode ^
+      userNotes.hashCode ^
+      summaryCitations.hashCode ^
+      aiUpdatedLabel.hashCode ^
+      openCount.hashCode ^
+      doneCount.hashCode ^
+      mentionCount.hashCode ^
+      lastActiveLabel.hashCode ^
+      summaryDir.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1336,7 +2871,101 @@ class EntityView {
           mentions == other.mentions &&
           related == other.related &&
           documents == other.documents &&
-          pendingSync == other.pendingSync;
+          pendingSync == other.pendingSync &&
+          titleDir == other.titleDir &&
+          initials == other.initials &&
+          path == other.path &&
+          tags == other.tags &&
+          userNotes == other.userNotes &&
+          summaryCitations == other.summaryCitations &&
+          aiUpdatedLabel == other.aiUpdatedLabel &&
+          openCount == other.openCount &&
+          doneCount == other.doneCount &&
+          mentionCount == other.mentionCount &&
+          lastActiveLabel == other.lastActiveLabel &&
+          summaryDir == other.summaryDir;
+}
+
+/// Result of an export saved to disk.
+class ExportSummary {
+  /// Where it was written.
+  final String path;
+
+  /// Size.
+  final BigInt sizeBytes;
+
+  /// Notes (`.md` entries) in it.
+  final int noteCount;
+
+  /// "18.4 MB · 412 notes".
+  final String label;
+
+  const ExportSummary({
+    required this.path,
+    required this.sizeBytes,
+    required this.noteCount,
+    required this.label,
+  });
+
+  @override
+  int get hashCode =>
+      path.hashCode ^ sizeBytes.hashCode ^ noteCount.hashCode ^ label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ExportSummary &&
+          runtimeType == other.runtimeType &&
+          path == other.path &&
+          sizeBytes == other.sizeBytes &&
+          noteCount == other.noteCount &&
+          label == other.label;
+}
+
+/// A filter chip with its count.
+class FilterOption {
+  /// Facet (`tag`, `role`, `company`, `industry`, `doc_type`, `status`, `place`, `holder`,
+  /// `expiring`, `has_open_items`).
+  final String facet;
+
+  /// Value (tag, role, ID, …; empty for boolean facets).
+  final String value;
+
+  /// Label.
+  final String label;
+
+  /// Rows of the tab (query applied) matching it.
+  final int count;
+
+  /// Currently applied.
+  final bool selected;
+
+  const FilterOption({
+    required this.facet,
+    required this.value,
+    required this.label,
+    required this.count,
+    required this.selected,
+  });
+
+  @override
+  int get hashCode =>
+      facet.hashCode ^
+      value.hashCode ^
+      label.hashCode ^
+      count.hashCode ^
+      selected.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FilterOption &&
+          runtimeType == other.runtimeType &&
+          facet == other.facet &&
+          value == other.value &&
+          label == other.label &&
+          count == other.count &&
+          selected == other.selected;
 }
 
 /// A folder in the notes tree.
@@ -1380,14 +3009,42 @@ class GlobalGraphView {
   /// Cluster labels, by name.
   final List<ClusterLabel> clusters;
 
+  /// Filter applied.
+  final GraphFilter filter;
+
+  /// Edges per kind before filtering.
+  final List<KindCount> edgeCounts;
+
+  /// Nodes per kind before filtering.
+  final List<KindCount> nodeCounts;
+
+  /// Neighbours of `filter.focus` (to keep bright), by ID.
+  final List<String> neighbours;
+
+  /// Similarity edges (server graph endpoint; not in the contract yet).
+  final Availability similarity;
+
   const GlobalGraphView({
     required this.nodes,
     required this.edges,
     required this.clusters,
+    required this.filter,
+    required this.edgeCounts,
+    required this.nodeCounts,
+    required this.neighbours,
+    required this.similarity,
   });
 
   @override
-  int get hashCode => nodes.hashCode ^ edges.hashCode ^ clusters.hashCode;
+  int get hashCode =>
+      nodes.hashCode ^
+      edges.hashCode ^
+      clusters.hashCode ^
+      filter.hashCode ^
+      edgeCounts.hashCode ^
+      nodeCounts.hashCode ^
+      neighbours.hashCode ^
+      similarity.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1396,7 +3053,12 @@ class GlobalGraphView {
           runtimeType == other.runtimeType &&
           nodes == other.nodes &&
           edges == other.edges &&
-          clusters == other.clusters;
+          clusters == other.clusters &&
+          filter == other.filter &&
+          edgeCounts == other.edgeCounts &&
+          nodeCounts == other.nodeCounts &&
+          neighbours == other.neighbours &&
+          similarity == other.similarity;
 }
 
 /// An edge of a local graph.
@@ -1416,12 +3078,28 @@ class GraphEdge {
   /// AI confidence.
   final double? confidence;
 
+  /// Stable edge ID (`<src>|<kind>|<dst>`).
+  final String id;
+
+  /// Relation type for `relation:<type>` edges.
+  final String? relType;
+
+  /// Localised label ("works at", "link", "mentions").
+  final String label;
+
+  /// The AI's reason, when it gave one.
+  final String? reason;
+
   const GraphEdge({
     required this.src,
     required this.dst,
     required this.kind,
     this.by,
     this.confidence,
+    required this.id,
+    this.relType,
+    required this.label,
+    this.reason,
   });
 
   @override
@@ -1430,7 +3108,11 @@ class GraphEdge {
       dst.hashCode ^
       kind.hashCode ^
       by.hashCode ^
-      confidence.hashCode;
+      confidence.hashCode ^
+      id.hashCode ^
+      relType.hashCode ^
+      label.hashCode ^
+      reason.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1441,7 +3123,75 @@ class GraphEdge {
           dst == other.dst &&
           kind == other.kind &&
           by == other.by &&
-          confidence == other.confidence;
+          confidence == other.confidence &&
+          id == other.id &&
+          relType == other.relType &&
+          label == other.label &&
+          reason == other.reason;
+}
+
+/// Global map filters, applied in the core.
+class GraphFilter {
+  /// Edge kinds to keep (`link`, `embed`, `relation`, `mention`, `concept`, `entity`,
+  /// `custody`, `part-of-place`, `similarity`); empty = all.
+  final List<String> edgeKinds;
+
+  /// Node kinds to keep (`note`, `person`, …); empty = all.
+  final List<String> nodeKinds;
+
+  /// Include AI similarity edges (needs the server's graph endpoint).
+  final bool similarity;
+
+  /// Keep only this cluster (and edges inside it).
+  final String? cluster;
+
+  /// Lens.
+  final GraphLens lens;
+
+  /// Selected node: its neighbours are listed in `GlobalGraphView::neighbours`.
+  final String? focus;
+
+  const GraphFilter({
+    required this.edgeKinds,
+    required this.nodeKinds,
+    required this.similarity,
+    this.cluster,
+    required this.lens,
+    this.focus,
+  });
+
+  @override
+  int get hashCode =>
+      edgeKinds.hashCode ^
+      nodeKinds.hashCode ^
+      similarity.hashCode ^
+      cluster.hashCode ^
+      lens.hashCode ^
+      focus.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GraphFilter &&
+          runtimeType == other.runtimeType &&
+          edgeKinds == other.edgeKinds &&
+          nodeKinds == other.nodeKinds &&
+          similarity == other.similarity &&
+          cluster == other.cluster &&
+          lens == other.lens &&
+          focus == other.focus;
+}
+
+/// Which graph the global map shows (PLAN §10 entity lens).
+enum GraphLens {
+  /// Every note.
+  notes,
+
+  /// People and their relations / co-mentions.
+  people,
+
+  /// Companies and their relations / co-mentions.
+  companies,
 }
 
 /// A node of a graph view, with its position.
@@ -1470,6 +3220,21 @@ class GraphNode {
   /// Position.
   final double y;
 
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// Short AI summary (hover card), when the server has one.
+  final String? summary;
+
+  /// Last change ("today", "21 Sep").
+  final String updatedLabel;
+
+  /// Label priority: 0 = always labelled (hubs), higher = only when zoomed in further.
+  final int labelRank;
+
+  /// A hub (label always shown).
+  final bool isHub;
+
   const GraphNode({
     required this.id,
     required this.title,
@@ -1479,6 +3244,11 @@ class GraphNode {
     required this.degree,
     required this.x,
     required this.y,
+    required this.titleDir,
+    this.summary,
+    required this.updatedLabel,
+    required this.labelRank,
+    required this.isHub,
   });
 
   @override
@@ -1490,7 +3260,12 @@ class GraphNode {
       clusterId.hashCode ^
       degree.hashCode ^
       x.hashCode ^
-      y.hashCode;
+      y.hashCode ^
+      titleDir.hashCode ^
+      summary.hashCode ^
+      updatedLabel.hashCode ^
+      labelRank.hashCode ^
+      isHub.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1503,6 +3278,33 @@ class GraphNode {
           depth == other.depth &&
           clusterId == other.clusterId &&
           degree == other.degree &&
+          x == other.x &&
+          y == other.y &&
+          titleDir == other.titleDir &&
+          summary == other.summary &&
+          updatedLabel == other.updatedLabel &&
+          labelRank == other.labelRank &&
+          isHub == other.isHub;
+}
+
+/// A point of a region outline.
+class GraphPoint {
+  /// X.
+  final double x;
+
+  /// Y.
+  final double y;
+
+  const GraphPoint({required this.x, required this.y});
+
+  @override
+  int get hashCode => x.hashCode ^ y.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GraphPoint &&
+          runtimeType == other.runtimeType &&
           x == other.x &&
           y == other.y;
 }
@@ -1532,6 +3334,81 @@ enum HintKind {
 
   /// Code.
   code,
+
+  /// `**bold**` / `__bold__`.
+  bold,
+
+  /// `*italic*` / `_italic_`.
+  italic,
+
+  /// `~~strike~~`.
+  strike,
+
+  /// `==mark==`.
+  mark,
+
+  /// A line whose first strong character is right-to-left (lay it out RTL).
+  rtlLine,
+
+  /// A line whose first strong character is left-to-right.
+  ltrLine,
+}
+
+/// One revision of a note (history panel, online).
+class HistoryEntry {
+  /// Commit ID.
+  final String commit;
+
+  /// "v7" (1 = oldest).
+  final String versionLabel;
+
+  /// Commit message.
+  final String message;
+
+  /// `user` | `ai` | `system`.
+  final String author;
+
+  /// When.
+  final DateTime at;
+
+  /// "Today 14:31", "Sat 18:40", "12 Sep".
+  final String atLabel;
+
+  /// Reverting to it is possible (not the current revision, not a deletion).
+  final bool canRevert;
+
+  const HistoryEntry({
+    required this.commit,
+    required this.versionLabel,
+    required this.message,
+    required this.author,
+    required this.at,
+    required this.atLabel,
+    required this.canRevert,
+  });
+
+  @override
+  int get hashCode =>
+      commit.hashCode ^
+      versionLabel.hashCode ^
+      message.hashCode ^
+      author.hashCode ^
+      at.hashCode ^
+      atLabel.hashCode ^
+      canRevert.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HistoryEntry &&
+          runtimeType == other.runtimeType &&
+          commit == other.commit &&
+          versionLabel == other.versionLabel &&
+          message == other.message &&
+          author == other.author &&
+          at == other.at &&
+          atLabel == other.atLabel &&
+          canRevert == other.canRevert;
 }
 
 /// Home / Capture.
@@ -1548,11 +3425,63 @@ class HomeView {
   /// Sync indicator.
   final SyncPill sync_;
 
+  /// "Sunday 27 September".
+  final String todayLabel;
+
+  /// "Good afternoon, Shawket".
+  final String greeting;
+
+  /// The account's display name.
+  final String displayName;
+
+  /// The newest captures with the AI's proposal (≤ 3).
+  final List<InboxPreviewItem> inboxPreview;
+
+  /// Captures needing a decision only the user can make.
+  final int needsYouCount;
+
+  /// Contradictions to review.
+  final int contradictionsCount;
+
+  /// Summary line ("1 needs you · 1 contradiction to review"); empty when nothing waits.
+  final String inboxSummary;
+
+  /// AI activity feed state (the server has no activity feed yet).
+  final Availability aiActivity;
+
+  /// AI activity entries, newest first.
+  final List<AiActivityItem> aiActivityItems;
+
+  /// "3 relations added, 1 contradiction found".
+  final String aiActivityHeadline;
+
+  /// Open items roll-up state.
+  final Availability openItems;
+
+  /// Open items of people and companies, newest entity first (≤ 10).
+  final List<OpenItem> openItemList;
+
+  /// Pinned notes.
+  final List<NoteListItem> pinned;
+
   const HomeView({
     required this.recentNotes,
     required this.inboxCount,
     required this.tasks,
     required this.sync_,
+    required this.todayLabel,
+    required this.greeting,
+    required this.displayName,
+    required this.inboxPreview,
+    required this.needsYouCount,
+    required this.contradictionsCount,
+    required this.inboxSummary,
+    required this.aiActivity,
+    required this.aiActivityItems,
+    required this.aiActivityHeadline,
+    required this.openItems,
+    required this.openItemList,
+    required this.pinned,
   });
 
   @override
@@ -1560,7 +3489,20 @@ class HomeView {
       recentNotes.hashCode ^
       inboxCount.hashCode ^
       tasks.hashCode ^
-      sync_.hashCode;
+      sync_.hashCode ^
+      todayLabel.hashCode ^
+      greeting.hashCode ^
+      displayName.hashCode ^
+      inboxPreview.hashCode ^
+      needsYouCount.hashCode ^
+      contradictionsCount.hashCode ^
+      inboxSummary.hashCode ^
+      aiActivity.hashCode ^
+      aiActivityItems.hashCode ^
+      aiActivityHeadline.hashCode ^
+      openItems.hashCode ^
+      openItemList.hashCode ^
+      pinned.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1570,7 +3512,20 @@ class HomeView {
           recentNotes == other.recentNotes &&
           inboxCount == other.inboxCount &&
           tasks == other.tasks &&
-          sync_ == other.sync_;
+          sync_ == other.sync_ &&
+          todayLabel == other.todayLabel &&
+          greeting == other.greeting &&
+          displayName == other.displayName &&
+          inboxPreview == other.inboxPreview &&
+          needsYouCount == other.needsYouCount &&
+          contradictionsCount == other.contradictionsCount &&
+          inboxSummary == other.inboxSummary &&
+          aiActivity == other.aiActivity &&
+          aiActivityItems == other.aiActivityItems &&
+          aiActivityHeadline == other.aiActivityHeadline &&
+          openItems == other.openItems &&
+          openItemList == other.openItemList &&
+          pinned == other.pinned;
 }
 
 /// A choice for one hunk.
@@ -1620,6 +3575,40 @@ enum HunkChoiceKind {
   text,
 }
 
+/// Result of an import.
+class ImportSummary {
+  /// Files imported.
+  final int imported;
+
+  /// Entries skipped (hidden files, …).
+  final int skipped;
+
+  const ImportSummary({required this.imported, required this.skipped});
+
+  @override
+  int get hashCode => imported.hashCode ^ skipped.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ImportSummary &&
+          runtimeType == other.runtimeType &&
+          imported == other.imported &&
+          skipped == other.skipped;
+}
+
+/// Inbox filter tabs.
+enum InboxFilter {
+  /// Everything.
+  all,
+
+  /// Captures and suggestions needing the user.
+  needsYou,
+
+  /// Conflicts and contradictions.
+  conflicts,
+}
+
 /// A capture in the inbox.
 class InboxItem {
   /// Note ID.
@@ -1640,6 +3629,27 @@ class InboxItem {
   /// Not synced yet.
   final bool pendingSync;
 
+  /// Direction of `text`.
+  final TextDir textDir;
+
+  /// `created` as a label ("09:47", "Sat 18:40").
+  final String createdLabel;
+
+  /// Where it came from ("Typed on Pixel 8", "Voice"), from the note's `source:`.
+  final String? sourceLabel;
+
+  /// The AI's filing confidence, when it proposed a filing.
+  final double? filingConfidence;
+
+  /// Some suggestion needs the user.
+  final bool needsYou;
+
+  /// Every suggestion can be accepted as is ("Accept all ready").
+  final bool ready;
+
+  /// It resembles existing items (a `duplicate` suggestion is pending).
+  final bool isDuplicate;
+
   const InboxItem({
     required this.noteId,
     required this.title,
@@ -1647,6 +3657,13 @@ class InboxItem {
     required this.created,
     required this.suggestions,
     required this.pendingSync,
+    required this.textDir,
+    required this.createdLabel,
+    this.sourceLabel,
+    this.filingConfidence,
+    required this.needsYou,
+    required this.ready,
+    required this.isDuplicate,
   });
 
   @override
@@ -1656,7 +3673,14 @@ class InboxItem {
       text.hashCode ^
       created.hashCode ^
       suggestions.hashCode ^
-      pendingSync.hashCode;
+      pendingSync.hashCode ^
+      textDir.hashCode ^
+      createdLabel.hashCode ^
+      sourceLabel.hashCode ^
+      filingConfidence.hashCode ^
+      needsYou.hashCode ^
+      ready.hashCode ^
+      isDuplicate.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1668,7 +3692,59 @@ class InboxItem {
           text == other.text &&
           created == other.created &&
           suggestions == other.suggestions &&
-          pendingSync == other.pendingSync;
+          pendingSync == other.pendingSync &&
+          textDir == other.textDir &&
+          createdLabel == other.createdLabel &&
+          sourceLabel == other.sourceLabel &&
+          filingConfidence == other.filingConfidence &&
+          needsYou == other.needsYou &&
+          ready == other.ready &&
+          isDuplicate == other.isDuplicate;
+}
+
+/// A capture in the Home inbox preview.
+class InboxPreviewItem {
+  /// The capture's note.
+  final String noteId;
+
+  /// Text (first line, ≤ 120 characters).
+  final String text;
+
+  /// Direction of `text`.
+  final TextDir textDir;
+
+  /// What the AI proposes ("→ Weekly invoicing request — Acme", "Who is “بابا”?").
+  final String summary;
+
+  /// Needs a decision only the user can make.
+  final bool needsYou;
+
+  const InboxPreviewItem({
+    required this.noteId,
+    required this.text,
+    required this.textDir,
+    required this.summary,
+    required this.needsYou,
+  });
+
+  @override
+  int get hashCode =>
+      noteId.hashCode ^
+      text.hashCode ^
+      textDir.hashCode ^
+      summary.hashCode ^
+      needsYou.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is InboxPreviewItem &&
+          runtimeType == other.runtimeType &&
+          noteId == other.noteId &&
+          text == other.text &&
+          textDir == other.textDir &&
+          summary == other.summary &&
+          needsYou == other.needsYou;
 }
 
 /// Inbox.
@@ -1679,10 +3755,40 @@ class InboxView {
   /// Pending suggestions not tied to an inbox capture (entity link-or-create, custody, …).
   final List<SuggestionItem> suggestions;
 
-  const InboxView({required this.captures, required this.suggestions});
+  /// Filter applied.
+  final InboxFilter filter;
+
+  /// Captures ready to accept as proposed ("Accept all ready").
+  final int readyCount;
+
+  /// Captures and suggestions needing the user (unfiltered count).
+  final int needsYouCount;
+
+  /// Conflicts and contradictions (unfiltered count).
+  final int conflictsCount;
+
+  /// Everything (unfiltered count).
+  final int allCount;
+
+  const InboxView({
+    required this.captures,
+    required this.suggestions,
+    required this.filter,
+    required this.readyCount,
+    required this.needsYouCount,
+    required this.conflictsCount,
+    required this.allCount,
+  });
 
   @override
-  int get hashCode => captures.hashCode ^ suggestions.hashCode;
+  int get hashCode =>
+      captures.hashCode ^
+      suggestions.hashCode ^
+      filter.hashCode ^
+      readyCount.hashCode ^
+      needsYouCount.hashCode ^
+      conflictsCount.hashCode ^
+      allCount.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1690,7 +3796,87 @@ class InboxView {
       other is InboxView &&
           runtimeType == other.runtimeType &&
           captures == other.captures &&
-          suggestions == other.suggestions;
+          suggestions == other.suggestions &&
+          filter == other.filter &&
+          readyCount == other.readyCount &&
+          needsYouCount == other.needsYouCount &&
+          conflictsCount == other.conflictsCount &&
+          allCount == other.allCount;
+}
+
+/// An integrity warning (Settings → Integrity).
+class IntegrityItem {
+  /// ID.
+  final String id;
+
+  /// Kind (`out_of_band_edit`, …).
+  final String kind;
+
+  /// Localisation key (`integrity.<kind>`).
+  final String messageKey;
+
+  /// Vault path.
+  final String? path;
+
+  /// "12 Sep 14:31".
+  final String createdLabel;
+
+  const IntegrityItem({
+    required this.id,
+    required this.kind,
+    required this.messageKey,
+    this.path,
+    required this.createdLabel,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      kind.hashCode ^
+      messageKey.hashCode ^
+      path.hashCode ^
+      createdLabel.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is IntegrityItem &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          kind == other.kind &&
+          messageKey == other.messageKey &&
+          path == other.path &&
+          createdLabel == other.createdLabel;
+}
+
+/// A kind with its count (filter panel).
+class KindCount {
+  /// Kind.
+  final String kind;
+
+  /// Localised label.
+  final String label;
+
+  /// Count before filtering.
+  final int count;
+
+  const KindCount({
+    required this.kind,
+    required this.label,
+    required this.count,
+  });
+
+  @override
+  int get hashCode => kind.hashCode ^ label.hashCode ^ count.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is KindCount &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          label == other.label &&
+          count == other.count;
 }
 
 /// An account with a local database on this device.
@@ -1707,11 +3893,15 @@ class KnownAccountItem {
   /// Server URL.
   final String serverUrl;
 
+  /// Avatar initials.
+  final String initials;
+
   const KnownAccountItem({
     required this.userId,
     required this.username,
     required this.displayName,
     required this.serverUrl,
+    required this.initials,
   });
 
   @override
@@ -1719,7 +3909,8 @@ class KnownAccountItem {
       userId.hashCode ^
       username.hashCode ^
       displayName.hashCode ^
-      serverUrl.hashCode;
+      serverUrl.hashCode ^
+      initials.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1729,7 +3920,80 @@ class KnownAccountItem {
           userId == other.userId &&
           username == other.username &&
           displayName == other.displayName &&
-          serverUrl == other.serverUrl;
+          serverUrl == other.serverUrl &&
+          initials == other.initials;
+}
+
+/// How a line of one conflict column changed.
+enum LineChange {
+  /// Same as the base.
+  same,
+
+  /// Added on this side.
+  added,
+
+  /// Removed on this side (base column: removed by either side).
+  removed,
+
+  /// Changed on this side only.
+  changed,
+
+  /// Changed on both sides (the conflict).
+  changedBoth,
+}
+
+/// The user's answer to "Who is “بابا”?".
+class LinkOrCreateChoice {
+  /// Kind.
+  final LinkOrCreateKind kind;
+
+  /// `Link`: the entity.
+  final String? entityId;
+
+  /// `Create`: the new entity's name.
+  final String? name;
+
+  /// `Create`: `person` (default) or `company`.
+  final String? entityKind;
+
+  /// `Create`: skip the duplicate check.
+  final bool force;
+
+  const LinkOrCreateChoice({
+    required this.kind,
+    this.entityId,
+    this.name,
+    this.entityKind,
+    required this.force,
+  });
+
+  @override
+  int get hashCode =>
+      kind.hashCode ^
+      entityId.hashCode ^
+      name.hashCode ^
+      entityKind.hashCode ^
+      force.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LinkOrCreateChoice &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          entityId == other.entityId &&
+          name == other.name &&
+          entityKind == other.entityKind &&
+          force == other.force;
+}
+
+/// Link-or-create answer.
+enum LinkOrCreateKind {
+  /// Link the mention to an existing entity (it becomes an alias).
+  link,
+
+  /// Create a new person/company named `name` with the mention as alias.
+  create,
 }
 
 /// A note's neighbourhood (depth 1–3) from cached links and relations, laid out radially
@@ -1750,12 +4014,36 @@ class LocalGraphView {
   /// Edges.
   final List<GraphEdge> edges;
 
+  /// Relations of the focused note ("8 relations · 2 by AI").
+  final int relationCount;
+
+  /// Of which by the AI.
+  final int aiRelationCount;
+
+  /// "8 relations · 2 by AI".
+  final String relationLabel;
+
+  /// The focused note's summary.
+  final String? summary;
+
+  /// Saving a layout as `.canvas` (the server has no endpoint for canvas files yet).
+  final Availability saveLayout;
+
+  /// Proposing a relation type with AI on drag-to-relate (needs the AI endpoint).
+  final Availability proposeRelation;
+
   const LocalGraphView({
     required this.center,
     required this.found,
     required this.depth,
     required this.nodes,
     required this.edges,
+    required this.relationCount,
+    required this.aiRelationCount,
+    required this.relationLabel,
+    this.summary,
+    required this.saveLayout,
+    required this.proposeRelation,
   });
 
   @override
@@ -1764,7 +4052,13 @@ class LocalGraphView {
       found.hashCode ^
       depth.hashCode ^
       nodes.hashCode ^
-      edges.hashCode;
+      edges.hashCode ^
+      relationCount.hashCode ^
+      aiRelationCount.hashCode ^
+      relationLabel.hashCode ^
+      summary.hashCode ^
+      saveLayout.hashCode ^
+      proposeRelation.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1775,7 +4069,228 @@ class LocalGraphView {
           found == other.found &&
           depth == other.depth &&
           nodes == other.nodes &&
-          edges == other.edges;
+          edges == other.edges &&
+          relationCount == other.relationCount &&
+          aiRelationCount == other.aiRelationCount &&
+          relationLabel == other.relationLabel &&
+          summary == other.summary &&
+          saveLayout == other.saveLayout &&
+          proposeRelation == other.proposeRelation;
+}
+
+/// Result of `insert_mention`: the new content and caret.
+class MentionEdit {
+  /// New full content (the link inserted and the entity added to `people:` /
+  /// `companies:`); save it with `update_note`.
+  final String content;
+
+  /// Caret after the inserted link (UTF-16).
+  final int cursor;
+
+  const MentionEdit({required this.content, required this.cursor});
+
+  @override
+  int get hashCode => content.hashCode ^ cursor.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MentionEdit &&
+          runtimeType == other.runtimeType &&
+          content == other.content &&
+          cursor == other.cursor;
+}
+
+/// What merging two entities would move.
+class MergePreview {
+  /// The entity that disappears.
+  final EntityRef source;
+
+  /// The survivor.
+  final EntityRef into;
+
+  /// Aliases the survivor gains (incl. the source's name).
+  final List<String> aliases;
+
+  /// Notes whose links move.
+  final int mentionCount;
+
+  /// Relations that move.
+  final int relationCount;
+
+  const MergePreview({
+    required this.source,
+    required this.into,
+    required this.aliases,
+    required this.mentionCount,
+    required this.relationCount,
+  });
+
+  @override
+  int get hashCode =>
+      source.hashCode ^
+      into.hashCode ^
+      aliases.hashCode ^
+      mentionCount.hashCode ^
+      relationCount.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MergePreview &&
+          runtimeType == other.runtimeType &&
+          source == other.source &&
+          into == other.into &&
+          aliases == other.aliases &&
+          mentionCount == other.mentionCount &&
+          relationCount == other.relationCount;
+}
+
+/// Which day of the month a monthly/yearly rule falls on.
+enum MonthDayMode {
+  /// The due date's own day.
+  sameDay,
+
+  /// `month_days` (1–31, clamped to the month).
+  days,
+
+  /// The last day of the month.
+  lastDay,
+
+  /// `nth` `nth_weekday` ("2nd Wednesday", `nth` = −1 for "last").
+  nthWeekday,
+}
+
+/// Navigation counts and pinned notes (sidebar, rail, bottom bar).
+class NavView {
+  /// Inbox items awaiting review.
+  final int inboxCount;
+
+  /// Open tasks due today or overdue ("Tasks 3").
+  final int tasksDueCount;
+
+  /// Live notes.
+  final int notesCount;
+
+  /// People + companies + documents + places.
+  final int directoryCount;
+
+  /// Map clusters.
+  final int clusterCount;
+
+  /// Pinned notes, in pin order.
+  final List<NoteListItem> pinned;
+
+  /// Sync indicator.
+  final SyncPill sync_;
+
+  const NavView({
+    required this.inboxCount,
+    required this.tasksDueCount,
+    required this.notesCount,
+    required this.directoryCount,
+    required this.clusterCount,
+    required this.pinned,
+    required this.sync_,
+  });
+
+  @override
+  int get hashCode =>
+      inboxCount.hashCode ^
+      tasksDueCount.hashCode ^
+      notesCount.hashCode ^
+      directoryCount.hashCode ^
+      clusterCount.hashCode ^
+      pinned.hashCode ^
+      sync_.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NavView &&
+          runtimeType == other.runtimeType &&
+          inboxCount == other.inboxCount &&
+          tasksDueCount == other.tasksDueCount &&
+          notesCount == other.notesCount &&
+          directoryCount == other.directoryCount &&
+          clusterCount == other.clusterCount &&
+          pinned == other.pinned &&
+          sync_ == other.sync_;
+}
+
+/// A new account created by an admin.
+class NewUserRequest {
+  /// Username.
+  final String username;
+
+  /// Display name.
+  final String displayName;
+
+  /// Initial password.
+  final String password;
+
+  /// `admin` | `member`.
+  final String role;
+
+  const NewUserRequest({
+    required this.username,
+    required this.displayName,
+    required this.password,
+    required this.role,
+  });
+
+  @override
+  int get hashCode =>
+      username.hashCode ^
+      displayName.hashCode ^
+      password.hashCode ^
+      role.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NewUserRequest &&
+          runtimeType == other.runtimeType &&
+          username == other.username &&
+          displayName == other.displayName &&
+          password == other.password &&
+          role == other.role;
+}
+
+/// A revision compared with the current note (history panel).
+class NoteDiffView {
+  /// Note.
+  final String noteId;
+
+  /// The revision's commit.
+  final String commit;
+
+  /// "+2 lines, 1 removed".
+  final String summary;
+
+  /// Lines: the revision (old) against the current content (new).
+  final List<DiffLine> lines;
+
+  const NoteDiffView({
+    required this.noteId,
+    required this.commit,
+    required this.summary,
+    required this.lines,
+  });
+
+  @override
+  int get hashCode =>
+      noteId.hashCode ^ commit.hashCode ^ summary.hashCode ^ lines.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NoteDiffView &&
+          runtimeType == other.runtimeType &&
+          noteId == other.noteId &&
+          commit == other.commit &&
+          summary == other.summary &&
+          lines == other.lines;
 }
 
 /// A note in a list.
@@ -1804,6 +4319,21 @@ class NoteListItem {
   /// Has unsynced changes.
   final bool pendingSync;
 
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// Direction of the snippet.
+  final TextDir snippetDir;
+
+  /// `updated_at` for lists ("14:31" today, "Sat" this week, "21 Sep", "21 Sep 2025").
+  final String updatedLabel;
+
+  /// Outgoing links and relations ("4 links").
+  final int linkCount;
+
+  /// Matched spans in `snippet` (search hits, mentions of an entity).
+  final List<TextSpan> highlights;
+
   const NoteListItem({
     required this.id,
     required this.title,
@@ -1813,6 +4343,11 @@ class NoteListItem {
     required this.tags,
     required this.updatedAt,
     required this.pendingSync,
+    required this.titleDir,
+    required this.snippetDir,
+    required this.updatedLabel,
+    required this.linkCount,
+    required this.highlights,
   });
 
   @override
@@ -1824,7 +4359,12 @@ class NoteListItem {
       snippet.hashCode ^
       tags.hashCode ^
       updatedAt.hashCode ^
-      pendingSync.hashCode;
+      pendingSync.hashCode ^
+      titleDir.hashCode ^
+      snippetDir.hashCode ^
+      updatedLabel.hashCode ^
+      linkCount.hashCode ^
+      highlights.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1838,7 +4378,12 @@ class NoteListItem {
           snippet == other.snippet &&
           tags == other.tags &&
           updatedAt == other.updatedAt &&
-          pendingSync == other.pendingSync;
+          pendingSync == other.pendingSync &&
+          titleDir == other.titleDir &&
+          snippetDir == other.snippetDir &&
+          updatedLabel == other.updatedLabel &&
+          linkCount == other.linkCount &&
+          highlights == other.highlights;
 }
 
 /// The note screen.
@@ -1873,6 +4418,9 @@ enum NoteSyncKind {
 
   /// An edit conflicts with the server (open the conflict screen).
   conflict,
+
+  /// Creating it found an existing item ("Already exists"; open the duplicate sheet).
+  duplicate,
 }
 
 /// Sync state of one note.
@@ -1886,15 +4434,28 @@ class NoteSyncState {
   /// The conflicting op.
   final String? conflictOpId;
 
+  /// The create op awaiting a duplicate choice.
+  final String? duplicateOpId;
+
+  /// The status line ("Saved · v7", "Saved on this device · 2 changes to sync",
+  /// "Conflict", "Already exists").
+  final String label;
+
   const NoteSyncState({
     required this.kind,
     required this.pendingOps,
     this.conflictOpId,
+    this.duplicateOpId,
+    required this.label,
   });
 
   @override
   int get hashCode =>
-      kind.hashCode ^ pendingOps.hashCode ^ conflictOpId.hashCode;
+      kind.hashCode ^
+      pendingOps.hashCode ^
+      conflictOpId.hashCode ^
+      duplicateOpId.hashCode ^
+      label.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1903,7 +4464,9 @@ class NoteSyncState {
           runtimeType == other.runtimeType &&
           kind == other.kind &&
           pendingOps == other.pendingOps &&
-          conflictOpId == other.conflictOpId;
+          conflictOpId == other.conflictOpId &&
+          duplicateOpId == other.duplicateOpId &&
+          label == other.label;
 }
 
 /// A note.
@@ -1950,6 +4513,36 @@ class NoteView {
   /// History and revert (online only).
   final Availability history;
 
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// Version of `content` (pass it to `update_note` as `base_version`).
+  final String contentVersion;
+
+  /// "v7" once the history was fetched (`refresh_history`).
+  final String? versionLabel;
+
+  /// "Created 18 Sep".
+  final String? createdLabel;
+
+  /// "Edited today 14:31".
+  final String? editedLabel;
+
+  /// Who made the last change, once the history was fetched ("Shawket", "AI").
+  final String? editedBy;
+
+  /// Words in the body.
+  final int wordCount;
+
+  /// Incoming links and relations ("Backlinks 6").
+  final int backlinkCount;
+
+  /// Revisions, newest first (once fetched while online).
+  final List<HistoryEntry> historyEntries;
+
+  /// Pinned to the sidebar.
+  final bool pinned;
+
   const NoteView({
     required this.id,
     required this.path,
@@ -1965,6 +4558,16 @@ class NoteView {
     required this.hints,
     required this.sync_,
     required this.history,
+    required this.titleDir,
+    required this.contentVersion,
+    this.versionLabel,
+    this.createdLabel,
+    this.editedLabel,
+    this.editedBy,
+    required this.wordCount,
+    required this.backlinkCount,
+    required this.historyEntries,
+    required this.pinned,
   });
 
   @override
@@ -1982,7 +4585,17 @@ class NoteView {
       tasks.hashCode ^
       hints.hashCode ^
       sync_.hashCode ^
-      history.hashCode;
+      history.hashCode ^
+      titleDir.hashCode ^
+      contentVersion.hashCode ^
+      versionLabel.hashCode ^
+      createdLabel.hashCode ^
+      editedLabel.hashCode ^
+      editedBy.hashCode ^
+      wordCount.hashCode ^
+      backlinkCount.hashCode ^
+      historyEntries.hashCode ^
+      pinned.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2002,7 +4615,17 @@ class NoteView {
           tasks == other.tasks &&
           hints == other.hints &&
           sync_ == other.sync_ &&
-          history == other.history;
+          history == other.history &&
+          titleDir == other.titleDir &&
+          contentVersion == other.contentVersion &&
+          versionLabel == other.versionLabel &&
+          createdLabel == other.createdLabel &&
+          editedLabel == other.editedLabel &&
+          editedBy == other.editedBy &&
+          wordCount == other.wordCount &&
+          backlinkCount == other.backlinkCount &&
+          historyEntries == other.historyEntries &&
+          pinned == other.pinned;
 }
 
 /// The Notes destination: a folder's subfolders and notes.
@@ -2016,14 +4639,27 @@ class NotesListView {
   /// Notes directly in the folder, by title.
   final List<NoteListItem> notes;
 
+  /// Root → this folder (the root has `path` `""`).
+  final List<FolderItem> breadcrumb;
+
+  /// Notes directly in this folder.
+  final int noteCount;
+
   const NotesListView({
     required this.folder,
     required this.folders,
     required this.notes,
+    required this.breadcrumb,
+    required this.noteCount,
   });
 
   @override
-  int get hashCode => folder.hashCode ^ folders.hashCode ^ notes.hashCode;
+  int get hashCode =>
+      folder.hashCode ^
+      folders.hashCode ^
+      notes.hashCode ^
+      breadcrumb.hashCode ^
+      noteCount.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2032,29 +4668,27 @@ class NotesListView {
           runtimeType == other.runtimeType &&
           folder == other.folder &&
           folders == other.folders &&
-          notes == other.notes;
+          notes == other.notes &&
+          breadcrumb == other.breadcrumb &&
+          noteCount == other.noteCount;
 }
 
-/// A notification action tapped by the user.
+/// A notification action tapped by the user (Snooze uses the device's snooze length).
 class NotificationAction {
   /// Kind.
   final NotificationActionKind kind;
 
-  /// `Snooze`: minutes from now.
-  final int minutes;
-
-  const NotificationAction({required this.kind, required this.minutes});
+  const NotificationAction({required this.kind});
 
   @override
-  int get hashCode => kind.hashCode ^ minutes.hashCode;
+  int get hashCode => kind.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is NotificationAction &&
           runtimeType == other.runtimeType &&
-          kind == other.kind &&
-          minutes == other.minutes;
+          kind == other.kind;
 }
 
 /// A notification action tapped by the user.
@@ -2167,6 +4801,60 @@ enum NotificationResult {
 
   /// Too many pending notifications.
   platformLimit,
+
+  /// Any other platform error.
+  failed,
+}
+
+/// An open item of a person or company (`## Open items`), for Home.
+class OpenItem {
+  /// Stable ID (`<entity id>:<n>`).
+  final String id;
+
+  /// Text.
+  final String text;
+
+  /// Direction of `text`.
+  final TextDir textDir;
+
+  /// The person/company.
+  final EntityRef person;
+
+  /// First citation.
+  final Citation? citation;
+
+  /// Done (always `false` until the format records done items).
+  final bool done;
+
+  const OpenItem({
+    required this.id,
+    required this.text,
+    required this.textDir,
+    required this.person,
+    this.citation,
+    required this.done,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      text.hashCode ^
+      textDir.hashCode ^
+      person.hashCode ^
+      citation.hashCode ^
+      done.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is OpenItem &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          text == other.text &&
+          textDir == other.textDir &&
+          person == other.person &&
+          citation == other.citation &&
+          done == other.done;
 }
 
 /// A queued op.
@@ -2189,6 +4877,15 @@ class OutboxItem {
   /// Queued at.
   final DateTime created;
 
+  /// What it does ("+2 lines, 1 changed", "works at → Acme", the capture's text).
+  final String detail;
+
+  /// Direction of `detail`.
+  final TextDir detailDir;
+
+  /// "14:32".
+  final String createdLabel;
+
   const OutboxItem({
     required this.opId,
     required this.kind,
@@ -2196,6 +4893,9 @@ class OutboxItem {
     required this.status,
     required this.attempts,
     required this.created,
+    required this.detail,
+    required this.detailDir,
+    required this.createdLabel,
   });
 
   @override
@@ -2205,7 +4905,10 @@ class OutboxItem {
       title.hashCode ^
       status.hashCode ^
       attempts.hashCode ^
-      created.hashCode;
+      created.hashCode ^
+      detail.hashCode ^
+      detailDir.hashCode ^
+      createdLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2217,7 +4920,10 @@ class OutboxItem {
           title == other.title &&
           status == other.status &&
           attempts == other.attempts &&
-          created == other.created;
+          created == other.created &&
+          detail == other.detail &&
+          detailDir == other.detailDir &&
+          createdLabel == other.createdLabel;
 }
 
 /// Outbox op status.
@@ -2233,6 +4939,229 @@ enum OutboxStatus {
 
   /// Duplicate prompt awaiting a choice.
   duplicate,
+}
+
+/// Password strength for the sign-up meter.
+enum PasswordLevel {
+  /// Shorter than the server's minimum.
+  tooShort,
+
+  /// Long enough, one kind of character.
+  weak,
+
+  /// Two or three kinds, or long.
+  fair,
+
+  /// Four kinds, or very long.
+  strong,
+}
+
+/// Result of `password_strength`.
+class PasswordStrength {
+  /// Level.
+  final PasswordLevel level;
+
+  /// Characters typed.
+  final int length;
+
+  /// The server's minimum (default configuration).
+  final int minLength;
+
+  const PasswordStrength({
+    required this.level,
+    required this.length,
+    required this.minLength,
+  });
+
+  @override
+  int get hashCode => level.hashCode ^ length.hashCode ^ minLength.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PasswordStrength &&
+          runtimeType == other.runtimeType &&
+          level == other.level &&
+          length == other.length &&
+          minLength == other.minLength;
+}
+
+/// A sign-up or sign-in waiting for an admin's decision (D22).
+class PendingApproval {
+  /// Username.
+  final String username;
+
+  /// Server.
+  final String serverUrl;
+
+  /// When the account was requested (sign-up) or first found pending on this device.
+  final DateTime requestedAt;
+
+  /// "sent 2 hours ago".
+  final String requestedLabel;
+
+  /// Last "Check again".
+  final DateTime? lastCheckedAt;
+
+  /// "Last checked 14:32".
+  final String? lastCheckedLabel;
+
+  /// Whether "Check again" can run without asking for the password again (the password
+  /// is kept in memory only, never on disk).
+  final bool canCheck;
+
+  const PendingApproval({
+    required this.username,
+    required this.serverUrl,
+    required this.requestedAt,
+    required this.requestedLabel,
+    this.lastCheckedAt,
+    this.lastCheckedLabel,
+    required this.canCheck,
+  });
+
+  @override
+  int get hashCode =>
+      username.hashCode ^
+      serverUrl.hashCode ^
+      requestedAt.hashCode ^
+      requestedLabel.hashCode ^
+      lastCheckedAt.hashCode ^
+      lastCheckedLabel.hashCode ^
+      canCheck.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PendingApproval &&
+          runtimeType == other.runtimeType &&
+          username == other.username &&
+          serverUrl == other.serverUrl &&
+          requestedAt == other.requestedAt &&
+          requestedLabel == other.requestedLabel &&
+          lastCheckedAt == other.lastCheckedAt &&
+          lastCheckedLabel == other.lastCheckedLabel &&
+          canCheck == other.canCheck;
+}
+
+/// A new place.
+class PlaceDraft {
+  /// Name.
+  final String name;
+
+  /// Aliases.
+  final List<String> aliases;
+
+  /// Enclosing place.
+  final String? parentId;
+
+  /// Address.
+  final String? address;
+
+  const PlaceDraft({
+    required this.name,
+    required this.aliases,
+    this.parentId,
+    this.address,
+  });
+
+  @override
+  int get hashCode =>
+      name.hashCode ^ aliases.hashCode ^ parentId.hashCode ^ address.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PlaceDraft &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          aliases == other.aliases &&
+          parentId == other.parentId &&
+          address == other.address;
+}
+
+/// A place in a place page's tree.
+class PlaceNode {
+  /// The place.
+  final EntityRef place;
+
+  /// Depth below the page's place (1 = direct sub-place).
+  final int depth;
+
+  /// Documents stored there (not nested).
+  final int documentCount;
+
+  /// Its parent (the page's place for depth 1).
+  final String parentId;
+
+  const PlaceNode({
+    required this.place,
+    required this.depth,
+    required this.documentCount,
+    required this.parentId,
+  });
+
+  @override
+  int get hashCode =>
+      place.hashCode ^
+      depth.hashCode ^
+      documentCount.hashCode ^
+      parentId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PlaceNode &&
+          runtimeType == other.runtimeType &&
+          place == other.place &&
+          depth == other.depth &&
+          documentCount == other.documentCount &&
+          parentId == other.parentId;
+}
+
+/// A place in the custody place picker.
+class PlaceOption {
+  /// Place ID.
+  final String id;
+
+  /// Title.
+  final String title;
+
+  /// Enclosing places, outermost first.
+  final List<EntityRef> breadcrumb;
+
+  /// Nesting depth (0 = top level).
+  final int depth;
+
+  /// The document is there now (`place_options(document_id)`).
+  final bool isCurrent;
+
+  const PlaceOption({
+    required this.id,
+    required this.title,
+    required this.breadcrumb,
+    required this.depth,
+    required this.isCurrent,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      title.hashCode ^
+      breadcrumb.hashCode ^
+      depth.hashCode ^
+      isCurrent.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PlaceOption &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          title == other.title &&
+          breadcrumb == other.breadcrumb &&
+          depth == other.depth &&
+          isCurrent == other.isCurrent;
 }
 
 /// A place page.
@@ -2258,6 +5187,21 @@ class PlaceView {
   /// Custody events at this place or nested places, newest first (≤ 20).
   final List<CustodyItem> recentMovements;
 
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// Every nested place, depth first (children by title).
+  final List<PlaceNode> tree;
+
+  /// Documents last stored here (or nested) that a person holds now ("Out with people").
+  final List<DocumentBrief> outWithPeople;
+
+  /// The user-owned `## Notes` body.
+  final String userNotes;
+
+  /// Path.
+  final String path;
+
   const PlaceView({
     required this.id,
     required this.title,
@@ -2266,6 +5210,11 @@ class PlaceView {
     required this.subPlaces,
     required this.documents,
     required this.recentMovements,
+    required this.titleDir,
+    required this.tree,
+    required this.outWithPeople,
+    required this.userNotes,
+    required this.path,
   });
 
   @override
@@ -2276,7 +5225,12 @@ class PlaceView {
       breadcrumb.hashCode ^
       subPlaces.hashCode ^
       documents.hashCode ^
-      recentMovements.hashCode;
+      recentMovements.hashCode ^
+      titleDir.hashCode ^
+      tree.hashCode ^
+      outWithPeople.hashCode ^
+      userNotes.hashCode ^
+      path.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2289,7 +5243,12 @@ class PlaceView {
           breadcrumb == other.breadcrumb &&
           subPlaces == other.subPlaces &&
           documents == other.documents &&
-          recentMovements == other.recentMovements;
+          recentMovements == other.recentMovements &&
+          titleDir == other.titleDir &&
+          tree == other.tree &&
+          outWithPeople == other.outWithPeople &&
+          userNotes == other.userNotes &&
+          path == other.path;
 }
 
 /// Platform of this install (device registration, notification mode).
@@ -2332,7 +5291,184 @@ class PropertyItem {
           values == other.values;
 }
 
-/// A rolled-back op.
+/// Which notes the "Recent" block lists.
+enum RecentFilter {
+  /// Most recently edited.
+  edited,
+
+  /// Most recently created.
+  created,
+
+  /// Captures the AI filed (notes with `source:` that left the inbox).
+  filedByAi,
+}
+
+/// The "Recent" block with a filter (HomeExpanded).
+class RecentNotesView {
+  /// Filter.
+  final RecentFilter filter;
+
+  /// Notes (≤ 20).
+  final List<NoteListItem> notes;
+
+  const RecentNotesView({required this.filter, required this.notes});
+
+  @override
+  int get hashCode => filter.hashCode ^ notes.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecentNotesView &&
+          runtimeType == other.runtimeType &&
+          filter == other.filter &&
+          notes == other.notes;
+}
+
+/// A recurrence phrase compiled from a form.
+class RecurrenceCompose {
+  /// The phrase to store (`every month on the 1st`).
+  final String phrase;
+
+  /// Whether the grammar understands it (always `true` for a valid form).
+  final bool understood;
+
+  /// Human summary in the UI language ("Every month on the 1st").
+  final String label;
+
+  const RecurrenceCompose({
+    required this.phrase,
+    required this.understood,
+    required this.label,
+  });
+
+  @override
+  int get hashCode => phrase.hashCode ^ understood.hashCode ^ label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecurrenceCompose &&
+          runtimeType == other.runtimeType &&
+          phrase == other.phrase &&
+          understood == other.understood &&
+          label == other.label;
+}
+
+/// The recurrence editor's structured form (Tasks plugin grammar, `vault-format`).
+class RecurrenceForm {
+  /// Frequency.
+  final RecurrenceFrequency frequency;
+
+  /// Every N periods (≥ 1).
+  final int interval;
+
+  /// Weekly: days (empty = the due date's weekday).
+  final List<WeekdayKind> weekdays;
+
+  /// Monthly/yearly: the day rule.
+  final MonthDayMode monthDayMode;
+
+  /// `Days`: days of the month.
+  final Uint32List monthDays;
+
+  /// `NthWeekday`: position (1–5, −1…−5).
+  final int nth;
+
+  /// `NthWeekday`: weekday.
+  final WeekdayKind? nthWeekday;
+
+  /// Yearly: months 1–12 (empty = the due date's month).
+  final Uint32List months;
+
+  /// Count from the completion date ("when done").
+  final bool whenDone;
+
+  const RecurrenceForm({
+    required this.frequency,
+    required this.interval,
+    required this.weekdays,
+    required this.monthDayMode,
+    required this.monthDays,
+    required this.nth,
+    this.nthWeekday,
+    required this.months,
+    required this.whenDone,
+  });
+
+  @override
+  int get hashCode =>
+      frequency.hashCode ^
+      interval.hashCode ^
+      weekdays.hashCode ^
+      monthDayMode.hashCode ^
+      monthDays.hashCode ^
+      nth.hashCode ^
+      nthWeekday.hashCode ^
+      months.hashCode ^
+      whenDone.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecurrenceForm &&
+          runtimeType == other.runtimeType &&
+          frequency == other.frequency &&
+          interval == other.interval &&
+          weekdays == other.weekdays &&
+          monthDayMode == other.monthDayMode &&
+          monthDays == other.monthDays &&
+          nth == other.nth &&
+          nthWeekday == other.nthWeekday &&
+          months == other.months &&
+          whenDone == other.whenDone;
+}
+
+/// How often a recurrence repeats.
+enum RecurrenceFrequency {
+  /// Days.
+  daily,
+
+  /// Weeks.
+  weekly,
+
+  /// Months.
+  monthly,
+
+  /// Years.
+  yearly,
+}
+
+/// One upcoming occurrence of a recurrence.
+class RecurrencePreviewItem {
+  /// The date.
+  final DateTime date;
+
+  /// "Thu 1 Oct 2026" / "Sun 1 Nov".
+  final String label;
+
+  /// The first entry is the current due date.
+  final bool isDue;
+
+  const RecurrencePreviewItem({
+    required this.date,
+    required this.label,
+    required this.isDue,
+  });
+
+  @override
+  int get hashCode => date.hashCode ^ label.hashCode ^ isDue.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RecurrencePreviewItem &&
+          runtimeType == other.runtimeType &&
+          date == other.date &&
+          label == other.label &&
+          isDue == other.isDue;
+}
+
 class RejectionItem {
   /// Op ID.
   final String opId;
@@ -2388,12 +5524,24 @@ class RelationChip {
   /// AI reason.
   final String? reason;
 
+  /// Localised label of the type ("works at" for `works-at`).
+  final String relLabel;
+
+  /// When the AI added it ("14:05"); `None` when the server does not say.
+  final String? createdLabel;
+
+  /// Blocks the AI cited for it.
+  final List<Citation> citations;
+
   const RelationChip({
     required this.relType,
     required this.target,
     required this.by,
     this.confidence,
     this.reason,
+    required this.relLabel,
+    this.createdLabel,
+    required this.citations,
   });
 
   @override
@@ -2402,7 +5550,10 @@ class RelationChip {
       target.hashCode ^
       by.hashCode ^
       confidence.hashCode ^
-      reason.hashCode;
+      reason.hashCode ^
+      relLabel.hashCode ^
+      createdLabel.hashCode ^
+      citations.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2413,7 +5564,32 @@ class RelationChip {
           target == other.target &&
           by == other.by &&
           confidence == other.confidence &&
-          reason == other.reason;
+          reason == other.reason &&
+          relLabel == other.relLabel &&
+          createdLabel == other.createdLabel &&
+          citations == other.citations;
+}
+
+/// A relation type the user can pick (properties panel, retype).
+class RelationTypeItem {
+  /// Key (`works-at`).
+  final String key;
+
+  /// Localised label ("works at").
+  final String label;
+
+  const RelationTypeItem({required this.key, required this.label});
+
+  @override
+  int get hashCode => key.hashCode ^ label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RelationTypeItem &&
+          runtimeType == other.runtimeType &&
+          key == other.key &&
+          label == other.label;
 }
 
 /// A reminder of a task.
@@ -2424,10 +5600,32 @@ class ReminderItem {
   /// The instant it fires (user's timezone, DST resolved).
   final DateTime at;
 
-  const ReminderItem({required this.local, required this.at});
+  /// The wall-clock time (date-only reminders use the default reminder time): pass it back
+  /// to `remove_reminder`.
+  final DateTime localAt;
+
+  /// Time of day ("09:00").
+  final String timeLabel;
+
+  /// Relative to the due date ("on the day", "30 days before"), or the date when the task
+  /// has no due date ("Thu 1 Oct").
+  final String offsetLabel;
+
+  const ReminderItem({
+    required this.local,
+    required this.at,
+    required this.localAt,
+    required this.timeLabel,
+    required this.offsetLabel,
+  });
 
   @override
-  int get hashCode => local.hashCode ^ at.hashCode;
+  int get hashCode =>
+      local.hashCode ^
+      at.hashCode ^
+      localAt.hashCode ^
+      timeLabel.hashCode ^
+      offsetLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2435,7 +5633,10 @@ class ReminderItem {
       other is ReminderItem &&
           runtimeType == other.runtimeType &&
           local == other.local &&
-          at == other.at;
+          at == other.at &&
+          localAt == other.localAt &&
+          timeLabel == other.timeLabel &&
+          offsetLabel == other.offsetLabel;
 }
 
 /// Reminder settings of this device.
@@ -2455,12 +5656,28 @@ class RemindersSetting {
   /// Time used for date-only reminders (`HH:MM`).
   final String defaultTime;
 
+  /// Snooze length used by the notification's Snooze action.
+  final int snoozeMinutes;
+
+  /// Quiet hours on.
+  final bool quietEnabled;
+
+  /// Quiet hours start (`HH:MM`).
+  final String quietFrom;
+
+  /// Quiet hours end (`HH:MM`); reminders inside are delivered then.
+  final String quietUntil;
+
   const RemindersSetting({
     required this.enabled,
     required this.permission,
     required this.mode,
     required this.scheduled,
     required this.defaultTime,
+    required this.snoozeMinutes,
+    required this.quietEnabled,
+    required this.quietFrom,
+    required this.quietUntil,
   });
 
   @override
@@ -2469,7 +5686,11 @@ class RemindersSetting {
       permission.hashCode ^
       mode.hashCode ^
       scheduled.hashCode ^
-      defaultTime.hashCode;
+      defaultTime.hashCode ^
+      snoozeMinutes.hashCode ^
+      quietEnabled.hashCode ^
+      quietFrom.hashCode ^
+      quietUntil.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2480,7 +5701,11 @@ class RemindersSetting {
           permission == other.permission &&
           mode == other.mode &&
           scheduled == other.scheduled &&
-          defaultTime == other.defaultTime;
+          defaultTime == other.defaultTime &&
+          snoozeMinutes == other.snoozeMinutes &&
+          quietEnabled == other.quietEnabled &&
+          quietFrom == other.quietFrom &&
+          quietUntil == other.quietUntil;
 }
 
 /// How to resolve a conflict.
@@ -2497,6 +5722,10 @@ enum ResolutionKind {
   /// Resolve the merge preview hunk by hunk ([`ConflictResolution::choices`],
   /// `sync-model` `Conflicted::resolve`).
   hunks,
+
+  /// Keep both versions as separate notes: the server's stays, the local edit is kept
+  /// in the conflict copy the server created (or created now).
+  saveBothAsCopies,
 }
 
 /// A search result.
@@ -2516,12 +5745,28 @@ class SearchHit {
   /// Snippet around the match (plain text).
   final String snippet;
 
+  /// Direction of the title.
+  final TextDir titleDir;
+
+  /// Direction of the snippet.
+  final TextDir snippetDir;
+
+  /// Matched terms in `snippet`.
+  final List<TextSpan> highlights;
+
+  /// Relevance (higher is better; mode-specific scale).
+  final double score;
+
   const SearchHit({
     required this.noteId,
     required this.title,
     required this.path,
     required this.kind,
     required this.snippet,
+    required this.titleDir,
+    required this.snippetDir,
+    required this.highlights,
+    required this.score,
   });
 
   @override
@@ -2530,7 +5775,11 @@ class SearchHit {
       title.hashCode ^
       path.hashCode ^
       kind.hashCode ^
-      snippet.hashCode;
+      snippet.hashCode ^
+      titleDir.hashCode ^
+      snippetDir.hashCode ^
+      highlights.hashCode ^
+      score.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2541,7 +5790,11 @@ class SearchHit {
           title == other.title &&
           path == other.path &&
           kind == other.kind &&
-          snippet == other.snippet;
+          snippet == other.snippet &&
+          titleDir == other.titleDir &&
+          snippetDir == other.snippetDir &&
+          highlights == other.highlights &&
+          score == other.score;
 }
 
 /// Search mode.
@@ -2570,16 +5823,29 @@ class SearchView {
   /// Whether the asked mode could run (semantic/hybrid need the server).
   final Availability availability;
 
+  /// Modes usable right now (keyword always; semantic/hybrid when online).
+  final List<SearchMode> availableModes;
+
+  /// Folder the search was limited to.
+  final String? folder;
+
   const SearchView({
     required this.query,
     required this.mode,
     required this.results,
     required this.availability,
+    required this.availableModes,
+    this.folder,
   });
 
   @override
   int get hashCode =>
-      query.hashCode ^ mode.hashCode ^ results.hashCode ^ availability.hashCode;
+      query.hashCode ^
+      mode.hashCode ^
+      results.hashCode ^
+      availability.hashCode ^
+      availableModes.hashCode ^
+      folder.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2589,7 +5855,9 @@ class SearchView {
           query == other.query &&
           mode == other.mode &&
           results == other.results &&
-          availability == other.availability;
+          availability == other.availability &&
+          availableModes == other.availableModes &&
+          folder == other.folder;
 }
 
 /// Which screen the account state leads to.
@@ -2612,6 +5880,12 @@ enum SessionKind {
 
   /// The account is scheduled for deletion (D25): export-only; local data is read-only.
   deletionPending,
+
+  /// Signed up (or signed in) and waiting for an admin's approval (D22).
+  pendingApproval,
+
+  /// An admin rejected the sign-up.
+  rejected,
 }
 
 /// The app's account state: decides between the login screen, the main shell and the
@@ -2641,6 +5915,31 @@ class SessionState {
   /// `DeletionPending`: whole days until then.
   final int? daysRemaining;
 
+  /// `DeletionPending`: `deletion_at` as a local date in the account's time zone
+  /// ("11 Oct 2026").
+  final String? deletionLabel;
+
+  /// `PendingApproval` / `Rejected`: the request.
+  final PendingApproval? pending;
+
+  /// Size of the last downloaded export (`DeletionPending`, after `download_export`).
+  final BigInt? exportSizeBytes;
+
+  /// Notes in the last downloaded export.
+  final int? exportNoteCount;
+
+  /// `export_size_bytes` / `export_note_count` as "18.4 MB · 412 notes".
+  final String? exportLabel;
+
+  /// This device as the server lists it (account sheet), once fetched.
+  final DeviceItem? thisDevice;
+
+  /// Devices of the account ("Devices 3"), once fetched.
+  final int? deviceCount;
+
+  /// Admins: accounts waiting for approval ("2 pending"), once fetched.
+  final int? pendingApprovals;
+
   const SessionState({
     required this.kind,
     this.account,
@@ -2650,6 +5949,14 @@ class SessionState {
     required this.unsyncedOps,
     this.deletionAt,
     this.daysRemaining,
+    this.deletionLabel,
+    this.pending,
+    this.exportSizeBytes,
+    this.exportNoteCount,
+    this.exportLabel,
+    this.thisDevice,
+    this.deviceCount,
+    this.pendingApprovals,
   });
 
   /// A state of `kind` with every detail empty.
@@ -2665,7 +5972,15 @@ class SessionState {
       deviceName.hashCode ^
       unsyncedOps.hashCode ^
       deletionAt.hashCode ^
-      daysRemaining.hashCode;
+      daysRemaining.hashCode ^
+      deletionLabel.hashCode ^
+      pending.hashCode ^
+      exportSizeBytes.hashCode ^
+      exportNoteCount.hashCode ^
+      exportLabel.hashCode ^
+      thisDevice.hashCode ^
+      deviceCount.hashCode ^
+      pendingApprovals.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2679,7 +5994,15 @@ class SessionState {
           deviceName == other.deviceName &&
           unsyncedOps == other.unsyncedOps &&
           deletionAt == other.deletionAt &&
-          daysRemaining == other.daysRemaining;
+          daysRemaining == other.daysRemaining &&
+          deletionLabel == other.deletionLabel &&
+          pending == other.pending &&
+          exportSizeBytes == other.exportSizeBytes &&
+          exportNoteCount == other.exportNoteCount &&
+          exportLabel == other.exportLabel &&
+          thisDevice == other.thisDevice &&
+          deviceCount == other.deviceCount &&
+          pendingApprovals == other.pendingApprovals;
 }
 
 /// Settings.
@@ -2705,6 +6028,18 @@ class SettingsView {
   /// Admin → Users entry.
   final Availability admin;
 
+  /// Devices of the account, once fetched (`refresh_settings`), by last activity.
+  final List<DeviceItem> deviceList;
+
+  /// AI status, once fetched.
+  final AiStatusView? aiStatus;
+
+  /// Integrity warnings, once fetched, newest first.
+  final List<IntegrityItem> integrityWarnings;
+
+  /// Last `refresh_settings` ("Updated 14:32").
+  final String? refreshedLabel;
+
   const SettingsView({
     required this.account,
     required this.reminders,
@@ -2713,6 +6048,10 @@ class SettingsView {
     required this.export_,
     required this.integrity,
     required this.admin,
+    required this.deviceList,
+    this.aiStatus,
+    required this.integrityWarnings,
+    this.refreshedLabel,
   });
 
   @override
@@ -2723,7 +6062,11 @@ class SettingsView {
       ai.hashCode ^
       export_.hashCode ^
       integrity.hashCode ^
-      admin.hashCode;
+      admin.hashCode ^
+      deviceList.hashCode ^
+      aiStatus.hashCode ^
+      integrityWarnings.hashCode ^
+      refreshedLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2736,7 +6079,11 @@ class SettingsView {
           ai == other.ai &&
           export_ == other.export_ &&
           integrity == other.integrity &&
-          admin == other.admin;
+          admin == other.admin &&
+          deviceList == other.deviceList &&
+          aiStatus == other.aiStatus &&
+          integrityWarnings == other.integrityWarnings &&
+          refreshedLabel == other.refreshedLabel;
 }
 
 /// What `sign_in` needs.
@@ -2902,6 +6249,25 @@ class SuggestionDetail {
   /// Unsupported: the server's kind string.
   final String serverKind;
 
+  /// Custody: the resulting location.
+  final EntityRef? location;
+
+  /// Custody: the resulting holder.
+  final EntityRef? holder;
+
+  /// Custody: the resulting last holder.
+  final EntityRef? lastHolder;
+
+  /// Custody: documents the event may be about ("Which contract?"); pick one with
+  /// `accept_suggestion_choice`.
+  final List<EntityRef> documentChoices;
+
+  /// The resolved timeline date of a mention, when the AI provides one.
+  final TimelineChip? timeline;
+
+  /// Conflict / duplicates: the other note (conflict copy, second item).
+  final EntityRef? other;
+
   const SuggestionDetail({
     required this.kind,
     required this.title,
@@ -2917,6 +6283,12 @@ class SuggestionDetail {
     required this.relType,
     required this.reason,
     required this.serverKind,
+    this.location,
+    this.holder,
+    this.lastHolder,
+    required this.documentChoices,
+    this.timeline,
+    this.other,
   });
 
   /// An empty detail of `kind`.
@@ -2938,7 +6310,13 @@ class SuggestionDetail {
       target.hashCode ^
       relType.hashCode ^
       reason.hashCode ^
-      serverKind.hashCode;
+      serverKind.hashCode ^
+      location.hashCode ^
+      holder.hashCode ^
+      lastHolder.hashCode ^
+      documentChoices.hashCode ^
+      timeline.hashCode ^
+      other.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2958,7 +6336,67 @@ class SuggestionDetail {
           target == other.target &&
           relType == other.relType &&
           reason == other.reason &&
-          serverKind == other.serverKind;
+          serverKind == other.serverKind &&
+          location == other.location &&
+          holder == other.holder &&
+          lastHolder == other.lastHolder &&
+          documentChoices == other.documentChoices &&
+          timeline == other.timeline &&
+          other == other.other;
+}
+
+/// Edits to a proposal before accepting it (InboxExpanded).
+class SuggestionEdits {
+  /// Filing: title.
+  final String? title;
+
+  /// Filing: folder.
+  final String? folder;
+
+  /// Filing: tags.
+  final List<String>? tags;
+
+  /// Task: text.
+  final String? text;
+
+  /// Task: due date.
+  final DateTime? due;
+
+  /// Task: recurrence phrase.
+  final String? recurrence;
+
+  const SuggestionEdits({
+    this.title,
+    this.folder,
+    this.tags,
+    this.text,
+    this.due,
+    this.recurrence,
+  });
+
+  static Future<SuggestionEdits> default_() =>
+      StrataCore.instance.api.crateViewModelSuggestionEditsDefault();
+
+  @override
+  int get hashCode =>
+      title.hashCode ^
+      folder.hashCode ^
+      tags.hashCode ^
+      text.hashCode ^
+      due.hashCode ^
+      recurrence.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SuggestionEdits &&
+          runtimeType == other.runtimeType &&
+          title == other.title &&
+          folder == other.folder &&
+          tags == other.tags &&
+          text == other.text &&
+          due == other.due &&
+          recurrence == other.recurrence;
 }
 
 /// A suggestion.
@@ -2981,6 +6419,28 @@ class SuggestionItem {
   /// The user's accept/reject has not synced yet.
   final bool pendingSync;
 
+  /// `created` as a label ("09:47", "Sat 18:40").
+  final String createdLabel;
+
+  /// The capture text behind a suggestion not shown under its capture.
+  final String? sourceText;
+
+  /// Direction of `source_text`.
+  final TextDir sourceDir;
+
+  /// The AI applied it on its own (D30 custody above the threshold): show "Applied
+  /// automatically" with Undo / Looks right.
+  final bool autoApplied;
+
+  /// Plain Accept can run (no choice missing).
+  final bool canAccept;
+
+  /// Only the user can decide (who-is, duplicates, a document choice).
+  final bool needsYou;
+
+  /// Replies, oldest first.
+  final List<ThreadMessage> thread;
+
   const SuggestionItem({
     required this.id,
     this.noteId,
@@ -2988,6 +6448,13 @@ class SuggestionItem {
     required this.detail,
     required this.created,
     required this.pendingSync,
+    required this.createdLabel,
+    this.sourceText,
+    required this.sourceDir,
+    required this.autoApplied,
+    required this.canAccept,
+    required this.needsYou,
+    required this.thread,
   });
 
   @override
@@ -2997,7 +6464,14 @@ class SuggestionItem {
       status.hashCode ^
       detail.hashCode ^
       created.hashCode ^
-      pendingSync.hashCode;
+      pendingSync.hashCode ^
+      createdLabel.hashCode ^
+      sourceText.hashCode ^
+      sourceDir.hashCode ^
+      autoApplied.hashCode ^
+      canAccept.hashCode ^
+      needsYou.hashCode ^
+      thread.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -3009,7 +6483,14 @@ class SuggestionItem {
           status == other.status &&
           detail == other.detail &&
           created == other.created &&
-          pendingSync == other.pendingSync;
+          pendingSync == other.pendingSync &&
+          createdLabel == other.createdLabel &&
+          sourceText == other.sourceText &&
+          sourceDir == other.sourceDir &&
+          autoApplied == other.autoApplied &&
+          canAccept == other.canAccept &&
+          needsYou == other.needsYou &&
+          thread == other.thread;
 }
 
 /// What a suggestion proposes.
@@ -3032,6 +6513,12 @@ enum SuggestionKind {
   /// A task proposed from a capture (`line`).
   task,
 
+  /// An edit made offline conflicted; the server kept both (`copy`).
+  conflict,
+
+  /// Two stored items look like duplicates (nightly sweep, `duplicates`).
+  duplicates,
+
   /// A kind this app version cannot show (`server_kind`).
   unsupported,
 }
@@ -3053,12 +6540,24 @@ class SyncActivity {
   /// When the next attempt runs (backoff).
   final DateTime? retryAt;
 
+  /// Ops of this cycle's push already answered.
+  final int opsDone;
+
+  /// Ops to push in this cycle (all pending when it started).
+  final int opsTotal;
+
+  /// Changes pulled so far in this cycle.
+  final int pulled;
+
   const SyncActivity({
     required this.phase,
     required this.pagesDone,
     this.pagesTotal,
     required this.ops,
     this.retryAt,
+    required this.opsDone,
+    required this.opsTotal,
+    required this.pulled,
   });
 
   static Future<SyncActivity> default_() =>
@@ -3070,7 +6569,10 @@ class SyncActivity {
       pagesDone.hashCode ^
       pagesTotal.hashCode ^
       ops.hashCode ^
-      retryAt.hashCode;
+      retryAt.hashCode ^
+      opsDone.hashCode ^
+      opsTotal.hashCode ^
+      pulled.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -3081,7 +6583,46 @@ class SyncActivity {
           pagesDone == other.pagesDone &&
           pagesTotal == other.pagesTotal &&
           ops == other.ops &&
-          retryAt == other.retryAt;
+          retryAt == other.retryAt &&
+          opsDone == other.opsDone &&
+          opsTotal == other.opsTotal &&
+          pulled == other.pulled;
+}
+
+/// One line of the sync log.
+class SyncLogItem {
+  /// When.
+  final DateTime at;
+
+  /// "14:32:10".
+  final String atLabel;
+
+  /// `synced` | `failed` | `bootstrap` | `paused` | `resumed` | `reset` | `account`.
+  final String kind;
+
+  /// "Pushed 3 · pulled 12", or the error key.
+  final String detail;
+
+  const SyncLogItem({
+    required this.at,
+    required this.atLabel,
+    required this.kind,
+    required this.detail,
+  });
+
+  @override
+  int get hashCode =>
+      at.hashCode ^ atLabel.hashCode ^ kind.hashCode ^ detail.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SyncLogItem &&
+          runtimeType == other.runtimeType &&
+          at == other.at &&
+          atLabel == other.atLabel &&
+          kind == other.kind &&
+          detail == other.detail;
 }
 
 /// What the sync engine is doing.
@@ -3125,6 +6666,22 @@ class SyncPill {
   /// Last successful sync.
   final DateTime? lastSyncAt;
 
+  /// The state to show.
+  final SyncPillKind display;
+
+  /// `Syncing`: work done ("Syncing 12/40").
+  final int progressDone;
+
+  /// `Syncing`: work in total (0 when unknown).
+  final int progressTotal;
+
+  /// Last successful sync as a local time label ("14:32", "Sat 18:40"), in the account's
+  /// time zone and UI language.
+  final String? lastSyncLabel;
+
+  /// The pill's text ("Synced", "Offline · 3 queued", "Syncing 12/40", "1 conflict").
+  final String label;
+
   const SyncPill({
     required this.connectivity,
     required this.activity,
@@ -3132,6 +6689,11 @@ class SyncPill {
     required this.conflicts,
     required this.duplicates,
     this.lastSyncAt,
+    required this.display,
+    required this.progressDone,
+    required this.progressTotal,
+    this.lastSyncLabel,
+    required this.label,
   });
 
   @override
@@ -3141,7 +6703,12 @@ class SyncPill {
       pendingOps.hashCode ^
       conflicts.hashCode ^
       duplicates.hashCode ^
-      lastSyncAt.hashCode;
+      lastSyncAt.hashCode ^
+      display.hashCode ^
+      progressDone.hashCode ^
+      progressTotal.hashCode ^
+      lastSyncLabel.hashCode ^
+      label.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -3153,7 +6720,37 @@ class SyncPill {
           pendingOps == other.pendingOps &&
           conflicts == other.conflicts &&
           duplicates == other.duplicates &&
-          lastSyncAt == other.lastSyncAt;
+          lastSyncAt == other.lastSyncAt &&
+          display == other.display &&
+          progressDone == other.progressDone &&
+          progressTotal == other.progressTotal &&
+          lastSyncLabel == other.lastSyncLabel &&
+          label == other.label;
+}
+
+/// What the sync pill shows (the core picks one state by priority: conflict > duplicates >
+/// syncing > paused > offline > error > synced).
+enum SyncPillKind {
+  /// Everything synced.
+  synced,
+
+  /// The server cannot be reached; ops are queued.
+  offline,
+
+  /// A push/pull is running (see `progress_*`).
+  syncing,
+
+  /// A conflict waits for the user.
+  conflict,
+
+  /// An "Already exists" prompt waits for the user.
+  duplicates,
+
+  /// The user paused sync.
+  paused,
+
+  /// The last cycle failed (not offline); retrying.
+  error,
 }
 
 /// Sync status screen.
@@ -3176,6 +6773,21 @@ class SyncStatusView {
   /// Rolled-back ops to acknowledge.
   final List<RejectionItem> rejections;
 
+  /// The user paused sync.
+  final bool paused;
+
+  /// Backoff: seconds between retries now ("every 30 s").
+  final int? retryIntervalSecs;
+
+  /// Backoff: "next at 14:47:30".
+  final String? nextRetryLabel;
+
+  /// "Retrying automatically every 30 s · next at 14:47:30".
+  final String? retryLabel;
+
+  /// Last cycles, newest first (≤ 50).
+  final List<SyncLogItem> log;
+
   const SyncStatusView({
     required this.pill,
     required this.bootstrapComplete,
@@ -3183,6 +6795,11 @@ class SyncStatusView {
     required this.outbox,
     required this.conflicts,
     required this.rejections,
+    required this.paused,
+    this.retryIntervalSecs,
+    this.nextRetryLabel,
+    this.retryLabel,
+    required this.log,
   });
 
   @override
@@ -3192,7 +6809,12 @@ class SyncStatusView {
       lastError.hashCode ^
       outbox.hashCode ^
       conflicts.hashCode ^
-      rejections.hashCode;
+      rejections.hashCode ^
+      paused.hashCode ^
+      retryIntervalSecs.hashCode ^
+      nextRetryLabel.hashCode ^
+      retryLabel.hashCode ^
+      log.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -3204,7 +6826,74 @@ class SyncStatusView {
           lastError == other.lastError &&
           outbox == other.outbox &&
           conflicts == other.conflicts &&
-          rejections == other.rejections;
+          rejections == other.rejections &&
+          paused == other.paused &&
+          retryIntervalSecs == other.retryIntervalSecs &&
+          nextRetryLabel == other.nextRetryLabel &&
+          retryLabel == other.retryLabel &&
+          log == other.log;
+}
+
+/// A tag with its note count.
+class TagItem {
+  /// Tag (without `#`).
+  final String tag;
+
+  /// Notes carrying it.
+  final int count;
+
+  const TagItem({required this.tag, required this.count});
+
+  @override
+  int get hashCode => tag.hashCode ^ count.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TagItem &&
+          runtimeType == other.runtimeType &&
+          tag == other.tag &&
+          count == other.count;
+}
+
+/// One "Understood as" chip.
+class TaskChip {
+  /// Kind.
+  final TaskChipKind kind;
+
+  /// Label ("Tomorrow", "every Monday", "09:00", "Acme").
+  final String label;
+
+  const TaskChip({required this.kind, required this.label});
+
+  @override
+  int get hashCode => kind.hashCode ^ label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskChip &&
+          runtimeType == other.runtimeType &&
+          kind == other.kind &&
+          label == other.label;
+}
+
+/// What a "chip" of the parsed task text stands for.
+enum TaskChipKind {
+  /// 📅
+  due,
+
+  /// 🔁
+  recurrence,
+
+  /// ⏰
+  reminder,
+
+  /// A linked note/entity.
+  link,
+
+  /// Priority.
+  priority,
 }
 
 /// A task to create (from the task editor).
@@ -3264,6 +6953,170 @@ class TaskDraft {
           priority == other.priority;
 }
 
+/// A new task's text as the core understands it (TaskEditCompact "Understood as").
+class TaskDraftPreview {
+  /// Description without the understood phrases.
+  final String description;
+
+  /// Direction of `description`.
+  final TextDir descriptionDir;
+
+  /// 📅
+  final DateTime? due;
+
+  /// Due label.
+  final String? dueLabel;
+
+  /// 🔁 phrase.
+  final String? recurrence;
+
+  /// Reminders (local wall-clock).
+  final List<DateTime> reminders;
+
+  /// Priority (`high`, …).
+  final String? priority;
+
+  /// Linked notes/entities.
+  final List<EntityRef> links;
+
+  /// Chips, in text order.
+  final List<TaskChip> chips;
+
+  /// The draft to pass to `create_task` (home note left to the caller).
+  final TaskDraft draft;
+
+  const TaskDraftPreview({
+    required this.description,
+    required this.descriptionDir,
+    this.due,
+    this.dueLabel,
+    this.recurrence,
+    required this.reminders,
+    this.priority,
+    required this.links,
+    required this.chips,
+    required this.draft,
+  });
+
+  @override
+  int get hashCode =>
+      description.hashCode ^
+      descriptionDir.hashCode ^
+      due.hashCode ^
+      dueLabel.hashCode ^
+      recurrence.hashCode ^
+      reminders.hashCode ^
+      priority.hashCode ^
+      links.hashCode ^
+      chips.hashCode ^
+      draft.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskDraftPreview &&
+          runtimeType == other.runtimeType &&
+          description == other.description &&
+          descriptionDir == other.descriptionDir &&
+          due == other.due &&
+          dueLabel == other.dueLabel &&
+          recurrence == other.recurrence &&
+          reminders == other.reminders &&
+          priority == other.priority &&
+          links == other.links &&
+          chips == other.chips &&
+          draft == other.draft;
+}
+
+/// Upcoming tasks of one day (or "LATER").
+class TaskGroup {
+  /// Header ("TUE 29 SEP", "LATER").
+  final String label;
+
+  /// The day (`None` for the "later" group).
+  final DateTime? date;
+
+  /// Tasks, in section order.
+  final List<TaskItem> tasks;
+
+  const TaskGroup({required this.label, this.date, required this.tasks});
+
+  @override
+  int get hashCode => label.hashCode ^ date.hashCode ^ tasks.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskGroup &&
+          runtimeType == other.runtimeType &&
+          label == other.label &&
+          date == other.date &&
+          tasks == other.tasks;
+}
+
+/// A note that can hold new tasks (new-task sheet).
+class TaskHomeItem {
+  /// Note ID (`None`: `tasks/Tasks.md` does not exist yet and will be created).
+  final String? noteId;
+
+  /// Title.
+  final String title;
+
+  /// Path.
+  final String path;
+
+  /// The default home (`tasks/Tasks.md`).
+  final bool isDefault;
+
+  /// Open tasks in it.
+  final int openTasks;
+
+  const TaskHomeItem({
+    this.noteId,
+    required this.title,
+    required this.path,
+    required this.isDefault,
+    required this.openTasks,
+  });
+
+  @override
+  int get hashCode =>
+      noteId.hashCode ^
+      title.hashCode ^
+      path.hashCode ^
+      isDefault.hashCode ^
+      openTasks.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskHomeItem &&
+          runtimeType == other.runtimeType &&
+          noteId == other.noteId &&
+          title == other.title &&
+          path == other.path &&
+          isDefault == other.isDefault &&
+          openTasks == other.openTasks;
+}
+
+/// Candidate homes for a new task: the default first, then notes holding tasks, by title.
+class TaskHomesView {
+  /// Homes.
+  final List<TaskHomeItem> homes;
+
+  const TaskHomesView({required this.homes});
+
+  @override
+  int get hashCode => homes.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TaskHomesView &&
+          runtimeType == other.runtimeType &&
+          homes == other.homes;
+}
+
 /// A task in a list or detail.
 class TaskItem {
   /// Block ID (`t-…`).
@@ -3308,6 +7161,34 @@ class TaskItem {
   /// Has unsynced changes.
   final bool pendingSync;
 
+  /// Direction of `description`.
+  final TextDir descriptionDir;
+
+  /// Path of the note holding the line ("tasks/Tasks.md").
+  final String notePath;
+
+  /// 1-based line number of the task in that file.
+  final int lineNumber;
+
+  /// Due date as a label ("Today", "Tomorrow", "Tue 29 Sep", "1 Oct 2027").
+  final String? dueLabel;
+
+  /// Open and due before today: "3 days late".
+  final String? latenessLabel;
+
+  /// Done/cancelled: "on time" / "2 days late" (history rows).
+  final String? completionLabel;
+
+  /// Open and recurring: "next in 4 days" (time to the due/scheduled date).
+  final String? nextInLabel;
+
+  /// Where it came from ("From document expiry" for tasks linking a document with an
+  /// expiry date), when known.
+  final String? originLabel;
+
+  /// Open and due before today.
+  final bool isOverdue;
+
   const TaskItem({
     required this.id,
     required this.noteId,
@@ -3323,6 +7204,15 @@ class TaskItem {
     required this.reminders,
     required this.links,
     required this.pendingSync,
+    required this.descriptionDir,
+    required this.notePath,
+    required this.lineNumber,
+    this.dueLabel,
+    this.latenessLabel,
+    this.completionLabel,
+    this.nextInLabel,
+    this.originLabel,
+    required this.isOverdue,
   });
 
   @override
@@ -3340,7 +7230,16 @@ class TaskItem {
       recurrenceUnderstood.hashCode ^
       reminders.hashCode ^
       links.hashCode ^
-      pendingSync.hashCode;
+      pendingSync.hashCode ^
+      descriptionDir.hashCode ^
+      notePath.hashCode ^
+      lineNumber.hashCode ^
+      dueLabel.hashCode ^
+      latenessLabel.hashCode ^
+      completionLabel.hashCode ^
+      nextInLabel.hashCode ^
+      originLabel.hashCode ^
+      isOverdue.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -3360,7 +7259,16 @@ class TaskItem {
           recurrenceUnderstood == other.recurrenceUnderstood &&
           reminders == other.reminders &&
           links == other.links &&
-          pendingSync == other.pendingSync;
+          pendingSync == other.pendingSync &&
+          descriptionDir == other.descriptionDir &&
+          notePath == other.notePath &&
+          lineNumber == other.lineNumber &&
+          dueLabel == other.dueLabel &&
+          latenessLabel == other.latenessLabel &&
+          completionLabel == other.completionLabel &&
+          nextInLabel == other.nextInLabel &&
+          originLabel == other.originLabel &&
+          isOverdue == other.isOverdue;
 }
 
 /// Field edits of a task: `None` leaves a field unchanged; the `clear_*` flags remove it.
@@ -3437,16 +7345,44 @@ class TaskScreen {
   /// Completed occurrences of the same recurring task in the same note, newest first.
   final List<TaskItem> history;
 
+  /// "tasks/Tasks.md · line 14".
+  final String locationLabel;
+
+  /// Devices reminders go to ("Pixel 9, MacBook Pro"), once the device list was fetched.
+  final String? deliveryLabel;
+
+  /// "Next occurrence in 4 days".
+  final String? nextOccurrenceLabel;
+
+  /// The recurrence as a form (`None`: no recurrence or not understood).
+  final RecurrenceForm? recurrenceForm;
+
+  /// Next occurrences (≤ 3), from the due date.
+  final List<RecurrencePreviewItem> recurrencePreview;
+
   const TaskScreen({
     required this.id,
     this.task,
     required this.line,
     required this.history,
+    required this.locationLabel,
+    this.deliveryLabel,
+    this.nextOccurrenceLabel,
+    this.recurrenceForm,
+    required this.recurrencePreview,
   });
 
   @override
   int get hashCode =>
-      id.hashCode ^ task.hashCode ^ line.hashCode ^ history.hashCode;
+      id.hashCode ^
+      task.hashCode ^
+      line.hashCode ^
+      history.hashCode ^
+      locationLabel.hashCode ^
+      deliveryLabel.hashCode ^
+      nextOccurrenceLabel.hashCode ^
+      recurrenceForm.hashCode ^
+      recurrencePreview.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -3456,7 +7392,12 @@ class TaskScreen {
           id == other.id &&
           task == other.task &&
           line == other.line &&
-          history == other.history;
+          history == other.history &&
+          locationLabel == other.locationLabel &&
+          deliveryLabel == other.deliveryLabel &&
+          nextOccurrenceLabel == other.nextOccurrenceLabel &&
+          recurrenceForm == other.recurrenceForm &&
+          recurrencePreview == other.recurrencePreview;
 }
 
 /// Tasks grouped for Home (compact) and the Tasks screen.
@@ -3476,12 +7417,20 @@ class TaskSections {
   /// Open without any date.
   final List<TaskItem> noDate;
 
+  /// `upcoming` grouped by day for the next 7 days, then one "later" group.
+  final List<TaskGroup> upcomingGroups;
+
+  /// Overdue + today ("Today 2").
+  final int todayCount;
+
   const TaskSections({
     required this.overdue,
     required this.today,
     required this.upcoming,
     required this.recurring,
     required this.noDate,
+    required this.upcomingGroups,
+    required this.todayCount,
   });
 
   static Future<TaskSections> default_() =>
@@ -3493,7 +7442,9 @@ class TaskSections {
       today.hashCode ^
       upcoming.hashCode ^
       recurring.hashCode ^
-      noDate.hashCode;
+      noDate.hashCode ^
+      upcomingGroups.hashCode ^
+      todayCount.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -3504,7 +7455,9 @@ class TaskSections {
           today == other.today &&
           upcoming == other.upcoming &&
           recurring == other.recurring &&
-          noDate == other.noDate;
+          noDate == other.noDate &&
+          upcomingGroups == other.upcomingGroups &&
+          todayCount == other.todayCount;
 }
 
 /// Task lifecycle.
@@ -3527,10 +7480,35 @@ class TasksView {
   /// Done and cancelled tasks, most recent first (≤ 50).
   final List<TaskItem> done;
 
-  const TasksView({required this.sections, required this.done});
+  /// Open tasks ("Open · 5").
+  final int openCount;
+
+  /// Completed since Monday of this week ("4 done this week").
+  final int doneThisWeek;
+
+  /// "4 done this week".
+  final String doneThisWeekLabel;
+
+  /// Notes containing open tasks ("6 notes contain tasks").
+  final int notesWithTasks;
+
+  const TasksView({
+    required this.sections,
+    required this.done,
+    required this.openCount,
+    required this.doneThisWeek,
+    required this.doneThisWeekLabel,
+    required this.notesWithTasks,
+  });
 
   @override
-  int get hashCode => sections.hashCode ^ done.hashCode;
+  int get hashCode =>
+      sections.hashCode ^
+      done.hashCode ^
+      openCount.hashCode ^
+      doneThisWeek.hashCode ^
+      doneThisWeekLabel.hashCode ^
+      notesWithTasks.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -3538,5 +7516,151 @@ class TasksView {
       other is TasksView &&
           runtimeType == other.runtimeType &&
           sections == other.sections &&
-          done == other.done;
+          done == other.done &&
+          openCount == other.openCount &&
+          doneThisWeek == other.doneThisWeek &&
+          doneThisWeekLabel == other.doneThisWeekLabel &&
+          notesWithTasks == other.notesWithTasks;
+}
+
+/// Direction of a piece of user content, from its first strong character (Unicode P2,
+/// PLAN §11: per paragraph/line). `Neutral`: no strong character (digits, punctuation) —
+/// the ambient direction applies.
+enum TextDir {
+  /// Left to right (Latin, …).
+  ltr,
+
+  /// Right to left (Arabic, …).
+  rtl,
+
+  /// No strong character.
+  neutral,
+}
+
+/// A span of a displayed text (UTF-16 offsets into that text, end exclusive).
+class TextSpan {
+  /// Start (inclusive).
+  final int start;
+
+  /// End (exclusive).
+  final int end;
+
+  const TextSpan({required this.start, required this.end});
+
+  @override
+  int get hashCode => start.hashCode ^ end.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TextSpan &&
+          runtimeType == other.runtimeType &&
+          start == other.start &&
+          end == other.end;
+}
+
+/// A message of a suggestion's thread (§9.8 "threaded suggestions").
+class ThreadMessage {
+  /// Reply ID.
+  final String id;
+
+  /// `user` | `ai`.
+  final String author;
+
+  /// Text.
+  final String text;
+
+  /// Direction of `text`.
+  final TextDir textDir;
+
+  /// "14:05".
+  final String createdLabel;
+
+  /// Not synced yet.
+  final bool pendingSync;
+
+  const ThreadMessage({
+    required this.id,
+    required this.author,
+    required this.text,
+    required this.textDir,
+    required this.createdLabel,
+    required this.pendingSync,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      author.hashCode ^
+      text.hashCode ^
+      textDir.hashCode ^
+      createdLabel.hashCode ^
+      pendingSync.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ThreadMessage &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          author == other.author &&
+          text == other.text &&
+          textDir == other.textDir &&
+          createdLabel == other.createdLabel &&
+          pendingSync == other.pendingSync;
+}
+
+/// "Timeline · Mon 28 Sep (from “بكرة”)".
+class TimelineChip {
+  /// Resolved date label.
+  final String dateLabel;
+
+  /// The phrase it came from.
+  final String sourcePhrase;
+
+  /// Entities whose timeline gets the entry.
+  final List<EntityRef> targets;
+
+  const TimelineChip({
+    required this.dateLabel,
+    required this.sourcePhrase,
+    required this.targets,
+  });
+
+  @override
+  int get hashCode =>
+      dateLabel.hashCode ^ sourcePhrase.hashCode ^ targets.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TimelineChip &&
+          runtimeType == other.runtimeType &&
+          dateLabel == other.dateLabel &&
+          sourcePhrase == other.sourcePhrase &&
+          targets == other.targets;
+}
+
+/// A day of the week.
+enum WeekdayKind {
+  /// Monday.
+  mon,
+
+  /// Tuesday.
+  tue,
+
+  /// Wednesday.
+  wed,
+
+  /// Thursday.
+  thu,
+
+  /// Friday.
+  fri,
+
+  /// Saturday.
+  sat,
+
+  /// Sunday.
+  sun,
 }

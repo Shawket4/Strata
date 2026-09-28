@@ -47,3 +47,53 @@ Future<void> appLifecycle({required AppLifecycle state}) =>
 
 /// "Sync now".
 Future<void> syncNow() => StrataCore.instance.api.crateApiAppSyncNow();
+
+/// "Check again" on the waiting-for-approval screen (uses the sign-in kept in memory).
+Future<SessionState> checkApproval() =>
+    StrataCore.instance.api.crateApiAppCheckApproval();
+
+/// Leaves the waiting-for-approval / rejected screen.
+Future<SessionState> dismissPending() =>
+    StrataCore.instance.api.crateApiAppDismissPending();
+
+/// Password strength for the sign-up meter.
+Future<PasswordStrength> passwordStrength({required String password}) =>
+    StrataCore.instance.api.crateApiAppPasswordStrength(password: password);
+
+/// Changes the password (Settings → Account, and the password-change-required screen).
+Future<SessionState> changePassword({
+  required String current,
+  required String new_,
+}) => StrataCore.instance.api.crateApiAppChangePassword(
+  current: current,
+  new_: new_,
+);
+
+/// Sets the UI language (`en` | `ar`).
+Future<void> setUiLanguage({required String code}) =>
+    StrataCore.instance.api.crateApiAppSetUiLanguage(code: code);
+
+/// Sets the time zone (IANA name, e.g. `Africa/Cairo`).
+Future<void> setTimezone({required String iana}) =>
+    StrataCore.instance.api.crateApiAppSetTimezone(iana: iana);
+
+/// Sets the display name.
+Future<void> setDisplayName({required String name}) =>
+    StrataCore.instance.api.crateApiAppSetDisplayName(name: name);
+
+/// Downloads the account's export (`GET /me/export`) to a file the user chose.
+Future<ExportSummary> downloadExport({required String path}) =>
+    StrataCore.instance.api.crateApiAppDownloadExport(path: path);
+
+/// "Delete now" (D25): refused while ops are unsynced unless `force`.
+Future<SessionState> deleteAccountNow({required bool force}) =>
+    StrataCore.instance.api.crateApiAppDeleteAccountNow(force: force);
+
+/// Writes the unsynced ops to a readable file (disabled / deletion-pending accounts); returns
+/// how many.
+Future<int> exportUnsynced({required String path}) =>
+    StrataCore.instance.api.crateApiAppExportUnsynced(path: path);
+
+/// Pauses (or resumes) sync.
+Future<void> setSyncPaused({required bool paused}) =>
+    StrataCore.instance.api.crateApiAppSetSyncPaused(paused: paused);

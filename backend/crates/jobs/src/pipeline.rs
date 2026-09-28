@@ -477,6 +477,20 @@ impl Directory {
                     })
             })
             .collect();
+        // Places nested in (or enclosing) an offered place: "the safe at the office".
+        let places: BTreeSet<NoteId> = out
+            .iter()
+            .filter(|e| e.kind == NoteKind::Place)
+            .map(|e| e.id)
+            .collect();
+        for e in &self.entities {
+            let related = e.kind == NoteKind::Place
+                && (e.parent.is_some_and(|p| places.contains(&p))
+                    || out.iter().any(|o| o.parent == Some(e.id)));
+            if related && !out.iter().any(|o| o.id == e.id) {
+                out.push(e);
+            }
+        }
         out.sort_by(|a, b| {
             (a.kind.as_str(), &a.name, a.id).cmp(&(b.kind.as_str(), &b.name, b.id))
         });
@@ -808,6 +822,7 @@ pub struct Planner<'a> {
     pending: PendingKeys,
     applied: BTreeSet<(RelationKey, NoteId)>,
     resolved: BTreeMap<String, NoteId>,
+    ambiguous: BTreeMap<String, Vec<NoteId>>,
     needs_block: BTreeSet<String>,
     touched_entities: BTreeSet<NoteId>,
     /// Decisions recorded, by kind (for tests and logs).
@@ -849,6 +864,7 @@ impl<'a> Planner<'a> {
             pending,
             applied: BTreeSet::new(),
             resolved: BTreeMap::new(),
+            ambiguous: BTreeMap::new(),
             needs_block: BTreeSet::new(),
             touched_entities: BTreeSet::new(),
             decided: Vec::new(),
@@ -1082,6 +1098,9 @@ impl<'a> Planner<'a> {
                     }
                 }
             }
+            if candidates.len() > 1 {
+                self.ambiguous.insert(norm.clone(), candidates.clone());
+            }
             let rel = mention_rel(kind);
             let blocked = |t: NoteId| {
                 rel.is_some_and(|r| self.note.sidecar.is_blocked(r, t.as_ulid()))
@@ -1189,6 +1208,16 @@ impl<'a> Planner<'a> {
         }
         match self.dir.by_alias(text, kinds).as_slice() {
             [one] => Ok(*one),
+            [] => Err(self
+                .ambiguous
+                .get(&norm)
+                .map(|c| {
+                    c.iter()
+                        .copied()
+                        .filter(|i| self.dir.entity(*i).is_some_and(|e| kinds.contains(&e.kind)))
+                        .collect()
+                })
+                .unwrap_or_default()),
             many => Err(many.to_vec()),
         }
     }

@@ -5,7 +5,7 @@
 //!
 //! Everything here is callable headless: the frb facade in [`crate::api`] only forwards to it.
 
-mod account;
+mod account_ops;
 pub mod ask;
 mod core;
 mod editing;
@@ -27,6 +27,7 @@ use ulid::Ulid;
 
 use crate::auth::{AccountMode, CoreTokenProvider, TokenStore, account_mode};
 use crate::error::{CoreError, CoreResult};
+use crate::format::labels::Lang;
 use crate::net::{NetError, Tokens};
 use crate::notify;
 use crate::store::{AccountDb, account, cache, notes, outbox, tokens};
@@ -36,7 +37,6 @@ use crate::view::model::{
     Connectivity, NotificationMode, NotificationOp, NotificationResult, Platform, SessionKind,
     SessionState, SyncActivity,
 };
-use crate::format::labels::Lang;
 use crate::view::{Topics, ViewCtx, ViewHub, ViewSink, WatchId};
 
 /// Notification mode of a platform.
@@ -314,6 +314,48 @@ impl Session {
         })?;
         self.lock().session_changed = true;
         Ok(())
+    }
+
+    /// Subscribes to `/events`, resuming after the last seq this device received.
+    pub fn subscribe_events(&self) -> CoreResult<Box<dyn crate::net::EventStream>> {
+        let resume = self.read(|c, _| Ok(crate::store::sync_state::get(c)?.events_seq))?;
+        Ok(self
+            .env
+            .events_api
+            .subscribe(&self.server_url()?, self.tokens(), resume)?)
+    }
+
+    /// Applies one `/events` signal: the resume point is saved; a change or a reset asks for a
+    /// pull (`true`); an account closure moves the account to its restricted state (`false`,
+    /// the stream ends).
+    pub fn handle_event(&self, signal: &crate::net::EventSignal) -> CoreResult<bool> {
+        use crate::net::EventSignal;
+        let (seq, pull) = match signal {
+            EventSignal::Changed { seq } | EventSignal::Reset { seq } => (*seq, true),
+            EventSignal::AccountClosed { seq, .. } => (*seq, false),
+        };
+        self.write(|c, now| {
+            crate::store::sync_state::update(c, |s| s.events_seq = Some(seq))?;
+            match signal {
+                EventSignal::Reset { .. } => {
+                    crate::store::cache::log(c, now, "reset", "")?;
+                }
+                EventSignal::AccountClosed { reason, .. } => {
+                    crate::store::cache::log(c, now, "account", reason)?;
+                }
+                EventSignal::Changed { .. } => {}
+            }
+            Ok(((), Topics::SYNC))
+        })?;
+        if let EventSignal::AccountClosed { reason, .. } = signal {
+            let e = match reason.as_str() {
+                "deletion_pending" => NetError::AccountDeletionPending,
+                "disabled" => NetError::AccountDisabled,
+                _ => NetError::Unauthorized,
+            };
+            self.account_failure(&e)?;
+        }
+        Ok(pull)
     }
 
     /// Whether the session state may have changed since last asked (and clears the flag).

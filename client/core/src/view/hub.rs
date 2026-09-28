@@ -227,6 +227,7 @@ mod tests {
             connectivity: Connectivity::Unknown,
             activity: SyncActivity::default(),
             notification_mode: NotificationMode::OsScheduled,
+            lang: crate::format::labels::Lang::En,
         }
     }
 

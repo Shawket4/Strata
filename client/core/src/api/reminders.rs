@@ -10,12 +10,18 @@ use crate::sync::engine::Trigger;
 use crate::view::model::CoreFailure;
 use crate::view::model::{NotificationAction, NotificationOp, NotificationResult};
 
-/// The notification-ops stream (schedule / update / cancel / show now).
+/// The notification-ops stream (schedule / update / cancel / show now). It does not depend on
+/// a session: while signed out it stays open and receives nothing; the ops of whichever account
+/// signs in arrive on it.
 pub fn watch_notification_ops(sink: StreamSink<NotificationOp>) -> Result<(), CoreFailure> {
     lift(|| {
-        let session = core()?.session()?;
-        session.attach_notifications(Box::new(DartSink(sink)));
-        session.recompute_notifications()
+        let core = core()?;
+        core.env().notifications.attach(Box::new(DartSink(sink)));
+        if let Ok(session) = core.session() {
+            session.flush_notifications();
+            session.recompute_notifications()?;
+        }
+        Ok(())
     })
 }
 

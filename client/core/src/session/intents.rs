@@ -518,6 +518,26 @@ impl Session {
             .ok_or_else(|| CoreError::not_found("conflict"))?;
         let keep = match resolution.kind {
             ResolutionKind::KeepServer => None,
+            ResolutionKind::SaveBothAsCopies => {
+                // The server's version stays; the local edit survives as its own note: the
+                // conflict copy the server already wrote, or a copy created now.
+                let server_copied = matches!(
+                    conflict.resolution,
+                    Some(sync_model::ConflictResolution::ConflictCopy { .. })
+                );
+                if !server_copied && let Some(local) = conflict.local_content.clone() {
+                    let path = self
+                        .read(|c, _| notes::current(c, &conflict.entity_id))?
+                        .map(|n| n.path)
+                        .unwrap_or_else(|| "notes/Conflict.md".to_owned());
+                    let stem = path.strip_suffix(".md").unwrap_or(&path);
+                    let stamp = self.ctx().labels().local(self.env.clock.now());
+                    let copy_path = format!("{stem} (conflict {}).md", stamp.format("%Y-%m-%d %H%M%S"));
+                    let body = vault_format::Document::parse(&local).body().to_owned();
+                    self.create_note(&copy_path, &body, true)?;
+                }
+                None
+            }
             ResolutionKind::Merged => Some(
                 resolution
                     .content

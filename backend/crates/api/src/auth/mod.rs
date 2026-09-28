@@ -164,6 +164,30 @@ impl AuthState {
         &self.tokens
     }
 
+    /// Counts one `POST /capture` of `user`; `429 rate_limited` past
+    /// `auth.rate_limits.capture_per_user` (PLAN §8, §15).
+    pub fn check_capture_limit(&self, user: strata_common::UserId) -> Result<(), AccountError> {
+        self.limiters
+            .capture_user
+            .check(&user.to_string())
+            .map_err(|l| AccountError::RateLimited {
+                retry_after_secs: l.retry_after_secs,
+                reason: "too many captures; try again later",
+            })
+    }
+
+    /// Counts one `POST /ask` of `user`; `429 rate_limited` past
+    /// `auth.rate_limits.ask_per_user` (PLAN §8, §15).
+    pub fn check_ask_limit(&self, user: strata_common::UserId) -> Result<(), AccountError> {
+        self.limiters
+            .ask_user
+            .check(&user.to_string())
+            .map_err(|l| AccountError::RateLimited {
+                retry_after_secs: l.retry_after_secs,
+                reason: "too many questions; try again later",
+            })
+    }
+
     /// Creates an active account with its vault (as `POST /admin/users` does; `actor` is the
     /// creating admin, `None` for the system).
     pub async fn create_account(

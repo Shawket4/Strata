@@ -734,7 +734,10 @@ mod tests {
         assert_eq!(l.lateness(d("2026-09-27")), None);
         assert_eq!(l.next_in(d("2026-10-01")), "next in 4 days");
         assert_eq!(l.next_in(d("2026-09-28")), "next tomorrow");
-        assert_eq!(l.next_occurrence(d("2026-10-01")), "Next occurrence in 4 days");
+        assert_eq!(
+            l.next_occurrence(d("2026-10-01")),
+            "Next occurrence in 4 days"
+        );
         assert_eq!(l.group_header(d("2026-09-29")), "TUE 29 SEP");
         assert_eq!(
             l.reminder_offset(Some(d("2026-10-01")), d("2026-09-01")),
@@ -745,7 +748,10 @@ mod tests {
             "on the day"
         );
         assert_eq!(l.reminder_offset(None, d("2026-10-01")), "Thu 1 Oct");
-        assert_eq!(l.completion(d("2026-10-03"), d("2026-10-01")), "2 days late");
+        assert_eq!(
+            l.completion(d("2026-10-03"), d("2026-10-01")),
+            "2 days late"
+        );
         assert_eq!(l.completion(d("2026-10-01"), d("2026-10-01")), "on time");
         assert_eq!(l.ago(at("2026-09-27T09:32:00Z")), "2 hours ago");
         assert_eq!(l.age(at("2026-09-25T11:32:00Z")), "2d");

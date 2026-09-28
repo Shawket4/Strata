@@ -124,9 +124,23 @@ fn load(conn: &Connection) -> CoreResult<Loaded> {
                ON m.src_id = r.src_id AND m.dst_id = r.dst_id AND m.rel_type = r.rel_type
              WHERE r.dst_id IS NOT NULL AND r.dst_id != r.src_id ORDER BY 1, 2, 3",
         )?;
-        let rows: Vec<(String, String, String, Option<String>, Option<f64>, Option<String>)> = st
+        let rows: Vec<(
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<f64>,
+            Option<String>,
+        )> = st
             .query_map([], |r| {
-                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                ))
             })?
             .collect::<Result<_, _>>()?;
         for (src, dst, rel, by, confidence, reason) in rows {
@@ -299,7 +313,16 @@ pub fn local_graph(
     let nodes = hood
         .nodes
         .iter()
-        .map(|&(ix, d)| node_view(&loaded, ctx, ix, d, None, pos.get(&ix).copied().unwrap_or((0.0, 0.0))))
+        .map(|&(ix, d)| {
+            node_view(
+                &loaded,
+                ctx,
+                ix,
+                d,
+                None,
+                pos.get(&ix).copied().unwrap_or((0.0, 0.0)),
+            )
+        })
         .collect();
     let edges: Vec<GraphEdge> = hood
         .edges
@@ -311,9 +334,13 @@ pub fn local_graph(
         .filter(|e| (e.src == id || e.dst == id) && e.rel_type.is_some())
         .collect();
     let relation_count = u32::try_from(touching.len()).unwrap_or(u32::MAX);
-    let ai_relation_count =
-        u32::try_from(touching.iter().filter(|e| e.by.as_deref() == Some("ai")).count())
-            .unwrap_or(u32::MAX);
+    let ai_relation_count = u32::try_from(
+        touching
+            .iter()
+            .filter(|e| e.by.as_deref() == Some("ai"))
+            .count(),
+    )
+    .unwrap_or(u32::MAX);
     let relation_label = match lang {
         Lang::En => format!(
             "{} · {ai_relation_count} by AI",
@@ -511,8 +538,13 @@ pub fn global_graph_filtered(
             all_edges.push(GraphEdge {
                 id: format!("{a}|co-mention|{b}"),
                 label: match lang {
-                    Lang::En => format!("co-mentioned in {}", labels::NOTES.of(i64::from(c.notes), lang)),
-                    Lang::Ar => format!("ذُكرا معًا في {}", labels::NOTES.of(i64::from(c.notes), lang)),
+                    Lang::En => format!(
+                        "co-mentioned in {}",
+                        labels::NOTES.of(i64::from(c.notes), lang)
+                    ),
+                    Lang::Ar => {
+                        format!("ذُكرا معًا في {}", labels::NOTES.of(i64::from(c.notes), lang))
+                    }
                 },
                 src: a,
                 dst: b,
@@ -614,7 +646,13 @@ mod tests {
 
     #[test]
     fn hull_and_ranks() {
-        let hull = convex_hull(vec![(0.0, 0.0), (2.0, 0.0), (1.0, 1.0), (2.0, 2.0), (0.0, 2.0)]);
+        let hull = convex_hull(vec![
+            (0.0, 0.0),
+            (2.0, 0.0),
+            (1.0, 1.0),
+            (2.0, 2.0),
+            (0.0, 2.0),
+        ]);
         assert_eq!(hull, vec![(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]);
         assert_eq!(
             [0, 1, 2, 3, 5, 6, 40].map(label_rank),
@@ -626,6 +664,12 @@ mod tests {
         assert_eq!((x, y), (5.0, 0.0));
         assert_eq!(r, 5.0 + REGION_PAD);
         assert_eq!(h.len(), 2);
-        assert_eq!(h[0], GraphPoint { x: -REGION_PAD, y: 0.0 });
+        assert_eq!(
+            h[0],
+            GraphPoint {
+                x: -REGION_PAD,
+                y: 0.0
+            }
+        );
     }
 }

@@ -33,12 +33,13 @@ pub(crate) fn core() -> CoreResult<Arc<Core>> {
 }
 
 /// Installs a core (replacing any previous one) and, inside a Tokio runtime, starts its
-/// background loop.
+/// background loop and its `/events` subscription.
 pub(crate) fn install(core: Core) -> Arc<Core> {
     let core = Arc::new(core);
     let trigger = tokio::runtime::Handle::try_current().ok().map(|handle| {
         let (tx, rx) = mpsc::unbounded_channel();
         handle.spawn(background(core.clone(), rx));
+        handle.spawn(events_loop(core.clone(), tx.clone()));
         tx
     });
     *lock() = Some(Runtime {
@@ -98,5 +99,57 @@ async fn background(core: Arc<Core>, mut rx: mpsc::UnboundedReceiver<Trigger>) {
             },
             () = tokio::time::sleep(delay) => Trigger::Timer,
         };
+    }
+}
+
+/// The `/events` subscription of the active session (§12.4: events only trigger pulls):
+/// resumes from the saved seq, pulls on every change or reset, applies `account.disabled`,
+/// re-subscribes with backoff after a drop and whenever the active session changes.
+async fn events_loop(core: Arc<Core>, tx: mpsc::UnboundedSender<Trigger>) {
+    let mut failures = 0u32;
+    loop {
+        let generation = core.generation();
+        let Ok(session) = core.session() else {
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            continue;
+        };
+        match session.subscribe_events() {
+            Err(_) => failures += 1,
+            Ok(mut stream) => loop {
+                tokio::select! {
+                    next = stream.next() => match next {
+                        Some(Ok(signal)) => {
+                            failures = 0;
+                            match session.handle_event(&signal) {
+                                Ok(true) => {
+                                    if tx.send(Trigger::EventsFrame).is_err() {
+                                        return;
+                                    }
+                                }
+                                Ok(false) => {
+                                    let _ = core.publish_state();
+                                    break;
+                                }
+                                Err(e) => tracing::warn!("event failed: {e}"),
+                            }
+                        }
+                        Some(Err(e)) => {
+                            failures += 1;
+                            let _ = session.account_failure(&e);
+                            let _ = core.publish_state();
+                            break;
+                        }
+                        None => break,
+                    },
+                    () = tokio::time::sleep(Duration::from_secs(1)) => {
+                        if core.generation() != generation {
+                            break;
+                        }
+                    }
+                }
+            },
+        }
+        drop(session);
+        tokio::time::sleep(backoff_delay(failures.max(1))).await;
     }
 }

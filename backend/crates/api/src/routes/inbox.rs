@@ -14,7 +14,7 @@ use strata_vault::ops::suggestions::{Payload, SuggestionView};
 use ulid::Ulid;
 use utoipa::ToSchema;
 
-use crate::auth::Authenticated;
+use crate::auth::{AuthState, Authenticated};
 use crate::routes::notes::Note;
 use crate::vault::{OrProblem, candidate};
 use crate::wire::{Binary, DuplicateCandidate, MatchLevel, MsgPack, MsgPackConfig, Problem};
@@ -274,13 +274,18 @@ pub struct ReplyRequest {
 #[utoipa::path(
     post, path = "/capture", tag = "inbox", operation_id = "capture",
     request_body = CaptureRequest,
-    responses((status = 201, description = "Saved; one `user: capture <path>` commit.", body = Capture)),
+    responses(
+        (status = 201, description = "Saved; one `user: capture <path>` commit.", body = Capture),
+        (status = 429, description = "`rate_limited`: too many captures from this user (`auth.rate_limits.capture_per_user`). See `Retry-After`.", body = Problem),
+    ),
 )]
 pub async fn capture(
     auth: Authenticated,
+    state: web::Data<AuthState>,
     vault: web::Data<VaultService>,
     body: MsgPack<CaptureRequest>,
-) -> Result<impl Responder, Problem> {
+) -> Result<impl Responder, actix_web::Error> {
+    state.check_capture_limit(auth.user_id())?;
     let c = vault
         .capture(auth.scope(), body.into_inner().text)
         .await

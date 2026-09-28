@@ -107,7 +107,10 @@ pub fn summary(old: &str, new: &str, lang: Lang) -> String {
     }
     let mut parts = Vec::new();
     if plus > 0 {
-        parts.push(format!("+{}", LINES.of(i64::try_from(plus).unwrap_or(i64::MAX), lang)));
+        parts.push(format!(
+            "+{}",
+            LINES.of(i64::try_from(plus).unwrap_or(i64::MAX), lang)
+        ));
     }
     if changed > 0 {
         parts.push(match lang {

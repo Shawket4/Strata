@@ -33,6 +33,9 @@ chrono-tz = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 tracing = { workspace = true }
+similar = { workspace = true }
+zip = { workspace = true }
+rmpv = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

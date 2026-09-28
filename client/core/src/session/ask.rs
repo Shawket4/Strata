@@ -93,7 +93,12 @@ impl Session {
 
     /// Asks a question (online only) and streams the answer into the conversation. Returns
     /// the answer's ID once the answer ended (stopped, done or failed).
-    pub async fn ask(&self, question: &str, scope: Option<String>, scope_label: &str) -> CoreResult<String> {
+    pub async fn ask(
+        &self,
+        question: &str,
+        scope: Option<String>,
+        scope_label: &str,
+    ) -> CoreResult<String> {
         let question = question.trim();
         if question.is_empty() {
             return Err(CoreError::invalid("question", "empty"));
@@ -251,7 +256,12 @@ impl Session {
         let note_id = self
             .env
             .account_api
-            .save_ask(self.server_url()?, self.tokens(), message_id.to_owned(), None)
+            .save_ask(
+                self.server_url()?,
+                self.tokens(),
+                message_id.to_owned(),
+                None,
+            )
             .await?;
         self.ask_update(|a| {
             if let Some(m) = a.messages.iter_mut().find(|m| m.id == message_id) {

@@ -218,7 +218,7 @@ pub fn parse(text: &str, today: NaiveDate) -> ParsedTaskText {
     while i < toks.len() {
         let t = toks[i].lower.as_str();
         let next = toks.get(i + 1).map(|t| t.lower.as_str());
-        let mut take = |n: usize, piece: Piece, used: &mut Vec<bool>, out: &mut ParsedTaskText| {
+        let take = |n: usize, piece: Piece, used: &mut Vec<bool>, out: &mut ParsedTaskText| {
             for u in used.iter_mut().skip(i).take(n) {
                 *u = true;
             }
@@ -244,11 +244,15 @@ pub fn parse(text: &str, today: NaiveDate) -> ParsedTaskText {
         }
         // Dates.
         let date_n: Option<(NaiveDate, usize)> = match (t, next) {
-            ("today" | "النهارده" | "النهاردة" | "اليوم", _) => Some((today, 1)),
+            ("today" | "النهارده" | "النهاردة" | "اليوم", _) => {
+                Some((today, 1))
+            }
             ("day", Some("after")) if toks.get(i + 2).is_some_and(|t| t.lower == "tomorrow") => {
                 Some((today + Duration::days(2), 3))
             }
-            ("بعد", Some("بكرة" | "بكره" | "غد")) => Some((today + Duration::days(2), 2)),
+            ("بعد", Some("بكرة" | "بكره" | "غد")) => {
+                Some((today + Duration::days(2), 2))
+            }
             ("tomorrow" | "بكرة" | "بكره" | "غدا" | "غدًا", _) => {
                 Some((today + Duration::days(1), 1))
             }
@@ -400,7 +404,10 @@ mod tests {
                 (Piece::Time, "at 9:30pm".into()),
             ]
         );
-        let r = parse("Make Watanya's ETA invoice every month on the 1st", d(TODAY));
+        let r = parse(
+            "Make Watanya's ETA invoice every month on the 1st",
+            d(TODAY),
+        );
         assert_eq!(r.description, "Make Watanya's ETA invoice");
         assert_eq!(r.recurrence.as_deref(), Some("every month on the 1st"));
         assert_eq!(r.due, Some(d("2026-10-01")));
@@ -413,11 +420,18 @@ mod tests {
         assert_eq!(x.due, Some(d("2026-10-02")));
         assert_eq!(x.priority.as_deref(), Some("high"));
         let y = parse("Pay rent 1 Oct", d(TODAY));
-        assert_eq!((y.description.as_str(), y.due), ("Pay rent", Some(d("2026-10-01"))));
+        assert_eq!(
+            (y.description.as_str(), y.due),
+            ("Pay rent", Some(d("2026-10-01")))
+        );
         let z = parse("Submit report in 3 days", d(TODAY));
         assert_eq!(z.due, Some(d("2026-09-30")));
         let sunday = parse("Plan week sunday", d(TODAY));
-        assert_eq!(sunday.due, Some(d("2026-10-04")), "same weekday → next week");
+        assert_eq!(
+            sunday.due,
+            Some(d("2026-10-04")),
+            "same weekday → next week"
+        );
     }
 
     #[test]

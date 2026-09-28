@@ -19,7 +19,7 @@ use ulid::Ulid;
 use utoipa::ToSchema;
 
 use crate::ai::{AiApi, AskEnd};
-use crate::auth::Authenticated;
+use crate::auth::{AuthState, Authenticated};
 use crate::openapi::StreamOperation;
 use crate::routes::notes::Note;
 use crate::vault::OrProblem;
@@ -285,15 +285,18 @@ fn ai_api(api: Option<&web::Data<AiApi>>) -> Result<&AiApi, Problem> {
     request_body = AskRequest,
     responses(
         (status = 200, description = "Started; stream the answer from `GET /ask/{id}`.", body = AskStarted),
+        (status = 429, description = "`rate_limited`: too many questions from this user (`auth.rate_limits.ask_per_user`). See `Retry-After`.", body = Problem),
         (status = 503, description = "`ai_unavailable` (AI disabled or not configured) or `ai_paused` (budget reached, provider usage limit; `detail` says until when).", body = Problem),
     ),
 )]
 pub async fn ask(
     auth: Authenticated,
+    state: web::Data<AuthState>,
     api: Option<web::Data<AiApi>>,
     body: MsgPack<AskRequest>,
-) -> Result<MsgPack<AskStarted>, Problem> {
+) -> Result<MsgPack<AskStarted>, actix_web::Error> {
     let api = ai_api(api.as_ref())?;
+    state.check_ask_limit(auth.user_id())?;
     let req = body.into_inner();
     let name = username(api, &auth).await?;
     let run = api

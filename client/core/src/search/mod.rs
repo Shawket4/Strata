@@ -55,7 +55,11 @@ pub fn available_modes(ctx: &ViewCtx) -> Vec<SearchMode> {
     if ctx.connectivity == Connectivity::Offline {
         vec![SearchMode::Keyword]
     } else {
-        vec![SearchMode::Keyword, SearchMode::Semantic, SearchMode::Hybrid]
+        vec![
+            SearchMode::Keyword,
+            SearchMode::Semantic,
+            SearchMode::Hybrid,
+        ]
     }
 }
 
@@ -68,7 +72,10 @@ fn query_terms(query: &str) -> Vec<String> {
 }
 
 fn in_folder(path: &str, folder: Option<&str>) -> bool {
-    match folder.map(|f| f.trim_matches('/')).filter(|f| !f.is_empty()) {
+    match folder
+        .map(|f| f.trim_matches('/'))
+        .filter(|f| !f.is_empty())
+    {
         None => true,
         Some(f) => path.starts_with(&format!("{f}/")),
     }
@@ -113,7 +120,9 @@ pub fn search(
         }
         SearchMode::Semantic | SearchMode::Hybrid => Availability::Available,
     };
-    let folder_owned = folder.map(str::to_owned).filter(|f| !f.trim_matches('/').is_empty());
+    let folder_owned = folder
+        .map(str::to_owned)
+        .filter(|f| !f.trim_matches('/').is_empty());
     let Some(q) = fts_query(query) else {
         return Ok(SearchView {
             query: query.to_owned(),
@@ -133,7 +142,14 @@ pub fn search(
              ORDER BY bm25(notes_fts, 0.0, 10.0, 1.0, 5.0), n.title, n.id",
         )?;
         st.query_map(params![q], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
+            Ok((
+                r.get(0)?,
+                r.get(1)?,
+                r.get(2)?,
+                r.get(3)?,
+                r.get(4)?,
+                r.get(5)?,
+            ))
         })?
         .collect::<Result<_, _>>()?
     };

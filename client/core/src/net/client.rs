@@ -575,9 +575,7 @@ impl AccountApi for ClientAccountApi {
     ) -> BoxFuture<'_, Result<AiStatusInfo, NetError>> {
         Box::pin(async move {
             let c = client(&server_url, Some(tokens))?;
-            let s = operations::ai_status(&c)
-                .await
-                .map_err(|e| classify(&e))?;
+            let s = operations::ai_status(&c).await.map_err(|e| classify(&e))?;
             Ok(AiStatusInfo {
                 enabled: s.enabled,
                 provider: s.provider.map(|p| p.name),

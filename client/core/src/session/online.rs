@@ -18,7 +18,9 @@ use crate::view::{Topics, ViewCtx};
 
 /// Notes (`.md` entries outside `.trash/`) in an export zip.
 pub fn zip_note_count(bytes: &[u8]) -> u32 {
-    let Ok(mut archive) = zip::ZipArchive::new(std::io::Cursor::new(bytes)) else {
+    let Ok(mut archive) =
+        zip::ZipArchive::<std::io::Cursor<&[u8]>>::new(std::io::Cursor::new(bytes))
+    else {
         return 0;
     };
     let mut n = 0u32;
@@ -99,7 +101,11 @@ impl Session {
 
     /// Signs another device out (this device signs out with `sign_out`).
     pub async fn revoke_device(&self, device_id: &str) -> CoreResult<()> {
-        if self.read(|c, _| crate::sync::apply::device_id(c))?.as_deref() == Some(device_id) {
+        if self
+            .read(|c, _| crate::sync::apply::device_id(c))?
+            .as_deref()
+            == Some(device_id)
+        {
             return Err(CoreError::invalid("device", "this_device"));
         }
         let url = self.server_url()?;
@@ -115,7 +121,11 @@ impl Session {
     /// Reminders on/off for any device ("Deliver to"). This device goes through the outbox
     /// (`set_reminders_enabled`); other devices are changed on the server directly.
     pub async fn set_device_reminders(&self, device_id: &str, enabled: bool) -> CoreResult<()> {
-        if self.read(|c, _| crate::sync::apply::device_id(c))?.as_deref() == Some(device_id) {
+        if self
+            .read(|c, _| crate::sync::apply::device_id(c))?
+            .as_deref()
+            == Some(device_id)
+        {
             return self.set_reminders_enabled(enabled);
         }
         let url = self.server_url()?;
@@ -144,7 +154,11 @@ impl Session {
     }
 
     /// A revision compared with the note's current content.
-    pub async fn note_revision_diff(&self, note_id: &str, commit: &str) -> CoreResult<NoteDiffView> {
+    pub async fn note_revision_diff(
+        &self,
+        note_id: &str,
+        commit: &str,
+    ) -> CoreResult<NoteDiffView> {
         let url = self.server_url()?;
         let rev = self.online(
             self.env
@@ -206,7 +220,13 @@ impl Session {
         let hits = match self
             .env
             .account_api
-            .search(url, self.tokens(), query.to_owned(), mode_str.to_owned(), 50)
+            .search(
+                url,
+                self.tokens(),
+                query.to_owned(),
+                mode_str.to_owned(),
+                50,
+            )
             .await
         {
             Ok(h) => h,
@@ -214,7 +234,12 @@ impl Session {
             Err(NetError::Api { status: 503, .. } | NetError::NotAvailable { .. }) => {
                 return Ok(empty(Availability::NotYetAvailable));
             }
-            Err(e) => return Err(self.online::<()>(Err(e)).err().unwrap_or(CoreError::Offline)),
+            Err(e) => {
+                return Err(self
+                    .online::<()>(Err(e))
+                    .err()
+                    .unwrap_or(CoreError::Offline));
+            }
         };
         self.read(|c, ctx| crate::search::remote_view(c, ctx, query, mode, folder.clone(), hits))
     }
@@ -322,7 +347,11 @@ impl Session {
         self.admin_item(u)
     }
 
-    async fn admin_patch(&self, id: &str, update: AdminUpdate) -> CoreResult<(AdminUserItem, Option<String>)> {
+    async fn admin_patch(
+        &self,
+        id: &str,
+        update: AdminUpdate,
+    ) -> CoreResult<(AdminUserItem, Option<String>)> {
         let (_, me) = self.admin_ctx()?;
         if me == id {
             return Err(CoreError::invalid("user", "self"));

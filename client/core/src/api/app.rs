@@ -10,8 +10,8 @@ use crate::session::{Core, CoreEnv};
 use crate::sync::engine::Trigger;
 use crate::view::model::CoreFailure;
 use crate::view::model::{
-    AppLifecycle, CoreConfig, SessionState, SignInRequest, SignOutOutcome, SignUpOutcome,
-    SignUpRequest,
+    AppLifecycle, CoreConfig, ExportSummary, PasswordStrength, SessionState, SignInRequest,
+    SignOutOutcome, SignUpOutcome, SignUpRequest,
 };
 
 /// frb start-up hook (logging, panic backtraces).
@@ -91,6 +91,75 @@ pub fn sync_now() -> Result<(), CoreFailure> {
     lift(|| {
         core()?;
         runtime::trigger(Trigger::Manual);
+        Ok(())
+    })
+}
+
+/// "Check again" on the waiting-for-approval screen (uses the sign-in kept in memory).
+pub async fn check_approval() -> Result<SessionState, CoreFailure> {
+    lift_async(async {
+        let state = core()?.check_approval().await?;
+        if state.kind == crate::view::model::SessionKind::Active {
+            runtime::trigger(Trigger::Start);
+        }
+        Ok(state)
+    })
+    .await
+}
+
+/// Leaves the waiting-for-approval / rejected screen.
+pub fn dismiss_pending() -> Result<SessionState, CoreFailure> {
+    lift(|| core()?.dismiss_pending())
+}
+
+/// Password strength for the sign-up meter.
+pub fn password_strength(password: String) -> PasswordStrength {
+    crate::session::password_strength(&password)
+}
+
+/// Changes the password (Settings → Account, and the password-change-required screen).
+pub async fn change_password(current: String, new: String) -> Result<SessionState, CoreFailure> {
+    lift_async(async { core()?.change_password(&current, &new).await }).await
+}
+
+/// Sets the UI language (`en` | `ar`).
+pub async fn set_ui_language(code: String) -> Result<(), CoreFailure> {
+    lift_async(async { core()?.set_ui_language(&code).await }).await
+}
+
+/// Sets the time zone (IANA name, e.g. `Africa/Cairo`).
+pub async fn set_timezone(iana: String) -> Result<(), CoreFailure> {
+    lift_async(async { core()?.set_timezone(&iana).await }).await
+}
+
+/// Sets the display name.
+pub async fn set_display_name(name: String) -> Result<(), CoreFailure> {
+    lift_async(async { core()?.set_display_name(&name).await }).await
+}
+
+/// Downloads the account's export (`GET /me/export`) to a file the user chose.
+pub async fn download_export(path: String) -> Result<ExportSummary, CoreFailure> {
+    lift_async(async { core()?.download_export(&path).await }).await
+}
+
+/// "Delete now" (D25): refused while ops are unsynced unless `force`.
+pub async fn delete_account_now(force: bool) -> Result<SessionState, CoreFailure> {
+    lift_async(async { core()?.delete_account_now(force).await }).await
+}
+
+/// Writes the unsynced ops to a readable file (disabled / deletion-pending accounts); returns
+/// how many.
+pub fn export_unsynced(path: String) -> Result<u32, CoreFailure> {
+    lift(|| core()?.session()?.export_unsynced(&path))
+}
+
+/// Pauses (or resumes) sync.
+pub fn set_sync_paused(paused: bool) -> Result<(), CoreFailure> {
+    lift(|| {
+        core()?.session()?.set_sync_paused(paused)?;
+        if !paused {
+            runtime::trigger(Trigger::Manual);
+        }
         Ok(())
     })
 }

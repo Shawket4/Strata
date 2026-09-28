@@ -307,7 +307,7 @@ pub struct AuthConfig {
     pub min_password_length: u32,
     /// Argon2id cost parameters for new password hashes.
     pub argon2: Argon2Config,
-    /// Login and signup rate limits (§15).
+    /// Login, signup, capture and ask rate limits (§8, §15).
     pub rate_limits: RateLimits,
 }
 
@@ -333,7 +333,8 @@ pub struct RateLimit {
     pub window_secs: u32,
 }
 
-/// Rate limits for the unauthenticated account endpoints.
+/// Rate limits for the account endpoints (per client/username) and for capture and ask (per
+/// user).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct RateLimits {
@@ -345,6 +346,10 @@ pub struct RateLimits {
     pub signup_per_ip: RateLimit,
     /// Sign-ups across all clients.
     pub signup_global: RateLimit,
+    /// `POST /capture` requests per user (§8: capture/ask limits are per user).
+    pub capture_per_user: RateLimit,
+    /// `POST /ask` requests per user.
+    pub ask_per_user: RateLimit,
 }
 
 /// Push provider credentials (paths only; files are read at startup and never logged).
@@ -497,6 +502,14 @@ impl Default for Config {
                     signup_global: RateLimit {
                         max: 30,
                         window_secs: 3600,
+                    },
+                    capture_per_user: RateLimit {
+                        max: 60,
+                        window_secs: 60,
+                    },
+                    ask_per_user: RateLimit {
+                        max: 20,
+                        window_secs: 60,
                     },
                 },
             },
@@ -736,6 +749,8 @@ impl Config {
             ("login_per_username", auth.rate_limits.login_per_username),
             ("signup_per_ip", auth.rate_limits.signup_per_ip),
             ("signup_global", auth.rate_limits.signup_global),
+            ("capture_per_user", auth.rate_limits.capture_per_user),
+            ("ask_per_user", auth.rate_limits.ask_per_user),
         ] {
             positive(&format!("auth.rate_limits.{name}.max"), limit.max)?;
             positive(
@@ -996,6 +1011,20 @@ mod tests {
             }
         );
         assert_eq!(config.auth.rate_limits.login_per_username.max, 10);
+        assert_eq!(
+            config.auth.rate_limits.capture_per_user,
+            RateLimit {
+                max: 60,
+                window_secs: 60
+            }
+        );
+        assert_eq!(
+            config.auth.rate_limits.ask_per_user,
+            RateLimit {
+                max: 20,
+                window_secs: 60
+            }
+        );
         assert_eq!(
             config.auth.argon2,
             Argon2Config {

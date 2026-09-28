@@ -15,9 +15,9 @@ use crate::net::{AccountApi, EventsApi, NetError, SyncApi, Tokens};
 use crate::store::registry::{self, KnownAccount, Registry};
 use crate::store::{StorePaths, account, tokens};
 use crate::view::model::{
-    CoreConfig, KnownAccountItem, NotificationOp, PasswordLevel, PasswordStrength,
-    PendingApproval, Platform, SessionKind, SessionState, SignInRequest, SignOutOutcome,
-    SignUpOutcome, SignUpRequest,
+    CoreConfig, KnownAccountItem, NotificationOp, PasswordLevel, PasswordStrength, PendingApproval,
+    Platform, SessionKind, SessionState, SignInRequest, SignOutOutcome, SignUpOutcome,
+    SignUpRequest,
 };
 use crate::view::{Topics, ViewSink};
 
@@ -293,7 +293,10 @@ impl Core {
             reg.remove_device_value(registry::PENDING_CHECKED_AT)?;
         }
         reg.set_device_value(registry::PENDING_SERVER, server_url)?;
-        reg.set_device_value(registry::PENDING_REJECTED, if rejected { "true" } else { "false" })?;
+        reg.set_device_value(
+            registry::PENDING_REJECTED,
+            if rejected { "true" } else { "false" },
+        )?;
         Ok(())
     }
 
@@ -382,7 +385,7 @@ impl Core {
             .signup(
                 req.server_url.clone(),
                 req.username,
-                req.password,
+                req.password.clone(),
                 req.display_name,
             )
             .await
@@ -580,7 +583,7 @@ impl Core {
         })
     }
 
-    fn wipe(&self, session: Arc<Session>) -> CoreResult<()> {
+    pub(super) fn wipe(&self, session: Arc<Session>) -> CoreResult<()> {
         let user_id = session.user_id().to_string();
         *lock(&self.active) = None;
         self.bump_generation();

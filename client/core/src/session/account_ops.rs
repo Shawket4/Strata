@@ -142,7 +142,7 @@ impl Core {
             .confirm_deletion(session.server_url()?, session.tokens())
             .await?;
         session.cancel_all_notifications()?;
-        self.wipe_session(session)?;
+        self.wipe(session)?;
         self.state()
     }
 }
@@ -183,7 +183,7 @@ pub fn export_unsynced(conn: &rusqlite::Connection, path: &str) -> CoreResult<u3
             let _ = write!(md, "\n{fence}markdown\n{}\n{fence}\n", body.trim_end());
         } else {
             let payload = rmp_serde::from_slice::<rmpv::Value>(&op.op.payload_bytes()?)
-                .map(|v| v.to_string())
+                .map(|v: rmpv::Value| v.to_string())
                 .unwrap_or_default();
             let _ = writeln!(md, "- Details: `{payload}`");
         }
