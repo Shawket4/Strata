@@ -226,7 +226,11 @@ void main() {
         'Draft: Three experiments',
       );
       expect(callsOf(fake, 'updateNote'), [
-        CoreCall('updateNote', {'id': _id, 'content': expected}),
+        CoreCall('updateNote', {
+          'id': _id,
+          'content': expected,
+          'baseVersion': EditorFixtures.contentVersion,
+        }),
       ]);
     });
 
@@ -246,6 +250,7 @@ void main() {
             '## Next steps',
             '## Next steps (Q4)',
           ),
+          'baseVersion': EditorFixtures.contentVersion,
         }),
       ]);
     });

@@ -67,6 +67,9 @@ List<EditorHint> shiftedHints(List<EditorHint> hints, int offset, int delta) =>
 
 /// Fixed IDs and texts of the sample note.
 abstract final class EditorFixtures {
+  /// The version the sample note was loaded at (the base of saves).
+  static const String contentVersion = 'v1-5f1c0e2a';
+
   /// Note ID.
   static const String noteId = 'n-pricing-experiments';
 
@@ -194,7 +197,7 @@ abstract final class EditorFixtures {
     sync_: sync,
     history: Availability.available,
     titleDir: TextDir.ltr,
-    contentVersion: '',
+    contentVersion: EditorFixtures.contentVersion,
     wordCount: 0,
     backlinkCount: 0,
     historyEntries: [],

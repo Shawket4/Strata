@@ -53,13 +53,17 @@ struct ScratchDb(String);
 
 impl ScratchDb {
     async fn create(encoding: &str, ctype: &str) -> Self {
+        // Unique per process and call: tests of one process run concurrently and may ask for
+        // the same locale within the same second.
+        static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
         let name = format!(
-            "strata_test_{}_{}_locale_{}",
+            "strata_test_{}_{}_{}_locale_{}",
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .expect("time")
                 .as_secs(),
             std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             ctype.to_ascii_lowercase().replace(['.', '-'], "_")
         );
         let mut admin = sqlx::PgConnection::connect(&admin_url())

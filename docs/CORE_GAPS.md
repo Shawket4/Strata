@@ -1,167 +1,167 @@
 # Core gaps found by the Flutter UI
 
-View-model fields and intents the Flutter screens need from the Rust core (PLAN L15: the UI renders what the core provides and never computes it). Each entry names what is missing and what the screen renders meanwhile.
+View-model fields and intents the Flutter screens need from the Rust core (PLAN L15: the UI renders what the core provides and never computes it). Each entry names what was missing and its status after the core-gaps pass: **✅ resolved** (what the core now provides; the facade function or field to use) or **⏳ open** (why, and what the screen keeps rendering). Resolved entries are ready for the feature UIs to adopt; the pass itself changed only the call sites needed to keep the workspace compiling, plus the maps filtering (moved to the core).
 
 ## App shell, accounts, settings, admin, sync (Flutter pass: apps/strata, features/accounts|settings|admin|sync)
 
 ### Sync pill display state (`SyncPill`)
-- **Needed:** `SyncPill.display: SyncPillKind { synced, offline, syncing, conflict, duplicates }` plus the values the chosen state shows: `progressDone`/`progressTotal` for "Syncing 12/40" and the local `lastSyncLabel` ("14:32" in the account's time zone). Today the pill would have to pick a priority between `connectivity`, `activity.phase`, `pendingOps`, `conflicts` and `duplicates` and compute done/total (`ops - pendingOps`), which is logic.
-- **Rendered meanwhile:** tone/icon/copy 1:1 from `connectivity` with the queued count ("Offline · 3 queued", "Synced"), a conflict badge when `conflicts > 0`, a spinner when `activity.phase != idle`.
+- **Display state.** ✅ resolved: `SyncPill.display: SyncPillKind { synced, offline, syncing, conflict, duplicates, paused, error }` (the core picks the priority), `progress_done` / `progress_total` ("Syncing 12/40"), `last_sync_label` (account time zone) and a ready `label`.
 
 ### Sidebar and rail counts
-- **Needed:** one stream (or `HomeView` fields) with the navigation counts of SCREEN_SPEC: tasks due (sidebar "Tasks 3"), notes total, directory total, map cluster count. Only `HomeView.inboxCount` exists; the others are not shown.
-- **Needed:** pinned notes for the sidebar "Pinned" section (`pinned: Vec<NoteListItem>` in `HomeView` or a `watch_pinned` stream) and a pin/unpin intent.
+- **Navigation counts.** ✅ resolved: `watch_nav() -> NavView { inbox_count, tasks_due_count, notes_count, directory_count, cluster_count, pinned }`.
+- **Pinned notes.** ✅ resolved: `NavView.pinned` / `HomeView.pinned` and `pin_note(id, pinned)`.
 
 ### Accounts
-- **Pending approval as a session state:** `SessionKind::PendingApproval` (and `Rejected`) with the username and `requested_at`, plus a `check_approval()` intent. Today "Check again" re-sends the `SignInRequest` the UI keeps in memory, and "sent 2 hours ago" / "Last checked 14:32" cannot be rendered.
-- **Change password:** `change_password(current, new)` intent (Settings → Account and `SessionKind::PasswordChangeRequired`). The screen renders the fields with the submit disabled.
-- **UI language and time zone:** `set_ui_language(code)` and `set_timezone(iana)` intents (the values are shown read-only from `AccountSummary`).
-- **Account disabled:** `export_unsynced(path)` intent ("Export them first") — disabled meanwhile.
-- **Deletion pending:** `download_export(path)` (`GET /me/export`), `export_unsynced(path)` and `delete_account_now()` intents, plus `export_size_bytes`/`export_note_count` ("18.4 MB · 412 notes") on `SessionState`; the buttons are disabled meanwhile. `SessionState.deletionAt` should also come with the account-timezone local date (the UI formats `toLocal()`).
-- **Account sheet:** the current device's name and sign-in date, the device count ("Devices 3") and the pending-approval count ("2 pending") — `SessionState.deviceName` is documented as the signed-out prefill only.
-- **Avatar initials** ("SN" for Sara Nabil): `initials` on `AccountSummary`/`AdminUserItem`/`KnownAccountItem` (the UI shows a person icon meanwhile).
-- **Sign-up:** password strength (`password_strength(pw) -> {level, length, min_length}`) and username availability (`check_username(server, name)`) for the SignupCompact meter and "@sara.n is available". Only the confirm-password equality is checked in the form.
+- **Pending approval as a session state.** ✅ resolved: `SessionKind::PendingApproval` / `Rejected` with `SessionState.pending: PendingApproval { username, server_url, requested_at, requested_label, last_checked_at, last_checked_label, can_check }`, `check_approval()` (re-signs in with the request kept in memory only) and `dismiss_pending()`. The router routes both kinds to the approval screen.
+- **Change password.** ✅ resolved: `change_password(current, new) -> SessionState` (also leaves `PasswordChangeRequired`).
+- **UI language and time zone.** ✅ resolved: `set_ui_language(code)`, `set_timezone(iana)`, `set_display_name(name)` (`PATCH /me`); every label is rebuilt in the new zone/language.
+- **Account disabled.** ✅ resolved: `export_unsynced(path) -> count` (the unsynced ops as a Markdown file).
+- **Deletion pending.** ✅ resolved: `download_export(path) -> ExportSummary` (`GET /me/export`), `export_unsynced(path)`, `delete_account_now(force)` (`POST /me/delete/confirm`), `SessionState.export_size_bytes` / `export_note_count` / `export_label` ("18.4 MB · 412 notes") and `deletion_label` (the account-zone local date).
+- **Account sheet.** ✅ resolved: `SessionState.this_device: DeviceItem`, `device_count`, `pending_approvals` (admins).
+- **Avatar initials.** ✅ resolved: `initials` on `AccountSummary`, `KnownAccountItem`, `AdminUserItem`, `DirectoryItem`, `EntityView`.
+- **Sign-up.** ✅ resolved: `password_strength(password) -> PasswordStrength { level, length, min_length }`. ⏳ open: username availability — the API has no availability endpoint (usernames are checked only on `POST /auth/signup`, and exposing a lookup would allow account enumeration); the form keeps showing the server's answer after submit.
 
 ### Settings
-- **Devices:** `SettingsView.devices` is only an `Availability`. Needed: `devices: Vec<DeviceItem { id, name, platform, last_seen, is_this_device, reminders_enabled }>` and intents `rename_device(id, name)`, `revoke_device(id)`, `set_device_reminders(id, enabled)` (per-device toggle of ReminderNotifications "Deliver to").
-- **Reminders:** quiet hours (`quiet_from`, `quiet_until`, enabled), snooze length and default time as settable values with intents (`set_default_reminder_time`, `set_quiet_hours`, `set_snooze_minutes`). Only `default_time` is shown today (read-only).
-- **AI / integrity / export-import:** data and intents behind the `Availability` flags (AI status, thresholds, auto-file, budget "62% used"; integrity warnings; `export_vault(path)` / `import_files(paths)`). The sections render the availability state and disabled actions.
+- **Devices.** ✅ resolved: `SettingsView.device_list: Vec<DeviceItem { id, name, platform, last_seen(+label), signed_in(+label), is_this_device, reminders_enabled }>`, `refresh_settings()`, `rename_device(id, name)`, `revoke_device(id)`, `set_device_reminders(id, enabled)`.
+- **Reminders.** ✅ resolved: `RemindersSetting.{snooze_minutes, quiet_enabled, quiet_from, quiet_until}` with `set_default_reminder_time`, `set_quiet_hours`, `set_snooze_minutes`.
+- **AI / integrity / export-import.** ✅ resolved: `SettingsView.ai_status: AiStatusView { enabled, provider, paused_label, queue_depth, budget_used_percent, budget_label, embedding_percent }`, `integrity_warnings: Vec<IntegrityItem>`, `export_vault(path) -> ExportSummary`, `import_vault(path) -> ImportSummary` (a zip of Markdown, `POST /vault/import`). ⏳ open: editable AI thresholds / auto-file toggles — server-side settings with no endpoint yet (read-only in `AiStatusView`).
 
 ### Admin → Users
-- **Intents:** `approve_user(id)`, `reject_user(id)`, `set_user_role(id, role)`, `disable_user(id)`, `enable_user(id)`, `reset_password(id) -> one_time_password`, `schedule_deletion(id) -> deletion_at`, `cancel_deletion(id)`, `create_user(...)`. All controls are rendered disabled; the one-time password and schedule-deletion dialogs exist and take the core's values.
-- **Fields:** `AdminUserItem.device_count`, `last_active_at`, `is_self` ("you", no actions on your own row), `requested_from_device` ("Sara's iPad"), and `deletion_at` for the confirmation ("deleted on 11 Oct 2026") before scheduling. Search needs a `query` parameter on `load_admin_users` (no filtering in Dart).
+- **Intents.** ✅ resolved: `approve_user`, `reject_user`, `set_user_role`, `set_user_enabled` (disable/enable), `reset_password -> one_time_password`, `schedule_deletion`, `cancel_deletion`, `create_user(NewUserRequest)`; each returns the updated `AdminUserItem`.
+- **Fields.** ✅ resolved: `is_self`, `created_label`, `deletion_at` + `deletion_label`, `password_change_required`, `initials`; search via `load_admin_users(query)` (filtered in the core). ⏳ open: `device_count`, `last_active_at`, `requested_from_device` — not in the admin users API (`AdminUser` has no device or activity data); the rows omit them.
 
 ### Sync status and conflicts
-- **Outbox rows:** a per-op detail line (`"+2 lines, 1 changed"`, `"contradicts → Discount policy"`, the capture excerpt); only `kind`, `title` and `status` exist.
-- **Retry schedule:** "Retrying automatically every 30 s · next at 14:47:30" — `retry_at` exists only inside `activity` during backoff; the interval is not exposed.
-- **Pull progress:** "Then pulling 37 changes from 2 other devices" and "~20 s left" are not in `SyncActivity`.
-- **Pause sync / sync log** (SyncMedium) — no intents.
-- **Conflict screen:** per-line diff annotations for the three columns (`added` / `removed` / `changed on both sides` spans with line numbers), the versions' origins ("MacBook Pro · today 14:41 · edited offline", "v8, from phone"), the note path, and a readable hunk location ("Line 6" instead of `body:6`). The UI shows the raw texts and the `location` code.
-- **Allowed hunk choices:** `ConflictHunkView.allowed_choices: Vec<HunkChoiceKind>` — the UI offers `oursThenTheirs` and `text` only when `kind == "body"`, which mirrors a sync-model rule.
-- **Own text:** `HunkChoiceKind::Text` expects a trailing line terminator; the core should normalise the text it receives rather than the UI appending `\n`.
-- **"Save both as copies"** (ConflictExpanded footer) — no `ResolutionKind` for it.
+- **Outbox rows.** ✅ resolved: `OutboxItem.detail` ("+2 lines, 1 changed", "contradicts → Discount policy", the capture excerpt), `detail_dir`, `created_label`.
+- **Retry schedule.** ✅ resolved: `SyncStatusView.retry_interval_secs`, `next_retry_label`, `retry_label` ("Retrying automatically every 30 s · next at 14:47:30").
+- **Pull progress.** ✅ resolved: `SyncActivity.ops_done`, `ops_total`, `pulled`. ⏳ open: "from 2 other devices" and "~20 s left" — the changes feed carries neither the originating device nor a size estimate.
+- **Pause sync / sync log.** ✅ resolved: `set_sync_paused(paused)` (`SyncStatusView.paused`, pill `paused`) and `SyncStatusView.log: Vec<SyncLogItem>`.
+- **Conflict screen.** ✅ resolved: per-line annotations `ConflictDetail.{base_lines, local_lines, server_lines}: Vec<AnnotatedLine { number, text, change: added | removed | changed | same }>`, `local_origin_label` / `server_origin_label`, `path`, `ConflictHunkView.location_label` ("Line 6"), `conflict_copy_path`.
+- **Allowed hunk choices.** ✅ resolved: `ConflictHunkView.allowed_choices` (the sync-model rule lives in the core).
+- **Own text.** ✅ resolved: the core adds a missing final line terminator to `HunkChoiceKind::Text`.
+- **"Save both as copies".** ✅ resolved: `ResolutionKind::SaveBothAsCopies` (keeps the server version and stores the local text as a conflict copy note).
 
 ### Reminders adapter (§12.5b)
-- **Snooze length:** `NotificationAction.minutes` must be chosen by Dart. Needed: the core decides (a `snooze_minutes` in `RemindersSetting`, or `NotificationAction` without minutes). The adapter sends a named interim constant (15, from the design copy).
-- **Failure result:** `NotificationResult` has no generic `failed`; platform errors other than permission map to `platform_limit`.
-- **Stream per session:** `watch_notification_ops` fails when no session is active and the provider is `keepAlive`; the adapter re-subscribes (invalidates) whenever the shell mounts. A session-independent stream (empty while signed out) would remove that.
-- **Launch/tap context:** notification taps carry only the op ID and the task ID payload; if the core wants the Done action to address a task directly (`task_id`) the op should say which one to use.
+- **Snooze length.** ✅ resolved: `NotificationAction` has no `minutes`; the core uses `RemindersSetting.snooze_minutes`. The adapter's interim constant is removed.
+- **Failure result.** ✅ resolved: `NotificationResult::Failed`.
+- **Stream per session.** ✅ resolved: `watch_notification_ops` is session-independent (empty while signed out; the notify hub survives account switches).
+- **Launch/tap context.** ✅ resolved: `NotificationOp.task_id` carries the task the Done/Snooze action addresses.
 
 ## Notes and editor (Flutter pass: features/notes, features/editor)
 
 ### Save with the view's version
-- **Needed:** `update_note(id, content, base_version)` — the editor saves the full markdown it built on `NoteView.version`; the core should compare it with the note's current base and answer with a conflict (or the D19 merge) instead of silently applying an edit made against a stale view. Today `updateNote(id, content)` has no version, so the UI sends `id` + full markdown only.
-- **Needed:** a display version for the status line ("Saved · v7"): `NoteView.version_label` (or `version_number`) from the history the server keeps. `NoteView.version` is a content hash; the UI shows "Saved" / "Saved on this device · N changes to sync" / "Conflict" from `sync` only.
-- **Needed:** a note-level duplicate state (`NoteSyncState.duplicate_op_id` or `NoteSyncKind::Duplicate`) so the note view can hand an "Already exists" prompt for *this* note to the duplicate sheet; `DuplicatePrompt` has no note ID, so the note view shows nothing.
+- **Base version.** ✅ resolved: `update_note(id, content, base_version)`; a stale base is 3-way merged (D19) or refused with `stale_edit`. The editor now sends `NoteView.content_version` of the text it loaded.
+- **Display version.** ✅ resolved: `NoteView.version_label` ("v7", from the server history) and `content_version`; `NoteSyncState.label` is the ready status line.
+- **Note-level duplicate state.** ✅ resolved: `NoteSyncKind::Duplicate` + `NoteSyncState.duplicate_op_id`.
 
 ### Editor hints (`EditorHint` / `editor_hints`)
-- **Needed:** `EditorHint.target_id: Option<String>` (resolved note ID) and `target_anchor` on `WikiLink`/`Embed` spans, so tapping a wikilink opens the note. Today the editor forwards the link's source text (`[[Note|alias]]`) to `onOpenLink`; the host cannot resolve it without logic.
-- **Needed:** `EditorHint.task_id` on `TaskLine` spans. The editor takes the ID from the `BlockId` span inside the task-line span (the span text minus `^`) and looks it up in `NoteView.tasks`.
-- **Needed:** `Heading` spans with the level (`HintKind::Heading { level }` as a field, e.g. `EditorHint.level: u8`); all headings are styled alike today.
-- **Needed:** per-line paragraph direction (`EditorHint` of kind `Direction { rtl }` per line, or `line_directions: Vec<bool>`), from the first strong character. `super_editor` only looks at the first non-space character (wrong for `- خصم`, `## الفرضيات`), so the editor applies the Unicode first-strong rule (P2) itself as a layout step.
-- **Needed:** emphasis spans (`**bold**`, `_italic_`, `~~strike~~`, `==mark==`, inline code already exists) so the editor can style them; markers are shown as typed today.
-- **Needed (`NoteListItem`, `NoteView`, `BacklinkGroup`):** a `lang`/direction hint for titles, snippets and backlink titles (the Arabic note list rows and the Arabic title of NoteExpandedDarkAr); rendered direction-neutral with `TextAlign.start` meanwhile.
+- **Link targets.** ✅ resolved: `EditorHint.target_id` / `target_anchor` on `WikiLink` / `Embed`.
+- **Task IDs.** ✅ resolved: `EditorHint.task_id` on `TaskLine`.
+- **Heading levels.** ✅ resolved: `EditorHint.level`.
+- **Line direction.** ✅ resolved: `HintKind::RtlLine` / `LtrLine` spans per line (Unicode P2 first-strong rule).
+- **Emphasis.** ✅ resolved: `HintKind::Bold`, `Italic`, `Strike`, `Mark` (styled by the editor).
+- **Title/snippet direction.** ✅ resolved: `title_dir` / `snippet_dir` on `NoteListItem`, `NoteView`, `BacklinkItem` (`TextDir { ltr, rtl, neutral }`).
 
 ### Editor completions
-- **Needed:** `editor_completions(note_id, content, cursor) -> Completions { kind: wikilink | mention | tag | block_ref, replace_start, replace_end, items: [{ label, detail, insert_text, target_id, entity_kind }] }`. The editor detects the token before the caret itself (`[[query`, `@query`, `#query`, `[[Note#^`) and fills the list from `search(query, keyword)` (notes) and `watch_directory(people|companies, query)` (mentions).
-- **Needed:** a tag list for `#` autocomplete (vault tags with counts, filtered by prefix). The tag panel shows "Tag suggestions aren't available yet."
-- **Needed:** the block list of a note for the block reference picker (`[[Note#^`): `blocks(note_id) -> [{ block_id, text }]`. The picker shows "Block references can't be listed yet."
-- **Needed:** `insert_mention(note_id, content, cursor_range, entity_id) -> { content, cursor }` that writes the link (path-disambiguated when titles collide, PLAN §6.3) and adds the entity to `people:`/`companies:` in one op. Meanwhile the editor replaces `@query` with `[[<title>]]` and calls `add_relation(src_id, dst_id, "people"|"companies")`; `[[` completion inserts `<title>]]`.
+- **Completions.** ✅ resolved: `editor_completions(note_id, content, cursor) -> Completions { kind: wiki_link | mention | tag | block_ref | none, replace_start, replace_end, query, items: [CompletionItem { label, detail, insert_text, target_id, entity_kind, label_dir }] }` (UTF-16 offsets).
+- **Tags.** ✅ resolved: `tags(prefix) -> Vec<TagItem { tag, count }>`.
+- **Blocks.** ✅ resolved: `note_blocks(note_id) -> Vec<BlockItem>`.
+- **Mentions.** ✅ resolved: `insert_mention(content, start, end, entity_id) -> MentionEdit { content, cursor }` (path-disambiguated link + `people:` / `companies:` in one content change for `update_note`).
 
 ### Note view (properties, backlinks, history, list)
-- **Needed:** history entries and revert: `NoteView.history` is only an `Availability`. Needed `history: Vec<HistoryEntry { version_label, message, author, at_label, can_revert }>` (online) and `revert_note(id, version)` + a diff view model. The panel renders the four availability states.
-- **Needed:** backlink details: `BacklinkItem.snippet` (the linking sentence), `by`/`confidence` for AI relations, and a total `backlink_count` on `NoteView` (the "Backlinks 6" tab badge; the UI does not sum the groups).
-- **Needed:** `NoteView.created_label` / `edited_label` / `edited_by` ("Created 18 Sep · edited today 14:31 by Shawket") and `word_count`; `NoteListItem.updated_label` ("14:31", "Sat", "21 Sep" — relative to today in the account's time zone). Not shown meanwhile.
-- **Needed:** `NotesListView.breadcrumb: Vec<FolderItem>` (root → current) and the folder's own `note_count`; the list shows "Notes › notes/sales" with the root as the only link.
-- **Needed:** folder-scoped filtering ("Filter notes in sales"): `search` has no folder parameter, so the list search is vault-wide.
-- **Needed (`RelationChip`):** `created_label` and cited evidence (`citations: Vec<Citation>`) for the AI reason card ("confidence 0.72 · 14:05", `^a1b2` quotes), and an intent to add a relation from the Properties panel with an AI-proposed type ("+ Add relation"). The card shows confidence and reason only; add-relation is not offered.
-- **Wiring note (maps feature):** the note's local mini-graph slot shows a placeholder with "Open map" (`NotesScreen.onOpenLocalMap(noteId)`); `strata_maps` exports no embeddable mini-graph widget over `watch_local_graph` yet. When it does, the slot (`LocalGraphSlot`) should host it.
+- **History and revert.** ✅ resolved: `refresh_history(note_id)` fills `NoteView.history_entries: Vec<HistoryEntry { commit, version_label, message, author, at_label, can_revert }>`; `note_revision_diff(note_id, commit) -> NoteDiffView` and `revert_note(note_id, commit)` (online).
+- **Backlink details.** ✅ resolved: `BacklinkItem.{snippet, snippet_dir, by, confidence}`, `BacklinkGroup.label`, `NoteView.backlink_count`.
+- **Created/edited labels.** ✅ resolved: `NoteView.{created_label, edited_label, edited_by, word_count}`, `NoteListItem.updated_label`.
+- **Breadcrumb.** ✅ resolved: `NotesListView.breadcrumb` and `note_count`.
+- **Folder-scoped filtering.** ✅ resolved: `search_in_folder(query, mode, folder)`.
+- **Relation chips.** ✅ resolved: `RelationChip.{rel_label, created_label, citations, decision_id}`; `relation_types()` lists the addable types with labels. ⏳ open: "+ Add relation" with an **AI-proposed type** — no AI endpoint proposes a type for a user-chosen pair (`LocalGraphView.propose_relation` stays `NotYetAvailable`); the user picks the type from `relation_types()`.
+- **Mini-graph slot (maps feature).** ⏳ open (UI wiring only): `strata_maps` exports `MiniGraph`; hosting it in `LocalGraphSlot` is a feature-UI change outside this pass.
 
 ## Home, inbox, tasks, duplicate prompt (Flutter pass: features/home|inbox|tasks)
 
 ### Display labels in the user's time zone (all three screens)
-- **Needed:** display-ready local labels next to every instant the UI shows: `NoteListItem.updated_label` ("2d", "1w"), `InboxItem.created_label` ("09:47", "Sat 18:40"), `SuggestionItem.created_label`, `ReminderItem.time_label` ("09:00") and `offset_label` ("on the day", "30 days before"). Converting UTC instants to the account's time zone or computing relative ages is logic.
-- **Rendered meanwhile:** date-only values (`TaskItem.due/done`, UTC midnight) are formatted with gen-l10n date formats; `NoteListItem.updatedAt` is formatted as a UTC day ("27 Sep"); reminders show `ReminderItem.local` verbatim ("2026-10-01 09:00"); capture times are not shown.
-- **Needed:** a language/direction hint for user content (`lang: "ar" | "en" | "mixed"` or a `TextDirection` per paragraph) on `InboxItem.text`, `NoteListItem.title/snippet`, `TaskItem.description`. The UI renders them direction-neutral (`TextAlign.start`, ambient direction).
+- **Local labels.** ✅ resolved: `NoteListItem.updated_label`, `InboxItem.created_label`, `SuggestionItem.created_label`, `ReminderItem.{local_at, time_label, offset_label}`, task labels (below) — all in the account's zone and UI language (English/Arabic, CLDR plurals), DST-correct (Africa/Cairo tested across the October switch).
+- **Content direction.** ✅ resolved: `InboxItem.text_dir`, `NoteListItem.title_dir/snippet_dir`, `TaskItem.description_dir`, `SuggestionItem.source_dir`.
 
 ### Home (`HomeView`)
-- **Header:** today's date and the greeting ("Sunday 27 September · good afternoon, Shawket"): `today_label`, `greeting`, `display_name`. Not rendered.
-- **Inbox preview:** the first captures with their proposal summary ("→ Weekly invoicing request — Acme", "Needs you · Who is “بابا”?"): `inbox_preview: Vec<InboxPreviewItem { note_id, text, summary, needs_you }>` and `needs_you_count` / `contradictions_count` ("1 needs you · 1 contradiction to review"). Only `inboxCount` is rendered (count card).
-- **AI activity feed:** `ai_activity: Availability` + `Vec<AiActivityItem { at_label, kind (relation_added | contradiction | timeline | custody_applied), summary, source/target refs, rel_type, confidence, undo_suggestion_id }>` and the headline ("3 relations added, 1 contradiction found"). Rendered as "Not available yet".
-- **Open items roll-up:** `open_items: Availability` + `Vec<OpenItem { id, text, person: EntityRef, citation, done }>` and a `complete_open_item(id)` intent. Rendered as "Not available yet".
-- **Recent notes:** link count per note (`NoteListItem.link_count`, "4 links") and the Edited / Created / Filed-by-AI filters of HomeExpanded (`watch_recent(filter)`). Not rendered.
-- **Today block count:** a single "due today incl. overdue" count (`tasks_today_count`, "Today 2") — the block shows the two sections without a summed count.
+- **Header.** ✅ resolved: `today_label`, `greeting`, `display_name`.
+- **Inbox preview.** ✅ resolved: `inbox_preview: Vec<InboxPreviewItem { note_id, text, text_dir, summary, needs_you }>`, `needs_you_count`, `contradictions_count`, `inbox_summary`.
+- **AI activity feed.** ✅ resolved: `ai_activity` + `ai_activity_items: Vec<AiActivityItem { at_label, kind, summary, source, target, rel_type, confidence, undo_suggestion_id, decision_id, reverted }>` and `ai_activity_headline`, from the server's AI decisions (`refresh_ai_activity()`); undo/correct with `reject_ai_decision`, `repoint_ai_decision`, `retype_ai_decision` (D13).
+- **Open items roll-up.** ✅ resolved: `open_items` + `open_item_list: Vec<OpenItem { id, text, text_dir, person, citation, done }>` from the entities' `## Open items`. ⏳ open: `complete_open_item(id)` — open items are AI-maintained bullets without a done marker in the vault format (PLAN §6); a done state needs a vault-format decision (the checkbox stays read-only, `done` is always false).
+- **Recent notes.** ✅ resolved: `NoteListItem.link_count` and `watch_recent(RecentFilter { edited, created, filed_by_ai })`.
+- **Today count.** ✅ resolved: `TaskSections.today_count`.
 
 ### Inbox (`InboxView`, `SuggestionItem`)
-- **Capture-level intents:** `accept_capture(note_id)` / `reject_capture(note_id)` (and a bulk `accept_captures(ids)`), so the core decides what Accept means for a capture with several suggestions. Meanwhile Accept / Reject (card, bulk bar, A / R keys) forward `acceptSuggestion` / `rejectSuggestion` for every suggestion of the capture in the order the core lists them.
-- **Edit the proposal:** `accept_suggestion_with(id, edits { title, folder, tags, relations })` for the editable title / folder / tags / relations of InboxExpanded. Meanwhile "Edit" opens the capture note (`onOpenNote(noteId)`).
-- **Accept all ready / filters:** `ready_count` and `accept_all_ready()`; filter tabs All / Needs you / Conflicts need `needs_you_count`, `conflicts_count` and a `watch_inbox(filter)` parameter. Not rendered (filtering is logic).
-- **Capture metadata:** `InboxItem.source` ("Typed on Pixel 8", "voice"), the AI filing confidence on the capture row, and `SuggestionItem.source_text` (the capture text behind a standalone suggestion such as "بابا عايز يشوف الأرقام بكرة").
-- **Link-or-create:** `resolve_link_or_create(suggestion_id, choice: Link { entity_id } | Create { name })` that adds the mention as an alias. Meanwhile "Link to existing person…" is disabled ("not available yet") and "Create person…" calls `createEntity(kind: "person", name, aliases: [mention], force: false)` (duplicate candidates shown in place, Create anyway resends with `force: true`) and then `acceptSuggestion(id)` — please confirm this sequence or replace it with the single intent.
-- **Timeline chip:** the resolved timeline date of a mention ("Timeline · Mon 28 Sep (from “بكرة”)", "Nov 2026 — rates +8% on both pages"): `SuggestionDetail.timeline: Option<{ date_label, source_phrase, targets }>`. Not rendered.
-- **Custody:** an explicit `auto_applied: bool` (today the UI maps `status == "accepted"` to "Applied automatically"), `undo_suggestion(id)` (Undo currently sends `rejectSuggestion(id)`), `acknowledge_suggestion(id)` for "Looks right" (not rendered), the resulting location / holder / last-holder fields (`location: EntityRef`, `holder`, `last_holder`) and `accept_suggestion_choice(id, document_id)` for the ambiguous "Which contract?" choice (Accept is disabled while `candidates` is non-empty).
-- **Duplicate-flagged captures:** confirm the mapping Create anyway → `rejectSuggestion(id)`, Discard → `acceptSuggestion(id)`, Open existing → navigation only; or add `resolve_duplicate_suggestion(id, DuplicateChoice)`. The candidate's kind for routing Open existing is `CandidateItem.kind` (the app shell routes by kind).
-- **Suggestion threads (reply):** no view-model or intent exists (`thread: Vec<ThreadMessage>`, `reply_to_suggestion(id, text)`). Not rendered.
+- **Capture-level intents.** ✅ resolved: `accept_capture(note_id)`, `reject_capture(note_id)`, `accept_captures(ids)`.
+- **Edit the proposal.** ✅ resolved: `accept_suggestion_with(id, SuggestionEdits { title, folder, tags, text, due, recurrence })`.
+- **Accept all ready / filters.** ✅ resolved: `accept_all_ready()`, `watch_inbox_filtered(InboxFilter { all, needs_you, conflicts })`, `InboxView.{ready_count, needs_you_count, conflicts_count, all_count}`, `InboxItem.{ready, needs_you, is_duplicate}`.
+- **Capture metadata.** ✅ resolved: `InboxItem.source_label`, `filing_confidence`, `SuggestionItem.source_text`. ⏳ open: the capturing device ("Typed on Pixel 8") — the sync record of a capture carries no device; only a `source:` property is shown.
+- **Link-or-create.** ✅ resolved: `resolve_link_or_create(suggestion_id, LinkOrCreateChoice { kind: link | create, entity_id, name })` (adds the mention as an alias).
+- **Timeline chip.** ⏳ open: `SuggestionDetail.timeline: Option<TimelineChip>` exists, but the server's suggestion payloads carry no resolved timeline date yet, so it is always `None`.
+- **Custody.** ✅ resolved: `SuggestionItem.auto_applied`, `undo_suggestion(id)`, `acknowledge_suggestion(id)` ("Looks right"), `SuggestionDetail.{location, holder, last_holder, document_choices}` and `accept_suggestion_choice(id, document_id)`.
+- **Duplicate-flagged captures.** ✅ resolved: `resolve_capture_duplicate(suggestion_id, DuplicateChoice)` (Create anyway / Discard; Open existing is navigation by `CandidateItem.kind`).
+- **Suggestion threads.** ✅ resolved: `SuggestionItem.thread: Vec<ThreadMessage>` and `reply_to_suggestion(id, text)`. ⏳ open: reply authors other than "you" — the synced suggestion record stores reply texts without the author.
 
 ### Tasks (`TasksView`, `TaskScreen`, `TaskItem`)
-- **Grouping and labels:** upcoming grouped by day with headers ("TUE 29 SEP", "LATER"), "3 days late", "next in 4 days", "Next occurrence in 4 days", history "on time" / "2 days late", "4 done this week", the open total ("Open · 5"), "6 notes contain tasks", reminder offset ("30 days before", "on the day"), "From document expiry": `TaskItem.due_label`, `lateness_label`, `next_in_label`, `origin_label`, `TaskSections.upcoming_groups: Vec<{ label, tasks }>`, `TasksView.open_count`, `done_this_week`, `notes_with_tasks`. Rendered meanwhile: flat sections with the formatted due date and an "Overdue" style for the overdue section.
-- **Task line location:** `TaskScreen.line_number` ("tasks/Tasks.md · line 14") and the home note's path (`TaskItem.note_path`); the UI shows `noteTitle`.
-- **Reminders editing:** `add_reminder(task_id, local)` / `remove_reminder(task_id, local)` (or `ReminderItem.local` as a `DateTime` so `TaskPatch.reminders` can be rebuilt without parsing a string). "Add reminder" in task detail is disabled meanwhile; the new-task sheet sends picked `DateTime`s in `TaskDraft.reminders`. Delivery devices ("to Pixel 9, MacBook Pro") are not rendered.
-- **Recurrence editor:** a structured rule and its compiler: `recurrence_form(phrase) -> RecurrenceForm { frequency, interval, by_month_day | nth_weekday | last_day, ends: Never | On(date) | After(n) }`, `compose_recurrence(form) -> { phrase, understood }` and the preview `recurrence_preview(phrase_or_form, from) -> Vec<{ date_label }>` ("Thu 1 Oct 2026 · due, Sun 1 Nov, Tue 1 Dec"). Meanwhile the editor saves the typed phrase verbatim (`updateTask(patch: TaskPatch(recurrence: phrase))`, "Stop repeating" sends `clearRecurrence: true`); the frequency / interval / on / ends controls are shown disabled and the preview says "not available yet".
-- **New task parsing:** `parse_task_text(text) -> TaskDraftPreview { description, due, due_label, recurrence, reminders, links: Vec<EntityRef>, chips }` for the "Understood as" chips of TaskEditCompact. Meanwhile the sheet sends the text as `TaskDraft.description` with the due date / repeat phrase / reminders the user sets by hand.
-- **Home note picker:** a list of candidate home notes (`watch_task_homes()`) for the new-task sheet; it uses the caller's `noteId` or the core default (`noteId: null`).
+- **Grouping and labels.** ✅ resolved: `TaskItem.{due_label, lateness_label, completion_label, next_in_label, origin_label, is_overdue}`, `TaskSections.upcoming_groups: Vec<TaskGroup { label, tasks }>`, `TasksView.{open_count, done_this_week, done_this_week_label, notes_with_tasks}`, `TaskScreen.next_occurrence_label`.
+- **Task line location.** ✅ resolved: `TaskItem.{note_path, line_number}`, `TaskScreen.location_label`.
+- **Reminders editing.** ✅ resolved: `add_reminder(task_id, local)`, `remove_reminder(task_id, local)`, `ReminderItem.local_at`; `TaskScreen.delivery_label` ("to Pixel 9, MacBook Pro").
+- **Recurrence editor.** ✅ resolved: `recurrence_form(phrase) -> Option<RecurrenceForm>`, `compose_recurrence(form) -> RecurrenceCompose { phrase, understood }`, `recurrence_preview(phrase, from, count) -> Vec<RecurrencePreviewItem>`, `TaskScreen.recurrence_form` / `recurrence_preview`; the phrase grammar is shared with `vault-format` (`RecurrenceRule::to_phrase`, L16). ⏳ open: an "ends" rule (on date / after n) — the Tasks recurrence grammar has no end clause; adding one is a vault-format decision.
+- **New task parsing.** ✅ resolved: `parse_task_text(text) -> TaskDraftPreview { description, due, due_label, recurrence, reminders, priority, links, chips, draft }` (English + Arabic phrases, `@mentions` resolved to links).
+- **Home note picker.** ✅ resolved: `watch_task_homes() -> TaskHomesView`.
 
 ### Duplicate prompt (`DuplicatePrompt`, `CandidateItem`)
-- **Candidate details:** `CandidateItem.path` ("tasks/Tasks.md") and a match reason ("A recurring task already covers …") are not in the view-model; the sheet shows kind, snippet, match level and score.
+- **Candidate details.** ✅ resolved: `CandidateItem.path` and `reason`.
 
 ## Directory, entity pages, documents & places, maps, Ask & search (Flutter pass: features/directory|documents|maps|ask)
 
 ### Directory (`DirectoryView` / `DirectoryItem`)
-- **Row fields:** `initials` (avatars "AS"; a kind glyph is shown meanwhile), `mention_count` ("14 mentions"), `last_active` (+ its label "Today" / "Thu 24 Sep"), `role` and `company: EntityRef` as separate fields (today one `subtitle` string, so the company can't be a link or carry its kind dot), `tags`. Documents rows: `status`, `location: Vec<EntityRef>` (breadcrumb), `holder` / `last_holder` with the date ("Last with Shady · 20 Sep"), `copy`, `expires` and an `expiring_soon` flag (the "Expiring" filter badge). Places rows: parent breadcrumb as refs. Only `subtitle` is rendered today.
-- **Sort and filters:** `watch_directory(tab, query, filter: DirectoryFilter { tags, role, company, industry, doc_type, status, place, holder, expiring, has_open_items }, sort: DirectorySort { name, last_active, recently_moved })` plus the filter options with counts (`DirectoryView.filter_options`). Filter chips are rendered disabled ("Filters aren't available yet"); rows keep the core's order.
-- **Sections:** "Recently active" vs "All people · A–Z" (PeopleCompact) needs the core to split or label the rows.
-- **Directory suggestions:** a `DirectoryView.suggestions` (or a `watch_directory_suggestions`) with only the entity suggestions for the tab (who-is, merge proposals). The strip shows `InboxView.suggestions` as-is (every kind rendered, none filtered).
-- **Suggestion answers with a choice:** link-or-create needs `accept_suggestion_with(id, SuggestionChoice { link_to: id | create })`; merge proposals need the merge target. Only plain accept / reject are wired.
-- **Create documents and places:** `create_entity` accepts `person | company | concept`; the "Add document" / "Place inside" actions need `document` / `place` kinds (with `part-of` / initial location). Not rendered for those tabs.
+- **Row fields.** ✅ resolved: `initials`, `mention_count`, `last_active` + `last_active_label`, `role`, `company: EntityRef`, `industry`, `tags`, `status`, `doc_type`, `location` (breadcrumb refs), `holder`, `last_holder`, `holder_label`, `copy`, `expires` + `expires_label`, `expiring_soon`, `breadcrumb`, `document_count`, `has_open_items`, `title_dir`.
+- **Sort and filters.** ✅ resolved: `watch_directory_filtered(tab, query, DirectoryFilter, DirectorySort { name, last_active, recently_moved })` with `DirectoryView.filter_options: Vec<FilterOption { facet, value, label, count, selected }>` and `expiring_count`.
+- **Sections.** ✅ resolved: `DirectoryView.sections: Vec<DirectorySection { label, items }>`.
+- **Directory suggestions.** ✅ resolved: `DirectoryView.suggestions` (entity suggestions of the tab only).
+- **Suggestion answers with a choice.** ✅ resolved: `resolve_link_or_create`, `accept_suggestion_choice`, `merge_entities`.
+- **Create documents and places.** ✅ resolved: `create_document(DocumentDraft, force)`, `create_place(PlaceDraft, force)`.
 
 ### Entity page (`EntityView`)
-- **Merge:** `merge_entities(source_id, into_id)` (+ preview of what moves: aliases, mentions, relations). "Merge…" is disabled.
-- **Repoint an AI link (D13):** `repoint_relation(src, dst, rel_type, new_dst)` (and for mentions `repoint_mention(note_id, mention_block, new_entity)`). The Repoint button is disabled; Reject uses `remove_relation` — a dedicated `reject_relation` that records the rejection (§6.5, "never re-proposed") and returns an undo token would match D13 better.
-- **User notes section:** `EntityView.user_notes: String` (the `## Notes` body) and `update_user_notes(id, text)` (the AI never edits that section; the UI must not splice markdown). The same for `DocumentView`/`PlaceView`. A placeholder is shown.
-- **Summary citations and freshness:** `summary_citations: Vec<Citation>` and `ai_updated_at` ("AI-maintained · updated 2h ago"); open-item state (`done: bool`) and a `complete_open_item` intent for the checkboxes; counts for "2 open · 1 done".
-- **Header facts:** `last_active` ("last active today"), `mention_count` when `mentions` is truncated, `tags`, `path` (breadcrumb "people/ahmed-samir.md"), property provenance ("Phone · added by you") and `add_property` / `add_alias` intents.
-- **Mentions:** `NoteListItem.highlight: Vec<(start, end)>` spans for the matched mention in the snippet (the design marks "أحمد"), and `lang`/direction per snippet.
-- **Entity relation label:** `RelationChip.rel_label` (localisable "works at" for `works-at`); the raw type is shown.
+- **Merge.** ✅ resolved: `merge_preview(source_id, into_id) -> MergePreview` and `merge_entities(source_id, into_id)`.
+- **Repoint an AI link (D13).** ✅ resolved: `repoint_relation(src, dst, rel_type, new_dst)`, `reject_relation(src, dst, rel_type)` (recorded as rejected, never re-proposed), and for server-side AI decisions (mentions included) `repoint_ai_decision(decision_id, target_id, hint)` / `reject_ai_decision`.
+- **User notes section.** ✅ resolved: `EntityView.user_notes` / `DocumentView.user_notes` / `PlaceView.user_notes` and `update_user_notes(id, text)` (the core edits only `## Notes`).
+- **Summary citations and freshness.** ✅ resolved: `summary_citations`, `summary_dir`, `open_count` / `done_count`. ⏳ open: `ai_updated_label` stays `None` — the synced note record has no "AI section updated at" time (the server keeps it in job state only); `complete_open_item` as under Home.
+- **Header facts.** ✅ resolved: `last_active_label`, `mention_count`, `tags`, `path`, `set_property` / `remove_property`, `add_alias` / `remove_alias`. ⏳ open: property provenance ("added by you") — frontmatter keeps no per-property author.
+- **Mentions.** ✅ resolved: `NoteListItem.highlights: Vec<HighlightSpan>` (UTF-16) and `snippet_dir`.
+- **Entity relation label.** ✅ resolved: `RelationChip.rel_label`.
 
 ### Documents and places
-- **Record a move:** `record_custody(document_id, CustodyDraft { kind, place_id?, person_id?, counterparty_id?, date, note })` → op id. The form (event type, place picker with nested places, holder, date, note) is complete; submit is disabled with a notice. The place picker also needs each place's full breadcrumb (`DirectoryItem.breadcrumb`) and the current location flag.
-- **AI custody entries:** `CustodyItem.by` (`user` | `ai`), `confidence`, `decision_id` and `undo_ai_decision(decision_id)` for "AI · 0.93 · Undo". Not rendered.
-- **Custody sentence:** a localisation-ready form per event (`kind` + roles is rendered as "date · type" and linked refs; "Shady returned it to Safe" needs the core to say which ref is the actor vs the destination for each kind).
-- **Expiry and renewal:** `DocumentView.renewal_task: Option<TaskItem>` (the "Renew · task, remind 1 Mar" link) and `expiring_soon`. "Renewal: Not available yet" is shown.
-- **Document mentions and counts:** `DocumentView.mentions: Vec<NoteListItem>` (context panel "Mentioning notes"), `path`, `pending_sync`; copy rows with their `location`/`holder` (today `copies: Vec<EntityRef>`).
-- **Place page:** nested tree deeper than one level (`sub_places` with their own children and `document_count`), each document's `holder` / `last_holder` / `doc_type` in `DocumentBrief`, "Out with people" (documents that belong here but are held now), and whether a movement row is "here" vs a nested place. Only direct sub-places are shown.
+- **Record a move.** ✅ resolved: `record_custody(document_id, CustodyDraft)`; the picker uses `place_options(document_id) -> Vec<PlaceOption { id, title, breadcrumb, depth, is_current }>`.
+- **AI custody entries.** ✅ resolved: `CustodyItem.{by, confidence}`; undo through the inbox (`undo_suggestion`) or `reject_ai_decision`. ⏳ open: `CustodyItem.decision_id` — a custody line in the vault does not reference the server's AI decision, so the page cannot link a line to its decision (`None`).
+- **Custody sentence.** ✅ resolved: `CustodyItem.{sentence, sentence_key, actor, destination, date_label, here}`.
+- **Expiry and renewal.** ✅ resolved: `DocumentView.renewal_task`, `expiring_soon`, `expires_label`.
+- **Document mentions and counts.** ✅ resolved: `DocumentView.{mentions, path, pending_sync, copy_briefs, holder_label}`.
+- **Place page.** ✅ resolved: `PlaceView.tree: Vec<PlaceNode>` (every depth, with `document_count`), `DocumentBrief.{holder, last_holder, doc_type, location_path, expiring_soon}`, `out_with_people`, `CustodyItem.here`.
 
 ### Maps
-- **Global map filters and lens in the core:** `global_graph(filter: GraphFilter { edge_kinds, node_kinds, similarity, cluster, lens: notes|people|companies })` with per-kind counts for the filter panel (`GlobalGraphView.edge_counts`, `node_counts`). Meanwhile edge/node filters and cluster focus are applied as paint-time layer visibility and dimming of the core's data; the lens (People / Companies) and the AI-similarity toggle are disabled; no counts.
-- **Cluster regions and labels:** `ClusterLabel.{x, y}` (label anchor) and region geometry (`hull: Vec<(f32, f32)>` or centre + radii) from `graph-algo`. Regions are drawn as the union of soft discs around clustered nodes; region labels are not drawn (cluster names are in the filters panel).
-- **Label priority:** `GraphNode.label_rank` (or `is_hub`) so zoom-dependent labels don't depend on a Dart threshold (the painter uses the GraphLanguage rule "degree ≥ 6" as a design constant).
-- **Hover card:** `GraphNode.summary` (PLAN §6: node payload includes a short summary) and `updated`.
-- **Edges:** `GraphEdge.reason` (the edge sheet shows "The AI's reason … isn't shown here yet"), `GraphEdge.rel_type` as its own field (the UI maps the full `kind` string 1:1), and edge IDs.
-- **Mind map:** `save_layout(center_id, positions)` → `.canvas` (button disabled), `propose_relation(src, dst)` for drag-to-relate (AI proposes the type; only the hint is shown), a selected node's `summary`, and a relation count split ("8 relations · 2 by AI").
-- **Neighbourhood for highlighting:** the global map uses `watch_local_graph(id, 1)` to know which nodes to keep bright on selection; a `neighbours` list on the selection would avoid a second stream.
+- **Global map filters and lens in the core.** ✅ resolved: `global_graph_filtered(GraphFilter { edge_kinds, node_kinds, similarity, cluster, lens: notes | people | companies, focus, include_tags })` with `edge_counts` / `node_counts` (before filtering) and `neighbours`; edge kinds match a family (`relation`) or a full kind (`relation:supports`). The global map now sends its filter choices to the core and the painter only paints (the Dart visibility filtering is removed); the mind map's edge toggles use `watch_local_graph_filtered(id, depth, edge_kinds)`.
+- **Same graph as the server (L16).** ✅ resolved: stored relations map to edge kinds through the shared `domain::GraphEdgeKind::of_relation` (place nesting appears once as `part-of-place`), `document:copy-of` edges, the tag toggle (`tag:<tag>` nodes, `tag` edges), `GraphNode.{kind: GraphNodeKind, path, updated}`.
+- **Cluster regions and labels.** ✅ resolved: `ClusterLabel.{x, y, hull, radius}` (convex hull padded around the members).
+- **Label priority.** ✅ resolved: `GraphNode.label_rank` and `is_hub`.
+- **Hover card.** ✅ resolved: `GraphNode.summary` and `updated_label`.
+- **Edges.** ✅ resolved: `GraphEdge.{id, rel_type, label, reason}`.
+- **Mind map.** ✅ resolved: `save_layout(center_id, name, positions)` → `maps/<name>.canvas` (JSON Canvas via `PUT /maps`), `LocalGraphView.{summary, relation_count, ai_relation_count, relation_label}`. ⏳ open: `propose_relation(src, dst)` — no endpoint proposes a relation type for a pair (`propose_relation: NotYetAvailable`).
+- **Similarity.** ✅ resolved: `refresh_similarity()` fetches the server's similarity edges (`GET /graph`); `GraphFilter.similarity` shows them.
+- **Neighbourhood for highlighting.** ✅ resolved: `GraphFilter.focus` → `GlobalGraphView.neighbours`.
 
 ### Ask and search
-- **Asking:** `ask(question, scope) -> conversation id` with a streaming view (`AskMessage.streaming: bool`, partial text updates), `stop_ask()`, `new_conversation()`, and `AskView.scopes: Vec<AskScope>` (All notes / an entity / a folder). The composer and "New conversation" are disabled; only "All notes" is shown.
-- **Inline citations:** `AskMessage.spans` (text runs and citation positions) so chips sit where the answer cites them; today citations follow the paragraph. Sources grouped by note ("^a1b2 ^c4d7" on one row) need `sources: Vec<{note_id, title, anchors}>`.
-- **Save as note:** `save_answer_as_note(message_id)` (the core writes the note with citations as links, §9.5). Disabled.
-- **Answer metadata:** `AskMessage.{scope, source_count, created_at}` ("Scope: Acme · 3 sources · 14:05"), AI provider status and daily budget (`AskView.ai_status`, `budget_used`).
-- **Source preview:** the cited block's text (`resolve_citation(note_id, anchor) -> {block_text, heading, path, date}`); the preview shows title, path and tags only.
-- **Per-paragraph direction:** a `lang`/direction hint on `AskMessage`, `SearchHit.snippet`, `NoteListItem.snippet`, `CitedBullet.text` and graph node titles (PLAN §11: direction by first strong character) — today they use the ambient direction with `TextAlign.start`.
-- **Search:** `SearchHit.highlights` (match spans), `score`, and `SearchView.available_modes` (so unavailable modes can be disabled before searching; today availability is only known after the search runs).
+- **Asking.** ✅ resolved: `ask(question, AskScope) -> answer id` streaming into `watch_ask()` (`AskMessage.streaming`, partial text), `stop_ask()`, `new_conversation()`, `AskView.scopes`.
+- **Inline citations.** ✅ resolved: `AskMessage.spans: Vec<AskSpan>` and `sources: Vec<AskSource { note_id, title, path, anchors, indexes }>`.
+- **Save as note.** ✅ resolved: `save_answer_as_note(message_id)`.
+- **Answer metadata.** ✅ resolved: `AskMessage.{scope_label, source_count, created_label, error_key}`, `AskView.ai_status`.
+- **Source preview.** ✅ resolved: `resolve_citation(note_id, anchor) -> CitationPreview`.
+- **Per-paragraph direction.** ✅ resolved: `AskMessage.dir`, `SearchHit.{title_dir, snippet_dir}`, `NoteListItem.snippet_dir`, `CitedBullet.dir`, `GraphNode.title_dir`.
+- **Search.** ✅ resolved: `SearchHit.{highlights, score}`, `SearchView.available_modes`; `search` and `search_in_folder` run the server's semantic/hybrid search online (keyword mode and offline use the local index).
 
 ## Coordinator notes (to resolve in the core-gaps pass)
-- Maps: edge/node filters are currently applied in the Dart painter (visibility/dimming). Move filtering and lens selection into the core (filtered view-models) so Dart only paints (L15).
-- Directory: rename the `EntityScreen` widget (clashes with the `EntityScreen` view-model type) to `EntityPage`.
-- Content direction: provide per-paragraph direction hints from the core everywhere text is rendered (maps, directory, ask, documents), replacing ambient-direction fallbacks.
-- Share the duplicated `test/helpers` across feature packages via `strata_state/testing.dart`.
-- Inbox intent mappings are provisional workarounds (e.g. duplicate-flagged "Discard" → acceptSuggestion, custody "Undo" → rejectSuggestion, capture-level accept/reject fanned out per suggestion). Replace with explicit core intents (`resolve_capture_duplicate`, `undo_ai_change`, `accept_capture`, `reject_capture`, `edit_proposal`, `link_or_create_entity`) and update the inbox UI.
+- **Maps filtering in the core.** ✅ resolved (see Maps): the global map and the mind map ask the core for filtered view-models; `GraphPaintOptions` / `MindMapCanvas` no longer hide anything.
+- **`EntityScreen` widget rename.** ⏳ open: a feature-UI rename; the widget still clashes with the view-model name (imports use `hide`/prefixes). Out of scope of this pass (no feature UI rewrites).
+- **Content direction everywhere.** ✅ resolved in the core (every text field above has a `*_dir`); adopting them is per feature UI.
+- **Shared test helpers.** ⏳ open: feature packages still carry their own `test/helpers`; `strata_state/testing.dart` now has a fixture for every view-model type (128) to build on.
+- **Explicit inbox intents.** ✅ resolved in the core: `resolve_capture_duplicate`, `undo_suggestion` / `reject_ai_decision`, `accept_capture`, `reject_capture`, `accept_suggestion_with`, `resolve_link_or_create`. The inbox UI still uses the provisional mappings until its next pass.

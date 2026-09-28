@@ -157,6 +157,8 @@ final class NoteEditorController extends ChangeNotifier {
     };
   }
 
+  String? _baseVersion;
+
   /// Shows [note], the latest view the core streamed.
   ///
   /// The document is rebuilt from the note's content when nothing is being
@@ -167,6 +169,9 @@ final class NoteEditorController extends ChangeNotifier {
     final first = _note == null || _note!.id != note.id;
     final dirty = !first && isDirty;
     _note = note;
+    // The version the shown text was loaded from: the base of the next save
+    // (the core 3-way merges a stale base, D19). Kept while text is unsaved.
+    if (!dirty) _baseVersion = note.contentVersion;
     if (first || (!dirty && note.content != _content)) {
       _load(note);
     } else {
@@ -257,16 +262,20 @@ final class NoteEditorController extends ChangeNotifier {
     return null;
   }
 
-  /// Saves the note: `updateNote` with the note's ID and the full markdown
-  /// (latest frontmatter + edited body). Does nothing when nothing changed.
-  /// Returns whether the core accepted it.
+  /// Saves the note: `updateNote` with the note's ID, the full markdown
+  /// (latest frontmatter + edited body) and the version it was edited from.
+  /// Does nothing when nothing changed. Returns whether the core accepted it.
   Future<bool> save() async {
     final note = _note;
     if (note == null || !isDirty || _saving) return true;
     _saving = true;
     notifyListeners();
     try {
-      await core.updateNote(id: note.id, content: _content);
+      await core.updateNote(
+        id: note.id,
+        content: _content,
+        baseVersion: _baseVersion,
+      );
       return true;
     } on Object {
       return false;

@@ -326,6 +326,7 @@ void main() {
           CoreCall('updateNote', {
             'id': EditorFixtures.noteId,
             'content': expected,
+            'baseVersion': EditorFixtures.contentVersion,
           }),
         ]);
         expect(

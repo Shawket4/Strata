@@ -645,7 +645,14 @@ pub fn hunk_choice(c: HunkChoiceKind, text: Option<String>) -> sync_model::Choic
         HunkChoiceKind::Base => sync_model::Choice::Base,
         HunkChoiceKind::OursThenTheirs => sync_model::Choice::OursThenTheirs,
         HunkChoiceKind::TheirsThenOurs => sync_model::Choice::TheirsThenOurs,
-        HunkChoiceKind::Text => sync_model::Choice::Text(text.unwrap_or_default()),
+        HunkChoiceKind::Text => {
+            // The user's own text replaces whole lines: it ends with a line terminator.
+            let mut t = text.unwrap_or_default();
+            if !t.is_empty() && !t.ends_with('\n') {
+                t.push('\n');
+            }
+            sync_model::Choice::Text(t)
+        }
     }
 }
 
@@ -3974,6 +3981,22 @@ pub fn days_until(now: DateTime<Utc>, at: DateTime<Utc>) -> u32 {
         0
     } else {
         u32::try_from(d.num_days()).unwrap_or(u32::MAX)
+    }
+}
+
+#[cfg(test)]
+mod hunk_tests {
+    use super::*;
+
+    #[test]
+    fn own_text_gets_a_line_terminator() {
+        let text = |t: &str| match hunk_choice(HunkChoiceKind::Text, Some(t.to_owned())) {
+            sync_model::Choice::Text(t) => t,
+            _ => String::new(),
+        };
+        assert_eq!(text("Mine"), "Mine\n");
+        assert_eq!(text("Mine\n"), "Mine\n");
+        assert_eq!(text(""), "");
     }
 }
 

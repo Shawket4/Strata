@@ -2751,7 +2751,8 @@ pub struct HunkChoice {
     pub hunk: u32,
     /// The choice.
     pub choice: HunkChoiceKind,
-    /// Replacement text for [`HunkChoiceKind::Text`] (ends with a line terminator).
+    /// Replacement text for [`HunkChoiceKind::Text`] (the core adds a missing final line
+    /// terminator).
     pub text: Option<String>,
 }
 
