@@ -28,20 +28,18 @@ pub fn stamp_home(
     new_id: Option<Ulid>,
     created: &DateTime<Utc>,
 ) -> Result<(), RenderError> {
-    match new_id {
-        Some(id) => stamp(doc, id, Some(created), Some(created)),
-        None => {
-            let fm = doc.frontmatter_mut();
-            if let Some(e) = fm.error() {
-                return Err(RenderError::Unreadable(e.clone()));
-            }
-            if fm.created().ok().flatten().is_none() {
-                fm.set_created(&crate::note::written_time(created))
-                    .map_err(RenderError::property("created"))?;
-            }
-            Ok(())
-        }
+    if let Some(id) = new_id {
+        return stamp(doc, id, Some(created), Some(created));
     }
+    let fm = doc.frontmatter_mut();
+    if let Some(e) = fm.error() {
+        return Err(RenderError::Unreadable(e.clone()));
+    }
+    if fm.created().ok().flatten().is_none() {
+        fm.set_created(&crate::note::written_time(created))
+            .map_err(RenderError::property("created"))?;
+    }
+    Ok(())
 }
 
 /// The block ID of a task (§6.11): `t-<ULID in lower case>`.
