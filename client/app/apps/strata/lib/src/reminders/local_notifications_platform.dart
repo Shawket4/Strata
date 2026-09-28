@@ -52,7 +52,7 @@ class LocalNotificationsPlatform implements NotificationPlatform {
         linux: LinuxInitializationSettings(defaultActionName: strings.open),
         windows: const WindowsInitializationSettings(
           appName: 'Strata',
-          appUserModelId: 'app.strata.Strata',
+          appUserModelId: 'com.shawket.strata',
           guid: '7c1f7f3e-3a2f-4f38-9d55-6d0f5f0f2a51',
         ),
       ),
