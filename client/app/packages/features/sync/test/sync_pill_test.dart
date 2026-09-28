@@ -1,33 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_state/strata_state.dart';
+import 'package:strata_state/testing.dart';
 import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
-import 'helpers/matrix.dart';
-
-SyncPill _pill({
-  Connectivity connectivity = Connectivity.online,
-  int pending = 0,
-  int conflicts = 0,
-  SyncPhase phase = SyncPhase.idle,
-}) => SyncPill(
-  connectivity: connectivity,
-  activity: SyncActivity(
-    phase: phase,
-    pagesDone: 0,
-    ops: 0,
-    opsDone: 0,
-    opsTotal: 0,
-    pulled: 0,
-  ),
-  pendingOps: pending,
-  conflicts: conflicts,
+SyncPill _pill(SyncPillKind display, String label) => SyncPill(
+  connectivity: Connectivity.online,
+  activity: StrataFixtures.syncActivity,
+  pendingOps: 0,
+  conflicts: 0,
   duplicates: 0,
-  display: SyncPillKind.synced,
+  display: display,
   progressDone: 0,
   progressTotal: 0,
-  label: '',
+  label: label,
 );
 
 Future<void> _pump(
@@ -38,76 +25,97 @@ Future<void> _pump(
   Variant? variant,
 }) => pumpVariant(
   tester,
-  variant ?? matrix().first,
-  Scaffold(
-    body: Center(
-      child: SyncStatusPill(pill: pill, dense: dense, onPressed: onPressed),
-    ),
+  variant ?? variants().first,
+  Center(
+    child: SyncStatusPill(pill: pill, dense: dense, onPressed: onPressed),
   ),
+  scaffold: true,
 );
 
 void main() {
-  const cases = <(String, Connectivity, int, StatusTone, IconData)>[
+  const cases = <(SyncPillKind, String, StatusTone, IconData)>[
     (
-      'Synced',
-      Connectivity.online,
-      0,
+      SyncPillKind.synced,
+      'Synced · 14:32',
       StatusTone.success,
       Icons.cloud_done_outlined,
     ),
     (
-      'Online · 2 queued',
-      Connectivity.online,
-      2,
-      StatusTone.success,
-      Icons.cloud_done_outlined,
-    ),
-    (
+      SyncPillKind.offline,
       'Offline · 3 queued',
-      Connectivity.offline,
-      3,
       StatusTone.warning,
       Icons.cloud_off_outlined,
     ),
+    (SyncPillKind.syncing, 'Syncing 12/40', StatusTone.info, Icons.sync),
     (
-      'Offline',
-      Connectivity.offline,
-      0,
-      StatusTone.warning,
-      Icons.cloud_off_outlined,
+      SyncPillKind.conflict,
+      '1 conflict',
+      StatusTone.danger,
+      Icons.report_problem_outlined,
     ),
     (
-      'Not synced yet',
-      Connectivity.unknown,
-      0,
-      StatusTone.neutral,
-      Icons.cloud_queue_outlined,
+      SyncPillKind.duplicates,
+      '1 already exists',
+      StatusTone.danger,
+      Icons.content_copy_outlined,
+    ),
+    (
+      SyncPillKind.paused,
+      'Paused · 3 queued',
+      StatusTone.warning,
+      Icons.pause_circle_outline,
+    ),
+    (
+      SyncPillKind.error,
+      'Sync failed',
+      StatusTone.danger,
+      Icons.sync_problem_outlined,
     ),
   ];
-  for (final (label, connectivity, pending, tone, icon) in cases) {
-    testWidgets('renders $label 1:1 from the view-model', (tester) async {
-      await _pump(tester, _pill(connectivity: connectivity, pending: pending));
+  for (final (display, label, tone, icon) in cases) {
+    testWidgets('renders $display 1:1 from the view-model', (tester) async {
+      await _pump(tester, _pill(display, label));
       final status = tester.widget<StatusPill>(find.byType(StatusPill));
       expect(status.label, label);
       expect(status.tone, tone);
       expect(status.icon, icon);
       expect(find.bySemanticsLabel('Sync status: $label'), findsOneWidget);
+      expect(
+        find.byType(CircularProgressIndicator),
+        display == SyncPillKind.syncing ? findsOneWidget : findsNothing,
+      );
     });
   }
 
-  testWidgets('adds the conflict badge in the danger tone', (tester) async {
-    await _pump(tester, _pill(pending: 1, conflicts: 1));
-    final status = tester.widget<StatusPill>(find.byType(StatusPill));
-    expect(status.label, 'Online · 1 queued · 1 conflict');
-    expect(status.tone, StatusTone.danger);
-  });
-
-  testWidgets('shows a spinner while the engine runs', (tester) async {
-    await _pump(tester, _pill(phase: SyncPhase.pushing));
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    await _pump(tester, _pill());
-    expect(find.byType(CircularProgressIndicator), findsNothing);
-  });
+  for (final v in variants()) {
+    testWidgets('matrix $v', (tester) async {
+      await _pump(
+        tester,
+        StrataFixtures.syncPillSyncing,
+        variant: v,
+        dense: v.sizeClass == SizeClass.medium,
+        onPressed: () {},
+      );
+      if (v.sizeClass == SizeClass.medium) {
+        expect(find.byTooltip('Syncing 12/40'), findsOneWidget);
+      } else {
+        expect(find.text('Syncing 12/40'), findsOneWidget);
+      }
+      final l10n = lookupSyncLocalizations(v.locale);
+      expect(
+        find.bySemanticsLabel(
+          l10n.pillSemanticsWithHint(status: 'Syncing 12/40'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        directionOf(tester, find.byType(SyncStatusPill)),
+        v.rtl ? TextDirection.rtl : TextDirection.ltr,
+      );
+      expectNoErrors(tester);
+      await expectAccessible(tester, contrast: v.textScale == 1);
+    });
+  }
 
   testWidgets('dense form keeps the label in tooltip and semantics', (
     tester,
@@ -115,7 +123,7 @@ void main() {
     var taps = 0;
     await _pump(
       tester,
-      _pill(connectivity: Connectivity.offline, pending: 3),
+      StrataFixtures.syncPillOffline,
       dense: true,
       onPressed: () => taps++,
     );
@@ -130,18 +138,6 @@ void main() {
     await tester.tap(find.byType(SyncStatusPill));
     expect(taps, 1);
     await expectAccessible(tester);
-  });
-
-  testWidgets('Arabic copy and RTL', (tester) async {
-    final ar = matrix().firstWhere((v) => v.rtl);
-    await _pump(
-      tester,
-      _pill(connectivity: Connectivity.offline, pending: 3),
-      variant: ar,
-    );
-    final l10n = lookupSyncLocalizations(ar.locale);
-    expect(find.text(l10n.pillOffline(count: 3)), findsOneWidget);
-    expect(directionOf(tester, find.byType(StatusPill)), TextDirection.rtl);
   });
 
   test('labels map every enum value', () async {
@@ -160,6 +156,9 @@ void main() {
       [for (final s in OutboxStatus.values) SyncLabels.status(l10n, s)],
       ['Queued', 'Sending', 'Conflict', 'Already exists?'],
     );
+    expect({
+      for (final d in SyncPillKind.values) SyncLabels.body(l10n, d),
+    }, hasLength(SyncPillKind.values.length));
     expect(SyncLabels.kind(l10n, 'task.complete'), 'Complete task');
     expect(SyncLabels.kind(l10n, 'document.custody'), 'Document change');
     expect(SyncLabels.kind(l10n, 'future.kind'), 'Change');

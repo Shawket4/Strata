@@ -7,7 +7,6 @@ import 'package:strata_ui/testing.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/hosts.dart';
-import '../helpers/matrix.dart';
 
 FakeCoreApi _status(SyncStatusView view) => FakeCoreApi()
   ..session.add(StrataFixtures.sessionActive)
@@ -16,7 +15,7 @@ FakeCoreApi _status(SyncStatusView view) => FakeCoreApi()
 void main() {
   setUpAll(loadStrataFonts);
 
-  goldens(
+  screenGoldens(
     'sync_status_offline',
     (v) => goldenFrame(
       v,
@@ -24,7 +23,7 @@ void main() {
       fake: _status(SyncFixtures.offline),
     ),
   );
-  goldens(
+  screenGoldens(
     'sync_status_syncing',
     (v) => goldenFrame(
       v,
@@ -32,7 +31,15 @@ void main() {
       fake: _status(SyncFixtures.syncing),
     ),
   );
-  goldens(
+  screenGoldens(
+    'sync_status_paused',
+    (v) => goldenFrame(
+      v,
+      SurfacePreview(sizeClass: v.sizeClass),
+      fake: _status(SyncFixtures.paused),
+    ),
+  );
+  screenGoldens(
     'sync_page',
     (v) => goldenFrame(
       v,
@@ -40,7 +47,7 @@ void main() {
       fake: _status(SyncFixtures.synced),
     ),
   );
-  goldens(
+  screenGoldens(
     'conflict',
     (v) => goldenFrame(
       v,

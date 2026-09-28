@@ -98,30 +98,6 @@ abstract class SyncLocalizations {
     Locale('en'),
   ];
 
-  /// Sync pill while offline, with the queued op count.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =0{Offline} =1{Offline · 1 queued} other{Offline · {count} queued}}'**
-  String pillOffline({required int count});
-
-  /// Sync pill while online.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =0{Synced} =1{Online · 1 queued} other{Online · {count} queued}}'**
-  String pillOnline({required int count});
-
-  /// Sync pill before the first request completed.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =0{Not synced yet} =1{Not synced · 1 queued} other{Not synced · {count} queued}}'**
-  String pillUnknown({required int count});
-
-  /// Conflict count badge on the sync pill.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 conflict} other{{count} conflicts}}'**
-  String pillConflicts({required int count});
-
   /// Accessibility label of the sync pill.
   ///
   /// In en, this message translates to:
@@ -133,24 +109,6 @@ abstract class SyncLocalizations {
   /// In en, this message translates to:
   /// **'Open sync status'**
   String get pillOpenHint;
-
-  /// Sync panel headline when the server is reachable.
-  ///
-  /// In en, this message translates to:
-  /// **'Online'**
-  String get titleOnline;
-
-  /// Sync panel headline when offline.
-  ///
-  /// In en, this message translates to:
-  /// **'Offline'**
-  String get titleOffline;
-
-  /// Sync panel headline before the first request completed.
-  ///
-  /// In en, this message translates to:
-  /// **'Connecting'**
-  String get titleUnknown;
 
   /// Sync panel description online.
   ///
@@ -235,12 +193,6 @@ abstract class SyncLocalizations {
   /// In en, this message translates to:
   /// **'Never'**
   String get lastSyncedNever;
-
-  /// Date and time of the last sync.
-  ///
-  /// In en, this message translates to:
-  /// **'{date} {time}'**
-  String lastSyncedValue({required String date, required String time});
 
   /// Label of the server URL.
   ///
@@ -638,10 +590,10 @@ abstract class SyncLocalizations {
   /// **'Keep the original'**
   String get hunkBase;
 
-  /// Hunk choice: ours then theirs.
+  /// Hunk choice ours then theirs.
   ///
   /// In en, this message translates to:
-  /// **'Keep both'**
+  /// **'Keep both, this device first'**
   String get hunkBoth;
 
   /// Hunk choice: own text.
@@ -716,17 +668,135 @@ abstract class SyncLocalizations {
   /// **'Something went wrong ({code}).'**
   String errorGeneric({required String code});
 
-  /// Sync pill copy followed by the conflict badge.
-  ///
-  /// In en, this message translates to:
-  /// **'{status} · {conflicts}'**
-  String pillWithConflicts({required String status, required String conflicts});
-
   /// Accessibility label of the sync pill when it opens the sync status.
   ///
   /// In en, this message translates to:
   /// **'Sync status: {status}. Open sync status'**
   String pillSemanticsWithHint({required String status});
+
+  /// Sync panel body while syncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending your changes, then pulling the server\'s.'**
+  String get bodySyncing;
+
+  /// Sync panel body with a conflict.
+  ///
+  /// In en, this message translates to:
+  /// **'A note was edited here and on the server. Review it to keep syncing it.'**
+  String get bodyConflict;
+
+  /// Sync panel body with a duplicate prompt.
+  ///
+  /// In en, this message translates to:
+  /// **'A change looks like something that already exists. Choose what to keep.'**
+  String get bodyDuplicates;
+
+  /// Sync panel body while paused.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync is paused. Your changes stay on this device until you resume.'**
+  String get bodyPaused;
+
+  /// Sync panel body after an error.
+  ///
+  /// In en, this message translates to:
+  /// **'The last sync failed. It retries automatically.'**
+  String get bodyError;
+
+  /// Sync progress.
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} items'**
+  String progressItems({required int done, required int total});
+
+  /// Changes pulled so far.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Nothing pulled yet} =1{1 change pulled} other{{count} changes pulled}}'**
+  String pulledCount({required int count});
+
+  /// Pause sync button.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause sync'**
+  String get pauseSync;
+
+  /// Resume sync button.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume sync'**
+  String get resumeSync;
+
+  /// Sync log section.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync log'**
+  String get syncLog;
+
+  /// Empty sync log.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing logged yet.'**
+  String get syncLogEmpty;
+
+  /// Conflict: keep the server version and store the local text as a copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Save both as copies'**
+  String get saveBothCopies;
+
+  /// Where the conflict copy was saved.
+  ///
+  /// In en, this message translates to:
+  /// **'A copy was saved at {path}'**
+  String conflictCopySaved({required String path});
+
+  /// Diff legend: added.
+  ///
+  /// In en, this message translates to:
+  /// **'Added'**
+  String get legendAdded;
+
+  /// Diff legend: removed.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed'**
+  String get legendRemoved;
+
+  /// Diff legend: changed on both sides.
+  ///
+  /// In en, this message translates to:
+  /// **'Changed on both sides'**
+  String get legendChanged;
+
+  /// One annotated line.
+  ///
+  /// In en, this message translates to:
+  /// **'Line {number}, {change}: {text}'**
+  String lineSemantics({
+    required int number,
+    required String change,
+    required String text,
+  });
+
+  /// Line change: same.
+  ///
+  /// In en, this message translates to:
+  /// **'unchanged'**
+  String get lineSame;
+
+  /// Line change: changed on one side.
+  ///
+  /// In en, this message translates to:
+  /// **'changed'**
+  String get lineChangedOneSide;
+
+  /// Hunk choice theirs then ours.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep both, server first'**
+  String get hunkBothServerFirst;
 }
 
 class _SyncLocalizationsDelegate

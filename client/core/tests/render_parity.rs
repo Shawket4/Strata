@@ -151,12 +151,20 @@ async fn server_and_device_render_new_items_identically() {
     assert_eq!(local.path, "inbox/2026-09-27-143205.md");
     assert_eq!(
         (local.path.as_str(), local.content.as_str()),
-        (server.note.path.as_str(), s.read(&server.note.path).as_str())
+        (
+            server.note.path.as_str(),
+            s.read(&server.note.path).as_str()
+        )
     );
     // A second capture in the same second: the server's free name is the shared rule's.
     let again = s
         .vault
-        .capture_as(&s.scope, "ثانية".into(), NoteId::from_ulid(ulid(0x101)), created)
+        .capture_as(
+            &s.scope,
+            "ثانية".into(),
+            NoteId::from_ulid(ulid(0x101)),
+            created,
+        )
         .await
         .expect("capture");
     assert_eq!(again.note.path, "inbox/2026-09-27-143205 2.md");
@@ -195,7 +203,10 @@ async fn server_and_device_render_new_items_identically() {
     assert_eq!(local.path, view.path);
     assert_eq!(
         local.content,
-        "---\nid: 01M3HGXC000000000000000800\nkind: person\ntitle: 'Shady: ops'\naliases: [شادي, Shady]\nrole: Operations\n---\n## Notes\n"
+        format!(
+            "---\nid: {}\nkind: person\ntitle: \"Shady: ops\"\naliases: [شادي, Shady]\nrole: Operations\n---\n## Notes\n",
+            person.id
+        )
     );
     assert_eq!(stamped(&local.content, person.id, &now), s.read(&view.path));
     s.paths.insert(person.id, view.path);
@@ -228,7 +239,10 @@ async fn server_and_device_render_new_items_identically() {
         .expect("company");
     let local = device(&s, None, &Op::EntityCreate(company.clone()));
     assert_eq!(
-        (local.path.as_str(), stamped(&local.content, company.id, &now)),
+        (
+            local.path.as_str(),
+            stamped(&local.content, company.id, &now)
+        ),
         (view.path.as_str(), s.read(&view.path))
     );
     s.paths.insert(company.id, view.path);
@@ -273,7 +287,10 @@ async fn server_and_device_render_new_items_identically() {
     }
     assert_eq!(
         places[1].content,
-        "---\nid: 01M3HGXC000000000000000C01\nkind: place\npart-of: [\"[[Nasr City office]]\"]\n---\n## Notes\n"
+        format!(
+            "---\nid: {}\nkind: place\npart-of: [\"[[Nasr City office]]\"]\n---\n## Notes\n",
+            ulid(0x301)
+        )
     );
 
     // Documents: fields and relations (the copy points at the original).
@@ -334,9 +351,10 @@ async fn server_and_device_render_new_items_identically() {
     assert_eq!(
         s.state(original.id).content,
         format!(
-            "---\nid: 01M3HGXC000000000000001000\nkind: document\naliases: [عقد وطنية]\n\
+            "---\nid: {id}\nkind: document\naliases: [عقد وطنية]\n\
              created: {t}\nupdated: {t}\ndoc-type: contract\ncopy: original\n\
-             companies: [\"[[Watanya]]\"]\npeople: [\"[[Shady - ops]]\"]\nexpires: 2027-03-31\n---\n## Notes\n",
+             expires: 2027-03-31\npeople: [\"[[Shady - ops]]\"]\ncompanies: [\"[[Watanya]]\"]\n---\n## Notes\n",
+            id = original.id,
             t = "2026-09-27T12:00:00+00:00"
         )
     );

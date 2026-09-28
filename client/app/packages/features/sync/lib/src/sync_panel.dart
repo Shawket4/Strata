@@ -56,6 +56,8 @@ class SyncStatusPanel extends ConsumerWidget {
         onSyncNow: () => ref.read(coreApiProvider).syncNow(),
         onDismissRejection: (opId) =>
             ref.read(coreApiProvider).dismissRejection(opId: opId),
+        onPausedChanged: (paused) =>
+            ref.read(coreApiProvider).setSyncPaused(paused: paused),
       ),
       AsyncError(:final error) => StrataEmptyState(
         icon: Icons.sync_problem_outlined,
@@ -85,6 +87,7 @@ class SyncStatusContent extends StatelessWidget {
     this.serverUrl,
     this.onOpenConflict,
     this.onClose,
+    this.onPausedChanged,
   });
 
   /// The core's sync status.
@@ -108,12 +111,17 @@ class SyncStatusContent extends StatelessWidget {
   /// Closes the surface.
   final VoidCallback? onClose;
 
+  /// "Pause sync" / "Resume sync" (the new paused state).
+  final ValueChanged<bool>? onPausedChanged;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.syncL10n;
     final colors = context.strataColors;
     final text = context.strataText;
     final pill = view.pill;
+    final retry = view.retryLabel;
+    final pause = onPausedChanged;
     final pad = surface == SyncSurface.popover
         ? StrataSpacing.s4
         : StrataSpacing.s5;
@@ -128,7 +136,7 @@ class SyncStatusContent extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ToneBadge(connectivity: pill.connectivity),
+              _ToneBadge(display: pill.display),
               const SizedBox(width: StrataSpacing.s3),
               Expanded(
                 child: Column(
@@ -138,7 +146,7 @@ class SyncStatusContent extends StatelessWidget {
                       header: true,
                       container: true,
                       child: Text(
-                        SyncLabels.pill(l10n, pill),
+                        pill.label,
                         style: surface == SyncSurface.popover
                             ? text.titleSmall
                             : text.title,
@@ -146,7 +154,7 @@ class SyncStatusContent extends StatelessWidget {
                     ),
                     const SizedBox(height: StrataSpacing.s1),
                     Text(
-                      SyncLabels.body(l10n, pill.connectivity),
+                      SyncLabels.body(l10n, pill.display),
                       style: text.bodySmall.copyWith(color: colors.text2),
                     ),
                   ],
@@ -162,7 +170,7 @@ class SyncStatusContent extends StatelessWidget {
           ),
           if (pill.activity.phase != SyncPhase.idle) ...[
             const SizedBox(height: StrataSpacing.s4),
-            _Activity(activity: pill.activity),
+            _Activity(activity: pill.activity, retryLabel: retry),
           ],
           const SizedBox(height: StrataSpacing.s4),
           _Details(view: view, serverUrl: serverUrl),
@@ -200,6 +208,30 @@ class SyncStatusContent extends StatelessWidget {
                   : l10n.syncNow,
             ),
           ),
+          if (retry != null && pill.activity.phase != SyncPhase.backoff) ...[
+            const SizedBox(height: StrataSpacing.s2),
+            Text(
+              retry,
+              textAlign: TextAlign.center,
+              style: text.caption.copyWith(color: colors.text2),
+            ),
+          ],
+          if (pause != null) ...[
+            const SizedBox(height: StrataSpacing.s2),
+            OutlinedButton.icon(
+              onPressed: () => pause(!view.paused),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(StrataLayout.minTouchTarget),
+              ),
+              icon: Icon(
+                view.paused ? Icons.play_arrow_outlined : Icons.pause,
+                size: 18,
+              ),
+              label: Text(view.paused ? l10n.resumeSync : l10n.pauseSync),
+            ),
+          ],
+          const SizedBox(height: StrataSpacing.s3),
+          _Log(items: view.log),
         ],
       ),
     );
@@ -207,14 +239,13 @@ class SyncStatusContent extends StatelessWidget {
 }
 
 class _ToneBadge extends StatelessWidget {
-  const new({required this.connectivity});
+  const new({required this.display});
 
-  final Connectivity connectivity;
+  final SyncPillKind display;
 
   @override
   Widget build(BuildContext context) {
-    final palette = SyncLabels.tone(connectivity)
-        .colorsIn(context.strataColors);
+    final palette = SyncLabels.tone(display).colorsIn(context.strataColors);
     return ExcludeSemantics(
       child: Container(
         width: 44,
@@ -224,7 +255,7 @@ class _ToneBadge extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Icon(
-          SyncLabels.icon(connectivity),
+          SyncLabels.icon(display),
           color: palette.foreground,
           size: 22,
         ),
@@ -234,9 +265,10 @@ class _ToneBadge extends StatelessWidget {
 }
 
 class _Activity extends StatelessWidget {
-  const new({required this.activity});
+  const new({required this.activity, required this.retryLabel});
 
   final SyncActivity activity;
+  final String? retryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -244,18 +276,24 @@ class _Activity extends StatelessWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final total = activity.pagesTotal;
-    final retryAt = activity.retryAt;
-    final detail = switch (activity.phase) {
-      SyncPhase.bootstrapping =>
-        total == null
-            ? l10n.progressPagesUnknown(done: activity.pagesDone)
-            : l10n.progressPages(done: activity.pagesDone, total: total),
-      SyncPhase.pushing => l10n.progressOps(count: activity.ops),
-      SyncPhase.backoff when retryAt != null => l10n.retryAt(
-        time: formatSyncClock(context, retryAt),
-      ),
-      _ => null,
-    };
+    final opsTotal = activity.opsTotal;
+    final details = [
+      switch (activity.phase) {
+        SyncPhase.bootstrapping =>
+          total == null
+              ? l10n.progressPagesUnknown(done: activity.pagesDone)
+              : l10n.progressPages(done: activity.pagesDone, total: total),
+        SyncPhase.backoff => retryLabel,
+        _ when opsTotal > 0 => l10n.progressItems(
+          done: activity.opsDone,
+          total: opsTotal,
+        ),
+        SyncPhase.pushing => l10n.progressOps(count: activity.ops),
+        _ => null,
+      },
+      if (activity.phase == SyncPhase.pulling)
+        l10n.pulledCount(count: activity.pulled),
+    ];
     return Semantics(
       container: true,
       liveRegion: true,
@@ -268,14 +306,17 @@ class _Activity extends StatelessWidget {
             borderRadius: StrataRadii.pillRadius,
             child: LinearProgressIndicator(
               minHeight: 6,
+              // The core's counters, drawn as a fraction.
+              value: opsTotal > 0 ? activity.opsDone / opsTotal : null,
               color: colors.accent,
               backgroundColor: colors.surface2,
             ),
           ),
-          if (detail != null) ...[
-            const SizedBox(height: StrataSpacing.s1),
-            Text(detail, style: text.caption.copyWith(color: colors.text2)),
-          ],
+          for (final detail in details)
+            if (detail != null) ...[
+              const SizedBox(height: StrataSpacing.s1),
+              Text(detail, style: text.caption.copyWith(color: colors.text2)),
+            ],
         ],
       ),
     );
@@ -291,16 +332,13 @@ class _Details extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.syncL10n;
-    final last = view.pill.lastSyncAt;
     final server = serverUrl;
     return _Card(
       child: Column(
         children: [
           _DetailRow(
             label: l10n.lastSynced,
-            value: last == null
-                ? l10n.lastSyncedNever
-                : formatSyncTime(context, last),
+            value: view.pill.lastSyncLabel ?? l10n.lastSyncedNever,
           ),
           if (server != null)
             _DetailRow(label: l10n.server, value: server, mono: true),
@@ -340,11 +378,15 @@ class _DetailRow extends StatelessWidget {
           ),
           const SizedBox(width: StrataSpacing.s3),
           Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: (mono ? text.monoSmall : text.bodySmall).copyWith(
-                color: colors.text,
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                textDirection: mono ? TextDirection.ltr : null,
+                style: (mono ? text.monoSmall : text.bodySmall).copyWith(
+                  color: colors.text,
+                ),
               ),
             ),
           ),
@@ -441,6 +483,7 @@ class _OutboxRow extends StatelessWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final title = item.title;
+    final detail = item.detail;
     return MergeSemantics(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s2),
@@ -475,6 +518,13 @@ class _OutboxRow extends StatelessWidget {
                       textAlign: TextAlign.start,
                       style: text.bodySmall,
                     ),
+                  if (detail.isNotEmpty)
+                    Text(
+                      detail,
+                      textDirection: textDirectionOf(item.detailDir),
+                      textAlign: TextAlign.start,
+                      style: text.bodySmall.copyWith(color: colors.text2),
+                    ),
                   Text(
                     SyncLabels.status(l10n, item.status),
                     style: text.caption.copyWith(color: colors.text2),
@@ -484,7 +534,7 @@ class _OutboxRow extends StatelessWidget {
             ),
             const SizedBox(width: StrataSpacing.s2),
             Text(
-              formatSyncClock(context, item.created),
+              item.createdLabel,
               style: text.caption.copyWith(color: colors.text2),
             ),
           ],
@@ -541,6 +591,10 @@ class _Conflicts extends StatelessWidget {
                         Text(
                           l10n.conflictRow,
                           style: text.caption.copyWith(color: colors.text),
+                        ),
+                        Text(
+                          conflict.createdLabel,
+                          style: text.caption.copyWith(color: colors.text2),
                         ),
                       ],
                     ),
@@ -621,6 +675,56 @@ class _Rejections extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The sync log (newest first, the core's order), folded by default.
+class _Log extends StatelessWidget {
+  const new({required this.items});
+
+  final List<SyncLogItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.syncL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        title: Text(l10n.syncLog, style: text.bodyStrong),
+        children: [
+          if (items.isEmpty)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Text(
+                l10n.syncLogEmpty,
+                style: text.bodySmall.copyWith(color: colors.text2),
+              ),
+            ),
+          for (final item in items)
+            MergeSemantics(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s1),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.atLabel,
+                      textDirection: TextDirection.ltr,
+                      style: text.monoSmall.copyWith(color: colors.text2),
+                    ),
+                    const SizedBox(width: StrataSpacing.s3),
+                    Expanded(child: Text(item.detail, style: text.bodySmall)),
+                  ],
+                ),
               ),
             ),
         ],

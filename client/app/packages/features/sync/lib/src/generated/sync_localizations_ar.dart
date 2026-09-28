@@ -10,80 +10,12 @@ class SyncLocalizationsAr extends SyncLocalizations {
   SyncLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String pillOffline({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'غير متصل · $count تغيير في الانتظار',
-      many: 'غير متصل · $count تغييرًا في الانتظار',
-      few: 'غير متصل · $count تغييرات في الانتظار',
-      two: 'غير متصل · تغييران في الانتظار',
-      one: 'غير متصل · تغيير واحد في الانتظار',
-      zero: 'غير متصل',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String pillOnline({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'متصل · $count تغيير في الانتظار',
-      many: 'متصل · $count تغييرًا في الانتظار',
-      few: 'متصل · $count تغييرات في الانتظار',
-      two: 'متصل · تغييران في الانتظار',
-      one: 'متصل · تغيير واحد في الانتظار',
-      zero: 'متزامن',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String pillUnknown({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'لم تتم المزامنة · $count تغيير',
-      many: 'لم تتم المزامنة · $count تغييرًا',
-      few: 'لم تتم المزامنة · $count تغييرات',
-      two: 'لم تتم المزامنة · تغييران',
-      one: 'لم تتم المزامنة · تغيير واحد',
-      zero: 'لم تتم المزامنة بعد',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String pillConflicts({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count تعارض',
-      many: '$count تعارضًا',
-      few: '$count تعارضات',
-      two: 'تعارضان',
-      one: 'تعارض واحد',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String pillSemantics({required String status}) {
     return 'حالة المزامنة: $status';
   }
 
   @override
   String get pillOpenHint => 'افتح حالة المزامنة';
-
-  @override
-  String get titleOnline => 'متصل';
-
-  @override
-  String get titleOffline => 'غير متصل';
-
-  @override
-  String get titleUnknown => 'جارٍ الاتصال';
 
   @override
   String get bodyOnline => 'التغييرات تتزامن تلقائيًا مع الخادم.';
@@ -145,11 +77,6 @@ class SyncLocalizationsAr extends SyncLocalizations {
 
   @override
   String get lastSyncedNever => 'أبدًا';
-
-  @override
-  String lastSyncedValue({required String date, required String time}) {
-    return '$date $time';
-  }
 
   @override
   String get server => 'الخادم';
@@ -393,7 +320,7 @@ class SyncLocalizationsAr extends SyncLocalizations {
   String get hunkBase => 'احتفظ بالأصل';
 
   @override
-  String get hunkBoth => 'احتفظ بالاتنين';
+  String get hunkBoth => 'احتفظ بالاتنين، الجهاز ده الأول';
 
   @override
   String get hunkOwn => 'اكتب نصي';
@@ -451,15 +378,90 @@ class SyncLocalizationsAr extends SyncLocalizations {
   }
 
   @override
-  String pillWithConflicts({
-    required String status,
-    required String conflicts,
-  }) {
-    return '$status · $conflicts';
-  }
-
-  @override
   String pillSemanticsWithHint({required String status}) {
     return 'حالة المزامنة: $status. افتح حالة المزامنة';
   }
+
+  @override
+  String get bodySyncing => 'بنبعت تغييراتك وبعدين بنجيب تغييرات السيرفر.';
+
+  @override
+  String get bodyConflict =>
+      'ملاحظة اتعدلت هنا وعلى السيرفر. راجعها عشان تكمل مزامنتها.';
+
+  @override
+  String get bodyDuplicates => 'فيه تغيير شبه حاجة موجودة. اختار تحتفظ بإيه.';
+
+  @override
+  String get bodyPaused =>
+      'المزامنة واقفة. تغييراتك هتفضل على الجهاز ده لحد ما تكمّل.';
+
+  @override
+  String get bodyError => 'آخر مزامنة فشلت. هتتعاد لوحدها.';
+
+  @override
+  String progressItems({required int done, required int total}) {
+    return '$done من $total';
+  }
+
+  @override
+  String pulledCount({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'اتجاب $count تغيير',
+      few: 'اتجاب $count تغييرات',
+      two: 'اتجاب تغييرين',
+      one: 'اتجاب تغيير واحد',
+      zero: 'لسه مفيش حاجة اتجابت',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pauseSync => 'وقّف المزامنة';
+
+  @override
+  String get resumeSync => 'كمّل المزامنة';
+
+  @override
+  String get syncLog => 'سجل المزامنة';
+
+  @override
+  String get syncLogEmpty => 'لسه مفيش حاجة في السجل.';
+
+  @override
+  String get saveBothCopies => 'احفظ الاتنين كنسخ';
+
+  @override
+  String conflictCopySaved({required String path}) {
+    return 'اتحفظت نسخة في $path';
+  }
+
+  @override
+  String get legendAdded => 'اتضاف';
+
+  @override
+  String get legendRemoved => 'اتشال';
+
+  @override
+  String get legendChanged => 'اتغير في الناحيتين';
+
+  @override
+  String lineSemantics({
+    required int number,
+    required String change,
+    required String text,
+  }) {
+    return 'سطر $number، $change: $text';
+  }
+
+  @override
+  String get lineSame => 'زي ما هو';
+
+  @override
+  String get lineChangedOneSide => 'اتغير';
+
+  @override
+  String get hunkBothServerFirst => 'احتفظ بالاتنين، السيرفر الأول';
 }

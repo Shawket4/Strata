@@ -6,44 +6,37 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// 1:1 renderings of the sync view-model's enums and codes (copy, tone,
 /// icon). Nothing is derived: every value comes from the core.
 abstract final class SyncLabels {
-  /// The pill copy for [pill]'s connectivity and queued op count.
-  static String pill(SyncLocalizations l10n, SyncPill pill) {
-    final count = pill.pendingOps;
-    return switch (pill.connectivity) {
-      Connectivity.online => l10n.pillOnline(count: count),
-      Connectivity.offline => l10n.pillOffline(count: count),
-      Connectivity.unknown => l10n.pillUnknown(count: count),
-    };
-  }
-
-  /// The tone of a connectivity.
-  static StatusTone tone(Connectivity connectivity) => switch (connectivity) {
-    Connectivity.online => StatusTone.success,
-    Connectivity.offline => StatusTone.warning,
-    Connectivity.unknown => StatusTone.neutral,
+  /// The tone of the pill's display state (picked by the core).
+  static StatusTone tone(SyncPillKind display) => switch (display) {
+    SyncPillKind.synced => StatusTone.success,
+    SyncPillKind.offline || SyncPillKind.paused => StatusTone.warning,
+    SyncPillKind.syncing => StatusTone.info,
+    SyncPillKind.conflict ||
+    SyncPillKind.duplicates ||
+    SyncPillKind.error => StatusTone.danger,
   };
 
-  /// The icon of a connectivity.
-  static IconData icon(Connectivity connectivity) => switch (connectivity) {
-    Connectivity.online => Icons.cloud_done_outlined,
-    Connectivity.offline => Icons.cloud_off_outlined,
-    Connectivity.unknown => Icons.cloud_queue_outlined,
+  /// The icon of the pill's display state.
+  static IconData icon(SyncPillKind display) => switch (display) {
+    SyncPillKind.synced => Icons.cloud_done_outlined,
+    SyncPillKind.offline => Icons.cloud_off_outlined,
+    SyncPillKind.syncing => Icons.sync,
+    SyncPillKind.conflict => Icons.report_problem_outlined,
+    SyncPillKind.duplicates => Icons.content_copy_outlined,
+    SyncPillKind.paused => Icons.pause_circle_outline,
+    SyncPillKind.error => Icons.sync_problem_outlined,
   };
 
-  /// The panel headline of a connectivity.
-  static String title(SyncLocalizations l10n, Connectivity connectivity) =>
-      switch (connectivity) {
-        Connectivity.online => l10n.titleOnline,
-        Connectivity.offline => l10n.titleOffline,
-        Connectivity.unknown => l10n.titleUnknown,
-      };
-
-  /// The panel description of a connectivity.
-  static String body(SyncLocalizations l10n, Connectivity connectivity) =>
-      switch (connectivity) {
-        Connectivity.online => l10n.bodyOnline,
-        Connectivity.offline => l10n.bodyOffline,
-        Connectivity.unknown => l10n.bodyUnknown,
+  /// The panel description of the pill's display state.
+  static String body(SyncLocalizations l10n, SyncPillKind display) =>
+      switch (display) {
+        SyncPillKind.synced => l10n.bodyOnline,
+        SyncPillKind.offline => l10n.bodyOffline,
+        SyncPillKind.syncing => l10n.bodySyncing,
+        SyncPillKind.conflict => l10n.bodyConflict,
+        SyncPillKind.duplicates => l10n.bodyDuplicates,
+        SyncPillKind.paused => l10n.bodyPaused,
+        SyncPillKind.error => l10n.bodyError,
       };
 
   /// The name of a sync phase.
@@ -112,24 +105,3 @@ abstract final class SyncLabels {
         _ => l10n.errorGeneric(code: 'internal'),
       };
 }
-
-/// Formats an instant from the core as local date and time with the
-/// Material localisations of the UI language.
-String formatSyncTime(BuildContext context, DateTime at) {
-  final material = MaterialLocalizations.of(context);
-  final local = at.toLocal();
-  return context.syncL10n.lastSyncedValue(
-    date: material.formatMediumDate(local),
-    time: material.formatTimeOfDay(
-      TimeOfDay.fromDateTime(local),
-      alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
-    ),
-  );
-}
-
-/// Formats an instant as a local time of day.
-String formatSyncClock(BuildContext context, DateTime at) =>
-    MaterialLocalizations.of(context).formatTimeOfDay(
-      TimeOfDay.fromDateTime(at.toLocal()),
-      alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
-    );

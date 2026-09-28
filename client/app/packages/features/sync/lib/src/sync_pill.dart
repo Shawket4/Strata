@@ -5,8 +5,9 @@ import 'package:strata_sync/src/labels.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// The always-visible sync indicator, rendered 1:1 from the core's
-/// [SyncPill]: connectivity (tone, icon, copy), queued ops, an activity
-/// spinner while the engine runs and a conflict badge.
+/// [SyncPill]: the display state the core picked ([SyncPill.display]: tone
+/// and icon), its ready label ("Synced · 14:32", "Offline · 3 queued",
+/// "Syncing 12/40", "1 conflict") and a spinner while syncing.
 ///
 /// [dense] is the icon-only form for the navigation rail (the label stays in
 /// the tooltip and semantics).
@@ -31,23 +32,15 @@ class SyncStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.syncL10n;
-    final label = SyncLabels.pill(l10n, pill);
-    final conflicts = pill.conflicts > 0
-        ? l10n.pillConflicts(count: pill.conflicts)
-        : null;
-    final full = conflicts == null
-        ? label
-        : l10n.pillWithConflicts(status: label, conflicts: conflicts);
-    final tone = conflicts == null
-        ? SyncLabels.tone(pill.connectivity)
-        : StatusTone.danger;
-    final icon = SyncLabels.icon(pill.connectivity);
-    final running = pill.activity.phase != SyncPhase.idle;
+    final label = pill.label;
+    final tone = SyncLabels.tone(pill.display);
+    final icon = SyncLabels.icon(pill.display);
+    final running = pill.display == SyncPillKind.syncing;
+    final palette = tone.colorsIn(context.strataColors);
     final Widget visual;
     if (dense) {
-      final palette = tone.colorsIn(context.strataColors);
       visual = Tooltip(
-        message: full,
+        message: label,
         excludeFromSemantics: true,
         child: Container(
           width: 36,
@@ -56,18 +49,14 @@ class SyncStatusPill extends StatelessWidget {
             color: palette.background,
             shape: BoxShape.circle,
           ),
-          child: Icon(
-            running ? Icons.sync : icon,
-            size: 18,
-            color: palette.foreground,
-          ),
+          child: Icon(icon, size: 18, color: palette.foreground),
         ),
       );
     } else {
       visual = ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: StrataLayout.sidebarWidth),
         child: StatusPill(
-          label: full,
+          label: label,
           tone: tone,
           icon: icon,
           trailing: running
@@ -75,7 +64,7 @@ class SyncStatusPill extends StatelessWidget {
                   dimension: 10,
                   child: CircularProgressIndicator(
                     strokeWidth: 1.5,
-                    color: tone.colorsIn(context.strataColors).foreground,
+                    color: palette.foreground,
                   ),
                 )
               : null,
@@ -84,8 +73,8 @@ class SyncStatusPill extends StatelessWidget {
     }
     return StrataTapTarget(
       semanticLabel: onPressed == null
-          ? l10n.pillSemantics(status: full)
-          : l10n.pillSemanticsWithHint(status: full),
+          ? l10n.pillSemantics(status: label)
+          : l10n.pillSemanticsWithHint(status: label),
       onTap: onPressed,
       child: visual,
     );

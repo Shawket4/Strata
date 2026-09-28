@@ -10,68 +10,12 @@ class SyncLocalizationsEn extends SyncLocalizations {
   SyncLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String pillOffline({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Offline · $count queued',
-      one: 'Offline · 1 queued',
-      zero: 'Offline',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String pillOnline({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Online · $count queued',
-      one: 'Online · 1 queued',
-      zero: 'Synced',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String pillUnknown({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Not synced · $count queued',
-      one: 'Not synced · 1 queued',
-      zero: 'Not synced yet',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String pillConflicts({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count conflicts',
-      one: '1 conflict',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String pillSemantics({required String status}) {
     return 'Sync status: $status';
   }
 
   @override
   String get pillOpenHint => 'Open sync status';
-
-  @override
-  String get titleOnline => 'Online';
-
-  @override
-  String get titleOffline => 'Offline';
-
-  @override
-  String get titleUnknown => 'Connecting';
 
   @override
   String get bodyOnline => 'Changes sync automatically with your server.';
@@ -130,11 +74,6 @@ class SyncLocalizationsEn extends SyncLocalizations {
 
   @override
   String get lastSyncedNever => 'Never';
-
-  @override
-  String lastSyncedValue({required String date, required String time}) {
-    return '$date $time';
-  }
 
   @override
   String get server => 'Server';
@@ -369,7 +308,7 @@ class SyncLocalizationsEn extends SyncLocalizations {
   String get hunkBase => 'Keep the original';
 
   @override
-  String get hunkBoth => 'Keep both';
+  String get hunkBoth => 'Keep both, this device first';
 
   @override
   String get hunkOwn => 'Write my own';
@@ -424,15 +363,89 @@ class SyncLocalizationsEn extends SyncLocalizations {
   }
 
   @override
-  String pillWithConflicts({
-    required String status,
-    required String conflicts,
-  }) {
-    return '$status · $conflicts';
-  }
-
-  @override
   String pillSemanticsWithHint({required String status}) {
     return 'Sync status: $status. Open sync status';
   }
+
+  @override
+  String get bodySyncing => 'Sending your changes, then pulling the server\'s.';
+
+  @override
+  String get bodyConflict =>
+      'A note was edited here and on the server. Review it to keep syncing it.';
+
+  @override
+  String get bodyDuplicates =>
+      'A change looks like something that already exists. Choose what to keep.';
+
+  @override
+  String get bodyPaused =>
+      'Sync is paused. Your changes stay on this device until you resume.';
+
+  @override
+  String get bodyError => 'The last sync failed. It retries automatically.';
+
+  @override
+  String progressItems({required int done, required int total}) {
+    return '$done of $total items';
+  }
+
+  @override
+  String pulledCount({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count changes pulled',
+      one: '1 change pulled',
+      zero: 'Nothing pulled yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pauseSync => 'Pause sync';
+
+  @override
+  String get resumeSync => 'Resume sync';
+
+  @override
+  String get syncLog => 'Sync log';
+
+  @override
+  String get syncLogEmpty => 'Nothing logged yet.';
+
+  @override
+  String get saveBothCopies => 'Save both as copies';
+
+  @override
+  String conflictCopySaved({required String path}) {
+    return 'A copy was saved at $path';
+  }
+
+  @override
+  String get legendAdded => 'Added';
+
+  @override
+  String get legendRemoved => 'Removed';
+
+  @override
+  String get legendChanged => 'Changed on both sides';
+
+  @override
+  String lineSemantics({
+    required int number,
+    required String change,
+    required String text,
+  }) {
+    return 'Line $number, $change: $text';
+  }
+
+  @override
+  String get lineSame => 'unchanged';
+
+  @override
+  String get lineChangedOneSide => 'changed';
+
+  @override
+  String get hunkBothServerFirst => 'Keep both, server first';
 }

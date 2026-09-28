@@ -6,7 +6,7 @@ library;
 
 export 'src/conflict_screen.dart';
 export 'src/l10n.dart';
-export 'src/labels.dart' show SyncLabels, formatSyncClock, formatSyncTime;
+export 'src/labels.dart' show SyncLabels;
 export 'src/sync_panel.dart';
 export 'src/sync_pill.dart';
 export 'src/sync_surfaces.dart';

@@ -174,13 +174,15 @@ class _ConflictResolutionViewState extends State<ConflictResolutionView> {
     final detail = widget.detail;
     final device = _VersionColumn(
       title: l10n.columnDevice,
-      text: detail.local,
-      semanticsLabel: l10n.columnDevice,
+      origin: detail.localOriginLabel,
+      lines: detail.localLines,
+      missing: detail.local == null,
     );
     final server = _VersionColumn(
       title: l10n.columnServer,
-      text: detail.server,
-      semanticsLabel: l10n.columnServer,
+      origin: detail.serverOriginLabel,
+      lines: detail.serverLines,
+      missing: detail.server == null,
     );
     final merged = _MergedColumn(
       controller: _merged,
@@ -269,6 +271,14 @@ class _ConflictResolutionViewState extends State<ConflictResolutionView> {
                     ),
                   ),
                   onKeepMerged: resolution == null ? null : _keepMerged,
+                  onSaveBoth: () => unawaited(
+                    _resolve(
+                      const ConflictResolution(
+                        kind: ResolutionKind.saveBothAsCopies,
+                        choices: [],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -340,6 +350,32 @@ class _Header extends StatelessWidget {
                       : l10n.conflictIntro,
                   style: text.bodySmall.copyWith(color: colors.text2),
                 ),
+                const SizedBox(height: StrataSpacing.s2),
+                Wrap(
+                  spacing: StrataSpacing.s3,
+                  runSpacing: StrataSpacing.s1,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      detail.path,
+                      textDirection: TextDirection.ltr,
+                      style: text.monoSmall.copyWith(color: colors.text2),
+                    ),
+                    for (final change in const [
+                      LineChange.added,
+                      LineChange.removed,
+                      LineChange.changedBoth,
+                    ])
+                      _Legend(change: change),
+                  ],
+                ),
+                if (detail.conflictCopyPath case final copy?) ...[
+                  const SizedBox(height: StrataSpacing.s1),
+                  Text(
+                    l10n.conflictCopySaved(path: copy),
+                    style: text.caption.copyWith(color: colors.text2),
+                  ),
+                ],
               ],
             ),
           ),
@@ -386,51 +422,194 @@ class _ColumnTitle extends StatelessWidget {
   }
 }
 
+/// The glyph, tint and name of a line change (1:1 on [LineChange]).
+({String glyph, Color? tint, Color fg, String name}) _changeStyle(
+  BuildContext context,
+  LineChange change,
+) {
+  final l10n = context.syncL10n;
+  final colors = context.strataColors;
+  return switch (change) {
+    LineChange.same => (
+      glyph: '',
+      tint: null,
+      fg: colors.text2,
+      name: l10n.lineSame,
+    ),
+    LineChange.added => (
+      glyph: '+',
+      tint: colors.successTint,
+      fg: colors.successText,
+      name: l10n.legendAdded,
+    ),
+    LineChange.removed => (
+      glyph: '−',
+      tint: colors.dangerTint,
+      fg: colors.dangerText,
+      name: l10n.legendRemoved,
+    ),
+    LineChange.changed => (
+      glyph: '~',
+      tint: colors.infoTint,
+      fg: colors.infoText,
+      name: l10n.lineChangedOneSide,
+    ),
+    LineChange.changedBoth => (
+      glyph: '!',
+      tint: colors.warningTint,
+      fg: colors.warningText,
+      name: l10n.legendChanged,
+    ),
+  };
+}
+
+class _Legend extends StatelessWidget {
+  const new({required this.change});
+
+  final LineChange change;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = context.strataText;
+    final style = _changeStyle(context, change);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ExcludeSemantics(
+          child: Container(
+            width: 18,
+            height: 18,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: style.tint,
+              borderRadius: StrataRadii.inputRadius,
+            ),
+            child: Text(
+              style.glyph,
+              style: text.monoSmall.copyWith(color: style.fg),
+            ),
+          ),
+        ),
+        const SizedBox(width: StrataSpacing.s1),
+        Flexible(child: Text(style.name, style: text.caption)),
+      ],
+    );
+  }
+}
+
 class _VersionColumn extends StatelessWidget {
   const new({
     required this.title,
-    required this.text,
-    required this.semanticsLabel,
+    required this.origin,
+    required this.lines,
+    required this.missing,
   });
 
   final String title;
-  final String? text;
-  final String semanticsLabel;
+  final String origin;
+  final List<AnnotatedLine> lines;
+  final bool missing;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.syncL10n;
     final colors = context.strataColors;
     final styles = context.strataText;
-    final content = text;
     return Semantics(
       container: true,
-      label: semanticsLabel,
+      label: title,
       explicitChildNodes: true,
       child: ListView(
         padding: const EdgeInsets.all(StrataSpacing.s4),
         children: [
           _ColumnTitle(title: title),
+          if (origin.isNotEmpty)
+            Text(origin, style: styles.caption.copyWith(color: colors.text2)),
           const SizedBox(height: StrataSpacing.s3),
           Container(
-            padding: const EdgeInsets.all(StrataSpacing.s3),
+            padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s2),
             decoration: BoxDecoration(
               color: colors.surface,
               borderRadius: StrataRadii.cardRadius,
               border: Border.all(color: colors.border),
             ),
-            child: content == null
-                ? Text(
-                    l10n.versionMissing,
-                    style: styles.bodySmall.copyWith(color: colors.text2),
+            child: missing
+                ? Padding(
+                    padding: const EdgeInsets.all(StrataSpacing.s3),
+                    child: Text(
+                      l10n.versionMissing,
+                      style: styles.bodySmall.copyWith(color: colors.text2),
+                    ),
                   )
-                : SelectableText(
-                    content,
-                    textAlign: TextAlign.start,
-                    style: styles.mono.copyWith(color: colors.text),
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [for (final line in lines) _Line(line: line)],
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One annotated line: number, change glyph and the text in its own
+/// direction, tinted by the change.
+class _Line extends StatelessWidget {
+  const new({required this.line});
+
+  final AnnotatedLine line;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.syncL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final style = _changeStyle(context, line.change);
+    return Semantics(
+      container: true,
+      label: l10n.lineSemantics(
+        number: line.line,
+        change: style.name,
+        text: line.text,
+      ),
+      excludeSemantics: true,
+      child: ColoredBox(
+        color: style.tint ?? Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: StrataSpacing.s2,
+            vertical: 2,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 28,
+                child: Text(
+                  '${line.line}',
+                  textAlign: TextAlign.end,
+                  style: text.monoSmall.copyWith(color: colors.text2),
+                ),
+              ),
+              SizedBox(
+                width: 18,
+                child: Text(
+                  style.glyph,
+                  textAlign: TextAlign.center,
+                  style: text.monoSmall.copyWith(color: style.fg),
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  line.text,
+                  textDirection: textDirectionOf(line.dir),
+                  textAlign: TextAlign.start,
+                  style: text.mono.copyWith(color: colors.text),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -510,9 +689,6 @@ class _HunkCard extends StatelessWidget {
     final l10n = context.syncL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    // Body hunks accept the line-level choices too (sync-model
-    // `HunkChoiceKind`); the kind comes from the core.
-    final body = hunk.kind == 'body';
     Widget option(HunkChoiceKind kind, String label, [String? sample]) =>
         RadioListTile<HunkChoiceKind>(
           value: kind,
@@ -525,6 +701,15 @@ class _HunkCard extends StatelessWidget {
                   style: text.monoSmall.copyWith(color: colors.text),
                 ),
         );
+    // The choices this hunk allows come from the core (sync-model rule).
+    Widget optionOf(HunkChoiceKind kind) => switch (kind) {
+      HunkChoiceKind.ours => option(kind, l10n.hunkOurs, hunk.ours),
+      HunkChoiceKind.theirs => option(kind, l10n.hunkTheirs, hunk.theirs),
+      HunkChoiceKind.base => option(kind, l10n.hunkBase, hunk.base),
+      HunkChoiceKind.oursThenTheirs => option(kind, l10n.hunkBoth),
+      HunkChoiceKind.theirsThenOurs => option(kind, l10n.hunkBothServerFirst),
+      HunkChoiceKind.text => option(kind, l10n.hunkOwn),
+    };
     return Material(
       color: colors.warningTint,
       shape: RoundedRectangleBorder(
@@ -545,27 +730,21 @@ class _HunkCard extends StatelessWidget {
                 header: true,
                 container: true,
                 child: Text(
-                  l10n.hunkTitle(location: hunk.location),
+                  l10n.hunkTitle(location: hunk.locationLabel),
                   style: text.bodyStrong.copyWith(color: colors.warningText),
                 ),
               ),
-              option(HunkChoiceKind.ours, l10n.hunkOurs, hunk.ours),
-              option(HunkChoiceKind.theirs, l10n.hunkTheirs, hunk.theirs),
-              option(HunkChoiceKind.base, l10n.hunkBase, hunk.base),
-              if (body) ...[
-                option(HunkChoiceKind.oursThenTheirs, l10n.hunkBoth),
-                option(HunkChoiceKind.text, l10n.hunkOwn),
-                if (choice == HunkChoiceKind.text)
-                  TextField(
-                    controller: own,
-                    minLines: 2,
-                    maxLines: null,
-                    style: text.mono,
-                    decoration: InputDecoration(
-                      labelText: l10n.hunkOwnField(location: hunk.location),
-                    ),
+              for (final kind in hunk.allowedChoices) optionOf(kind),
+              if (choice == HunkChoiceKind.text)
+                TextField(
+                  controller: own,
+                  minLines: 2,
+                  maxLines: null,
+                  style: text.mono,
+                  decoration: InputDecoration(
+                    labelText: l10n.hunkOwnField(location: hunk.locationLabel),
                   ),
-              ],
+                ),
             ],
           ),
         ),
@@ -582,6 +761,7 @@ class _Footer extends StatelessWidget {
     required this.onKeepServer,
     required this.onKeepDevice,
     required this.onKeepMerged,
+    required this.onSaveBoth,
   });
 
   final int undecided;
@@ -590,6 +770,7 @@ class _Footer extends StatelessWidget {
   final VoidCallback onKeepServer;
   final VoidCallback onKeepDevice;
   final VoidCallback? onKeepMerged;
+  final VoidCallback onSaveBoth;
 
   @override
   Widget build(BuildContext context) {
@@ -597,6 +778,10 @@ class _Footer extends StatelessWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final merged = onKeepMerged;
+    final saveBoth = TextButton(
+      onPressed: busy ? null : onSaveBoth,
+      child: Text(l10n.saveBothCopies),
+    );
     final buttons = [
       OutlinedButton(
         onPressed: busy ? null : onKeepServer,
@@ -656,7 +841,7 @@ class _Footer extends StatelessWidget {
                         alignment: WrapAlignment.end,
                         spacing: StrataSpacing.s2,
                         runSpacing: StrataSpacing.s2,
-                        children: buttons,
+                        children: [saveBoth, ...buttons],
                       ),
                     ),
                   ],
@@ -675,6 +860,7 @@ class _Footer extends StatelessWidget {
                         Expanded(child: buttons[1]),
                       ],
                     ),
+                    saveBoth,
                   ],
                 ),
         ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/widgets.dart' show TextDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:flutter_test/flutter_test.dart';
@@ -67,6 +68,12 @@ Future<void> _expectStream<T>({
 }
 
 void main() {
+  test('textDirectionOf maps the core directions 1:1', () {
+    expect(textDirectionOf(TextDir.ltr), TextDirection.ltr);
+    expect(textDirectionOf(TextDir.rtl), TextDirection.rtl);
+    expect(textDirectionOf(TextDir.neutral), isNull);
+  });
+
   group('coreApiProvider', () {
     test('has no default: reading it unoverridden fails', () {
       final container = ProviderContainer();

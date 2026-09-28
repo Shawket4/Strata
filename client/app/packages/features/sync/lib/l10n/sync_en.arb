@@ -386,9 +386,9 @@
   "@hunkBase": {
     "description": "Hunk choice: base."
   },
-  "hunkBoth": "Keep both",
+  "hunkBoth": "Keep both, this device first",
   "@hunkBoth": {
-    "description": "Hunk choice: ours then theirs."
+    "description": "Hunk choice ours then theirs."
   },
   "hunkOwn": "Write my own",
   "@hunkOwn": {
@@ -571,5 +571,9 @@
   "lineChangedOneSide": "changed",
   "@lineChangedOneSide": {
     "description": "Line change: changed on one side."
+  },
+  "hunkBothServerFirst": "Keep both, server first",
+  "@hunkBothServerFirst": {
+    "description": "Hunk choice theirs then ours."
   }
 }

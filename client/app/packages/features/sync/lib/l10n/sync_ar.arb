@@ -82,7 +82,7 @@
   "hunkOurs": "احتفظ بنص الجهاز",
   "hunkTheirs": "احتفظ بنص الخادم",
   "hunkBase": "احتفظ بالأصل",
-  "hunkBoth": "احتفظ بالاتنين",
+  "hunkBoth": "احتفظ بالاتنين، الجهاز ده الأول",
   "hunkOwn": "اكتب نصي",
   "hunkOwnField": "نصك لـ {location}",
   "hunksLeft": "{count, plural, =0{كل الاختيارات اتعملت} =1{اختيار واحد متبقي} two{اختياران متبقيان} few{{count} اختيارات متبقية} many{{count} اختيارًا متبقيًا} other{{count} اختيار متبقي}}",
@@ -114,5 +114,6 @@
   "legendChanged": "اتغير في الناحيتين",
   "lineSemantics": "سطر {number}، {change}: {text}",
   "lineSame": "زي ما هو",
-  "lineChangedOneSide": "اتغير"
+  "lineChangedOneSide": "اتغير",
+  "hunkBothServerFirst": "احتفظ بالاتنين، السيرفر الأول"
 }

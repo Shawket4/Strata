@@ -547,10 +547,11 @@ abstract final class StrataFixtures {
     conflicts: 0,
     duplicates: 0,
     lastSyncAt: now,
+    lastSyncLabel: '14:32',
     display: SyncPillKind.synced,
     progressDone: 0,
     progressTotal: 0,
-    label: '',
+    label: 'Synced · 14:32',
   );
 
   /// "Offline · 3 changes queued".
@@ -561,10 +562,11 @@ abstract final class StrataFixtures {
     conflicts: 0,
     duplicates: 0,
     lastSyncAt: DateTime.utc(2026, 9, 27, 8, 15),
-    display: SyncPillKind.synced,
+    lastSyncLabel: '11:15',
+    display: SyncPillKind.offline,
     progressDone: 0,
     progressTotal: 0,
-    label: '',
+    label: 'Offline · 3 queued',
   );
 
   /// "Syncing 12/40".
@@ -574,18 +576,18 @@ abstract final class StrataFixtures {
       phase: SyncPhase.pushing,
       pagesDone: 0,
       ops: 40,
-      opsDone: 0,
-      opsTotal: 0,
+      opsDone: 12,
+      opsTotal: 40,
       pulled: 0,
     ),
     pendingOps: 28,
     conflicts: 0,
     duplicates: 0,
     lastSyncAt: DateTime.utc(2026, 9, 27, 8, 15),
-    display: SyncPillKind.synced,
-    progressDone: 0,
-    progressTotal: 0,
-    label: '',
+    display: SyncPillKind.syncing,
+    progressDone: 12,
+    progressTotal: 40,
+    label: 'Syncing 12/40',
   );
 
   /// "1 conflict".
@@ -596,10 +598,11 @@ abstract final class StrataFixtures {
     conflicts: 1,
     duplicates: 0,
     lastSyncAt: now,
-    display: SyncPillKind.synced,
+    lastSyncLabel: '14:32',
+    display: SyncPillKind.conflict,
     progressDone: 0,
     progressTotal: 0,
-    label: '',
+    label: '1 conflict',
   );
 
   /// A queued op.
@@ -610,9 +613,9 @@ abstract final class StrataFixtures {
     status: OutboxStatus.pending,
     attempts: 0,
     created: DateTime.utc(2026, 9, 26, 16, 40),
-    detail: '',
+    detail: '+2 lines, 1 changed',
     detailDir: TextDir.ltr,
-    createdLabel: '',
+    createdLabel: 'Sat 19:40',
   );
 
   /// A conflict row.
@@ -621,7 +624,7 @@ abstract final class StrataFixtures {
     noteId: 'n-discount-policy',
     title: 'Discount policy',
     created: DateTime.utc(2026, 9, 27, 10, 2),
-    createdLabel: '',
+    createdLabel: '13:02',
   );
 
   /// A rolled-back op.

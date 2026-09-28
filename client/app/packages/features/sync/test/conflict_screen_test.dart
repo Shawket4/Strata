@@ -7,7 +7,6 @@ import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
 const _op = 'op-weekly';
 
@@ -69,7 +68,7 @@ Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
 
 void main() {
   group('conflict matrix', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('hunks to choose $v', (tester) async {
         final l10n = lookupSyncLocalizations(v.locale);
         final fake = await _pump(tester, v);
@@ -79,22 +78,56 @@ void main() {
         );
         expect(find.text('Weekly invoicing proposal'), findsOneWidget);
         expect(find.text(l10n.conflictIntro), findsOneWidget);
+        expect(
+          find.text('notes/clients/acme/weekly-invoicing-proposal.md'),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.legendAdded), findsOneWidget);
+        expect(find.text(l10n.legendChanged), findsOneWidget);
         if (v.sizeClass == SizeClass.expanded) {
-          // Three columns side by side.
+          // Three columns side by side, each line annotated by the core.
           expect(find.byType(TabBar), findsNothing);
           expect(find.text(l10n.columnDevice), findsOneWidget);
           expect(find.text(l10n.columnServer), findsOneWidget);
           expect(find.textContaining(l10n.columnMerged), findsOneWidget);
           expect(
-            find.textContaining('net 14', findRichText: true),
-            findsWidgets,
+            find.text('MacBook Pro · today 14:41 · edited offline'),
+            findsOneWidget,
+          );
+          expect(find.text('Pixel 8 · today 14:38 · Shawket'), findsOneWidget);
+          expect(
+            find.bySemanticsLabel(
+              l10n.lineSemantics(
+                number: 2,
+                change: l10n.legendAdded,
+                text: 'Owner: [[Ahmed Samir]] confirmed on the call.',
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.bySemanticsLabel(
+              l10n.lineSemantics(
+                number: 3,
+                change: l10n.legendRemoved,
+                text: '- Minimum invoice EGP 5,000; smaller weeks roll over.',
+              ),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            tester
+                .widget<Text>(find.text('ملاحظة: أحمد وافق على الشروط'))
+                .textDirection,
+            TextDirection.rtl,
           );
         } else {
           // Tabs, the merged result first.
           expect(find.byType(TabBar), findsOneWidget);
           expect(find.byType(Tab), findsNWidgets(3));
         }
-        expect(find.text(l10n.hunkTitle(location: 'body:6')), findsOneWidget);
+        expect(find.text(l10n.hunkTitle(location: 'Line 6')), findsOneWidget);
+        expect(find.text(l10n.saveBothCopies), findsOneWidget);
         expect(find.text(l10n.hunksLeft(count: 2)), findsOneWidget);
         final merged = tester.widget<FilledButton>(
           find.widgetWithText(FilledButton, l10n.keepMerged),
@@ -139,8 +172,8 @@ void main() {
   });
 
   group('conflict intents', () {
-    final compact = matrix().first;
-    final expanded = matrix().firstWhere((v) => v.sizeName == 'expanded');
+    final compact = variants().first;
+    final expanded = variants().firstWhere((v) => v.sizeName == 'expanded');
 
     testWidgets('loading until the core emits', (tester) async {
       await _pump(tester, compact, emit: false);
@@ -157,12 +190,46 @@ void main() {
       expect(resolved, 2);
     });
 
+    testWidgets('Save both as copies', (tester) async {
+      final fake = await _pump(tester, expanded);
+      await _tapVisible(tester, find.text('Save both as copies'));
+      _expectResolution(fake, ResolutionKind.saveBothAsCopies);
+    });
+
+    testWidgets('keep both, server first', (tester) async {
+      final fake = await _pump(tester, expanded);
+      await _tapVisible(tester, find.text('Keep both, server first'));
+      await _tapVisible(tester, find.text("Keep the server's text").last);
+      await _tapVisible(tester, find.text('Keep merged'));
+      _expectResolution(
+        fake,
+        ResolutionKind.hunks,
+        choices: const [
+          HunkChoice(hunk: 0, choice: HunkChoiceKind.theirsThenOurs),
+          HunkChoice(hunk: 1, choice: HunkChoiceKind.theirs),
+        ],
+      );
+    });
+
+    testWidgets('a conflict copy says where it was saved', (tester) async {
+      await _pump(tester, expanded, detail: SyncFixtures.clean);
+      expect(
+        find.text(
+          'A copy was saved at notes/sales/discount-policy (conflict copy).md',
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('Keep merged sends one choice per hunk', (tester) async {
       final fake = await _pump(tester, expanded);
       await _tapVisible(tester, find.text("Keep the server's text").first);
       expect(find.text('1 choice left'), findsOneWidget);
-      // The frontmatter hunk offers no line-level choices.
-      expect(find.text('Keep both'), findsOneWidget);
+      // The frontmatter hunk allows only ours / theirs / base (the core's
+      // allowed choices).
+      expect(find.text('Keep both, this device first'), findsOneWidget);
+      expect(find.text('Keep both, server first'), findsOneWidget);
+      expect(find.text('Write my own'), findsOneWidget);
       await _tapVisible(tester, find.text("Keep this device's text").last);
       expect(find.text('Every choice made'), findsOneWidget);
       await _tapVisible(tester, find.text('Keep merged'));
@@ -178,12 +245,14 @@ void main() {
 
     testWidgets('Write my own sends the typed text', (tester) async {
       final fake = await _pump(tester, expanded);
+      await _tapVisible(tester, find.text('Keep the original').last);
       await _tapVisible(tester, find.text('Write my own'));
       await tester.enterText(
-        find.widgetWithText(TextField, 'Your text for body:6'),
+        find.widgetWithText(TextField, 'Your text for Line 6'),
         '- Payment terms: net 10.\n',
       );
-      await _tapVisible(tester, find.text('Keep the original').last);
+      await tester.pump();
+      expect(find.text('Every choice made'), findsOneWidget);
       await _tapVisible(tester, find.text('Keep merged'));
       _expectResolution(
         fake,
@@ -270,10 +339,14 @@ void main() {
       await _pump(tester, compact);
       await tester.tap(find.text('Server'));
       await settle(tester);
-      expect(find.textContaining('net 7', findRichText: true), findsWidgets);
+      expect(find.text('- Payment terms: net 7.'), findsOneWidget);
+      expect(find.text('Pixel 8 · today 14:38 · Shawket'), findsOneWidget);
       await tester.tap(find.text('This device'));
       await settle(tester);
-      expect(find.textContaining('net 14', findRichText: true), findsWidgets);
+      expect(
+        find.text('- Payment terms: net 14, with a 2-day grace period.'),
+        findsOneWidget,
+      );
     });
   });
 }
