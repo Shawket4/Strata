@@ -242,9 +242,7 @@ async fn a_document_page_lists_its_copies_and_the_renewal_task() {
     h.server.remote_upsert(
         ERRANDS,
         "notes/Errands.md",
-        &format!(
-            "---\nid: {ERRANDS}\n---\n- [ ] Renew the [[Car license]] 📅 2026-10-05 ^r1\n"
-        ),
+        &format!("---\nid: {ERRANDS}\n---\n- [ ] Renew the [[Car license]] 📅 2026-10-05 ^r1\n"),
     );
     s.pull().await.expect("pull");
 
@@ -285,7 +283,11 @@ async fn a_document_page_lists_its_copies_and_the_renewal_task() {
             renewal.description.as_str(),
             renewal.origin_label.as_deref()
         ),
-        ("r1", "Renew the [[Car license]]", Some("From document expiry"))
+        (
+            "r1",
+            "Renew the [[Car license]]",
+            Some("From document expiry")
+        )
     );
     assert_eq!(
         (

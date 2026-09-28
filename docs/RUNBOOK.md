@@ -468,3 +468,94 @@ memory for 30 minutes (lost at restart); `POST /api/v1/ask/{id}/save` writes one
 Citing a block without an ID appends `^ask-xxxxxx` to it in one `ai: ask <path>` commit
 (revertible like any AI commit). `503 ai_paused` / `ai_unavailable` mean the budget or provider
 limit is reached, or AI is off for the account.
+
+## 13. Build artifacts (CI) and signing
+
+`.github/workflows/build.yml` runs on pushes to `main`, pull requests, `v*` tags and by hand
+(Actions → Build → Run workflow). Download the artifacts from the run's summary page
+(artifacts are kept 90 days by default).
+
+| Artifact | Contents |
+|---|---|
+| `stratad-linux-x86_64` | `stratad-<version>-linux-x86_64.tar.gz` (the stripped `stratad`, `stratad.env.example`, `stratad.service`, `README.md`, `VPS_SETUP.md`) and its `.sha256`. On a `v*` tag the two files are also attached to a **draft** GitHub Release (publish it by hand). |
+| `strata-android-release-signed` or `strata-android-debug-signed` | `strata-<version>-android-universal-<kind>.apk`, one APK per ABI (`arm64-v8a`, `armeabi-v7a`, `x86_64`) and `SHA256SUMS`. |
+| `strata-macos-universal-adhoc` | `Strata-<version>-macos-universal.zip` and `.dmg` (arm64 + x86_64, ad-hoc signed) and `SHA256SUMS`. |
+
+`<version>` is the tag (`v0.1.0`) or `sha-<7 hex>` for other builds; Android and macOS builds
+use the workflow run number as the build number (Android `versionCode`), so a newer CI build
+installs over an older one.
+
+**stratad.** Built on Ubuntu 22.04 (glibc 2.35) so it runs on Debian 12+, Ubuntu 22.04+ and
+other glibc ≥ 2.35 systems. It is deliberately not a static musl build: `ort` loads ONNX
+Runtime at run time with `dlopen`. Deploy it as in §6 ("Manual deploy / upgrade") or, the first
+time, [`deploy/VPS_SETUP.md`](../deploy/VPS_SETUP.md).
+
+**Android.** A universal APK (installs on any device) plus one APK per ABI (about a third of
+the size; phones need `arm64-v8a`). Signing is chosen per run:
+
+- With the repository secrets below, release APKs are signed with your key
+  (`strata-android-release-signed`). Create the key once and keep it safe (losing it means
+  users must uninstall to update):
+
+  ```sh
+  keytool -genkeypair -v -keystore strata-release.jks -alias strata -keyalg RSA -keysize 4096 \
+    -validity 10000
+  base64 -w0 strata-release.jks     # the value of ANDROID_KEYSTORE_BASE64
+  ```
+
+  | Secret (Settings → Secrets and variables → Actions) | Value |
+  |---|---|
+  | `ANDROID_KEYSTORE_BASE64` | the keystore file, base64-encoded |
+  | `ANDROID_KEYSTORE_PASSWORD` | the keystore password |
+  | `ANDROID_KEY_ALIAS` | the key alias (`strata` above) |
+  | `ANDROID_KEY_PASSWORD` | the key password |
+
+- Without them (and for pull requests from forks), the APKs are signed with the runner's
+  debug key (`strata-android-debug-signed`, with a warning in the run). They sideload fine, but
+  every run has a different debug key, so installing a newer one over an older one fails with
+  a signature mismatch: uninstall first. `android/app/build.gradle.kts` reads the keystore
+  from `ANDROID_KEYSTORE_PATH` (CI decodes the secret to a temporary file); no keystore is
+  committed.
+
+Install: copy the APK to the phone and open it (allow "install unknown apps" for the file
+manager), or `adb install -r strata-…-arm64-v8a-….apk`.
+
+**macOS.** A universal app (cargokit builds the Rust core for every architecture of the
+release build and joins them with `lipo`; the workflow checks both are present), ad-hoc
+signed (`codesign --force --deep --sign -`, entitlements kept) and verified with
+`codesign --verify --deep --strict`. It is not notarised, so Gatekeeper blocks the first
+launch ("cannot be opened because the developer cannot be verified"). Either:
+
+- right-click (Control-click) `Strata.app` → **Open** → **Open**, once; or
+- remove the quarantine flag: `xattr -dr com.apple.quarantine /Applications/Strata.app`.
+
+On macOS 15, if the right-click route shows no Open button, use System Settings → Privacy &
+Security → "Open Anyway" after the first attempt.
+
+**App icons and splash screens** come from `design/brand/*.svg`:
+`client/app/apps/strata/tool/brand/generate.sh` renders the source PNGs into
+`apps/strata/assets/brand/` (plus the 9-size Windows `.ico` and the Linux 256 px icon), then
+runs `flutter_launcher_icons` (a pinned global tool: its `cli_util` constraint conflicts with
+melos) and `flutter_native_splash` (a dev dependency). The generated platform files are
+committed; `apps/strata/test/brand_assets_test.dart` checks every size and that every native
+launch colour equals the Flutter splash background (mist light, abyss dark).
+
+## 14. Later: Docker
+
+Not built yet (owner decision 2026-09-28). The plan:
+
+- The image contains **only the backend** (`stratad` on a slim glibc base, e.g.
+  `debian:bookworm-slim`, running as a non-root user). No PostgreSQL, model or ONNX Runtime
+  inside.
+- **PostgreSQL stays on the host**, shared with the other containers: the container reaches
+  it over the host network or a Unix socket mount, with the same three role URLs.
+- The **embedding model and ONNX Runtime stay on the host** and are mounted **read-only**
+  (e.g. `-v /opt/models:/opt/models:ro -v /opt/onnxruntime:/opt/onnxruntime:ro`); embeddings
+  remain in-process (D9 unchanged), so `STRATA_AI__EMBEDDING__MODEL_DIR` and
+  `…__ONNXRUNTIME_LIB` point at the mounts.
+- The data root is a volume; settings come from the same env file, mounted read-only and
+  read by `stratad --env-file` (not `docker run --env-file`, which does not understand the
+  quoting of §1); the signing key and other secret files are mounted read-only with mode
+  `0600`.
+- `claude -p` needs its own design for containers (it runs through `sudo` as `strata-ai` on
+  the host today).

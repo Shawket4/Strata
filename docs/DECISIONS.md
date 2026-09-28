@@ -29,6 +29,13 @@ Gaps filled while implementing the owner decision below; the owner may revisit a
 - **Configuration via `.env`:** `stratad` reads its configuration from environment variables, loaded from a `.env` file (the owner places it on the VPS). The binary is deployed manually for now; automated deployment comes later.
 - **Docker later:** a future image contains only the backend. PostgreSQL runs on the host (shared with other containers), and the embedding model and ONNX Runtime stay on the host, mounted read-only; embeddings remain in-process (D9 unchanged).
 
+### Implementation decisions (configuration and builds)
+Filling gaps of the owner decision above; the owner may revisit any of them.
+- **Variable names:** `STRATA_` + the setting's path with `__` between the parts, upper-case (`STRATA_DATABASE__APP_URL`, `STRATA_THRESHOLDS__DEDUPE__NOTE__NEAR`); `deploy/stratad.env.example` lists all 103. Lists are written plainly: the `claude` launcher as words separated by spaces, per-user providers as `user=provider` pairs separated by commas.
+- **Strictness:** every name in the env file must be a setting (typos stop `stratad` with a "did you mean"); in the process environment only `STRATA_…__…` names must be settings, so the test and tool variables (`STRATA_TEST_DATABASE_URL`, …) keep working. Errors never echo a value. `stratad check-config` prints the effective settings with database passwords masked.
+- **Artifacts:** Android ships a universal APK plus one per ABI; macOS a universal (arm64 + x86_64) app, ad-hoc signed, as zip and dmg; without the signing secrets the APKs are debug-signed and labelled so.
+- **Release fixes found while packaging:** release Android builds lacked the `INTERNET` permission and the sandboxed macOS release lacked `network.client` (and `files.user-selected.read-write` for the file picker); both added.
+
 ### File picker and label separators (owner)
 - **File picker:** export/import paths come from the native OS picker (`file_selector`, allowed in the app shell only); it returns a path and the core does the rest.
 - **No arrow glyphs in core labels:** labels use words or `·` instead of `→` (e.g. "Moved from Safe to Office"). Cairo has no arrow, and a fixed arrow points the wrong way in RTL.

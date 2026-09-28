@@ -111,8 +111,16 @@ async fn task_edits_relations_and_creates_converge_after_a_sync() {
     let report = s.sync(Trigger::AfterWrite).await.expect("sync");
     assert_eq!(report.pushed, 7);
     assert_eq!(s.read(|c, _| outbox::all(c)).expect("outbox"), []);
-    assert_eq!(local(&s), server(&h), "device and server hold the same bytes");
-    assert_eq!(local(&s), before_push, "the server wrote what the device showed");
+    assert_eq!(
+        local(&s),
+        server(&h),
+        "device and server hold the same bytes"
+    );
+    assert_eq!(
+        local(&s),
+        before_push,
+        "the server wrote what the device showed"
+    );
 
     let pricing = &server(&h)[NOTE].1;
     assert_eq!(

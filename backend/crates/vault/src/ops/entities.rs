@@ -570,7 +570,10 @@ impl Core {
             let heading = format!("### Merged from {ltitle} ({})", today.format("%Y-%m-%d"));
             let body = sdoc.body().to_owned();
             let secs = sections::sections(&body);
-            let insert = format!("{heading}\n\n{}\n", lnotes.trim_end());
+            // The section text starts after its heading line, usually with a blank line:
+            // one blank line under the new heading, not two.
+            let text = lnotes.trim_start_matches(['\r', '\n']).trim_end();
+            let insert = format!("{heading}\n\n{text}\n");
             let new_body = if let Some(s) = secs
                 .iter()
                 .find(|s| s.level == 2 && s.title.trim().eq_ignore_ascii_case("Notes"))
