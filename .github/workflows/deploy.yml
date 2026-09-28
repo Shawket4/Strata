@@ -57,13 +57,12 @@ jobs:
           if [ "$EVENT" = workflow_dispatch ]; then
             if [ -n "$INPUT_RUN" ]; then
               case "$INPUT_RUN" in *[!0-9]*) echo "::error::build_run_id must be a number"; exit 1 ;; esac
-              read -r wf concl < <(gh run view "$INPUT_RUN" --json workflowName,conclusion --jq '"\(.workflowName) \(.conclusion)"')
+              wf=$(gh run view "$INPUT_RUN" --json workflowName --jq .workflowName)
               [ "$wf" = Build ] || { echo "::error::run $INPUT_RUN is a '$wf' run, not Build"; exit 1; }
               run="$INPUT_RUN"
             else
               run=$(gh run list --workflow build.yml --branch "$BRANCH" --event push --status success -L 1 --json databaseId --jq '.[0].databaseId // empty')
               [ -n "$run" ] || { echo "::error::no green Build run on $BRANCH"; exit 1; }
-              concl=success
             fi
             # Only the stratad job has to be green (an app job may have failed).
             job=$(gh run view "$run" --json jobs --jq '.jobs[] | select(.name | startswith("stratad")) | .conclusion')
@@ -113,20 +112,27 @@ jobs:
           SHA256: ${{ steps.pkg.outputs.sha }}
         run: |
           set -euo pipefail
-          [ -n "$SSH_KEY" ] && [ -n "$KNOWN_HOSTS" ] && [ -n "$HOST" ] \
-            || { echo "::error::the production environment's STRATA_DEPLOY_* secrets are not set"; exit 1; }
+          if [ -z "$SSH_KEY" ] || [ -z "$KNOWN_HOSTS" ] || [ -z "$HOST" ]; then
+            echo "::error::the production environment's STRATA_DEPLOY_* secrets are not set"; exit 1
+          fi
           install -d -m 0700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/strata_deploy && chmod 0600 ~/.ssh/strata_deploy
+          # Remove the key even when ssh fails.
+          trap 'rm -f ~/.ssh/strata_deploy' EXIT
+          (umask 077 && printf '%s\n' "$SSH_KEY" > ~/.ssh/strata_deploy)
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           ssh -i ~/.ssh/strata_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes \
             -o ConnectTimeout=20 -o ServerAliveInterval=15 \
             "strata-deploy@$HOST" "deploy $SHA256 $NAME" < "pkg/$NAME.tar.gz"
-          rm -f ~/.ssh/strata_deploy
 
       - name: Check the public endpoint
         if: steps.pick.outputs.run != ''
         run: |
           code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
             -H 'Accept: application/vnd.msgpack' "$SERVER_URL/api/v1/health")
-          echo "$SERVER_URL/api/v1/health → $code"
+          echo "GET  $SERVER_URL/api/v1/health → $code"
           [ "$code" = 200 ]
+          # HEAD too (uptime monitors, curl -I): answered since the HEAD /health fix.
+          head=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -I \
+            -H 'Accept: application/vnd.msgpack' "$SERVER_URL/api/v1/health")
+          echo "HEAD $SERVER_URL/api/v1/health → $head"
+          [ "$head" = 200 ]
