@@ -566,6 +566,7 @@ fn the_facade_drives_the_core_end_to_end() {
             cluster: None,
             lens: GraphLens::People,
             focus: None,
+            include_tags: false,
         })
         .map(|g| (g.nodes.len(), g.edges.len())),
     );

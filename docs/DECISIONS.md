@@ -4,6 +4,19 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Implementation decisions (creation times, UTC)
+Gaps filled while implementing the owner decision below; the owner may revisit any of them.
+- **Which ops carry `created`:** `note.create`, `capture`, `entity/document/place.create`, `task.create` and `suggestion.accept` (an acceptance can create an entity note or `tasks/Tasks.md`), and the REST create bodies (`POST /notes`, `/capture`, `/entities`, `/documents`, `/places`, `/tasks`, `/ask/{id}/save`). `POST /suggestions/{id}/accept` and `accept-with-edits` stay without a body time: they are online-only, so the decision time is the server's clock. Conflict copies are made by the server when it finds the conflict and carry its clock.
+- **Refusal:** a `created` more than `max_future_skew_secs` (default 300) ahead of the server's clock is `422 created_in_future` (new problem type; exactly the limit is accepted); any past time is accepted.
+- **Capture file names are UTC:** PLAN §6.9 names `inbox/YYYY-MM-DD-HHmmss.md` without a zone; they follow the UTC rule for file names.
+- **`task.create` carries `home_id`,** the device's ID for a `tasks/Tasks.md` the create makes (ignored when the note exists), so both sides write identical bytes; the month heading is the creation time's date in the account's time zone.
+- **Device time zone:** read from the operating system in the Rust core (`iana-time-zone`), not passed through the bridge; after the first bootstrap an account with no synced `timezone` setting gets the device's zone via `PATCH /me`.
+- **Title rule scope:** entity, document, place and concept notes (user and AI). A `note.create` whose path was taken meanwhile is still written at `<stem> 2.md` without a `title`.
+
+### File picker and label separators (owner)
+- **File picker:** export/import paths come from the native OS picker (`file_selector`, allowed in the app shell only); it returns a path and the core does the rest.
+- **No arrow glyphs in core labels:** labels use words or `·` instead of `→` (e.g. "Moved from Safe to Office"). Cairo has no arrow, and a fixed arrow points the wrong way in RTL.
+
 ### Times, creation stamps and titles (owner)
 - **Times:** the server stores and writes every time in UTC; every surface converts to the client's time zone for display. File names that contain a time (conflict copies) use UTC on both sides, because they are vault content shared by all devices and Obsidian.
 - **Device creation time is required:** every create op (entity, document, place, task note) carries the device's `created` time, and the server writes it as `created`/`updated`. It never substitutes its receive time, so an item created offline on Monday keeps Monday after syncing on Wednesday. The server refuses times implausibly far in the future. Device and server write identical bytes.
