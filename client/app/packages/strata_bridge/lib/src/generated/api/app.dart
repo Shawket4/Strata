@@ -45,6 +45,11 @@ Future<void> refreshAccount() =>
 Future<void> appLifecycle({required AppLifecycle state}) =>
     StrataCore.instance.api.crateApiAppAppLifecycle(state: state);
 
+/// Pull-to-refresh: reconnects `/events`, re-reads the profile, runs a sync cycle and
+/// re-reads the server-only data (AI status, devices, AI activity). Resolves when done;
+/// offline it resolves after the failed cycle (the sync status says so).
+Future<void> refresh() => StrataCore.instance.api.crateApiAppRefresh();
+
 /// "Sync now".
 Future<void> syncNow() => StrataCore.instance.api.crateApiAppSyncNow();
 

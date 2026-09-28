@@ -72,6 +72,7 @@ export 'package:strata_bridge/strata_bridge.dart'
         recordCustody,
         recurrenceForm,
         recurrencePreview,
+        refresh,
         refreshAccount,
         refreshAiActivity,
         refreshHistory,

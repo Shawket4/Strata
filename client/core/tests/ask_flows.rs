@@ -604,3 +604,40 @@ async fn retrying_failed_jobs_requeues_them_and_refreshes_the_status() {
     assert_eq!(s.retry_failed_jobs().await, Err(CoreError::Offline));
     assert_eq!(api.retries.lock().unwrap().len(), 0);
 }
+
+#[tokio::test]
+async fn refresh_pulls_the_server_and_rereads_the_server_only_data() {
+    const LATE: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0V7M";
+    let (h, api, s) = world().await;
+    h.server.remote_upsert(
+        LATE,
+        "notes/From the laptop.md",
+        &format!("---\nid: {LATE}\n---\nWritten elsewhere.\n"),
+    );
+    *api.status.lock().unwrap() = Some(AiStatusInfo {
+        enabled: true,
+        provider: Some("claude_cli".into()),
+        paused_until: None,
+        paused_reason: None,
+        queue_depth: 2,
+        failed_jobs: 0,
+        tokens_used: 0,
+        tokens_limit: 0,
+        embedded: None,
+    });
+    assert_eq!(view(&s).ai_status, None);
+    s.refresh().await.expect("refresh");
+    let note = s
+        .read(|c, ctx| strata_core::view::build::note_screen(c, ctx, LATE))
+        .expect("note")
+        .note
+        .map(|n| n.title);
+    assert_eq!(note.as_deref(), Some("From the laptop"));
+    assert_eq!(view(&s).ai_status.map(|a| a.queue_depth), Some(2));
+
+    // Offline: the cycle fails, nothing else is asked, and refresh still resolves.
+    h.server.set_offline(true);
+    *api.status.lock().unwrap() = None;
+    assert_eq!(s.refresh().await, Ok(()));
+    assert_eq!(view(&s).ai_status.map(|a| a.queue_depth), Some(2));
+}

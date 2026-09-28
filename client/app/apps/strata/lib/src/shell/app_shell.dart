@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata/src/l10n.dart';
@@ -103,8 +105,9 @@ bool isDetailLocation(Uri location) => location.pathSegments.length > 1;
 
 /// Hosts the shell branches in the [AdaptiveScaffold]: destinations with the
 /// core's counts (`watch_nav`), the sync pill / block opening the sync sheet,
-/// drawer or popover, search (⌘K / Ctrl+K), the pinned notes and folder tree
-/// on expanded, app lifecycle forwarding and the reminders adapter.
+/// drawer or popover, search (⌘K / Ctrl+K), pull-to-refresh on every screen
+/// (and ⌘R / Ctrl+R), the pinned notes and folder tree on expanded, app
+/// lifecycle forwarding and the reminders adapter.
 ///
 /// The branch navigators live under one [GlobalKey], so their state (stacks,
 /// scroll positions, text being typed) survives every change of size class
@@ -150,6 +153,16 @@ class _AppShellState extends ConsumerState<AppShell> {
     initialLocation: index == widget.navigationShell.currentIndex,
   );
 
+  /// Pull-to-refresh: the core reconnects its live channel, syncs and re-reads
+  /// the server-only data. A failure (offline) shows in the sync pill.
+  Future<void> _refresh() async {
+    try {
+      await ref.read(coreApiProvider).refresh();
+    } on Object {
+      // The sync status says what went wrong.
+    }
+  }
+
   void _openSync() => unawaited(
     showSyncStatus(
       context,
@@ -169,7 +182,16 @@ class _AppShellState extends ConsumerState<AppShell> {
     final body = Semantics(
       container: true,
       explicitChildNodes: true,
-      child: KeyedSubtree(key: _bodyKey, child: widget.navigationShell),
+      child: RefreshIndicator(
+        // Any vertical list of any screen or pane, however deep.
+        notificationPredicate: (n) => n.metrics.axis == Axis.vertical,
+        onRefresh: _refresh,
+        child: ScrollConfiguration(
+          // Short lists can be pulled too.
+          behavior: _PullableScroll(ScrollConfiguration.of(context)),
+          child: KeyedSubtree(key: _bodyKey, child: widget.navigationShell),
+        ),
+      ),
     );
     final Widget shell;
     if (sizeClass == SizeClass.compact && isDetailLocation(widget.location)) {
@@ -219,9 +241,46 @@ class _AppShellState extends ConsumerState<AppShell> {
     }
     return ReminderAdapterHost(
       onOpenTask: (taskId) => TaskRoute(taskId: taskId).go(context),
-      child: shell,
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.keyR, control: true): () =>
+              unawaited(_refresh()),
+          const SingleActivator(LogicalKeyboardKey.keyR, meta: true): () =>
+              unawaited(_refresh()),
+        },
+        child: shell,
+      ),
     );
   }
+}
+
+/// The ambient scroll behavior with lists that scroll (and so can be pulled)
+/// even when their content fits.
+class _PullableScroll extends ScrollBehavior {
+  const new(this.base);
+
+  final ScrollBehavior base;
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) =>
+      AlwaysScrollableScrollPhysics(parent: base.getScrollPhysics(context));
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => base.dragDevices;
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) => base.buildScrollbar(context, child, details);
+
+  @override
+  Widget buildOverscrollIndicator(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) => base.buildOverscrollIndicator(context, child, details);
 }
 
 /// The sidebar's pinned notes (this device's pins, in pin order, from the

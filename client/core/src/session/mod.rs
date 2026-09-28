@@ -66,6 +66,8 @@ pub struct Session {
     /// so it is always taken after `inner` (or alone), never while holding it the other way.
     ask: Arc<Mutex<AskState>>,
     engine: SyncEngine,
+    /// One sync cycle or pull at a time (the background loop, "Sync now", pull-to-refresh).
+    cycle: tokio::sync::Mutex<()>,
     tokens: Arc<CoreTokenProvider>,
 }
 
@@ -129,6 +131,7 @@ impl Session {
             let api = (env.sync_api)(&server_url, provider);
             Session {
                 engine: SyncEngine::new(api),
+                cycle: tokio::sync::Mutex::new(()),
                 env: env.clone(),
                 user_id,
                 inner: Mutex::new(Inner {
@@ -279,6 +282,18 @@ impl Session {
         }
     }
 
+    /// Pull-to-refresh: a sync cycle now (after the one running, if any), then the data only
+    /// the server has (AI status, devices, integrity warnings, the AI activity feed). The
+    /// online-only parts are skipped offline or when they fail; the sync status shows why.
+    pub async fn refresh(&self) -> CoreResult<()> {
+        self.sync(Trigger::Manual).await?;
+        if self.ctx().connectivity != crate::view::model::Connectivity::Offline {
+            let _ = self.refresh_settings().await;
+            let _ = self.refresh_ai_activity().await;
+        }
+        Ok(())
+    }
+
     /// Runs one sync cycle and maps account-level failures to account states.
     pub async fn sync(&self, trigger: Trigger) -> CoreResult<CycleReport> {
         self.sync_with(&self.engine, trigger).await
@@ -286,6 +301,7 @@ impl Session {
 
     /// Pulls without pushing (queued ops are rebased onto what arrives).
     pub async fn pull(&self) -> CoreResult<CycleReport> {
+        let _cycle = self.cycle.lock().await;
         let report = self.engine.pull(self).await?;
         if let CycleOutcome::Failed(e) = &report.outcome {
             self.account_failure(e)?;
@@ -299,6 +315,7 @@ impl Session {
         engine: &SyncEngine,
         trigger: Trigger,
     ) -> CoreResult<CycleReport> {
+        let _cycle = self.cycle.lock().await;
         let report = engine.run_cycle(self, trigger).await?;
         if let CycleOutcome::Failed(e) = &report.outcome {
             self.account_failure(e)?;

@@ -86,6 +86,19 @@ pub fn app_lifecycle(state: AppLifecycle) -> Result<(), CoreFailure> {
     })
 }
 
+/// Pull-to-refresh: reconnects `/events`, re-reads the profile, runs a sync cycle and
+/// re-reads the server-only data (AI status, devices, AI activity). Resolves when done;
+/// offline it resolves after the failed cycle (the sync status says so).
+pub async fn refresh() -> Result<(), CoreFailure> {
+    lift_async(async {
+        let core = core()?;
+        runtime::reconnect_events();
+        let _ = core.refresh_account().await;
+        core.session()?.refresh().await
+    })
+    .await
+}
+
 /// "Sync now".
 pub fn sync_now() -> Result<(), CoreFailure> {
     lift(|| {

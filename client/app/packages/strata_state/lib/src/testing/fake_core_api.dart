@@ -390,6 +390,9 @@ final class FakeCoreApi implements CoreApi {
   /// `syncNow`.
   final FakeAnswer<void> syncNowAnswer = FakeAnswer(null);
 
+  /// `refresh`.
+  final FakeAnswer<void> refreshAnswer = FakeAnswer(null);
+
   /// `checkApproval`.
   final FakeAnswer<SessionState> checkApprovalAnswer = FakeAnswer(
     StrataFixtures.sessionActive,
@@ -937,6 +940,9 @@ final class FakeCoreApi implements CoreApi {
 
   @override
   Future<void> syncNow() => _call(syncNowAnswer, 'syncNow');
+
+  @override
+  Future<void> refresh() => _call(refreshAnswer, 'refresh');
 
   @override
   Future<SessionState> checkApproval() =>

@@ -173,6 +173,36 @@ void main() {
       });
     }
 
+    testWidgets('pulling a screen refreshes', (tester) async {
+      final app = await boot(tester);
+      await go(tester, app, '/notes');
+      await tester.fling(
+        find
+            .byWidgetPredicate(
+              (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+            )
+            .first,
+        const Offset(0, 400),
+        1000,
+      );
+      await settle(tester);
+      expect(app.fake.calls.where((c) => c.method == 'refresh'), [
+        const CoreCall('refresh'),
+      ]);
+    });
+
+    testWidgets('Ctrl+R refreshes', (tester) async {
+      final wide = await boot(tester, size: StrataTestSizes.expanded);
+      await go(tester, wide, '/notes');
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await settle(tester);
+      expect(wide.fake.calls.where((c) => c.method == 'refresh'), [
+        const CoreCall('refresh'),
+      ]);
+    });
+
     testWidgets('app lifecycle is forwarded', (tester) async {
       final app = await boot(tester);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);

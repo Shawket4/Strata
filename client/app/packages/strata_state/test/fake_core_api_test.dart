@@ -64,6 +64,11 @@ void main() {
       answer: null,
     ),
     (
+      invoke: (api) => api.refresh(),
+      call: const CoreCall('refresh'),
+      answer: null,
+    ),
+    (
       invoke: (api) => api.checkApproval(),
       call: const CoreCall('checkApproval'),
       answer: StrataFixtures.sessionActive,
@@ -896,8 +901,8 @@ void main() {
 
   test('covers every Future-returning CoreApi method once', () {
     // 143 facade functions - 22 streams.
-    expect(cases, hasLength(122));
-    expect(cases.map((c) => c.call.method).toSet(), hasLength(122));
+    expect(cases, hasLength(123));
+    expect(cases.map((c) => c.call.method).toSet(), hasLength(123));
   });
 
   for (final c in cases) {

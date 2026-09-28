@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-use tokio::sync::mpsc;
+use tokio::sync::{Notify, mpsc};
 
 use crate::error::{CoreError, CoreResult};
 use crate::session::Core;
@@ -16,6 +16,8 @@ const TIMER: Duration = Duration::from_secs(60);
 struct Runtime {
     core: Arc<Core>,
     trigger: Option<mpsc::UnboundedSender<Trigger>>,
+    /// Asks the `/events` loop to drop its connection and subscribe again at once.
+    reconnect: Arc<Notify>,
 }
 
 static RUNTIME: Mutex<Option<Runtime>> = Mutex::new(None);
@@ -36,17 +38,27 @@ pub(crate) fn core() -> CoreResult<Arc<Core>> {
 /// background loop and its `/events` subscription.
 pub(crate) fn install(core: Core) -> Arc<Core> {
     let core = Arc::new(core);
+    let reconnect = Arc::new(Notify::new());
     let trigger = tokio::runtime::Handle::try_current().ok().map(|handle| {
         let (tx, rx) = mpsc::unbounded_channel();
         handle.spawn(background(core.clone(), rx));
-        handle.spawn(events_loop(core.clone(), tx.clone()));
+        handle.spawn(events_loop(core.clone(), tx.clone(), reconnect.clone()));
         tx
     });
     *lock() = Some(Runtime {
         core: core.clone(),
         trigger,
+        reconnect,
     });
     core
+}
+
+/// Makes the `/events` loop reconnect now (pull-to-refresh: a connection that silently
+/// dropped comes back without waiting for its backoff).
+pub(crate) fn reconnect_events() {
+    if let Some(r) = lock().as_ref() {
+        r.reconnect.notify_one();
+    }
 }
 
 /// Wakes the background loop.
@@ -108,10 +120,11 @@ async fn background(core: Arc<Core>, mut rx: mpsc::UnboundedReceiver<Trigger>) {
 
 /// The `/events` subscription of the active session (§12.4: events only trigger pulls):
 /// resumes from the saved seq, pulls on every change or reset, applies `account.disabled`,
-/// re-subscribes with backoff after a drop and whenever the active session changes.
-async fn events_loop(core: Arc<Core>, tx: mpsc::UnboundedSender<Trigger>) {
+/// re-subscribes with backoff after a drop and whenever the active session changes, and at
+/// once when asked to ([`reconnect_events`]).
+async fn events_loop(core: Arc<Core>, tx: mpsc::UnboundedSender<Trigger>, reconnect: Arc<Notify>) {
     let mut failures = 0u32;
-    loop {
+    'subscribe: loop {
         let generation = core.generation();
         let Ok(session) = core.session() else {
             tokio::time::sleep(Duration::from_secs(2)).await;
@@ -145,6 +158,12 @@ async fn events_loop(core: Arc<Core>, tx: mpsc::UnboundedSender<Trigger>) {
                         }
                         None => break,
                     },
+                    () = reconnect.notified() => {
+                        failures = 0;
+                        drop(stream);
+                        drop(session);
+                        continue 'subscribe;
+                    }
                     () = tokio::time::sleep(Duration::from_secs(1)) => {
                         if core.generation() != generation {
                             break;
@@ -154,6 +173,9 @@ async fn events_loop(core: Arc<Core>, tx: mpsc::UnboundedSender<Trigger>) {
             },
         }
         drop(session);
-        tokio::time::sleep(backoff_delay(failures.max(1))).await;
+        tokio::select! {
+            () = tokio::time::sleep(backoff_delay(failures.max(1))) => {}
+            () = reconnect.notified() => failures = 0,
+        }
     }
 }

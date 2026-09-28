@@ -4,6 +4,9 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Owner decision: pull-to-refresh on every screen, also reconnecting the live channel
+Picked over "sync only" and "sync + screen data". Pulling down any screen (any vertical list, at any depth, short lists included), or ⌘R / Ctrl+R on desktop, runs `refresh`: the core drops and re-opens its `/events` connection at once (a connection that silently died comes back without waiting for its backoff), re-reads the profile, runs a sync cycle and re-reads the server-only data (AI status, devices, integrity warnings, AI activity). The spinner stays until the cycle ends; offline it ends after the failed cycle and the sync pill says why. Sync cycles and pulls now run one at a time per session (the background loop, "Sync now" and pull-to-refresh could overlap before).
+
 ### Owner decision: the AI answers captures, replies and corrections at once, reported over `/events`
 Picked over a per-request stream and over adding SSE (which would change L21). Captures, replies to suggestions and corrections still travel as outbox ops (so they work offline); once on the server:
 - **Interactive jobs** (`file_inbox`, `suggestion_reply`, `correct`) are claimed before any other due work and may use one slot beyond `jobs.max_concurrency`, so they never wait behind nightly or weekly jobs. Other work still stops at `max_concurrency`.

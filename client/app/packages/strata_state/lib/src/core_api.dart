@@ -52,6 +52,10 @@ abstract interface class CoreApi {
   /// "Sync now".
   Future<void> syncNow();
 
+  /// Pull-to-refresh: reconnects the live channel, syncs and re-reads the
+  /// server-only data; completes when done (offline too).
+  Future<void> refresh();
+
   /// "Check again" on the waiting-for-approval screen (uses the sign-in kept in
   /// memory).
   Future<SessionState> checkApproval();

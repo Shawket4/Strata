@@ -119,6 +119,9 @@ final class BridgeCoreApi implements CoreApi {
   Future<void> syncNow() => bridge.syncNow();
 
   @override
+  Future<void> refresh() => bridge.refresh();
+
+  @override
   Future<SessionState> checkApproval() => bridge.checkApproval();
 
   @override
