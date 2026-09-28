@@ -4,6 +4,11 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Times, creation stamps and titles (owner)
+- **Times:** the server stores and writes every time in UTC; every surface converts to the client's time zone for display. File names that contain a time (conflict copies) use UTC on both sides, because they are vault content shared by all devices and Obsidian.
+- **Device creation time is required:** every create op (entity, document, place, task note) carries the device's `created` time, and the server writes it as `created`/`updated`. It never substitutes its receive time, so an item created offline on Monday keeps Monday after syncing on Wednesday. The server refuses times implausibly far in the future. Device and server write identical bytes.
+- **Title rule:** `title` is written whenever the file stem differs from the item's name (for example `Ahmed 2.md` gets `title: Ahmed`), for user and AI creates alike.
+
 ### Graph API
 - `GET /graph` and `/graph/local` take `types` (edge kinds) and an additional `kinds` (node kinds) filter, because "concept" is both a node and an edge kind. Global similarity edges are computed exactly over the 2,000 most recently updated notes (response marked `truncated` beyond that). Clusters smaller than 3 notes stay unclustered; resolution is the user preference `graph.cluster_resolution` (default 1.0); user-given cluster names are never replaced.
 
