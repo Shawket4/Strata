@@ -23,9 +23,15 @@ class ManifestException {
 }
 
 class CrateInfo {
-  CrateInfo({required this.packageName});
+  CrateInfo({required this.packageName, String? libraryName})
+      : libraryName = libraryName ?? packageName.replaceAll('-', '_');
 
   final String packageName;
+
+  /// Name of the built library files (`[lib] name`, else the package name with
+  /// `-` replaced by `_`, as cargo does). Strata: package `strata-core`,
+  /// library `strata_core`.
+  final String libraryName;
 
   static CrateInfo parseManifest(String manifest, {final String? fileName}) {
     final toml = TomlDocument.parse(manifest);
@@ -37,7 +43,9 @@ class CrateInfo {
     if (name == null) {
       throw ManifestException('Missing package name', fileName: fileName);
     }
-    return CrateInfo(packageName: name);
+    final lib = toml.toMap()['lib'];
+    final libName = lib is Map ? lib['name'] as String? : null;
+    return CrateInfo(packageName: name, libraryName: libName);
   }
 
   static CrateInfo load(String manifestDir) {
