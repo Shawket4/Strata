@@ -714,14 +714,26 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     .await
     .expect("task");
     let text = format!("Ask Watanya about the plan {secret}");
-    api::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.clone() })
-        .await
-        .expect("capture");
-    let suggestion = api::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text })
-        .await
-        .expect("capture")
-        .suggestion_id
-        .expect("duplicate suggestion");
+    api::capture(
+        c,
+        &types::CaptureRequest {
+            created: strata_common::clock::default_test_epoch(),
+            text: text.clone(),
+        },
+    )
+    .await
+    .expect("capture");
+    let suggestion = api::capture(
+        c,
+        &types::CaptureRequest {
+            created: strata_common::clock::default_test_epoch(),
+            text,
+        },
+    )
+    .await
+    .expect("capture")
+    .suggestion_id
+    .expect("duplicate suggestion");
     let commit = api::get_note_history(c, note.id)
         .await
         .expect("history")

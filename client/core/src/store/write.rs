@@ -604,4 +604,3 @@ pub fn describe_create(op: &Op) -> (String, String) {
         other => (other.kind().as_str().to_owned(), String::new()),
     }
 }
-

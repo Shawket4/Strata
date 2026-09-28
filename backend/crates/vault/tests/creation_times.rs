@@ -112,7 +112,10 @@ async fn creates_write_the_device_creation_time_in_utc() {
         .expect("person");
     assert_eq!(
         w.read(u, "people/Ahmed.md"),
-        format!("---\nid: {}\nkind: person\n{MONDAY}---\n## Notes\n", ahmed.id)
+        format!(
+            "---\nid: {}\nkind: person\n{MONDAY}---\n## Notes\n",
+            ahmed.id
+        )
     );
 
     // A task made at 22:30Z on 30 September — 1 October, 01:30 in Cairo — goes under
@@ -157,14 +160,23 @@ async fn creation_times_in_the_future_are_refused() {
         .capture(&s, "early".into(), late)
         .await
         .expect_err("refused");
-    assert!(matches!(err, VaultError::CreatedInFuture { max_skew_secs: 300 }), "{err:?}");
+    assert!(
+        matches!(err, VaultError::CreatedInFuture { max_skew_secs: 300 }),
+        "{err:?}"
+    );
     assert!(matches!(
         w.vault.create_entity(&s, person("Mona", late)).await,
         Err(VaultError::CreatedInFuture { max_skew_secs: 300 })
     ));
     assert!(matches!(
         w.vault
-            .create_task(&s, NewTask { text: "x".into(), ..NewTask::new(late) })
+            .create_task(
+                &s,
+                NewTask {
+                    text: "x".into(),
+                    ..NewTask::new(late)
+                }
+            )
             .await,
         Err(VaultError::CreatedInFuture { max_skew_secs: 300 })
     ));
@@ -186,7 +198,9 @@ async fn creation_times_in_the_future_are_refused() {
     assert_eq!(w.log(u).len(), commits, "nothing written");
     assert_eq!(
         strata_common::DomainError::public_detail(&refused).as_deref(),
-        Some("`created` is more than 300 seconds ahead of the server's clock; check the device's clock")
+        Some(
+            "`created` is more than 300 seconds ahead of the server's clock; check the device's clock"
+        )
     );
 
     let edge = now + chrono::Duration::seconds(300);
@@ -208,7 +222,11 @@ async fn creation_times_in_the_future_are_refused() {
     );
     assert!(matches!(
         strict
-            .capture(&s, "two minutes early".into(), now + chrono::Duration::seconds(61))
+            .capture(
+                &s,
+                "two minutes early".into(),
+                now + chrono::Duration::seconds(61)
+            )
             .await,
         Err(VaultError::CreatedInFuture { max_skew_secs: 60 })
     ));

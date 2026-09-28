@@ -81,7 +81,11 @@ fn scripted(cfg: &mut web::ServiceConfig) {
     )
     .route(
         "/json",
-        web::get().to(|| async { HttpResponse::Ok().content_type("application/json").body("{}") }),
+        web::get().to(|| async {
+            HttpResponse::Ok()
+                .content_type("application/json")
+                .body("{}")
+        }),
     )
     .route(
         "/untyped",
@@ -281,7 +285,13 @@ async fn successes_that_break_the_contract_are_typed_errors() {
         .await
         .expect_err("shape");
     assert!(
-        matches!(&err, Error::Decode { operation: "scripted", .. }),
+        matches!(
+            &err,
+            Error::Decode {
+                operation: "scripted",
+                ..
+            }
+        ),
         "{err:?}"
     );
 
@@ -296,15 +306,9 @@ async fn successes_that_break_the_contract_are_typed_errors() {
         .expect("204");
 
     // Zip downloads ask for the archive and return its bytes; anything else is unexpected.
-    let bytes = client
-        .send_zip(get("/export.zip"))
-        .await
-        .expect("archive");
+    let bytes = client.send_zip(get("/export.zip")).await.expect("archive");
     assert_eq!(bytes.as_ref(), b"PK\x05\x06zip");
-    let err = client
-        .send_zip(get("/json"))
-        .await
-        .expect_err("not a zip");
+    let err = client.send_zip(get("/json")).await.expect_err("not a zip");
     assert!(
         matches!(err, Error::UnexpectedResponse { status: 200, .. }),
         "{err:?}"
@@ -316,7 +320,9 @@ async fn every_problem_type_decodes_into_its_variant() {
     let (_server, client) = server();
     let cases: Vec<(&str, u16, fn(&ApiError) -> bool)> = vec![
         ("not_found", 404, |e| matches!(e, ApiError::NotFound(_))),
-        ("unauthorized", 401, |e| matches!(e, ApiError::Unauthorized(_))),
+        ("unauthorized", 401, |e| {
+            matches!(e, ApiError::Unauthorized(_))
+        }),
         ("forbidden", 403, |e| matches!(e, ApiError::Forbidden(_))),
         ("account_pending", 403, |e| {
             matches!(e, ApiError::AccountPending(_))
@@ -327,19 +333,31 @@ async fn every_problem_type_decodes_into_its_variant() {
         ("account_deletion_pending", 403, |e| {
             matches!(e, ApiError::AccountDeletionPending(_))
         }),
-        ("version_conflict", 409, |e| {
-            matches!(e, ApiError::VersionConflict { current_version: Some(v), .. } if v == "v7")
+        (
+            "version_conflict",
+            409,
+            |e| matches!(e, ApiError::VersionConflict { current_version: Some(v), .. } if v == "v7"),
+        ),
+        (
+            "duplicate_candidates",
+            409,
+            |e| matches!(e, ApiError::DuplicateCandidates { candidates, .. } if candidates.len() == 1),
+        ),
+        ("invalid_body", 422, |e| {
+            matches!(e, ApiError::InvalidBody(_))
         }),
-        ("duplicate_candidates", 409, |e| {
-            matches!(e, ApiError::DuplicateCandidates { candidates, .. } if candidates.len() == 1)
-        }),
-        ("invalid_body", 422, |e| matches!(e, ApiError::InvalidBody(_))),
         ("invalid_parameter", 422, |e| {
             matches!(e, ApiError::InvalidParameter(_))
         }),
-        ("epoch_changed", 410, |e| matches!(e, ApiError::EpochChanged(_))),
-        ("rate_limited", 429, |e| matches!(e, ApiError::RateLimited(_))),
-        ("payload_too_large", 413, |e| matches!(e, ApiError::Other(_))),
+        ("epoch_changed", 410, |e| {
+            matches!(e, ApiError::EpochChanged(_))
+        }),
+        ("rate_limited", 429, |e| {
+            matches!(e, ApiError::RateLimited(_))
+        }),
+        ("payload_too_large", 413, |e| {
+            matches!(e, ApiError::Other(_))
+        }),
     ];
     for (type_, status, is_variant) in cases {
         let err = client

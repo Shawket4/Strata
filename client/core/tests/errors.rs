@@ -247,7 +247,13 @@ fn every_core_error_has_a_stable_code_and_carries_only_ids_and_codes() {
                 field: "path".to_owned(),
                 reason: "forbidden_char".to_owned(),
             },
-            failure("invalid_input", Some("path"), Some("forbidden_char"), None, None),
+            failure(
+                "invalid_input",
+                Some("path"),
+                Some("forbidden_char"),
+                None,
+                None,
+            ),
             "invalid path: forbidden_char",
         ),
         (
@@ -463,7 +469,9 @@ async fn endpoints_a_transport_does_not_implement_answer_not_available() {
         Err(na("ask"))
     );
     assert_eq!(
-        api.ask_stream(url(), t(), id()).map(|_| ()).expect_err("stream"),
+        api.ask_stream(url(), t(), id())
+            .map(|_| ())
+            .expect_err("stream"),
         na("ask_stream")
     );
     assert_eq!(
@@ -483,10 +491,7 @@ async fn endpoints_a_transport_does_not_implement_answer_not_available() {
             .await,
         Err(na("retype_ai_decision"))
     );
-    assert_eq!(
-        api.similarity_edges(url(), t()).await,
-        Err(na("get_graph"))
-    );
+    assert_eq!(api.similarity_edges(url(), t()).await, Err(na("get_graph")));
     assert_eq!(
         api.put_map(url(), t(), id(), "{}".to_owned()).await,
         Err(na("put_map"))

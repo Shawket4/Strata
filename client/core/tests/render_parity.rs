@@ -530,8 +530,11 @@ async fn server_and_device_render_new_items_identically() {
 
     // The month heading is the creation date in the user's time zone: 22:30Z on 30 September
     // is 1 October in Cairo (the server's clock moves past it first; the op's time is used).
-    s.db.clock
-        .set(DateTime::parse_from_rfc3339("2026-10-02T09:00:00Z").expect("ts").to_utc());
+    s.db.clock.set(
+        DateTime::parse_from_rfc3339("2026-10-02T09:00:00Z")
+            .expect("ts")
+            .to_utc(),
+    );
     let second = ops::TaskCreate {
         created: DateTime::parse_from_rfc3339("2026-09-30T22:30:00Z")
             .expect("ts")

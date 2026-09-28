@@ -151,14 +151,26 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     .await
     .expect("task");
     let text = "Ask Watanya about the quarterly plan";
-    ops::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.into() })
-        .await
-        .expect("capture");
-    let suggestion = ops::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.into() })
-        .await
-        .expect("capture")
-        .suggestion_id
-        .expect("suggestion");
+    ops::capture(
+        c,
+        &types::CaptureRequest {
+            created: strata_common::clock::default_test_epoch(),
+            text: text.into(),
+        },
+    )
+    .await
+    .expect("capture");
+    let suggestion = ops::capture(
+        c,
+        &types::CaptureRequest {
+            created: strata_common::clock::default_test_epoch(),
+            text: text.into(),
+        },
+    )
+    .await
+    .expect("capture")
+    .suggestion_id
+    .expect("suggestion");
     let commit = ops::get_note_history(c, note.id)
         .await
         .expect("history")

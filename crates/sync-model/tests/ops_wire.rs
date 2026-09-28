@@ -311,7 +311,12 @@ fn every_kind_has_a_sample_that_round_trips_and_validates() {
                 | Op::TaskCreate(_)
                 | Op::SuggestionAccept(_)
         );
-        assert_eq!(op.op.created(), creates.then(t).as_ref(), "{}", op.op.kind());
+        assert_eq!(
+            op.op.created(),
+            creates.then(t).as_ref(),
+            "{}",
+            op.op.kind()
+        );
     }
     let request = PushRequest { ops };
     assert_eq!(request.validate(), Ok(()));
@@ -380,7 +385,8 @@ fn creation_times_are_required_and_utc() {
     let payload = json!({"id": "00000000000000000000000002", "text": "x", "created": "2026-09-27T14:32:00+03:00"});
     let bytes = rmp_serde::to_vec_named(&payload).unwrap();
     assert_eq!(Op::from_parts(OpKind::Capture, &bytes), Ok(capture));
-    let without = json!({"id": "00000000000000000000000001", "path": "notes/A.md", "content": "# A\n"});
+    let without =
+        json!({"id": "00000000000000000000000001", "path": "notes/A.md", "content": "# A\n"});
     let err = Op::from_parts(
         OpKind::NoteCreate,
         &rmp_serde::to_vec_named(&without).unwrap(),

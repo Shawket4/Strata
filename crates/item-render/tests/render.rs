@@ -84,7 +84,9 @@ fn a_taken_name_is_kept_as_title() {
     assert_eq!(path, "people/Ahmed 2.md");
     assert_eq!(
         spec.render(id(ID), &path, &created()).unwrap(),
-        format!("---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: person\ntitle: Ahmed\n{STAMP}---\n## Notes\n")
+        format!(
+            "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: person\ntitle: Ahmed\n{STAMP}---\n## Notes\n"
+        )
     );
     // The name free: no title.
     assert_eq!(
@@ -99,7 +101,9 @@ fn a_name_that_is_not_a_file_name_is_kept_as_title() {
     assert_eq!(spec.stem(), "Q3 - plan - review");
     assert_eq!(
         spec.render(id(ID), &spec.path([]), &created()).unwrap(),
-        format!("---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: company\ntitle: \"Q3: plan / review\"\n{STAMP}---\n## Notes\n")
+        format!(
+            "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: company\ntitle: \"Q3: plan / review\"\n{STAMP}---\n## Notes\n"
+        )
     );
 }
 
@@ -118,7 +122,9 @@ fn ops_become_specs() {
         EntitySpec::from_entity_create(&entity)
             .render(entity.id, "people/Shady.md", &entity.created)
             .unwrap(),
-        format!("---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: person\naliases: [شادي]\n{STAMP}phone: +20 100\n---\n## Notes\n")
+        format!(
+            "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: person\naliases: [شادي]\n{STAMP}phone: +20 100\n---\n## Notes\n"
+        )
     );
 
     let original = id("01J8ZK3M4X7Q9W2E5R6T8Y0V1A");
@@ -165,9 +171,11 @@ fn ops_become_specs() {
         EntitySpec::from_document_create(&doc, texts)
             .render(doc.id, "documents/Watanya contract (copy).md", &doc.created)
             .unwrap(),
-        format!("---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: document\n{STAMP}doc-type: contract\ncopy: certified copy\n\
+        format!(
+            "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: document\n{STAMP}doc-type: contract\ncopy: certified copy\n\
          expires: 2027-03-31\npeople: [\"[[people/Shady]]\"]\ncompanies: [\"[[Watanya]]\"]\n\
-         copy-of: [\"[[Watanya contract]]\"]\n---\n## Notes\n")
+         copy-of: [\"[[Watanya contract]]\"]\n---\n## Notes\n"
+        )
     );
 
     let place = PlaceCreate {
@@ -185,10 +193,16 @@ fn ops_become_specs() {
     );
     assert_eq!(
         EntitySpec::from_place_create(&place, Some("Nasr City office".into()))
-            .render(place.id, "places/Safe — Nasr City office.md", &place.created)
+            .render(
+                place.id,
+                "places/Safe — Nasr City office.md",
+                &place.created
+            )
             .unwrap(),
-        format!("---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: place\naliases: [الخزنة]\n{STAMP}address: \"\"\n\
-         part-of: [\"[[Nasr City office]]\"]\n---\n## Notes\n")
+        format!(
+            "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nkind: place\naliases: [الخزنة]\n{STAMP}address: \"\"\n\
+         part-of: [\"[[Nasr City office]]\"]\n---\n## Notes\n"
+        )
     );
 }
 

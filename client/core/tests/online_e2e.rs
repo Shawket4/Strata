@@ -18,9 +18,9 @@ use strata_core::store::notes;
 use strata_core::sync::engine::Trigger;
 use strata_core::view::build;
 use strata_core::view::model::{
-    AdminUserItem, Availability, DiffLine, DiffLineKind, HighlightSpan, HistoryEntry, ImportSummary,
-    NewUserRequest, NodePosition, NoteDiffView, SearchMode, SearchView, SessionKind, SignUpRequest,
-    TextDir,
+    AdminUserItem, Availability, DiffLine, DiffLineKind, HighlightSpan, HistoryEntry,
+    ImportSummary, NewUserRequest, NodePosition, NoteDiffView, SearchMode, SearchView, SessionKind,
+    SignUpRequest, TextDir,
 };
 use strata_index::types::UserRole;
 use world::World;
@@ -99,10 +99,7 @@ async fn devices_are_listed_renamed_muted_and_revoked() {
         [(LAPTOP.to_owned(), "device 1".to_owned(), true, false)]
     );
     // The revoked device's session is gone.
-    assert_eq!(
-        s2.refresh_settings().await,
-        Err(CoreError::SessionExpired)
-    );
+    assert_eq!(s2.refresh_settings().await, Err(CoreError::SessionExpired));
     assert_eq!(
         phone.core.state().expect("state").kind,
         SessionKind::SignedOut
@@ -250,7 +247,11 @@ async fn history_diff_and_revert_come_from_the_server() {
         .id
         .expect("id");
     s.sync(Trigger::AfterWrite).await.expect("push");
-    let v1 = s.read(|c, _| notes::current(c, &id)).expect("read").expect("note").content;
+    let v1 = s
+        .read(|c, _| notes::current(c, &id))
+        .expect("read")
+        .expect("note")
+        .content;
     s.update_note(&id, &v1.replace("Second.", "Second, edited."))
         .expect("edit");
     s.sync(Trigger::AfterWrite).await.expect("push");
@@ -332,7 +333,10 @@ async fn history_diff_and_revert_come_from_the_server() {
     s.revert_note(&id, &first).await.expect("revert");
     s.sync(Trigger::Manual).await.expect("pull");
     assert_eq!(
-        s.read(|c, _| notes::current(c, &id)).expect("read").expect("note").content,
+        s.read(|c, _| notes::current(c, &id))
+            .expect("read")
+            .expect("note")
+            .content,
         v1
     );
     assert_eq!(
@@ -370,7 +374,11 @@ async fn server_search_export_and_import() {
             mode: SearchMode::Hybrid,
             results: Vec::new(),
             availability: Availability::Available,
-            available_modes: vec![SearchMode::Keyword, SearchMode::Semantic, SearchMode::Hybrid],
+            available_modes: vec![
+                SearchMode::Keyword,
+                SearchMode::Semantic,
+                SearchMode::Hybrid
+            ],
             folder: None,
         }
     );
@@ -405,7 +413,11 @@ async fn server_search_export_and_import() {
         .expect("semantic");
     // No embedding model on this server: semantic search is "not yet available", not an error.
     assert_eq!(
-        (semantic.availability, semantic.results.len(), semantic.folder.as_deref()),
+        (
+            semantic.availability,
+            semantic.results.len(),
+            semantic.folder.as_deref()
+        ),
         (Availability::NotYetAvailable, 0, Some("notes"))
     );
 
@@ -445,9 +457,7 @@ async fn server_search_export_and_import() {
         }
     );
     b.sync(Trigger::Manual).await.expect("pull");
-    let titles = b
-        .read(|c, _| notes::live_paths(c))
-        .expect("paths");
+    let titles = b.read(|c, _| notes::live_paths(c)).expect("paths");
     assert_eq!(
         titles.into_iter().map(|(_, p)| p).collect::<Vec<_>>(),
         ["notes/Pricing.md", "notes/Travel.md"]
@@ -524,14 +534,32 @@ async fn admins_manage_accounts_from_the_users_screen() {
     assert_eq!(
         view.pending.iter().map(row).collect::<Vec<_>>(),
         [
-            ("carol".into(), "member".into(), "pending".into(), false, None, false),
-            ("dave".into(), "member".into(), "pending".into(), false, None, false),
+            (
+                "carol".into(),
+                "member".into(),
+                "pending".into(),
+                false,
+                None,
+                false
+            ),
+            (
+                "dave".into(),
+                "member".into(),
+                "pending".into(),
+                false,
+                None,
+                false
+            ),
         ]
     );
     assert_eq!(
         view.pending
             .iter()
-            .map(|u| (u.display_name.as_str(), u.initials.as_str(), u.created_label.as_str()))
+            .map(|u| (
+                u.display_name.as_str(),
+                u.initials.as_str(),
+                u.created_label.as_str()
+            ))
             .collect::<Vec<_>>(),
         [
             ("Carol", "C", "Requested just now"),
@@ -541,23 +569,73 @@ async fn admins_manage_accounts_from_the_users_screen() {
     assert_eq!(
         view.users.iter().map(row).collect::<Vec<_>>(),
         [
-            ("alice".into(), "member".into(), "active".into(), false, None, false),
-            ("root".into(), "admin".into(), "active".into(), true, None, false),
+            (
+                "alice".into(),
+                "member".into(),
+                "active".into(),
+                false,
+                None,
+                false
+            ),
+            (
+                "root".into(),
+                "admin".into(),
+                "active".into(),
+                true,
+                None,
+                false
+            ),
         ]
     );
     assert_eq!(view.users[0].created_label, "Joined 27 Sep 2026");
-    let carol_id = view.pending.iter().find(|u| u.username == "carol").expect("carol").id.clone();
-    let dave_id = view.pending.iter().find(|u| u.username == "dave").expect("dave").id.clone();
+    let carol_id = view
+        .pending
+        .iter()
+        .find(|u| u.username == "carol")
+        .expect("carol")
+        .id
+        .clone();
+    let dave_id = view
+        .pending
+        .iter()
+        .find(|u| u.username == "dave")
+        .expect("dave")
+        .id
+        .clone();
     let filtered = admin.admin_users("ALI").await.expect("filtered");
     assert_eq!(
-        filtered.users.iter().map(|u| u.username.as_str()).collect::<Vec<_>>(),
+        filtered
+            .users
+            .iter()
+            .map(|u| u.username.as_str())
+            .collect::<Vec<_>>(),
         ["alice"]
     );
 
     let approved = admin.approve_user(&carol_id).await.expect("approve");
-    assert_eq!(row(&approved), ("carol".into(), "member".into(), "active".into(), false, None, false));
+    assert_eq!(
+        row(&approved),
+        (
+            "carol".into(),
+            "member".into(),
+            "active".into(),
+            false,
+            None,
+            false
+        )
+    );
     let rejected = admin.reject_user(&dave_id).await.expect("reject");
-    assert_eq!(row(&rejected), ("dave".into(), "member".into(), "rejected".into(), false, None, false));
+    assert_eq!(
+        row(&rejected),
+        (
+            "dave".into(),
+            "member".into(),
+            "rejected".into(),
+            false,
+            None,
+            false
+        )
+    );
 
     // Role, status and password changes; never on the admin's own account.
     assert_eq!(
@@ -575,10 +653,26 @@ async fn admins_manage_accounts_from_the_users_screen() {
         })
     );
     let promoted = admin.set_user_role(&carol_id, "admin").await.expect("role");
-    assert_eq!(row(&promoted), ("carol".into(), "admin".into(), "active".into(), false, None, false));
-    let disabled = admin.set_user_enabled(&carol_id, false).await.expect("disable");
+    assert_eq!(
+        row(&promoted),
+        (
+            "carol".into(),
+            "admin".into(),
+            "active".into(),
+            false,
+            None,
+            false
+        )
+    );
+    let disabled = admin
+        .set_user_enabled(&carol_id, false)
+        .await
+        .expect("disable");
     assert_eq!(disabled.status, "disabled");
-    let enabled = admin.set_user_enabled(&carol_id, true).await.expect("enable");
+    let enabled = admin
+        .set_user_enabled(&carol_id, true)
+        .await
+        .expect("enable");
     assert_eq!(enabled.status, "active");
     let temporary = admin.reset_password(&carol_id).await.expect("reset");
     assert_eq!(temporary.chars().count(), 16, "{temporary}");
@@ -621,7 +715,17 @@ async fn admins_manage_accounts_from_the_users_screen() {
         })
         .await
         .expect("create");
-    assert_eq!(row(&erin), ("erin".into(), "member".into(), "active".into(), false, None, false));
+    assert_eq!(
+        row(&erin),
+        (
+            "erin".into(),
+            "member".into(),
+            "active".into(),
+            false,
+            None,
+            false
+        )
+    );
     let taken = admin
         .create_user(NewUserRequest {
             username: "ERIN".into(),
@@ -660,8 +764,21 @@ async fn admins_manage_accounts_from_the_users_screen() {
         )
     );
     let cancelled = admin.cancel_deletion(&alice_id).await.expect("cancel");
-    assert_eq!(row(&cancelled), ("alice".into(), "member".into(), "active".into(), false, None, false));
-    admin.schedule_deletion(&alice_id).await.expect("schedule again");
+    assert_eq!(
+        row(&cancelled),
+        (
+            "alice".into(),
+            "member".into(),
+            "active".into(),
+            false,
+            None,
+            false
+        )
+    );
+    admin
+        .schedule_deletion(&alice_id)
+        .await
+        .expect("schedule again");
     // Scheduling revokes the member's sessions.
     assert_eq!(
         alice_device.core.refresh_account().await,
@@ -691,7 +808,11 @@ async fn admins_manage_accounts_from_the_users_screen() {
         .await
         .expect("export-only session downloads");
     assert_eq!(summary.note_count, 0);
-    let after = alice_device.core.delete_account_now(false).await.expect("deleted");
+    let after = alice_device
+        .core
+        .delete_account_now(false)
+        .await
+        .expect("deleted");
     assert_eq!(
         (after.kind, after.known_accounts.len()),
         (SessionKind::SignedOut, 0)
@@ -705,22 +826,43 @@ async fn admins_manage_accounts_from_the_users_screen() {
     );
     drop(carol);
 
+    // Alice confirmed her deletion: she is gone from the list.
     let everyone = admin.admin_users("").await.expect("users");
     assert_eq!(
         everyone.users.iter().map(row).collect::<Vec<_>>(),
         [
             (
-                "alice".into(),
+                "carol".into(),
+                "admin".into(),
+                "active".into(),
+                false,
+                None,
+                true
+            ),
+            (
+                "dave".into(),
                 "member".into(),
-                "deleted".into(),
+                "rejected".into(),
                 false,
                 None,
                 false
             ),
-            ("carol".into(), "admin".into(), "active".into(), false, None, true),
-            ("dave".into(), "member".into(), "rejected".into(), false, None, false),
-            ("erin".into(), "member".into(), "active".into(), false, None, false),
-            ("root".into(), "admin".into(), "active".into(), true, None, false),
+            (
+                "erin".into(),
+                "member".into(),
+                "active".into(),
+                false,
+                None,
+                false
+            ),
+            (
+                "root".into(),
+                "admin".into(),
+                "active".into(),
+                true,
+                None,
+                false
+            ),
         ]
     );
     w.finish().await;
@@ -882,11 +1024,26 @@ async fn ask_streams_an_answer_into_the_conversation_and_saves_it() {
     assert_eq!(
         view.messages
             .iter()
-            .map(|m| (m.role.as_str(), m.text.as_str(), m.scope_label.as_str(), m.created_label.as_str()))
+            .map(|m| (
+                m.role.as_str(),
+                m.text.as_str(),
+                m.scope_label.as_str(),
+                m.created_label.as_str()
+            ))
             .collect::<Vec<_>>(),
         [
-            ("user", "What does Acme prefer?", "Scope: All notes", "12:00"),
-            ("assistant", "Weekly invoicing Call#^inv.", "Scope: All notes", "12:00"),
+            (
+                "user",
+                "What does Acme prefer?",
+                "Scope: All notes",
+                "12:00"
+            ),
+            (
+                "assistant",
+                "Weekly invoicing Call#^inv.",
+                "Scope: All notes",
+                "12:00"
+            ),
         ]
     );
     assert!(!view.streaming);

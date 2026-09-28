@@ -145,7 +145,8 @@ fn an_unreadable_or_invalid_config_exits_with_status_2() {
         .arg("migrate"));
     assert_eq!(out.status.code(), Some(2));
     assert!(
-        stderr(&out).starts_with("stratad: invalid environment override STRATA__JOBS__MAX_CONCURRENCY: "),
+        stderr(&out)
+            .starts_with("stratad: invalid environment override STRATA__JOBS__MAX_CONCURRENCY: "),
         "{}",
         stderr(&out)
     );
@@ -271,7 +272,11 @@ async fn create_user_verify_and_reindex_report_on_the_console() {
         .expect("query")
         .expect("exists");
     assert_eq!(
-        (user.username.as_str(), user.display_name.as_str(), user.role),
+        (
+            user.username.as_str(),
+            user.display_name.as_str(),
+            user.role
+        ),
         ("owner", "owner", strata_index::types::UserRole::Admin)
     );
 
@@ -470,7 +475,13 @@ async fn serve_fails_on_an_occupied_address_after_the_checks() {
     assert_eq!(err, "stratad: Address already in use (os error 98)\n");
     let messages = log_messages(&log);
     assert_eq!(
-        messages.iter().rev().take(2).rev().cloned().collect::<Vec<_>>(),
+        messages
+            .iter()
+            .rev()
+            .take(2)
+            .rev()
+            .cloned()
+            .collect::<Vec<_>>(),
         ["stratad stopped", "stratad failed"]
     );
     drop(occupied);

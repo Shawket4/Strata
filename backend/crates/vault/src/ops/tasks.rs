@@ -244,13 +244,15 @@ impl Core {
         };
         let mut doc = Document::parse(&text);
         let heading = item_render::task::heading_date(&req.created, tz);
-        let body = apply_task_create(doc.body(), &op, heading, doc.line_ending())
-            .map_err(|e| match e {
-                ApplyError::TaskExists(_) => {
-                    VaultError::invalid("a task with this id already exists")
-                }
-                _ => VaultError::invalid("the task line is invalid"),
-            })?;
+        let body =
+            apply_task_create(doc.body(), &op, heading, doc.line_ending()).map_err(
+                |e| match e {
+                    ApplyError::TaskExists(_) => {
+                        VaultError::invalid("a task with this id already exists")
+                    }
+                    _ => VaultError::invalid("the task line is invalid"),
+                },
+            )?;
         doc.set_body(body);
         // A new home note gets its id and the device's creation time; an existing one keeps
         // `updated` (the device's optimistic apply of `task.create` writes the same bytes).

@@ -543,11 +543,8 @@ impl Session {
                         .map_or_else(|| "notes/Conflict.md".to_owned(), |n| n.path);
                     // Named in UTC, like the server's copies (vault content every device and
                     // Obsidian share).
-                    let copy_path = item_render::paths::conflict_copy_path(
-                        &path,
-                        &self.env.clock.now(),
-                        1,
-                    );
+                    let copy_path =
+                        item_render::paths::conflict_copy_path(&path, &self.env.clock.now(), 1);
                     let body = vault_format::Document::parse(&local).body().to_owned();
                     self.create_note(&copy_path, &body, true)?;
                 }

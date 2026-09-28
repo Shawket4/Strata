@@ -157,7 +157,8 @@ impl VaultService {
         text: String,
         created: chrono::DateTime<chrono::Utc>,
     ) -> Result<Captured> {
-        on_actor!(self, scope, |core, s| core.capture_as(s, text, None, created))
+        on_actor!(self, scope, |core, s| core
+            .capture_as(s, text, None, created))
     }
 
     /// A capture pushed by a device: client-generated ID and capture time (sync).

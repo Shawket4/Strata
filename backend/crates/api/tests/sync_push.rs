@@ -664,7 +664,8 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             Op::Capture(o::Capture {
                 id: id(i),
                 text: "Call the notary".into(),
-                created: (at + chrono::Duration::seconds(i64::try_from(i).expect("small"))).to_utc(),
+                created: (at + chrono::Duration::seconds(i64::try_from(i).expect("small")))
+                    .to_utc(),
             }),
         )
     };

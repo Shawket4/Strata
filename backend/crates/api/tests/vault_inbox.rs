@@ -39,9 +39,15 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
     let alice = h.user("alice").await;
     let c = &alice.client;
     let text = "Call Watanya about the ETA invoice for October";
-    let first = ops::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.into() })
-        .await
-        .expect("capture");
+    let first = ops::capture(
+        c,
+        &types::CaptureRequest {
+            created: strata_common::clock::default_test_epoch(),
+            text: text.into(),
+        },
+    )
+    .await
+    .expect("capture");
     assert_eq!(first.note.path, "inbox/2026-09-27-120000.md");
     assert_eq!(first.duplicates, vec![]);
     assert_eq!(first.suggestion_id, None);
@@ -58,9 +64,15 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
     );
 
     // The same text again: saved anyway (same second → a free name), with a suggestion.
-    let second = ops::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.into() })
-        .await
-        .expect("never refused");
+    let second = ops::capture(
+        c,
+        &types::CaptureRequest {
+            created: strata_common::clock::default_test_epoch(),
+            text: text.into(),
+        },
+    )
+    .await
+    .expect("never refused");
     assert_eq!(second.note.path, "inbox/2026-09-27-120000 2.md");
     assert_eq!(second.duplicates.len(), 1);
     assert_eq!(second.duplicates[0].id, first.note.id);
@@ -140,9 +152,15 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
     tx.commit().await.expect("commit");
 
     // A third capture is flagged against both; rejecting keeps the notes.
-    let third = ops::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.into() })
-        .await
-        .expect("never refused");
+    let third = ops::capture(
+        c,
+        &types::CaptureRequest {
+            created: strata_common::clock::default_test_epoch(),
+            text: text.into(),
+        },
+    )
+    .await
+    .expect("never refused");
     let mut flagged: Vec<_> = third.duplicates.iter().map(|d| d.id).collect();
     flagged.sort();
     let mut want = vec![first.note.id, second.note.id];

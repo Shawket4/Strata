@@ -91,7 +91,10 @@ mod tests {
         let t = DateTime::parse_from_rfc3339("2026-09-30T22:30:00Z")
             .expect("ts")
             .to_utc();
-        assert_eq!(heading_date(&t, chrono_tz::UTC), NaiveDate::from_ymd_opt(2026, 9, 30).expect("d"));
+        assert_eq!(
+            heading_date(&t, chrono_tz::UTC),
+            NaiveDate::from_ymd_opt(2026, 9, 30).expect("d")
+        );
         assert_eq!(
             heading_date(&t, chrono_tz::Africa::Cairo),
             NaiveDate::from_ymd_opt(2026, 10, 1).expect("d")
@@ -110,7 +113,8 @@ mod tests {
             doc.render(),
             "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\ncreated: 2026-09-28T05:15:30Z\nupdated: 2026-09-28T05:15:30Z\n---\n## September 2026\n- [ ] a ^t-x\n"
         );
-        let existing = "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nupdated: 2020-01-01T00:00:00Z\n---\nx\n";
+        let existing =
+            "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\nupdated: 2020-01-01T00:00:00Z\n---\nx\n";
         let mut doc = Document::parse(existing);
         stamp_home(&mut doc, None, &t).expect("stamp");
         assert_eq!(
@@ -122,7 +126,10 @@ mod tests {
         stamp_home(&mut doc, None, &t).expect("stamp");
         assert_eq!(doc.render(), stamped);
         let mut bad = Document::parse("---\na: [\n---\nx\n");
-        assert!(matches!(stamp_home(&mut bad, None, &t), Err(RenderError::Unreadable(_))));
+        assert!(matches!(
+            stamp_home(&mut bad, None, &t),
+            Err(RenderError::Unreadable(_))
+        ));
     }
 
     #[test]

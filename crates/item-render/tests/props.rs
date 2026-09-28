@@ -199,5 +199,8 @@ proptest! {
 fn capture_paths_are_utc() {
     // Half past midnight in Cairo is still the previous day in UTC.
     let cairo = DateTime::parse_from_rfc3339("2026-09-27T00:30:00+03:00").unwrap();
-    assert_eq!(capture_path(&cairo.to_utc(), []), "inbox/2026-09-26-213000.md");
+    assert_eq!(
+        capture_path(&cairo.to_utc(), []),
+        "inbox/2026-09-26-213000.md"
+    );
 }

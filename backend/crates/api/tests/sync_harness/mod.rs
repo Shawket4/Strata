@@ -493,9 +493,7 @@ impl Device {
 
 /// The frontmatter of a note created at the test epoch (UTC).
 pub fn header(id: &str) -> String {
-    format!(
-        "---\nid: {id}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\n---\n"
-    )
+    format!("---\nid: {id}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\n---\n")
 }
 
 /// `sha256:` version of a text.

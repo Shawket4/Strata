@@ -267,7 +267,9 @@ async fn offline_creates_keep_the_device_creation_time() {
         ),
         (
             home_id.clone(),
-            format!("---\nid: {home_id}\n{stamp}---\n## September 2026\n- [ ] Send the invoice ^{task}\n"),
+            format!(
+                "---\nid: {home_id}\n{stamp}---\n## September 2026\n- [ ] Send the invoice ^{task}\n"
+            ),
         ),
     ];
     for (id, content) in expected {

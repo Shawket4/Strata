@@ -307,6 +307,10 @@ async fn creation_times_in_the_future_are_refused_over_sync_and_rest() {
         err.api().expect("a problem").problem().type_,
         "created_in_future"
     );
-    assert_eq!(h.log(alice.id).len(), commits + 1, "only the capture at the limit");
+    assert_eq!(
+        h.log(alice.id).len(),
+        commits + 1,
+        "only the capture at the limit"
+    );
     h.finish().await;
 }
