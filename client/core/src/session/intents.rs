@@ -348,16 +348,18 @@ impl Session {
             }
             // No task home yet: the device makes `tasks/Tasks.md` with its own ID, which the
             // server gives the note too (both write the same bytes).
-            None => self.read(|c, _| notes::id_by_path(c, TASK_HOME))?.map_or_else(
-                || {
-                    let home = self.new_ulid();
-                    (home.to_string(), None, Some(home))
-                },
-                |home| {
-                    let home_id = ulid_of(&home).ok();
-                    (home, None, home_id)
-                },
-            ),
+            None => self
+                .read(|c, _| notes::id_by_path(c, TASK_HOME))?
+                .map_or_else(
+                    || {
+                        let home = self.new_ulid();
+                        (home.to_string(), None, Some(home))
+                    },
+                    |home| {
+                        let home_id = ulid_of(&home).ok();
+                        (home, None, home_id)
+                    },
+                ),
         };
         let links: Vec<String> = vault_format::wikilink::find_all(&t.description)
             .iter()

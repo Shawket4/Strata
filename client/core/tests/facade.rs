@@ -23,9 +23,12 @@ use chrono::NaiveDate;
 use pretty_assertions::assert_eq;
 use strata_core::api::{app, intents, views};
 use strata_core::view::model::{
-    AppLifecycle, CoreConfig, CoreFailure, DocumentDraft, EditorHint, HintKind, PasswordLevel,
-    PlaceDraft, Platform, RecurrenceFrequency, SearchMode, SessionKind, SignInRequest,
-    SignUpRequest, TagItem, TaskDraft, TaskPatch,
+    AppLifecycle, AskScope, AskScopeKind, ConflictResolution, CoreConfig, CoreFailure,
+    CustodyDraft, DocumentDraft, DuplicateChoice, EditorHint, GraphFilter, GraphLens, HintKind,
+    LinkOrCreateChoice, LinkOrCreateKind, NewUserRequest, NodePosition, NotificationAction,
+    NotificationActionKind, NotificationResult, PasswordLevel, PlaceDraft, Platform,
+    RecurrenceFrequency, ResolutionKind, SearchMode, SessionKind, SignInRequest, SignUpRequest,
+    SuggestionEdits, TagItem, TaskDraft, TaskPatch,
 };
 use strata_index::types::UserRole;
 use world::World;
@@ -39,6 +42,10 @@ fn failure(code: &str) -> CoreFailure {
         count: None,
         status: None,
     }
+}
+
+fn show<T: std::fmt::Debug>(label: &str, v: &T) {
+    println!("=== {label}\n{v:#?}");
 }
 
 fn invalid(field: &str, reason: &str) -> CoreFailure {
@@ -149,7 +156,8 @@ fn the_facade_drives_the_core_end_to_end() {
     );
     app::app_lifecycle(AppLifecycle::Resumed).expect("resume");
     app::sync_now().expect("sync now");
-    rt.block_on(app::refresh_account()).expect("refresh account");
+    rt.block_on(app::refresh_account())
+        .expect("refresh account");
 
     // Local intents.
     let note = intents::create_note(
@@ -179,8 +187,7 @@ fn the_facade_drives_the_core_end_to_end() {
         .expect("company")
         .id
         .expect("created");
-    intents::add_relation(note.clone(), company.clone(), "related".to_owned())
-        .expect("relate");
+    intents::add_relation(note.clone(), company.clone(), "related".to_owned()).expect("relate");
     intents::retype_relation(
         note.clone(),
         company.clone(),
@@ -348,7 +355,11 @@ fn the_facade_drives_the_core_end_to_end() {
     );
     let parsed = views::parse_task_text("Pay rent tomorrow".to_owned()).expect("parsed");
     assert_eq!(
-        (parsed.description.as_str(), parsed.due.is_some(), parsed.due_label.as_deref()),
+        (
+            parsed.description.as_str(),
+            parsed.due.is_some(),
+            parsed.due_label.as_deref()
+        ),
         ("Pay rent", true, Some("Tomorrow"))
     );
     let completions =
@@ -357,12 +368,15 @@ fn the_facade_drives_the_core_end_to_end() {
         completions
             .items
             .iter()
-            .map(|i| (i.label.as_str(), i.insert_text.as_str(), i.target_id.clone()))
+            .map(|i| (
+                i.label.as_str(),
+                i.insert_text.as_str(),
+                i.target_id.clone()
+            ))
             .collect::<Vec<_>>(),
         [("Ahmed Fathy", "Ahmed Fathy]]", Some(person.clone()))]
     );
-    let citation =
-        views::resolve_citation(note.clone(), Some("p2".to_owned())).expect("citation");
+    let citation = views::resolve_citation(note.clone(), Some("p2".to_owned())).expect("citation");
     assert_eq!(
         (
             citation.note_id.as_deref(),
@@ -392,6 +406,361 @@ fn the_facade_drives_the_core_end_to_end() {
     );
     assert_eq!(views::ask_view().expect("ask").messages.len(), 0);
 
+    // Edits, moves, merges and relation fixes of local items.
+    let version = views::note_blocks(note.clone())
+        .map(|_| ())
+        .expect("note exists");
+    let _ = version;
+    let edited = intents::update_note(
+        note.clone(),
+        "Weekly invoicing for [[Acme]]. #client\n\nSecond paragraph. ^p2\n\nThird.\n".to_owned(),
+        None,
+    );
+    show("update note", &edited);
+    show(
+        "update note stale",
+        &intents::update_note(note.clone(), "x".to_owned(), Some("v-unknown".to_owned())),
+    );
+    let scratch = intents::create_note("notes/Scratch.md".to_owned(), "Draft.\n".to_owned(), false)
+        .expect("scratch")
+        .id
+        .expect("created");
+    show(
+        "move",
+        &intents::move_note(scratch.clone(), "archive/Scratch.md".to_owned()),
+    );
+    show("delete note", &intents::delete_note(scratch.clone()));
+    show(
+        "mention",
+        &intents::insert_mention(note.clone(), "Hi @Ah".to_owned(), 3, 6, person.clone()),
+    );
+    let other = intents::create_entity("company".to_owned(), "Acme Corp".to_owned(), vec![], true)
+        .expect("company")
+        .id
+        .expect("created");
+    intents::add_relation(person.clone(), other.clone(), "works-at".to_owned()).expect("works at");
+    show(
+        "repoint",
+        &intents::repoint_relation(
+            person.clone(),
+            other.clone(),
+            "works-at".to_owned(),
+            company.clone(),
+        ),
+    );
+    show(
+        "reject relation",
+        &intents::reject_relation(person.clone(), company.clone(), "works-at".to_owned()),
+    );
+    show(
+        "merge",
+        &intents::merge_entities(other.clone(), company.clone()),
+    );
+    show(
+        "custody",
+        &intents::record_custody(
+            document.clone(),
+            CustodyDraft {
+                kind: "stored-at".to_owned(),
+                place_id: Some(place.clone()),
+                person_id: None,
+                counterparty_id: None,
+                date: NaiveDate::from_ymd_opt(2026, 9, 20).expect("date"),
+            },
+        ),
+    );
+
+    // Inbox and sync items that do not exist answer `not_found`.
+    let unknown = "01M3HBS0G0000000000000ZZZZ".to_owned();
+    show(
+        "accept suggestion",
+        &intents::accept_suggestion(unknown.clone()),
+    );
+    show(
+        "reject suggestion",
+        &intents::reject_suggestion(unknown.clone()),
+    );
+    show("relink", &intents::request_relink(note.clone()));
+    show(
+        "resolve conflict",
+        &intents::resolve_conflict(
+            unknown.clone(),
+            ConflictResolution {
+                kind: ResolutionKind::KeepMine,
+                content: None,
+                choices: vec![],
+            },
+        ),
+    );
+    show(
+        "resolve duplicate",
+        &intents::resolve_duplicate(unknown.clone(), DuplicateChoice::CreateAnyway),
+    );
+    show(
+        "dismiss rejection",
+        &intents::dismiss_rejection(unknown.clone()),
+    );
+    show("accept capture", &intents::accept_capture(capture.clone()));
+    show("reject capture", &intents::reject_capture(capture.clone()));
+    show(
+        "accept captures",
+        &intents::accept_captures(vec![capture.clone()]),
+    );
+    show("accept all ready", &intents::accept_all_ready());
+    show(
+        "accept with",
+        &intents::accept_suggestion_with(unknown.clone(), SuggestionEdits::default()),
+    );
+    show(
+        "link or create",
+        &intents::resolve_link_or_create(
+            unknown.clone(),
+            LinkOrCreateChoice {
+                kind: LinkOrCreateKind::Link,
+                entity_id: Some(person.clone()),
+                name: None,
+                entity_kind: None,
+                force: false,
+            },
+        ),
+    );
+    show(
+        "choice",
+        &intents::accept_suggestion_choice(unknown.clone(), document.clone()),
+    );
+    show("undo", &intents::undo_suggestion(unknown.clone()));
+    show("ack", &intents::acknowledge_suggestion(unknown.clone()));
+    show(
+        "capture duplicate",
+        &intents::resolve_capture_duplicate(unknown.clone(), DuplicateChoice::Discard),
+    );
+    show(
+        "reply",
+        &intents::reply_to_suggestion(unknown.clone(), "Why?".to_owned()),
+    );
+
+    // Recurrence helpers and filtered maps.
+    show("compose", &views::compose_recurrence(form.clone()));
+    show(
+        "preview",
+        &views::recurrence_preview(
+            "every week".to_owned(),
+            NaiveDate::from_ymd_opt(2026, 10, 5).expect("date"),
+            3,
+        ),
+    );
+    show(
+        "preview bad",
+        &views::recurrence_preview(
+            "sometimes".to_owned(),
+            NaiveDate::from_ymd_opt(2026, 10, 5).expect("date"),
+            3,
+        ),
+    );
+    show(
+        "filtered graph",
+        &views::global_graph_filtered(GraphFilter {
+            edge_kinds: vec![],
+            node_kinds: vec!["person".to_owned()],
+            similarity: false,
+            cluster: None,
+            lens: GraphLens::People,
+            focus: None,
+        })
+        .map(|g| (g.nodes.len(), g.edges.len())),
+    );
+
+    // Reminders reported by the platform adapter.
+    show(
+        "notification result",
+        &strata_core::api::reminders::report_notification_result(7, NotificationResult::Ok),
+    );
+    show(
+        "notification action",
+        &strata_core::api::reminders::notification_action(
+            7,
+            NotificationAction {
+                kind: NotificationActionKind::Done,
+            },
+        ),
+    );
+
+    // Online calls through the facade.
+    rt.block_on(intents::refresh_settings()).expect("settings");
+    show(
+        "rename device",
+        &rt.block_on(intents::rename_device(unknown.clone(), "X".to_owned())),
+    );
+    show(
+        "revoke device",
+        &rt.block_on(intents::revoke_device(unknown.clone())),
+    );
+    show(
+        "device reminders",
+        &rt.block_on(intents::set_device_reminders(unknown.clone(), false)),
+    );
+    show(
+        "history",
+        &rt.block_on(intents::refresh_history(note.clone())),
+    );
+    show(
+        "revert",
+        &rt.block_on(intents::revert_note(
+            note.clone(),
+            "0000000000000000000000000000000000000000".to_owned(),
+        )),
+    );
+    show(
+        "diff",
+        &rt.block_on(views::note_revision_diff(
+            note.clone(),
+            "0000000000000000000000000000000000000000".to_owned(),
+        )),
+    );
+    let zip = dir.path().join("vault.zip");
+    show(
+        "export vault",
+        &rt.block_on(intents::export_vault(
+            zip.to_str().expect("utf-8").to_owned(),
+        )),
+    );
+    show(
+        "import vault",
+        &rt.block_on(intents::import_vault(
+            zip.to_str().expect("utf-8").to_owned(),
+        )),
+    );
+    let users = rt
+        .block_on(views::load_admin_users(String::new()))
+        .expect("users");
+    let bob = users.pending.first().expect("bob waits").id.clone();
+    show("approve", &rt.block_on(intents::approve_user(bob.clone())));
+    show(
+        "role",
+        &rt.block_on(intents::set_user_role(bob.clone(), "admin".to_owned())),
+    );
+    show(
+        "enabled",
+        &rt.block_on(intents::set_user_enabled(bob.clone(), false)),
+    );
+    show(
+        "reset",
+        &rt.block_on(intents::reset_password(bob.clone()))
+            .map(|p| p.len()),
+    );
+    show(
+        "schedule",
+        &rt.block_on(intents::schedule_deletion(bob.clone())),
+    );
+    show(
+        "cancel",
+        &rt.block_on(intents::cancel_deletion(bob.clone())),
+    );
+    show(
+        "reject user",
+        &rt.block_on(intents::reject_user(bob.clone())),
+    );
+    show(
+        "create user",
+        &rt.block_on(intents::create_user(NewUserRequest {
+            username: "carol".to_owned(),
+            display_name: "Carol".to_owned(),
+            password: "carol-password-1".to_owned(),
+            role: "member".to_owned(),
+        })),
+    );
+    show(
+        "remote search",
+        &rt.block_on(views::search_in_folder(
+            "invoicing".to_owned(),
+            SearchMode::Hybrid,
+            Some("notes".to_owned()),
+        )),
+    );
+    show(
+        "ask",
+        &rt.block_on(intents::ask(
+            "Anything?".to_owned(),
+            AskScope {
+                kind: AskScopeKind::All,
+                value: None,
+                label: "All notes".to_owned(),
+            },
+        )),
+    );
+    intents::stop_ask().expect("stop");
+    intents::new_conversation().expect("new conversation");
+    show(
+        "save answer",
+        &rt.block_on(intents::save_answer_as_note(unknown.clone())),
+    );
+    rt.block_on(intents::refresh_ai_activity())
+        .expect("activity");
+    show(
+        "reject decision",
+        &rt.block_on(intents::reject_ai_decision(unknown.clone())),
+    );
+    show(
+        "repoint decision",
+        &rt.block_on(intents::repoint_ai_decision(
+            unknown.clone(),
+            person.clone(),
+            None,
+        )),
+    );
+    show(
+        "retype decision",
+        &rt.block_on(intents::retype_ai_decision(
+            unknown.clone(),
+            "related".to_owned(),
+        )),
+    );
+    rt.block_on(intents::refresh_similarity())
+        .expect("similarity");
+    show(
+        "save layout",
+        &rt.block_on(intents::save_layout(
+            note.clone(),
+            "Pricing".to_owned(),
+            vec![NodePosition {
+                id: note.clone(),
+                x: 0.0,
+                y: 0.0,
+            }],
+        )),
+    );
+
+    // Account settings through the facade.
+    rt.block_on(app::set_display_name("Alice".to_owned()))
+        .expect("name");
+    rt.block_on(app::set_ui_language("en".to_owned()))
+        .expect("language");
+    rt.block_on(app::set_timezone("Africa/Cairo".to_owned()))
+        .expect("zone");
+    let export = dir.path().join("me.zip");
+    show(
+        "download export",
+        &rt.block_on(app::download_export(
+            export.to_str().expect("utf-8").to_owned(),
+        ))
+        .map(|e| e.note_count),
+    );
+    show("delete now", &rt.block_on(app::delete_account_now(false)));
+    show("check approval", &rt.block_on(app::check_approval()));
+    show("dismiss pending", &app::dismiss_pending().map(|s| s.kind));
+    show(
+        "switch",
+        &app::switch_account(unknown.clone()).map(|s| s.kind),
+    );
+    show(
+        "change password",
+        &rt.block_on(app::change_password(
+            world::password("alice"),
+            "alice-password-2".to_owned(),
+        ))
+        .map(|s| s.kind),
+    );
+
     intents::set_default_reminder_time("08:30".to_owned()).expect("default time");
     intents::set_quiet_hours(true, "23:00".to_owned(), "06:30".to_owned()).expect("quiet");
     intents::set_snooze_minutes(30).expect("snooze");
@@ -399,10 +768,7 @@ fn the_facade_drives_the_core_end_to_end() {
 
     // Signing out with unsynced changes asks first; the unsynced ops can be exported.
     let asked = rt.block_on(app::sign_out(false)).expect("sign out");
-    assert_eq!(
-        (asked.signed_out, asked.unsynced_ops),
-        (false, 23)
-    );
+    assert_eq!((asked.signed_out, asked.unsynced_ops), (false, 23));
     let unsynced = dir.path().join("unsynced.md");
     assert_eq!(
         app::export_unsynced(unsynced.to_str().expect("utf-8").to_owned()),
@@ -410,7 +776,10 @@ fn the_facade_drives_the_core_end_to_end() {
     );
     let text = std::fs::read_to_string(&unsynced).expect("written");
     assert!(text.starts_with("# Unsynced changes\n\n## "), "{text}");
-    assert!(text.contains("Weekly invoicing for [[Acme]]. #client"), "{text}");
+    assert!(
+        text.contains("Weekly invoicing for [[Acme]]. #client"),
+        "{text}"
+    );
     app::set_sync_paused(true).expect("pause");
     app::set_sync_paused(false).expect("resume sync");
     let done = rt.block_on(app::sign_out(true)).expect("forced sign out");
