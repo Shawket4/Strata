@@ -134,10 +134,6 @@ class TasksLocalizationsEn extends TasksLocalizations {
   String get editorParsedTitle => 'UNDERSTOOD AS';
 
   @override
-  String get editorParsedUnavailable =>
-      'Reading dates and repeats from the text is not available yet';
-
-  @override
   String get editorDue => 'Due';
 
   @override
@@ -221,24 +217,7 @@ class TasksLocalizationsEn extends TasksLocalizations {
   String get recurrenceOnLastDay => 'On the last day';
 
   @override
-  String get recurrenceEndsNever => 'Ends never';
-
-  @override
-  String get recurrenceEndsOnDate => 'Ends on a date';
-
-  @override
-  String get recurrenceEndsAfter => 'Ends after N occurrences';
-
-  @override
-  String get recurrenceBuilderUnavailable =>
-      'Building a rule from options is not available yet';
-
-  @override
   String get recurrencePreviewTitle => 'NEXT DATES';
-
-  @override
-  String get recurrencePreviewUnavailable =>
-      'A preview of the next dates isn\'t available yet.';
 
   @override
   String get recurrenceSave => 'Save rule';
@@ -524,5 +503,142 @@ class TasksLocalizationsEn extends TasksLocalizations {
   @override
   String dupSubtitleUntitled({required String kind}) {
     return 'A similar $kind already exists.';
+  }
+
+  @override
+  String tasksDueLabel({required String due}) {
+    return 'Due $due';
+  }
+
+  @override
+  String tasksOverdueLabel({required String late, required String due}) {
+    return 'Overdue · $late · due $due';
+  }
+
+  @override
+  String tasksRuleNextLabel({required String rule, required String next}) {
+    return '$rule · next $next';
+  }
+
+  @override
+  String tasksSummary({
+    required int open,
+    required String done,
+    required int notes,
+  }) {
+    String _temp0 = intl.Intl.pluralLogic(
+      open,
+      locale: localeName,
+      other: '$open open',
+      one: '1 open',
+      zero: 'Nothing open',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      notes,
+      locale: localeName,
+      other: 'in $notes notes',
+      one: 'in 1 note',
+      zero: 'in no notes',
+    );
+    return '$_temp0 · $done · $_temp1';
+  }
+
+  @override
+  String tasksSummaryOpen({required int open, required int notes}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      open,
+      locale: localeName,
+      other: '$open open',
+      one: '1 open',
+      zero: 'Nothing open',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      notes,
+      locale: localeName,
+      other: 'in $notes notes',
+      one: 'in 1 note',
+      zero: 'in no notes',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String get recurrencePreviewNone =>
+      'Set a due date and a rule the app understands to see the next dates.';
+
+  @override
+  String recurrenceInterval({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Every $count periods',
+      one: 'Every period',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recurrenceIntervalLess => 'Less often';
+
+  @override
+  String get recurrenceIntervalMore => 'More apart';
+
+  @override
+  String get recurrenceOnDueDay => 'On the due date\'s day';
+
+  @override
+  String recurrenceNth({required String nth}) {
+    String _temp0 = intl.Intl.selectLogic(nth, {
+      '1': 'First',
+      '2': 'Second',
+      '3': 'Third',
+      '4': 'Fourth',
+      'other': 'Last',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get recurrenceWhenDone => 'Count from when it\'s done';
+
+  @override
+  String get recurrenceNotUnderstoodHint =>
+      'Type a rule, or pick a frequency to build one.';
+
+  @override
+  String get weekdayMon => 'Mon';
+
+  @override
+  String get weekdayTue => 'Tue';
+
+  @override
+  String get weekdayWed => 'Wed';
+
+  @override
+  String get weekdayThu => 'Thu';
+
+  @override
+  String get weekdayFri => 'Fri';
+
+  @override
+  String get weekdaySat => 'Sat';
+
+  @override
+  String get weekdaySun => 'Sun';
+
+  @override
+  String get editorParsedNothing =>
+      'Dates, repeats, reminders and @people in the text show here.';
+
+  @override
+  String editorHomeItem({required String title, required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count open',
+      one: '1 open',
+      zero: 'no open tasks',
+    );
+    return '$title · $_temp0';
   }
 }

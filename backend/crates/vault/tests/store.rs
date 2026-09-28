@@ -22,6 +22,7 @@ use vault_format::RelationKey;
 
 fn note(path: &str, content: &str) -> CreateNote {
     CreateNote {
+        created: strata_common::clock::default_test_epoch(),
         path: path.to_owned(),
         content: content.to_owned(),
         id: None,

@@ -73,6 +73,7 @@ async fn the_weekly_digest_summarises_new_notes_open_items_and_contradictions() 
         .create_entity(
             &sa,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind: NoteKind::Person,
                 name: "Shady".into(),
                 aliases: vec![],

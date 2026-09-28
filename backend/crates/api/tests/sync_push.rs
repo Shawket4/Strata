@@ -77,6 +77,7 @@ async fn one(h: &H, user: &User, sync_op: SyncOp) -> OpResult {
 
 fn create(n: u128, path: &str, body: &str) -> Op {
     Op::NoteCreate(o::NoteCreate {
+        created: strata_common::clock::default_test_epoch(),
         id: id(n),
         path: path.into(),
         content: body.into(),
@@ -241,6 +242,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             9,
             None,
             Op::EntityCreate(o::EntityCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(4),
                 kind: NoteKind::Person,
                 name: "Sam Hany".into(),
@@ -290,6 +292,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             11,
             None,
             Op::EntityCreate(o::EntityCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(5),
                 kind: NoteKind::Person,
                 name: "Samuel Hany".into(),
@@ -329,6 +332,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             13,
             None,
             Op::PlaceCreate(o::PlaceCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(6),
                 name: "Office safe".into(),
                 aliases: vec![],
@@ -365,6 +369,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             15,
             None,
             Op::DocumentCreate(o::DocumentCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(7),
                 name: "Lease contract".into(),
                 aliases: vec![],
@@ -449,6 +454,8 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             19,
             None,
             Op::TaskCreate(o::TaskCreate {
+                created: strata_common::clock::default_test_epoch(),
+                home_id: None,
                 id: tid.clone(),
                 note_id: None,
                 text: "Renew the lease".into(),
@@ -690,6 +697,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             33,
             None,
             Op::SuggestionAccept(o::SuggestionAccept {
+                created: strata_common::clock::default_test_epoch(),
                 id: ids[0],
                 edits: None,
             }),
@@ -719,6 +727,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             35,
             None,
             Op::SuggestionAccept(o::SuggestionAccept {
+                created: strata_common::clock::default_test_epoch(),
                 id: ids[1],
                 edits: None,
             }),
@@ -947,6 +956,8 @@ async fn a_replayed_op_returns_the_stored_bytes_and_is_not_applied_again() {
             2,
             None,
             Op::TaskCreate(o::TaskCreate {
+                created: strata_common::clock::default_test_epoch(),
+                home_id: None,
                 id: "t-01j9replayaaaaaaaaaaaaaaaa".into(),
                 note_id: None,
                 text: "Pay rent".into(),
@@ -1049,6 +1060,7 @@ async fn ops_apply_in_order_within_one_push() {
                     4,
                     None,
                     Op::NoteCreate(o::NoteCreate {
+                        created: strata_common::clock::default_test_epoch(),
                         id: id(2),
                         path: "notes/Draft.md".into(),
                         content: "# Another draft\n".into(),
@@ -1157,6 +1169,7 @@ async fn another_users_ids_are_rejected_as_not_found_and_never_applied() {
             2,
             None,
             Op::EntityCreate(o::EntityCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(2),
                 kind: NoteKind::Person,
                 name: "Sam".into(),
@@ -1280,6 +1293,8 @@ async fn task_edits_use_the_devices_dates_and_ids_and_conflict_per_line() {
             1,
             None,
             Op::TaskCreate(o::TaskCreate {
+                created: strata_common::clock::default_test_epoch(),
+                home_id: None,
                 id: tid.clone(),
                 note_id: None,
                 text: "Pay rent".into(),
@@ -1366,6 +1381,7 @@ async fn task_edits_use_the_devices_dates_and_ids_and_conflict_per_line() {
 
 fn entity(n: u128, kind: NoteKind, name: &str) -> Op {
     Op::EntityCreate(o::EntityCreate {
+        created: strata_common::clock::default_test_epoch(),
         id: id(n),
         kind,
         name: name.into(),
@@ -1377,6 +1393,7 @@ fn entity(n: u128, kind: NoteKind, name: &str) -> Op {
 
 fn document(n: u128, name: &str, copy_of: Option<Ulid>, companies: &[u128], people: &[u128]) -> Op {
     Op::DocumentCreate(o::DocumentCreate {
+        created: strata_common::clock::default_test_epoch(),
         id: id(n),
         name: name.into(),
         aliases: vec![],
@@ -1637,6 +1654,7 @@ async fn suggestion_accept_applies_edits_and_relink_forces_a_run() {
             3,
             None,
             Op::SuggestionAccept(o::SuggestionAccept {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(5),
                 edits: Some(o::SuggestionEdits {
                     title: Some("Other".into()),
@@ -1667,6 +1685,7 @@ async fn suggestion_accept_applies_edits_and_relink_forces_a_run() {
             4,
             None,
             Op::SuggestionAccept(o::SuggestionAccept {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(3),
                 edits: Some(o::SuggestionEdits {
                     title: Some("Watanya ETA invoicing".into()),
@@ -1705,6 +1724,7 @@ async fn suggestion_accept_applies_edits_and_relink_forces_a_run() {
             4,
             None,
             Op::SuggestionAccept(o::SuggestionAccept {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(3),
                 edits: None,
             }),

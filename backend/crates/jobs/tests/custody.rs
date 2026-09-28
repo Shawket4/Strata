@@ -44,6 +44,7 @@ async fn entity(
         .create_entity(
             s,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind,
                 name: name.to_owned(),
                 aliases: aliases.iter().map(|a| (*a).to_owned()).collect(),

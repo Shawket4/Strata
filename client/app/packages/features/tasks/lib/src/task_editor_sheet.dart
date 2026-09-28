@@ -10,15 +10,14 @@ import 'package:strata_tasks/src/l10n.dart';
 import 'package:strata_tasks/src/labels.dart';
 import 'package:strata_ui/strata_ui.dart';
 
-/// The new-task sheet: the task text as typed, the details the user sets
-/// (due date, repeat phrase, reminders) and the home note, saved with
-/// `CoreApi.createTask` (duplicate-checked; the "Already exists" content is
-/// shown in place when the core returns candidates, and Create anyway resends
-/// with `force: true`).
-///
-/// "Understood as" chips need the core's parser of natural task text; until
-/// it exists the section says so (docs/CORE_GAPS.md) — nothing is parsed in
-/// Dart (L15).
+/// The new-task sheet: the task text as typed with what the core understands
+/// in it ("Understood as": due, repeat, reminders, links, priority from
+/// `parse_task_text`, English or Arabic), the details the user sets on top
+/// (due date, repeat phrase, reminders) and the home note from the core's
+/// list (`watch_task_homes`), saved with `CoreApi.createTask`
+/// (duplicate-checked; the "Already exists" content is shown in place when
+/// the core returns candidates, and Create anyway resends with
+/// `force: true`). Nothing is parsed in Dart (L15).
 class TaskEditorSheet extends HookConsumerWidget {
   /// Creates the sheet.
   const new({
@@ -83,13 +82,25 @@ class TaskEditorSheet extends HookConsumerWidget {
     final due = useState<DateTime?>(null);
     final reminders = useState<List<DateTime>>(const []);
     final candidates = useState<List<CandidateItem>?>(null);
+    final home = useState<String?>(noteId);
+    final parsed = text.text.trim().isEmpty
+        ? null
+        : ref.watch(parseTaskTextProvider(text.text)).value;
+    final homes = ref.watch(taskHomesProvider).value?.homes;
 
-    TaskDraft draft() => TaskDraft(
-      noteId: noteId,
-      description: description.text,
-      due: due.value,
-      recurrence: recurrence.text.isEmpty ? null : recurrence.text,
-      reminders: reminders.value,
+    /// The core's reading of the text, with the fields the user set on top.
+    TaskDraft draft(TaskDraft understood) => TaskDraft(
+      noteId: home.value,
+      description: understood.description,
+      due: due.value ?? understood.due,
+      scheduled: understood.scheduled,
+      recurrence: recurrence.text.isEmpty
+          ? understood.recurrence
+          : recurrence.text,
+      reminders: reminders.value.isEmpty
+          ? understood.reminders
+          : reminders.value,
+      priority: understood.priority,
     );
 
     Future<void> create({required bool force}) async {
@@ -97,7 +108,11 @@ class TaskEditorSheet extends HookConsumerWidget {
       final messenger = ScaffoldMessenger.maybeOf(context);
       final l10n = lookupTasksLocalizations(Localizations.localeOf(context));
       try {
-        final outcome = await api.createTask(draft: draft(), force: force);
+        final understood = await api.parseTaskText(text: description.text);
+        final outcome = await api.createTask(
+          draft: draft(understood.draft),
+          force: force,
+        );
         final id = outcome.id;
         if (id != null) {
           onCreated?.call(id);
@@ -254,10 +269,34 @@ class TaskEditorSheet extends HookConsumerWidget {
                         const SizedBox(height: StrataSpacing.s4),
                         Text(l10n.editorParsedTitle, style: section),
                         const SizedBox(height: StrataSpacing.s1),
-                        StatusPill(
-                          label: l10n.editorParsedUnavailable,
-                          icon: Icons.auto_awesome_outlined,
-                        ),
+                        if (parsed == null || parsed.chips.isEmpty)
+                          Text(
+                            l10n.editorParsedNothing,
+                            style: style.bodySmall.copyWith(
+                              color: colors.text2,
+                            ),
+                          )
+                        else
+                          Wrap(
+                            spacing: StrataSpacing.s1,
+                            runSpacing: StrataSpacing.s1,
+                            children: [
+                              for (final chip in parsed.chips)
+                                StatusPill(
+                                  label: chip.label,
+                                  tone: StatusTone.info,
+                                  icon: switch (chip.kind) {
+                                    TaskChipKind.due => Icons.event,
+                                    TaskChipKind.recurrence => Icons.repeat,
+                                    TaskChipKind.reminder =>
+                                      Icons.notifications_none_rounded,
+                                    TaskChipKind.link => Icons.link,
+                                    TaskChipKind.priority =>
+                                      Icons.flag_outlined,
+                                  },
+                                ),
+                            ],
+                          ),
                         const SizedBox(height: StrataSpacing.s4),
                         _EditorRow(
                           icon: Icons.event,
@@ -330,11 +369,37 @@ class TaskEditorSheet extends HookConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: StrataSpacing.s3),
-                        _EditorRow(
-                          icon: Icons.description_outlined,
-                          label: l10n.editorHomeNote,
-                          value: noteTitle ?? l10n.editorDefaultHome,
-                        ),
+                        if (homes == null || homes.isEmpty)
+                          _EditorRow(
+                            icon: Icons.description_outlined,
+                            label: l10n.editorHomeNote,
+                            value: noteTitle ?? l10n.editorDefaultHome,
+                          )
+                        else
+                          DropdownButtonFormField<String?>(
+                            initialValue: home.value,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: l10n.editorHomeNote,
+                              prefixIcon: const Icon(
+                                Icons.description_outlined,
+                              ),
+                            ),
+                            items: [
+                              for (final item in homes)
+                                DropdownMenuItem(
+                                  value: item.noteId,
+                                  child: Text(
+                                    l10n.editorHomeItem(
+                                      title: item.title,
+                                      count: item.openTasks,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
+                            onChanged: (value) => home.value = value,
+                          ),
                       ],
                     ),
                   ),

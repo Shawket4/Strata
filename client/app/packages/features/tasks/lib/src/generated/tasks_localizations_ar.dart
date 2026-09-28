@@ -133,10 +133,6 @@ class TasksLocalizationsAr extends TasksLocalizations {
   String get editorParsedTitle => 'فُهمت على أنها';
 
   @override
-  String get editorParsedUnavailable =>
-      'قراءة المواعيد والتكرار من النص غير متاحة بعد';
-
-  @override
   String get editorDue => 'الاستحقاق';
 
   @override
@@ -220,24 +216,7 @@ class TasksLocalizationsAr extends TasksLocalizations {
   String get recurrenceOnLastDay => 'في آخر يوم';
 
   @override
-  String get recurrenceEndsNever => 'لا ينتهي';
-
-  @override
-  String get recurrenceEndsOnDate => 'ينتهي في تاريخ';
-
-  @override
-  String get recurrenceEndsAfter => 'ينتهي بعد N مرات';
-
-  @override
-  String get recurrenceBuilderUnavailable =>
-      'بناء القاعدة من الخيارات غير متاح بعد';
-
-  @override
   String get recurrencePreviewTitle => 'المواعيد التالية';
-
-  @override
-  String get recurrencePreviewUnavailable =>
-      'معاينة المواعيد التالية غير متاحة بعد.';
 
   @override
   String get recurrenceSave => 'حفظ القاعدة';
@@ -522,5 +501,160 @@ class TasksLocalizationsAr extends TasksLocalizations {
   @override
   String dupSubtitleUntitled({required String kind}) {
     return 'يوجد $kind مشابه بالفعل.';
+  }
+
+  @override
+  String tasksDueLabel({required String due}) {
+    return 'مستحقة $due';
+  }
+
+  @override
+  String tasksOverdueLabel({required String late, required String due}) {
+    return 'متأخرة · $late · كانت مستحقة $due';
+  }
+
+  @override
+  String tasksRuleNextLabel({required String rule, required String next}) {
+    return '$rule · التالية $next';
+  }
+
+  @override
+  String tasksSummary({
+    required int open,
+    required String done,
+    required int notes,
+  }) {
+    String _temp0 = intl.Intl.pluralLogic(
+      open,
+      locale: localeName,
+      other: '$open مهمة مفتوحة',
+      many: '$open مهمة مفتوحة',
+      few: '$open مهام مفتوحة',
+      two: 'مهمتان مفتوحتان',
+      one: 'مهمة مفتوحة',
+      zero: 'لا شيء مفتوح',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      notes,
+      locale: localeName,
+      other: 'في $notes ملاحظة',
+      many: 'في $notes ملاحظة',
+      few: 'في $notes ملاحظات',
+      two: 'في ملاحظتين',
+      one: 'في ملاحظة واحدة',
+      zero: 'في لا ملاحظات',
+    );
+    return '$_temp0 · $done · $_temp1';
+  }
+
+  @override
+  String tasksSummaryOpen({required int open, required int notes}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      open,
+      locale: localeName,
+      other: '$open مهمة مفتوحة',
+      many: '$open مهمة مفتوحة',
+      few: '$open مهام مفتوحة',
+      two: 'مهمتان مفتوحتان',
+      one: 'مهمة مفتوحة',
+      zero: 'لا شيء مفتوح',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      notes,
+      locale: localeName,
+      other: 'في $notes ملاحظة',
+      many: 'في $notes ملاحظة',
+      few: 'في $notes ملاحظات',
+      two: 'في ملاحظتين',
+      one: 'في ملاحظة واحدة',
+      zero: 'في لا ملاحظات',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String get recurrencePreviewNone =>
+      'حدّد تاريخ استحقاق وقاعدة يفهمها التطبيق لترى المواعيد التالية.';
+
+  @override
+  String recurrenceInterval({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'كل $count فترة',
+      many: 'كل $count فترة',
+      few: 'كل $count فترات',
+      two: 'كل فترتين',
+      one: 'كل فترة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recurrenceIntervalLess => 'أقل تكرارًا';
+
+  @override
+  String get recurrenceIntervalMore => 'أكثر تباعدًا';
+
+  @override
+  String get recurrenceOnDueDay => 'في يوم تاريخ الاستحقاق';
+
+  @override
+  String recurrenceNth({required String nth}) {
+    String _temp0 = intl.Intl.selectLogic(nth, {
+      '1': 'الأول',
+      '2': 'الثاني',
+      '3': 'الثالث',
+      '4': 'الرابع',
+      'other': 'الأخير',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get recurrenceWhenDone => 'احسب من وقت إنجازها';
+
+  @override
+  String get recurrenceNotUnderstoodHint =>
+      'اكتب قاعدة أو اختر تكرارًا لبنائها.';
+
+  @override
+  String get weekdayMon => 'الاثنين';
+
+  @override
+  String get weekdayTue => 'الثلاثاء';
+
+  @override
+  String get weekdayWed => 'الأربعاء';
+
+  @override
+  String get weekdayThu => 'الخميس';
+
+  @override
+  String get weekdayFri => 'الجمعة';
+
+  @override
+  String get weekdaySat => 'السبت';
+
+  @override
+  String get weekdaySun => 'الأحد';
+
+  @override
+  String get editorParsedNothing =>
+      'التواريخ والتكرار والتذكيرات و@الأشخاص في النص تظهر هنا.';
+
+  @override
+  String editorHomeItem({required String title, required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مفتوحة',
+      many: '$count مفتوحة',
+      few: '$count مفتوحة',
+      two: 'مهمتان مفتوحتان',
+      one: 'مهمة مفتوحة',
+      zero: 'لا مهام مفتوحة',
+    );
+    return '$title · $_temp0';
   }
 }

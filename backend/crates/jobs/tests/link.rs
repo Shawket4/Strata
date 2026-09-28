@@ -577,6 +577,7 @@ async fn accepting_an_entity_duplicates_pair_merges_the_entities() {
                 .create_entity(
                     sa,
                     strata_vault::ops::entities::NewEntity {
+                        created: strata_common::clock::default_test_epoch(),
                         kind: domain::NoteKind::Person,
                         name: name.into(),
                         aliases,

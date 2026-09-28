@@ -163,6 +163,7 @@ async fn run(actions: Vec<Action>) {
                 Ulid(0x0199_0000_0000_0000_0000_0000_0000_0000 + n),
                 None,
                 Op::NoteCreate(o::NoteCreate {
+                    created: strata_common::clock::default_test_epoch(),
                     id: Ulid(0x0199_1111_0000_0000_0000_0000_0000_0000 + n),
                     path: format!("notes/Seed {n}.md"),
                     content: format!("# Seed {n}\n\none\ntwo\nthree\n"),
@@ -207,6 +208,7 @@ async fn run(actions: Vec<Action>) {
                     Ulid::nil(),
                     None,
                     Op::NoteCreate(o::NoteCreate {
+                        created: strata_common::clock::default_test_epoch(),
                         id,
                         path: format!("notes/Note {n}.md"),
                         content: text,

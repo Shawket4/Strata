@@ -77,8 +77,10 @@ Future<void> _reveal(WidgetTester tester, Finder finder) async {
         scrollable: list,
         maxScrolls: 80,
       );
+      // `scrollUntilVisible` reports "not in this list" as a StateError.
+      // ignore: avoid_catching_errors
     } on StateError {
-      // Not in this list.
+      continue;
     }
   }
 }

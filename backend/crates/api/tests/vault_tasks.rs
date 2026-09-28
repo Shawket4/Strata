@@ -20,6 +20,8 @@ fn d(y: i32, m: u32, day: u32) -> NaiveDate {
 
 fn new_task(text: &str) -> types::CreateTaskRequest {
     types::CreateTaskRequest {
+        created: strata_common::clock::default_test_epoch(),
+        home_id: None,
         text: text.into(),
         due: None,
         force: None,
@@ -144,6 +146,7 @@ async fn views_edits_cancel_reopen_and_entity_filter() {
     let watanya = ops::create_entity(
         c,
         &types::CreateEntityRequest {
+            created: strata_common::clock::default_test_epoch(),
             kind: types::EntityKind::Company,
             name: "Watanya".into(),
             aliases: vec![],

@@ -39,6 +39,35 @@ Future<void> pickTaskDue(
   );
 }
 
+/// Asks for a reminder's day and time and adds it (`add_reminder`; a
+/// wall-clock time, sent as the core stores it: a UTC-encoded local time).
+Future<void> addTaskReminder(
+  BuildContext context,
+  WidgetRef ref,
+  TaskItem task,
+) async {
+  final api = ref.read(coreApiProvider);
+  final day = await showDatePicker(
+    context: context,
+    initialDate: task.due,
+    firstDate: DateTime(2000),
+    lastDate: DateTime(2100),
+  );
+  if (day == null || !context.mounted) return;
+  final time = await showTimePicker(
+    context: context,
+    initialTime: const TimeOfDay(hour: 9, minute: 0),
+  );
+  if (time == null || !context.mounted) return;
+  await forwardIntent(
+    context,
+    api.addReminder(
+      taskId: task.id,
+      at: DateTime.utc(day.year, day.month, day.day, time.hour, time.minute),
+    ),
+  );
+}
+
 /// Task detail as a full screen (compact, or a deep link): text, due, repeat
 /// rule, reminders, linked entities, home note, completed-occurrence history
 /// and Mark done / Cancel task (occurrences are never skipped).
@@ -154,10 +183,13 @@ class _TaskDetailBody extends ConsumerWidget {
     final text = context.strataText;
     final api = ref.read(coreApiProvider);
     final open = task.state == TaskState.open;
-    final due = task.due;
+    final due = task.dueLabel;
+    final late = task.latenessLabel;
     final recurrence = task.recurrence;
     final openNote = onOpenNote;
     final close = onClose;
+    final next = screen.nextOccurrenceLabel;
+    final delivery = screen.deliveryLabel;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -169,7 +201,9 @@ class _TaskDetailBody extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      task.noteTitle,
+                      screen.locationLabel.isEmpty
+                          ? task.noteTitle
+                          : screen.locationLabel,
                       style: text.monoSmall.copyWith(color: colors.text2),
                     ),
                   ),
@@ -200,6 +234,7 @@ class _TaskDetailBody extends ConsumerWidget {
                         container: true,
                         child: Text(
                           task.description,
+                          textDirection: textDirectionOf(task.descriptionDir),
                           textAlign: TextAlign.start,
                           style: text.title,
                         ),
@@ -252,6 +287,11 @@ class _TaskDetailBody extends ConsumerWidget {
                       recurrence ?? l10n.tasksDoesNotRepeat,
                       style: text.bodySmall.withWeight(FontWeight.w500),
                     ),
+                    if (recurrence != null && next != null)
+                      Text(
+                        next,
+                        style: text.caption.copyWith(color: colors.text2),
+                      ),
                     if (!task.recurrenceUnderstood)
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
@@ -278,11 +318,26 @@ class _TaskDetailBody extends ConsumerWidget {
               _Field(
                 icon: Icons.event,
                 label: l10n.tasksFieldDue,
-                value: Text(
-                  due == null
-                      ? l10n.tasksNoDueDate
-                      : l10n.tasksDateLong(date: due),
-                  style: text.bodySmall.withWeight(FontWeight.w500),
+                value: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      due ?? l10n.tasksNoDueDate,
+                      style: text.bodySmall.withWeight(FontWeight.w500),
+                    ),
+                    if (late != null && open)
+                      Text(
+                        late,
+                        style: text.caption
+                            .withWeight(FontWeight.w600)
+                            .copyWith(color: colors.dangerText),
+                      )
+                    else if (task.nextInLabel case final inLabel? when open)
+                      Text(
+                        inLabel,
+                        style: text.caption.copyWith(color: colors.text2),
+                      ),
+                  ],
                 ),
                 action: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -315,19 +370,66 @@ class _TaskDetailBody extends ConsumerWidget {
               _Field(
                 icon: Icons.notifications_none_rounded,
                 label: l10n.tasksFieldReminders,
-                value: task.reminders.isEmpty
-                    ? Text(l10n.tasksNoReminders, style: text.bodySmall)
-                    : TaskReminderBell(reminders: task.reminders),
-                action: Tooltip(
-                  message: l10n.commonNotYetAvailable,
-                  child: TextButton.icon(
-                    onPressed: null,
-                    icon: const Icon(Icons.add),
-                    label: Text(
-                      l10n.tasksActionAddReminder,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                value: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (task.reminders.isEmpty)
+                      Text(l10n.tasksNoReminders, style: text.bodySmall),
+                    for (final reminder in task.reminders)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  reminder.timeLabel,
+                                  style: text.bodySmall.withWeight(
+                                    FontWeight.w500,
+                                  ),
+                                ),
+                                if (reminder.offsetLabel.isNotEmpty)
+                                  Text(
+                                    reminder.offsetLabel,
+                                    style: text.caption.copyWith(
+                                      color: colors.text2,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: l10n.editorRemoveReminder(
+                              time: reminder.timeLabel,
+                            ),
+                            onPressed: () => unawaited(
+                              forwardIntent(
+                                context,
+                                api.removeReminder(
+                                  taskId: task.id,
+                                  at: reminder.localAt,
+                                ),
+                              ),
+                            ),
+                            icon: const Icon(Icons.close, size: 18),
+                          ),
+                        ],
+                      ),
+                    if (delivery != null && task.reminders.isNotEmpty)
+                      Text(
+                        delivery,
+                        style: text.caption.copyWith(color: colors.text2),
+                      ),
+                  ],
+                ),
+                action: TextButton.icon(
+                  onPressed: () =>
+                      unawaited(addTaskReminder(context, ref, task)),
+                  icon: const Icon(Icons.add),
+                  label: Text(
+                    l10n.tasksActionAddReminder,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -604,8 +706,8 @@ class _HistoryRow extends StatelessWidget {
     final l10n = context.tasksL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final done = occurrence.done;
-    final due = occurrence.due;
+    final done = occurrence.completionLabel;
+    final due = occurrence.dueLabel;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s1),
       child: Row(
@@ -626,14 +728,14 @@ class _HistoryRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  done == null
+                  occurrence.state == TaskState.cancelled || done == null
                       ? l10n.tasksCancelled
-                      : l10n.tasksDoneOn(date: done),
+                      : done,
                   style: text.bodySmall.withWeight(FontWeight.w600),
                 ),
                 if (due != null)
                   Text(
-                    l10n.tasksHistoryDue(date: due),
+                    l10n.tasksDueLabel(due: due),
                     style: text.caption.copyWith(color: colors.text2),
                   ),
               ],

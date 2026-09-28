@@ -582,6 +582,7 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     let note = api::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: format!("The plan for [[Watanya]]. {secret}\n\nSecond block ^b1\n"),
             force: None,
             id: None,
@@ -593,6 +594,7 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     let other = api::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: format!("Follow-up to [[Plan]]. {secret}\n"),
             force: None,
             id: None,
@@ -604,6 +606,7 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     let trashed = api::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: format!("Old {secret}\n"),
             force: None,
             id: None,
@@ -624,6 +627,7 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     .await
     .expect("relation");
     let entity = |kind, name: &str| types::CreateEntityRequest {
+        created: strata_common::clock::default_test_epoch(),
         aliases: vec![],
         fields: HashMap::new(),
         force: None,
@@ -644,6 +648,7 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     let place = api::create_place(
         c,
         &types::CreatePlaceRequest {
+            created: strata_common::clock::default_test_epoch(),
             address: None,
             aliases: vec![],
             force: None,
@@ -660,6 +665,7 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     let document = api::create_document(
         c,
         &types::CreateDocumentRequest {
+            created: strata_common::clock::default_test_epoch(),
             aliases: vec![],
             copy: None,
             doc_type: Some("passport".into()),
@@ -691,6 +697,8 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     let task = api::create_task(
         c,
         &types::CreateTaskRequest {
+            created: strata_common::clock::default_test_epoch(),
+            home_id: None,
             text: "Pay the rent [[Watanya]]".into(),
             due: None,
             force: None,
@@ -706,10 +714,10 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     .await
     .expect("task");
     let text = format!("Ask Watanya about the plan {secret}");
-    api::capture(c, &types::CaptureRequest { text: text.clone() })
+    api::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.clone() })
         .await
         .expect("capture");
-    let suggestion = api::capture(c, &types::CaptureRequest { text })
+    let suggestion = api::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text })
         .await
         .expect("capture")
         .suggestion_id

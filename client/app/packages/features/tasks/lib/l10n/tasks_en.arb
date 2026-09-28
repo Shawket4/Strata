@@ -181,10 +181,6 @@
   "@editorParsedTitle": {
     "description": "Section title of the parsed task details."
   },
-  "editorParsedUnavailable": "Reading dates and repeats from the text is not available yet",
-  "@editorParsedUnavailable": {
-    "description": "Parsed details are not provided by the core yet."
-  },
   "editorDue": "Due",
   "@editorDue": {
     "description": "Due date field."
@@ -293,29 +289,9 @@
   "@recurrenceOnLastDay": {
     "description": "Monthly option."
   },
-  "recurrenceEndsNever": "Ends never",
-  "@recurrenceEndsNever": {
-    "description": "Ends option."
-  },
-  "recurrenceEndsOnDate": "Ends on a date",
-  "@recurrenceEndsOnDate": {
-    "description": "Ends option."
-  },
-  "recurrenceEndsAfter": "Ends after N occurrences",
-  "@recurrenceEndsAfter": {
-    "description": "Ends option."
-  },
-  "recurrenceBuilderUnavailable": "Building a rule from options is not available yet",
-  "@recurrenceBuilderUnavailable": {
-    "description": "The core rule builder is missing."
-  },
   "recurrencePreviewTitle": "NEXT DATES",
   "@recurrencePreviewTitle": {
     "description": "Preview section title."
-  },
-  "recurrencePreviewUnavailable": "A preview of the next dates isn't available yet.",
-  "@recurrencePreviewUnavailable": {
-    "description": "The core preview is missing."
   },
   "recurrenceSave": "Save rule",
   "@recurrenceSave": {
@@ -686,6 +662,152 @@
     "placeholders": {
       "kind": {
         "type": "String"
+      }
+    }
+  },
+  "tasksDueLabel": "Due {due}",
+  "@tasksDueLabel": {
+    "description": "A task's due date, from the core's label.",
+    "placeholders": {
+      "due": {
+        "type": "String"
+      }
+    }
+  },
+  "tasksOverdueLabel": "Overdue · {late} · due {due}",
+  "@tasksOverdueLabel": {
+    "description": "An overdue task: the core's lateness and due labels.",
+    "placeholders": {
+      "late": {
+        "type": "String"
+      },
+      "due": {
+        "type": "String"
+      }
+    }
+  },
+  "tasksRuleNextLabel": "{rule} · next {next}",
+  "@tasksRuleNextLabel": {
+    "description": "A recurring rule with its next occurrence (core label).",
+    "placeholders": {
+      "rule": {
+        "type": "String"
+      },
+      "next": {
+        "type": "String"
+      }
+    }
+  },
+  "tasksSummary": "{open, plural, =0{Nothing open} =1{1 open} other{{open} open}} · {done} · {notes, plural, =0{in no notes} =1{in 1 note} other{in {notes} notes}}",
+  "@tasksSummary": {
+    "description": "Tasks header: open count, the core's done-this-week label, notes with tasks.",
+    "placeholders": {
+      "open": {
+        "type": "int"
+      },
+      "done": {
+        "type": "String"
+      },
+      "notes": {
+        "type": "int"
+      }
+    }
+  },
+  "tasksSummaryOpen": "{open, plural, =0{Nothing open} =1{1 open} other{{open} open}} · {notes, plural, =0{in no notes} =1{in 1 note} other{in {notes} notes}}",
+  "@tasksSummaryOpen": {
+    "description": "Tasks header without a done-this-week label.",
+    "placeholders": {
+      "open": {
+        "type": "int"
+      },
+      "notes": {
+        "type": "int"
+      }
+    }
+  },
+  "recurrencePreviewNone": "Set a due date and a rule the app understands to see the next dates.",
+  "@recurrencePreviewNone": {
+    "description": "No preview of the next dates."
+  },
+  "recurrenceInterval": "{count, plural, =1{Every period} other{Every {count} periods}}",
+  "@recurrenceInterval": {
+    "description": "The rule's interval.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recurrenceIntervalLess": "Less often",
+  "@recurrenceIntervalLess": {
+    "description": "Decreases the interval."
+  },
+  "recurrenceIntervalMore": "More apart",
+  "@recurrenceIntervalMore": {
+    "description": "Increases the interval."
+  },
+  "recurrenceOnDueDay": "On the due date's day",
+  "@recurrenceOnDueDay": {
+    "description": "Month day rule: same day as the due date."
+  },
+  "recurrenceNth": "{nth, select, 1{First} 2{Second} 3{Third} 4{Fourth} other{Last}}",
+  "@recurrenceNth": {
+    "description": "Position of the nth weekday.",
+    "placeholders": {
+      "nth": {
+        "type": "String"
+      }
+    }
+  },
+  "recurrenceWhenDone": "Count from when it's done",
+  "@recurrenceWhenDone": {
+    "description": "Recurrence counted from completion."
+  },
+  "recurrenceNotUnderstoodHint": "Type a rule, or pick a frequency to build one.",
+  "@recurrenceNotUnderstoodHint": {
+    "description": "Builder without a form."
+  },
+  "weekdayMon": "Mon",
+  "@weekdayMon": {
+    "description": "Monday."
+  },
+  "weekdayTue": "Tue",
+  "@weekdayTue": {
+    "description": "Tuesday."
+  },
+  "weekdayWed": "Wed",
+  "@weekdayWed": {
+    "description": "Wednesday."
+  },
+  "weekdayThu": "Thu",
+  "@weekdayThu": {
+    "description": "Thursday."
+  },
+  "weekdayFri": "Fri",
+  "@weekdayFri": {
+    "description": "Friday."
+  },
+  "weekdaySat": "Sat",
+  "@weekdaySat": {
+    "description": "Saturday."
+  },
+  "weekdaySun": "Sun",
+  "@weekdaySun": {
+    "description": "Sunday."
+  },
+  "editorParsedNothing": "Dates, repeats, reminders and @people in the text show here.",
+  "@editorParsedNothing": {
+    "description": "Understood-as section without chips."
+  },
+  "editorHomeItem": "{title} · {count, plural, =0{no open tasks} =1{1 open} other{{count} open}}",
+  "@editorHomeItem": {
+    "description": "A home note in the picker with its open tasks.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
       }
     }
   }

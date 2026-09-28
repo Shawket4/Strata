@@ -230,6 +230,7 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
                 ulid::Ulid(0x0199_0000_0000_0000_0000_0000_0000_0000 + n),
                 None,
                 Op::NoteCreate(o::NoteCreate {
+                    created: strata_common::clock::default_test_epoch(),
                     id: ulid::Ulid(0x0199_1111_0000_0000_0000_0000_0000_0000 + n),
                     path: format!("inbox/Pushed {n:03}.md"),
                     content: format!("Pushed offline {n} — ملاحظة {n}\n"),

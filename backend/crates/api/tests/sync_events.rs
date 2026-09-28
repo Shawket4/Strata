@@ -38,6 +38,7 @@ fn op(n: u128, base: Option<Version>, op: Op) -> SyncOp {
 
 fn create(n: u128, path: &str, body: &str) -> Op {
     Op::NoteCreate(o::NoteCreate {
+        created: strata_common::clock::default_test_epoch(),
         id: id(n),
         path: path.into(),
         content: body.into(),
@@ -130,6 +131,7 @@ async fn writes_produce_the_exact_event_sequence() {
             4,
             None,
             Op::EntityCreate(o::EntityCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(3),
                 kind: domain::NoteKind::Person,
                 name: "Sam".into(),
@@ -149,6 +151,8 @@ async fn writes_produce_the_exact_event_sequence() {
             5,
             None,
             Op::TaskCreate(o::TaskCreate {
+                created: strata_common::clock::default_test_epoch(),
+                home_id: None,
                 id: tid.clone(),
                 note_id: Some(id(2)),
                 text: "Ask [[Sam]]".into(),

@@ -4,8 +4,6 @@ import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_tasks/strata_tasks.dart';
 
-import 'helpers/harness.dart';
-
 Future<void> _tap(WidgetTester tester, Finder finder) async {
   if (finder.evaluate().isEmpty) {
     await tester.scrollUntilVisible(
@@ -14,15 +12,12 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
       scrollable: find.byType(Scrollable).first,
     );
   }
-  await tester.ensureVisible(finder.first);
-  await tester.pumpAndSettle();
-  await tester.tap(finder.first);
-  await tester.pumpAndSettle();
+  await tapVisible(tester, finder.first);
 }
 
 void main() {
   group('TaskDetailScreen', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('recurring task: fields, history and intents [$v]', (
         tester,
       ) async {
@@ -34,7 +29,6 @@ void main() {
           v,
           TaskDetailScreen(taskId: 't-watanya-eta', onOpenNote: notes.add),
           fake: fake,
-          scaffold: false,
         );
         final s = lookupTasksLocalizations(v.locale);
         expectNoErrors(tester);
@@ -46,15 +40,22 @@ void main() {
         expect(find.text("Make Watanya's ETA invoice"), findsOneWidget);
         expect(find.text('every month on the 1st'), findsOneWidget);
         expect(find.text(s.tasksRecurring), findsOneWidget);
-        await expectAccessible(tester);
+        // The core's labels: where the line lives, next occurrence, due.
+        expect(find.text('Tasks.md · line 12'), findsOneWidget);
+        expect(find.text('Next: Sun 1 Nov'), findsOneWidget);
+        expect(find.text('Thu 1 Oct'), findsOneWidget);
+        expect(find.text('in 4 days'), findsOneWidget);
+        await expectAccessible(tester, contrast: v.textScale == 1);
         final scrollable = find.byType(Scrollable).first;
         await tester.scrollUntilVisible(
-          find.byType(TaskReminderBell),
+          find.text('Thu 1 Oct, 09:00'),
           200,
           scrollable: scrollable,
         );
+        expect(find.text('on the due date'), findsOneWidget);
+        expect(find.text('to Pixel 9, MacBook Pro'), findsOneWidget);
         await tester.scrollUntilVisible(
-          find.text(s.tasksDoneOn(date: DateTime.utc(2026, 9))),
+          find.text('Done Tue 1 Sep'),
           200,
           scrollable: scrollable,
         );
@@ -74,7 +75,7 @@ void main() {
           fake.calls,
           contains(const CoreCall('cancelTask', {'taskId': 't-watanya-eta'})),
         );
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
         expectNoErrors(tester);
       });
 
@@ -94,7 +95,6 @@ void main() {
           v,
           const TaskDetailScreen(taskId: 't-gone'),
           fake: fake,
-          scaffold: false,
         );
         final s = lookupTasksLocalizations(v.locale);
         expect(find.text(s.tasksNotFoundTitle), findsOneWidget);
@@ -119,7 +119,6 @@ void main() {
           v,
           const TaskDetailScreen(taskId: 't-watanya-eta-2026-09'),
           fake: fake,
-          scaffold: false,
         );
         final s = lookupTasksLocalizations(v.locale);
         expect(find.text(s.tasksActionMarkDone), findsNothing);
@@ -137,29 +136,61 @@ void main() {
   });
 
   group('Task detail editing', () {
-    final compact = matrix().first;
+    final compact = variants().first;
 
     testWidgets('Edit rule saves the phrase verbatim; Stop repeating clears', (
       tester,
     ) async {
       final fake = FakeCoreApi()
-        ..task['t-watanya-eta'].add(StrataFixtures.taskScreen);
+        ..task['t-watanya-eta'].add(StrataFixtures.taskScreen)
+        ..recurrenceFormAnswer.returns(StrataFixtures.taskScreen.recurrenceForm)
+        ..recurrencePreviewAnswer.returns(
+          StrataFixtures.taskScreen.recurrencePreview,
+        );
       await pumpVariant(
         tester,
         compact,
         const TaskDetailScreen(taskId: 't-watanya-eta'),
         fake: fake,
-        scaffold: false,
       );
       final s = lookupTasksLocalizations(compact.locale);
       await _tap(tester, find.text(s.tasksActionEditRule));
       expect(find.byType(RecurrenceEditor), findsOneWidget);
       expect(find.byType(BottomSheet), findsOneWidget);
-      expect(find.text(s.recurrencePreviewUnavailable), findsOneWidget);
+      // The core's form of the stored phrase and its next dates.
+      expect(
+        fake.calls,
+        containsAll([
+          const CoreCall('recurrenceForm', {
+            'phrase': 'every month on the 1st',
+          }),
+          CoreCall('recurrencePreview', {
+            'phrase': 'every month on the 1st',
+            'from': DateTime.utc(2026, 10),
+            'count': 3,
+          }),
+        ]),
+      );
+      expect(find.text('Sun 1 Nov'), findsOneWidget);
+      // A builder change is compiled by the core into the phrase.
+      await _tap(tester, find.text(s.recurrenceOnLastDay));
+      final composed = fake.calls.lastWhere(
+        (c) => c.method == 'composeRecurrence',
+      );
+      expect(
+        (composed.args['form']! as RecurrenceForm).monthDayMode,
+        MonthDayMode.lastDay,
+      );
+      expect(find.text('Every month on the last day'), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'every month on the last day',
+      );
       await tester.enterText(
         find.byType(TextField),
         'every month on the last day',
       );
+      await settle(tester);
       await _tap(tester, find.text(s.recurrenceSave));
       expect(
         fake.calls,
@@ -195,7 +226,6 @@ void main() {
         compact,
         const TaskDetailScreen(taskId: 't-watanya-eta'),
         fake: fake,
-        scaffold: false,
       );
       final s = lookupTasksLocalizations(compact.locale);
       await _tap(tester, find.byTooltip(s.tasksActionEditText));
@@ -232,6 +262,40 @@ void main() {
       );
     });
 
+    testWidgets('reminders are removed and added', (tester) async {
+      final fake = FakeCoreApi()
+        ..task['t-watanya-eta'].add(StrataFixtures.taskScreen);
+      await pumpVariant(
+        tester,
+        compact,
+        const TaskDetailScreen(taskId: 't-watanya-eta'),
+        fake: fake,
+      );
+      final s = lookupTasksLocalizations(compact.locale);
+      await _tap(
+        tester,
+        find.byTooltip(s.editorRemoveReminder(time: 'Thu 1 Oct, 09:00')),
+      );
+      expect(
+        fake.calls.last,
+        CoreCall('removeReminder', {
+          'taskId': 't-watanya-eta',
+          'at': StrataFixtures.reminderItem.localAt,
+        }),
+      );
+      await _tap(tester, find.text(s.tasksActionAddReminder));
+      await _tap(tester, find.text('15'));
+      await _tap(tester, find.text('OK'));
+      await _tap(tester, find.text('OK'));
+      expect(
+        fake.calls.last,
+        CoreCall('addReminder', {
+          'taskId': 't-watanya-eta',
+          'at': DateTime.utc(2026, 10, 15, 9),
+        }),
+      );
+    });
+
     testWidgets('change due date through the picker', (tester) async {
       final fake = FakeCoreApi()
         ..task['t-watanya-eta'].add(StrataFixtures.taskScreen);
@@ -240,7 +304,6 @@ void main() {
         compact,
         const TaskDetailScreen(taskId: 't-watanya-eta'),
         fake: fake,
-        scaffold: false,
       );
       final s = lookupTasksLocalizations(compact.locale);
       await _tap(tester, find.byTooltip(s.tasksActionChangeDue));

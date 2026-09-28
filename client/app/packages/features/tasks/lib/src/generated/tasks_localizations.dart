@@ -318,12 +318,6 @@ abstract class TasksLocalizations {
   /// **'UNDERSTOOD AS'**
   String get editorParsedTitle;
 
-  /// Parsed details are not provided by the core yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Reading dates and repeats from the text is not available yet'**
-  String get editorParsedUnavailable;
-
   /// Due date field.
   ///
   /// In en, this message translates to:
@@ -468,41 +462,11 @@ abstract class TasksLocalizations {
   /// **'On the last day'**
   String get recurrenceOnLastDay;
 
-  /// Ends option.
-  ///
-  /// In en, this message translates to:
-  /// **'Ends never'**
-  String get recurrenceEndsNever;
-
-  /// Ends option.
-  ///
-  /// In en, this message translates to:
-  /// **'Ends on a date'**
-  String get recurrenceEndsOnDate;
-
-  /// Ends option.
-  ///
-  /// In en, this message translates to:
-  /// **'Ends after N occurrences'**
-  String get recurrenceEndsAfter;
-
-  /// The core rule builder is missing.
-  ///
-  /// In en, this message translates to:
-  /// **'Building a rule from options is not available yet'**
-  String get recurrenceBuilderUnavailable;
-
   /// Preview section title.
   ///
   /// In en, this message translates to:
   /// **'NEXT DATES'**
   String get recurrencePreviewTitle;
-
-  /// The core preview is missing.
-  ///
-  /// In en, this message translates to:
-  /// **'A preview of the next dates isn\'t available yet.'**
-  String get recurrencePreviewUnavailable;
 
   /// Saves the rule.
   ///
@@ -941,6 +905,142 @@ abstract class TasksLocalizations {
   /// In en, this message translates to:
   /// **'A similar {kind} already exists.'**
   String dupSubtitleUntitled({required String kind});
+
+  /// A task's due date, from the core's label.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {due}'**
+  String tasksDueLabel({required String due});
+
+  /// An overdue task: the core's lateness and due labels.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue · {late} · due {due}'**
+  String tasksOverdueLabel({required String late, required String due});
+
+  /// A recurring rule with its next occurrence (core label).
+  ///
+  /// In en, this message translates to:
+  /// **'{rule} · next {next}'**
+  String tasksRuleNextLabel({required String rule, required String next});
+
+  /// Tasks header: open count, the core's done-this-week label, notes with tasks.
+  ///
+  /// In en, this message translates to:
+  /// **'{open, plural, =0{Nothing open} =1{1 open} other{{open} open}} · {done} · {notes, plural, =0{in no notes} =1{in 1 note} other{in {notes} notes}}'**
+  String tasksSummary({
+    required int open,
+    required String done,
+    required int notes,
+  });
+
+  /// Tasks header without a done-this-week label.
+  ///
+  /// In en, this message translates to:
+  /// **'{open, plural, =0{Nothing open} =1{1 open} other{{open} open}} · {notes, plural, =0{in no notes} =1{in 1 note} other{in {notes} notes}}'**
+  String tasksSummaryOpen({required int open, required int notes});
+
+  /// No preview of the next dates.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a due date and a rule the app understands to see the next dates.'**
+  String get recurrencePreviewNone;
+
+  /// The rule's interval.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Every period} other{Every {count} periods}}'**
+  String recurrenceInterval({required int count});
+
+  /// Decreases the interval.
+  ///
+  /// In en, this message translates to:
+  /// **'Less often'**
+  String get recurrenceIntervalLess;
+
+  /// Increases the interval.
+  ///
+  /// In en, this message translates to:
+  /// **'More apart'**
+  String get recurrenceIntervalMore;
+
+  /// Month day rule: same day as the due date.
+  ///
+  /// In en, this message translates to:
+  /// **'On the due date\'s day'**
+  String get recurrenceOnDueDay;
+
+  /// Position of the nth weekday.
+  ///
+  /// In en, this message translates to:
+  /// **'{nth, select, 1{First} 2{Second} 3{Third} 4{Fourth} other{Last}}'**
+  String recurrenceNth({required String nth});
+
+  /// Recurrence counted from completion.
+  ///
+  /// In en, this message translates to:
+  /// **'Count from when it\'s done'**
+  String get recurrenceWhenDone;
+
+  /// Builder without a form.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a rule, or pick a frequency to build one.'**
+  String get recurrenceNotUnderstoodHint;
+
+  /// Monday.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get weekdayMon;
+
+  /// Tuesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get weekdayTue;
+
+  /// Wednesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get weekdayWed;
+
+  /// Thursday.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get weekdayThu;
+
+  /// Friday.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get weekdayFri;
+
+  /// Saturday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get weekdaySat;
+
+  /// Sunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get weekdaySun;
+
+  /// Understood-as section without chips.
+  ///
+  /// In en, this message translates to:
+  /// **'Dates, repeats, reminders and @people in the text show here.'**
+  String get editorParsedNothing;
+
+  /// A home note in the picker with its open tasks.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} · {count, plural, =0{no open tasks} =1{1 open} other{{count} open}}'**
+  String editorHomeItem({required String title, required int count});
 }
 
 class _TasksLocalizationsDelegate

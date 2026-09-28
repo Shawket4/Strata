@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,12 +13,14 @@ import 'package:strata_ui/strata_ui.dart';
 /// The recurrence editor of a task.
 ///
 /// The rule is the Tasks-plugin phrase kept verbatim in the vault (`every
-/// month on the 1st`); Save sends it unchanged with `CoreApi.updateTask`
+/// month on the 1st`). The builder (frequency, interval, weekdays, the day
+/// rule of a month, "when done") is the core's form of the phrase
+/// (`recurrence_form`); every change is compiled back by the core
+/// (`compose_recurrence`) into the phrase and its summary, and the next dates
+/// come from the core too (`recurrence_preview`) — no rule is composed or
+/// evaluated in Dart (L15). Save sends the phrase with `CoreApi.updateTask`
 /// (`TaskPatch.recurrence`), "Stop repeating" sends
-/// `TaskPatch.clearRecurrence`. The structured builder (frequency, interval,
-/// day of month / nth weekday / last day, ends) and the preview of the next
-/// dates need the core's rule builder and are shown as not yet available
-/// (docs/CORE_GAPS.md) — no rule is composed or evaluated in Dart (L15).
+/// `TaskPatch.clearRecurrence`.
 class RecurrenceEditor extends HookConsumerWidget {
   /// Creates the editor for [task].
   const new({required this.task, super.key, this.line});
@@ -59,14 +62,59 @@ class RecurrenceEditor extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final phrase = useTextEditingController(text: task.recurrence ?? '');
     final value = useValueListenable(phrase);
+    final api = ref.read(coreApiProvider);
+    final form = useState<RecurrenceForm?>(null);
+    final summary = useState<String?>(null);
+    // The builder starts from the core's reading of the stored phrase.
+    useEffect(() {
+      final initial = task.recurrence;
+      if (initial == null) return null;
+      unawaited(
+        api
+            .recurrenceForm(phrase: initial)
+            .then((parsed) {
+              if (context.mounted) form.value = parsed;
+            })
+            .catchError((Object _) {}),
+      );
+      return null;
+    }, const []);
+
+    Future<void> setForm(RecurrenceForm next) async {
+      form.value = next;
+      try {
+        final composed = await api.composeRecurrence(form: next);
+        if (!context.mounted) return;
+        phrase.text = composed.phrase;
+        summary.value = composed.label;
+      } on Object {
+        // The typed phrase stays as it is.
+      }
+    }
+
+    Future<void> onPhrase(String text) async {
+      summary.value = null;
+      try {
+        final parsed = await api.recurrenceForm(phrase: text);
+        if (context.mounted) form.value = parsed;
+      } on Object {
+        // Not understood: the builder keeps its last state.
+      }
+    }
+
+    final due = task.due;
+    final preview = value.text.isEmpty || due == null
+        ? null
+        : ref.watch(recurrencePreviewProvider(value.text, due, 3));
+
     return TasksL10nScope(
       child: Builder(
         builder: (context) {
           final l10n = context.tasksL10n;
           final colors = context.strataColors;
           final text = context.strataText;
-          final api = ref.read(coreApiProvider);
           final stored = line;
+          final current = form.value;
 
           void save() {
             if (value.text.isEmpty) return;
@@ -147,6 +195,7 @@ class RecurrenceEditor extends HookConsumerWidget {
                   TextField(
                     controller: phrase,
                     textDirection: TextDirection.ltr,
+                    onChanged: (text) => unawaited(onPhrase(text)),
                     decoration: InputDecoration(
                       labelText: l10n.recurrencePhraseLabel,
                       hintText: l10n.recurrencePhraseHint,
@@ -154,62 +203,44 @@ class RecurrenceEditor extends HookConsumerWidget {
                       helperMaxLines: 3,
                     ),
                   ),
+                  if (summary.value case final label?)
+                    Padding(
+                      padding: const EdgeInsets.only(top: StrataSpacing.s1),
+                      child: Text(
+                        label,
+                        style: text.bodySmall.withWeight(FontWeight.w600),
+                      ),
+                    ),
                   const SizedBox(height: StrataSpacing.s4),
                   Text(l10n.recurrenceFrequency, style: section),
                   const SizedBox(height: StrataSpacing.s2),
-                  SegmentedButton<int>(
-                    segments: [
-                      ButtonSegment(
-                        value: 0,
-                        label: Text(l10n.recurrenceDaily),
-                      ),
-                      ButtonSegment(
-                        value: 1,
-                        label: Text(l10n.recurrenceWeekly),
-                      ),
-                      ButtonSegment(
-                        value: 2,
-                        label: Text(l10n.recurrenceMonthly),
-                      ),
-                      ButtonSegment(
-                        value: 3,
-                        label: Text(l10n.recurrenceYearly),
-                      ),
-                    ],
-                    selected: const {},
-                    emptySelectionAllowed: true,
-                  ),
-                  const SizedBox(height: StrataSpacing.s3),
-                  Wrap(
-                    spacing: StrataSpacing.s4,
-                    runSpacing: StrataSpacing.s1,
-                    children: [
-                      for (final option in [
-                        l10n.recurrenceOnDayOfMonth,
-                        l10n.recurrenceOnNthWeekday,
-                        l10n.recurrenceOnLastDay,
-                        l10n.recurrenceEndsNever,
-                        l10n.recurrenceEndsOnDate,
-                        l10n.recurrenceEndsAfter,
-                      ])
-                        Text(
-                          option,
-                          style: text.bodySmall.copyWith(color: colors.text2),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: StrataSpacing.s2),
-                  StatusPill(
-                    label: l10n.recurrenceBuilderUnavailable,
-                    icon: Icons.hourglass_empty,
+                  _FormBuilder(
+                    form: current,
+                    onChanged: (next) => unawaited(setForm(next)),
                   ),
                   const SizedBox(height: StrataSpacing.s4),
                   Text(l10n.recurrencePreviewTitle, style: section),
                   const SizedBox(height: StrataSpacing.s1),
-                  Text(
-                    l10n.recurrencePreviewUnavailable,
-                    style: text.bodySmall.copyWith(color: colors.text2),
-                  ),
+                  switch (preview) {
+                    AsyncData(:final value) when value.isNotEmpty => Wrap(
+                      spacing: StrataSpacing.s2,
+                      runSpacing: StrataSpacing.s1,
+                      children: [
+                        for (final item in value)
+                          StatusPill(
+                            label: item.label,
+                            tone: item.isDue
+                                ? StatusTone.info
+                                : StatusTone.neutral,
+                            icon: item.isDue ? Icons.event : null,
+                          ),
+                      ],
+                    ),
+                    _ => Text(
+                      l10n.recurrencePreviewNone,
+                      style: text.bodySmall.copyWith(color: colors.text2),
+                    ),
+                  },
                   if (stored != null) ...[
                     const SizedBox(height: StrataSpacing.s4),
                     Text(l10n.tasksFieldStoredLine, style: section),
@@ -267,6 +298,245 @@ class RecurrenceEditor extends HookConsumerWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// The structured rule: frequency, interval, weekdays (weekly), the day rule
+/// (monthly and yearly) and "when done". Each change is a new form for the
+/// core to compile.
+class _FormBuilder extends StatelessWidget {
+  const new({required this.form, required this.onChanged});
+
+  final RecurrenceForm? form;
+  final ValueChanged<RecurrenceForm> onChanged;
+
+  static final RecurrenceForm _default = RecurrenceForm(
+    frequency: RecurrenceFrequency.weekly,
+    interval: 1,
+    weekdays: [],
+    monthDayMode: MonthDayMode.sameDay,
+    monthDays: Uint32List(0),
+    nth: 1,
+    months: Uint32List(0),
+    whenDone: false,
+  );
+
+  RecurrenceForm _with({
+    RecurrenceFrequency? frequency,
+    int? interval,
+    List<WeekdayKind>? weekdays,
+    MonthDayMode? monthDayMode,
+    Uint32List? monthDays,
+    int? nth,
+    WeekdayKind? nthWeekday,
+    bool? whenDone,
+  }) {
+    final f = form ?? _default;
+    return RecurrenceForm(
+      frequency: frequency ?? f.frequency,
+      interval: interval ?? f.interval,
+      weekdays: weekdays ?? f.weekdays,
+      monthDayMode: monthDayMode ?? f.monthDayMode,
+      monthDays: monthDays ?? f.monthDays,
+      nth: nth ?? f.nth,
+      nthWeekday: nthWeekday ?? f.nthWeekday,
+      months: f.months,
+      whenDone: whenDone ?? f.whenDone,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.tasksL10n;
+    final text = context.strataText;
+    final colors = context.strataColors;
+    final f = form;
+    String weekday(WeekdayKind day) => switch (day) {
+      WeekdayKind.mon => l10n.weekdayMon,
+      WeekdayKind.tue => l10n.weekdayTue,
+      WeekdayKind.wed => l10n.weekdayWed,
+      WeekdayKind.thu => l10n.weekdayThu,
+      WeekdayKind.fri => l10n.weekdayFri,
+      WeekdayKind.sat => l10n.weekdaySat,
+      WeekdayKind.sun => l10n.weekdaySun,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<RecurrenceFrequency>(
+          segments: [
+            ButtonSegment(
+              value: RecurrenceFrequency.daily,
+              label: Text(l10n.recurrenceDaily),
+            ),
+            ButtonSegment(
+              value: RecurrenceFrequency.weekly,
+              label: Text(l10n.recurrenceWeekly),
+            ),
+            ButtonSegment(
+              value: RecurrenceFrequency.monthly,
+              label: Text(l10n.recurrenceMonthly),
+            ),
+            ButtonSegment(
+              value: RecurrenceFrequency.yearly,
+              label: Text(l10n.recurrenceYearly),
+            ),
+          ],
+          selected: {?f?.frequency},
+          emptySelectionAllowed: true,
+          showSelectedIcon: false,
+          onSelectionChanged: (values) {
+            if (values.isEmpty) return;
+            onChanged(_with(frequency: values.first));
+          },
+        ),
+        if (f != null) ...[
+          const SizedBox(height: StrataSpacing.s2),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.recurrenceInterval(count: f.interval),
+                  style: text.bodySmall,
+                ),
+              ),
+              IconButton(
+                tooltip: l10n.recurrenceIntervalLess,
+                onPressed: f.interval <= 1
+                    ? null
+                    : () => onChanged(_with(interval: f.interval - 1)),
+                icon: const Icon(Icons.remove),
+              ),
+              IconButton(
+                tooltip: l10n.recurrenceIntervalMore,
+                onPressed: () => onChanged(_with(interval: f.interval + 1)),
+                icon: const Icon(Icons.add),
+              ),
+            ],
+          ),
+          if (f.frequency == RecurrenceFrequency.weekly)
+            Wrap(
+              spacing: StrataSpacing.s1,
+              runSpacing: StrataSpacing.s1,
+              children: [
+                for (final day in WeekdayKind.values)
+                  FilterChip(
+                    label: Text(weekday(day)),
+                    selected: f.weekdays.contains(day),
+                    onSelected: (on) => onChanged(
+                      _with(
+                        weekdays: [
+                          for (final d in WeekdayKind.values)
+                            if (d == day ? on : f.weekdays.contains(d)) d,
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          if (f.frequency == RecurrenceFrequency.monthly ||
+              f.frequency == RecurrenceFrequency.yearly)
+            RadioGroup<MonthDayMode>(
+              groupValue: f.monthDayMode,
+              onChanged: (mode) {
+                if (mode != null) onChanged(_with(monthDayMode: mode));
+              },
+              child: Column(
+                children: [
+                  RadioListTile<MonthDayMode>(
+                    dense: true,
+                    value: MonthDayMode.sameDay,
+                    title: Text(l10n.recurrenceOnDueDay),
+                  ),
+                  RadioListTile<MonthDayMode>(
+                    dense: true,
+                    value: MonthDayMode.days,
+                    title: Text(l10n.recurrenceOnDayOfMonth),
+                    secondary: f.monthDayMode == MonthDayMode.days
+                        ? DropdownButton<int>(
+                            value: f.monthDays.isEmpty ? 1 : f.monthDays.first,
+                            items: [
+                              for (var d = 1; d <= 31; d++)
+                                DropdownMenuItem(value: d, child: Text('$d')),
+                            ],
+                            onChanged: (d) {
+                              if (d == null) return;
+                              onChanged(
+                                _with(monthDays: Uint32List.fromList([d])),
+                              );
+                            },
+                          )
+                        : null,
+                  ),
+                  RadioListTile<MonthDayMode>(
+                    dense: true,
+                    value: MonthDayMode.nthWeekday,
+                    title: Text(l10n.recurrenceOnNthWeekday),
+                  ),
+                  if (f.monthDayMode == MonthDayMode.nthWeekday)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(
+                        start: StrataSpacing.s8,
+                      ),
+                      child: Wrap(
+                        spacing: StrataSpacing.s3,
+                        children: [
+                          DropdownButton<int>(
+                            value: f.nth,
+                            items: [
+                              for (final n in const [1, 2, 3, 4, -1])
+                                DropdownMenuItem(
+                                  value: n,
+                                  child: Text(l10n.recurrenceNth(nth: '$n')),
+                                ),
+                            ],
+                            onChanged: (n) {
+                              if (n != null) onChanged(_with(nth: n));
+                            },
+                          ),
+                          DropdownButton<WeekdayKind>(
+                            value: f.nthWeekday ?? WeekdayKind.mon,
+                            items: [
+                              for (final day in WeekdayKind.values)
+                                DropdownMenuItem(
+                                  value: day,
+                                  child: Text(weekday(day)),
+                                ),
+                            ],
+                            onChanged: (day) {
+                              if (day != null) {
+                                onChanged(_with(nthWeekday: day));
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  RadioListTile<MonthDayMode>(
+                    dense: true,
+                    value: MonthDayMode.lastDay,
+                    title: Text(l10n.recurrenceOnLastDay),
+                  ),
+                ],
+              ),
+            ),
+          SwitchListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            value: f.whenDone,
+            onChanged: (on) => onChanged(_with(whenDone: on)),
+            title: Text(l10n.recurrenceWhenDone),
+          ),
+        ] else
+          Padding(
+            padding: const EdgeInsets.only(top: StrataSpacing.s2),
+            child: Text(
+              l10n.recurrenceNotUnderstoodHint,
+              style: text.bodySmall.copyWith(color: colors.text2),
+            ),
+          ),
+      ],
     );
   }
 }

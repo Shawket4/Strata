@@ -35,6 +35,7 @@ async fn create(u: &User, path: &str, body: &str) -> types::Note {
     ops::create_note(
         &u.client,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: body.to_owned(),
             force: Some(true),
             id: None,
@@ -364,6 +365,7 @@ async fn ask_streams_tokens_then_citations_resolved_to_blocks_and_saves_as_a_not
         c,
         started.id,
         &types::SaveAskRequest {
+            created: strata_common::clock::default_test_epoch(),
             force: None,
             title: None,
         },
@@ -389,6 +391,7 @@ async fn ask_streams_tokens_then_citations_resolved_to_blocks_and_saves_as_a_not
         &bob.client,
         started.id,
         &types::SaveAskRequest {
+            created: strata_common::clock::default_test_epoch(),
             force: None,
             title: Some("Stolen".into()),
         },
@@ -591,6 +594,7 @@ async fn without_ai_everything_else_keeps_working() {
     let created = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: "x\n".into(),
             force: None,
             id: None,
@@ -619,6 +623,7 @@ async fn creates_report_semantic_duplicates_with_their_level() {
     let err = ops::create_note(
         &alice.client,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: "x\n".into(),
             force: None,
             id: None,

@@ -37,6 +37,7 @@ fn setup() -> Vec<SyncOp> {
             op_id(1),
             None,
             Op::EntityCreate(o::EntityCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(1),
                 kind: domain::NoteKind::Person,
                 name: "Sam Hany".into(),
@@ -49,6 +50,7 @@ fn setup() -> Vec<SyncOp> {
             op_id(2),
             None,
             Op::NoteCreate(o::NoteCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(2),
                 path: "notes/A.md".into(),
                 content: "# A\n\none\n".into(),
@@ -70,6 +72,7 @@ fn crashing(a: &str) -> Vec<SyncOp> {
             op_id(10),
             None,
             Op::NoteCreate(o::NoteCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(10),
                 path: "notes/Plan.md".into(),
                 content: "# Plan\n\nship it\n".into(),
@@ -88,6 +91,8 @@ fn crashing(a: &str) -> Vec<SyncOp> {
             op_id(12),
             None,
             Op::TaskCreate(o::TaskCreate {
+                created: strata_common::clock::default_test_epoch(),
+                home_id: None,
                 id: TASK.into(),
                 // In a note with a client ID (the task home note's ID is the server's own).
                 note_id: Some(id(2)),
@@ -105,6 +110,7 @@ fn crashing(a: &str) -> Vec<SyncOp> {
             op_id(13),
             None,
             Op::DocumentCreate(o::DocumentCreate {
+                created: strata_common::clock::default_test_epoch(),
                 id: id(13),
                 name: "Lease contract".into(),
                 aliases: vec![],

@@ -33,6 +33,7 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     let note = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: "The quarterly plan for [[Watanya]].\n".into(),
             force: None,
             id: None,
@@ -44,6 +45,7 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     let only = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: "Private.\n".into(),
             force: None,
             id: None,
@@ -55,6 +57,7 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     let person = ops::create_entity(
         c,
         &types::CreateEntityRequest {
+            created: strata_common::clock::default_test_epoch(),
             aliases: vec!["واتانيا".into()],
             fields: HashMap::new(),
             force: None,
@@ -70,6 +73,7 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     let company = ops::create_entity(
         c,
         &types::CreateEntityRequest {
+            created: strata_common::clock::default_test_epoch(),
             aliases: vec![],
             fields: HashMap::new(),
             force: None,
@@ -85,6 +89,7 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     let place = ops::create_place(
         c,
         &types::CreatePlaceRequest {
+            created: strata_common::clock::default_test_epoch(),
             address: None,
             aliases: vec![],
             force: None,
@@ -99,6 +104,7 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     let doc = ops::create_document(
         c,
         &types::CreateDocumentRequest {
+            created: strata_common::clock::default_test_epoch(),
             aliases: vec![],
             copy: None,
             doc_type: Some("passport".into()),
@@ -128,6 +134,8 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     let task = ops::create_task(
         c,
         &types::CreateTaskRequest {
+            created: strata_common::clock::default_test_epoch(),
+            home_id: None,
             text: "Pay the rent [[Watanya]]".into(),
             due: None,
             force: None,
@@ -143,10 +151,10 @@ async fn populate(u: &User, only_path: &str) -> Owned {
     .await
     .expect("task");
     let text = "Ask Watanya about the quarterly plan";
-    ops::capture(c, &types::CaptureRequest { text: text.into() })
+    ops::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.into() })
         .await
         .expect("capture");
-    let suggestion = ops::capture(c, &types::CaptureRequest { text: text.into() })
+    let suggestion = ops::capture(c, &types::CaptureRequest { created: strata_common::clock::default_test_epoch(), text: text.into() })
         .await
         .expect("capture")
         .suggestion_id

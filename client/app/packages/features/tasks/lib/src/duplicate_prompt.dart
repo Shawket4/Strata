@@ -219,6 +219,17 @@ class _CandidateCard extends StatelessWidget {
                           snippet,
                           style: text.bodySmall.copyWith(color: colors.text2),
                         ),
+                      if (candidate.path case final path?)
+                        Text(
+                          path,
+                          textDirection: TextDirection.ltr,
+                          style: text.monoSmall.copyWith(color: colors.text2),
+                        ),
+                      if (candidate.reason.isNotEmpty)
+                        Text(
+                          candidate.reason,
+                          style: text.caption.copyWith(color: colors.text2),
+                        ),
                       const SizedBox(height: StrataSpacing.s1),
                       Wrap(
                         spacing: StrataSpacing.s2,

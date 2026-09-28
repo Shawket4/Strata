@@ -22,6 +22,7 @@ fn d(y: i32, m: u32, day: u32) -> NaiveDate {
 
 fn entity(kind: types::EntityKind, name: &str, aliases: &[&str]) -> types::CreateEntityRequest {
     types::CreateEntityRequest {
+        created: strata_common::clock::default_test_epoch(),
         aliases: aliases.iter().map(|a| (*a).to_owned()).collect(),
         fields: HashMap::new(),
         force: None,
@@ -35,6 +36,7 @@ fn entity(kind: types::EntityKind, name: &str, aliases: &[&str]) -> types::Creat
 
 fn place(name: &str, parent: Option<ulid::Ulid>) -> types::CreatePlaceRequest {
     types::CreatePlaceRequest {
+        created: strata_common::clock::default_test_epoch(),
         address: None,
         aliases: vec![],
         force: None,
@@ -210,6 +212,7 @@ async fn entities_in_both_scripts_duplicates_force_keep_both_and_merge() {
     let note = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: "Met [[واتانيا]] about the invoice.\n".into(),
             force: None,
             id: None,
@@ -301,6 +304,7 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
         .expect("company");
 
     let new_doc = |name: &str| types::CreateDocumentRequest {
+        created: strata_common::clock::default_test_epoch(),
         aliases: vec![],
         copy: Some(types::CopyKind::Original),
         doc_type: Some("passport".into()),
@@ -499,6 +503,7 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
     let call = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: "Found the passport at the office.\n".into(),
             force: None,
             id: None,

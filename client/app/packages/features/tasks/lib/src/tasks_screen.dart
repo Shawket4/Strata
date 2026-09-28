@@ -226,7 +226,10 @@ class TasksScreen extends HookConsumerWidget {
 /// The tasks of a list view, in the order they are rendered.
 List<TaskItem> _rowsForTab(TasksView view, TasksTab tab) => switch (tab) {
   TasksTab.today => view.sections.today,
-  TasksTab.upcoming => view.sections.upcoming,
+  TasksTab.upcoming =>
+    view.sections.upcomingGroups.isEmpty
+        ? view.sections.upcoming
+        : [for (final group in view.sections.upcomingGroups) ...group.tasks],
   TasksTab.overdue => view.sections.overdue,
   TasksTab.recurring => view.sections.recurring,
   TasksTab.noDate => view.sections.noDate,
@@ -241,7 +244,12 @@ List<(String Function(TasksLocalizations), List<TaskItem>, bool)> _groups(
   TasksTableTab.open => [
     ((l) => l.tasksTabOverdue, view.sections.overdue, true),
     ((l) => l.tasksTabToday, view.sections.today, false),
-    ((l) => l.tasksTabUpcoming, view.sections.upcoming, false),
+    // Upcoming by the core's day groups ("Tue 29 Sep").
+    if (view.sections.upcomingGroups.isEmpty)
+      ((l) => l.tasksTabUpcoming, view.sections.upcoming, false)
+    else
+      for (final group in view.sections.upcomingGroups)
+        ((_) => group.label, group.tasks, false),
     ((l) => l.tasksTabNoDate, view.sections.noDate, false),
   ],
   TasksTableTab.recurring => [
@@ -370,10 +378,17 @@ class _TabbedList extends StatelessWidget {
             spacing: StrataSpacing.s3,
             runSpacing: StrataSpacing.s2,
             children: [
-              Semantics(
-                header: true,
-                container: true,
-                child: Text(l10n.tasksTitle, style: text.title),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Semantics(
+                    header: true,
+                    container: true,
+                    child: Text(l10n.tasksTitle, style: text.title),
+                  ),
+                  _Summary(view: view),
+                ],
               ),
               FilledButton.icon(
                 style: tallFilledButton,
@@ -424,16 +439,31 @@ class _TabbedList extends StatelessWidget {
                 )
               : ListView(
                   children: [
-                    for (final task in rows)
-                      if (tab == TasksTab.recurring)
-                        RecurringRuleRow(task: task, onOpen: onOpen)
-                      else
-                        TaskRow(
-                          task: task,
-                          overdue: tab == TasksTab.overdue,
-                          selected: task.id == selected,
-                          onOpen: onOpen,
+                    if (tab == TasksTab.upcoming &&
+                        view.sections.upcomingGroups.isNotEmpty)
+                      for (final group in view.sections.upcomingGroups) ...[
+                        StrataSectionHeader(
+                          title: group.label,
+                          count: group.tasks.length,
                         ),
+                        for (final task in group.tasks)
+                          TaskRow(
+                            task: task,
+                            selected: task.id == selected,
+                            onOpen: onOpen,
+                          ),
+                      ]
+                    else
+                      for (final task in rows)
+                        if (tab == TasksTab.recurring)
+                          RecurringRuleRow(task: task, onOpen: onOpen)
+                        else
+                          TaskRow(
+                            task: task,
+                            overdue: tab == TasksTab.overdue,
+                            selected: task.id == selected,
+                            onOpen: onOpen,
+                          ),
                   ],
                 ),
         ),
@@ -487,10 +517,17 @@ class _TaskTable extends StatelessWidget {
           runSpacing: StrataSpacing.s3,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Semantics(
-              header: true,
-              container: true,
-              child: Text(l10n.tasksTitle, style: text.display),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  header: true,
+                  container: true,
+                  child: Text(l10n.tasksTitle, style: text.display),
+                ),
+                _Summary(view: view),
+              ],
             ),
             SegmentedButton<TasksTableTab>(
               segments: [
@@ -628,6 +665,33 @@ class _TaskTable extends StatelessWidget {
   }
 }
 
+/// "4 open · 1 done this week · in 2 notes" from the core's counts.
+class _Summary extends StatelessWidget {
+  const new({required this.view});
+
+  final TasksView view;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.tasksL10n;
+    return Text(
+      view.doneThisWeekLabel.isEmpty
+          ? l10n.tasksSummaryOpen(
+              open: view.openCount,
+              notes: view.notesWithTasks,
+            )
+          : l10n.tasksSummary(
+              open: view.openCount,
+              done: view.doneThisWeekLabel,
+              notes: view.notesWithTasks,
+            ),
+      style: context.strataText.caption.copyWith(
+        color: context.strataColors.text2,
+      ),
+    );
+  }
+}
+
 class _Hint extends StatelessWidget {
   const new({required this.keys, required this.label});
 
@@ -673,7 +737,9 @@ class _TableRow extends StatelessWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final cell = text.bodySmall.copyWith(color: colors.text2);
-    final due = task.due;
+    final due = task.dueLabel;
+    final late = task.latenessLabel;
+    final isLate = overdue || task.isOverdue;
     final recurrence = task.recurrence;
     final closed = task.state != TaskState.open;
     return Material(
@@ -696,6 +762,7 @@ class _TableRow extends StatelessWidget {
                     children: [
                       Text(
                         task.description,
+                        textDirection: textDirectionOf(task.descriptionDir),
                         style: text.bodySmall
                             .withWeight(FontWeight.w600)
                             .copyWith(
@@ -760,12 +827,14 @@ class _TableRow extends StatelessWidget {
               Expanded(
                 flex: 2,
                 child: Text(
-                  due == null
+                  closed
+                      ? task.completionLabel ?? l10n.commonNone
+                      : due == null
                       ? l10n.commonNone
-                      : overdue
-                      ? l10n.tasksOverdueSince(date: due)
-                      : l10n.tasksDateShort(date: due),
-                  style: overdue
+                      : isLate && late != null
+                      ? l10n.tasksOverdueLabel(late: late, due: due)
+                      : due,
+                  style: isLate && !closed
                       ? cell
                             .withWeight(FontWeight.w600)
                             .copyWith(color: colors.dangerText)

@@ -25,6 +25,7 @@ use vault_format::custody::CustodyEventType;
 
 fn note(path: &str, content: &str) -> CreateNote {
     CreateNote {
+        created: strata_common::clock::default_test_epoch(),
         path: path.to_owned(),
         content: content.to_owned(),
         id: None,
@@ -236,6 +237,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
         .create_entity(
             &s,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind: NoteKind::Place,
                 name: "Nasr City office".into(),
                 aliases: vec!["مكتب مدينة نصر".into()],
@@ -252,6 +254,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
         .create_entity(
             &s,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind: NoteKind::Place,
                 name: "Safe — Nasr City office".into(),
                 aliases: vec![],
@@ -268,6 +271,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
         .create_entity(
             &s,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind: NoteKind::Person,
                 name: "Shady".into(),
                 aliases: vec!["شادي".into()],
@@ -284,6 +288,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
         .create_entity(
             &s,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind: NoteKind::Company,
                 name: "Watanya".into(),
                 aliases: vec!["وطنية".into()],
@@ -300,6 +305,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
         .create_entity(
             &s,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind: NoteKind::Document,
                 name: "Watanya contract".into(),
                 aliases: vec!["عقد وطنية".into()],

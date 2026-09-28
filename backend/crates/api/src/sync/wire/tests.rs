@@ -62,6 +62,7 @@ fn every_op() -> Vec<Op> {
     };
     vec![
         Op::NoteCreate(o::NoteCreate {
+            created: strata_common::clock::default_test_epoch(),
             id: u(1),
             path: "notes/A.md".into(),
             content: "# A\n".into(),
@@ -98,6 +99,7 @@ fn every_op() -> Vec<Op> {
             new_type: "supports".parse().expect("relation"),
         }),
         Op::SuggestionAccept(o::SuggestionAccept {
+            created: strata_common::clock::default_test_epoch(),
             id: u(3),
             edits: Some(o::SuggestionEdits {
                 title: Some("T".into()),
@@ -107,6 +109,7 @@ fn every_op() -> Vec<Op> {
             }),
         }),
         Op::SuggestionAccept(o::SuggestionAccept {
+            created: strata_common::clock::default_test_epoch(),
             id: u(3),
             edits: None,
         }),
@@ -120,6 +123,7 @@ fn every_op() -> Vec<Op> {
             text: "the other one".into(),
         }),
         Op::EntityCreate(o::EntityCreate {
+            created: strata_common::clock::default_test_epoch(),
             id: u(5),
             kind: NoteKind::Person,
             name: "Sam".into(),
@@ -133,6 +137,7 @@ fn every_op() -> Vec<Op> {
             into_id: u(6),
         }),
         Op::DocumentCreate(o::DocumentCreate {
+            created: strata_common::clock::default_test_epoch(),
             id: u(7),
             name: "Contract".into(),
             aliases: vec![],
@@ -154,6 +159,7 @@ fn every_op() -> Vec<Op> {
             counterparty_id: None,
         }),
         Op::PlaceCreate(o::PlaceCreate {
+            created: strata_common::clock::default_test_epoch(),
             id: u(10),
             name: "Safe".into(),
             aliases: vec![],
@@ -163,6 +169,8 @@ fn every_op() -> Vec<Op> {
         }),
         Op::PlacePatch(patch),
         Op::TaskCreate(o::TaskCreate {
+            created: strata_common::clock::default_test_epoch(),
+            home_id: None,
             id: "t-01".into(),
             note_id: None,
             text: "Pay".into(),

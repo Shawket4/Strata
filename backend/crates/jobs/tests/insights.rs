@@ -37,6 +37,7 @@ async fn insights_are_cited_validated_dated_and_leave_user_content_alone() {
         .create_entity(
             &sa,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind: NoteKind::Person,
                 name: "Shady".into(),
                 aliases: vec!["شادي".into()],

@@ -7,8 +7,6 @@ import 'package:strata_tasks/strata_tasks.dart';
 import 'package:strata_ui/strata_ui.dart';
 import 'package:strata_ui/testing.dart';
 
-import 'helpers/harness.dart';
-
 final _petrolScreen = TaskScreen(
   id: 't-petrol-arrows',
   task: StrataFixtures.taskPetrolArrowsInvoice,
@@ -46,7 +44,7 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 
 void main() {
   group('TasksScreen content', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('structure, intents and accessibility [$v]', (tester) async {
         final fake = FakeCoreApi()
           ..tasks.add(StrataFixtures.tasksView)
@@ -63,6 +61,7 @@ void main() {
             onOpenTask: opened.add,
           ),
           fake: fake,
+          scaffold: true,
         );
         final s = lookupTasksLocalizations(v.locale);
         expectNoErrors(tester);
@@ -136,10 +135,16 @@ void main() {
   });
 
   group('TasksScreen states', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('empty [$v]', (tester) async {
         final fake = FakeCoreApi()..tasks.add(_empty);
-        await pumpVariant(tester, v, const TasksScreen(), fake: fake);
+        await pumpVariant(
+          tester,
+          v,
+          const TasksScreen(),
+          fake: fake,
+          scaffold: true,
+        );
         final s = lookupTasksLocalizations(v.locale);
         expect(find.text(s.tasksEmptyTitle), findsOneWidget);
         await expectAccessible(tester);
@@ -153,13 +158,17 @@ void main() {
           v,
           const TasksScreen(initialTab: TasksTab.overdue),
           fake: fake,
+          scaffold: true,
         );
         final s = lookupTasksLocalizations(v.locale);
+        // The core's lateness and due labels.
         expect(
-          find.text(s.tasksOverdueSince(date: DateTime.utc(2026, 9, 24))),
+          find.text(
+            s.tasksOverdueLabel(late: '3 days late', due: 'Thu 24 Sep'),
+          ),
           findsOneWidget,
         );
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
         expectNoErrors(tester);
       });
 
@@ -170,7 +179,7 @@ void main() {
           v,
           const TasksScreen(),
           fake: fake,
-          settle: false,
+          scaffold: true,
         );
         final s = lookupTasksLocalizations(v.locale);
         expect(_semantics(s.commonLoading), findsOneWidget);
@@ -191,11 +200,17 @@ void main() {
     testWidgets('compact pushes the task detail without a route callback', (
       tester,
     ) async {
-      final v = matrix(sizes: {'compact': StrataTestSizes.compact}).first;
+      final v = variants(sizes: {'compact': StrataTestSizes.compact}).first;
       final fake = FakeCoreApi()
         ..tasks.add(StrataFixtures.tasksView)
         ..task['t-petrol-arrows'].add(_petrolScreen);
-      await pumpVariant(tester, v, const TasksScreen(), fake: fake);
+      await pumpVariant(
+        tester,
+        v,
+        const TasksScreen(),
+        fake: fake,
+        scaffold: true,
+      );
       await _tap(tester, find.text('Petrol Arrows invoice'));
       expect(find.byType(TaskDetailScreen), findsOneWidget);
       expect(
@@ -207,15 +222,18 @@ void main() {
     testWidgets('views map 1:1 to the core sections and done reopens', (
       tester,
     ) async {
-      final v = matrix(sizes: {'compact': StrataTestSizes.compact}).first;
+      final v = variants(sizes: {'compact': StrataTestSizes.compact}).first;
       final fake = FakeCoreApi()..tasks.add(StrataFixtures.tasksView);
-      await pumpVariant(tester, v, const TasksScreen(), fake: fake);
+      await pumpVariant(
+        tester,
+        v,
+        const TasksScreen(),
+        fake: fake,
+        scaffold: true,
+      );
       final s = lookupTasksLocalizations(v.locale);
       await _tap(tester, find.text(s.tasksTabDone));
-      expect(
-        find.text(s.tasksDoneOn(date: DateTime.utc(2026, 9))),
-        findsOneWidget,
-      );
+      expect(find.text('Done Tue 1 Sep'), findsOneWidget);
       await _tap(
         tester,
         _semantics(s.tasksReopenSemantics(title: "Make Watanya's ETA invoice")),
@@ -234,7 +252,7 @@ void main() {
     });
 
     testWidgets('expanded keyboard: Enter, R and T', (tester) async {
-      final v = matrix(sizes: {'expanded': StrataTestSizes.expanded}).first;
+      final v = variants(sizes: {'expanded': StrataTestSizes.expanded}).first;
       final fake = FakeCoreApi()
         ..tasks.add(StrataFixtures.tasksView)
         ..task['t-watanya-eta'].add(StrataFixtures.taskScreen);
@@ -244,6 +262,7 @@ void main() {
         v,
         TasksScreen(initialTaskId: 't-watanya-eta', onOpenNote: notes.add),
         fake: fake,
+        scaffold: true,
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.pump();

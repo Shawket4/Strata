@@ -74,6 +74,7 @@ async fn notes_crud_move_trash_history_and_revert() {
     let created = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             path: "notes/Pricing.md".into(),
             content: "# Pricing\n\nTiers ^t1\n".into(),
             id: None,
@@ -190,6 +191,7 @@ async fn notes_crud_move_trash_history_and_revert() {
     let refs = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             path: "notes/Refs.md".into(),
             content: "See [[Pricing#^t1]] and [[Pricing]].\n".into(),
             id: None,
@@ -381,6 +383,7 @@ async fn whole_commit_revert_over_http() {
     let t = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             path: "notes/T.md".into(),
             content: "t\n".into(),
             id: None,
@@ -392,6 +395,7 @@ async fn whole_commit_revert_over_http() {
     let n = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             path: "notes/N.md".into(),
             content: "n\n".into(),
             id: None,
@@ -442,6 +446,7 @@ async fn keyword_search_normalises_arabic_and_semantic_needs_ai() {
     let n = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             path: "notes/عقد.md".into(),
             content: "عَقْد شركة وطنيّة\nسطر آخر\n".into(),
             id: None,
@@ -524,6 +529,7 @@ async fn path_traversal_is_rejected_on_every_path_parameter() {
             ops::create_note(
                 c,
                 &types::CreateNoteRequest {
+                    created: strata_common::clock::default_test_epoch(),
                     path: path.into(),
                     content: "x".into(),
                     id: None,
@@ -538,6 +544,7 @@ async fn path_traversal_is_rejected_on_every_path_parameter() {
     let n = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             path: "notes/A.md".into(),
             content: "a\n".into(),
             id: None,

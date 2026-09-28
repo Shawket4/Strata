@@ -248,7 +248,12 @@ async fn epoch_change_rebootstraps_and_keeps_live_local_ops() {
         (path.as_str(), base),
         ("notes/Onboarding checklist v2.md", None)
     );
-    assert_eq!(content, format!("---\nid: {local_id}\n---\nSteps.\n"));
+    assert_eq!(
+        content,
+        format!(
+            "---\nid: {local_id}\ncreated: 2026-09-27T10:00:00Z\nupdated: 2026-09-27T10:00:00Z\n---\nSteps.\n"
+        )
+    );
     expected.insert(local_id.clone(), (path, content, None));
     assert_eq!(local, expected);
     let state = s.read(|c, _| sync_state::get(c)).expect("state");
@@ -276,7 +281,9 @@ async fn applied_creates_become_the_verified_base() {
     let report = s.sync(Trigger::AfterWrite).await.expect("sync");
 
     assert_eq!(report, synced(1, 1, false));
-    let content = format!("---\nid: {id}\n---\nHire two.\n");
+    let content = format!(
+        "---\nid: {id}\ncreated: 2026-09-27T10:00:00Z\nupdated: 2026-09-27T10:00:00Z\n---\nHire two.\n"
+    );
     assert_eq!(
         local_notes(&s).get(&id),
         Some(&(

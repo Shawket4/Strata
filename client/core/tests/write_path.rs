@@ -150,7 +150,8 @@ async fn capture_queues_one_op_and_updates_home() {
         .expect("inbox");
     assert_eq!(inbox.captures.len(), 1);
     assert_eq!(inbox.captures[0].note_id, id);
-    assert_eq!(inbox.captures[0].title, "2026-09-27-130000");
+    // The inbox file is named in UTC (13:00 in Cairo).
+    assert_eq!(inbox.captures[0].title, "2026-09-27-100000");
     assert_eq!(inbox.captures[0].text, "كلمت أحمد النهارده");
     assert!(inbox.captures[0].pending_sync);
     // Captures are never refused, even if empty-looking duplicates exist.
@@ -183,7 +184,9 @@ async fn note_create_update_move_delete_ops_and_note_view() {
             candidates: Vec::new()
         }
     );
-    let v1 = format!("---\nid: {id}\n---\n# Pricing\nTry 5% off #pricing [[Churn notes]]\n");
+    let v1 = format!(
+        "---\nid: {id}\ncreated: 2026-09-27T10:00:00Z\nupdated: 2026-09-27T10:00:00Z\n---\n# Pricing\nTry 5% off #pricing [[Churn notes]]\n"
+    );
     assert_eq!(content(&s, &id), v1);
 
     let notes = Recorder::new();
@@ -489,7 +492,7 @@ async fn tasks_create_complete_recurring_and_sections() {
             &home_id,
             "Send weekly invoicing proposal to Ahmed",
             "2026-09-29",
-            2,
+            7,
             "Tue 29 Sep"
         )]
     );
@@ -512,7 +515,7 @@ async fn tasks_create_complete_recurring_and_sections() {
             &home_id,
             "Petrol Arrows invoice",
             "2026-09-27",
-            3,
+            8,
             "Today",
         )
     };
@@ -566,7 +569,9 @@ async fn relations_edit_frontmatter_through_shared_rules() {
     s.add_relation(&pricing, &churn, "related").expect("add");
     assert_eq!(
         content(&s, &pricing),
-        format!("---\nid: {pricing}\nrelated: [\"[[Churn notes]]\"]\n---\nTry 5% off.\n")
+        format!(
+            "---\nid: {pricing}\ncreated: 2026-09-27T10:00:00Z\nupdated: 2026-09-27T10:00:00Z\nrelated: [\"[[Churn notes]]\"]\n---\nTry 5% off.\n"
+        )
     );
     let screen = s
         .read(|c, ctx| build::note_screen(c, ctx, &churn))
@@ -580,13 +585,17 @@ async fn relations_edit_frontmatter_through_shared_rules() {
         .expect("retype");
     assert_eq!(
         content(&s, &pricing),
-        format!("---\nid: {pricing}\nsupports: [\"[[Churn notes]]\"]\n---\nTry 5% off.\n")
+        format!(
+            "---\nid: {pricing}\ncreated: 2026-09-27T10:00:00Z\nupdated: 2026-09-27T10:00:00Z\nsupports: [\"[[Churn notes]]\"]\n---\nTry 5% off.\n"
+        )
     );
     s.remove_relation(&pricing, &churn, "supports")
         .expect("remove");
     assert_eq!(
         content(&s, &pricing),
-        format!("---\nid: {pricing}\n---\nTry 5% off.\n")
+        format!(
+            "---\nid: {pricing}\ncreated: 2026-09-27T10:00:00Z\nupdated: 2026-09-27T10:00:00Z\n---\nTry 5% off.\n"
+        )
     );
     let kinds: Vec<&str> = outbox(&s).iter().map(|o| o.op.kind().as_str()).collect();
     assert_eq!(

@@ -37,6 +37,7 @@ async fn entity(h: &H, s: &UserScope, kind: NoteKind, name: &str, aliases: &[&st
         .create_entity(
             s,
             NewEntity {
+                created: strata_common::clock::default_test_epoch(),
                 kind,
                 name: name.into(),
                 aliases: aliases.iter().map(|a| (*a).to_owned()).collect(),
@@ -57,6 +58,7 @@ async fn note(h: &H, s: &UserScope, path: &str, text: &str) -> NoteId {
         .create_note(
             s,
             CreateNote {
+                created: strata_common::clock::default_test_epoch(),
                 path: path.into(),
                 content: format!("{text}\n"),
                 id: None,

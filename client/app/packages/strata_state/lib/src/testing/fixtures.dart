@@ -763,7 +763,8 @@ abstract final class StrataFixtures {
     snippet: 'monthly on the 1st · next Thu 1 Oct',
     matchLevel: 'near',
     score: 0.91,
-    reason: '',
+    path: 'notes/Tasks.md',
+    reason: 'Same wording as an open task',
   );
 
   /// Created.
@@ -1913,9 +1914,9 @@ abstract final class StrataFixtures {
 
   /// A sample [RecurrenceCompose].
   static const RecurrenceCompose recurrenceCompose = RecurrenceCompose(
-    phrase: '',
-    understood: false,
-    label: '',
+    phrase: 'every month on the last day',
+    understood: true,
+    label: 'Every month on the last day',
   );
 
   /// A sample [RecurrenceForm].
@@ -1957,14 +1958,24 @@ abstract final class StrataFixtures {
   /// A sample [TaskChip].
   static const TaskChip taskChip = TaskChip(kind: TaskChipKind.due, label: '');
 
-  /// A sample [TaskDraftPreview].
+  /// "Send weekly invoicing proposal to @Ahmed by Tuesday" as the core
+  /// reads it.
   static final TaskDraftPreview taskDraftPreview = TaskDraftPreview(
-    description: '',
+    description: 'Send weekly invoicing proposal to Ahmed',
     descriptionDir: TextDir.ltr,
-    reminders: [],
-    links: [],
-    chips: [],
-    draft: taskDraft,
+    due: DateTime.utc(2026, 9, 29),
+    dueLabel: 'Tue 29 Sep',
+    reminders: const [],
+    links: const [ahmedSamirRef],
+    chips: const [
+      TaskChip(kind: TaskChipKind.due, label: 'Due Tue 29 Sep'),
+      TaskChip(kind: TaskChipKind.link, label: 'Ahmed Samir'),
+    ],
+    draft: TaskDraft(
+      description: 'Send weekly invoicing proposal to Ahmed',
+      due: DateTime.utc(2026, 9, 29),
+      reminders: const [],
+    ),
   );
 
   /// A sample [TaskGroup].
@@ -1979,7 +1990,23 @@ abstract final class StrataFixtures {
   );
 
   /// A sample [TaskHomesView].
-  static const TaskHomesView taskHomesView = TaskHomesView(homes: []);
+  static const TaskHomesView taskHomesView = TaskHomesView(
+    homes: [
+      TaskHomeItem(
+        title: 'Tasks',
+        path: 'notes/Tasks.md',
+        isDefault: true,
+        openTasks: 3,
+      ),
+      TaskHomeItem(
+        noteId: 'n-call-2026-09-12-acme',
+        title: 'Call 2026-09-12 — Acme',
+        path: 'notes/clients/acme/Call 2026-09-12 — Acme.md',
+        isDefault: false,
+        openTasks: 1,
+      ),
+    ],
+  );
 
   /// A sample [HighlightSpan].
   static const HighlightSpan highlightSpan = HighlightSpan(start: 0, end: 0);

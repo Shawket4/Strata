@@ -4,8 +4,6 @@ import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_tasks/strata_tasks.dart';
 
-import 'helpers/harness.dart';
-
 const _opId = '01J8ZQ5N7P9R1T3V5X7Z9B1D3F';
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
@@ -17,7 +15,7 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 
 void main() {
   group('DuplicatePromptSheet', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('prompt, candidates and resolveDuplicate [$v]', (
         tester,
       ) async {
@@ -31,6 +29,7 @@ void main() {
             child: DuplicatePromptSheet(onOpenExisting: opened.add),
           ),
           fake: fake,
+          scaffold: true,
         );
         final s = lookupTasksLocalizations(v.locale);
         expect(find.text(s.dupTitle), findsOneWidget);
@@ -91,17 +90,18 @@ void main() {
         ..duplicatePrompts.add(const DuplicatePromptsView(prompts: []));
       await pumpVariant(
         tester,
-        matrix().first,
+        variants().first,
         const DuplicatePromptSheet(),
         fake: fake,
+        scaffold: true,
       );
-      final s = lookupTasksLocalizations(matrix().first.locale);
+      final s = lookupTasksLocalizations(variants().first.locale);
       expect(find.text(s.dupNoneOpen), findsOneWidget);
     });
 
     testWidgets('show(): compact bottom sheet, expanded dialog; closes after '
         'an answer', (tester) async {
-      for (final v in [matrix().first, matrix().last]) {
+      for (final v in [variants().first, variants().last]) {
         await tester.pumpWidget(const SizedBox());
         final fake = FakeCoreApi()
           ..duplicatePrompts.add(StrataFixtures.duplicatePromptsView);
@@ -115,6 +115,7 @@ void main() {
             ),
           ),
           fake: fake,
+          scaffold: true,
         );
         await _tap(tester, find.text('open'));
         expect(

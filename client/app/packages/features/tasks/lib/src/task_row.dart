@@ -45,9 +45,10 @@ class TaskCheckbox extends ConsumerWidget {
   }
 }
 
-/// The meta line of a task: due (or overdue) date, done date, cancelled,
-/// recurrence phrase (or "not understood"), linked entities and the unsynced
-/// marker — each rendered only when the view-model carries it.
+/// The meta line of a task, from the core's labels: due ("Tue 29 Sep") or
+/// how late ("3 days late"), done ("Done Tue 1 Sep"), cancelled, recurrence
+/// phrase (or "not understood"), linked entities and the unsynced marker —
+/// each rendered only when the view-model carries it.
 class TaskMeta extends StatelessWidget {
   /// Creates the meta line.
   const new({
@@ -79,26 +80,28 @@ class TaskMeta extends StatelessWidget {
     final l10n = context.tasksL10n;
     final colors = context.strataColors;
     final style = context.strataText.caption.copyWith(color: colors.text2);
-    final due = task.due;
-    final done = task.done;
+    final due = task.dueLabel;
+    final late = task.latenessLabel;
+    final done = task.completionLabel;
     final recurrence = task.recurrence;
+    final isLate = overdue || task.isOverdue;
     return Wrap(
       spacing: StrataSpacing.s2,
       runSpacing: 2,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        if (due != null)
+        if (due != null && task.state == TaskState.open)
           Text(
-            overdue
-                ? l10n.tasksOverdueSince(date: due)
-                : l10n.tasksDueOn(date: due),
-            style: overdue
+            isLate && late != null
+                ? l10n.tasksOverdueLabel(late: late, due: due)
+                : l10n.tasksDueLabel(due: due),
+            style: isLate
                 ? style
                       .withWeight(FontWeight.w600)
                       .copyWith(color: colors.dangerText)
                 : style,
           ),
-        if (done != null) Text(l10n.tasksDoneOn(date: done), style: style),
+        if (done != null) Text(done, style: style),
         if (task.state == TaskState.cancelled)
           Text(l10n.tasksCancelled, style: style),
         if (showRecurrence && recurrence != null)
@@ -168,14 +171,14 @@ class TaskReminderBell extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.tasksL10n;
     final colors = context.strataColors;
-    final style = context.strataText.monoSmall.copyWith(color: colors.text2);
+    final style = context.strataText.caption.copyWith(color: colors.text2);
     return Wrap(
       spacing: StrataSpacing.s1,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         for (final reminder in reminders)
           Semantics(
-            label: l10n.tasksReminderSemantics(time: reminder.local),
+            label: l10n.tasksReminderSemantics(time: reminder.timeLabel),
             excludeSemantics: true,
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -186,13 +189,7 @@ class TaskReminderBell extends StatelessWidget {
                   color: colors.text2,
                 ),
                 const SizedBox(width: 2),
-                Flexible(
-                  child: Text(
-                    reminder.local,
-                    style: style,
-                    textDirection: TextDirection.ltr,
-                  ),
-                ),
+                Flexible(child: Text(reminder.timeLabel, style: style)),
               ],
             ),
           ),
@@ -257,6 +254,7 @@ class TaskRow extends StatelessWidget {
                     children: [
                       Text(
                         task.description,
+                        textDirection: textDirectionOf(task.descriptionDir),
                         textAlign: TextAlign.start,
                         style: text.body
                             .withWeight(FontWeight.w500)
@@ -298,7 +296,7 @@ class RecurringRuleRow extends StatelessWidget {
     final l10n = context.tasksL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final due = task.due;
+    final due = task.dueLabel;
     final open = onOpen;
     return InkWell(
       onTap: open == null ? null : () => open(task.id),
@@ -329,14 +327,15 @@ class RecurringRuleRow extends StatelessWidget {
                   children: [
                     Text(
                       task.description,
+                      textDirection: textDirectionOf(task.descriptionDir),
                       style: text.bodySmall.withWeight(FontWeight.w600),
                     ),
                     Text(
                       due == null
                           ? task.recurrence ?? ''
-                          : l10n.tasksRuleNext(
+                          : l10n.tasksRuleNextLabel(
                               rule: task.recurrence ?? '',
-                              date: due,
+                              next: due,
                             ),
                       style: text.caption.copyWith(color: colors.text2),
                     ),

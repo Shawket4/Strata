@@ -272,6 +272,7 @@ async fn out_of_band_edits_are_reconciled_and_reported() {
     let n = ops::create_note(
         c,
         &types::CreateNoteRequest {
+            created: strata_common::clock::default_test_epoch(),
             content: "Original.\n".into(),
             force: None,
             id: None,

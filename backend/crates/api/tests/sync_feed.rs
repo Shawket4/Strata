@@ -36,6 +36,7 @@ fn op(n: u128, base: Option<Version>, op: Op) -> SyncOp {
 
 fn create(n: u128, path: &str, body: &str) -> Op {
     Op::NoteCreate(o::NoteCreate {
+        created: strata_common::clock::default_test_epoch(),
         id: id(n),
         path: path.into(),
         content: body.into(),
