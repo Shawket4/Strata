@@ -3866,13 +3866,27 @@ pub fn entity_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<E
 // Graph, ask, settings, session
 // ---------------------------------------------------------------------------------------------
 
-/// Scopes Ask offers: all notes, then people and companies (A–Z), then top-level folders.
+/// Scopes Ask offers: all notes, then the pinned notes (a conversation about one note is its
+/// saved thread), then people and companies (A–Z), then top-level folders.
 pub fn ask_scopes(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Vec<AskScope>> {
     let mut out = vec![AskScope {
         kind: AskScopeKind::All,
         value: None,
         label: tr(ctx.lang, "All notes", "كل الملاحظات"),
     }];
+    let pinned: Vec<(String, String)> = {
+        let mut st = conn.prepare(
+            "SELECT n.id, n.title FROM pinned_notes p JOIN notes n ON n.id = p.note_id
+             WHERE n.deleted = 0 ORDER BY p.ord, n.id",
+        )?;
+        st.query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<Result<_, _>>()?
+    };
+    out.extend(pinned.into_iter().map(|(id, title)| AskScope {
+        kind: AskScopeKind::Note,
+        value: Some(id),
+        label: title,
+    }));
     let rows: Vec<(String, String)> = {
         let mut st = conn.prepare(
             "SELECT e.note_id, e.display_name FROM entities e JOIN notes n ON n.id = e.note_id
@@ -3904,7 +3918,7 @@ pub fn ask_scopes(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Vec<AskScope>>
 /// The Ask scope value the server takes (`None` = everything): an entity's path or a folder.
 pub fn ask_scope_value(conn: &Connection, scope: &AskScope) -> CoreResult<Option<String>> {
     Ok(match (scope.kind, &scope.value) {
-        (AskScopeKind::All, _) | (_, None) => None,
+        (AskScopeKind::All | AskScopeKind::Note, _) | (_, None) => None,
         (AskScopeKind::Entity, Some(id)) => conn
             .query_row("SELECT path FROM notes WHERE id = ?1", [id], |r| r.get(0))
             .optional()?,
@@ -3983,12 +3997,101 @@ fn ai_status_view(ctx: &ViewCtx, s: &crate::net::AiStatusInfo) -> AiStatusView {
 }
 
 /// Ask: the conversation (online only).
+/// The saved thread of `note` as conversation entries (citations resolved to local titles),
+/// oldest first.
+fn thread_entries(
+    conn: &Connection,
+    note: &str,
+    title: &str,
+) -> CoreResult<Vec<crate::session::ask::AskEntry>> {
+    let stored: Option<Vec<u8>> = conn
+        .query_row(
+            "SELECT messages FROM note_threads WHERE note_id = ?1",
+            [note],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let Some(bytes) = stored else {
+        return Ok(Vec::new());
+    };
+    let messages: Vec<vault_format::thread::ThreadMessage> = crate::store::from_msgpack(&bytes)?;
+    let mut out = Vec::with_capacity(messages.len());
+    for m in messages {
+        let mut citations = Vec::with_capacity(m.citations.len());
+        for (i, c) in m.citations.iter().enumerate() {
+            let id = c.note_id.to_string();
+            let (cited_title, path): (String, String) = conn
+                .query_row("SELECT title, path FROM notes WHERE id = ?1", [&id], |r| {
+                    Ok((r.get(0)?, r.get(1)?))
+                })
+                .optional()?
+                .unwrap_or_else(|| (c.target.clone(), String::new()));
+            citations.push(crate::session::ask::AskCitation {
+                index: u32::try_from(i + 1).unwrap_or(u32::MAX),
+                note_id: id,
+                path,
+                title: cited_title,
+                block_id: c.block_id.clone(),
+                target: c.target.clone(),
+            });
+        }
+        out.push(crate::session::ask::AskEntry {
+            id: m.id.to_string(),
+            role: match m.role {
+                vault_format::thread::ThreadRole::User => "user",
+                vault_format::thread::ThreadRole::Assistant => "assistant",
+            }
+            .to_owned(),
+            text: m.text,
+            created: m.created.with_timezone(&chrono::Utc),
+            citations,
+            streaming: false,
+            scope_label: title.to_owned(),
+            error_key: None,
+            saved_note_id: None,
+        });
+    }
+    Ok(out)
+}
+
+/// Ask: the conversation (online only). About a note, it is the note's saved thread followed
+/// by the exchange not saved yet (a live answer drops out, with its question, once the thread
+/// holds it).
 pub fn ask(
     conn: &Connection,
     ctx: &ViewCtx,
-    entries: &[crate::session::ask::AskEntry],
+    live: &[crate::session::ask::AskEntry],
+    note: Option<&str>,
 ) -> CoreResult<AskView> {
     let labels = ctx.labels();
+    let note_scope = match note {
+        Some(id) => note_title(conn, id)?.map(|title| AskNoteScope {
+            note_id: id.to_owned(),
+            label: match ctx.lang {
+                Lang::En => format!("About {title}"),
+                Lang::Ar => format!("عن {title}"),
+            },
+            title,
+        }),
+        None => None,
+    };
+    let mut entries = match &note_scope {
+        Some(n) => thread_entries(conn, &n.note_id, &n.title)?,
+        None => Vec::new(),
+    };
+    let saved: std::collections::BTreeSet<String> = entries.iter().map(|e| e.id.clone()).collect();
+    let mut pending: Vec<crate::session::ask::AskEntry> = Vec::new();
+    for e in live {
+        if e.role == "assistant" && saved.contains(&e.id) {
+            // Saved: drop the live answer and the question asked for it.
+            if pending.last().is_some_and(|q| q.role == "user") {
+                pending.pop();
+            }
+            continue;
+        }
+        pending.push(e.clone());
+    }
+    entries.extend(pending);
     let messages = entries
         .iter()
         .map(|e| {
@@ -4052,6 +4155,7 @@ pub fn ask(
     };
     Ok(AskView {
         availability,
+        note: note_scope,
         streaming: entries.iter().any(|e| e.streaming),
         messages,
         scopes: ask_scopes(conn, ctx)?,

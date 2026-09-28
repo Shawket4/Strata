@@ -1024,7 +1024,9 @@ async fn ask_streams_an_answer_into_the_conversation_and_saves_it() {
         ]
     );
     let entries = s.ask_entries();
-    let view = s.read(|c, ctx| build::ask(c, ctx, &entries)).expect("view");
+    let view = s
+        .read(|c, ctx| build::ask(c, ctx, &entries, None))
+        .expect("view");
     assert_eq!(
         view.messages
             .iter()

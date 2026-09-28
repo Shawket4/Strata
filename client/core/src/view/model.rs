@@ -2367,6 +2367,19 @@ pub enum AskScopeKind {
     Entity,
     /// A folder.
     Folder,
+    /// One note: the conversation is that note's saved thread.
+    Note,
+}
+
+/// The note an Ask conversation is about.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AskNoteScope {
+    /// Note ID.
+    pub note_id: String,
+    /// Title.
+    pub title: String,
+    /// "About Pricing" / "عن Pricing".
+    pub label: String,
 }
 
 /// A scope the user can pick.
@@ -2437,6 +2450,8 @@ pub struct AskMessage {
 pub struct AskView {
     /// Whether Ask can be used.
     pub availability: Availability,
+    /// The note the conversation is about (its saved thread is `messages`), if any.
+    pub note: Option<AskNoteScope>,
     /// The conversation.
     pub messages: Vec<AskMessage>,
     /// Scopes to choose from (All notes, people and companies, top folders).

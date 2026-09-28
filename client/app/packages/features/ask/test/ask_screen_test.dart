@@ -181,6 +181,39 @@ void main() {
       expect(find.text('Paused until 14:00'), findsOneWidget);
     });
 
+    testWidgets('about a note: its thread, its questions, back to all notes', (
+      tester,
+    ) async {
+      String? opened;
+      final fake = await _pump(
+        tester,
+        _compact,
+        AskScreen(onOpenNote: (id, _) => opened = id),
+        _fake(AskFixtures.aboutNote),
+      );
+      // The note replaces the scope chips; the hint says what is asked about.
+      expect(find.text('About Call 2026-09-12 Acme'), findsOneWidget);
+      expect(find.byType(ChoiceChip), findsNothing);
+      expect(find.text('Ask about this note'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField), 'And the payment terms?');
+      await settle(tester);
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
+      await settle(tester);
+      final scope = fake.calls.last.args['scope']! as AskScope;
+      expect(
+        (fake.calls.last.method, scope.kind, scope.value),
+        ('ask', AskScopeKind.note, 'n-call-2026-09-12-acme'),
+      );
+
+      await tester.tap(find.text('About Call 2026-09-12 Acme'));
+      await settle(tester);
+      expect(opened, 'n-call-2026-09-12-acme');
+      await tester.tap(find.byTooltip('Ask about all notes'));
+      await settle(tester);
+      expect(fake.calls.last, const CoreCall('newConversation'));
+    });
+
     testWidgets('new conversation', (tester) async {
       final fake = await _pump(
         tester,

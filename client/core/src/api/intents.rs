@@ -511,10 +511,22 @@ pub async fn create_user(request: NewUserRequest) -> Result<AdminUserItem, CoreF
 pub async fn ask(question: String, scope: AskScope) -> Result<String, CoreFailure> {
     lift_async(async {
         let session = core()?.session()?;
+        // A note scope: the conversation is that note's thread.
+        if scope.kind == crate::view::model::AskScopeKind::Note
+            && let Some(note) = &scope.value
+            && session.ask_state_note().as_deref() != Some(note.as_str())
+        {
+            session.open_note_thread(note)?;
+        }
         let value = session.read(|c, _| crate::view::build::ask_scope_value(c, &scope))?;
         session.ask(&question, value, &scope.label).await
     })
     .await
+}
+
+/// Ask: makes the conversation about note `id` (its saved thread; "Ask about this note").
+pub fn open_note_thread(id: String) -> Result<(), CoreFailure> {
+    lift(|| core()?.session()?.open_note_thread(&id))
 }
 
 /// Ask: stops the streaming answer.

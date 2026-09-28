@@ -260,6 +260,12 @@ abstract class NotesLocalizations {
   /// **'Open local mind map'**
   String get openLocalMap;
 
+  /// Opens Ask with the conversation about this note (its saved thread).
+  ///
+  /// In en, this message translates to:
+  /// **'Ask AI about this note'**
+  String get askAboutNote;
+
   /// Overflow menu button.
   ///
   /// In en, this message translates to:

@@ -108,6 +108,9 @@ class NotesLocalizationsEn extends NotesLocalizations {
   String get openLocalMap => 'Open local mind map';
 
   @override
+  String get askAboutNote => 'Ask AI about this note';
+
+  @override
   String get moreActions => 'More actions';
 
   @override

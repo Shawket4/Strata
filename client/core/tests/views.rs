@@ -694,7 +694,7 @@ async fn settings_ask_and_admin_views() {
     // Admin screens are for admins only.
     assert_eq!(settings.admin, Availability::NotAllowed);
 
-    let ask = s.read(|c, ctx| build::ask(c, ctx, &[])).expect("ask");
+    let ask = s.read(|c, ctx| build::ask(c, ctx, &[], None)).expect("ask");
     assert_eq!(ask.availability, Availability::Available);
     assert_eq!(ask.messages, []);
     assert_eq!(

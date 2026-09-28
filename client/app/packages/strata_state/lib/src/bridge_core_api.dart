@@ -541,6 +541,10 @@ final class BridgeCoreApi implements CoreApi {
   Future<void> stopAsk() => bridge.stopAsk();
 
   @override
+  Future<void> openNoteThread({required String id}) =>
+      bridge.openNoteThread(id: id);
+
+  @override
   Future<void> newConversation() => bridge.newConversation();
 
   @override

@@ -657,6 +657,26 @@ impl AccountApi for ClientAccountApi {
         })
     }
 
+    fn ask_about_note(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        note_id: String,
+        question: String,
+    ) -> BoxFuture<'_, Result<String, NetError>> {
+        Box::pin(async move {
+            let c = client(&server_url, Some(tokens))?;
+            operations::ask_about_note(
+                &c,
+                ulid(&note_id, "note")?,
+                &types::ThreadAskRequest { question },
+            )
+            .await
+            .map(|s| s.id.to_string())
+            .map_err(|e| classify(&e))
+        })
+    }
+
     fn ask_stream(
         &self,
         server_url: String,

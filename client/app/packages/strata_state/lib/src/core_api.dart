@@ -414,6 +414,10 @@ abstract interface class CoreApi {
   /// Ask: stops the streaming answer.
   Future<void> stopAsk();
 
+  /// Makes the Ask conversation about note [id]: its saved thread, questions
+  /// go to that note ("Ask about this note").
+  Future<void> openNoteThread({required String id});
+
   /// Ask: starts a new conversation.
   Future<void> newConversation();
 

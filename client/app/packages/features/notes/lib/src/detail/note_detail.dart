@@ -21,6 +21,7 @@ class NoteActions {
     this.onOpenConflict,
     this.onOpenDuplicate,
     this.onOpenLocalMap,
+    this.onOpenAsk,
   });
 
   /// Opens a note by ID.
@@ -38,6 +39,10 @@ class NoteActions {
 
   /// Opens the local mind map of a note ID.
   final ValueChanged<String>? onOpenLocalMap;
+
+  /// Opens Ask (after the core made its conversation about a note: "Ask
+  /// about this note").
+  final VoidCallback? onOpenAsk;
 }
 
 /// Renders the loading / error / not-found states of the note stream, or
@@ -161,6 +166,38 @@ class PinNoteButton extends ConsumerWidget {
       onPressed: () => unawaited(
         ref.read(coreApiProvider).pinNote(id: note.id, pinned: !note.pinned),
       ),
+    );
+  }
+}
+
+/// "Ask about this note": makes the Ask conversation this note's saved
+/// thread, then opens Ask ([onOpenAsk]).
+class AskAboutNoteButton extends ConsumerWidget {
+  /// Creates the button for [note].
+  const new({required this.note, required this.onOpenAsk, super.key});
+
+  /// The note.
+  final NoteView note;
+
+  /// Opens Ask.
+  final VoidCallback onOpenAsk;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = NotesLocalizations.of(context);
+    final colors = context.strataColors;
+    return IconButton(
+      tooltip: l10n.askAboutNote,
+      icon: const Icon(Icons.auto_awesome_outlined),
+      color: colors.text2,
+      onPressed: () async {
+        try {
+          await ref.read(coreApiProvider).openNoteThread(id: note.id);
+        } on Object {
+          return;
+        }
+        onOpenAsk();
+      },
     );
   }
 }
@@ -464,6 +501,8 @@ class _NoteDetailBody extends StatelessWidget {
                   ),
                 LivePreviewToggle(controller: controller),
                 PinNoteButton(note: note),
+                if (actions.onOpenAsk case final ask?)
+                  AskAboutNoteButton(note: note, onOpenAsk: ask),
                 IconButton(
                   tooltip: l10n.openLocalMap,
                   icon: const Icon(Icons.hub_outlined),
@@ -776,6 +815,8 @@ class _CompactNotePageState extends State<CompactNotePage> {
                   child: Text(context.l10n.actionSave),
                 ),
               PinNoteButton(note: note),
+              if (actions.onOpenAsk case final ask?)
+                AskAboutNoteButton(note: note, onOpenAsk: ask),
             ],
           ),
         ),

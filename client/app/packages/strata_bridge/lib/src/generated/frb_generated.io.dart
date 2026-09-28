@@ -146,6 +146,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   AskMessage dco_decode_ask_message(dynamic raw);
 
   @protected
+  AskNoteScope dco_decode_ask_note_scope(dynamic raw);
+
+  @protected
   AskScope dco_decode_ask_scope(dynamic raw);
 
   @protected
@@ -186,6 +189,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   AiStatusView dco_decode_box_autoadd_ai_status_view(dynamic raw);
+
+  @protected
+  AskNoteScope dco_decode_box_autoadd_ask_note_scope(dynamic raw);
 
   @protected
   AskScope dco_decode_box_autoadd_ask_scope(dynamic raw);
@@ -799,6 +805,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   AiStatusView? dco_decode_opt_box_autoadd_ai_status_view(dynamic raw);
 
   @protected
+  AskNoteScope? dco_decode_opt_box_autoadd_ask_note_scope(dynamic raw);
+
+  @protected
   bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
@@ -1198,6 +1207,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   AskMessage sse_decode_ask_message(SseDeserializer deserializer);
 
   @protected
+  AskNoteScope sse_decode_ask_note_scope(SseDeserializer deserializer);
+
+  @protected
   AskScope sse_decode_ask_scope(SseDeserializer deserializer);
 
   @protected
@@ -1242,6 +1254,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   AiStatusView sse_decode_box_autoadd_ai_status_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  AskNoteScope sse_decode_box_autoadd_ask_note_scope(
     SseDeserializer deserializer,
   );
 
@@ -1977,6 +1994,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  AskNoteScope? sse_decode_opt_box_autoadd_ask_note_scope(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
@@ -2432,6 +2454,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_ask_message(AskMessage self, SseSerializer serializer);
 
   @protected
+  void sse_encode_ask_note_scope(AskNoteScope self, SseSerializer serializer);
+
+  @protected
   void sse_encode_ask_scope(AskScope self, SseSerializer serializer);
 
   @protected
@@ -2482,6 +2507,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   @protected
   void sse_encode_box_autoadd_ai_status_view(
     AiStatusView self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_ask_note_scope(
+    AskNoteScope self,
     SseSerializer serializer,
   );
 
@@ -3457,6 +3488,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   @protected
   void sse_encode_opt_box_autoadd_ai_status_view(
     AiStatusView? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_ask_note_scope(
+    AskNoteScope? self,
     SseSerializer serializer,
   );
 

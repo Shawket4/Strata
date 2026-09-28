@@ -721,6 +721,9 @@ final class FakeCoreApi implements CoreApi {
   /// `stopAsk`.
   final FakeAnswer<void> stopAskAnswer = FakeAnswer(null);
 
+  /// `openNoteThread`.
+  final FakeAnswer<void> openNoteThreadAnswer = FakeAnswer(null);
+
   /// `newConversation`.
   final FakeAnswer<void> newConversationAnswer = FakeAnswer(null);
 
@@ -1455,6 +1458,10 @@ final class FakeCoreApi implements CoreApi {
 
   @override
   Future<void> stopAsk() => _call(stopAskAnswer, 'stopAsk');
+
+  @override
+  Future<void> openNoteThread({required String id}) =>
+      _call(openNoteThreadAnswer, 'openNoteThread', {'id': id});
 
   @override
   Future<void> newConversation() =>

@@ -76,6 +76,12 @@ class AskLocalizationsEn extends AskLocalizations {
   String get askHint => 'Ask about your notes — English or العربية';
 
   @override
+  String get askAboutNoteHint => 'Ask about this note';
+
+  @override
+  String get leaveNoteThread => 'Ask about all notes';
+
+  @override
   String get send => 'Send';
 
   @override

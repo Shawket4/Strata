@@ -671,6 +671,17 @@ pub trait AccountApi: Send + Sync + fmt::Debug {
     ) -> BoxFuture<'_, Result<String, NetError>> {
         not_available("ask")
     }
+    /// `POST /notes/{id}/thread`: a follow-up question about one note; returns the answer's
+    /// ID (streamed from `GET /ask/{id}`).
+    fn ask_about_note(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        note_id: String,
+        question: String,
+    ) -> BoxFuture<'_, Result<String, NetError>> {
+        not_available("ask_about_note")
+    }
     /// `GET /ask/{id}` (WebSocket).
     fn ask_stream(
         &self,

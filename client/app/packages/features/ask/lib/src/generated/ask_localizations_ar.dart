@@ -76,6 +76,12 @@ class AskLocalizationsAr extends AskLocalizations {
   String get askHint => 'اسأل عن ملاحظاتك — بالعربي أو English';
 
   @override
+  String get askAboutNoteHint => 'اسأل عن الملاحظة دي';
+
+  @override
+  String get leaveNoteThread => 'اسأل عن كل الملاحظات';
+
+  @override
   String get send => 'إرسال';
 
   @override

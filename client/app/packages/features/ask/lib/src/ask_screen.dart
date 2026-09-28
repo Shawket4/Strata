@@ -189,10 +189,19 @@ class _Conversation extends HookConsumerWidget {
             ),
           );
 
+    final note = view.note;
+
     Future<void> send() async {
       final value = question.text.trim();
-      if (value.isEmpty || view.scopes.isEmpty) return;
-      final chosen = view.scopes[scope.value.clamp(0, view.scopes.length - 1)];
+      if (value.isEmpty || (note == null && view.scopes.isEmpty)) return;
+      // About a note, the question goes to that note's thread.
+      final chosen = note != null
+          ? AskScope(
+              kind: AskScopeKind.note,
+              value: note.noteId,
+              label: note.title,
+            )
+          : view.scopes[scope.value.clamp(0, view.scopes.length - 1)];
       final sent = await _run(
         context,
         () => core.ask(question: value, scope: chosen),
@@ -234,7 +243,8 @@ class _Conversation extends HookConsumerWidget {
                 const Spacer(),
               IconButton(
                 tooltip: l10n.newConversation,
-                onPressed: view.messages.isEmpty || view.streaming
+                onPressed:
+                    (view.messages.isEmpty && note == null) || view.streaming
                     ? null
                     : () => unawaited(_run(context, core.newConversation)),
                 icon: const Icon(Icons.add_comment_outlined),
@@ -242,6 +252,31 @@ class _Conversation extends HookConsumerWidget {
             ],
           ),
         ),
+        if (note != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(
+              StrataSpacing.s4,
+              StrataSpacing.s1,
+              StrataSpacing.s4,
+              0,
+            ),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: InputChip(
+                avatar: const Icon(Icons.description_outlined, size: 18),
+                label: Text(note.label),
+                tooltip: l10n.openNote,
+                onPressed: switch (onOpenNote) {
+                  final open? => () => open(note.noteId, null),
+                  null => null,
+                },
+                deleteButtonTooltipMessage: l10n.leaveNoteThread,
+                onDeleted: view.streaming
+                    ? null
+                    : () => unawaited(_run(context, core.newConversation)),
+              ),
+            ),
+          ),
         Expanded(
           child: Semantics(
             label: l10n.conversation,
@@ -276,7 +311,8 @@ class _Conversation extends HookConsumerWidget {
         ),
         _Composer(
           controller: question,
-          scopes: view.scopes,
+          scopes: note == null ? view.scopes : const [],
+          hint: note == null ? l10n.askHint : l10n.askAboutNoteHint,
           scope: scope.value,
           onScope: (value) => scope.value = value,
           enabled: view.availability == Availability.available,
@@ -618,6 +654,7 @@ class _Composer extends StatelessWidget {
   const new({
     required this.controller,
     required this.scopes,
+    required this.hint,
     required this.scope,
     required this.onScope,
     required this.enabled,
@@ -628,6 +665,7 @@ class _Composer extends StatelessWidget {
 
   final TextEditingController controller;
   final List<AskScope> scopes;
+  final String hint;
   final int scope;
   final ValueChanged<int> onScope;
   final bool enabled;
@@ -696,7 +734,7 @@ class _Composer extends StatelessWidget {
                         maxLines: 4,
                         textInputAction: TextInputAction.send,
                         onSubmitted: (_) => onSend(),
-                        decoration: InputDecoration(hintText: l10n.askHint),
+                        decoration: InputDecoration(hintText: hint),
                       ),
                     ),
                     const SizedBox(width: StrataSpacing.s2),

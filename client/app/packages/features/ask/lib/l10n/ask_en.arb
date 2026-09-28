@@ -77,6 +77,14 @@
   "@askHint": {
     "description": "Composer placeholder."
   },
+  "askAboutNoteHint": "Ask about this note",
+  "@askAboutNoteHint": {
+    "description": "Question field hint when the conversation is about one note."
+  },
+  "leaveNoteThread": "Ask about all notes",
+  "@leaveNoteThread": {
+    "description": "Removes the note from the conversation (a new conversation about the whole vault)."
+  },
   "send": "Send",
   "@send": {
     "description": "Send."

@@ -18,6 +18,8 @@
   "copied": "اتنسخت الإجابة",
   "question": "السؤال",
   "askHint": "اسأل عن ملاحظاتك — بالعربي أو English",
+  "askAboutNoteHint": "اسأل عن الملاحظة دي",
+  "leaveNoteThread": "اسأل عن كل الملاحظات",
   "send": "إرسال",
   "scope": "النطاق",
   "sourcePreview": "معاينة المصدر",

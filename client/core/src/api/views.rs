@@ -312,7 +312,8 @@ pub fn ask_view() -> Result<AskView, CoreFailure> {
     lift(|| {
         let session = core()?.session()?;
         let entries = session.ask_entries();
-        session.read(|c, ctx| build::ask(c, ctx, &entries))
+        let note = session.ask_state_note();
+        session.read(|c, ctx| build::ask(c, ctx, &entries, note.as_deref()))
     })
 }
 

@@ -1,5 +1,10 @@
 //! Ask (PLAN §9.5, §11 screen 10): one conversation per session, answers streamed from the
 //! server's `/ask` WebSocket (D24) into the `watch_ask` view. Online only.
+//!
+//! A conversation can be about one note (owner decision 2026-09-28): [`Session::open_note_thread`]
+//! scopes it to the note, the view shows the note's saved thread (synced from the server)
+//! followed by the exchange still streaming, and questions go to `POST /notes/{id}/thread`,
+//! which appends each finished exchange to the thread.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, MutexGuard, PoisonError};
@@ -58,6 +63,8 @@ pub struct AskEntry {
 pub struct AskState {
     /// Messages, oldest first.
     pub messages: Vec<AskEntry>,
+    /// The note the conversation is about (its thread), if any.
+    pub note: Option<String>,
     stop: Option<Arc<AtomicBool>>,
     next_local: u32,
 }
@@ -88,6 +95,11 @@ impl Session {
         }
     }
 
+    /// The note the conversation is about, if any.
+    pub fn ask_state_note(&self) -> Option<String> {
+        self.ask_state().note.clone()
+    }
+
     /// A copy of the conversation (view builder input).
     pub fn ask_entries(&self) -> Vec<AskEntry> {
         self.ask_state().messages.clone()
@@ -98,14 +110,18 @@ impl Session {
     pub fn watch_ask(&self, sink: impl ViewSink<AskView> + 'static) -> CoreResult<WatchId> {
         let ask = Arc::clone(&self.ask);
         self.watch(
-            Topics::ASK | Topics::SYNC | Topics::REMOTE | Topics::ENTITIES | Topics::ACCOUNT,
+            Topics::ASK
+                | Topics::SYNC
+                | Topics::REMOTE
+                | Topics::ENTITIES
+                | Topics::ACCOUNT
+                | Topics::NOTES,
             move |c, ctx| {
-                let entries = ask
-                    .lock()
-                    .unwrap_or_else(PoisonError::into_inner)
-                    .messages
-                    .clone();
-                crate::view::build::ask(c, ctx, &entries)
+                let (entries, note) = {
+                    let a = ask.lock().unwrap_or_else(PoisonError::into_inner);
+                    (a.messages.clone(), a.note.clone())
+                };
+                crate::view::build::ask(c, ctx, &entries, note.as_deref())
             },
             sink,
         )
@@ -178,10 +194,18 @@ impl Session {
         };
         let url = self.server_url();
         let api = self.env.account_api.clone();
-        let ask_id = match api
-            .ask(url.clone(), self.tokens(), question.to_owned(), scope)
-            .await
-        {
+        let note = self.ask_state().note.clone();
+        let started = match note {
+            Some(note) => {
+                api.ask_about_note(url.clone(), self.tokens(), note, question.to_owned())
+                    .await
+            }
+            None => {
+                api.ask(url.clone(), self.tokens(), question.to_owned(), scope)
+                    .await
+            }
+        };
+        let ask_id = match started {
             Ok(id) => id,
             Err(e) => {
                 fail(&local_id, &e);
@@ -255,12 +279,28 @@ impl Session {
         self.ask_state().stop();
     }
 
-    /// Starts a new conversation (stops a streaming answer).
+    /// Starts a new conversation (stops a streaming answer), about the whole vault again.
     pub fn new_conversation(&self) {
         self.ask_update(|a| {
             a.stop();
             a.messages.clear();
+            a.note = None;
         });
+    }
+
+    /// Makes the conversation about note `note_id`: its saved thread is shown and questions
+    /// go to that note (stops a streaming answer; the note must exist on this device).
+    pub fn open_note_thread(&self, note_id: &str) -> CoreResult<()> {
+        let known = self.read(|c, _| Ok(crate::store::notes::current(c, note_id)?.is_some()))?;
+        if !known {
+            return Err(CoreError::not_found("note"));
+        }
+        self.ask_update(|a| {
+            a.stop();
+            a.messages.clear();
+            a.note = Some(note_id.to_owned());
+        });
+        Ok(())
     }
 
     /// Saves an answer as a note (the server writes it with its citations as links, §9.5).

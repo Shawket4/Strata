@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -697951222;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 707566055;
 
 // Section: executor
 
@@ -1972,6 +1972,39 @@ fn wire__crate__view__model__notification_op_cancel_impl(
                 transform_result_sse::<_, ()>((move || {
                     let output_ok =
                         Ok::<_, ()>(crate::view::model::NotificationOp::cancel(api_id))?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__intents__open_note_thread_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "open_note_thread",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::view::model::CoreFailure>((move || {
+                    let output_ok = crate::api::intents::open_note_thread(api_id)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -6018,6 +6051,20 @@ impl SseDecode for crate::view::model::AskMessage {
     }
 }
 
+impl SseDecode for crate::view::model::AskNoteScope {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_noteId = <String>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_label = <String>::sse_decode(deserializer);
+        return crate::view::model::AskNoteScope {
+            note_id: var_noteId,
+            title: var_title,
+            label: var_label,
+        };
+    }
+}
+
 impl SseDecode for crate::view::model::AskScope {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -6040,6 +6087,7 @@ impl SseDecode for crate::view::model::AskScopeKind {
             0 => crate::view::model::AskScopeKind::All,
             1 => crate::view::model::AskScopeKind::Entity,
             2 => crate::view::model::AskScopeKind::Folder,
+            3 => crate::view::model::AskScopeKind::Note,
             _ => unreachable!("Invalid variant for AskScopeKind: {}", inner),
         };
     }
@@ -6079,12 +6127,14 @@ impl SseDecode for crate::view::model::AskView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_availability = <crate::view::model::Availability>::sse_decode(deserializer);
+        let mut var_note = <Option<crate::view::model::AskNoteScope>>::sse_decode(deserializer);
         let mut var_messages = <Vec<crate::view::model::AskMessage>>::sse_decode(deserializer);
         let mut var_scopes = <Vec<crate::view::model::AskScope>>::sse_decode(deserializer);
         let mut var_streaming = <bool>::sse_decode(deserializer);
         let mut var_aiStatus = <Option<crate::view::model::AiStatusView>>::sse_decode(deserializer);
         return crate::view::model::AskView {
             availability: var_availability,
+            note: var_note,
             messages: var_messages,
             scopes: var_scopes,
             streaming: var_streaming,
@@ -8991,6 +9041,17 @@ impl SseDecode for Option<crate::view::model::AiStatusView> {
     }
 }
 
+impl SseDecode for Option<crate::view::model::AskNoteScope> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::view::model::AskNoteScope>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<bool> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -10635,173 +10696,174 @@ fn pde_ffi_dispatcher_primary_impl(
         56 => {
             wire__crate__view__model__notification_op_cancel_impl(port, ptr, rust_vec_len, data_len)
         }
-        57 => wire__crate__api__views__parse_task_text_impl(port, ptr, rust_vec_len, data_len),
-        58 => wire__crate__api__app__password_strength_impl(port, ptr, rust_vec_len, data_len),
-        59 => wire__crate__api__intents__pin_note_impl(port, ptr, rust_vec_len, data_len),
-        60 => wire__crate__api__views__place_options_impl(port, ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__intents__record_custody_impl(port, ptr, rust_vec_len, data_len),
-        62 => wire__crate__api__views__recurrence_form_impl(port, ptr, rust_vec_len, data_len),
-        63 => wire__crate__api__views__recurrence_preview_impl(port, ptr, rust_vec_len, data_len),
-        64 => wire__crate__api__app__refresh_impl(port, ptr, rust_vec_len, data_len),
-        65 => wire__crate__api__app__refresh_account_impl(port, ptr, rust_vec_len, data_len),
-        66 => {
+        57 => wire__crate__api__intents__open_note_thread_impl(port, ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__views__parse_task_text_impl(port, ptr, rust_vec_len, data_len),
+        59 => wire__crate__api__app__password_strength_impl(port, ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__intents__pin_note_impl(port, ptr, rust_vec_len, data_len),
+        61 => wire__crate__api__views__place_options_impl(port, ptr, rust_vec_len, data_len),
+        62 => wire__crate__api__intents__record_custody_impl(port, ptr, rust_vec_len, data_len),
+        63 => wire__crate__api__views__recurrence_form_impl(port, ptr, rust_vec_len, data_len),
+        64 => wire__crate__api__views__recurrence_preview_impl(port, ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__app__refresh_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__app__refresh_account_impl(port, ptr, rust_vec_len, data_len),
+        67 => {
             wire__crate__api__intents__refresh_ai_activity_impl(port, ptr, rust_vec_len, data_len)
         }
-        67 => wire__crate__api__intents__refresh_history_impl(port, ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__intents__refresh_settings_impl(port, ptr, rust_vec_len, data_len),
-        69 => wire__crate__api__intents__refresh_similarity_impl(port, ptr, rust_vec_len, data_len),
-        70 => wire__crate__api__intents__reject_ai_decision_impl(port, ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__intents__reject_capture_impl(port, ptr, rust_vec_len, data_len),
-        72 => wire__crate__api__intents__reject_relation_impl(port, ptr, rust_vec_len, data_len),
-        73 => wire__crate__api__intents__reject_suggestion_impl(port, ptr, rust_vec_len, data_len),
-        74 => wire__crate__api__intents__reject_user_impl(port, ptr, rust_vec_len, data_len),
-        75 => wire__crate__api__views__relation_types_impl(port, ptr, rust_vec_len, data_len),
-        76 => wire__crate__api__intents__remove_alias_impl(port, ptr, rust_vec_len, data_len),
-        77 => wire__crate__api__intents__remove_property_impl(port, ptr, rust_vec_len, data_len),
-        78 => wire__crate__api__intents__remove_relation_impl(port, ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__intents__remove_reminder_impl(port, ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__intents__rename_device_impl(port, ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__intents__reopen_task_impl(port, ptr, rust_vec_len, data_len),
-        82 => {
+        68 => wire__crate__api__intents__refresh_history_impl(port, ptr, rust_vec_len, data_len),
+        69 => wire__crate__api__intents__refresh_settings_impl(port, ptr, rust_vec_len, data_len),
+        70 => wire__crate__api__intents__refresh_similarity_impl(port, ptr, rust_vec_len, data_len),
+        71 => wire__crate__api__intents__reject_ai_decision_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__intents__reject_capture_impl(port, ptr, rust_vec_len, data_len),
+        73 => wire__crate__api__intents__reject_relation_impl(port, ptr, rust_vec_len, data_len),
+        74 => wire__crate__api__intents__reject_suggestion_impl(port, ptr, rust_vec_len, data_len),
+        75 => wire__crate__api__intents__reject_user_impl(port, ptr, rust_vec_len, data_len),
+        76 => wire__crate__api__views__relation_types_impl(port, ptr, rust_vec_len, data_len),
+        77 => wire__crate__api__intents__remove_alias_impl(port, ptr, rust_vec_len, data_len),
+        78 => wire__crate__api__intents__remove_property_impl(port, ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__intents__remove_relation_impl(port, ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__intents__remove_reminder_impl(port, ptr, rust_vec_len, data_len),
+        81 => wire__crate__api__intents__rename_device_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__intents__reopen_task_impl(port, ptr, rust_vec_len, data_len),
+        83 => {
             wire__crate__api__intents__reply_to_suggestion_impl(port, ptr, rust_vec_len, data_len)
         }
-        83 => {
+        84 => {
             wire__crate__api__intents__repoint_ai_decision_impl(port, ptr, rust_vec_len, data_len)
         }
-        84 => wire__crate__api__views__repoint_choices_impl(port, ptr, rust_vec_len, data_len),
-        85 => wire__crate__api__intents__repoint_relation_impl(port, ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__reminders__report_notification_result_impl(
+        85 => wire__crate__api__views__repoint_choices_impl(port, ptr, rust_vec_len, data_len),
+        86 => wire__crate__api__intents__repoint_relation_impl(port, ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__reminders__report_notification_result_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        87 => wire__crate__api__intents__request_relink_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__intents__reset_password_impl(port, ptr, rust_vec_len, data_len),
-        89 => wire__crate__api__intents__resolve_capture_duplicate_impl(
+        88 => wire__crate__api__intents__request_relink_impl(port, ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__intents__reset_password_impl(port, ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__intents__resolve_capture_duplicate_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        90 => wire__crate__api__views__resolve_citation_impl(port, ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__intents__resolve_conflict_impl(port, ptr, rust_vec_len, data_len),
-        92 => wire__crate__api__intents__resolve_duplicate_impl(port, ptr, rust_vec_len, data_len),
-        93 => wire__crate__api__intents__resolve_link_or_create_impl(
+        91 => wire__crate__api__views__resolve_citation_impl(port, ptr, rust_vec_len, data_len),
+        92 => wire__crate__api__intents__resolve_conflict_impl(port, ptr, rust_vec_len, data_len),
+        93 => wire__crate__api__intents__resolve_duplicate_impl(port, ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__intents__resolve_link_or_create_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        94 => wire__crate__api__intents__retry_failed_jobs_impl(port, ptr, rust_vec_len, data_len),
-        95 => wire__crate__api__intents__retype_ai_decision_impl(port, ptr, rust_vec_len, data_len),
-        96 => wire__crate__api__intents__retype_relation_impl(port, ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__intents__revert_note_impl(port, ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__intents__revoke_device_impl(port, ptr, rust_vec_len, data_len),
-        99 => {
+        95 => wire__crate__api__intents__retry_failed_jobs_impl(port, ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__intents__retype_ai_decision_impl(port, ptr, rust_vec_len, data_len),
+        97 => wire__crate__api__intents__retype_relation_impl(port, ptr, rust_vec_len, data_len),
+        98 => wire__crate__api__intents__revert_note_impl(port, ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__intents__revoke_device_impl(port, ptr, rust_vec_len, data_len),
+        100 => {
             wire__crate__api__intents__save_answer_as_note_impl(port, ptr, rust_vec_len, data_len)
         }
-        100 => wire__crate__api__intents__save_layout_impl(port, ptr, rust_vec_len, data_len),
-        101 => wire__crate__api__intents__schedule_deletion_impl(port, ptr, rust_vec_len, data_len),
-        102 => wire__crate__api__views__search_impl(port, ptr, rust_vec_len, data_len),
-        103 => wire__crate__api__views__search_in_folder_impl(port, ptr, rust_vec_len, data_len),
-        104 => wire__crate__view__model__session_state_of_impl(port, ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__intents__set_default_reminder_time_impl(
+        101 => wire__crate__api__intents__save_layout_impl(port, ptr, rust_vec_len, data_len),
+        102 => wire__crate__api__intents__schedule_deletion_impl(port, ptr, rust_vec_len, data_len),
+        103 => wire__crate__api__views__search_impl(port, ptr, rust_vec_len, data_len),
+        104 => wire__crate__api__views__search_in_folder_impl(port, ptr, rust_vec_len, data_len),
+        105 => wire__crate__view__model__session_state_of_impl(port, ptr, rust_vec_len, data_len),
+        106 => wire__crate__api__intents__set_default_reminder_time_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        106 => {
+        107 => {
             wire__crate__api__intents__set_device_reminders_impl(port, ptr, rust_vec_len, data_len)
         }
-        107 => wire__crate__api__app__set_display_name_impl(port, ptr, rust_vec_len, data_len),
-        108 => wire__crate__api__intents__set_property_impl(port, ptr, rust_vec_len, data_len),
-        109 => {
+        108 => wire__crate__api__app__set_display_name_impl(port, ptr, rust_vec_len, data_len),
+        109 => wire__crate__api__intents__set_property_impl(port, ptr, rust_vec_len, data_len),
+        110 => {
             wire__crate__api__intents__set_property_values_impl(port, ptr, rust_vec_len, data_len)
         }
-        110 => wire__crate__api__intents__set_quiet_hours_impl(port, ptr, rust_vec_len, data_len),
-        111 => {
+        111 => wire__crate__api__intents__set_quiet_hours_impl(port, ptr, rust_vec_len, data_len),
+        112 => {
             wire__crate__api__intents__set_reminders_enabled_impl(port, ptr, rust_vec_len, data_len)
         }
-        112 => {
+        113 => {
             wire__crate__api__intents__set_snooze_minutes_impl(port, ptr, rust_vec_len, data_len)
         }
-        113 => wire__crate__api__app__set_sync_paused_impl(port, ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__app__set_timezone_impl(port, ptr, rust_vec_len, data_len),
-        115 => wire__crate__api__app__set_ui_language_impl(port, ptr, rust_vec_len, data_len),
-        116 => wire__crate__api__intents__set_user_enabled_impl(port, ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__intents__set_user_role_impl(port, ptr, rust_vec_len, data_len),
-        118 => wire__crate__api__app__sign_in_impl(port, ptr, rust_vec_len, data_len),
-        119 => wire__crate__api__app__sign_out_impl(port, ptr, rust_vec_len, data_len),
-        120 => wire__crate__api__app__sign_up_impl(port, ptr, rust_vec_len, data_len),
-        121 => wire__crate__api__intents__stop_ask_impl(port, ptr, rust_vec_len, data_len),
-        122 => {
+        114 => wire__crate__api__app__set_sync_paused_impl(port, ptr, rust_vec_len, data_len),
+        115 => wire__crate__api__app__set_timezone_impl(port, ptr, rust_vec_len, data_len),
+        116 => wire__crate__api__app__set_ui_language_impl(port, ptr, rust_vec_len, data_len),
+        117 => wire__crate__api__intents__set_user_enabled_impl(port, ptr, rust_vec_len, data_len),
+        118 => wire__crate__api__intents__set_user_role_impl(port, ptr, rust_vec_len, data_len),
+        119 => wire__crate__api__app__sign_in_impl(port, ptr, rust_vec_len, data_len),
+        120 => wire__crate__api__app__sign_out_impl(port, ptr, rust_vec_len, data_len),
+        121 => wire__crate__api__app__sign_up_impl(port, ptr, rust_vec_len, data_len),
+        122 => wire__crate__api__intents__stop_ask_impl(port, ptr, rust_vec_len, data_len),
+        123 => {
             wire__crate__view__model__suggestion_detail_of_impl(port, ptr, rust_vec_len, data_len)
         }
-        123 => wire__crate__view__model__suggestion_edits_default_impl(
+        124 => wire__crate__view__model__suggestion_edits_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        124 => wire__crate__api__app__switch_account_impl(port, ptr, rust_vec_len, data_len),
-        125 => {
+        125 => wire__crate__api__app__switch_account_impl(port, ptr, rust_vec_len, data_len),
+        126 => {
             wire__crate__view__model__sync_activity_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        126 => wire__crate__api__app__sync_now_impl(port, ptr, rust_vec_len, data_len),
-        127 => wire__crate__view__model__sync_phase_default_impl(port, ptr, rust_vec_len, data_len),
-        128 => wire__crate__api__views__tags_impl(port, ptr, rust_vec_len, data_len),
-        129 => wire__crate__view__model__task_patch_default_impl(port, ptr, rust_vec_len, data_len),
-        130 => {
+        127 => wire__crate__api__app__sync_now_impl(port, ptr, rust_vec_len, data_len),
+        128 => wire__crate__view__model__sync_phase_default_impl(port, ptr, rust_vec_len, data_len),
+        129 => wire__crate__api__views__tags_impl(port, ptr, rust_vec_len, data_len),
+        130 => wire__crate__view__model__task_patch_default_impl(port, ptr, rust_vec_len, data_len),
+        131 => {
             wire__crate__view__model__task_sections_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        131 => wire__crate__api__views__timezones_impl(port, ptr, rust_vec_len, data_len),
-        132 => wire__crate__api__intents__undo_suggestion_impl(port, ptr, rust_vec_len, data_len),
-        133 => wire__crate__api__intents__update_note_impl(port, ptr, rust_vec_len, data_len),
-        134 => wire__crate__api__intents__update_task_impl(port, ptr, rust_vec_len, data_len),
-        135 => wire__crate__api__intents__update_user_notes_impl(port, ptr, rust_vec_len, data_len),
-        136 => wire__crate__api__views__watch_ask_impl(port, ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__views__watch_conflict_impl(port, ptr, rust_vec_len, data_len),
-        138 => wire__crate__api__views__watch_directory_impl(port, ptr, rust_vec_len, data_len),
-        139 => wire__crate__api__views__watch_directory_filtered_impl(
+        132 => wire__crate__api__views__timezones_impl(port, ptr, rust_vec_len, data_len),
+        133 => wire__crate__api__intents__undo_suggestion_impl(port, ptr, rust_vec_len, data_len),
+        134 => wire__crate__api__intents__update_note_impl(port, ptr, rust_vec_len, data_len),
+        135 => wire__crate__api__intents__update_task_impl(port, ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__intents__update_user_notes_impl(port, ptr, rust_vec_len, data_len),
+        137 => wire__crate__api__views__watch_ask_impl(port, ptr, rust_vec_len, data_len),
+        138 => wire__crate__api__views__watch_conflict_impl(port, ptr, rust_vec_len, data_len),
+        139 => wire__crate__api__views__watch_directory_impl(port, ptr, rust_vec_len, data_len),
+        140 => wire__crate__api__views__watch_directory_filtered_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        140 => {
+        141 => {
             wire__crate__api__views__watch_duplicate_prompts_impl(port, ptr, rust_vec_len, data_len)
         }
-        141 => wire__crate__api__views__watch_entity_impl(port, ptr, rust_vec_len, data_len),
-        142 => wire__crate__api__views__watch_home_impl(port, ptr, rust_vec_len, data_len),
-        143 => wire__crate__api__views__watch_inbox_impl(port, ptr, rust_vec_len, data_len),
-        144 => {
+        142 => wire__crate__api__views__watch_entity_impl(port, ptr, rust_vec_len, data_len),
+        143 => wire__crate__api__views__watch_home_impl(port, ptr, rust_vec_len, data_len),
+        144 => wire__crate__api__views__watch_inbox_impl(port, ptr, rust_vec_len, data_len),
+        145 => {
             wire__crate__api__views__watch_inbox_filtered_impl(port, ptr, rust_vec_len, data_len)
         }
-        145 => wire__crate__api__views__watch_local_graph_impl(port, ptr, rust_vec_len, data_len),
-        146 => wire__crate__api__views__watch_local_graph_filtered_impl(
+        146 => wire__crate__api__views__watch_local_graph_impl(port, ptr, rust_vec_len, data_len),
+        147 => wire__crate__api__views__watch_local_graph_filtered_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        147 => wire__crate__api__views__watch_nav_impl(port, ptr, rust_vec_len, data_len),
-        148 => wire__crate__api__views__watch_note_impl(port, ptr, rust_vec_len, data_len),
-        149 => wire__crate__api__views__watch_notes_list_impl(port, ptr, rust_vec_len, data_len),
-        150 => wire__crate__api__reminders__watch_notification_ops_impl(
+        148 => wire__crate__api__views__watch_nav_impl(port, ptr, rust_vec_len, data_len),
+        149 => wire__crate__api__views__watch_note_impl(port, ptr, rust_vec_len, data_len),
+        150 => wire__crate__api__views__watch_notes_list_impl(port, ptr, rust_vec_len, data_len),
+        151 => wire__crate__api__reminders__watch_notification_ops_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        151 => wire__crate__api__views__watch_recent_impl(port, ptr, rust_vec_len, data_len),
-        152 => wire__crate__api__app__watch_session_impl(port, ptr, rust_vec_len, data_len),
-        153 => wire__crate__api__views__watch_settings_impl(port, ptr, rust_vec_len, data_len),
-        154 => wire__crate__api__views__watch_sync_status_impl(port, ptr, rust_vec_len, data_len),
-        155 => wire__crate__api__views__watch_task_impl(port, ptr, rust_vec_len, data_len),
-        156 => wire__crate__api__views__watch_task_homes_impl(port, ptr, rust_vec_len, data_len),
-        157 => wire__crate__api__views__watch_tasks_impl(port, ptr, rust_vec_len, data_len),
+        152 => wire__crate__api__views__watch_recent_impl(port, ptr, rust_vec_len, data_len),
+        153 => wire__crate__api__app__watch_session_impl(port, ptr, rust_vec_len, data_len),
+        154 => wire__crate__api__views__watch_settings_impl(port, ptr, rust_vec_len, data_len),
+        155 => wire__crate__api__views__watch_sync_status_impl(port, ptr, rust_vec_len, data_len),
+        156 => wire__crate__api__views__watch_task_impl(port, ptr, rust_vec_len, data_len),
+        157 => wire__crate__api__views__watch_task_homes_impl(port, ptr, rust_vec_len, data_len),
+        158 => wire__crate__api__views__watch_tasks_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -11039,6 +11101,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::AskMessage>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::view::model::AskNoteScope {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.note_id.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+            self.label.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::view::model::AskNoteScope
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::view::model::AskNoteScope>
+    for crate::view::model::AskNoteScope
+{
+    fn into_into_dart(self) -> crate::view::model::AskNoteScope {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::view::model::AskScope {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -11064,6 +11148,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::AskScopeKind {
             Self::All => 0.into_dart(),
             Self::Entity => 1.into_dart(),
             Self::Folder => 2.into_dart(),
+            Self::Note => 3.into_dart(),
             _ => unreachable!(),
         }
     }
@@ -11123,6 +11208,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::AskView {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.availability.into_into_dart().into_dart(),
+            self.note.into_into_dart().into_dart(),
             self.messages.into_into_dart().into_dart(),
             self.scopes.into_into_dart().into_dart(),
             self.streaming.into_into_dart().into_dart(),
@@ -15390,6 +15476,15 @@ impl SseEncode for crate::view::model::AskMessage {
     }
 }
 
+impl SseEncode for crate::view::model::AskNoteScope {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.note_id, serializer);
+        <String>::sse_encode(self.title, serializer);
+        <String>::sse_encode(self.label, serializer);
+    }
+}
+
 impl SseEncode for crate::view::model::AskScope {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -15407,6 +15502,7 @@ impl SseEncode for crate::view::model::AskScopeKind {
                 crate::view::model::AskScopeKind::All => 0,
                 crate::view::model::AskScopeKind::Entity => 1,
                 crate::view::model::AskScopeKind::Folder => 2,
+                crate::view::model::AskScopeKind::Note => 3,
                 _ => {
                     unimplemented!("");
                 }
@@ -15439,6 +15535,7 @@ impl SseEncode for crate::view::model::AskView {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::view::model::Availability>::sse_encode(self.availability, serializer);
+        <Option<crate::view::model::AskNoteScope>>::sse_encode(self.note, serializer);
         <Vec<crate::view::model::AskMessage>>::sse_encode(self.messages, serializer);
         <Vec<crate::view::model::AskScope>>::sse_encode(self.scopes, serializer);
         <bool>::sse_encode(self.streaming, serializer);
@@ -17570,6 +17667,16 @@ impl SseEncode for Option<crate::view::model::AiStatusView> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::view::model::AiStatusView>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::view::model::AskNoteScope> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::view::model::AskNoteScope>::sse_encode(value, serializer);
         }
     }
 }

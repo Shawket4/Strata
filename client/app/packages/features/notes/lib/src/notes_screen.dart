@@ -34,6 +34,7 @@ class NotesScreen extends StatefulWidget {
     this.onOpenConflict,
     this.onOpenDuplicate,
     this.onOpenLocalMap,
+    this.onOpenAsk,
   });
 
   /// The folder shown (`''` = vault root).
@@ -67,6 +68,10 @@ class NotesScreen extends StatefulWidget {
 
   /// Opens the local mind map of a note (maps feature).
   final ValueChanged<String>? onOpenLocalMap;
+
+  /// Opens Ask once the core made its conversation about a note ("Ask about
+  /// this note").
+  final VoidCallback? onOpenAsk;
 
   /// The icon that represents this feature.
   static const IconData icon = Icons.description_outlined;
@@ -142,6 +147,7 @@ class _NotesScreenState extends State<NotesScreen> {
       onOpenConflict: widget.onOpenConflict,
       onOpenDuplicate: widget.onOpenDuplicate,
       onOpenLocalMap: widget.onOpenLocalMap,
+      onOpenAsk: widget.onOpenAsk,
     );
     final list = NotesListPane(
       folder: _folder,

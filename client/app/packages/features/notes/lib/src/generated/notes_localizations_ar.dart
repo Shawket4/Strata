@@ -111,6 +111,9 @@ class NotesLocalizationsAr extends NotesLocalizations {
   String get openLocalMap => 'فتح الخريطة الذهنية';
 
   @override
+  String get askAboutNote => 'اسأل الذكاء الاصطناعي عن الملاحظة دي';
+
+  @override
   String get moreActions => 'إجراءات تانية';
 
   @override

@@ -4,6 +4,13 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Implementation decisions (note follow-up threads)
+Gaps filled while implementing the owner decision "follow up on a note with AI: both"; the owner may revisit any of them.
+- **Where the thread lives:** `.meta/threads/<note-id>.json`, not the sidecar (it grows per exchange; the sidecar is rewritten by every linking run). Indexed in `note_threads` (a pure function of the file), synced as the `thread` record, dropped with its note.
+- **One conversation surface:** "Ask about this note" (note screen) and a pinned note chosen as Ask's scope both make the Ask conversation that note's thread: the saved thread, then the exchange still streaming; "Ask about all notes" leaves it. Asking needs the connection (like Ask); reading a thread works offline.
+- **What the AI sees:** the `note_thread` prompt with the note's own excerpts first (up to `top_k`), then the best excerpts of other notes, and the last 10 messages of the thread. Answers cite like Ask; the note itself is never edited (cited blocks get IDs as in Ask).
+- **When it is saved:** when the server's answer finishes; a failed answer is not kept. Stop only stops the app reading the stream: the server still finishes the answer and keeps it in the thread. `thread.updated` on `/events` makes devices pull it.
+
 ### Owner decisions: warm Claude, attachments, following up on a note
 - **Warm Claude: a pool of pre-started processes** (over routing interactive work to the API provider, or leaving it). One or two `claude` processes are started ahead of time and wait for their input; each serves exactly one call and a new one starts behind it, so no call pays the start-up and no history is shared between jobs or users. The embedding model is kept loaded (`idle_unload_secs = 0`, the new default).
 - **Attachments: store, sync and show, plus camera and share sheet;** AI reading them (OCR, text extraction) is deferred, wanted later; voice notes not now. Files are saved unchanged under `attachments/YYYY/MM/<id>.<ext>` (PLAN §18.1), embedded in the note, shown inline (images) or as a file chip, and downloaded to devices lazily. **At most 10 MB per file.**

@@ -58,6 +58,8 @@ impl AskStream for Script {
 struct AskApi {
     inner: Arc<FakeAccountApi>,
     asks: Mutex<VecDeque<Result<String, NetError>>>,
+    /// `(note, question)` of every `ask_about_note` call.
+    note_asks: Mutex<Vec<(String, String)>>,
     streams: Mutex<VecDeque<Result<Vec<Step>, NetError>>>,
     status: Mutex<Option<AiStatusInfo>>,
     /// `POST /ai/jobs/retry` answers; each also moves the failed jobs into the queue.
@@ -172,6 +174,17 @@ impl AccountApi for AskApi {
         let r = self.asks.lock().unwrap().pop_front().expect("scripted ask");
         Box::pin(async move { r })
     }
+    fn ask_about_note(
+        &self,
+        _server_url: String,
+        _tokens: Tokens,
+        note_id: String,
+        question: String,
+    ) -> BoxFuture<'_, Result<String, NetError>> {
+        self.note_asks.lock().unwrap().push((note_id, question));
+        let r = self.asks.lock().unwrap().pop_front().expect("scripted ask");
+        Box::pin(async move { r })
+    }
     fn ask_stream(
         &self,
         _server_url: String,
@@ -196,6 +209,7 @@ async fn world() -> (Harness, Arc<AskApi>, Arc<Session>) {
     let api = Arc::new(AskApi {
         inner: h.accounts.clone(),
         asks: Mutex::default(),
+        note_asks: Mutex::default(),
         streams: Mutex::default(),
         status: Mutex::default(),
         retries: Mutex::default(),
@@ -227,7 +241,8 @@ async fn world() -> (Harness, Arc<AskApi>, Arc<Session>) {
 
 fn view(s: &Session) -> AskView {
     let entries = s.ask_entries();
-    s.read(|c, ctx| build::ask(c, ctx, &entries))
+    let note = s.ask_state_note();
+    s.read(|c, ctx| build::ask(c, ctx, &entries, note.as_deref()))
         .expect("ask view")
 }
 
@@ -640,4 +655,118 @@ async fn refresh_pulls_the_server_and_rereads_the_server_only_data() {
     *api.status.lock().unwrap() = None;
     assert_eq!(s.refresh().await, Ok(()));
     assert_eq!(view(&s).ai_status.map(|a| a.queue_depth), Some(2));
+}
+
+#[tokio::test]
+async fn a_conversation_about_a_note_is_its_saved_thread_plus_the_live_exchange() {
+    use strata_core::sync::model::Record;
+    use sync_model::changes::NoteThreadRecord;
+    use vault_format::thread::{ThreadMessage, ThreadRole};
+    const NOTE: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0V5N";
+    const A1: &str = "01K5THREAD0000000000000002";
+    const A2: &str = "01K5THREAD0000000000000004";
+    let (h, api, s) = world().await;
+    h.server.remote_upsert(
+        NOTE,
+        "notes/Delivery.md",
+        &format!("---\nid: {NOTE}\n---\nBy Friday.\n"),
+    );
+    s.sync(Trigger::Manual).await.expect("pull");
+    let ulid = |t: &str| ulid::Ulid::from_string(t).expect("ulid");
+    let at = DateTime::parse_from_rfc3339("2026-09-28T19:00:00+03:00").expect("ts");
+    let msg = |id: &str, role, text: &str| ThreadMessage {
+        id: ulid(id),
+        role,
+        text: text.into(),
+        citations: Vec::new(),
+        model: None,
+        created: at,
+    };
+    let first = vec![
+        msg("01K5THREAD0000000000000001", ThreadRole::User, "When?"),
+        msg(A1, ThreadRole::Assistant, "By Friday."),
+    ];
+    h.server.remote_record(Record::Thread(NoteThreadRecord {
+        note_id: ulid(NOTE),
+        messages: first.clone(),
+    }));
+    s.sync(Trigger::Manual).await.expect("pull thread");
+
+    // Unknown notes are refused; the note's conversation is its saved thread.
+    assert!(s.open_note_thread("01J8ZK3M4X7Q9W2E5R6T8Y0V5Z").is_err());
+    s.open_note_thread(NOTE).expect("open");
+    let v = view(&s);
+    assert_eq!(
+        v.note.map(|n| (n.note_id, n.title, n.label)),
+        Some((
+            NOTE.to_owned(),
+            "Delivery".to_owned(),
+            "About Delivery".to_owned()
+        ))
+    );
+    assert_eq!(
+        messages(&s),
+        [
+            msg_row("01K5THREAD0000000000000001", "user", "When?"),
+            msg_row(A1, "assistant", "By Friday."),
+        ]
+    );
+
+    // A follow-up goes to the note; the live exchange follows the saved thread.
+    api.asks.lock().unwrap().push_back(Ok(A2.into()));
+    api.streams.lock().unwrap().push_back(Ok(vec![
+        tokens("On receipt."),
+        Step::Event(Ok(AskEvent::Done("On receipt.".into()))),
+    ]));
+    let scope = strata_core::view::model::AskScope {
+        kind: strata_core::view::model::AskScopeKind::Note,
+        value: Some(NOTE.into()),
+        label: "Delivery".into(),
+    };
+    s.ask("And payment?", None, &scope.label)
+        .await
+        .expect("ask");
+    assert_eq!(
+        *api.note_asks.lock().unwrap(),
+        [(NOTE.to_owned(), "And payment?".to_owned())]
+    );
+    let live = messages(&s);
+    assert_eq!(live.len(), 4);
+    assert_eq!(
+        (live[2].1.as_str(), live[2].2.as_str()),
+        ("user", "And payment?")
+    );
+    assert_eq!(live[3], msg_row(A2, "assistant", "On receipt."));
+
+    // The server saved the exchange: the thread shows it once.
+    let mut both = first;
+    both.push(msg(
+        "01K5THREAD0000000000000003",
+        ThreadRole::User,
+        "And payment?",
+    ));
+    both.push(msg(A2, ThreadRole::Assistant, "On receipt."));
+    h.server.remote_record(Record::Thread(NoteThreadRecord {
+        note_id: ulid(NOTE),
+        messages: both,
+    }));
+    s.sync(Trigger::Manual).await.expect("pull saved");
+    assert_eq!(
+        messages(&s),
+        [
+            msg_row("01K5THREAD0000000000000001", "user", "When?"),
+            msg_row(A1, "assistant", "By Friday."),
+            msg_row("01K5THREAD0000000000000003", "user", "And payment?"),
+            msg_row(A2, "assistant", "On receipt."),
+        ]
+    );
+
+    // A new conversation is about the whole vault again.
+    s.new_conversation();
+    let v = view(&s);
+    assert_eq!((v.note, v.messages.len()), (None, 0));
+}
+
+fn msg_row(id: &str, role: &str, text: &str) -> (String, String, String, bool, Option<String>) {
+    msg(id, role, text, None)
 }

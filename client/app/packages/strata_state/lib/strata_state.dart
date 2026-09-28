@@ -65,6 +65,7 @@ export 'package:strata_bridge/strata_bridge.dart'
         noteBlocks,
         noteRevisionDiff,
         notificationAction,
+        openNoteThread,
         parseTaskText,
         passwordStrength,
         pinNote,

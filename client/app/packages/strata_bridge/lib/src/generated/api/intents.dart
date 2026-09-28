@@ -474,6 +474,10 @@ Future<String> ask({required String question, required AskScope scope}) =>
       scope: scope,
     );
 
+/// Ask: makes the conversation about note `id` (its saved thread; "Ask about this note").
+Future<void> openNoteThread({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsOpenNoteThread(id: id);
+
 /// Ask: stops the streaming answer.
 Future<void> stopAsk() => StrataCore.instance.api.crateApiIntentsStopAsk();
 

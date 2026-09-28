@@ -31,6 +31,7 @@ final class Host {
   final List<String> conflicts = [];
   final List<String> maps = [];
   int closed = 0;
+  int asks = 0;
 
   NotesScreen screen({String folder = _folder, String? selected}) =>
       NotesScreen(
@@ -41,6 +42,7 @@ final class Host {
         onCloseNote: () => closed++,
         onOpenConflict: conflicts.add,
         onOpenLocalMap: maps.add,
+        onOpenAsk: () => asks++,
       );
 }
 
@@ -583,6 +585,24 @@ void main() {
       await tester.tap(find.byTooltip('Open local mind map'));
       expect(host.maps, [_pricing, _pricing]);
     });
+
+    for (final sizeClass in [SizeClass.expanded, SizeClass.compact]) {
+      testWidgets('ask about this note opens its thread, then Ask '
+          '(${sizeClass.name})', (tester) async {
+        final host = Host();
+        final fake = await pumpNotes(
+          tester,
+          host.screen(selected: _pricing),
+          sizeClass: sizeClass,
+        );
+        await tester.tap(find.byTooltip('Ask AI about this note'));
+        await tester.pump();
+        expect(fake.calls.where((c) => c.method == 'openNoteThread'), [
+          const CoreCall('openNoteThread', {'id': _pricing}),
+        ]);
+        expect(host.asks, 1);
+      });
+    }
 
     testWidgets('the expanded panel hides and shows', (tester) async {
       await pumpNotes(

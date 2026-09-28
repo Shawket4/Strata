@@ -327,6 +327,7 @@ class NotesRoute extends GoRouteData with $NotesRoute {
       onOpenConflict: (opId) => ConflictRoute(opId: opId).go(context),
       onOpenDuplicate: (_) => _showDuplicate(context),
       onOpenLocalMap: (id) => MindMapRoute(noteId: id).go(context),
+      onOpenAsk: () => const AskRoute().go(context),
     ),
   );
 }
@@ -356,6 +357,7 @@ class NoteEditorRoute extends GoRouteData with $NoteEditorRoute {
       onOpenConflict: (opId) => ConflictRoute(opId: opId).go(context),
       onOpenDuplicate: (_) => _showDuplicate(context),
       onOpenLocalMap: (id) => MindMapRoute(noteId: id).go(context),
+      onOpenAsk: () => const AskRoute().go(context),
     ),
   );
 }

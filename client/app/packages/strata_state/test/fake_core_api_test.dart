@@ -664,6 +664,11 @@ void main() {
       answer: StrataFixtures.opId,
     ),
     (
+      invoke: (api) => api.openNoteThread(id: 'n'),
+      call: const CoreCall('openNoteThread', {'id': 'n'}),
+      answer: null,
+    ),
+    (
       invoke: (api) => api.stopAsk(),
       call: const CoreCall('stopAsk'),
       answer: null,
@@ -901,8 +906,8 @@ void main() {
 
   test('covers every Future-returning CoreApi method once', () {
     // 143 facade functions - 22 streams.
-    expect(cases, hasLength(123));
-    expect(cases.map((c) => c.call.method).toSet(), hasLength(123));
+    expect(cases, hasLength(124));
+    expect(cases.map((c) => c.call.method).toSet(), hasLength(124));
   });
 
   for (final c in cases) {

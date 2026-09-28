@@ -1733,6 +1733,13 @@ abstract final class StrataFixtures {
   /// A sample [AskScope].
   static const AskScope askScope = AskScope(kind: AskScopeKind.all, label: '');
 
+  /// A conversation about one note (its saved thread).
+  static const AskNoteScope askNoteScope = AskNoteScope(
+    noteId: 'n-pricing-experiments',
+    title: 'Pricing experiments',
+    label: 'About Pricing experiments',
+  );
+
   /// A sample [AskSource].
   static final AskSource askSource = AskSource(
     noteId: '',

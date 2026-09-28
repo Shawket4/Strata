@@ -133,6 +133,20 @@ abstract final class AskFixtures {
     aiStatus: aiStatus,
   );
 
+  /// A conversation about one note: its saved thread.
+  static final AskView aboutNote = AskView(
+    availability: Availability.available,
+    note: const AskNoteScope(
+      noteId: 'n-call-2026-09-12-acme',
+      title: 'Call 2026-09-12 Acme',
+      label: 'About Call 2026-09-12 Acme',
+    ),
+    messages: [question, answer],
+    scopes: scopes,
+    streaming: false,
+    aiStatus: aiStatus,
+  );
+
   /// An answer still streaming.
   static const AskView streaming = AskView(
     availability: Availability.available,

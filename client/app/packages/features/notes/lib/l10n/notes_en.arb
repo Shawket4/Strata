@@ -136,6 +136,10 @@
   "@openLocalMap": {
     "description": "Button that opens the local mind map."
   },
+  "askAboutNote": "Ask AI about this note",
+  "@askAboutNote": {
+    "description": "Opens Ask with the conversation about this note (its saved thread)."
+  },
   "moreActions": "More actions",
   "@moreActions": {
     "description": "Overflow menu button."

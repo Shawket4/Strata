@@ -206,6 +206,18 @@ abstract class AskLocalizations {
   /// **'Ask about your notes — English or العربية'**
   String get askHint;
 
+  /// Question field hint when the conversation is about one note.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask about this note'**
+  String get askAboutNoteHint;
+
+  /// Removes the note from the conversation (a new conversation about the whole vault).
+  ///
+  /// In en, this message translates to:
+  /// **'Ask about all notes'**
+  String get leaveNoteThread;
+
   /// Send.
   ///
   /// In en, this message translates to:
