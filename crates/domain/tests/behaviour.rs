@@ -1,8 +1,8 @@
 //! Tests for the helper methods and constants beyond string round trips.
 
 use domain::{
-    AccountStatus, CUSTODY_CONFIDENCE_THRESHOLD, DedupeKind, DedupeThresholds, EntityRelationType,
-    GraphNodeKind, MatchLevel, MentionType, NOTE_RELATION_KEYS, NoteKind, Priority,
+    AccountStatus, CUSTODY_CONFIDENCE_THRESHOLD, DedupeKind, DedupeThresholds,
+    DocumentRelationType, EntityRelationType, GraphEdgeKind, GraphNodeKind, MatchLevel, MentionType, NOTE_RELATION_KEYS, NoteKind, Priority,
     RELATION_CONFIDENCE_THRESHOLD, RelationType, SemanticThresholds,
 };
 
@@ -325,4 +325,54 @@ fn near_thresholds_separate_calibration_pairs() {
             "{kind} {a:?} vs {b:?}: {score}"
         );
     }
+}
+
+#[test]
+fn stored_relation_types_map_to_graph_edge_kinds() {
+    use NoteKind::{Company, Concept, Document, Note, Person, Place};
+    let cases = [
+        (
+            "related",
+            Note,
+            Note,
+            Some(GraphEdgeKind::Relation(RelationType::Related)),
+        ),
+        (
+            "part-of",
+            Note,
+            Note,
+            Some(GraphEdgeKind::Relation(RelationType::PartOf)),
+        ),
+        ("part-of", Place, Place, Some(GraphEdgeKind::PartOfPlace)),
+        (
+            "part-of",
+            Place,
+            Note,
+            Some(GraphEdgeKind::Relation(RelationType::PartOf)),
+        ),
+        ("concepts", Note, Concept, Some(GraphEdgeKind::Concept)),
+        ("people", Note, Person, Some(GraphEdgeKind::Mention)),
+        ("companies", Document, Company, Some(GraphEdgeKind::Mention)),
+        (
+            "works-at",
+            Person,
+            Company,
+            Some(GraphEdgeKind::Entity(EntityRelationType::WorksAt)),
+        ),
+        (
+            "copy-of",
+            Document,
+            Document,
+            Some(GraphEdgeKind::Document(DocumentRelationType::CopyOf)),
+        ),
+        ("nonsense", Note, Note, None),
+        ("tags", Note, Note, None),
+    ];
+    for (t, s, d, want) in cases {
+        assert_eq!(GraphEdgeKind::of_relation(t, s, d), want, "{t}");
+    }
+    assert_eq!(
+        GraphEdgeKind::from(DocumentRelationType::CopyOf),
+        GraphEdgeKind::Document(DocumentRelationType::CopyOf)
+    );
 }

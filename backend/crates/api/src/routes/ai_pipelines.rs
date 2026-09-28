@@ -12,8 +12,8 @@
 //! - `POST /notes/{id}/relink` — force a linking run;
 //! - `GET`/`PUT /ai/settings` — the user's auto-file setting (§9.3).
 //!
-//! The payload DTOs of AI suggestions (`filing`, `entity_link`, `custody`, `task`,
-//! `correction`) are defined here and used by `routes::inbox`.
+//! The payloads of AI suggestions (`filing`, `entity_link`, `custody`, `task`, `correction`)
+//! are decoded here ([`ai_payload`]) into `routes::inbox::SuggestionPayload`.
 
 use actix_web::http::StatusCode;
 use actix_web::{Responder, web};
@@ -32,7 +32,7 @@ use vault_format::RelationKey;
 
 use crate::ai::AiApi;
 use crate::auth::Authenticated;
-use crate::routes::inbox::Suggestion;
+use crate::routes::inbox::{Suggestion, SuggestionPayload};
 use crate::vault::OrProblem;
 use crate::wire::{MsgPack, Problem, ProblemType};
 
@@ -241,51 +241,6 @@ pub struct AiSettings {
 
 // ---- suggestion payload DTOs (used by `routes::inbox`) ---------------------------------------
 
-/// A filing proposal (`filing`).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-pub struct FilingProposal {
-    /// The decision.
-    #[schema(value_type = String, format = "ulid")]
-    pub decision_id: Ulid,
-    /// Title.
-    pub title: String,
-    /// Tags.
-    pub tags: Vec<String>,
-    /// Destination folder.
-    pub folder: String,
-}
-
-/// A link-or-create proposal (`entity_link`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
-pub struct EntityLinkProposal {
-    /// The decision.
-    #[schema(value_type = String, format = "ulid")]
-    pub decision_id: Ulid,
-    /// The mention as written.
-    pub mention: String,
-    /// `person`, `company`, `document`, `place`.
-    pub entity_kind: String,
-    /// The note mentioning it.
-    #[schema(value_type = String, format = "ulid")]
-    pub source_note: Ulid,
-    /// The block stating it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub block_id: Option<String>,
-    /// The proposed entity (absent: create a new one).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schema(value_type = Option<String>, format = "ulid")]
-    pub proposed: Option<Ulid>,
-    /// Entities that fit.
-    #[schema(value_type = Vec<String>)]
-    pub candidates: Vec<Ulid>,
-    /// A nickname or kinship term.
-    pub is_nickname: bool,
-    /// Model confidence.
-    pub confidence: f64,
-    /// `ambiguous`, `nickname`, `new`, `low_confidence`, `reply`.
-    pub reason: String,
-}
-
 /// A custody participant.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub struct CustodyTargetDto {
@@ -308,74 +263,6 @@ impl From<CustodyTarget> for CustodyTargetDto {
             candidates: t.candidates.into_iter().map(|c| c.as_ulid()).collect(),
         }
     }
-}
-
-/// A custody event proposal (`custody`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
-pub struct CustodyProposal {
-    /// The decision.
-    #[schema(value_type = String, format = "ulid")]
-    pub decision_id: Ulid,
-    /// The note stating it.
-    #[schema(value_type = String, format = "ulid")]
-    pub source_note: Ulid,
-    /// The block stating it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub block_id: Option<String>,
-    /// Event type (`stored-at`, …).
-    pub event: String,
-    /// Date.
-    pub date: NaiveDate,
-    /// Document.
-    pub document: CustodyTargetDto,
-    /// Place.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub place: Option<CustodyTargetDto>,
-    /// Enclosing place mention.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub place_part_of: Option<String>,
-    /// Person.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub person: Option<CustodyTargetDto>,
-    /// Third party.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub counterparty: Option<CustodyTargetDto>,
-    /// Model confidence.
-    pub confidence: f64,
-    /// `low_confidence`, `ambiguous`, `unknown`, `conflict`, `reply`.
-    pub reason: String,
-    /// The span stating it.
-    pub quote: String,
-}
-
-/// A task proposal (`task`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
-pub struct TaskProposal {
-    /// The decision.
-    #[schema(value_type = String, format = "ulid")]
-    pub decision_id: Ulid,
-    /// The note it came from.
-    #[schema(value_type = String, format = "ulid")]
-    pub source_note: Ulid,
-    /// The block stating it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub block_id: Option<String>,
-    /// Title.
-    pub title: String,
-    /// Due date.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub due: Option<NaiveDate>,
-    /// Recurrence phrase.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub recurrence: Option<String>,
-    /// Reminders (local times).
-    #[schema(value_type = Vec<String>)]
-    pub reminders: Vec<NaiveDateTime>,
-    /// Entities it concerns.
-    #[schema(value_type = Vec<String>)]
-    pub entities: Vec<Ulid>,
-    /// Model confidence.
-    pub confidence: f64,
 }
 
 /// One proposed fix of a correction.
@@ -409,70 +296,53 @@ pub struct HintDto {
     pub text: String,
 }
 
-/// A correction in words that was not applied automatically (`correction`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
-pub struct CorrectionProposal {
-    /// The correction decision.
-    #[schema(value_type = String, format = "ulid")]
-    pub decision_id: Ulid,
-    /// The user's words.
-    pub message: String,
-    /// Proposed fixes.
-    pub fixes: Vec<CorrectionFixDto>,
-    /// Hints to remember.
-    pub hints: Vec<HintDto>,
-    /// The model's question when ambiguous.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub question: Option<String>,
-}
-
 /// The typed payload of an AI suggestion of `kind`, if it is one.
-pub fn ai_payload(kind: &str, bytes: &[u8]) -> Option<AiPayload> {
+pub fn ai_payload(kind: &str, bytes: &[u8]) -> Option<SuggestionPayload> {
     let ids = |v: Vec<NoteId>| v.into_iter().map(|n| n.as_ulid()).collect::<Vec<_>>();
+    let target = |t: CustodyTarget| Box::new(CustodyTargetDto::from(t));
     match kind {
-        decide::KIND_FILING => rmp_serde::from_slice::<FilingPayload>(bytes).ok().map(|p| {
-            AiPayload::Filing(FilingProposal {
+        decide::KIND_FILING => rmp_serde::from_slice::<FilingPayload>(bytes)
+            .ok()
+            .map(|p| SuggestionPayload::Filing {
                 decision_id: p.decision_id.as_ulid(),
                 title: p.title,
                 tags: p.tags,
                 folder: p.folder,
-            })
-        }),
-        decide::KIND_ENTITY_LINK => {
-            rmp_serde::from_slice::<EntityLinkPayload>(bytes).ok().map(|p| {
-                AiPayload::EntityLink(EntityLinkProposal {
-                    decision_id: p.decision_id.as_ulid(),
-                    mention: p.mention,
-                    entity_kind: p.kind,
-                    source_note: p.source_note.as_ulid(),
-                    block_id: p.block_id,
-                    proposed: p.proposed.map(|n| n.as_ulid()),
-                    candidates: ids(p.candidates),
-                    is_nickname: p.is_nickname,
-                    confidence: p.confidence,
-                    reason: p.reason,
-                })
-            })
-        }
-        decide::KIND_CUSTODY => rmp_serde::from_slice::<CustodyPayload>(bytes).ok().map(|p| {
-            AiPayload::Custody(CustodyProposal {
+            }),
+        decide::KIND_ENTITY_LINK => rmp_serde::from_slice::<EntityLinkPayload>(bytes)
+            .ok()
+            .map(|p| SuggestionPayload::EntityLink {
+                decision_id: p.decision_id.as_ulid(),
+                mention: p.mention,
+                entity_kind: p.kind,
+                source_note: p.source_note.as_ulid(),
+                block_id: p.block_id,
+                proposed: p.proposed.map(|n| n.as_ulid()),
+                candidates: ids(p.candidates),
+                is_nickname: p.is_nickname,
+                confidence: p.confidence,
+                reason: p.reason,
+            }),
+        decide::KIND_CUSTODY => rmp_serde::from_slice::<CustodyPayload>(bytes)
+            .ok()
+            .map(|p| SuggestionPayload::Custody {
                 decision_id: p.decision_id.as_ulid(),
                 source_note: p.source_note.as_ulid(),
                 block_id: p.block_id,
                 event: p.event,
                 date: p.date,
-                document: p.document.into(),
-                place: p.place.map(Into::into),
+                document: target(p.document),
+                place: p.place.map(target),
                 place_part_of: p.place_part_of,
-                person: p.person.map(Into::into),
-                counterparty: p.counterparty.map(Into::into),
+                person: p.person.map(target),
+                counterparty: p.counterparty.map(target),
                 confidence: p.confidence,
                 reason: p.reason,
                 quote: p.quote,
-            })
-        }),
-        decide::KIND_TASK => rmp_serde::from_slice::<TaskPayload>(bytes).ok().map(|p| {
-            AiPayload::Task(TaskProposal {
+            }),
+        decide::KIND_TASK => rmp_serde::from_slice::<TaskPayload>(bytes)
+            .ok()
+            .map(|p| SuggestionPayload::Task {
                 decision_id: p.decision_id.as_ulid(),
                 source_note: p.source_note.as_ulid(),
                 block_id: p.block_id,
@@ -482,54 +352,36 @@ pub fn ai_payload(kind: &str, bytes: &[u8]) -> Option<AiPayload> {
                 reminders: p.reminders,
                 entities: ids(p.entities),
                 confidence: p.confidence,
-            })
-        }),
-        decide::KIND_CORRECTION => {
-            rmp_serde::from_slice::<CorrectionPayload>(bytes).ok().map(|p| {
-                AiPayload::Correction(CorrectionProposal {
-                    decision_id: p.decision_id.as_ulid(),
-                    message: p.message,
-                    fixes: p
-                        .fixes
-                        .into_iter()
-                        .map(|f| CorrectionFixDto {
-                            decision_id: f.decision_id.as_ulid(),
-                            action: f.action,
-                            new_target: f.new_target.map(|n| n.as_ulid()),
-                            new_type: f.new_type,
-                            confidence: f.confidence,
-                            reason: f.reason,
-                        })
-                        .collect(),
-                    hints: p
-                        .hints
-                        .into_iter()
-                        .map(|h| HintDto {
-                            entity: h.entity.as_ulid(),
-                            text: h.text,
-                        })
-                        .collect(),
-                    question: p.question,
-                })
-            })
-        }
+            }),
+        decide::KIND_CORRECTION => rmp_serde::from_slice::<CorrectionPayload>(bytes)
+            .ok()
+            .map(|p| SuggestionPayload::Correction {
+                decision_id: p.decision_id.as_ulid(),
+                message: p.message,
+                fixes: p
+                    .fixes
+                    .into_iter()
+                    .map(|f| CorrectionFixDto {
+                        decision_id: f.decision_id.as_ulid(),
+                        action: f.action,
+                        new_target: f.new_target.map(|n| n.as_ulid()),
+                        new_type: f.new_type,
+                        confidence: f.confidence,
+                        reason: f.reason,
+                    })
+                    .collect(),
+                hints: p
+                    .hints
+                    .into_iter()
+                    .map(|h| HintDto {
+                        entity: h.entity.as_ulid(),
+                        text: h.text,
+                    })
+                    .collect(),
+                question: p.question,
+            }),
         _ => None,
     }
-}
-
-/// A decoded AI suggestion payload.
-#[derive(Debug, Clone, PartialEq)]
-pub enum AiPayload {
-    /// `filing`.
-    Filing(FilingProposal),
-    /// `entity_link`.
-    EntityLink(EntityLinkProposal),
-    /// `custody`.
-    Custody(CustodyProposal),
-    /// `task`.
-    Task(TaskProposal),
-    /// `correction`.
-    Correction(CorrectionProposal),
 }
 
 // ---- handlers ---------------------------------------------------------------------------------
@@ -868,15 +720,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         get_settings,
         put_settings
     ),
-    components(schemas(
-        FilingProposal,
-        EntityLinkProposal,
-        CustodyProposal,
-        CustodyTargetDto,
-        TaskProposal,
-        CorrectionProposal,
-        CorrectionFixDto,
-        HintDto
-    ))
+    components(schemas(CustodyTargetDto, CorrectionFixDto, HintDto))
 )]
 pub struct AiPipelinesApiDoc;

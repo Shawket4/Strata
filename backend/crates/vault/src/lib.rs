@@ -12,7 +12,8 @@
 //! - after each write the **index is updated synchronously** ([`derive`], [`indexer`]) in the
 //!   user's scoped transaction, the change log is appended and AI jobs are enqueued;
 //! - **reconciliation** ([`reconcile`]) repairs crashes and out-of-band edits and can rebuild
-//!   a user's derived rows from the vault;
+//!   a user's derived rows from the vault (with the cluster rows of `.meta/clusters.json`,
+//!   [`clusters`]);
 //! - a write is **all-or-nothing** across crashes ([`journal`]), and a pushed op's result is
 //!   stored in the write's own transaction and commit ([`receipt`]);
 //! - duplicate checks on create ([`dup`]), export/import ([`archive`]).
@@ -26,6 +27,7 @@
 #![allow(clippy::case_sensitive_file_extension_comparisons)]
 
 pub mod archive;
+pub mod clusters;
 pub mod derive;
 pub mod diff;
 pub mod dup;

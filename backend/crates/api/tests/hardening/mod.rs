@@ -794,21 +794,25 @@ pub fn strings_in(body: &[u8]) -> Vec<String> {
 }
 
 /// Filesystem paths in a string: the data root, absolute Unix/Windows paths, `..` segments.
-pub fn path_leaks(s: &str, data_root: &Path) -> Vec<String> {
+/// A path-like token that the client itself sent (`echo`: the request's target and body) is
+/// not a leak of the server's layout; the data root always is.
+pub fn path_leaks(s: &str, data_root: &Path, echo: &[u8]) -> Vec<String> {
     let mut out = Vec::new();
     let root = data_root.to_string_lossy();
     if s.contains(root.as_ref()) {
         out.push(format!("data root in {s:?}"));
     }
-    for prefix in [
-        "/home/", "/tmp/", "/srv/", "/etc/", "/root/", "/var/", "/usr/", "/proc/", "/opt/",
-    ] {
-        if s.contains(prefix) {
-            out.push(format!("absolute path {prefix} in {s:?}"));
+    let echoed = |token: &str| echo.windows(token.len()).any(|w| w == token.as_bytes());
+    for token in s.split(|c: char| c.is_whitespace() || "`'\"()[]<>,;".contains(c)) {
+        let absolute = [
+            "/home/", "/tmp/", "/srv/", "/etc/", "/root/", "/var/", "/usr/", "/proc/", "/opt/",
+        ]
+        .iter()
+        .any(|p| token.contains(p));
+        let escape = token.contains("../") || token.contains("..\\") || token.contains(":\\");
+        if (absolute || escape) && !echoed(token) {
+            out.push(format!("filesystem path {token:?} in {s:?}"));
         }
-    }
-    if s.contains("../") || s.contains("..\\") || s.contains(":\\") {
-        out.push(format!("path escape in {s:?}"));
     }
     out
 }

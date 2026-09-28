@@ -96,16 +96,128 @@ pub enum SuggestionPayload {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
     },
-    /// A filing proposal for an inbox capture (`filing`, §9.3).
-    Filing(crate::routes::ai_pipelines::FilingProposal),
-    /// Link a mention to an entity or create it (`entity_link`, §6.7, D13 = b).
-    EntityLink(crate::routes::ai_pipelines::EntityLinkProposal),
+    /// A filing proposal for an inbox capture (`filing`, §9.3): accepting (optionally with
+    /// edits) titles, tags and moves the capture in one commit.
+    Filing {
+        /// The AI decision.
+        #[schema(value_type = String, format = "ulid")]
+        decision_id: Ulid,
+        /// Title (file name).
+        title: String,
+        /// Tags to add.
+        tags: Vec<String>,
+        /// Destination folder.
+        folder: String,
+    },
+    /// Link a mention to an entity, or create it (`entity_link`, §6.7, D13 = b): accepting
+    /// adds the mention to the entity's aliases.
+    EntityLink {
+        /// The AI decision.
+        #[schema(value_type = String, format = "ulid")]
+        decision_id: Ulid,
+        /// The mention as written.
+        mention: String,
+        /// `person`, `company`, `document`, `place`.
+        entity_kind: String,
+        /// The note mentioning it.
+        #[schema(value_type = String, format = "ulid")]
+        source_note: Ulid,
+        /// The block stating it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        block_id: Option<String>,
+        /// The proposed entity (absent: create a new one).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schema(value_type = Option<String>, format = "ulid")]
+        proposed: Option<Ulid>,
+        /// Entities that fit.
+        #[schema(value_type = Vec<String>)]
+        candidates: Vec<Ulid>,
+        /// A nickname or kinship term (never created automatically).
+        is_nickname: bool,
+        /// Model confidence.
+        confidence: f64,
+        /// `ambiguous`, `nickname`, `new`, `low_confidence`, `reply`.
+        reason: String,
+    },
     /// A custody event not applied automatically (`custody`, §6.12, D30).
-    Custody(Box<crate::routes::ai_pipelines::CustodyProposal>),
-    /// A task proposed from a note (`task`, §6.11).
-    Task(crate::routes::ai_pipelines::TaskProposal),
+    Custody {
+        /// The AI decision.
+        #[schema(value_type = String, format = "ulid")]
+        decision_id: Ulid,
+        /// The note stating it.
+        #[schema(value_type = String, format = "ulid")]
+        source_note: Ulid,
+        /// The block stating it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        block_id: Option<String>,
+        /// Event type (`stored-at`, …).
+        event: String,
+        /// Date (resolved).
+        date: chrono::NaiveDate,
+        /// The document.
+        document: Box<crate::routes::ai_pipelines::CustodyTargetDto>,
+        /// The place.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        place: Option<Box<crate::routes::ai_pipelines::CustodyTargetDto>>,
+        /// The enclosing place mention.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        place_part_of: Option<String>,
+        /// The person.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        person: Option<Box<crate::routes::ai_pipelines::CustodyTargetDto>>,
+        /// The third party.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        counterparty: Option<Box<crate::routes::ai_pipelines::CustodyTargetDto>>,
+        /// Model confidence.
+        confidence: f64,
+        /// `low_confidence`, `ambiguous`, `unknown`, `conflict`, `reply`.
+        reason: String,
+        /// The span stating it.
+        quote: String,
+    },
+    /// A task proposed from a note (`task`, §6.11): accepting writes the line.
+    Task {
+        /// The AI decision.
+        #[schema(value_type = String, format = "ulid")]
+        decision_id: Ulid,
+        /// The note it came from.
+        #[schema(value_type = String, format = "ulid")]
+        source_note: Ulid,
+        /// The block stating it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        block_id: Option<String>,
+        /// Title.
+        title: String,
+        /// Due date.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        due: Option<chrono::NaiveDate>,
+        /// Recurrence phrase (Tasks plugin language).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        recurrence: Option<String>,
+        /// Reminders (local times).
+        #[schema(value_type = Vec<String>)]
+        reminders: Vec<chrono::NaiveDateTime>,
+        /// Entities it concerns.
+        #[schema(value_type = Vec<String>)]
+        entities: Vec<Ulid>,
+        /// Model confidence.
+        confidence: f64,
+    },
     /// A correction in words not applied automatically (`correction`, §9.8).
-    Correction(crate::routes::ai_pipelines::CorrectionProposal),
+    Correction {
+        /// The correction decision.
+        #[schema(value_type = String, format = "ulid")]
+        decision_id: Ulid,
+        /// The user's words.
+        message: String,
+        /// Proposed fixes.
+        fixes: Vec<crate::routes::ai_pipelines::CorrectionFixDto>,
+        /// Hints to remember.
+        hints: Vec<crate::routes::ai_pipelines::HintDto>,
+        /// The model's question when ambiguous.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        question: Option<String>,
+    },
     /// A kind this version does not describe (MessagePack as stored).
     Opaque {
         /// The raw payload.
@@ -213,15 +325,8 @@ impl From<SuggestionView> for Suggestion {
                 },
             },
             Payload::Opaque(data) => {
-                use crate::routes::ai_pipelines::{AiPayload, ai_payload};
-                match ai_payload(&v.suggestion.kind, &data) {
-                    Some(AiPayload::Filing(p)) => SuggestionPayload::Filing(p),
-                    Some(AiPayload::EntityLink(p)) => SuggestionPayload::EntityLink(p),
-                    Some(AiPayload::Custody(p)) => SuggestionPayload::Custody(Box::new(p)),
-                    Some(AiPayload::Task(p)) => SuggestionPayload::Task(p),
-                    Some(AiPayload::Correction(p)) => SuggestionPayload::Correction(p),
-                    None => SuggestionPayload::Opaque { data: Binary(data) },
-                }
+                crate::routes::ai_pipelines::ai_payload(&v.suggestion.kind, &data)
+                    .unwrap_or(SuggestionPayload::Opaque { data: Binary(data) })
             }
         };
         let s = v.suggestion;

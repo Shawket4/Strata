@@ -263,3 +263,24 @@ pub fn encode(s: &str) -> String {
     }
     out
 }
+
+/// Percent-decodes `s` (bytes; invalid escapes are kept as is).
+pub fn decode(s: &str) -> Vec<u8> {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'%'
+            && i + 2 < b.len()
+            && let Some(hex) = s.get(i + 1..i + 3)
+            && let Ok(v) = u8::from_str_radix(hex, 16)
+        {
+            out.push(v);
+            i += 3;
+        } else {
+            out.push(if b[i] == b'+' { b' ' } else { b[i] });
+            i += 1;
+        }
+    }
+    out
+}

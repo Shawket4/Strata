@@ -663,7 +663,8 @@ fn derive_all(
 }
 
 /// Deletes every derived row of the user and derives the whole vault again (`stratad
-/// reindex`). The vault is reconciled first.
+/// reindex`), reloading the cluster rows from `.meta/clusters.json` (change-log rows only for
+/// what differs from before). The vault is reconciled first.
 pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
     let dir = core.dir.clone();
     let inner = core.inner.clone();
@@ -683,14 +684,25 @@ pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
             sidecars.insert(id, sc);
         }
     }
+    // The cluster rows come back from `.meta/clusters.json` (missing or unreadable: none).
+    let cluster_file = core
+        .read_text(vault_format::clusters::CLUSTERS_PATH)
+        .await?
+        .and_then(|t| vault_format::clusters::Clusters::from_json(&t).ok());
     let mut tx = core.begin(&scope).await?;
     let tz = core.tz(&mut tx).await?;
     let derived = derive_all(&mut state, &scanned.texts, &sidecars, tz);
+    let clusters_before = crate::clusters::snapshot(&mut tx).await?;
     vrepo::clear_derived(&mut tx).await?;
     let mut batch: Vec<(NoteId, Derived)> = derived.into_iter().collect();
     batch.sort_by_key(|(id, _)| *id);
     let batch: Vec<Derived> = batch.into_iter().map(|(_, d)| d).collect();
     indexer::write(&mut tx, &batch).await?;
+    let clusters_now = cluster_file
+        .as_ref()
+        .map(crate::clusters::ClusterRows::of_file)
+        .unwrap_or_default();
+    crate::clusters::replace(&mut tx, &clusters_before, &clusters_now, at).await?;
     tx.commit().await?;
     core.state = Some(state);
     Ok(batch.len())

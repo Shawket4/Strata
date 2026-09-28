@@ -4,7 +4,9 @@ use std::fmt;
 use std::str::FromStr;
 
 use crate::macros::string_enum;
-use crate::{EntityRelationType, NoteKind, ParseError, RelationType};
+use crate::{
+    DocumentRelationType, EntityRelationType, MentionType, NoteKind, ParseError, RelationType,
+};
 
 string_enum! {
     /// Node kind in the graph API (§10).
@@ -56,8 +58,8 @@ string_enum! {
 }
 
 /// Edge kind in the graph API (§10). Parameterised kinds are written `prefix:value`
-/// (`relation:contradicts`, `entity:works-at`, `custody:last-holder`), and serialise as that
-/// single string.
+/// (`relation:contradicts`, `entity:works-at`, `custody:last-holder`, `document:copy-of`),
+/// and serialise as that single string.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum GraphEdgeKind {
     /// Body wikilink.
@@ -78,6 +80,10 @@ pub enum GraphEdgeKind {
     Custody(CustodyEdge),
     /// Place → containing place (`part-of` on a place).
     PartOfPlace,
+    /// Document → document relation (`copy-of`, §6.12).
+    Document(DocumentRelationType),
+    /// Note → tag node (the optional tag toggle).
+    Tag,
 }
 
 impl GraphEdgeKind {
@@ -89,7 +95,47 @@ impl GraphEdgeKind {
         all.extend(EntityRelationType::ALL.iter().copied().map(Self::Entity));
         all.extend(CustodyEdge::ALL.iter().copied().map(Self::Custody));
         all.push(Self::PartOfPlace);
+        all.extend(
+            DocumentRelationType::ALL
+                .iter()
+                .copied()
+                .map(Self::Document),
+        );
+        all.push(Self::Tag);
         all
+    }
+
+    /// The edge kind of a stored frontmatter relation type (`relations.type`) between notes
+    /// of the given kinds: note relation types → `relation:<type>` (`part-of` from a place
+    /// to a place → `part-of-place`), `concepts` → `concept`, `people`/`companies` →
+    /// `mention`, entity relation types → `entity:<type>`, document relation types →
+    /// `document:<type>`; `None` for unknown types.
+    pub fn of_relation(rel_type: &str, src: NoteKind, dst: NoteKind) -> Option<Self> {
+        if let Ok(t) = rel_type.parse::<RelationType>() {
+            if t == RelationType::PartOf && src == NoteKind::Place && dst == NoteKind::Place {
+                return Some(Self::PartOfPlace);
+            }
+            return Some(Self::Relation(t));
+        }
+        if let Ok(m) = rel_type.parse::<MentionType>() {
+            return Some(match m {
+                MentionType::Concepts => Self::Concept,
+                MentionType::People | MentionType::Companies => Self::Mention,
+            });
+        }
+        if let Ok(t) = rel_type.parse::<EntityRelationType>() {
+            return Some(Self::Entity(t));
+        }
+        rel_type
+            .parse::<DocumentRelationType>()
+            .ok()
+            .map(Self::Document)
+    }
+}
+
+impl From<DocumentRelationType> for GraphEdgeKind {
+    fn from(t: DocumentRelationType) -> Self {
+        Self::Document(t)
     }
 }
 
@@ -105,6 +151,8 @@ impl fmt::Display for GraphEdgeKind {
             Self::Entity(t) => write!(f, "entity:{t}"),
             Self::Custody(c) => write!(f, "custody:{c}"),
             Self::PartOfPlace => f.write_str("part-of-place"),
+            Self::Document(t) => write!(f, "document:{t}"),
+            Self::Tag => f.write_str("tag"),
         }
     }
 }
@@ -119,6 +167,7 @@ impl FromStr for GraphEdgeKind {
                 "relation" => value.parse().map(Self::Relation).map_err(|_| err()),
                 "entity" => value.parse().map(Self::Entity).map_err(|_| err()),
                 "custody" => value.parse().map(Self::Custody).map_err(|_| err()),
+                "document" => value.parse().map(Self::Document).map_err(|_| err()),
                 _ => Err(err()),
             };
         }
@@ -129,6 +178,7 @@ impl FromStr for GraphEdgeKind {
             "concept" => Ok(Self::Concept),
             "mention" => Ok(Self::Mention),
             "part-of-place" => Ok(Self::PartOfPlace),
+            "tag" => Ok(Self::Tag),
             _ => Err(err()),
         }
     }

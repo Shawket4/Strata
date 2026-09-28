@@ -299,7 +299,7 @@ async fn suggestion_payloads_are_typed_and_accepting_with_edits_creates_the_enti
         .expect("suggestions");
     assert_eq!(list.items.len(), 1);
     let sug = &list.items[0];
-    let types::SuggestionPayload::Variant3 {
+    let types::SuggestionPayload::EntityLink {
         block_id,
         candidates,
         confidence,

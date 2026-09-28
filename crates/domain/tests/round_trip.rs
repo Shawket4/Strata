@@ -403,9 +403,11 @@ fn graph_edge_kind() -> TestResult {
         (Custody(CustodyEdge::Holder), "custody:holder"),
         (Custody(CustodyEdge::LastHolder), "custody:last-holder"),
         (PartOfPlace, "part-of-place"),
+        (Document(DocumentRelationType::CopyOf), "document:copy-of"),
+        (Tag, "tag"),
     ];
     let all = GraphEdgeKind::all();
-    assert_eq!(all.len(), 25);
+    assert_eq!(all.len(), 27);
     for (value, s) in &expected {
         assert_eq!(value.to_string(), *s);
         assert_eq!(s.parse::<GraphEdgeKind>(), Ok(*value));
@@ -429,6 +431,9 @@ fn graph_edge_kind() -> TestResult {
         "similar:related",
         "Link",
         "part-of",
+        "copy-of",
+        "document:related",
+        "tag:x",
     ] {
         assert_eq!(
             bad.parse::<GraphEdgeKind>(),

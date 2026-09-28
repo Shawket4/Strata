@@ -144,7 +144,16 @@ fn phase(op: &Op) -> u8 {
     }
 }
 
-fn scan(h: &H, what: &str, resp: &Resp, leaks: &mut Vec<String>, forbidden: &[String]) {
+fn scan(h: &H, what: &str, req: &Req, resp: &Resp, leaks: &mut Vec<String>, forbidden: &[String]) {
+    let mut echo = req.target.as_bytes().to_vec();
+    echo.extend(hardening::http::decode(&req.target));
+    echo.extend(hardening::http::decode(&String::from_utf8_lossy(&hardening::http::decode(&req.target))));
+    for (_, v) in &req.headers {
+        echo.extend_from_slice(v.as_bytes());
+    }
+    if let Some((_, body)) = &req.body {
+        echo.extend_from_slice(body);
+    }
     let mut texts = hardening::strings_in(&resp.body);
     texts.extend(resp.headers.iter().map(|(_, v)| v.clone()));
     if resp.content_type() == Some(strata_api::wire::ZIP) {
@@ -152,7 +161,7 @@ fn scan(h: &H, what: &str, resp: &Resp, leaks: &mut Vec<String>, forbidden: &[St
         texts.clear();
     }
     for t in &texts {
-        for leak in hardening::path_leaks(t, h.data.path()) {
+        for leak in hardening::path_leaks(t, h.data.path(), &echo) {
             leaks.push(format!("{what}: {leak}"));
         }
         for f in forbidden {
@@ -213,7 +222,7 @@ async fn no_operation_returns_a_filesystem_path() {
         }
         let resp = h.send(Some(&op.id), &req).await;
         assert!(resp.status < 500, "{} → {}", op.id, resp.status);
-        scan(&h, &op.id, &resp, &mut leaks, &[]);
+        scan(&h, &op.id, &req, &resp, &mut leaks, &[]);
         covered.insert(op.id.clone(), resp.status);
     }
     // Error paths that name files: a missing path, an invalid path, a taken path, a stale
@@ -228,9 +237,10 @@ async fn no_operation_returns_a_filesystem_path() {
         ("import_vault", Req::new("POST", "/api/v1/import").body(strata_api::wire::ZIP, zip_of(&[("../evil.md", b"x")]))),
     ];
     for (op, req) in extra {
-        let resp = h.send(Some(op), &req.token(&alice.token)).await;
+        let req = req.token(&alice.token);
+        let resp = h.send(Some(op), &req).await;
         assert!(resp.status < 500, "{op} → {}", resp.status);
-        scan(&h, op, &resp, &mut leaks, &[]);
+        scan(&h, op, &req, &resp, &mut leaks, &[]);
     }
     for (op, status) in &covered {
         eprintln!("paths-scan {op} → {status}");
@@ -373,7 +383,7 @@ async fn path_traversal_on_every_parameter_is_refused() {
                     failures.push(format!("{what}: content from outside the vault"));
                 }
                 let mut leaks = Vec::new();
-                scan(&h, &what, &resp, &mut leaks, &[]);
+                scan(&h, &what, &req, &resp, &mut leaks, &[]);
                 failures.extend(leaks);
             }
         }
@@ -988,7 +998,7 @@ async fn tenant_isolation_sweep_answers_404_for_foreign_ids() {
         own.token = Some(token.clone());
         let resp = h.send(Some(&op.id), &own).await;
         let mut leaks = Vec::new();
-        scan(&h, &format!("{} (own)", op.id), &resp, &mut leaks, &private);
+        scan(&h, &format!("{} (own)", op.id), &own, &resp, &mut leaks, &private);
         failures.extend(leaks);
         // 2. Alice's IDs in every ID position (path, query, body) of Bob's request.
         let has_path_id = op.path_params().next().is_some();
@@ -1019,7 +1029,7 @@ async fn tenant_isolation_sweep_answers_404_for_foreign_ids() {
             failures.push(format!("{what}: expected an empty 200"));
         }
         let mut leaks = Vec::new();
-        scan(&h, &what, &resp, &mut leaks, &private);
+        scan(&h, &what, &foreign, &resp, &mut leaks, &private);
         failures.extend(leaks);
     }
     assert_eq!(failures, Vec::<String>::new());
