@@ -716,9 +716,20 @@ class _CompactNotePageState extends State<CompactNotePage> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    NoteStatusLabel(
-                      status: controller.status,
-                      label: note.sync_.label,
+                    Wrap(
+                      spacing: StrataSpacing.s2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        NoteStatusLabel(
+                          status: controller.status,
+                          label: note.sync_.label,
+                        ),
+                        if (note.versionLabel case final version?)
+                          Text(
+                            version,
+                            style: text.monoSmall.copyWith(color: colors.text2),
+                          ),
+                      ],
                     ),
                   ],
                 ),

@@ -85,10 +85,13 @@ class RelationChip extends StatelessWidget {
           RelationLineSample(type: type, mentionOf: mentionOf),
           const SizedBox(width: StrataSpacing.s2),
           if (shownType != null) ...[
-            Text(
-              shownType,
-              maxLines: 1,
-              style: text.caption.copyWith(color: colors.text2),
+            Flexible(
+              child: Text(
+                shownType,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: text.caption.copyWith(color: colors.text2),
+              ),
             ),
             const SizedBox(width: StrataSpacing.s1 + 2),
           ],

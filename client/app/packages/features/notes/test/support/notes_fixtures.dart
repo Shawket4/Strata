@@ -4,7 +4,14 @@
 // spans the core emits for the content (exact UTF-16 offsets).
 import 'package:strata_state/strata_state.dart';
 
-EditorHint _hint(String content, HintKind kind, String text) {
+EditorHint _hint(
+  String content,
+  HintKind kind,
+  String text, {
+  String? targetId,
+  String? taskId,
+  int level = 0,
+}) {
   // Search the body only (after the frontmatter).
   final start = content.indexOf(text, content.indexOf('---\n', 4) + 4);
   if (start < 0) throw StateError('"$text" not in fixture');
@@ -12,7 +19,9 @@ EditorHint _hint(String content, HintKind kind, String text) {
     kind: kind,
     start: start,
     end: start + text.length,
-    level: 0,
+    targetId: targetId,
+    taskId: taskId,
+    level: level,
   );
 }
 
@@ -41,7 +50,7 @@ abstract final class NotesFixtures {
     pendingSync: false,
     titleDir: TextDir.ltr,
     snippetDir: TextDir.ltr,
-    updatedLabel: '',
+    updatedLabel: '14:31',
     linkCount: 0,
     highlights: [],
   );
@@ -59,7 +68,7 @@ abstract final class NotesFixtures {
     pendingSync: true,
     titleDir: TextDir.ltr,
     snippetDir: TextDir.ltr,
-    updatedLabel: '',
+    updatedLabel: '13:02',
     linkCount: 0,
     highlights: [],
   );
@@ -73,9 +82,9 @@ abstract final class NotesFixtures {
     tags: const ['pricing'],
     updatedAt: DateTime.utc(2026, 9, 27, 9, 15),
     pendingSync: false,
-    titleDir: TextDir.ltr,
-    snippetDir: TextDir.ltr,
-    updatedLabel: '',
+    titleDir: TextDir.rtl,
+    snippetDir: TextDir.rtl,
+    updatedLabel: '12:15',
     linkCount: 0,
     highlights: [],
   );
@@ -92,7 +101,7 @@ abstract final class NotesFixtures {
     pendingSync: false,
     titleDir: TextDir.ltr,
     snippetDir: TextDir.ltr,
-    updatedLabel: '',
+    updatedLabel: 'Sat',
     linkCount: 0,
     highlights: [],
   );
@@ -103,8 +112,11 @@ abstract final class NotesFixtures {
       FolderItem(path: 'notes/sales/archive', name: 'archive', noteCount: 12),
     ],
     notes: [pricing, weekly, arabic, churn],
-    breadcrumb: [],
-    noteCount: 0,
+    breadcrumb: const [
+      FolderItem(path: 'notes', name: 'notes', noteCount: 96),
+      FolderItem(path: 'notes/sales', name: 'sales', noteCount: 7),
+    ],
+    noteCount: 7,
   );
 
   static const NotesListView emptyFolder = NotesListView(
@@ -121,15 +133,27 @@ abstract final class NotesFixtures {
     by: 'ai',
     confidence: 0.72,
     reason: 'States a flat 10% discount, while target caps discounts at 3%.',
-    relLabel: '',
-    citations: [],
+    relLabel: 'contradicts',
+    createdLabel: '14:05',
+    citations: [
+      Citation(
+        noteId: pricingId,
+        target: 'Pricing experiments',
+        anchor: 'a1b2',
+      ),
+      Citation(
+        noteId: 'n-discount-policy',
+        target: 'Discount policy',
+        anchor: 'cap',
+      ),
+    ],
   );
 
   static const RelationChip partOf = RelationChip(
     relType: 'part-of',
     target: EntityRef(id: 'n-subscription-tiers', title: 'Subscription tiers'),
     by: 'user',
-    relLabel: '',
+    relLabel: 'part of',
     citations: [],
   );
 
@@ -139,7 +163,7 @@ abstract final class NotesFixtures {
     by: 'ai',
     confidence: 0.81,
     reason: 'Both discuss retention of customers past 12 months.',
-    relLabel: '',
+    relLabel: 'related',
     citations: [],
   );
 
@@ -148,7 +172,7 @@ abstract final class NotesFixtures {
     target: EntityRef(id: 'c-pricing', title: 'Pricing'),
     by: 'ai',
     confidence: 0.9,
-    relLabel: '',
+    relLabel: 'concept',
     citations: [],
   );
 
@@ -160,16 +184,21 @@ abstract final class NotesFixtures {
           noteId: 'n-call-2026-09-12-acme',
           title: 'Call 2026-09-12 — Acme',
           titleDir: TextDir.ltr,
+          snippet: 'Ahmed asked whether annual prepay gets a discount.',
           snippetDir: TextDir.ltr,
+          by: 'user',
         ),
         BacklinkItem(
           noteId: 'n-onboarding-v2',
           title: 'Onboarding checklist v2',
           titleDir: TextDir.ltr,
+          snippet: 'Show plan pricing on day one of the trial.',
           snippetDir: TextDir.ltr,
+          by: 'ai',
+          confidence: 0.77,
         ),
       ],
-      label: '',
+      label: 'supports',
     ),
     BacklinkGroup(
       kind: 'follows-up',
@@ -178,10 +207,11 @@ abstract final class NotesFixtures {
           noteId: 'n-weekly-invoicing-proposal',
           title: 'Weekly invoicing proposal',
           titleDir: TextDir.ltr,
+          snippet: 'Pair weekly invoicing with the annual prepay test.',
           snippetDir: TextDir.ltr,
         ),
       ],
-      label: '',
+      label: 'follows up',
     ),
     BacklinkGroup(
       kind: 'link',
@@ -193,7 +223,7 @@ abstract final class NotesFixtures {
           snippetDir: TextDir.ltr,
         ),
       ],
-      label: '',
+      label: 'body links',
     ),
   ];
 
@@ -216,15 +246,27 @@ abstract final class NotesFixtures {
 
   static final List<EditorHint> pricingHints = [
     _frontmatter(pricingContent),
-    _hint(pricingContent, HintKind.wikiLink, '[[Subscription tiers]]'),
-    _hint(pricingContent, HintKind.wikiLink, '[[Ahmed Samir]]'),
-    _hint(pricingContent, HintKind.heading, '## Hypotheses'),
+    _hint(
+      pricingContent,
+      HintKind.wikiLink,
+      '[[Subscription tiers]]',
+      targetId: 'n-subscription-tiers',
+    ),
+    _hint(
+      pricingContent,
+      HintKind.wikiLink,
+      '[[Ahmed Samir]]',
+      targetId: 'p-ahmed-samir',
+    ),
+    _hint(pricingContent, HintKind.heading, '## Hypotheses', level: 2),
+    _hint(pricingContent, HintKind.bold, '**flat 10% discount**'),
     _hint(pricingContent, HintKind.blockId, '^a1b2'),
-    _hint(pricingContent, HintKind.heading, '## Next steps'),
+    _hint(pricingContent, HintKind.heading, '## Next steps', level: 2),
     _hint(
       pricingContent,
       HintKind.taskLine,
       '- [ ] Draft two pricing page variants #pricing ^t-01j9p1',
+      taskId: 't-01j9p1',
     ),
     _hint(pricingContent, HintKind.tag, '#pricing'),
     _hint(pricingContent, HintKind.blockId, '^t-01j9p1'),
@@ -247,12 +289,60 @@ abstract final class NotesFixtures {
     isOverdue: false,
   );
 
+  /// The version history (newest first).
+  static final List<HistoryEntry> history = [
+    HistoryEntry(
+      commit: 'c7',
+      versionLabel: 'v7',
+      message: 'user: edit Hypotheses',
+      author: 'user',
+      at: DateTime.utc(2026, 9, 27, 11, 31),
+      atLabel: 'today 14:31',
+      canRevert: false,
+    ),
+    HistoryEntry(
+      commit: 'c6',
+      versionLabel: 'v6',
+      message: 'ai: contradicts [[Discount policy]]',
+      author: 'ai',
+      at: DateTime.utc(2026, 9, 27, 11, 5),
+      atLabel: 'today 14:05',
+      canRevert: true,
+    ),
+    HistoryEntry(
+      commit: 'c5',
+      versionLabel: 'v5',
+      message: 'user: add Next steps',
+      author: 'user',
+      at: DateTime.utc(2026, 9, 26, 15, 20),
+      atLabel: 'Sat 26 Sep 18:20',
+      canRevert: true,
+    ),
+  ];
+
+  static const NoteSyncState conflictSync = NoteSyncState(
+    kind: NoteSyncKind.conflict,
+    pendingOps: 1,
+    conflictOpId: conflictOpId,
+    label: 'Conflict',
+  );
+
+  static const NoteSyncState duplicateSync = NoteSyncState(
+    kind: NoteSyncKind.duplicate,
+    pendingOps: 1,
+    duplicateOpId: duplicateOpId,
+    label: 'Already exists?',
+  );
+
+  static const String duplicateOpId = '01J8ZQ9DUPL1CATE000000000B';
+
   static NoteView pricingNote({
     NoteSyncState sync = const NoteSyncState(
       kind: NoteSyncKind.synced,
       pendingOps: 0,
-      label: '',
+      label: 'Saved',
     ),
+    bool pinned = false,
     Availability history = Availability.available,
     List<RelationChip> relations = const [
       contradicts,
@@ -279,11 +369,17 @@ abstract final class NotesFixtures {
     sync_: sync,
     history: history,
     titleDir: TextDir.ltr,
-    contentVersion: '',
-    wordCount: 0,
-    backlinkCount: 0,
-    historyEntries: [],
-    pinned: false,
+    contentVersion: 'v7-5f2c9e',
+    versionLabel: 'v7',
+    createdLabel: '18 Sep',
+    editedLabel: 'today 14:31',
+    editedBy: 'Shawket',
+    wordCount: 214,
+    backlinkCount: 6,
+    historyEntries: history == Availability.available
+        ? NotesFixtures.history
+        : const [],
+    pinned: pinned,
   );
 
   static const String arabicContent =
@@ -305,10 +401,24 @@ abstract final class NotesFixtures {
 
   static final List<EditorHint> arabicHints = [
     _frontmatter(arabicContent),
-    _hint(arabicContent, HintKind.wikiLink, '[[Pricing experiments]]'),
+    _hint(
+      arabicContent,
+      HintKind.wikiLink,
+      '[[Pricing experiments]]',
+      targetId: pricingId,
+    ),
     _hint(arabicContent, HintKind.wikiLink, '[[أحمد سمير]]'),
-    _hint(arabicContent, HintKind.heading, '## الفرضيات'),
+    _hint(arabicContent, HintKind.heading, '## الفرضيات', level: 2),
     _hint(arabicContent, HintKind.blockId, '^c4d5'),
+    for (final line in [
+      'ملخص سريع لتجارب التسعير',
+      'اتكلمت مع',
+      '## الفرضيات',
+      '- خصم ولاء',
+      '- نجهز نسختين',
+    ])
+      _hint(arabicContent, HintKind.rtlLine, line),
+    _hint(arabicContent, HintKind.ltrLine, 'Next: A/B test'),
   ];
 
   static final NoteView arabicNote = NoteView(
@@ -326,7 +436,7 @@ abstract final class NotesFixtures {
         relType: 'follows-up',
         target: EntityRef(id: pricingId, title: 'Pricing experiments'),
         by: 'user',
-        relLabel: '',
+        relLabel: 'follows up',
         citations: [],
       ),
       RelationChip(
@@ -338,7 +448,7 @@ abstract final class NotesFixtures {
         by: 'ai',
         confidence: 0.81,
         reason: 'Both describe the loyalty tier.',
-        relLabel: '',
+        relLabel: 'related',
         citations: [],
       ),
     ],
@@ -353,7 +463,7 @@ abstract final class NotesFixtures {
             snippetDir: TextDir.ltr,
           ),
         ],
-        label: '',
+        label: 'related',
       ),
     ],
     tags: const ['pricing'],
@@ -362,12 +472,13 @@ abstract final class NotesFixtures {
     sync_: const NoteSyncState(
       kind: NoteSyncKind.synced,
       pendingOps: 0,
-      label: '',
+      label: 'Saved',
     ),
     history: Availability.available,
-    titleDir: TextDir.ltr,
+    titleDir: TextDir.rtl,
     contentVersion: '',
-    wordCount: 0,
+    versionLabel: 'v3',
+    wordCount: 58,
     backlinkCount: 0,
     historyEntries: [],
     pinned: false,

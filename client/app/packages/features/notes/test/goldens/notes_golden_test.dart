@@ -13,7 +13,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
 import 'package:strata_ui/testing.dart';
 
-import '../support/harness.dart';
 import '../support/notes_fixtures.dart';
 
 FakeCoreApi _fake({NoteView? note}) {
@@ -53,20 +52,24 @@ void main() {
         goldenTest(
           'notes list $v',
           fileName: 'notes_list_${v.id}',
-          builder: () =>
-              goldenFrame(v, _fake(), const NotesScreen(folder: 'notes/sales')),
+          constraints: BoxConstraints.tight(v.size),
+          builder: () => goldenFrame(
+            v,
+            const NotesScreen(folder: 'notes/sales'),
+            fake: _fake(),
+          ),
         ),
       );
       unawaited(
         goldenTest(
           'note $v',
           fileName: 'note_${v.id}',
+          constraints: BoxConstraints.tight(v.size),
           pumpBeforeTest: v.sizeClass == SizeClass.medium
               ? _openDrawer
               : onlyPumpAndSettle,
           builder: () => goldenFrame(
             v,
-            _fake(),
             NotesScreen(
               folder: 'notes/sales',
               selectedNoteId: NotesFixtures.pricingId,
@@ -74,12 +77,13 @@ void main() {
               onOpenLocalMap: (_) {},
               onOpenConflict: (_) {},
             ),
+            fake: _fake(),
           ),
         ),
       );
     }
 
-    const darkAr = MatrixVariant(
+    const darkAr = Variant(
       sizeName: 'expanded',
       size: StrataTestSizes.expanded,
       brightness: Brightness.dark,
@@ -90,20 +94,21 @@ void main() {
       goldenTest(
         'NoteExpandedDarkAr',
         fileName: 'note_arabic_content_${darkAr.id}',
+        constraints: BoxConstraints.tight(darkAr.size),
         builder: () => goldenFrame(
           darkAr,
-          _fake(),
           NotesScreen(
             folder: 'notes/sales',
             selectedNoteId: NotesFixtures.arabicId,
             onOpenNote: (_) {},
             onOpenLocalMap: (_) {},
           ),
+          fake: _fake(),
         ),
       ),
     );
 
-    const conflict = MatrixVariant(
+    const conflict = Variant(
       sizeName: 'expanded',
       size: StrataTestSizes.expanded,
       brightness: Brightness.light,
@@ -114,23 +119,17 @@ void main() {
       goldenTest(
         'note conflict hand-off',
         fileName: 'note_conflict_${conflict.id}',
+        constraints: BoxConstraints.tight(conflict.size),
         builder: () => goldenFrame(
           conflict,
-          _fake(
-            note: NotesFixtures.pricingNote(
-              sync: const NoteSyncState(
-                kind: NoteSyncKind.conflict,
-                pendingOps: 1,
-                conflictOpId: NotesFixtures.conflictOpId,
-                label: '',
-              ),
-            ),
-          ),
           NotesScreen(
             folder: 'notes/sales',
             selectedNoteId: NotesFixtures.pricingId,
             onOpenConflict: (_) {},
             onOpenLocalMap: (_) {},
+          ),
+          fake: _fake(
+            note: NotesFixtures.pricingNote(sync: NotesFixtures.conflictSync),
           ),
         ),
       ),

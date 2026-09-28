@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_editor/strata_editor.dart';
+import 'package:strata_maps/strata_maps.dart' show MiniGraph;
 import 'package:strata_notes/strata_notes.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
 
-import 'support/harness.dart';
 import 'support/notes_fixtures.dart';
 
 const String _folder = 'notes/sales';
@@ -74,11 +74,20 @@ void main() {
     for (final v in variants()) {
       testWidgets('list $v', (tester) async {
         final fake = fakeWith();
-        await pumpVariant(tester, v, const NotesScreen(folder: _folder), fake);
+        await pumpVariant(
+          tester,
+          v,
+          const NotesScreen(folder: _folder),
+          fake: fake,
+        );
         expect(find.byType(NotesListPane), findsOneWidget);
         expect(find.text('Pricing experiments'), findsOneWidget);
         expect(find.text('archive'), findsOneWidget);
-        expect(find.text(_folder), findsOneWidget);
+        // The core's breadcrumb and count.
+        expect(find.text('sales'), findsOneWidget);
+        expect(find.text('notes'), findsOneWidget);
+        expect(find.text(v.rtl ? '7 ملاحظات' : '7 notes'), findsOneWidget);
+        expect(find.text('14:31'), findsOneWidget);
         expect(
           fake.calls.first,
           const CoreCall('watchNotesList', {'folder': _folder}),
@@ -89,7 +98,7 @@ void main() {
           find.text(v.rtl ? 'اختار ملاحظة' : 'Select a note'),
           v.sizeClass == SizeClass.compact ? findsNothing : findsOneWidget,
         );
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
       });
 
@@ -99,7 +108,7 @@ void main() {
           tester,
           v,
           const NotesScreen(folder: _folder, selectedNoteId: _pricing),
-          fake,
+          fake: fake,
         );
         final compact = v.sizeClass == SizeClass.compact;
         expect(
@@ -126,13 +135,15 @@ void main() {
           compact ? findsOneWidget : findsNothing,
         );
         expect(find.byType(PropertiesPanel), findsOneWidget);
+        expect(find.text('Saved'), findsWidgets);
+        expect(find.text('v7'), findsOneWidget);
         await revealInScroll(tester, find.byType(StrataNoteEditor));
         expect(find.byType(StrataNoteEditor), findsOneWidget);
         expect(
           fake.calls,
           contains(const CoreCall('watchNote', {'id': _pricing})),
         );
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
       });
 
@@ -142,7 +153,7 @@ void main() {
           tester,
           v,
           const NotesScreen(folder: 'notes/ops'),
-          fake,
+          fake: fake,
         );
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
         fake.notesList['notes/ops'].add(NotesFixtures.emptyFolder);
@@ -151,7 +162,7 @@ void main() {
           find.text(v.rtl ? 'مفيش ملاحظات هنا لسه' : 'No notes here yet'),
           findsOneWidget,
         );
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
         fake.notesList['notes/ops'].addError(StrataFixtures.coreFailure);
         await tester.pump();
@@ -161,7 +172,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
       });
 
@@ -169,19 +180,14 @@ void main() {
         final fake = fakeWith(
           note: NotesFixtures.pricingNote(
             history: Availability.offline,
-            sync: const NoteSyncState(
-              kind: NoteSyncKind.conflict,
-              pendingOps: 1,
-              conflictOpId: NotesFixtures.conflictOpId,
-              label: '',
-            ),
+            sync: NotesFixtures.conflictSync,
           ),
         );
         await pumpVariant(
           tester,
           v,
           const NotesScreen(folder: _folder, selectedNoteId: _pricing),
-          fake,
+          fake: fake,
         );
         await revealInScroll(tester, find.byType(NoteConflictBanner));
         expect(find.byType(NoteConflictBanner), findsOneWidget);
@@ -205,7 +211,7 @@ void main() {
             findsOneWidget,
           );
         }
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
       });
     }
@@ -253,9 +259,9 @@ void main() {
       );
     });
 
-    testWidgets('search shows the core keyword results', (tester) async {
+    testWidgets('search asks the core within the folder', (tester) async {
       final fake = fakeWith()
-        ..searchAnswer.returns(
+        ..searchInFolderAnswer.returns(
           const SearchView(
             query: 'churn',
             mode: SearchMode.keyword,
@@ -268,7 +274,7 @@ void main() {
                 snippet: 'Most exits happen at the first renewal.',
                 titleDir: TextDir.ltr,
                 snippetDir: TextDir.ltr,
-                highlights: [],
+                highlights: [HighlightSpan(start: 5, end: 10)],
                 score: 0,
               ),
             ],
@@ -281,13 +287,18 @@ void main() {
       await tester.enterText(find.byType(TextField), 'churn');
       await tester.pump();
       await tester.pump();
-      expect(callsOf(fake, 'search'), [
-        const CoreCall('search', {
+      expect(callsOf(fake, 'searchInFolder'), [
+        const CoreCall('searchInFolder', {
           'query': 'churn',
           'mode': SearchMode.keyword,
+          'folder': _folder,
         }),
       ]);
-      expect(find.text('Most exits happen at the first renewal.'), findsOne);
+      final snippet = tester.widget<StrataHighlightedText>(
+        find.byType(StrataHighlightedText),
+      );
+      expect(snippet.text, 'Most exits happen at the first renewal.');
+      expect(snippet.highlights, const [TextRange(start: 5, end: 10)]);
       await tester.tap(find.text('Churn notes'));
       expect(host.notes, ['n-churn-notes']);
       await tester.tap(find.byTooltip('Clear search'));
@@ -298,7 +309,7 @@ void main() {
 
     testWidgets('search with no results says so', (tester) async {
       final fake = fakeWith()
-        ..searchAnswer.returns(
+        ..searchInFolderAnswer.returns(
           const SearchView(
             query: 'zzz',
             mode: SearchMode.keyword,
@@ -398,10 +409,12 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(find.text('14:05'), findsOneWidget);
+      expect(find.byType(CitationChip), findsNWidgets(2));
       await tester.tap(find.text('Reject'));
       await tester.pumpAndSettle();
-      expect(callsOf(fake, 'removeRelation'), [
-        const CoreCall('removeRelation', {
+      expect(callsOf(fake, 'rejectRelation'), [
+        const CoreCall('rejectRelation', {
           'srcId': _pricing,
           'dstId': 'n-discount-policy',
           'relType': 'contradicts',
@@ -411,9 +424,16 @@ void main() {
     });
 
     testWidgets('long-press sheet: Retype → supports', (tester) async {
-      final fake = await pumpNotes(
+      final fake = fakeWith()
+        ..relationTypesAnswer.returns(const [
+          RelationTypeItem(key: 'related', label: 'related'),
+          RelationTypeItem(key: 'supports', label: 'supports'),
+          RelationTypeItem(key: 'contradicts', label: 'contradicts'),
+        ]);
+      await pumpNotes(
         tester,
         const NotesScreen(folder: _folder, selectedNoteId: _pricing),
+        fake: fake,
         sizeClass: SizeClass.compact,
       );
       await tester.longPress(find.text('Discount policy'));
@@ -421,15 +441,21 @@ void main() {
       await tester.tap(find.text('Retype'));
       await tester.pumpAndSettle();
       expect(find.text('Change relation type'), findsOneWidget);
+      expect(callsOf(fake, 'relationTypes'), hasLength(1));
+      // The core's types; the current one is checked.
       expect(
         find.descendant(
           of: find.byType(SimpleDialog),
-          matching: find.text('contradicts'),
+          matching: find.byIcon(Icons.check),
         ),
-        findsNothing,
-        reason: 'the current type is not offered',
+        findsOneWidget,
       );
-      await tester.tap(find.text('supports'));
+      await tester.tap(
+        find.descendant(
+          of: find.byType(SimpleDialog),
+          matching: find.text('supports'),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(callsOf(fake, 'retypeRelation'), [
         const CoreCall('retypeRelation', {
@@ -457,8 +483,8 @@ void main() {
       );
       await tester.tap(find.text('Reject'));
       await tester.pump();
-      expect(callsOf(fake, 'removeRelation'), [
-        const CoreCall('removeRelation', {
+      expect(callsOf(fake, 'rejectRelation'), [
+        const CoreCall('rejectRelation', {
           'srcId': _pricing,
           'dstId': 'n-churn-notes',
           'relType': 'related',
@@ -470,6 +496,23 @@ void main() {
         find.text('Both discuss retention of customers past 12 months.'),
         findsNothing,
       );
+    });
+
+    testWidgets('a citation of an AI relation opens its block', (tester) async {
+      final opened = <(String, String?)>[];
+      await pumpNotes(
+        tester,
+        NotesScreen(
+          folder: _folder,
+          selectedNoteId: _pricing,
+          onOpenLink: (id, anchor) => opened.add((id, anchor)),
+        ),
+        sizeClass: SizeClass.compact,
+      );
+      await tester.longPress(find.text('Discount policy'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(CitationChip).last);
+      expect(opened, [('n-discount-policy', 'cap')]);
     });
 
     testWidgets('user relations have no AI actions', (tester) async {
@@ -495,10 +538,39 @@ void main() {
           findsOneWidget,
         );
       }
+      expect(find.text('Backlinks 6'), findsOneWidget);
+      expect(
+        find.text('Ahmed asked whether annual prepay gets a discount.'),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: panel, matching: find.text('AI · 0.77')),
+        findsOneWidget,
+      );
       await tester.tap(
         find.descendant(of: panel, matching: find.text('Q4 hiring plan')),
       );
       expect(host.notes, ['n-q4-hiring']);
+    });
+
+    testWidgets('the mini graph shows the core local graph', (tester) async {
+      final fake = await pumpNotes(
+        tester,
+        const NotesScreen(folder: _folder, selectedNoteId: _pricing),
+      );
+      expect(
+        find.descendant(
+          of: find.byType(LocalGraphSlot),
+          matching: find.byType(MiniGraph),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        fake.calls,
+        contains(
+          const CoreCall('watchLocalGraph', {'id': _pricing, 'depth': 1}),
+        ),
+      );
     });
 
     testWidgets('Open map and the local map button open the mind map', (
@@ -545,7 +617,6 @@ void main() {
     });
 
     const historyMessages = {
-      Availability.available: 'Versions of this note appear here.',
       Availability.offline:
           "History needs a connection. It's back when you're online.",
       Availability.notYetAvailable: "History isn't available yet.",
@@ -553,7 +624,7 @@ void main() {
     };
     for (final entry in historyMessages.entries) {
       testWidgets('history renders ${entry.key.name}', (tester) async {
-        await pumpNotes(
+        final fake = await pumpNotes(
           tester,
           const NotesScreen(folder: _folder, selectedNoteId: _pricing),
           fake: fakeWith(note: NotesFixtures.pricingNote(history: entry.key)),
@@ -561,8 +632,180 @@ void main() {
         await tester.tap(find.text('History').first);
         await tester.pump();
         expect(find.text(entry.value), findsOneWidget);
+        expect(callsOf(fake, 'refreshHistory'), isEmpty);
       });
     }
+
+    testWidgets('history lists the core entries and refreshes', (tester) async {
+      final fake = await pumpNotes(
+        tester,
+        const NotesScreen(folder: _folder, selectedNoteId: _pricing),
+      );
+      await tester.tap(find.text('History').first);
+      await tester.pump();
+      expect(callsOf(fake, 'refreshHistory').last.args, {'noteId': _pricing});
+      expect(find.text('All 3 versions'), findsOneWidget);
+      expect(find.text('ai: contradicts [[Discount policy]]'), findsOneWidget);
+      expect(find.text('Strata AI · today 14:05'), findsOneWidget);
+      expect(find.text('You · today 14:31'), findsOneWidget);
+      // The current version cannot be reverted to.
+      expect(find.text('Revert'), findsNWidgets(2));
+    });
+
+    testWidgets('history: changes and revert', (tester) async {
+      final fake = fakeWith()
+        ..noteRevisionDiffAnswer.returns(
+          const NoteDiffView(
+            noteId: _pricing,
+            commit: 'c6',
+            summary: '+1 line, 1 removed',
+            lines: [
+              DiffLine(
+                kind: DiffLineKind.removed,
+                oldLine: 3,
+                text: '- Launch offer: a flat 5% discount.',
+                dir: TextDir.ltr,
+              ),
+              DiffLine(
+                kind: DiffLineKind.added,
+                newLine: 3,
+                text: '- Launch offer: a flat 10% discount.',
+                dir: TextDir.ltr,
+              ),
+            ],
+          ),
+        );
+      await pumpNotes(
+        tester,
+        const NotesScreen(folder: _folder, selectedNoteId: _pricing),
+        fake: fake,
+      );
+      await tester.tap(find.text('History').first);
+      await tester.pump();
+      await tester.tap(find.text('Changes').at(1));
+      await tester.pumpAndSettle();
+      expect(find.text('v6 compared with now'), findsOneWidget);
+      expect(find.text('+1 line, 1 removed'), findsOneWidget);
+      expect(find.text('- Launch offer: a flat 5% discount.'), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Revert').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Revert to v6?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Revert'));
+      await tester.pumpAndSettle();
+      expect(
+        fake.calls.where(
+          (c) => c.method == 'noteRevisionDiff' || c.method == 'revertNote',
+        ),
+        [
+          const CoreCall('noteRevisionDiff', {
+            'noteId': _pricing,
+            'commit': 'c6',
+          }),
+          const CoreCall('revertNote', {'noteId': _pricing, 'commit': 'c6'}),
+        ],
+      );
+    });
+  });
+
+  group('note header', () {
+    testWidgets('meta line, word count and pin', (tester) async {
+      final fake = await pumpNotes(
+        tester,
+        const NotesScreen(folder: _folder, selectedNoteId: _pricing),
+      );
+      expect(find.text('Created 18 Sep'), findsOneWidget);
+      expect(find.text('edited today 14:31 by Shawket'), findsOneWidget);
+      expect(find.text('214 words'), findsOneWidget);
+      await tester.tap(find.byTooltip('Pin to sidebar'));
+      await tester.pump();
+      expect(callsOf(fake, 'pinNote'), [
+        const CoreCall('pinNote', {'id': _pricing, 'pinned': true}),
+      ]);
+    });
+
+    testWidgets('a pinned note unpins', (tester) async {
+      final fake = await pumpNotes(
+        tester,
+        const NotesScreen(folder: _folder, selectedNoteId: _pricing),
+        fake: fakeWith(note: NotesFixtures.pricingNote(pinned: true)),
+        sizeClass: SizeClass.compact,
+      );
+      await tester.tap(find.byTooltip('Unpin from sidebar'));
+      await tester.pump();
+      expect(callsOf(fake, 'pinNote'), [
+        const CoreCall('pinNote', {'id': _pricing, 'pinned': false}),
+      ]);
+    });
+
+    testWidgets('a linked block is resolved by the core', (tester) async {
+      final fake = fakeWith()
+        ..resolveCitationAnswer.returns(
+          const CitationPreview(
+            noteId: _pricing,
+            title: 'Pricing experiments',
+            path: 'notes/sales/Pricing experiments.md',
+            blockText: 'Launch offer: a flat 10% discount on the first plan.',
+            blockDir: TextDir.ltr,
+            heading: 'Hypotheses',
+            tags: [],
+          ),
+        );
+      await pumpNotes(
+        tester,
+        const NotesScreen(
+          folder: _folder,
+          selectedNoteId: _pricing,
+          anchor: 'a1b2',
+        ),
+        fake: fake,
+      );
+      expect(callsOf(fake, 'resolveCitation'), [
+        const CoreCall('resolveCitation', {
+          'noteId': _pricing,
+          'anchor': 'a1b2',
+        }),
+      ]);
+      expect(find.text('Linked block'), findsOneWidget);
+      expect(find.text('Hypotheses'), findsWidgets);
+      expect(
+        find.text('Launch offer: a flat 10% discount on the first plan.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a block that is gone says so', (tester) async {
+      await pumpNotes(
+        tester,
+        const NotesScreen(
+          folder: _folder,
+          selectedNoteId: _pricing,
+          anchor: 'zz99',
+        ),
+        sizeClass: SizeClass.compact,
+      );
+      expect(find.text("That block isn't in this note anymore."), findsOne);
+    });
+
+    testWidgets('a duplicate-flagged note opens the prompt', (tester) async {
+      final duplicates = <String>[];
+      await pumpNotes(
+        tester,
+        NotesScreen(
+          folder: _folder,
+          selectedNoteId: _pricing,
+          onOpenDuplicate: duplicates.add,
+        ),
+        fake: fakeWith(
+          note: NotesFixtures.pricingNote(sync: NotesFixtures.duplicateSync),
+        ),
+      );
+      expect(find.text('This note may already exist'), findsOneWidget);
+      expect(find.text('Already exists?'), findsOneWidget);
+      await tester.tap(find.text('Review'));
+      expect(duplicates, [NotesFixtures.duplicateOpId]);
+    });
   });
 
   group('compact note page', () {
@@ -573,7 +816,7 @@ void main() {
         sizeClass: SizeClass.compact,
       );
       expect(find.byType(StrataNoteEditor), findsOneWidget);
-      await tester.tap(find.text('Links'));
+      await tester.tap(find.text('Links 6'));
       await tester.pump();
       expect(find.byType(BacklinksSection), findsOneWidget);
       await tester.scrollUntilVisible(find.byType(LocalGraphSlot), 200);
@@ -581,7 +824,7 @@ void main() {
       expect(find.byType(StrataNoteEditor), findsNothing);
       await tester.tap(find.text('History'));
       await tester.pump();
-      expect(find.text('Versions of this note appear here.'), findsOneWidget);
+      expect(find.text('All 3 versions'), findsOneWidget);
     });
 
     testWidgets('back returns to the list', (tester) async {
@@ -615,14 +858,7 @@ void main() {
         tester,
         host.screen(selected: _pricing),
         fake: fakeWith(
-          note: NotesFixtures.pricingNote(
-            sync: const NoteSyncState(
-              kind: NoteSyncKind.conflict,
-              pendingOps: 1,
-              conflictOpId: NotesFixtures.conflictOpId,
-              label: '',
-            ),
-          ),
+          note: NotesFixtures.pricingNote(sync: NotesFixtures.conflictSync),
         ),
         sizeClass: SizeClass.compact,
       );
@@ -655,6 +891,11 @@ void main() {
         Directionality.of(tester.element(find.byType(StrataNoteEditor))),
         TextDirection.ltr,
       );
+      // Each line takes the direction the core sent.
+      expect(editor.controller.lineHints.directions.values.toSet(), {
+        TextDirection.rtl,
+        TextDirection.ltr,
+      });
     });
   });
 }

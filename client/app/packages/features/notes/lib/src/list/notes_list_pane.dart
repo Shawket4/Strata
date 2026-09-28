@@ -7,9 +7,11 @@ import 'package:strata_notes/src/generated/notes_localizations.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_ui/strata_ui.dart';
 
-/// The notes list: folder breadcrumb, search field, subfolders, and notes
-/// with snippets and the selected note highlighted. With a query the list
-/// shows the core's keyword search results instead of the folder.
+/// The notes list: the core's folder breadcrumb and note count, search
+/// field, subfolders, and notes with snippets (each in its own direction)
+/// and edit labels, the selected note highlighted. With a query the list
+/// shows the core's keyword search limited to the folder
+/// (`search_in_folder`), with the matched terms marked.
 class NotesListPane extends ConsumerStatefulWidget {
   /// Creates the list of [folder].
   const new({
@@ -60,6 +62,7 @@ class _NotesListPaneState extends ConsumerState<NotesListPane> {
     final l10n = NotesLocalizations.of(context);
     final colors = context.strataColors;
     final query = _query.text;
+    final list = ref.watch(notesListProvider(widget.folder)).value;
     return Semantics(
       container: true,
       explicitChildNodes: true,
@@ -72,7 +75,8 @@ class _NotesListPaneState extends ConsumerState<NotesListPane> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _Header(
-              folder: widget.folder,
+              breadcrumb: list?.breadcrumb ?? const [],
+              noteCount: list?.noteCount,
               query: _query,
               focusNode: widget.searchFocusNode,
               onOpenFolder: widget.onOpenFolder,
@@ -87,6 +91,7 @@ class _NotesListPaneState extends ConsumerState<NotesListPane> {
                     )
                   : _SearchResults(
                       query: query,
+                      folder: widget.folder,
                       selectedNoteId: widget.selectedNoteId,
                       onOpenNote: widget.onOpenNote,
                     ),
@@ -100,13 +105,15 @@ class _NotesListPaneState extends ConsumerState<NotesListPane> {
 
 class _Header extends StatelessWidget {
   const new({
-    required this.folder,
+    required this.breadcrumb,
+    required this.noteCount,
     required this.query,
     required this.onOpenFolder,
     this.focusNode,
   });
 
-  final String folder;
+  final List<FolderItem> breadcrumb;
+  final int? noteCount;
   final TextEditingController query;
   final FocusNode? focusNode;
   final ValueChanged<String> onOpenFolder;
@@ -116,6 +123,26 @@ class _Header extends StatelessWidget {
     final l10n = NotesLocalizations.of(context);
     final colors = context.strataColors;
     final text = context.strataText;
+    final count = noteCount;
+    final chevron = Icon(
+      Icons.chevron_right,
+      size: 18,
+      color: colors.text2,
+      textDirection: Directionality.of(context),
+    );
+    Widget crumb(String label, String path) => TextButton(
+      onPressed: () => onOpenFolder(path),
+      style: TextButton.styleFrom(
+        foregroundColor: colors.text2,
+        minimumSize: const Size(48, StrataLayout.minTouchTarget),
+        padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s1),
+      ),
+      child: Text(label),
+    );
+    Widget current(String label) => Semantics(
+      header: true,
+      child: Text(label, style: text.titleSmall.copyWith(color: colors.text)),
+    );
     return Container(
       padding: const EdgeInsets.fromLTRB(
         StrataSpacing.s3,
@@ -136,46 +163,33 @@ class _Header extends StatelessWidget {
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                if (folder.isEmpty)
+                if (breadcrumb.isEmpty)
                   Padding(
                     padding: const EdgeInsetsDirectional.only(
                       start: StrataSpacing.s1,
                     ),
-                    child: Semantics(
-                      header: true,
-                      child: Text(
-                        l10n.notesRoot,
-                        style: text.titleSmall.copyWith(color: colors.text),
-                      ),
-                    ),
+                    child: current(l10n.notesRoot),
                   )
                 else ...[
-                  TextButton(
-                    onPressed: () => onOpenFolder(''),
-                    style: TextButton.styleFrom(
-                      foregroundColor: colors.text2,
-                      minimumSize: const Size(48, StrataLayout.minTouchTarget),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: StrataSpacing.s1,
-                      ),
-                    ),
-                    child: Text(l10n.notesRoot),
-                  ),
-                  Icon(
-                    Directionality.of(context) == TextDirection.rtl
-                        ? Icons.chevron_left
-                        : Icons.chevron_right,
-                    size: 18,
-                    color: colors.text2,
-                  ),
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      folder,
-                      style: text.titleSmall.copyWith(color: colors.text),
-                    ),
-                  ),
+                  crumb(l10n.notesRoot, ''),
+                  for (final (i, folder) in breadcrumb.indexed) ...[
+                    chevron,
+                    if (i == breadcrumb.length - 1)
+                      current(folder.name)
+                    else
+                      crumb(folder.name, folder.path),
+                  ],
                 ],
+                if (count != null)
+                  Padding(
+                    padding: const EdgeInsetsDirectional.only(
+                      start: StrataSpacing.s2,
+                    ),
+                    child: Text(
+                      l10n.folderNoteCount(count: count),
+                      style: text.caption.copyWith(color: colors.text2),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -241,7 +255,10 @@ class _FolderList extends ConsumerWidget {
           for (final note in value.notes)
             NoteRow(
               title: note.title,
+              titleDir: note.titleDir,
               snippet: note.snippet,
+              snippetDir: note.snippetDir,
+              updatedLabel: note.updatedLabel,
               pendingSync: note.pendingSync,
               selected: note.id == selectedNoteId,
               onTap: () => onOpenNote(note.id),
@@ -269,18 +286,26 @@ class _FolderList extends ConsumerWidget {
 class _SearchResults extends ConsumerWidget {
   const new({
     required this.query,
+    required this.folder,
     required this.selectedNoteId,
     required this.onOpenNote,
   });
 
   final String query;
+  final String folder;
   final String? selectedNoteId;
   final ValueChanged<String> onOpenNote;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = NotesLocalizations.of(context);
-    final results = ref.watch(searchProvider(query, SearchMode.keyword));
+    final results = ref.watch(
+      searchInFolderProvider(
+        query,
+        SearchMode.keyword,
+        folder.isEmpty ? null : folder,
+      ),
+    );
     return switch (results) {
       AsyncData(:final value)
           when value.availability != Availability.available =>
@@ -305,7 +330,10 @@ class _SearchResults extends ConsumerWidget {
           for (final hit in value.results)
             NoteRow(
               title: hit.title,
+              titleDir: hit.titleDir,
               snippet: hit.snippet,
+              snippetDir: hit.snippetDir,
+              highlights: hit.highlights,
               pendingSync: false,
               selected: hit.noteId == selectedNoteId,
               onTap: () => onOpenNote(hit.noteId),
@@ -383,8 +411,9 @@ class _FolderRow extends StatelessWidget {
   }
 }
 
-/// A note in the list: title, snippet (the core's plain first line), a dot
-/// while it has unsynced changes; highlighted when selected. Right-click
+/// A note in the list: title and snippet (the core's plain first line), each
+/// in its own direction, the core's edit label, a dot while it has unsynced
+/// changes, the search highlights; highlighted when selected. Right-click
 /// (or long-press) opens its context menu.
 class NoteRow extends ConsumerWidget {
   /// Creates the row.
@@ -396,6 +425,10 @@ class NoteRow extends ConsumerWidget {
     required this.selected,
     required this.onTap,
     super.key,
+    this.titleDir = TextDir.neutral,
+    this.snippetDir = TextDir.neutral,
+    this.updatedLabel = '',
+    this.highlights = const [],
   });
 
   /// Note ID.
@@ -404,8 +437,20 @@ class NoteRow extends ConsumerWidget {
   /// Title.
   final String title;
 
+  /// Direction of [title].
+  final TextDir titleDir;
+
   /// Snippet.
   final String snippet;
+
+  /// Direction of [snippet].
+  final TextDir snippetDir;
+
+  /// When it was edited ("14:31", "Sat").
+  final String updatedLabel;
+
+  /// Matched terms in [snippet].
+  final List<HighlightSpan> highlights;
 
   /// Has unsynced changes.
   final bool pendingSync;
@@ -507,6 +552,7 @@ class NoteRow extends ConsumerWidget {
                                 title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
+                                textDirection: textDirectionOf(titleDir),
                                 textAlign: TextAlign.start,
                                 style: text.body.copyWith(
                                   color: colors.text,
@@ -515,6 +561,15 @@ class NoteRow extends ConsumerWidget {
                                 ),
                               ),
                             ),
+                            if (updatedLabel.isNotEmpty) ...[
+                              const SizedBox(width: StrataSpacing.s2),
+                              Text(
+                                updatedLabel,
+                                style: text.caption.copyWith(
+                                  color: colors.text2,
+                                ),
+                              ),
+                            ],
                             if (pendingSync) ...[
                               const SizedBox(width: StrataSpacing.s2),
                               Semantics(
@@ -532,11 +587,11 @@ class NoteRow extends ConsumerWidget {
                           ],
                         ),
                         if (snippet.isNotEmpty)
-                          Text(
+                          StrataHighlightedText(
                             snippet,
+                            highlights: textRangesOf(highlights),
                             maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.start,
+                            textDirection: textDirectionOf(snippetDir),
                             style: text.bodySmall.copyWith(
                               color: colors.text2,
                               fontSize: 13,
