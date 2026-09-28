@@ -194,12 +194,6 @@ abstract class SyncLocalizations {
   /// **'Never'**
   String get lastSyncedNever;
 
-  /// Label of the server URL.
-  ///
-  /// In en, this message translates to:
-  /// **'Server'**
-  String get server;
-
   /// Label: the bootstrap finished.
   ///
   /// In en, this message translates to:

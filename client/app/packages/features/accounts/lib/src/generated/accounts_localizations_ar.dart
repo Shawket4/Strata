@@ -27,9 +27,6 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
       'الملاحظات السريعة بتتصنف، والملاحظات بتترابط، والناس والشركات بيفضلوا محدثين. بالعربي والإنجليزي، أونلاين أو أوفلاين.';
 
   @override
-  String get fieldServer => 'الخادم';
-
-  @override
   String get fieldUsername => 'اسم المستخدم';
 
   @override
@@ -78,11 +75,6 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   @override
   String continueAs({required String name}) {
     return 'كمّل باسم $name';
-  }
-
-  @override
-  String signUpOn({required String server}) {
-    return 'على $server';
   }
 
   @override
@@ -290,7 +282,7 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   String get errorInvalidCredentials => 'اسم المستخدم أو كلمة المرور غلط';
 
   @override
-  String get errorOffline => 'مش قادر أوصل للخادم. اتأكد من العنوان والاتصال.';
+  String get errorOffline => 'مش قادر أوصل للخادم. اتأكد من الاتصال.';
 
   @override
   String get errorAccountPending => 'الحساب ده في انتظار الموافقة.';
@@ -319,10 +311,6 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   String errorServer({required String status}) {
     return 'الخادم رد بخطأ ($status).';
   }
-
-  @override
-  String get errorInsecureServer =>
-      'استخدم عنوان يبدأ بـ https://. عنوان http:// العادي بيشتغل بس مع الجهاز ده (localhost).';
 
   @override
   String get errorNotAvailable => 'ده مش متاح لسه.';

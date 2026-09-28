@@ -180,7 +180,6 @@ impl World {
         };
         Device {
             core: Core::open(env).expect("core"),
-            url: self.server.base_url(),
             name: format!("device {n}"),
             clock,
             dir,
@@ -200,7 +199,6 @@ pub fn password(name: &str) -> String {
 
 pub struct Device {
     pub core: Core,
-    pub url: String,
     pub name: String,
     pub clock: FakeClock,
     pub dir: TempDir,

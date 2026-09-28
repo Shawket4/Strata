@@ -33,19 +33,50 @@ void main() {
           appDataDir: dir.path,
           platform: Platform.linux,
           defaultDeviceName: 'Linux desktop',
-          defaultServerUrl: 'https://strata.example',
+          serverUrl: 'https://strata-ai.duckdns.org',
+          releaseBuild: true,
         ),
       );
 
       expect(state.kind, SessionKind.signedOut);
       expect(state.account, isNull);
       expect(state.knownAccounts, isEmpty);
-      expect(state.serverUrl, 'https://strata.example');
       expect(state.deviceName, 'Linux desktop');
       expect(state.unsyncedOps, 0);
       expect(
         io.File('${dir.path}/strata/registry.sqlite3').existsSync(),
         isTrue,
+      );
+    },
+    skip: _library.existsSync()
+        ? false
+        : 'build the core first: cargo build -p strata-core',
+  );
+
+  test(
+    'a build without an https server address does not start',
+    () async {
+      final dir = io.Directory.systemTemp.createTempSync('strata_bridge');
+      addTearDown(() => dir.deleteSync(recursive: true));
+
+      await expectLater(
+        initCore(
+          config: CoreConfig(
+            appDataDir: dir.path,
+            platform: Platform.linux,
+            defaultDeviceName: 'Linux desktop',
+            serverUrl: 'http://127.0.0.1:8080',
+            releaseBuild: true,
+          ),
+        ),
+        throwsA(
+          const CoreFailure(
+            code: 'misconfigured_build',
+            messageKey: 'error.misconfigured_build',
+            field: 'server_url',
+            reason: 'insecure_http',
+          ),
+        ),
       );
     },
     skip: _library.existsSync()
@@ -63,6 +94,8 @@ void main() {
           appDataDir: dir.path,
           platform: Platform.linux,
           defaultDeviceName: 'Linux desktop',
+          serverUrl: 'https://strata-ai.duckdns.org',
+          releaseBuild: true,
         ),
       );
 

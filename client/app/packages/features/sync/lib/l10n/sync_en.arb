@@ -92,10 +92,6 @@
   "@lastSyncedNever": {
     "description": "No sync completed yet."
   },
-  "server": "Server",
-  "@server": {
-    "description": "Label of the server URL."
-  },
   "snapshot": "Full copy on this device",
   "@snapshot": {
     "description": "Label: the bootstrap finished."

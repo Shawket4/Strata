@@ -150,7 +150,6 @@ impl World {
         Device {
             core: Core::open(env).expect("core"),
             clock,
-            url: self.server.base_url(),
             _dir: dir,
         }
     }
@@ -165,7 +164,6 @@ impl World {
 struct Device {
     core: Core,
     clock: FakeClock,
-    url: String,
     _dir: TempDir,
 }
 

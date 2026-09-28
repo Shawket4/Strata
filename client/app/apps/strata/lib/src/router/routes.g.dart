@@ -701,16 +701,10 @@ RouteBase get $signUpRoute => GoRouteData.$route(
 );
 
 mixin $SignUpRoute on GoRouteData {
-  static SignUpRoute _fromState(GoRouterState state) =>
-      SignUpRoute(server: state.uri.queryParameters['server']);
-
-  SignUpRoute get _self => this as SignUpRoute;
+  static SignUpRoute _fromState(GoRouterState state) => const SignUpRoute();
 
   @override
-  String get location => GoRouteData.$location(
-    '/sign-up',
-    queryParams: {if (_self.server != null) 'server': _self.server},
-  );
+  String get location => GoRouteData.$location('/sign-up');
 
   @override
   void go(BuildContext context) => context.go(location);

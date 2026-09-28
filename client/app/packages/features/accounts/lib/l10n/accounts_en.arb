@@ -20,10 +20,6 @@
   "@brandTagline": {
     "description": "Brand panel tagline."
   },
-  "fieldServer": "Server",
-  "@fieldServer": {
-    "description": "Server URL field label."
-  },
   "fieldUsername": "Username",
   "@fieldUsername": {
     "description": "Username field label."
@@ -89,15 +85,6 @@
     "description": "Switches to a known account.",
     "placeholders": {
       "name": {
-        "type": "String"
-      }
-    }
-  },
-  "signUpOn": "on {server}",
-  "@signUpOn": {
-    "description": "Sign-up subtitle with the server.",
-    "placeholders": {
-      "server": {
         "type": "String"
       }
     }
@@ -340,7 +327,7 @@
   "@errorInvalidCredentials": {
     "description": "Core error invalid_credentials."
   },
-  "errorOffline": "Can't reach the server. Check the address and your connection.",
+  "errorOffline": "Can't reach the server. Check your connection.",
   "@errorOffline": {
     "description": "Core error offline."
   },
@@ -385,10 +372,6 @@
         "type": "String"
       }
     }
-  },
-  "errorInsecureServer": "Use an https:// address. Plain http:// works only for this device (localhost).",
-  "@errorInsecureServer": {
-    "description": "Core error invalid_input on server_url with reason insecure_http: a plain-http server address that is not this device."
   },
   "errorNotAvailable": "This isn't available yet.",
   "@errorNotAvailable": {

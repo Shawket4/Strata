@@ -20,7 +20,7 @@ abstract interface class CoreBootstrap {
 
 /// The production bootstrap: `loadStrataCore`, the app-support directory
 /// from `strataAppDataDirectory`, the platform, the host name as the default
-/// device name and the build's default server address.
+/// device name, and the build's fixed server address and mode.
 class NativeCoreBootstrap implements CoreBootstrap {
   /// Creates the bootstrap.
   const new();
@@ -33,15 +33,17 @@ class NativeCoreBootstrap implements CoreBootstrap {
     appDataDir: await bridge.strataAppDataDirectory(),
     platform: platformOf(defaultTargetPlatform),
     defaultDeviceName: io.Platform.localHostname,
-    defaultServerUrl: defaultServer,
+    serverUrl: serverUrl,
+    releaseBuild: kReleaseMode,
   );
 
-  /// The server address baked in at build time
-  /// (`--dart-define=STRATA_DEFAULT_SERVER=<url>`, docs/RUNBOOK.md §13);
-  /// empty when unset, which the core treats as no default.
-  static const String defaultServer = String.fromEnvironment(
-    'STRATA_DEFAULT_SERVER',
-  );
+  /// The server of every account, fixed at build time
+  /// (`--dart-define=STRATA_SERVER_URL=<url>`, docs/RUNBOOK.md §13) and
+  /// never shown or editable. The core refuses to start without a usable
+  /// address (`misconfigured_build`: blank, not `https://`, or plain
+  /// `http://` other than loopback in a debug build), and the app shows
+  /// `MisconfiguredBuildScreen` instead.
+  static const String serverUrl = String.fromEnvironment('STRATA_SERVER_URL');
 }
 
 /// The core's [Platform] for a Flutter [TargetPlatform] (1:1; Fuchsia is

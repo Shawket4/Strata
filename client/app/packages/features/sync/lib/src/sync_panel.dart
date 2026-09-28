@@ -45,12 +45,10 @@ class SyncStatusPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.syncL10n;
     final status = ref.watch(syncStatusProvider);
-    final serverUrl = ref.watch(sessionProvider).value?.account?.serverUrl;
     return switch (status) {
       AsyncData(:final value) => SyncStatusContent(
         view: value,
         surface: surface,
-        serverUrl: serverUrl,
         onOpenConflict: onOpenConflict,
         onClose: onClose,
         onSyncNow: () => ref.read(coreApiProvider).syncNow(),
@@ -84,7 +82,6 @@ class SyncStatusContent extends StatelessWidget {
     required this.onSyncNow,
     required this.onDismissRejection,
     super.key,
-    this.serverUrl,
     this.onOpenConflict,
     this.onClose,
     this.onPausedChanged,
@@ -95,9 +92,6 @@ class SyncStatusContent extends StatelessWidget {
 
   /// Hosting surface.
   final SyncSurface surface;
-
-  /// The account's server URL, if signed in.
-  final String? serverUrl;
 
   /// "Sync now" / "Retry now".
   final VoidCallback onSyncNow;
@@ -173,7 +167,7 @@ class SyncStatusContent extends StatelessWidget {
             _Activity(activity: pill.activity, retryLabel: retry),
           ],
           const SizedBox(height: StrataSpacing.s4),
-          _Details(view: view, serverUrl: serverUrl),
+          _Details(view: view),
           if (view.conflicts.isNotEmpty) ...[
             const SizedBox(height: StrataSpacing.s4),
             _Conflicts(conflicts: view.conflicts, onOpen: onOpenConflict),
@@ -324,15 +318,13 @@ class _Activity extends StatelessWidget {
 }
 
 class _Details extends StatelessWidget {
-  const new({required this.view, required this.serverUrl});
+  const new({required this.view});
 
   final SyncStatusView view;
-  final String? serverUrl;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.syncL10n;
-    final server = serverUrl;
     return _Card(
       child: Column(
         children: [
@@ -340,8 +332,6 @@ class _Details extends StatelessWidget {
             label: l10n.lastSynced,
             value: view.pill.lastSyncLabel ?? l10n.lastSyncedNever,
           ),
-          if (server != null)
-            _DetailRow(label: l10n.server, value: server, mono: true),
           _DetailRow(
             label: l10n.snapshot,
             value: view.bootstrapComplete

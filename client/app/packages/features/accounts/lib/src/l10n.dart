@@ -26,12 +26,6 @@ extension AccountsLabels on AccountsLocalizations {
     CoreFailure(code: 'session_expired') => errorSessionExpired,
     CoreFailure(code: 'rate_limited') => errorRateLimited,
     CoreFailure(code: 'not_available') => errorNotAvailable,
-    CoreFailure(
-      code: 'invalid_input',
-      field: 'server_url',
-      reason: 'insecure_http',
-    ) =>
-      errorInsecureServer,
     CoreFailure(code: 'invalid_input', :final field) => errorInvalidInput(
       field: field ?? '',
     ),

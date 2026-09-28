@@ -6,9 +6,11 @@ import 'package:strata_accounts/src/l10n.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
-/// Sign in (§11 screen 1, SCREEN_SPEC LoginCompact / LoginExpanded): server
-/// URL, username, password and device name, prefilled from the signed-out
-/// session; accounts with data on this device can be resumed.
+/// Sign in (§11 screen 1, SCREEN_SPEC LoginCompact / LoginExpanded):
+/// username, password and device name (prefilled from the signed-out
+/// session); accounts with data on this device can be resumed. There is no
+/// server field: the core signs in to the build's server
+/// (`STRATA_SERVER_URL`).
 ///
 /// A successful sign-in changes the session stream (the app routes on it);
 /// an account waiting for approval (or refused) becomes a session state of
@@ -21,8 +23,8 @@ class SignInScreen extends HookConsumerWidget {
   /// The icon that represents this feature.
   static const IconData icon = Icons.login;
 
-  /// Opens sign-up with the server URL typed so far.
-  final ValueChanged<String>? onCreateAccount;
+  /// Opens sign-up.
+  final VoidCallback? onCreateAccount;
 
   /// The account exists but is not approved (or was turned down).
   final VoidCallback? onPendingApproval;
@@ -33,16 +35,14 @@ class SignInScreen extends HookConsumerWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final session = ref.watch(sessionProvider).value;
-    final server = useTextEditingController(text: session?.serverUrl ?? '');
     final username = useTextEditingController();
     final password = useTextEditingController();
     final device = useTextEditingController(text: session?.deviceName ?? '');
     // The session may arrive after the first build: prefill once.
     useEffect(() {
-      if (server.text.isEmpty) server.text = session?.serverUrl ?? '';
       if (device.text.isEmpty) device.text = session?.deviceName ?? '';
       return null;
-    }, [session?.serverUrl, session?.deviceName]);
+    }, [session?.deviceName]);
     final obscured = useState(true);
     final busy = useState(false);
     final failure = useState<String?>(null);
@@ -54,7 +54,6 @@ class SignInScreen extends HookConsumerWidget {
       busy.value = true;
       failure.value = null;
       final request = SignInRequest(
-        serverUrl: server.text,
         username: username.text,
         password: password.text,
         deviceName: device.text,
@@ -110,14 +109,6 @@ class SignInScreen extends HookConsumerWidget {
               ),
             ),
             const SizedBox(height: StrataSpacing.s6),
-            LabeledField(
-              label: l10n.fieldServer,
-              controller: server,
-              mono: true,
-              keyboardType: TextInputType.url,
-              autofillHints: const [AutofillHints.url],
-            ),
-            const SizedBox(height: StrataSpacing.s4),
             LabeledField(
               label: l10n.fieldUsername,
               controller: username,
@@ -179,9 +170,7 @@ class SignInScreen extends HookConsumerWidget {
                   style: text.bodySmall.copyWith(color: colors.text2),
                 ),
                 TextButton(
-                  onPressed: onCreateAccount == null
-                      ? null
-                      : () => onCreateAccount?.call(server.text),
+                  onPressed: onCreateAccount,
                   child: Text(l10n.createAccount),
                 ),
               ],
@@ -220,8 +209,6 @@ class _KnownAccountTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.accountsL10n;
-    final colors = context.strataColors;
-    final text = context.strataText;
     return Card(
       margin: const EdgeInsets.only(bottom: StrataSpacing.s2),
       child: ListTile(
@@ -229,11 +216,6 @@ class _KnownAccountTile extends StatelessWidget {
         minTileHeight: StrataLayout.minTouchTarget + StrataSpacing.s2,
         leading: StrataAvatar(initials: account.initials),
         title: Text(l10n.continueAs(name: account.displayName)),
-        subtitle: Text(
-          account.serverUrl,
-          textDirection: TextDirection.ltr,
-          style: text.monoSmall.copyWith(color: colors.text2),
-        ),
         trailing: const Icon(Icons.chevron_right),
       ),
     );

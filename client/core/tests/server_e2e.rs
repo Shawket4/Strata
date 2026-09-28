@@ -150,7 +150,6 @@ impl World {
         };
         Device {
             core: Core::open(env).expect("core"),
-            url: self.server.base_url(),
             name: format!("device {n}"),
             _dir: dir,
         }
@@ -169,7 +168,6 @@ fn password(name: &str) -> String {
 
 struct Device {
     core: Core,
-    url: String,
     name: String,
     _dir: TempDir,
 }
@@ -498,7 +496,7 @@ async fn admin_and_account_intents_against_the_real_server() {
     );
     sa.refresh_settings().await.expect("settings");
     let settings = sa
-        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
+        .read(|c, ctx| build::settings_view(c, ctx, &sa.server_url()))
         .expect("settings")
         .expect("signed in");
     let this: Vec<(&str, bool)> = settings
@@ -512,7 +510,7 @@ async fn admin_and_account_intents_against_the_real_server() {
         .await
         .expect("rename");
     let settings = sa
-        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
+        .read(|c, ctx| build::settings_view(c, ctx, &sa.server_url()))
         .expect("settings")
         .expect("signed in");
     assert_eq!(settings.device_list[0].name, "Alice's laptop");

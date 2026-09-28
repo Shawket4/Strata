@@ -21,6 +21,19 @@
   "@retry": {
     "description": "Retries the start."
   },
+  "misconfiguredBuildTitle": "This build can't start",
+  "@misconfiguredBuildTitle": {
+    "description": "The build has no usable server address (fatal)."
+  },
+  "misconfiguredBuildBody": "This copy of Strata was built without a usable server address ({reason}). Install a build made with an https:// STRATA_SERVER_URL.",
+  "@misconfiguredBuildBody": {
+    "description": "Details of a misconfigured build; reason is the core's code (missing, not_https, insecure_http).",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "notificationDone": "Done",
   "@notificationDone": {
     "description": "Reminder notification action: mark done."

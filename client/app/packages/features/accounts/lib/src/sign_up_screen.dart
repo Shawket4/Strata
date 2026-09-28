@@ -8,14 +8,11 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// Sign up (SCREEN_SPEC SignupCompact): display name, username, password
 /// with the core's strength meter and confirmation, and the approval notice
-/// (D22). A registered account waits for approval: the session becomes
+/// (D22), on the build's server (no server field). A registered account waits for approval: the session becomes
 /// `pendingApproval` (the app routes on it) and [onRequested] is called.
 class SignUpScreen extends HookConsumerWidget {
   /// Creates the sign-up screen.
-  const new({super.key, this.serverUrl, this.onBack, this.onRequested});
-
-  /// Server URL typed on the sign-in screen (else the session's prefill).
-  final String? serverUrl;
+  const new({super.key, this.onBack, this.onRequested});
 
   /// Back to sign in.
   final VoidCallback? onBack;
@@ -28,17 +25,6 @@ class SignUpScreen extends HookConsumerWidget {
     final l10n = context.accountsL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final session = ref.watch(sessionProvider).value;
-    final server = useTextEditingController(
-      text: serverUrl ?? session?.serverUrl ?? '',
-    );
-    // The session may arrive after the first build: prefill once.
-    useEffect(() {
-      if (server.text.isEmpty) {
-        server.text = serverUrl ?? session?.serverUrl ?? '';
-      }
-      return null;
-    }, [session?.serverUrl]);
     final name = useTextEditingController();
     final username = useTextEditingController();
     final password = useTextEditingController();
@@ -60,7 +46,6 @@ class SignUpScreen extends HookConsumerWidget {
             .read(coreApiProvider)
             .signUp(
               request: SignUpRequest(
-                serverUrl: server.text,
                 username: username.text,
                 password: password.text,
                 displayName: name.text,
@@ -99,22 +84,7 @@ class SignUpScreen extends HookConsumerWidget {
               container: true,
               child: Text(l10n.createAccount, style: text.display),
             ),
-            const SizedBox(height: StrataSpacing.s1),
-            ListenableBuilder(
-              listenable: server,
-              builder: (context, _) => Text(
-                l10n.signUpOn(server: server.text),
-                style: text.bodySmall.copyWith(color: colors.text2),
-              ),
-            ),
             const SizedBox(height: StrataSpacing.s6),
-            LabeledField(
-              label: l10n.fieldServer,
-              controller: server,
-              mono: true,
-              keyboardType: TextInputType.url,
-            ),
-            const SizedBox(height: StrataSpacing.s4),
             LabeledField(
               label: l10n.fieldDisplayName,
               controller: name,

@@ -321,9 +321,31 @@ fn registry_schema() {
             "user_id",
             "username",
             "display_name",
-            "server_url",
             "last_active_at",
             "active"
+        ]
+    );
+}
+
+#[test]
+fn the_account_row_keeps_no_server_address() {
+    // Every account uses the build's server (owner decision "No server address in the UI").
+    let conn = Connection::open_in_memory().expect("db");
+    migrations::migrate(&conn, ACCOUNT).expect("migrates");
+    assert_eq!(
+        columns(&conn, "account"),
+        [
+            "singleton",
+            "user_id",
+            "username",
+            "display_name",
+            "role",
+            "status",
+            "timezone",
+            "ui_language",
+            "deletion_at",
+            "password_change_required",
+            "disabled_warned_at"
         ]
     );
 }

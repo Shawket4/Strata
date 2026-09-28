@@ -76,9 +76,6 @@ class SyncLocalizationsEn extends SyncLocalizations {
   String get lastSyncedNever => 'Never';
 
   @override
-  String get server => 'Server';
-
-  @override
   String get snapshot => 'Full copy on this device';
 
   @override

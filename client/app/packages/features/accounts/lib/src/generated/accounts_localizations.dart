@@ -131,12 +131,6 @@ abstract class AccountsLocalizations {
   /// **'Captures filed, notes linked, people and companies kept current. In Arabic and English, online or off.'**
   String get brandTagline;
 
-  /// Server URL field label.
-  ///
-  /// In en, this message translates to:
-  /// **'Server'**
-  String get fieldServer;
-
   /// Username field label.
   ///
   /// In en, this message translates to:
@@ -232,12 +226,6 @@ abstract class AccountsLocalizations {
   /// In en, this message translates to:
   /// **'Continue as {name}'**
   String continueAs({required String name});
-
-  /// Sign-up subtitle with the server.
-  ///
-  /// In en, this message translates to:
-  /// **'on {server}'**
-  String signUpOn({required String server});
 
   /// Notice on the sign-up form.
   ///
@@ -530,7 +518,7 @@ abstract class AccountsLocalizations {
   /// Core error offline.
   ///
   /// In en, this message translates to:
-  /// **'Can\'t reach the server. Check the address and your connection.'**
+  /// **'Can\'t reach the server. Check your connection.'**
   String get errorOffline;
 
   /// Core error account_pending.
@@ -580,12 +568,6 @@ abstract class AccountsLocalizations {
   /// In en, this message translates to:
   /// **'The server answered with an error ({status}).'**
   String errorServer({required String status});
-
-  /// Core error invalid_input on server_url with reason insecure_http: a plain-http server address that is not this device.
-  ///
-  /// In en, this message translates to:
-  /// **'Use an https:// address. Plain http:// works only for this device (localhost).'**
-  String get errorInsecureServer;
 
   /// Core error not_available.
   ///

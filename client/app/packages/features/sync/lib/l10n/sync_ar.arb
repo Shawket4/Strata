@@ -16,7 +16,6 @@
   "retryAt": "المحاولة التالية الساعة {time}",
   "lastSynced": "آخر مزامنة",
   "lastSyncedNever": "أبدًا",
-  "server": "الخادم",
   "snapshot": "نسخة كاملة على هذا الجهاز",
   "snapshotDone": "نعم",
   "snapshotPending": "ليس بعد",

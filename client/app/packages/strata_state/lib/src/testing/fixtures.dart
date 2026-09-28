@@ -21,7 +21,7 @@ abstract final class StrataFixtures {
   /// The op / item ID the fake's intents answer with.
   static const String opId = '01J8ZQ4M6T3K9V2B7X5N1C0RDA';
 
-  /// Server URL of the sample install.
+  /// The build's server of the sample install (`STRATA_SERVER_URL`).
   static const String serverUrl = 'https://strata.example.com';
 
   // ---------------------------------------------------------------------------
@@ -108,7 +108,8 @@ abstract final class StrataFixtures {
     appDataDir: '/home/shawket/.local/share/strata',
     platform: Platform.linux,
     defaultDeviceName: 'shawket-laptop',
-    defaultServerUrl: serverUrl,
+    serverUrl: serverUrl,
+    releaseBuild: false,
   );
 
   /// Shawket's account.
@@ -129,7 +130,6 @@ abstract final class StrataFixtures {
     userId: 'u-shawket',
     username: 'shawket',
     displayName: 'Shawket',
-    serverUrl: serverUrl,
     initials: '',
   );
 
@@ -138,7 +138,6 @@ abstract final class StrataFixtures {
     kind: SessionKind.active,
     account: accountSummary,
     knownAccounts: [knownAccountItem],
-    serverUrl: serverUrl,
     deviceName: 'shawket-laptop',
     unsyncedOps: 0,
   );
@@ -147,7 +146,6 @@ abstract final class StrataFixtures {
   static const SessionState sessionSignedOut = SessionState(
     kind: SessionKind.signedOut,
     knownAccounts: [knownAccountItem],
-    serverUrl: serverUrl,
     deviceName: 'shawket-laptop',
     unsyncedOps: 0,
   );
@@ -157,7 +155,6 @@ abstract final class StrataFixtures {
     kind: SessionKind.deletionPending,
     account: accountSummary,
     knownAccounts: const [knownAccountItem],
-    serverUrl: serverUrl,
     deviceName: 'shawket-laptop',
     unsyncedOps: 2,
     deletionAt: DateTime.utc(2026, 10, 9, 21),
@@ -166,7 +163,6 @@ abstract final class StrataFixtures {
 
   /// A sign-in form as submitted.
   static const SignInRequest signInRequest = SignInRequest(
-    serverUrl: serverUrl,
     username: 'shawket',
     password: 'correct horse battery staple',
     deviceName: 'shawket-laptop',
@@ -174,7 +170,6 @@ abstract final class StrataFixtures {
 
   /// A sign-up form as submitted.
   static const SignUpRequest signUpRequest = SignUpRequest(
-    serverUrl: serverUrl,
     username: 'mona',
     password: 'nile-freight-2026',
     displayName: 'Mona Hassan',
@@ -1949,7 +1944,6 @@ abstract final class StrataFixtures {
   /// A sample [PendingApproval].
   static final PendingApproval pendingApproval = PendingApproval(
     username: 'shawket',
-    serverUrl: serverUrl,
     requestedAt: now,
     requestedLabel: 'just now',
     canCheck: true,
@@ -1959,7 +1953,6 @@ abstract final class StrataFixtures {
   static final SessionState sessionPendingApproval = SessionState(
     kind: SessionKind.pendingApproval,
     knownAccounts: const [],
-    serverUrl: serverUrl,
     deviceName: 'shawket-laptop',
     unsyncedOps: 0,
     pending: pendingApproval,

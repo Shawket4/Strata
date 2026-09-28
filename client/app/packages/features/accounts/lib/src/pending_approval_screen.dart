@@ -10,7 +10,7 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// (SCREEN_SPEC PendingApprovalCompact), with the "not approved" variant.
 ///
 /// Rendered from the session: `SessionKind.pendingApproval` /
-/// `SessionKind.rejected` with its [PendingApproval] (who, where, when it was
+/// `SessionKind.rejected` with its [PendingApproval] (who, when it was
 /// requested and last checked). "Check again" asks the core
 /// (`check_approval`, which retries the sign-in it keeps in memory); "Use a
 /// different account" leaves the screen (`dismiss_pending`). The app routes
@@ -71,19 +71,9 @@ class PendingApprovalScreen extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const StrataWordmark(fontSize: 18),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  pending?.serverUrl ?? session?.serverUrl ?? '',
-                  textDirection: TextDirection.ltr,
-                  overflow: TextOverflow.ellipsis,
-                  style: text.monoSmall.copyWith(color: colors.text2),
-                ),
-              ),
-            ],
+          const Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: StrataWordmark(fontSize: 18),
           ),
           const SizedBox(height: StrataSpacing.s8),
           if (rejected)

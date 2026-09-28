@@ -642,7 +642,7 @@ class SignInRoute extends GoRouteData with $SignInRoute {
   Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
     state,
     SignInScreen(
-      onCreateAccount: (server) => SignUpRoute(server: server).go(context),
+      onCreateAccount: () => const SignUpRoute().go(context),
       onPendingApproval: () => const ApprovalRoute().go(context),
     ),
   );
@@ -651,17 +651,13 @@ class SignInRoute extends GoRouteData with $SignInRoute {
 /// `/sign-up`.
 @TypedGoRoute<SignUpRoute>(path: '/sign-up')
 class SignUpRoute extends GoRouteData with $SignUpRoute {
-  /// Creates the route (with the server URL typed on sign-in).
-  const new({this.server});
-
-  /// Server URL prefill.
-  final String? server;
+  /// Creates the route.
+  const new();
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
     state,
     SignUpScreen(
-      serverUrl: server,
       onBack: () => const SignInRoute().go(context),
       onRequested: () => const ApprovalRoute().go(context),
     ),

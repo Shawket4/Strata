@@ -4,6 +4,8 @@
   "bootFailedTitle": "Strata ماقدرش يبدأ",
   "bootFailedBody": "ماقدرناش نفتح قاعدة البيانات المحلية ({code}).",
   "retry": "أعد المحاولة",
+  "misconfiguredBuildTitle": "النسخة دي مش هتقدر تبدأ",
+  "misconfiguredBuildBody": "النسخة دي من Strata اتبنت من غير عنوان خادم صالح ({reason}). ثبّت نسخة مبنية بعنوان https:// في STRATA_SERVER_URL.",
   "notificationDone": "تم",
   "notificationSnooze": "تأجيل",
   "notificationOpen": "فتح",

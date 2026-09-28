@@ -253,15 +253,14 @@ void main() {
       }
     });
 
-    testWidgets('shows the server URL of the signed-in account', (
-      tester,
-    ) async {
+    testWidgets('shows no server address', (tester) async {
       await _open(
         tester,
         variants().first,
         (f) => f.syncStatus.add(SyncFixtures.synced),
       );
-      expect(find.text(StrataFixtures.serverUrl), findsOneWidget);
+      expect(find.text(StrataFixtures.serverUrl), findsNothing);
+      expect(find.text('Server'), findsNothing);
     });
 
     testWidgets('the page renders the panel', (tester) async {

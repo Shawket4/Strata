@@ -28,9 +28,6 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
       'Captures filed, notes linked, people and companies kept current. In Arabic and English, online or off.';
 
   @override
-  String get fieldServer => 'Server';
-
-  @override
   String get fieldUsername => 'Username';
 
   @override
@@ -79,11 +76,6 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   @override
   String continueAs({required String name}) {
     return 'Continue as $name';
-  }
-
-  @override
-  String signUpOn({required String server}) {
-    return 'on $server';
   }
 
   @override
@@ -280,8 +272,7 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   String get errorInvalidCredentials => 'Username or password is incorrect';
 
   @override
-  String get errorOffline =>
-      'Can\'t reach the server. Check the address and your connection.';
+  String get errorOffline => 'Can\'t reach the server. Check your connection.';
 
   @override
   String get errorAccountPending => 'This account is waiting for approval.';
@@ -312,10 +303,6 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   String errorServer({required String status}) {
     return 'The server answered with an error ($status).';
   }
-
-  @override
-  String get errorInsecureServer =>
-      'Use an https:// address. Plain http:// works only for this device (localhost).';
 
   @override
   String get errorNotAvailable => 'This isn\'t available yet.';

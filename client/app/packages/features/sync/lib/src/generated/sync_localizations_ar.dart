@@ -79,9 +79,6 @@ class SyncLocalizationsAr extends SyncLocalizations {
   String get lastSyncedNever => 'أبدًا';
 
   @override
-  String get server => 'الخادم';
-
-  @override
   String get snapshot => 'نسخة كاملة على هذا الجهاز';
 
   @override

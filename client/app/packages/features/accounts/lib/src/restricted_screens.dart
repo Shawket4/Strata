@@ -16,32 +16,18 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// expanded (SCREEN_SPEC AccountDisabled*/DeletionPending*).
 class RestrictedLayout extends StatelessWidget {
   /// Creates the frame.
-  const new({required this.child, required this.caption, super.key});
+  const new({required this.child, super.key});
 
   /// The card or page content.
   final Widget child;
-
-  /// Header caption (server, account).
-  final String caption;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.strataColors;
     final text = context.strataText;
-    final header = Row(
-      children: [
-        const StrataWordmark(fontSize: 18),
-        const SizedBox(width: StrataSpacing.s3),
-        Expanded(
-          child: Text(
-            caption,
-            textAlign: TextAlign.end,
-            textDirection: TextDirection.ltr,
-            overflow: TextOverflow.ellipsis,
-            style: text.monoSmall.copyWith(color: colors.text2),
-          ),
-        ),
-      ],
+    const header = Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: StrataWordmark(fontSize: 18),
     );
     if (SizeClass.of(context) == SizeClass.compact) {
       return Scaffold(
@@ -303,7 +289,6 @@ class AccountDisabledScreen extends HookConsumerWidget {
     }
 
     return RestrictedLayout(
-      caption: account?.serverUrl ?? '',
       child: Semantics(
         liveRegion: true,
         child: Column(
@@ -385,7 +370,6 @@ class DeletionPendingScreen extends ConsumerWidget {
     final exportLabel = session?.exportLabel;
     final core = ref.read(coreApiProvider);
     return RestrictedLayout(
-      caption: account?.serverUrl ?? '',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -613,7 +597,6 @@ class PasswordChangeRequiredScreen extends HookConsumerWidget {
 
     final error = failure.value;
     return RestrictedLayout(
-      caption: account?.serverUrl ?? '',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -122,6 +122,18 @@ abstract class AppLocalizations {
   /// **'Retry'**
   String get retry;
 
+  /// The build has no usable server address (fatal).
+  ///
+  /// In en, this message translates to:
+  /// **'This build can\'t start'**
+  String get misconfiguredBuildTitle;
+
+  /// Details of a misconfigured build; reason is the core's code (missing, not_https, insecure_http).
+  ///
+  /// In en, this message translates to:
+  /// **'This copy of Strata was built without a usable server address ({reason}). Install a build made with an https:// STRATA_SERVER_URL.'**
+  String misconfiguredBuildBody({required String reason});
+
   /// Reminder notification action: mark done.
   ///
   /// In en, this message translates to:

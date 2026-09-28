@@ -17,7 +17,7 @@ use strata_core::clock::FakeClock;
 use strata_core::ids::SeqIds;
 use strata_core::net::{SyncApi, Tokens};
 use strata_core::session::{Core, CoreEnv};
-use strata_core::sync::Trigger;
+use strata_core::sync::engine::Trigger;
 use strata_core::testing::{FakeAccountApi, FakeServer};
 use strata_core::view::model::{
     CoreConfig, CoreFailure, Platform, SessionKind, SignInRequest, SignUpRequest,

@@ -24,6 +24,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get retry => 'Retry';
 
   @override
+  String get misconfiguredBuildTitle => 'This build can\'t start';
+
+  @override
+  String misconfiguredBuildBody({required String reason}) {
+    return 'This copy of Strata was built without a usable server address ($reason). Install a build made with an https:// STRATA_SERVER_URL.';
+  }
+
+  @override
   String get notificationDone => 'Done';
 
   @override

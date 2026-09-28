@@ -24,6 +24,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get retry => 'أعد المحاولة';
 
   @override
+  String get misconfiguredBuildTitle => 'النسخة دي مش هتقدر تبدأ';
+
+  @override
+  String misconfiguredBuildBody({required String reason}) {
+    return 'النسخة دي من Strata اتبنت من غير عنوان خادم صالح ($reason). ثبّت نسخة مبنية بعنوان https:// في STRATA_SERVER_URL.';
+  }
+
+  @override
   String get notificationDone => 'تم';
 
   @override

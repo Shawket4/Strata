@@ -11,7 +11,8 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// Arabic UI, typed go_router navigation routed by the session.
 ///
 /// While the Rust core loads (`coreStartupProvider`) a splash is shown; a
-/// failed start shows the core's error with Retry.
+/// failed start shows the core's error with Retry, or, when the build has no
+/// usable server address, [MisconfiguredBuildScreen].
 class StrataApp extends ConsumerWidget {
   /// Creates the app.
   const new({super.key, this.locale});
@@ -49,6 +50,10 @@ class StrataApp extends ConsumerWidget {
         supportedLocales: StrataLocalizations.supportedLocales,
         localizationsDelegates: StrataLocalizations.localizationsDelegates,
       ),
+      AsyncError(
+        error: CoreFailure(code: 'misconfigured_build', :final reason),
+      ) =>
+        app(home: MisconfiguredBuildScreen(reason: reason ?? '')),
       AsyncError(:final error) => app(
         home: BootFailedScreen(
           error: error,
@@ -128,6 +133,30 @@ class BootFailedScreen extends StatelessWidget {
           icon: Icons.refresh,
           onPressed: onRetry,
         ),
+      ),
+    );
+  }
+}
+
+/// The build has no usable server address (`STRATA_SERVER_URL` missing, not
+/// `https://`, or plain `http://` in a release build): the core refused to
+/// start. Fatal, with no retry: only another build fixes it.
+class MisconfiguredBuildScreen extends StatelessWidget {
+  /// Creates the screen for the core's [reason] (`missing`, `not_https`,
+  /// `insecure_http`).
+  const new({required this.reason, super.key});
+
+  /// The core's reason code.
+  final String reason;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.appL10n;
+    return Scaffold(
+      body: StrataEmptyState(
+        icon: Icons.dns_outlined,
+        title: l10n.misconfiguredBuildTitle,
+        message: l10n.misconfiguredBuildBody(reason: reason),
       ),
     );
   }
