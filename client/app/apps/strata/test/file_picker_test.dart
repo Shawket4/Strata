@@ -33,9 +33,7 @@ void main() {
       );
       final (groups, name, create) = asked.single;
       expect(
-        [
-          for (final g in groups) (g.label, g.extensions, g.mimeTypes),
-        ],
+        [for (final g in groups) (g.label, g.extensions, g.mimeTypes)],
         [
           ('Zip', ['zip'], ['application/zip']),
         ],
@@ -45,20 +43,18 @@ void main() {
 
     test('a cancelled dialog is null', () async {
       final picker = FileSelectorPicker(
-        saveDialog:
-            ({
-              acceptedTypeGroups = const [],
-              initialDirectory,
-              suggestedName,
-              confirmButtonText,
-              canCreateDirectories,
-            }) async => null,
-        openDialog:
-            ({
-              acceptedTypeGroups = const [],
-              initialDirectory,
-              confirmButtonText,
-            }) async => null,
+        saveDialog: ({
+          acceptedTypeGroups = const [],
+          initialDirectory,
+          suggestedName,
+          confirmButtonText,
+          canCreateDirectories,
+        }) async => null,
+        openDialog: ({
+          acceptedTypeGroups = const [],
+          initialDirectory,
+          confirmButtonText,
+        }) async => null,
       );
       expect(
         await picker.saveFile(

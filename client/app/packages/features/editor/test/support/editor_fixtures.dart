@@ -160,20 +160,8 @@ abstract final class EditorFixtures {
       open: 2,
       close: 2,
     ),
-    hintOf(
-      content,
-      HintKind.heading,
-      '## Hypotheses',
-      level: 2,
-      open: 3,
-    ),
-    hintOf(
-      content,
-      HintKind.bold,
-      '**flat 10% discount**',
-      open: 2,
-      close: 2,
-    ),
+    hintOf(content, HintKind.heading, '## Hypotheses', level: 2, open: 3),
+    hintOf(content, HintKind.bold, '**flat 10% discount**', open: 2, close: 2),
     hintOf(content, HintKind.blockId, '^a1b2'),
     hintOf(
       content,
@@ -184,13 +172,7 @@ abstract final class EditorFixtures {
       open: 2,
       close: 2,
     ),
-    hintOf(
-      content,
-      HintKind.heading,
-      '## Next steps',
-      level: 2,
-      open: 3,
-    ),
+    hintOf(content, HintKind.heading, '## Next steps', level: 2, open: 3),
     hintOf(
       content,
       HintKind.taskLine,

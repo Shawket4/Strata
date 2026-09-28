@@ -489,6 +489,12 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
   String get propertyValue => 'Value';
 
   @override
+  String get addValue => 'Add value';
+
+  @override
+  String get removeValue => 'Remove value';
+
+  @override
   String get save => 'Save';
 
   @override

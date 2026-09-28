@@ -2,22 +2,20 @@ import 'package:file_selector/file_selector.dart' as fs;
 import 'package:strata_state/strata_state.dart' show FilePicker, PickedFileType;
 
 /// Shows the platform's save dialog (`file_selector`'s `getSaveLocation`).
-typedef SaveDialog =
-    Future<fs.FileSaveLocation?> Function({
-      List<fs.XTypeGroup> acceptedTypeGroups,
-      String? initialDirectory,
-      String? suggestedName,
-      String? confirmButtonText,
-      bool? canCreateDirectories,
-    });
+typedef SaveDialog = Future<fs.FileSaveLocation?> Function({
+  List<fs.XTypeGroup> acceptedTypeGroups,
+  String? initialDirectory,
+  String? suggestedName,
+  String? confirmButtonText,
+  bool? canCreateDirectories,
+});
 
 /// Shows the platform's open dialog (`file_selector`'s `openFile`).
-typedef OpenDialog =
-    Future<fs.XFile?> Function({
-      List<fs.XTypeGroup> acceptedTypeGroups,
-      String? initialDirectory,
-      String? confirmButtonText,
-    });
+typedef OpenDialog = Future<fs.XFile?> Function({
+  List<fs.XTypeGroup> acceptedTypeGroups,
+  String? initialDirectory,
+  String? confirmButtonText,
+});
 
 /// The native file dialogs of every platform (`file_selector`, allowed in
 /// the app shell only; owner decision 2026-09-28). It only returns the path

@@ -815,6 +815,18 @@ abstract class DirectoryLocalizations {
   /// **'Value'**
   String get propertyValue;
 
+  /// Adds another value field to a property (several phone numbers).
+  ///
+  /// In en, this message translates to:
+  /// **'Add value'**
+  String get addValue;
+
+  /// Removes one value field of a property.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove value'**
+  String get removeValue;
+
   /// Saves a property.
   ///
   /// In en, this message translates to:

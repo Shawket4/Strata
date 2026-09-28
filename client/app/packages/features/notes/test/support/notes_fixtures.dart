@@ -29,7 +29,10 @@ EditorHint _hint(
     markers: [
       if (open > 0) MarkerRange(start: start, end: start + open),
       if (close > 0)
-        MarkerRange(start: start + text.length - close, end: start + text.length),
+        MarkerRange(
+          start: start + text.length - close,
+          end: start + text.length,
+        ),
     ],
   );
 }
@@ -272,13 +275,7 @@ abstract final class NotesFixtures {
       open: 2,
       close: 2,
     ),
-    _hint(
-      pricingContent,
-      HintKind.heading,
-      '## Hypotheses',
-      level: 2,
-      open: 3,
-    ),
+    _hint(pricingContent, HintKind.heading, '## Hypotheses', level: 2, open: 3),
     _hint(
       pricingContent,
       HintKind.bold,
@@ -287,13 +284,7 @@ abstract final class NotesFixtures {
       close: 2,
     ),
     _hint(pricingContent, HintKind.blockId, '^a1b2'),
-    _hint(
-      pricingContent,
-      HintKind.heading,
-      '## Next steps',
-      level: 2,
-      open: 3,
-    ),
+    _hint(pricingContent, HintKind.heading, '## Next steps', level: 2, open: 3),
     _hint(
       pricingContent,
       HintKind.taskLine,

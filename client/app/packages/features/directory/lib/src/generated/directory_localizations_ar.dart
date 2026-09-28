@@ -500,6 +500,12 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
   String get propertyValue => 'القيمة';
 
   @override
+  String get addValue => 'إضافة قيمة';
+
+  @override
+  String get removeValue => 'حذف القيمة';
+
+  @override
   String get save => 'حفظ';
 
   @override

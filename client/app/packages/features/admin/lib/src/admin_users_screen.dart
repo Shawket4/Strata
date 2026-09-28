@@ -917,15 +917,13 @@ class ScheduleDeletionDialog extends StatelessWidget {
     return AlertDialog(
       icon: Icon(Icons.auto_delete_outlined, color: colors.dangerText),
       title: Text(l10n.scheduleTitle(username: user.username)),
-      content: Text(
-        switch (purgeLabel) {
-          final date? => l10n.scheduleBodyDated(
-            name: user.displayName,
-            date: date,
-          ),
-          null => l10n.scheduleBody(name: user.displayName),
-        },
-      ),
+      content: Text(switch (purgeLabel) {
+        final date? => l10n.scheduleBodyDated(
+          name: user.displayName,
+          date: date,
+        ),
+        null => l10n.scheduleBody(name: user.displayName),
+      }),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),

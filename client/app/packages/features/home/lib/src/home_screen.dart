@@ -988,10 +988,8 @@ class _AiActivityCard extends ConsumerWidget {
     if (chosen == null || !context.mounted) return;
     await _run(
       context,
-      () => core.repointAiDecision(
-        decisionId: item.decisionId,
-        targetId: chosen,
-      ),
+      () =>
+          core.repointAiDecision(decisionId: item.decisionId, targetId: chosen),
     );
   }
 

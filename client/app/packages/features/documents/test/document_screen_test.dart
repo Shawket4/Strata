@@ -339,11 +339,10 @@ void main() {
       );
       await tapVisible(tester, find.text('Record move'));
       final draft = fake.calls.last.args['draft']! as CustodyDraft;
-      expect((draft.kind, draft.date, draft.note), (
-        'handed-to',
-        null,
-        'عشان المراجعة',
-      ));
+      expect(
+        (draft.kind, draft.date, draft.note),
+        ('handed-to', null, 'عشان المراجعة'),
+      );
     });
 
     testWidgets('sent to a third party picks the company', (tester) async {
