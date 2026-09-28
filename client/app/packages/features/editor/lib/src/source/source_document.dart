@@ -1,3 +1,4 @@
+import 'package:flutter/painting.dart' show TextDirection;
 import 'package:flutter/foundation.dart' show immutable;
 import 'package:strata_editor/src/source/markdown_source.dart';
 import 'package:strata_state/strata_state.dart' show EditorHint, HintKind;
@@ -48,11 +49,41 @@ List<SourceLine> linesOf(Document document) {
   ];
 }
 
-/// A hint span inside one line (UTF-16 offsets relative to the line).
+/// Where each line of [document] starts in the note's content (UTF-16
+/// offsets), in node order: the body starts at [bodyOffset] and every line
+/// but the last is followed by its terminator ([newline] when it has none).
+/// [lines] are the document's lines (see [linesOf]).
+List<int> lineStartsOf(
+  Document document,
+  List<SourceLine> lines, {
+  required String newline,
+  required int bodyOffset,
+}) {
+  final starts = <int>[];
+  var offset = bodyOffset;
+  for (var i = 0; i < lines.length; i++) {
+    starts.add(offset);
+    offset += lines[i].text.length;
+    if (i < lines.length - 1) {
+      offset += lines[i].eol.isEmpty ? newline.length : lines[i].eol.length;
+    }
+  }
+  return starts;
+}
+
+/// A hint span inside one line (UTF-16 offsets relative to the line), with
+/// what the core attached to it (link target, heading level).
 @immutable
 final class LineSpan {
   /// Creates a span of [kind] from [start] to [end].
-  const new(this.kind, this.start, this.end);
+  const new(
+    this.kind,
+    this.start,
+    this.end, {
+    this.targetId,
+    this.targetAnchor,
+    this.level = 0,
+  });
 
   /// What the span is.
   final HintKind kind;
@@ -63,15 +94,28 @@ final class LineSpan {
   /// End (exclusive).
   final int end;
 
+  /// Wikilinks and embeds: the note the core resolved the link to.
+  final String? targetId;
+
+  /// Wikilinks and embeds: the heading or block (without `^`).
+  final String? targetAnchor;
+
+  /// Headings: level 1–6.
+  final int level;
+
   @override
   bool operator ==(Object other) =>
       other is LineSpan &&
       other.kind == kind &&
       other.start == start &&
-      other.end == end;
+      other.end == end &&
+      other.targetId == targetId &&
+      other.targetAnchor == targetAnchor &&
+      other.level == level;
 
   @override
-  int get hashCode => Object.hash(kind, start, end);
+  int get hashCode =>
+      Object.hash(kind, start, end, targetId, targetAnchor, level);
 
   @override
   String toString() => 'LineSpan($kind, $start, $end)';
@@ -81,15 +125,19 @@ final class LineSpan {
 @immutable
 final class LineHints {
   /// Creates line hints.
-  const new({this.spans = const {}, this.taskIds = const {}});
+  const new({
+    this.spans = const {},
+    this.taskIds = const {},
+    this.directions = const {},
+  });
 
   /// Places [hints] (offsets into the note's content) on the lines of
   /// [document], whose body starts at [bodyOffset]. [lines] are the
   /// document's lines in node order (see [linesOf]).
   ///
-  /// A task line's ID is the text of the block-ID hint inside the core's
-  /// task-line hint, without its `^` (the core does not attach the ID to
-  /// the hint yet: docs/CORE_GAPS.md).
+  /// A task line's ID is the core's `EditorHint.task_id`; a line's direction
+  /// is the core's `RtlLine` / `LtrLine` span over it (first-strong rule,
+  /// computed in the core).
   factory place({
     required Document document,
     required List<SourceLine> lines,
@@ -99,20 +147,14 @@ final class LineHints {
   }) {
     final spans = <String, List<LineSpan>>{};
     final taskIds = <String, String>{};
-    final starts = <int>[];
-    final ids = <String>[];
-    var offset = bodyOffset;
-    var index = 0;
-    for (final node in document) {
-      starts.add(offset);
-      ids.add(node.id);
-      final line = lines[index];
-      offset += line.text.length;
-      if (index < lines.length - 1) {
-        offset += line.eol.isEmpty ? newline.length : line.eol.length;
-      }
-      index++;
-    }
+    final directions = <String, TextDirection>{};
+    final starts = lineStartsOf(
+      document,
+      lines,
+      newline: newline,
+      bodyOffset: bodyOffset,
+    );
+    final ids = [for (final node in document) node.id];
     for (final hint in hints) {
       if (hint.kind == HintKind.frontmatter) continue;
       for (var i = 0; i < ids.length; i++) {
@@ -122,21 +164,32 @@ final class LineHints {
         if (hint.start == lineEnd && hint.end > lineEnd) continue;
         final start = (hint.start - lineStart).clamp(0, lines[i].text.length);
         final end = (hint.end - lineStart).clamp(0, lines[i].text.length);
-        if (end <= start) continue;
-        (spans[ids[i]] ??= []).add(LineSpan(hint.kind, start, end));
-      }
-    }
-    for (final entry in spans.entries) {
-      final isTask = entry.value.any((s) => s.kind == HintKind.taskLine);
-      if (!isTask) continue;
-      final line = lines[ids.indexOf(entry.key)].text;
-      for (final span in entry.value) {
-        if (span.kind == HintKind.blockId && span.end - span.start > 1) {
-          taskIds[entry.key] = line.substring(span.start + 1, span.end);
+        switch (hint.kind) {
+          case HintKind.rtlLine:
+            directions[ids[i]] = TextDirection.rtl;
+            continue;
+          case HintKind.ltrLine:
+            directions[ids[i]] = TextDirection.ltr;
+            continue;
+          case HintKind.taskLine:
+            if (hint.taskId case final id?) taskIds[ids[i]] = id;
+          default:
+            break;
         }
+        if (end <= start && hint.kind != HintKind.taskLine) continue;
+        (spans[ids[i]] ??= []).add(
+          LineSpan(
+            hint.kind,
+            start,
+            end,
+            targetId: hint.targetId,
+            targetAnchor: hint.targetAnchor,
+            level: hint.level,
+          ),
+        );
       }
     }
-    return LineHints(spans: spans, taskIds: taskIds);
+    return LineHints(spans: spans, taskIds: taskIds, directions: directions);
   }
 
   /// Spans per node ID.
@@ -145,8 +198,15 @@ final class LineHints {
   /// Task block IDs per node ID of a task line.
   final Map<String, String> taskIds;
 
+  /// The core's direction per node ID.
+  final Map<String, TextDirection> directions;
+
   /// The spans of the line [nodeId].
   List<LineSpan> of(String nodeId) => spans[nodeId] ?? const [];
+
+  /// The direction of the line [nodeId] (`null`: the core sent none, e.g. a
+  /// line without a strong character or not hinted yet).
+  TextDirection? directionOf(String nodeId) => directions[nodeId];
 
   /// Whether [nodeId] is a task line.
   bool isTaskLine(String nodeId) =>

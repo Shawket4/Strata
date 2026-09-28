@@ -5,10 +5,11 @@ import 'package:strata_ui/strata_ui.dart';
 
 /// The formatting toolbar shown above the keyboard on phones (NoteCompact):
 /// undo, heading, bold, italic, list, checklist, wikilink, mention, tag,
-/// "open link" when the caret is in a link, and hide keyboard.
+/// "open link" when the caret is in a resolved link, live preview on/off,
+/// and hide keyboard.
 ///
-/// Each button types markdown characters on the user's behalf; autocomplete
-/// then takes over for `[[`, `@` and `#`.
+/// Each button types markdown characters on the user's behalf; the core's
+/// completions then take over for `[[`, `@` and `#`.
 class FormattingToolbar extends StatelessWidget {
   /// Creates the toolbar for [controller].
   const new({
@@ -21,8 +22,8 @@ class FormattingToolbar extends StatelessWidget {
   /// The editing session.
   final NoteEditorController controller;
 
-  /// Opens the wikilink under the caret.
-  final ValueChanged<String>? onOpenLink;
+  /// Opens the wikilink under the caret (the target the core resolved).
+  final OpenNoteAt? onOpenLink;
 
   /// Hides the on-screen keyboard.
   final VoidCallback? onHideKeyboard;
@@ -32,6 +33,7 @@ class FormattingToolbar extends StatelessWidget {
     final l10n = EditorLocalizations.of(context);
     final colors = context.strataColors;
     final link = controller.linkAtCaret;
+    final target = link?.targetId;
     Widget tool(IconData icon, String label, VoidCallback? onPressed) =>
         IconButton(
           tooltip: label,
@@ -58,11 +60,11 @@ class FormattingToolbar extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s1),
           child: Row(
             children: [
-              if (link != null)
+              if (link != null && target != null)
                 tool(
                   Icons.open_in_new,
                   l10n.toolOpenLink,
-                  () => onOpenLink?.call(link),
+                  () => onOpenLink?.call(target, link.targetAnchor),
                 ),
               tool(Icons.undo, l10n.toolUndo, controller.undo),
               separator(),
@@ -107,6 +109,7 @@ class FormattingToolbar extends StatelessWidget {
                 () => controller.insertAtCaret('#'),
               ),
               separator(),
+              LivePreviewToggle(controller: controller),
               tool(
                 Icons.keyboard_hide_outlined,
                 l10n.toolHideKeyboard,
@@ -120,43 +123,56 @@ class FormattingToolbar extends StatelessWidget {
   }
 }
 
-/// The note's status line ("Saved", "Unsaved changes", "Saved on this
-/// device · 1 change to sync", "Conflict"), mapped 1:1 from
-/// [NoteEditStatus].
-class NoteStatusLabel extends StatelessWidget {
-  /// Creates the label.
-  const new({required this.status, required this.pendingOps, super.key});
+/// Live preview on / off: markdown markers hidden off the caret line, or
+/// the source as typed.
+class LivePreviewToggle extends StatelessWidget {
+  /// Creates the toggle for [controller].
+  const new({required this.controller, super.key});
 
-  /// The status.
-  final NoteEditStatus status;
-
-  /// Ops waiting to sync (from the note's sync state).
-  final int pendingOps;
+  /// The editing session.
+  final NoteEditorController controller;
 
   @override
   Widget build(BuildContext context) {
     final l10n = EditorLocalizations.of(context);
     final colors = context.strataColors;
-    final (label, color, icon) = switch (status) {
-      NoteEditStatus.saved => (
-        l10n.statusSaved,
-        colors.successText,
-        Icons.check,
-      ),
-      NoteEditStatus.unsaved => (
-        l10n.statusUnsaved,
-        colors.text2,
-        Icons.edit_outlined,
-      ),
-      NoteEditStatus.pending => (
-        l10n.statusPending(count: pendingOps),
-        colors.text2,
-        Icons.cloud_upload_outlined,
-      ),
-      NoteEditStatus.conflict => (
-        l10n.statusConflict,
-        colors.dangerText,
-        Icons.error_outline,
+    final on = controller.livePreview;
+    return IconButton(
+      tooltip: on ? l10n.showMarkdown : l10n.hideMarkdown,
+      isSelected: !on,
+      icon: const Icon(Icons.code),
+      color: colors.text,
+      onPressed: () => controller.livePreview = !on,
+    );
+  }
+}
+
+/// The note's status line: "Unsaved changes" while the editor holds text
+/// the core does not have, else the core's ready line (`NoteSyncState.label`:
+/// "Saved", "Saved on this device · 1 change to sync", "Conflict"…), with
+/// the icon and tone of [status].
+class NoteStatusLabel extends StatelessWidget {
+  /// Creates the label.
+  const new({required this.status, required this.label, super.key});
+
+  /// The status.
+  final NoteEditStatus status;
+
+  /// The core's status line.
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = EditorLocalizations.of(context);
+    final colors = context.strataColors;
+    final (color, icon) = switch (status) {
+      NoteEditStatus.saved => (colors.successText, Icons.check),
+      NoteEditStatus.unsaved => (colors.text2, Icons.edit_outlined),
+      NoteEditStatus.pending => (colors.text2, Icons.cloud_upload_outlined),
+      NoteEditStatus.conflict => (colors.dangerText, Icons.error_outline),
+      NoteEditStatus.duplicate => (
+        colors.warningText,
+        Icons.content_copy_outlined,
       ),
     };
     return Row(
@@ -166,7 +182,7 @@ class NoteStatusLabel extends StatelessWidget {
         const SizedBox(width: StrataSpacing.s1 + 2),
         Flexible(
           child: Text(
-            label,
+            status == NoteEditStatus.unsaved ? l10n.statusUnsaved : label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: context.strataText.caption.copyWith(color: color),

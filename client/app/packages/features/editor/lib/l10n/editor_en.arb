@@ -8,27 +8,9 @@
   "@editorBodyLabel": {
     "description": "Semantics label of the markdown editor area."
   },
-  "statusSaved": "Saved",
-  "@statusSaved": {
-    "description": "Note status: the note has no local changes waiting."
-  },
   "statusUnsaved": "Unsaved changes",
   "@statusUnsaved": {
     "description": "Note status: the editor has edits that were not saved yet."
-  },
-  "statusPending": "{count, plural, =1{Saved on this device · 1 change to sync} other{Saved on this device · {count} changes to sync}}",
-  "@statusPending": {
-    "description": "Note status: saved locally, ops waiting to sync.",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "example": "1"
-      }
-    }
-  },
-  "statusConflict": "Conflict",
-  "@statusConflict": {
-    "description": "Note status: an edit conflicts with the server."
   },
   "conflictBannerTitle": "This note was also changed on the server",
   "@conflictBannerTitle": {
@@ -142,41 +124,9 @@
   "@suggestionsLabel": {
     "description": "Semantics label of the autocomplete panel."
   },
-  "suggestionsPeople": "People",
-  "@suggestionsPeople": {
-    "description": "Autocomplete section: people."
-  },
-  "suggestionsCompanies": "Companies",
-  "@suggestionsCompanies": {
-    "description": "Autocomplete section: companies."
-  },
-  "suggestionsNotes": "Notes",
-  "@suggestionsNotes": {
-    "description": "Autocomplete section: notes."
-  },
-  "suggestionsLoading": "Searching…",
-  "@suggestionsLoading": {
-    "description": "Autocomplete: results are loading."
-  },
   "suggestionsNone": "No matches",
   "@suggestionsNone": {
     "description": "Autocomplete: nothing matches."
-  },
-  "suggestionsTypeToSearch": "Type to search",
-  "@suggestionsTypeToSearch": {
-    "description": "Autocomplete: the query is still empty."
-  },
-  "suggestionsTagsUnavailable": "Tag suggestions aren't available yet.",
-  "@suggestionsTagsUnavailable": {
-    "description": "Autocomplete: the core has no tag list yet."
-  },
-  "suggestionsBlocksUnavailable": "Block references can't be listed yet.",
-  "@suggestionsBlocksUnavailable": {
-    "description": "Block reference picker: the core has no block list yet."
-  },
-  "suggestionsSearchUnavailable": "Search isn't available right now.",
-  "@suggestionsSearchUnavailable": {
-    "description": "Autocomplete: search is unavailable."
   },
   "suggestionsDismiss": "Dismiss suggestions",
   "@suggestionsDismiss": {
@@ -193,5 +143,29 @@
   "shortcutSave": "Save",
   "@shortcutSave": {
     "description": "Keyboard shortcut description: save."
+  },
+  "suggestionsKindWikiLink": "Notes",
+  "@suggestionsKindWikiLink": {
+    "description": "Completions heading for [[ links."
+  },
+  "suggestionsKindMention": "People and companies",
+  "@suggestionsKindMention": {
+    "description": "Completions heading for @ mentions."
+  },
+  "suggestionsKindTag": "Tags",
+  "@suggestionsKindTag": {
+    "description": "Completions heading for # tags."
+  },
+  "suggestionsKindBlock": "Blocks",
+  "@suggestionsKindBlock": {
+    "description": "Completions heading for [[Note#^ block references."
+  },
+  "showMarkdown": "Show markdown",
+  "@showMarkdown": {
+    "description": "Live preview toggle (turns preview off)."
+  },
+  "hideMarkdown": "Hide markdown",
+  "@hideMarkdown": {
+    "description": "Live preview toggle (turns preview on)."
   }
 }

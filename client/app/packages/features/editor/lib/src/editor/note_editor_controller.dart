@@ -6,65 +6,6 @@ import 'package:strata_editor/src/source/source_document.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:super_editor/super_editor.dart';
 
-/// Which autocomplete the characters before the caret ask for.
-enum TriggerKind {
-  /// `[[query` — note links (core search).
-  wikilink,
-
-  /// `[[Note#^` — block reference picker.
-  blockReference,
-
-  /// `@query` — people and companies (core directory).
-  mention,
-
-  /// `#query` — tags.
-  tag,
-}
-
-/// The token being completed: its kind, the line it is on and its range
-/// (the trigger characters included), and the text typed after the trigger.
-@immutable
-final class EditorTrigger {
-  /// Creates a trigger.
-  const new({
-    required this.kind,
-    required this.nodeId,
-    required this.start,
-    required this.end,
-    required this.query,
-  });
-
-  /// Kind.
-  final TriggerKind kind;
-
-  /// The line (paragraph node) holding the token.
-  final String nodeId;
-
-  /// Start of the token (the trigger characters).
-  final int start;
-
-  /// End of the token (the caret).
-  final int end;
-
-  /// What the user typed after the trigger characters.
-  final String query;
-
-  @override
-  bool operator ==(Object other) =>
-      other is EditorTrigger &&
-      other.kind == kind &&
-      other.nodeId == nodeId &&
-      other.start == start &&
-      other.end == end &&
-      other.query == query;
-
-  @override
-  int get hashCode => Object.hash(kind, nodeId, start, end, query);
-
-  @override
-  String toString() => 'EditorTrigger($kind, "$query")';
-}
-
 /// What the note's status line shows, mapped 1:1 from the note's sync state
 /// and whether the editor holds unsaved text.
 enum NoteEditStatus {
@@ -79,12 +20,15 @@ enum NoteEditStatus {
 
   /// An edit conflicts with the server.
   conflict,
+
+  /// Creating the note found an existing one ("Already exists").
+  duplicate,
 }
 
 /// The editing session of one note: the `super_editor` [Editor] over the
 /// note's markdown source (see `MarkdownSource`), the core's hints placed on
-/// its lines, and the intents the editor forwards (save, task toggles,
-/// mentions).
+/// its lines, the core's completions at the caret, and the intents the
+/// editor forwards (save, task toggles, mentions).
 ///
 /// Holds only ephemeral editing state (the text being typed); the note
 /// itself always comes from the core (PLAN L15).
@@ -105,7 +49,10 @@ final class NoteEditorController extends ChangeNotifier {
   List<EditorHint> _hints = const [];
   String _hintedContent = '';
   String _content = '';
-  EditorTrigger? _trigger;
+  Completions? _completions;
+  int _completionRequest = 0;
+  String? _caretNodeId;
+  bool _livePreview = true;
   bool _saving = false;
   int _generation = 0;
 
@@ -139,8 +86,24 @@ final class NoteEditorController extends ChangeNotifier {
   /// Whether a save is running.
   bool get isSaving => _saving;
 
-  /// The autocomplete token at the caret, if any.
-  EditorTrigger? get trigger => _trigger;
+  /// The core's completions at the caret (`editor_completions`), while
+  /// there is something to complete.
+  Completions? get completions => _completions;
+
+  /// The line holding the caret (its markdown markers stay visible).
+  String? get caretNodeId => _caretNodeId;
+
+  /// Live preview: markdown markers (`**`, `#`, `[[`…) are hidden on every
+  /// line but the caret's. Off: the source is shown as typed.
+  bool get livePreview => _livePreview;
+
+  /// Turns live preview on or off.
+  set livePreview(bool value) {
+    if (value == _livePreview) return;
+    _livePreview = value;
+    _generation++;
+    notifyListeners();
+  }
 
   /// The status line state.
   NoteEditStatus get status {
@@ -152,7 +115,8 @@ final class NoteEditorController extends ChangeNotifier {
     if (isDirty) return NoteEditStatus.unsaved;
     return switch (note.sync_.kind) {
       NoteSyncKind.synced => NoteEditStatus.saved,
-      NoteSyncKind.pending || NoteSyncKind.duplicate => NoteEditStatus.pending,
+      NoteSyncKind.pending => NoteEditStatus.pending,
+      NoteSyncKind.duplicate => NoteEditStatus.duplicate,
       NoteSyncKind.conflict => NoteEditStatus.conflict,
     };
   }
@@ -191,12 +155,16 @@ final class NoteEditorController extends ChangeNotifier {
   String _joined() =>
       '$_frontmatter${MarkdownSource.joinLines(linesOf(_document), _newline)}';
 
-  void _load(NoteView note) {
-    final source = MarkdownSource.parse(note.content, note.hints);
+  void _load(NoteView note) => _loadContent(note.content, note.hints);
+
+  void _loadContent(String content, List<EditorHint> hints) {
+    final source = MarkdownSource.parse(content, hints);
     _frontmatter = source.frontmatter;
     _newline = source.newline;
     _document = documentOf(source);
-    _composer = MutableDocumentComposer();
+    _composer = MutableDocumentComposer()
+      ..selectionNotifier.addListener(_onSelection);
+    _caretNodeId = null;
     _editor?.dispose();
     _editor = Editor(
       editables: {Editor.documentKey: _document, Editor.composerKey: _composer},
@@ -207,17 +175,30 @@ final class NoteEditorController extends ChangeNotifier {
       isHistoryEnabled: true,
     )..addListener(FunctionalEditListener(_onEdit));
     _content = source.content;
-    _trigger = null;
-    _applyHints(note.content, note.hints);
+    _completions = null;
+    _applyHints(content, hints);
   }
 
   void _onEdit(List<EditEvent> changes) {
     final content = _joined();
     final changed = content != _content;
     _content = content;
-    _trigger = _detectTrigger();
-    if (changed) unawaited(_refreshHints());
+    if (changed) {
+      unawaited(_refreshHints());
+      unawaited(_refreshCompletions());
+    }
     notifyListeners();
+  }
+
+  void _onSelection() {
+    final node = _composer.selection?.extent.nodeId;
+    if (node != _caretNodeId) {
+      // The markers of the line the caret left hide, the new line's show.
+      _caretNodeId = node;
+      _generation++;
+      notifyListeners();
+    }
+    if (_completions != null) unawaited(_refreshCompletions());
   }
 
   Future<void> _refreshHints() async {
@@ -244,6 +225,37 @@ final class NoteEditorController extends ChangeNotifier {
       bodyOffset: _frontmatter.length,
       hints: hints,
     );
+  }
+
+  List<int> _lineStarts() => lineStartsOf(
+    _document,
+    linesOf(_document),
+    newline: _newline,
+    bodyOffset: _frontmatter.length,
+  );
+
+  /// The caret as a UTF-16 offset into [content] (`null` without a caret).
+  int? get caretOffset {
+    final caret = _caret();
+    if (caret == null) return null;
+    final index = _document.getNodeIndexById(caret.$1);
+    if (index < 0) return null;
+    return _lineStarts()[index] + caret.$2;
+  }
+
+  /// The line and offset in it of [offset] into [content] (`null`: inside
+  /// the frontmatter or past the end).
+  (String, int)? positionOf(int offset) {
+    final starts = _lineStarts();
+    final lines = linesOf(_document);
+    final nodes = _document.toList();
+    for (var i = 0; i < nodes.length; i++) {
+      final start = starts[i];
+      if (offset >= start && offset <= start + lines[i].text.length) {
+        return (nodes[i].id, offset - start);
+      }
+    }
+    return null;
   }
 
   /// The hints the current line placement was computed from.
@@ -300,79 +312,96 @@ final class NoteEditorController extends ChangeNotifier {
   }
 
   // ---------------------------------------------------------------------------
-  // Autocomplete
+  // Completions (the core decides what the text at the caret asks for)
   // ---------------------------------------------------------------------------
 
-  EditorTrigger? _detectTrigger() {
-    final selection = _composer.selection;
-    if (selection == null || !selection.isCollapsed) return null;
-    final position = selection.extent.nodePosition;
-    if (position is! TextNodePosition) return null;
-    final node = _document.getNodeById(selection.extent.nodeId);
-    if (node is! TextNode) return null;
-    final text = node.text.toPlainText();
-    final caret = position.offset.clamp(0, text.length);
-    final before = text.substring(0, caret);
-    final open = before.lastIndexOf('[[');
-    if (open >= 0 && !before.substring(open).contains(']]')) {
-      final query = before.substring(open + 2);
-      return EditorTrigger(
-        kind: query.contains('#^')
-            ? TriggerKind.blockReference
-            : TriggerKind.wikilink,
-        nodeId: node.id,
-        start: open,
-        end: caret,
-        query: query,
-      );
+  Future<void> _refreshCompletions() async {
+    final note = _note;
+    final cursor = caretOffset;
+    final request = ++_completionRequest;
+    if (note == null || cursor == null) {
+      _setCompletions(null);
+      return;
     }
-    for (var i = before.length - 1; i >= 0; i--) {
-      final char = before[i];
-      if (char.trim().isEmpty) return null;
-      if (char != '@' && char != '#') continue;
-      if (i > 0 && before[i - 1].trim().isNotEmpty) return null;
-      return EditorTrigger(
-        kind: char == '@' ? TriggerKind.mention : TriggerKind.tag,
-        nodeId: node.id,
-        start: i,
-        end: caret,
-        query: before.substring(i + 1),
+    try {
+      final completions = await core.editorCompletions(
+        noteId: note.id,
+        content: _content,
+        cursor: cursor,
       );
+      if (request != _completionRequest) return;
+      _setCompletions(
+        completions.kind == CompletionKind.none ? null : completions,
+      );
+    } on Object {
+      // Completions are a convenience; the next edit asks again.
+      if (request == _completionRequest) _setCompletions(null);
     }
-    return null;
   }
 
-  /// Closes the autocomplete panel until the next edit.
-  void dismissTrigger() {
-    if (_trigger == null) return;
-    _trigger = null;
+  void _setCompletions(Completions? completions) {
+    if (completions == _completions) return;
+    _completions = completions;
     notifyListeners();
   }
 
-  /// Completes a `[[` link with [title] (the note title the core's search
-  /// returned) and closes it.
-  void completeWikilink(String title) {
-    final trigger = _trigger;
-    if (trigger == null) return;
-    _replace(trigger.nodeId, trigger.start + 2, trigger.end, '$title]]');
+  /// Closes the completions until the next edit.
+  void dismissCompletions() {
+    _completionRequest++;
+    _setCompletions(null);
   }
 
-  /// Replaces the `@query` token with a link to [entity] and asks the core
-  /// to add the entity to the note's `people:` or `companies:` relation
-  /// ([relationKey]).
-  Future<void> completeMention(
-    DirectoryItem entity, {
-    required String relationKey,
-  }) async {
-    final trigger = _trigger;
+  /// Applies [item] of the current completions: a mention goes through the
+  /// core (`insert_mention`: the link and the `people:` / `companies:`
+  /// entry in one content change, saved at once); any other item replaces
+  /// the typed range with the core's `insert_text`.
+  Future<void> applyCompletion(CompletionItem item) async {
+    final completions = _completions;
     final note = _note;
-    if (trigger == null || note == null) return;
-    _replace(trigger.nodeId, trigger.start, trigger.end, '[[${entity.title}]]');
-    await core.addRelation(
-      srcId: note.id,
-      dstId: entity.id,
-      relType: relationKey,
-    );
+    if (completions == null || note == null) return;
+    dismissCompletions();
+    if (completions.kind == CompletionKind.mention) {
+      final entity = item.targetId;
+      if (entity == null) return;
+      final edit = await core.insertMention(
+        noteId: note.id,
+        content: _content,
+        start: completions.replaceStart,
+        end: completions.replaceEnd,
+        entityId: entity,
+      );
+      await _replaceContent(edit.content, edit.cursor);
+      await save();
+      return;
+    }
+    final start = positionOf(completions.replaceStart);
+    final end = positionOf(completions.replaceEnd);
+    if (start == null || end == null || start.$1 != end.$1) return;
+    _replace(start.$1, start.$2, end.$2, item.insertText);
+  }
+
+  /// Replaces the whole markdown with [content] (a core edit that touches
+  /// the frontmatter too) and places the caret at [cursor].
+  Future<void> _replaceContent(String content, int cursor) async {
+    final hints = await core.editorHints(content: content);
+    _loadContent(content, hints);
+    final at = positionOf(cursor);
+    if (at != null) {
+      _editor?.execute([
+        ChangeSelectionRequest(
+          DocumentSelection.collapsed(
+            position: DocumentPosition(
+              nodeId: at.$1,
+              nodePosition: TextNodePosition(offset: at.$2),
+            ),
+          ),
+          SelectionChangeType.placeCaret,
+          SelectionReason.userInteraction,
+        ),
+      ]);
+    }
+    _generation++;
+    notifyListeners();
   }
 
   void _replace(String nodeId, int start, int end, String text) {
@@ -398,7 +427,6 @@ final class NoteEditorController extends ChangeNotifier {
         SelectionReason.userInteraction,
       ),
     ]);
-    _trigger = null;
     notifyListeners();
   }
 
@@ -406,13 +434,12 @@ final class NoteEditorController extends ChangeNotifier {
   // Formatting (typing markdown characters on the user's behalf)
   // ---------------------------------------------------------------------------
 
-  /// Inserts [text] at the caret (e.g. `[[`, `@`, `#` from the toolbar).
+  /// Inserts [text] at the caret (e.g. `[[`, `@`, `#` from the toolbar);
+  /// the core's completions follow.
   void insertAtCaret(String text) {
     final caret = _caret();
     if (caret == null) return;
     _replace(caret.$1, caret.$2, caret.$2, text);
-    _trigger = _detectTrigger();
-    notifyListeners();
   }
 
   /// Inserts [marker] at the start of the caret's line (`# `, `- `,
@@ -500,20 +527,17 @@ final class NoteEditorController extends ChangeNotifier {
     return (selection.extent.nodeId, position.offset);
   }
 
-  /// The raw link source (`[[…]]` / `![[…]]`) of the wikilink or embed hint
-  /// at [offset] of line [nodeId], if any.
-  String? linkAt(String nodeId, int offset) {
+  /// The wikilink or embed hint at [offset] of line [nodeId] whose target
+  /// the core resolved (`target_id`, `target_anchor`), if any.
+  LineSpan? linkAt(String nodeId, int offset) {
     final span =
         _lineHints.at(nodeId, offset, HintKind.wikiLink) ??
         _lineHints.at(nodeId, offset, HintKind.embed);
-    if (span == null) return null;
-    final node = _document.getNodeById(nodeId);
-    if (node is! TextNode) return null;
-    return node.text.toPlainText().substring(span.start, span.end);
+    return span?.targetId == null ? null : span;
   }
 
-  /// The wikilink under the caret, if any.
-  String? get linkAtCaret {
+  /// The resolved wikilink under the caret, if any.
+  LineSpan? get linkAtCaret {
     final caret = _caret();
     return caret == null ? null : linkAt(caret.$1, caret.$2);
   }
