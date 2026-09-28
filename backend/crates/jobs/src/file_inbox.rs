@@ -125,6 +125,10 @@ impl JobHandler for FileInboxHandler {
         pipeline::FILE_INBOX
     }
 
+    fn interactive(&self) -> bool {
+        true
+    }
+
     fn class(&self) -> JobClass {
         JobClass::Llm
     }

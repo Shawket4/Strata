@@ -23,8 +23,8 @@ use strata_index::UserScope;
 use strata_index::repo::jobs::{self, NewJob};
 use strata_index::types::JobStatus;
 use strata_jobs::{
-    JobClass, JobContext, JobError, JobHandler, JobNotice, JobOutcome, Runner, RunnerConfig,
-    Scheduler, StaticUsers,
+    JobClass, JobContext, JobError, JobHandler, JobNotice, JobOutcome, JobStart, Runner,
+    RunnerConfig, Scheduler, StaticUsers,
 };
 
 /// Plays the outcome listed in the payload for each attempt (`ok` after the list ends).
@@ -37,6 +37,7 @@ struct Script {
     gate: Option<Arc<tokio::sync::Semaphore>>,
     started: Option<Arc<tokio::sync::Notify>>,
     until: Option<DateTime<Utc>>,
+    interactive: bool,
 }
 
 impl Script {
@@ -49,6 +50,7 @@ impl Script {
             gate: None,
             started: None,
             until: None,
+            interactive: false,
         }
     }
 
@@ -67,6 +69,9 @@ impl JobHandler for Script {
     }
     fn max_concurrency(&self) -> usize {
         self.max
+    }
+    fn interactive(&self) -> bool {
+        self.interactive
     }
     async fn run(&self, ctx: JobContext) -> Result<(), JobError> {
         self.log
@@ -651,5 +656,85 @@ async fn jobs_that_failed_while_the_provider_was_down_run_again_once_it_works() 
     assert_eq!(job(&w, &sb, b_down).await.status, JobStatus::Queued);
     assert_eq!(job(&w, &sb, other).await.status, JobStatus::Failed);
     assert_eq!(scheduler.requeue_recovered().await, 0);
+    w.finish().await;
+}
+
+#[tokio::test]
+async fn interactive_jobs_go_first_and_always_have_a_slot() {
+    let w = World::new().await;
+    let (a, sa) = w.user("alice").await;
+    // Long background work is queued first and holds the only regular slot.
+    let gate = Arc::new(tokio::sync::Semaphore::new(0));
+    let mut slow = Script::new("digest_like", JobClass::Llm);
+    slow.gate = Some(gate.clone());
+    let slow = Arc::new(slow);
+    let mut filing = Script::new("file_like", JobClass::Llm);
+    filing.interactive = true;
+    let filing = Arc::new(filing);
+    let runner = w.runner(one_at_a_time(), vec![slow.clone(), filing.clone()]);
+    let digest = enqueue(&w, &sa, "digest_like", &[], None, 3).await;
+    enqueue(&w, &sa, "digest_like", &[], None, 3).await;
+    let kinds =
+        |c: Vec<strata_jobs::runner::Claimed>| c.into_iter().map(|c| c.kind).collect::<Vec<_>>();
+    assert_eq!(kinds(runner.tick().await), ["digest_like"]);
+
+    // A capture's filing arrives: it runs in the reserved slot while the digest still runs,
+    // and the second background job still waits.
+    let file = enqueue(&w, &sa, "file_like", &[], None, 3).await;
+    assert_eq!(kinds(runner.tick().await), ["file_like"]);
+    assert_eq!(kinds(runner.tick().await), Vec::<String>::new());
+    assert_eq!(
+        w.events.starts(),
+        [(
+            a,
+            JobStart {
+                id: file,
+                kind: "file_like".into(),
+                note_id: None,
+            }
+        )],
+        "only interactive jobs announce their start"
+    );
+    gate.add_permits(2);
+    runner.drain().await;
+    assert_eq!(kinds(runner.run_until_idle().await), ["digest_like"]);
+    assert_eq!(job(&w, &sa, digest).await.status, JobStatus::Done);
+
+    // Both queued and due: the interactive one is claimed first, though queued later.
+    enqueue(&w, &sa, "digest_like", &[], None, 3).await;
+    w.db.clock.advance(chrono::Duration::seconds(1));
+    enqueue(&w, &sa, "file_like", &[], None, 3).await;
+    gate.add_permits(1);
+    assert_eq!(
+        kinds(runner.run_until_idle().await),
+        ["file_like", "digest_like"]
+    );
+    w.finish().await;
+}
+
+#[tokio::test]
+async fn a_wake_starts_queued_work_without_waiting_for_the_poll() {
+    let w = World::new().await;
+    let (_, sa) = w.user("alice").await;
+    let started = Arc::new(tokio::sync::Notify::new());
+    let mut filing = Script::new("file_like", JobClass::Llm);
+    filing.interactive = true;
+    filing.started = Some(started.clone());
+    let runner = w.runner(
+        RunnerConfig {
+            poll_interval: Duration::from_secs(3600),
+            ..RunnerConfig::default()
+        },
+        vec![Arc::new(filing)],
+    );
+    // The loop's first pass finds nothing and waits an hour for the next poll.
+    let handle = runner.start_loop();
+    tokio::task::yield_now().await;
+    enqueue(&w, &sa, "file_like", &[], None, 3).await;
+    runner.wake();
+    tokio::time::timeout(Duration::from_secs(30), started.notified())
+        .await
+        .expect("the wake started the job long before the next poll");
+    handle.shutdown(Duration::from_secs(5)).await;
     w.finish().await;
 }

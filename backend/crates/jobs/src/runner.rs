@@ -38,7 +38,7 @@ use strata_index::{AppDb, ScopeIssuer, UserScope};
 use tokio::sync::{Notify, watch};
 use tokio::task::JoinSet;
 
-use crate::events::{JobEvents, JobNotice, JobOutcome};
+use crate::events::{JobEvents, JobNotice, JobOutcome, JobStart};
 use crate::handler::{JobClass, JobContext, JobError, JobHandler};
 use crate::recovery::LlmRecovery;
 use crate::repo;
@@ -119,6 +119,8 @@ pub struct LlmPause {
 #[derive(Debug, Default)]
 struct State {
     running_total: usize,
+    /// Running jobs of interactive kinds.
+    running_interactive: usize,
     running_kind: HashMap<&'static str, usize>,
     running_user: HashMap<UserId, usize>,
     /// Pass counter value at a user's last claim (round-robin order).
@@ -140,6 +142,8 @@ struct Inner {
     state: Mutex<State>,
     tasks: tokio::sync::Mutex<JoinSet<()>>,
     finished: Notify,
+    /// Work may have been queued (a vault commit): look now instead of at the next poll.
+    wake: Notify,
     recovery: Arc<LlmRecovery>,
 }
 
@@ -192,6 +196,7 @@ impl Runner {
                 state: Mutex::new(State::default()),
                 tasks: tokio::sync::Mutex::new(JoinSet::new()),
                 finished: Notify::new(),
+                wake: Notify::new(),
                 recovery: Arc::default(),
             }),
         }
@@ -256,10 +261,13 @@ impl Runner {
         total
     }
 
-    /// Kinds with free capacity that `user` may claim now.
+    /// Kinds with free capacity that `user` may claim now. Other work stops at
+    /// `max_concurrency`; interactive kinds may take one slot more, so there is always room
+    /// for them.
     fn claimable_kinds(&self, user: UserId, now: DateTime<Utc>) -> Vec<String> {
         let mut s = self.state();
-        if s.running_total >= self.inner.config.max_concurrency {
+        let full = s.running_total >= self.inner.config.max_concurrency;
+        if s.running_total > self.inner.config.max_concurrency {
             return Vec::new();
         }
         let today = now.date_naive();
@@ -278,8 +286,24 @@ impl Runner {
             .values()
             .filter(|h| s.running_kind.get(h.kind()).copied().unwrap_or(0) < h.max_concurrency())
             .filter(|h| !(paused && h.class() == JobClass::Llm))
+            .filter(|h| !full || h.interactive())
             .map(|h| h.kind().to_owned())
             .collect()
+    }
+
+    /// The interactive kinds (claimed before other work).
+    fn interactive_kinds(&self) -> Vec<String> {
+        self.inner
+            .handlers
+            .values()
+            .filter(|h| h.interactive())
+            .map(|h| h.kind().to_owned())
+            .collect()
+    }
+
+    /// Looks for work now (called when a vault write commits: a capture, a reply).
+    pub fn wake(&self) {
+        self.inner.wake.notify_one();
     }
 
     /// Due users in round-robin order: least recently served first, then by due time.
@@ -314,7 +338,9 @@ impl Runner {
         kinds: &[String],
     ) -> Result<Option<(Job, String)>, JobError> {
         let mut tx = self.inner.db.begin(scope).await?;
-        if let Some(job) = repo::claim_of_kinds(&mut tx, now, kinds).await? {
+        if let Some(job) =
+            repo::claim_of_kinds(&mut tx, now, kinds, &self.interactive_kinds()).await?
+        {
             let username = repo::username(&mut tx).await?.unwrap_or_default();
             tx.commit().await?;
             return Ok(Some((job, username)));
@@ -341,15 +367,18 @@ impl Runner {
         Ok(None)
     }
 
-    /// One scheduling pass: claims as many jobs as the capacity free at its start allows,
-    /// fairly across users, and starts them. Returns what it claimed.
+    /// One scheduling pass: claims as many jobs as the capacity free at its start allows
+    /// (plus the slot reserved for interactive work), fairly across users, and starts them.
+    /// Returns what it claimed.
     pub async fn tick(&self) -> Vec<Claimed> {
         let now = self.inner.clock.now();
-        let budget = self
-            .inner
-            .config
-            .max_concurrency
-            .saturating_sub(self.state().running_total);
+        let max = self.inner.config.max_concurrency;
+        let running = self.state().running_total;
+        // Regular slots free now; with none free, the one reserved for interactive work.
+        let budget = match max.saturating_sub(running) {
+            0 if running == max => 1,
+            n => n,
+        };
         let mut claimed = Vec::new();
         if budget == 0 {
             return claimed;
@@ -362,7 +391,7 @@ impl Runner {
             for user in active {
                 let kinds = self.claimable_kinds(user, now);
                 if kinds.is_empty() {
-                    if self.state().running_total >= self.inner.config.max_concurrency {
+                    if self.state().running_total > self.inner.config.max_concurrency {
                         return claimed;
                     }
                     continue;
@@ -398,9 +427,13 @@ impl Runner {
             return;
         };
         let kind = handler.kind();
+        let interactive = handler.interactive();
         {
             let mut s = self.state();
             s.running_total += 1;
+            if interactive {
+                s.running_interactive += 1;
+            }
             *s.running_kind.entry(kind).or_insert(0) += 1;
             *s.running_user.entry(scope.user_id()).or_insert(0) += 1;
             s.served_counter += 1;
@@ -413,6 +446,16 @@ impl Runner {
                     _ => (today, 1),
                 });
             }
+        }
+        if interactive {
+            self.inner.events.job_started(
+                scope.user_id(),
+                &JobStart {
+                    id: job.id,
+                    kind: job.kind.clone(),
+                    note_id: job.note_id,
+                },
+            );
         }
         let me = self.clone();
         let ctx = JobContext {
@@ -432,6 +475,9 @@ impl Runner {
                 // The job may have queued follow-up work for its user: look again.
                 s.skip_until.remove(&scope.user_id());
                 s.running_total = s.running_total.saturating_sub(1);
+                if interactive {
+                    s.running_interactive = s.running_interactive.saturating_sub(1);
+                }
                 if let Some(n) = s.running_kind.get_mut(kind) {
                     *n = n.saturating_sub(1);
                 }
@@ -579,6 +625,7 @@ impl Runner {
                 tokio::select! {
                     _ = stop_rx.changed() => {}
                     () = me.inner.finished.notified() => {}
+                    () = me.inner.wake.notified() => {}
                     () = tokio::time::sleep(wait) => {}
                 }
             }

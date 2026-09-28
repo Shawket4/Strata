@@ -4,6 +4,13 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Owner decision: the AI answers captures, replies and corrections at once, reported over `/events`
+Picked over a per-request stream and over adding SSE (which would change L21). Captures, replies to suggestions and corrections still travel as outbox ops (so they work offline); once on the server:
+- **Interactive jobs** (`file_inbox`, `suggestion_reply`, `correct`) are claimed before any other due work and may use one slot beyond `jobs.max_concurrency`, so they never wait behind nightly or weekly jobs. Other work still stops at `max_concurrency`.
+- **No poll wait:** every vault commit wakes the job runner (the 5 s poll stays as a fallback), so a pushed capture starts filing immediately.
+- **Progress on `/events`:** new `job.started` for interactive jobs, followed by the existing `job.completed` / `job.failed`; the results (filed note, new suggestion, thread answer) arrive as the usual note/suggestion events and pull.
+- **Forward compatibility (implementation gap filled):** the core decodes event payloads itself; an event type it does not know counts as a change to pull instead of ending the stream. Apps built before this change do not know `job.started` and reconnect in a loop on it until updated.
+
 ### Owner decision: admins skip every AI budget cap
 Picked over "exempt from the per-user cap only" and "remove budgets for everyone". The per-user and global daily token/cost caps (`[budgets]`) no longer pause an admin; an admin's calls are still recorded in `ai_usage` and count toward the global total that pauses other users. `GET /ai/status` reports zero (no) limits to an admin, and Settings → AI says "No daily limit". The provider's own usage limit (the `claude` subscription pause) still applies to everyone: the server cannot lift it.
 

@@ -3,8 +3,9 @@
 //! - the job runner over the standard handlers (`embed`, `embed_backfill`, `summarize`,
 //!   `dedupe`, and the AI pipelines `link`, `file_inbox`, `entity_insights`,
 //!   `entity_insights_sweep`, `correct`, `suggestion_reply`, `digest` with the thresholds of
-//!   `[thresholds]`), fair across users, publishing `job.completed` / `job.failed` to the event
-//!   bus;
+//!   `[thresholds]`), fair across users, publishing `job.started` (interactive kinds),
+//!   `job.completed` and `job.failed` to the event bus, and woken by every vault commit so a
+//!   capture or a reply is picked up at once instead of at the next poll;
 //! - the scheduler (nightly `dedupe` and `entity_insights_sweep` at `jobs.nightly_hour` in
 //!   `default_timezone`, the weekly `digest` on `jobs.digest_weekday`, checked hourly) and, with
 //!   embeddings, one `embed_backfill` per user at start (first import and model changes);
@@ -23,9 +24,10 @@ use strata_index::{AccountsDb, AppDb, ScopeIssuer};
 use strata_jobs::ask::{AskConfig, AskEngine};
 use strata_jobs::retrieval::Retriever;
 use strata_jobs::{
-    Deps, JobEvents, JobNotice, JobOutcome, Runner, RunnerConfig, Scheduler, UserDirectory,
+    Deps, JobEvents, JobNotice, JobOutcome, JobStart, Runner, RunnerConfig, Scheduler,
+    UserDirectory,
 };
-use strata_vault::VaultService;
+use strata_vault::{CommitListener, Committed, VaultService};
 use tokio::task::JoinHandle;
 
 use crate::ai::AiParts;
@@ -47,6 +49,34 @@ impl JobEvents for BusEvents {
             JobOutcome::Failed => Event::JobFailed { id, kind, note_id },
         };
         self.0.publish(user, [event]);
+    }
+
+    fn job_started(&self, user: UserId, start: &JobStart) {
+        self.0.publish(
+            user,
+            [Event::JobStarted {
+                id: start.id.as_ulid(),
+                kind: start.kind.clone(),
+                note_id: start.note_id.map(|n| n.as_ulid()),
+            }],
+        );
+    }
+}
+
+/// The vault's commit listener: the event bus first, then a wake-up for the job runner (the
+/// commit may have queued a capture's filing or a reply's answer).
+#[derive(Debug)]
+pub struct BusAndRunner {
+    /// The event bus.
+    pub bus: Arc<EventBus>,
+    /// The job runner.
+    pub runner: Runner,
+}
+
+impl CommitListener for BusAndRunner {
+    fn committed(&self, user: UserId, notice: &Committed) {
+        self.bus.committed(user, notice);
+        self.runner.wake();
     }
 }
 
@@ -213,8 +243,12 @@ pub async fn start(
         clock.clone(),
         Arc::new(BusEvents(bus.clone())),
         RunnerConfig::from_config(config),
-        handlers(&deps, bus),
+        handlers(&deps, bus.clone()),
     );
+    vault.set_listener(Arc::new(BusAndRunner {
+        bus,
+        runner: runner.clone(),
+    }));
     let users: Arc<dyn UserDirectory> = Arc::new(AccountUsers(accounts.clone()));
     let active = users.active_users().await.unwrap_or_else(|e| {
         tracing::error!(error = %e, "listing users for the job runner failed");

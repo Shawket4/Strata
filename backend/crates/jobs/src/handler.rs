@@ -107,6 +107,13 @@ pub trait JobHandler: Send + Sync + std::fmt::Debug {
         1
     }
 
+    /// Answers something the user just did (a capture, a reply, a correction): claimed
+    /// before other due work, may use one slot beyond the runner's `max_concurrency` so it
+    /// never waits behind long background jobs, and announced with `job.started`.
+    fn interactive(&self) -> bool {
+        false
+    }
+
     /// Runs one job.
     async fn run(&self, ctx: JobContext) -> Result<(), JobError>;
 }

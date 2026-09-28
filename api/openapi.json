@@ -2563,6 +2563,40 @@
             "type": "object"
           },
           {
+            "description": "An interactive job started (filing a capture, answering a reply to a suggestion,\napplying a correction); `job.completed` or `job.failed` follows.",
+            "properties": {
+              "id": {
+                "description": "Job ID.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "kind": {
+                "description": "Job kind (`file_inbox`, `suggestion_reply`, `correct`).",
+                "type": "string"
+              },
+              "note_id": {
+                "description": "Note it works on.",
+                "format": "ulid",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "job.started"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
             "description": "A background job finished.",
             "properties": {
               "id": {

@@ -355,6 +355,10 @@ impl JobHandler for CorrectHandler {
         CORRECT
     }
 
+    fn interactive(&self) -> bool {
+        true
+    }
+
     fn class(&self) -> JobClass {
         JobClass::Llm
     }
@@ -508,6 +512,10 @@ impl ReplyHandler {
 impl JobHandler for ReplyHandler {
     fn kind(&self) -> &'static str {
         SUGGESTION_REPLY
+    }
+
+    fn interactive(&self) -> bool {
+        true
     }
 
     fn class(&self) -> JobClass {

@@ -11,12 +11,14 @@ use crate::handler::JobError;
 const COLS: &str = "id, kind, note_id, payload, status, attempts, max_attempts, run_after, \
     locked_at, last_error, dedupe_key, created, updated";
 
-/// Claims the scoped user's next runnable job among `kinds` (earliest `run_after`, then ID),
-/// skipping rows other claimers hold (`FOR UPDATE SKIP LOCKED`, PLAN §9.2).
+/// Claims the scoped user's next runnable job among `kinds` (those of `first` before the
+/// rest, then earliest `run_after`, then ID), skipping rows other claimers hold
+/// (`FOR UPDATE SKIP LOCKED`, PLAN §9.2).
 pub async fn claim_of_kinds(
     tx: &mut ScopedTx,
     now: DateTime<Utc>,
     kinds: &[String],
+    first: &[String],
 ) -> Result<Option<Job>, JobError> {
     if kinds.is_empty() {
         return Ok(None);
@@ -26,11 +28,12 @@ pub async fn claim_of_kinds(
          WHERE (user_id, id) = ( \
            SELECT user_id, id FROM jobs WHERE status = 'queued' AND run_after <= $1 \
              AND kind = ANY($2) \
-           ORDER BY run_after, id FOR UPDATE SKIP LOCKED LIMIT 1) \
+           ORDER BY kind = ANY($3) DESC, run_after, id FOR UPDATE SKIP LOCKED LIMIT 1) \
          RETURNING {COLS}"
     )))
     .bind(now)
     .bind(kinds)
+    .bind(first)
     .fetch_optional(tx.conn())
     .await?)
 }

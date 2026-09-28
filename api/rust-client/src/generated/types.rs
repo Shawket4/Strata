@@ -1624,6 +1624,18 @@ pub enum Event {
         ///Status now.
         status: SuggestionStatus,
     },
+    /**An interactive job started (filing a capture, answering a reply to a suggestion,
+    applying a correction); `job.completed` or `job.failed` follows.*/
+    #[serde(rename = "job.started")]
+    JobStarted {
+        ///Job ID.
+        id: ::ulid::Ulid,
+        ///Job kind (`file_inbox`, `suggestion_reply`, `correct`).
+        kind: ::std::string::String,
+        ///Note it works on.
+        #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+        note_id: ::std::option::Option<::ulid::Ulid>,
+    },
     ///A background job finished.
     #[serde(rename = "job.completed")]
     JobCompleted {

@@ -52,7 +52,7 @@ use strata_common::{Clock, IdGenerator};
 use strata_index::AppDb;
 use strata_vault::VaultService;
 
-pub use events::{JobEvents, JobNotice, JobOutcome, NoEvents, RecordedEvents};
+pub use events::{JobEvents, JobNotice, JobOutcome, JobStart, NoEvents, RecordedEvents};
 pub use handler::{JobClass, JobContext, JobError, JobHandler};
 pub use recovery::LlmRecovery;
 pub use runner::{Runner, RunnerConfig, RunnerHandle};

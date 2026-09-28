@@ -972,8 +972,21 @@ impl SyncApi for BrokenSyncApi {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ClientEventsApi {}
 
+/// Payloads are decoded here, not by the subscription: an event type this build does not
+/// know (a newer server's) is still a change to pull, never an error that ends the stream.
 struct ClientEventStream {
-    sub: Subscription<types::Event>,
+    sub: Subscription<rmpv::Value>,
+}
+
+/// The signal of one `/events` payload.
+fn event_signal(seq: u64, payload: rmpv::Value) -> EventSignal {
+    match rmpv::ext::from_value::<types::Event>(payload) {
+        Ok(types::Event::AccountDisabled { reason }) => EventSignal::AccountClosed {
+            seq,
+            reason: reason.to_string(),
+        },
+        Ok(_) | Err(_) => EventSignal::Changed { seq },
+    }
 }
 
 impl EventStream for ClientEventStream {
@@ -982,14 +995,7 @@ impl EventStream for ClientEventStream {
             Some(match self.sub.next().await? {
                 Err(e) => Err(classify(&e)),
                 Ok(StreamEvent::Reset { seq }) => Ok(EventSignal::Reset { seq }),
-                Ok(StreamEvent::Data {
-                    seq,
-                    payload: types::Event::AccountDisabled { reason },
-                }) => Ok(EventSignal::AccountClosed {
-                    seq,
-                    reason: reason.to_string(),
-                }),
-                Ok(StreamEvent::Data { seq, .. }) => Ok(EventSignal::Changed { seq }),
+                Ok(StreamEvent::Data { seq, payload }) => Ok(event_signal(seq, payload)),
             })
         })
     }
@@ -1003,16 +1009,19 @@ impl EventsApi for ClientEventsApi {
         resume_from: Option<u64>,
     ) -> Result<Box<dyn EventStream>, NetError> {
         let c = client(server_url, Some(tokens))?;
-        let sub = streams::events(
+        // `streams::events`, with raw payloads (see `ClientEventStream`).
+        let sub = Subscription::new(
             &c,
+            "/api/v1/events".to_owned(),
+            "events",
+            true,
             StreamOptions {
                 resume_from,
                 // The session's loop reconnects with its own backoff and resume point.
                 reconnect: false,
                 ..StreamOptions::default()
             },
-        )
-        .map_err(|e| classify(&e))?;
+        );
         Ok(Box::new(ClientEventStream { sub }))
     }
 }
@@ -1020,6 +1029,46 @@ impl EventsApi for ClientEventsApi {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn map(pairs: &[(&str, rmpv::Value)]) -> rmpv::Value {
+        rmpv::Value::Map(
+            pairs
+                .iter()
+                .map(|(k, v)| (rmpv::Value::from(*k), v.clone()))
+                .collect(),
+        )
+    }
+
+    #[test]
+    fn every_event_is_a_change_except_account_closure_and_unknown_types_do_not_fail() {
+        let started = map(&[
+            ("type", "job.started".into()),
+            ("id", "01K5DSSE0000000000000JOB01".into()),
+            ("kind", "file_inbox".into()),
+        ]);
+        let unknown = map(&[("type", "insight.drafted".into()), ("id", 7.into())]);
+        let closed = map(&[
+            ("type", "account.disabled".into()),
+            ("reason", "disabled".into()),
+        ]);
+        assert_eq!(
+            [
+                event_signal(3, started),
+                event_signal(4, unknown),
+                event_signal(5, rmpv::Value::Nil),
+                event_signal(6, closed),
+            ],
+            [
+                EventSignal::Changed { seq: 3 },
+                EventSignal::Changed { seq: 4 },
+                EventSignal::Changed { seq: 5 },
+                EventSignal::AccountClosed {
+                    seq: 6,
+                    reason: "disabled".into()
+                },
+            ]
+        );
+    }
 
     #[tokio::test]
     async fn unreachable_server_is_offline() {

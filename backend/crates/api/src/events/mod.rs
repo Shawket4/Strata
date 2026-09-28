@@ -157,6 +157,20 @@ pub enum Event {
         /// Status now.
         status: SuggestionStatus,
     },
+    /// An interactive job started (filing a capture, answering a reply to a suggestion,
+    /// applying a correction); `job.completed` or `job.failed` follows.
+    #[serde(rename = "job.started")]
+    JobStarted {
+        /// Job ID.
+        #[schema(value_type = String, format = "ulid")]
+        id: Ulid,
+        /// Job kind (`file_inbox`, `suggestion_reply`, `correct`).
+        kind: String,
+        /// Note it works on.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[schema(value_type = Option<String>, format = "ulid")]
+        note_id: Option<Ulid>,
+    },
     /// A background job finished.
     #[serde(rename = "job.completed")]
     JobCompleted {
