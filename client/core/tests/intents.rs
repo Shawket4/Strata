@@ -2,7 +2,12 @@
 //! the `/events` signals (resume, reset, account closed), the waiting-for-approval session,
 //! inbox filters and capture intents, reminders and settings, against the fake server.
 
-#![allow(clippy::expect_used, clippy::unwrap_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod common;
 
@@ -518,10 +523,7 @@ async fn shared_suggestion_payloads_map_to_the_inbox_view() {
         )
         .expect("accept");
     let queued = s.read(|c, _| outbox::all(c)).expect("outbox");
-    let accept = queued
-        .iter()
-        .find(|o| o.op_id.to_string() == op)
-        .expect("op");
+    let accept = queued.iter().find(|o| o.op_id == op).expect("op");
     match &accept.op {
         Op::SuggestionAccept(a) => {
             let e = a.edits.as_ref().expect("edits");
@@ -535,7 +537,7 @@ async fn shared_suggestion_payloads_map_to_the_inbox_view() {
     let relink = s.request_relink(SRC).expect("relink");
     let queued = s.read(|c, _| outbox::all(c)).expect("outbox");
     assert!(matches!(
-        queued.iter().find(|o| o.op_id.to_string() == relink).map(|o| &o.op),
+        queued.iter().find(|o| o.op_id == relink).map(|o| &o.op),
         Some(Op::RelinkRequest(r)) if r.id == ulid(SRC)
     ));
 }

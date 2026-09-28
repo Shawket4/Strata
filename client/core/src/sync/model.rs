@@ -19,6 +19,7 @@ pub use sync_model::{
 /// not know, or that do not match their kind's schema, are shown as [`Self::Other`] with the
 /// record's `kind`, never dropped.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::large_enum_variant)] // decoded one at a time for a view build
 pub enum DecodedPayload {
     /// A known kind.
     Known(sync_model::SuggestionPayload),

@@ -160,7 +160,7 @@ class ProposalContent extends ConsumerWidget {
             ],
           ],
         );
-      case SuggestionKind.relation:
+      case SuggestionKind.correction:
         final target = detail.target;
         final targetId = target?.id;
         final openNote = onOpenNote;
@@ -236,7 +236,7 @@ class ProposalContent extends ConsumerWidget {
             ),
           ],
         );
-      case SuggestionKind.entityLinkOrCreate:
+      case SuggestionKind.entityLink:
       case SuggestionKind.custody:
       case SuggestionKind.duplicate || SuggestionKind.duplicates:
       case SuggestionKind.unsupported || SuggestionKind.conflict:
@@ -301,7 +301,7 @@ class SuggestionCard extends HookConsumerWidget {
       StatusTone tone,
       IconData icon,
     ) = switch (detail.kind) {
-      SuggestionKind.entityLinkOrCreate => (
+      SuggestionKind.entityLink => (
         l10n.inboxNeedsYou,
         StatusTone.warning,
         Icons.person_search_outlined,
@@ -321,7 +321,7 @@ class SuggestionCard extends HookConsumerWidget {
         StatusTone.warning,
         Icons.content_copy_outlined,
       ),
-      SuggestionKind.relation => (
+      SuggestionKind.correction => (
         l10n.inboxRelationSuggestion,
         StatusTone.info,
         Icons.hub_outlined,
@@ -346,7 +346,7 @@ class SuggestionCard extends HookConsumerWidget {
     final Widget body;
     final List<Widget> actions;
     switch (detail.kind) {
-      case SuggestionKind.entityLinkOrCreate:
+      case SuggestionKind.entityLink:
         body = _LinkOrCreate(suggestion: suggestion);
         actions = [
           TextButton(
@@ -416,7 +416,7 @@ class SuggestionCard extends HookConsumerWidget {
           cancelLabel: l10n.inboxDiscard,
         );
         actions = const [];
-      case SuggestionKind.relation:
+      case SuggestionKind.correction:
       case SuggestionKind.task:
       case SuggestionKind.filing:
         body = ProposalContent(

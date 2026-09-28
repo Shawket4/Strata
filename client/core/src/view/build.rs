@@ -1431,7 +1431,7 @@ fn custody_preview(
     Option<EntityRef>,
 ) {
     use vault_format::custody::{CustodyEvent, CustodyState};
-    let link = |r: Option<&EntityRef>| r.map(|r| format!("[[{}]]", r.title));
+    let wikilink = |r: Option<&EntityRef>| r.map(|r| format!("[[{}]]", r.title));
     let Ok(kind) = p.event.parse::<domain::CustodyEventType>() else {
         return (
             format!("{} — {}", p.date.format("%Y-%m-%d"), p.event),
@@ -1443,13 +1443,13 @@ fn custody_preview(
     let event = CustodyEvent {
         date: p.date,
         kind,
-        place: link(place),
-        person: link(person),
-        counterparty: link(counterparty),
+        place: wikilink(place),
+        person: wikilink(person),
+        counterparty: wikilink(counterparty),
         citations: Vec::new(),
     };
-    let line = event.to_line();
-    let line = line.strip_prefix("- ").unwrap_or(&line).to_owned();
+    let rendered = event.to_line();
+    let line = rendered.strip_prefix("- ").unwrap_or(&rendered).to_owned();
     let state = CustodyState::derive(std::slice::from_ref(&event));
     let pick = |v: Option<&String>| -> Option<EntityRef> {
         let v = v?;

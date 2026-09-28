@@ -32,6 +32,10 @@ SuggestionDetail _detail({
   reason: reason,
   serverKind: serverKind,
   documentChoices: [],
+  entityKind: '',
+  isNickname: false,
+  quote: '',
+  entities: [],
 );
 
 SuggestionItem _suggestion(
@@ -72,7 +76,7 @@ abstract final class InboxFixtures {
   static final SuggestionItem contradicts = _suggestion(
     's-rel-contradicts',
     _detail(
-      kind: SuggestionKind.relation,
+      kind: SuggestionKind.correction,
       target: const EntityRef(
         id: 'n-discount-policy',
         title: 'Discount policy',
@@ -87,7 +91,7 @@ abstract final class InboxFixtures {
   static final SuggestionItem partOf = _suggestion(
     's-rel-part-of',
     _detail(
-      kind: SuggestionKind.relation,
+      kind: SuggestionKind.correction,
       target: const EntityRef(
         id: 'n-subscription-tiers',
         title: 'Subscription tiers',

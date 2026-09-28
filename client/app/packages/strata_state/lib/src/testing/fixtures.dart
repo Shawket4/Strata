@@ -754,6 +754,10 @@ abstract final class StrataFixtures {
     reason: '',
     serverKind: '',
     documentChoices: [],
+    entityKind: '',
+    isNickname: false,
+    quote: '',
+    entities: [],
   );
 
   /// The filing suggestion of [inboxItem].
@@ -778,7 +782,7 @@ abstract final class StrataFixtures {
     noteId: 'n-capture-baba',
     status: 'pending',
     detail: const SuggestionDetail(
-      kind: SuggestionKind.entityLinkOrCreate,
+      kind: SuggestionKind.entityLink,
       title: '',
       folder: '',
       tags: [],
@@ -790,6 +794,10 @@ abstract final class StrataFixtures {
       reason: '',
       serverKind: '',
       documentChoices: [],
+      entityKind: '',
+      isNickname: false,
+      quote: '',
+      entities: [],
     ),
     created: DateTime.utc(2026, 9, 27, 8),
     pendingSync: false,

@@ -452,13 +452,11 @@ class _SuggestionRow extends StatelessWidget {
     final text = context.strataText;
     final detail = suggestion.detail;
     final summary = switch (detail.kind) {
-      SuggestionKind.entityLinkOrCreate => l10n.inboxWhoIs(
-        mention: detail.mention,
-      ),
+      SuggestionKind.entityLink => l10n.inboxWhoIs(mention: detail.mention),
       SuggestionKind.custody || SuggestionKind.task => detail.line,
       SuggestionKind.duplicate ||
       SuggestionKind.duplicates => l10n.inboxPossibleDuplicate,
-      SuggestionKind.relation => l10n.inboxRelationSummary(
+      SuggestionKind.correction => l10n.inboxRelationSummary(
         type: context.l10n.relationTypeLabel(
           CoreLabels.relationType(detail.relType),
         ),
@@ -469,13 +467,13 @@ class _SuggestionRow extends StatelessWidget {
       SuggestionKind.conflict => detail.serverKind,
     };
     final badge = switch (detail.kind) {
-      SuggestionKind.entityLinkOrCreate => l10n.inboxNeedsYou,
+      SuggestionKind.entityLink => l10n.inboxNeedsYou,
       SuggestionKind.custody when suggestion.status == 'accepted' =>
         l10n.inboxAppliedAutomatically,
       SuggestionKind.custody => l10n.inboxCustodySuggestion,
       SuggestionKind.duplicate ||
       SuggestionKind.duplicates => l10n.inboxPossibleDuplicate,
-      SuggestionKind.relation => l10n.inboxRelationSuggestion,
+      SuggestionKind.correction => l10n.inboxRelationSuggestion,
       SuggestionKind.task => l10n.inboxTaskSuggestion,
       SuggestionKind.filing => l10n.inboxFilingProposal,
       SuggestionKind.unsupported ||

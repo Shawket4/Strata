@@ -87,7 +87,7 @@ class SuggestionCard extends ConsumerWidget {
     final text = context.strataText;
     final detail = item.detail;
     final (icon, title, body) = switch (detail.kind) {
-      SuggestionKind.entityLinkOrCreate => (
+      SuggestionKind.entityLink => (
         Icons.person_search_outlined,
         l10n.whoIs(mention: detail.mention),
         l10n.whoIsCandidates(count: detail.candidates.length),
@@ -102,7 +102,7 @@ class SuggestionCard extends ConsumerWidget {
         l10n.custodySuggestion,
         detail.line,
       ),
-      SuggestionKind.relation => (
+      SuggestionKind.correction => (
         Icons.hub_outlined,
         l10n.relationSuggestion,
         detail.reason,
@@ -194,7 +194,7 @@ class SuggestionCard extends ConsumerWidget {
                     ref.read(coreApiProvider).acceptSuggestion(id: item.id),
                   ),
                   child: Text(
-                    detail.kind == SuggestionKind.entityLinkOrCreate &&
+                    detail.kind == SuggestionKind.entityLink &&
                             detail.candidates.isEmpty
                         ? l10n.createPerson
                         : l10n.accept,
