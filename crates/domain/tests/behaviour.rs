@@ -377,3 +377,8 @@ fn stored_relation_types_map_to_graph_edge_kinds() {
         GraphEdgeKind::Document(DocumentRelationType::CopyOf)
     );
 }
+
+#[test]
+fn document_relation_frontmatter_keys_are_exact() {
+    assert_eq!(DocumentRelationType::CopyOf.frontmatter_key(), "copy-of");
+}

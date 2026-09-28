@@ -263,6 +263,11 @@ cargo mutants -p vault-format -p text-normalize -p domain --timeout 180 --no-shu
 `cargo mutants` exits non-zero when a mutant survives, which fails the job; an equivalent
 mutant is excluded explicitly (e.g. `#[mutants::skip]`) with a comment explaining why.
 
+The ≈ 2,100 mutants take hours, so CI runs them in `.github/workflows/mutants.yml`: nightly and
+on demand (Actions → Mutants → Run workflow), in 8 shards (`--shard k/8 --in-place`), each
+uploading its `mutants.out`. The first run (2026-09-28) found four survivors; tests now kill them
+(`DocumentRelationType::frontmatter_key`, the final-sigma fold, the `ؤ` unification).
+
 ### 3.9 Flutter (PLAN §16.5)
 
 From `client/app` (Melos + pub workspace):
@@ -406,9 +411,12 @@ Every other crate is above 96 %. What stays unexecuted by Rust tests and why:
 |---|---|
 | `rust` | fmt, clippy (`-D warnings`), all tests under `cargo llvm-cov nextest` with the 90 % line gate, doctests |
 | `contract` | `api/generate.sh --check` |
-| `fuzz-smoke` | every `vault-format` fuzz target for 60 s |
-| `mutants` | `cargo mutants` on `vault-format`, `text-normalize`, `domain` |
+| `fuzz-smoke` | every `vault-format` fuzz target for 60 s (nightly toolchain via `RUSTUP_TOOLCHAIN`) |
 | `flutter` | format check, analyze, logic guard, widget + golden tests |
+
+Mutation testing is its own workflow, `.github/workflows/mutants.yml` (nightly, manual; §3.8).
+Pushes to `claude/**` branches also run `ci.yml` and `build.yml` (the repository has no `main`
+yet).
 
 Release builds are a separate workflow, `.github/workflows/build.yml` (push to `main`, pull
 requests, `v*` tags, manual): `stratad-linux-x86_64`, `app-android`, `app-macos`

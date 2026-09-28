@@ -224,6 +224,46 @@ mod tests {
     }
 
     #[test]
+    fn case_folding_special_cases() {
+        let fold = |c| {
+            let mut out = String::new();
+            fold_case(c, &mut out);
+            out
+        };
+        // Final sigma is already lower case, so `to_lowercase` alone would keep it.
+        assert_eq!(fold('ς'), "σ");
+        assert_eq!(fold('Σ'), "σ");
+        assert_eq!(fold('ß'), "ss");
+        assert_eq!(fold('ẞ'), "ss");
+        assert_eq!(fold('A'), "a");
+        assert_eq!(normalize_for_search("ΟΔΟΣ οδος"), "οδοσ οδοσ");
+    }
+
+    #[test]
+    fn arabic_letters_unify_exactly() {
+        for (from, to) in [
+            ('أ', 'ا'),
+            ('إ', 'ا'),
+            ('آ', 'ا'),
+            ('ٱ', 'ا'),
+            ('ى', 'ي'),
+            ('ی', 'ي'),
+            ('ئ', 'ي'),
+            ('ة', 'ه'),
+            ('ۀ', 'ه'),
+            // NFD already splits the composed hamza forms before this runs; the table still
+            // maps them for input that reaches it unsplit.
+            ('ؤ', 'و'),
+            ('ک', 'ك'),
+            ('ڪ', 'ك'),
+        ] {
+            assert_eq!(unify_arabic_letter(from), Some(to), "{from}");
+        }
+        assert_eq!(unify_arabic_letter('ب'), None);
+        assert_eq!(unify_arabic_letter('a'), None);
+    }
+
+    #[test]
     fn digits_map_exactly() {
         assert_eq!(arabic_digit_to_ascii('٠'), Some('0'));
         assert_eq!(arabic_digit_to_ascii('٩'), Some('9'));

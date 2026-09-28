@@ -23,6 +23,9 @@ jobs:
         image: pgvector/pgvector:pg16
         env:
           POSTGRES_PASSWORD: postgres
+          # testkit connects as the password-less strata_* roles over TCP (as in the dev
+          # container); this database only ever lives for one CI job.
+          POSTGRES_HOST_AUTH_METHOD: trust
           POSTGRES_INITDB_ARGS: --locale=C.UTF-8 --encoding=UTF8
         ports: ["5432:5432"]
         options: >-
@@ -75,21 +78,12 @@ jobs:
           tool: cargo-fuzz
       - name: Run each fuzz target for 60s
         working-directory: crates/vault-format/fuzz
+        # rust-toolchain.toml pins stable for the workspace; cargo-fuzz needs nightly (-Z).
+        env:
+          RUSTUP_TOOLCHAIN: nightly
+          RUSTFLAGS: ""
         run: |
           for t in $(cargo fuzz list); do cargo fuzz run "$t" -- -max_total_time=60; done
-
-  mutants:
-    name: Mutation testing (critical crates)
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: 1.94.1
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-mutants
-      - run: cargo mutants -p vault-format -p text-normalize -p domain --timeout 180 --no-shuffle
 
   flutter:
     name: Flutter (analyze, logic guard, widget + golden tests)
