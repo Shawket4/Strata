@@ -218,18 +218,32 @@ impl Core {
             let free =
                 id.filter(|i| !used.contains(i) && (!state.contains_id(*i) || existing_here(*i)));
             let editable = doc.frontmatter().is_none_or(|f| f.error().is_none());
-            let final_id = match free {
-                Some(i) => {
+            // The note already at this path keeps its ID (§6.4: an ID never changes), whatever
+            // ID the entry carries; the entry replaces its content.
+            let occupant = state
+                .notes
+                .get(&path)
+                .or_else(|| state.trash.get(&path))
+                .map(|m| m.id)
+                .filter(|o| !used.contains(o));
+            let final_id = match (occupant, free) {
+                (Some(o), f) if f != Some(o) && editable => {
+                    prepare::stamp(&mut doc, o, None, None)?;
+                    assigned.push(path.clone());
+                    kept_ids.insert(o);
+                    o
+                }
+                (_, Some(i)) => {
                     kept_ids.insert(i);
                     i
                 }
-                None if editable => {
+                (_, None) if editable => {
                     let i = NoteId::generate(self.ids());
                     prepare::stamp(&mut doc, i, None, None)?;
                     assigned.push(path.clone());
                     i
                 }
-                None => {
+                (_, None) => {
                     // Unreadable frontmatter: imported verbatim, indexed after an ID is given
                     // by reconciliation.
                     changes.push((path, Some(bytes)));

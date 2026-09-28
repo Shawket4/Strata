@@ -542,3 +542,57 @@ async fn regression_create_task_documents_404_for_an_unknown_note() {
     assert_eq!(h.conformance.violations(), Vec::<String>::new());
     h.finish().await;
 }
+
+/// Regression (found by this fuzzer, seeds `0x3` case 5751 and `0x4` case 4463): importing
+/// an archive entry at a path that already holds a note, without that note's ID in its
+/// frontmatter (an edited copy, a file saved by another tool), gave the entry a fresh ID, so
+/// two IDs claimed one path and the import answered `500`. The note at a path keeps its ID
+/// (PLAN §6.4: an ID never changes); the entry replaces its content in the import commit.
+#[tokio::test]
+async fn regression_import_over_an_existing_note_keeps_its_id() {
+    let h = H::with(Options::default()).await;
+    let u = h.user("alice").await;
+    let fx = populate(&h, &u, "alice text").await;
+    let zip = |name: &str, body: &str| {
+        let mut z = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        z.start_file(name, zip::write::SimpleFileOptions::default())
+            .expect("entry");
+        z.write_all(body.as_bytes()).expect("write");
+        z.finish().expect("zip").into_inner()
+    };
+    let other_id = generate::FALLBACK_ULID;
+    let cases = [
+        ("notes/Plan.md", "Replaced without an id.\n".to_owned(), fx.note.id),
+        ("notes/Plan.md", "Replaced again.\n".to_owned(), fx.note.id),
+        (
+            "notes/Follow up.md",
+            format!("---\nid: {other_id}\n---\nCarries another id.\n"),
+            fx.other.id,
+        ),
+        ("notes/Old.md", "Over the trashed path is a new note.\n".to_owned(), ulid::Ulid::nil()),
+    ];
+    for (path, body, keeps) in cases {
+        let resp = h
+            .send(
+                Some("import_vault"),
+                &Req::new("POST", "/api/v1/import")
+                    .token(&u.token)
+                    .body(strata_api::wire::ZIP, zip(path, &body)),
+            )
+            .await;
+        assert_eq!(resp.status, 200, "{path}: {}", String::from_utf8_lossy(&resp.body));
+        let note = strata_client::operations::get_note_by_path(&u.client, path)
+            .await
+            .expect("note");
+        if !keeps.is_nil() {
+            assert_eq!(note.id, keeps, "{path} keeps its id");
+        }
+        let text = body.split("---\n").last().unwrap_or_default();
+        assert_eq!(
+            note.content,
+            format!("---\nid: {}\n---\n{text}", note.id),
+            "{path}"
+        );
+    }
+    h.finish().await;
+}

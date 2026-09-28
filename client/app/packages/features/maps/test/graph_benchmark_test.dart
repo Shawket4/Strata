@@ -195,7 +195,7 @@ void main() {
   });
 
   testWidgets('whole frame of the global map while panning', (tester) async {
-    final fake = FakeCoreApi()..globalGraphAnswer.returns(view);
+    final fake = FakeCoreApi()..globalGraphFilteredAnswer.returns(view);
     await pumpStrataScreen(
       tester,
       const Scaffold(body: GlobalMapScreen()),

@@ -359,3 +359,132 @@ async fn verify_and_reindex_work_on_a_created_users_vault() {
     ));
     db.cleanup().await.expect("cleanup");
 }
+
+/// `(hint id, entity id, text, source decision, created)` rows of `user`, as text.
+async fn hint_rows(
+    db: &TestDb,
+    user: strata_common::UserId,
+) -> Vec<(String, String, String, Option<String>, String)> {
+    sqlx::query_as(
+        "SELECT id::text, entity_id::text, hint, source_decision_id::text, \
+           to_char(created AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') \
+         FROM disambiguation_hints WHERE user_id = $1 ORDER BY created, id",
+    )
+    .bind(user.as_uuid())
+    .fetch_all(&db.superuser)
+    .await
+    .expect("hints")
+}
+
+#[tokio::test]
+async fn reindex_rebuilds_disambiguation_hints_from_entity_sidecars() {
+    use strata_common::{DecisionId, HintId, NoteId};
+
+    let db = TestDb::new().await.expect("db");
+    let dir = tempfile::tempdir().expect("tempdir");
+    let config = config_for(db.name(), dir.path());
+    let user = commands::create_user(
+        &config,
+        &CreateUser {
+            username: "owner",
+            display_name: "Owner",
+            password: "owner-password-1",
+            admin: false,
+        },
+    )
+    .await
+    .expect("created");
+    let vault = dir
+        .path()
+        .join("users")
+        .join(user.to_string())
+        .join("vault");
+    let fathy = NoteId::from_ulid(ulid::Ulid(0x0199_2222_0000_0000_0000_0000_0000_0001));
+    let note = NoteId::from_ulid(ulid::Ulid(0x0199_2222_0000_0000_0000_0000_0000_0002));
+    let h1 = HintId::from_ulid(ulid::Ulid(0x0199_3333_0000_0000_0000_0000_0000_0001));
+    let h2 = HintId::from_ulid(ulid::Ulid(0x0199_3333_0000_0000_0000_0000_0000_0002));
+    let other = HintId::from_ulid(ulid::Ulid(0x0199_3333_0000_0000_0000_0000_0000_0003));
+    // A person with two hints mirrored in its sidecar (plus an unreadable entry and a repeated
+    // ID), and a plain note whose sidecar carries a hints key (not an entity: ignored).
+    std::fs::write(
+        vault.join("people/Ahmed Fathy.md"),
+        format!("---\nid: {fathy}\nkind: person\n---\n## Notes\n"),
+    )
+    .expect("person");
+    std::fs::write(
+        vault.join("notes/Acme call.md"),
+        format!("---\nid: {note}\n---\nAhmed called.\n"),
+    )
+    .expect("note");
+    let hint = |id: &HintId, text: &str, at: &str| {
+        format!(r#"{{"id": "{id}", "text": "{text}", "at": "{at}"}}"#)
+    };
+    std::fs::create_dir_all(vault.join(".meta/notes")).expect("meta");
+    std::fs::write(
+        vault.join(format!(".meta/notes/{fathy}.json")),
+        format!(
+            r#"{{"id": "{fathy}", "relations": [], "rejected": [], "hints": [{}, {}, {{"text": "no id"}}, {}]}}"#,
+            hint(&h1, "Ahmed at Acme = Ahmed Fathy", "2026-09-20T10:00:00Z"),
+            hint(&h2, "Ahmed Fathy works at Petrol Arrows", "2026-09-21T11:30:00Z"),
+            hint(&h1, "a repeated ID", "2026-09-22T00:00:00Z"),
+        ),
+    )
+    .expect("sidecar");
+    std::fs::write(
+        vault.join(format!(".meta/notes/{note}.json")),
+        format!(
+            r#"{{"id": "{note}", "relations": [], "rejected": [], "hints": [{}]}}"#,
+            hint(&other, "not an entity", "2026-09-20T10:00:00Z"),
+        ),
+    )
+    .expect("sidecar");
+    assert_eq!(
+        commands::reindex(&config, "owner").await.expect("reindex"),
+        2
+    );
+    let rows = |decision: Option<&DecisionId>| {
+        vec![
+            (
+                h1.as_uuid().to_string(),
+                fathy.as_uuid().to_string(),
+                "Ahmed at Acme = Ahmed Fathy".to_owned(),
+                decision.map(|d| d.as_uuid().to_string()),
+                "2026-09-20T10:00:00Z".to_owned(),
+            ),
+            (
+                h2.as_uuid().to_string(),
+                fathy.as_uuid().to_string(),
+                "Ahmed Fathy works at Petrol Arrows".to_owned(),
+                None,
+                "2026-09-21T11:30:00Z".to_owned(),
+            ),
+        ]
+    };
+    assert_eq!(hint_rows(&db, user).await, rows(None));
+
+    // A hint's correction decision (app state) survives the next reindex; a row that is not
+    // in the vault (no sidecar entry) does not.
+    let decision = DecisionId::from_ulid(ulid::Ulid(0x0199_4444_0000_0000_0000_0000_0000_0001));
+    sqlx::query("UPDATE disambiguation_hints SET source_decision_id = $1 WHERE id = $2")
+        .bind(decision.as_uuid())
+        .bind(h1.as_uuid())
+        .execute(&db.superuser)
+        .await
+        .expect("decision");
+    sqlx::query(
+        "INSERT INTO disambiguation_hints (user_id, id, entity_id, hint, created) \
+         VALUES ($1, $2, $3, 'only in the table', now())",
+    )
+    .bind(user.as_uuid())
+    .bind(other.as_uuid())
+    .bind(fathy.as_uuid())
+    .execute(&db.superuser)
+    .await
+    .expect("stray row");
+    assert_eq!(
+        commands::reindex(&config, "owner").await.expect("reindex"),
+        2
+    );
+    assert_eq!(hint_rows(&db, user).await, rows(Some(&decision)));
+    db.cleanup().await.expect("cleanup");
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_maps/src/generated/maps_localizations.dart';
+import 'package:strata_maps/src/graph/graph_kinds.dart';
 import 'package:strata_maps/src/mind_map/mind_map_canvas.dart';
 import 'package:strata_maps/strata_maps.dart';
 import 'package:strata_state/strata_state.dart';
@@ -15,7 +16,7 @@ const _id = 'n-pricing-experiments';
 FakeCoreApi _fake() {
   final fake = FakeCoreApi();
   for (final depth in const [1, 2, 3]) {
-    fake.localGraph[(_id, depth)].add(MapFixtures.pricingLocal);
+    fake.localGraphFiltered[(_id, depth, '')].add(MapFixtures.pricingLocal);
   }
   return fake;
 }
@@ -140,7 +141,9 @@ void main() {
 
     testWidgets('compact: tapping a node recentres on it', (tester) async {
       final fake = _fake();
-      fake.localGraph[('n-discount-policy', 1)].add(MapFixtures.pricingLocal);
+      fake.localGraphFiltered[('n-discount-policy', 1, '')].add(
+        MapFixtures.pricingLocal,
+      );
       await pumpVariant(tester, compact, const MindMapScreen(_id), fake);
       await tester.tap(find.text('Discount policy'));
       await tester.pump();
@@ -229,7 +232,9 @@ void main() {
       await expectAccessible(tester);
       await tester.tap(find.widgetWithText(FilledButton, 'Open note'));
       expect(opened, ['n-churn-notes']);
-      fake.localGraph[('n-churn-notes', 2)].add(MapFixtures.pricingLocal);
+      fake.localGraphFiltered[('n-churn-notes', 2, '')].add(
+        MapFixtures.pricingLocal,
+      );
       await tester.tap(find.text('Centre map on Churn notes'));
       await tester.pump();
       expect(
@@ -239,7 +244,29 @@ void main() {
     });
 
     testWidgets('edge type chips hide edges', (tester) async {
-      await pumpVariant(tester, expanded, const MindMapScreen(_id), _fake());
+      final fake = _fake();
+      // The core answers the new selection without the contradicts edge.
+      final kinds = selectedEdgeKinds({EdgeClass.contradicts});
+      final local = MapFixtures.pricingLocal;
+      fake.localGraphFiltered[(_id, 2, kinds.join(','))].add(
+        LocalGraphView(
+          center: local.center,
+          found: local.found,
+          depth: local.depth,
+          nodes: local.nodes,
+          edges: [
+            for (final e in local.edges)
+              if (e.kind != 'relation:contradicts') e,
+          ],
+          relationCount: local.relationCount,
+          aiRelationCount: local.aiRelationCount,
+          relationLabel: local.relationLabel,
+          summary: local.summary,
+          saveLayout: local.saveLayout,
+          proposeRelation: local.proposeRelation,
+        ),
+      );
+      await pumpVariant(tester, expanded, const MindMapScreen(_id), fake);
       expect(
         find.bySemanticsLabel(
           'contradicts: Pricing experiments to Discount policy',
@@ -254,8 +281,16 @@ void main() {
         ),
         findsNothing,
       );
-      final canvas = tester.widget<MindMapCanvas>(find.byType(MindMapCanvas));
-      expect(canvas.hiddenEdges, {EdgeClass.contradicts});
+      expect(
+        fake.calls.last,
+        CoreCall('watchLocalGraphFiltered', {
+          'id': _id,
+          'depth': 2,
+          'edgeKinds': kinds,
+        }),
+      );
+      expect(kinds, isNot(contains('relation:contradicts')));
+      expect(kinds, containsAll(['link', 'relation:supports']));
     });
   });
 }

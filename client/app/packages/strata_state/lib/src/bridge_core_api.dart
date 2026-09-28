@@ -663,6 +663,17 @@ final class BridgeCoreApi implements CoreApi {
   }) => bridge.watchLocalGraph(id: id, depth: depth);
 
   @override
+  Stream<LocalGraphView> watchLocalGraphFiltered({
+    required String id,
+    required int depth,
+    required List<String> edgeKinds,
+  }) => bridge.watchLocalGraphFiltered(
+    id: id,
+    depth: depth,
+    edgeKinds: edgeKinds,
+  );
+
+  @override
   Future<GlobalGraphView> globalGraph() => bridge.globalGraph();
 
   @override

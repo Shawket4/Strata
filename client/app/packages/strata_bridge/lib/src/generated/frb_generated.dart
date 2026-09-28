@@ -75,7 +75,7 @@ class StrataCore
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1637109564;
+  int get rustContentHash => 85507987;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -566,6 +566,12 @@ abstract class StrataCoreApi extends BaseApi {
   Stream<LocalGraphView> crateApiViewsWatchLocalGraph({
     required String id,
     required int depth,
+  });
+
+  Stream<LocalGraphView> crateApiViewsWatchLocalGraphFiltered({
+    required String id,
+    required int depth,
+    required List<String> edgeKinds,
   });
 
   Stream<NavView> crateApiViewsWatchNav();
@@ -4997,6 +5003,48 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Stream<LocalGraphView> crateApiViewsWatchLocalGraphFiltered({
+    required String id,
+    required int depth,
+    required List<String> edgeKinds,
+  }) {
+    final sink = RustStreamSink<LocalGraphView>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_String(id, serializer);
+            sse_encode_u_8(depth, serializer);
+            sse_encode_list_String(edgeKinds, serializer);
+            sse_encode_StreamSink_local_graph_view_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 141,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_core_failure,
+          ),
+          constMeta: kCrateApiViewsWatchLocalGraphFilteredConstMeta,
+          argValues: [id, depth, edgeKinds, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiViewsWatchLocalGraphFilteredConstMeta =>
+      const TaskConstMeta(
+        debugName: "watch_local_graph_filtered",
+        argNames: ["id", "depth", "edgeKinds", "sink"],
+      );
+
+  @override
   Stream<NavView> crateApiViewsWatchNav() {
     final sink = RustStreamSink<NavView>();
     unawaited(
@@ -5008,7 +5056,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 141,
+              funcId: 142,
               port: port_,
             );
           },
@@ -5041,7 +5089,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 142,
+              funcId: 143,
               port: port_,
             );
           },
@@ -5074,7 +5122,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 143,
+              funcId: 144,
               port: port_,
             );
           },
@@ -5109,7 +5157,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 144,
+              funcId: 145,
               port: port_,
             );
           },
@@ -5147,7 +5195,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 145,
+              funcId: 146,
               port: port_,
             );
           },
@@ -5181,7 +5229,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 146,
+              funcId: 147,
               port: port_,
             );
           },
@@ -5213,7 +5261,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 147,
+              funcId: 148,
               port: port_,
             );
           },
@@ -5245,7 +5293,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 148,
+              funcId: 149,
               port: port_,
             );
           },
@@ -5278,7 +5326,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 149,
+              funcId: 150,
               port: port_,
             );
           },
@@ -5310,7 +5358,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 150,
+              funcId: 151,
               port: port_,
             );
           },
@@ -5342,7 +5390,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 151,
+              funcId: 152,
               port: port_,
             );
           },

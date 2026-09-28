@@ -300,6 +300,10 @@ final class FakeCoreApi implements CoreApi {
   final FakeStreamFamily<(String, int), LocalGraphView> localGraph =
       FakeStreamFamily();
 
+  /// `watchLocalGraphFiltered`, by `id, depth, edgeKinds.join(',')`.
+  final FakeStreamFamily<(String, int, String), LocalGraphView>
+  localGraphFiltered = FakeStreamFamily();
+
   // Answers ------------------------------------------------------------------
 
   /// `initCore`.
@@ -329,7 +333,7 @@ final class FakeCoreApi implements CoreApi {
 
   /// `acknowledgeAccountDisabled`.
   final FakeAnswer<SessionState> acknowledgeAccountDisabledAnswer = FakeAnswer(
-    StrataFixtures.sessionSignedOut,
+    StrataFixtures.sessionActive,
   );
 
   /// `refreshAccount`.
@@ -807,6 +811,7 @@ final class FakeCoreApi implements CoreApi {
       task,
       conflict,
       localGraph,
+      localGraphFiltered,
     ]) {
       family._closeAll();
     }
@@ -1533,6 +1538,17 @@ final class FakeCoreApi implements CoreApi {
     'id': id,
     'depth': depth,
   });
+
+  @override
+  Stream<LocalGraphView> watchLocalGraphFiltered({
+    required String id,
+    required int depth,
+    required List<String> edgeKinds,
+  }) => _watch(
+    localGraphFiltered[(id, depth, edgeKinds.join(','))],
+    'watchLocalGraphFiltered',
+    {'id': id, 'depth': depth, 'edgeKinds': edgeKinds},
+  );
 
   @override
   Future<GlobalGraphView> globalGraph() =>

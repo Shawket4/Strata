@@ -16,7 +16,9 @@ void main() {
     screenGoldens(
       'global_map',
       () => const GlobalMapScreen(),
-      () => FakeCoreApi()..globalGraphAnswer.returns(MapFixtures.globalSmall),
+      () =>
+          FakeCoreApi()
+            ..globalGraphFilteredAnswer.returns(MapFixtures.globalSmall),
     );
   });
 
@@ -27,7 +29,7 @@ void main() {
       () {
         final fake = FakeCoreApi();
         for (final depth in const [1, 2]) {
-          fake.localGraph[('n-pricing-experiments', depth)].add(
+          fake.localGraphFiltered[('n-pricing-experiments', depth, '')].add(
             MapFixtures.pricingLocal,
           );
         }

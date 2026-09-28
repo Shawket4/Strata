@@ -3144,9 +3144,9 @@ class GraphEdge {
 
 /// Global map filters, applied in the core.
 class GraphFilter {
-  /// Edge kind families to keep (`link`, `embed`, `relation`, `mention`, `concept`,
-  /// `entity`, `custody`, `part-of-place`, `document`, `tag`, `similarity`, `co-mention`);
-  /// empty = all.
+  /// Edge kinds to keep, each a family (`link`, `embed`, `relation`, `mention`, `concept`,
+  /// `entity`, `custody`, `part-of-place`, `document`, `tag`, `similarity`, `co-mention`)
+  /// or a full kind (`relation:supports`); empty = all.
   final List<String> edgeKinds;
 
   /// Node kinds to keep (`note`, `person`, …); empty = all.

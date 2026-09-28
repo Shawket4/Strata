@@ -867,7 +867,7 @@ void main() {
   ];
 
   test('covers every Future-returning CoreApi method once', () {
-    // 139 facade functions - 21 streams.
+    // 140 facade functions - 22 streams.
     expect(cases, hasLength(118));
     expect(cases.map((c) => c.call.method).toSet(), hasLength(118));
   });

@@ -65,6 +65,11 @@ fn not_found() -> OpResult {
     }
 }
 
+/// The payload of a forced `link`/`file_inbox` job (`POST /notes/{id}/relink`).
+fn forced_link_payload() -> Vec<u8> {
+    rmp_serde::to_vec_named(&strata_jobs::link::LinkParams { force: true }).expect("params")
+}
+
 async fn one(h: &H, user: &User, sync_op: SyncOp) -> OpResult {
     let (res, _) = h.push(user, vec![sync_op]).await;
     res.results.into_iter().next().expect("one result").result
@@ -596,7 +601,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     .await;
     assert_eq!(r, applied_none());
 
-    // relink.request queues a job (no commit).
+    // relink.request queues a forced linking run (no commit).
     let before = commits(&h);
     let r = one(
         &h,
@@ -611,13 +616,20 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             .begin(&h.db.issuer.issue(uid))
             .await
             .expect("tx");
-    let queued: Vec<(String, uuid::Uuid)> =
-        sqlx::query_as("SELECT kind, note_id FROM jobs WHERE kind = 'link'")
+    let queued: Vec<(String, uuid::Uuid, Vec<u8>)> =
+        sqlx::query_as("SELECT kind, note_id, payload FROM jobs WHERE kind = 'link'")
             .fetch_all(tx.conn())
             .await
             .expect("jobs");
     tx.commit().await.expect("commit");
-    assert_eq!(queued, vec![("link".to_owned(), uuid::Uuid::from(id(1)))]);
+    assert_eq!(
+        queued,
+        vec![(
+            "link".to_owned(),
+            uuid::Uuid::from(id(1)),
+            forced_link_payload()
+        )]
+    );
 
     // device.settings on the pushing device.
     let r = one(
@@ -1536,5 +1548,225 @@ async fn semantic_duplicates_are_answered_with_the_semantic_level() {
     );
     assert_eq!(candidates[0].score, 0.99);
     assert_eq!(h.log(uid).len(), commits, "nothing written");
+    h.finish().await;
+}
+
+/// `suggestion.accept` with edits is `POST /suggestions/{id}/accept-with-edits`: a filing
+/// accepted with an edited title, tags and folder is filed in one `user:` commit; edits on a
+/// kind without them are rejected and nothing is written; `relink.request` on a capture
+/// queues a forced `file_inbox` run.
+#[tokio::test]
+async fn suggestion_accept_applies_edits_and_relink_forces_a_run() {
+    use strata_common::{NoteId, SuggestionId};
+    use sync_model::suggestions::{FilingPayload, kinds};
+
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let uid = alice.id;
+    let scope = h.db.issuer.issue(uid);
+    let at = Utc
+        .with_ymd_and_hms(2026, 9, 26, 8, 30, 5)
+        .single()
+        .expect("time")
+        .fixed_offset();
+    // A user folder to file into, and a capture.
+    let (res, _) = h
+        .push(
+            &alice,
+            vec![
+                op(1, None, create(1, "notes/Clients/Acme.md", "# Acme\n")),
+                op(
+                    2,
+                    None,
+                    Op::Capture(o::Capture {
+                        id: id(2),
+                        text: "Watanya wants ETA invoices monthly".into(),
+                        created: at,
+                    }),
+                ),
+            ],
+        )
+        .await;
+    assert!(
+        res.results
+            .iter()
+            .all(|r| matches!(r.result, OpResult::Applied { .. })),
+        "{res:?}"
+    );
+    let capture = "inbox/2026-09-26-083005.md";
+    let captured = h.read(uid, capture);
+    // The filing job's proposal (as `file_inbox` stores it).
+    let filing = SuggestionId::from_ulid(id(3));
+    let payload = sync_model::SuggestionPayload::from(FilingPayload {
+        decision_id: id(4),
+        title: "Watanya invoices".into(),
+        tags: vec!["watanya".into()],
+        folder: "notes".into(),
+    });
+    h.vault
+        .create_suggestion(
+            &scope,
+            filing,
+            Some(NoteId::from_ulid(id(2))),
+            kinds::FILING,
+            &payload.to_bytes(),
+        )
+        .await
+        .expect("filing suggestion");
+
+    // Edits on a kind that has none (a `duplicate` flag) are rejected; nothing is written.
+    let dup = SuggestionId::from_ulid(id(5));
+    h.vault
+        .create_suggestion(
+            &scope,
+            dup,
+            Some(NoteId::from_ulid(id(2))),
+            kinds::DUPLICATE,
+            &sync_model::SuggestionPayload::from(sync_model::suggestions::DuplicatePayload {
+                candidates: vec![],
+            })
+            .to_bytes(),
+        )
+        .await
+        .expect("duplicate suggestion");
+    let before = h.log(uid);
+    let r = one(
+        &h,
+        &alice,
+        op(
+            3,
+            None,
+            Op::SuggestionAccept(o::SuggestionAccept {
+                id: id(5),
+                edits: Some(o::SuggestionEdits {
+                    title: Some("Other".into()),
+                    ..Default::default()
+                }),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(
+        r,
+        OpResult::Rejected {
+            problem: Problem {
+                problem_type: "invalid_body".into(),
+                title: "Request body is invalid".into(),
+                status: 422,
+                detail: Some("edits are not supported for this suggestion kind".into()),
+            }
+        }
+    );
+    assert_eq!(h.log(uid), before);
+
+    // Accepting the filing with edits: title, tags and folder, one commit.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            4,
+            None,
+            Op::SuggestionAccept(o::SuggestionAccept {
+                id: id(3),
+                edits: Some(o::SuggestionEdits {
+                    title: Some("Watanya ETA invoicing".into()),
+                    tags: Some(vec!["watanya".into(), "invoices".into()]),
+                    folder: Some("notes/Clients".into()),
+                    ..Default::default()
+                }),
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied_none());
+    let log = h.log(uid);
+    assert_eq!(log.len(), before.len() + 1);
+    assert_eq!(
+        log[0],
+        format!("user: accept filing {capture} -> notes/Clients/Watanya ETA invoicing.md")
+    );
+    assert!(!h.exists(uid, capture));
+    assert_eq!(
+        h.read(uid, "notes/Clients/Watanya ETA invoicing.md"),
+        captured.replace("\ncreated: ", "\ntags: [watanya, invoices]\ncreated: ")
+    );
+    let accepted = ops::list_suggestions(&alice.client, Some(&types::SuggestionStatus::Accepted))
+        .await
+        .expect("accepted");
+    assert_eq!(
+        accepted.items.iter().map(|s| s.id).collect::<Vec<_>>(),
+        vec![id(3)]
+    );
+    // A replay answers the stored result and writes nothing.
+    let r = one(
+        &h,
+        &alice,
+        op(
+            4,
+            None,
+            Op::SuggestionAccept(o::SuggestionAccept {
+                id: id(3),
+                edits: None,
+            }),
+        ),
+    )
+    .await;
+    assert_eq!(r, applied_none());
+    assert_eq!(h.log(uid).len(), log.len());
+
+    // relink.request on a capture queues a forced `file_inbox` run; on a note a forced `link`.
+    let (res, _) = h
+        .push(
+            &alice,
+            vec![
+                op(
+                    5,
+                    None,
+                    Op::Capture(o::Capture {
+                        id: id(6),
+                        text: "Ask Shady about the contract".into(),
+                        created: at + chrono::Duration::minutes(1),
+                    }),
+                ),
+                op(6, None, Op::RelinkRequest(o::NoteRef { id: id(6) })),
+                op(7, None, Op::RelinkRequest(o::NoteRef { id: id(1) })),
+                op(8, None, Op::RelinkRequest(o::NoteRef { id: id(99) })),
+            ],
+        )
+        .await;
+    assert_eq!(
+        res.results
+            .iter()
+            .skip(1)
+            .map(|r| r.result.clone())
+            .collect::<Vec<_>>(),
+        vec![applied_none(), applied_none(), not_found()]
+    );
+    let mut tx = h.db.app_db.begin(&scope).await.expect("tx");
+    let queued: Vec<(String, uuid::Uuid, Vec<u8>)> = sqlx::query_as(
+        "SELECT kind, note_id, payload FROM jobs \
+         WHERE kind IN ('link', 'file_inbox') AND status = 'queued' AND note_id = ANY($1) \
+         ORDER BY kind, note_id",
+    )
+    .bind(vec![uuid::Uuid::from(id(1)), uuid::Uuid::from(id(6))])
+    .fetch_all(tx.conn())
+    .await
+    .expect("jobs");
+    tx.commit().await.expect("commit");
+    assert_eq!(
+        queued,
+        vec![
+            (
+                "file_inbox".to_owned(),
+                uuid::Uuid::from(id(6)),
+                forced_link_payload()
+            ),
+            (
+                "link".to_owned(),
+                uuid::Uuid::from(id(1)),
+                forced_link_payload()
+            ),
+        ]
+    );
     h.finish().await;
 }

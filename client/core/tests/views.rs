@@ -544,6 +544,20 @@ async fn local_graph_is_radial_around_the_centre_and_global_graph_caches_positio
             .iter()
             .all(|r| (r - radii[0]).abs() < 1e-9 && *r > 0.0)
     );
+    // The mind map's edge toggles filter in the core.
+    let license = s
+        .read(|c, ctx| graph::local_graph(c, ctx, LICENSE, 1))
+        .expect("license map");
+    let mut custody_only = license.edges.clone();
+    graph::retain_edge_kinds(&mut custody_only, &["custody".to_owned()]);
+    assert_eq!(
+        custody_only
+            .iter()
+            .map(|e| (e.src.as_str(), e.dst.as_str(), e.kind.as_str()))
+            .collect::<Vec<_>>(),
+        [(LICENSE, DRAWER, "custody:location")]
+    );
+    assert!(license.edges.len() > custody_only.len());
     let deeper = s
         .read(|c, ctx| graph::local_graph(c, ctx, SHADY, 9))
         .expect("clamped");

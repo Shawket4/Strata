@@ -143,6 +143,7 @@ export 'package:strata_bridge/strata_bridge.dart'
         watchInbox,
         watchInboxFiltered,
         watchLocalGraph,
+        watchLocalGraphFiltered,
         watchNav,
         watchNote,
         watchNotesList,

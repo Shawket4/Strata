@@ -444,3 +444,22 @@ pub async fn hints_for(tx: &mut ScopedTx, entities: &[NoteId]) -> Result<Vec<Hin
     .fetch_all(tx.conn())
     .await?)
 }
+
+/// Every hint of the scoped user, oldest first.
+pub async fn all_hints(tx: &mut ScopedTx) -> Result<Vec<Hint>> {
+    Ok(sqlx::query_as(
+        "SELECT id, entity_id, hint, source_decision_id, created FROM disambiguation_hints \
+         ORDER BY created, id",
+    )
+    .fetch_all(tx.conn())
+    .await?)
+}
+
+/// The note IDs of every entity row of the scoped user.
+pub async fn entity_ids(tx: &mut ScopedTx) -> Result<Vec<NoteId>> {
+    Ok(
+        sqlx::query_scalar("SELECT note_id FROM entities ORDER BY note_id")
+            .fetch_all(tx.conn())
+            .await?,
+    )
+}

@@ -65,6 +65,33 @@ EdgeClass edgeClassOf(String kind) => switch (kind) {
   _ => EdgeClass.entity,
 };
 
+/// The core edge kinds drawn as [edgeClass] (the inverse of [edgeClassOf]),
+/// for the edge-type selection the core filters by.
+List<String> coreEdgeKindsOf(EdgeClass edgeClass) => switch (edgeClass) {
+  EdgeClass.related => const ['relation:related'],
+  EdgeClass.partOf => const ['relation:part-of'],
+  EdgeClass.supports => const ['relation:supports'],
+  EdgeClass.contradicts => const ['relation:contradicts'],
+  EdgeClass.followsUp => const ['relation:follows-up'],
+  EdgeClass.duplicates => const ['relation:duplicates'],
+  EdgeClass.similarity => const ['similarity'],
+  EdgeClass.bodyLink => const ['link', 'embed'],
+  EdgeClass.mention => const ['mention'],
+  EdgeClass.concept => const ['concept'],
+  EdgeClass.custody => const ['custody'],
+  EdgeClass.placeNesting => const ['part-of-place'],
+  EdgeClass.entity => const ['entity', 'document', 'tag', 'co-mention'],
+};
+
+/// The core edge-kind selection for the classes the user left on: empty
+/// (every kind) when nothing is switched off.
+List<String> selectedEdgeKinds(Set<EdgeClass> hidden) => hidden.isEmpty
+    ? const []
+    : [
+        for (final edgeClass in EdgeClass.values)
+          if (!hidden.contains(edgeClass)) ...coreEdgeKindsOf(edgeClass),
+      ];
+
 /// The design-system relation type an edge class is drawn as.
 RelationType relationTypeOf(EdgeClass edgeClass) => switch (edgeClass) {
   EdgeClass.related ||

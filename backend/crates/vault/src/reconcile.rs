@@ -17,11 +17,13 @@
 //!    `sync_epochs.vault_head`;
 //! 7. records an integrity warning for each finding (surfaced by `GET /integrity`).
 //!
-//! A full reindex instead deletes every derived row and derives the whole vault again.
+//! A full reindex instead deletes every derived row and derives the whole vault again, and
+//! rebuilds the disambiguation hints from their mirror in the entity sidecars (§9.8).
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use strata_common::NoteId;
+use strata_common::{HintId, NoteId};
+use strata_index::repo::entities as erepo;
 use strata_index::repo::notes;
 use strata_index::repo::vault::{self as vrepo, IntegrityWarning};
 use strata_index::{ScopedTx, UserScope};
@@ -664,7 +666,8 @@ fn derive_all(
 
 /// Deletes every derived row of the user and derives the whole vault again (`stratad
 /// reindex`), reloading the cluster rows from `.meta/clusters.json` (change-log rows only for
-/// what differs from before). The vault is reconciled first.
+/// what differs from before) and the disambiguation hints from the entity sidecars (see
+/// [`rebuild_hints`]). The vault is reconciled first.
 pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
     let dir = core.dir.clone();
     let inner = core.inner.clone();
@@ -693,11 +696,14 @@ pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
     let tz = core.tz(&mut tx).await?;
     let derived = derive_all(&mut state, &scanned.texts, &sidecars, tz);
     let clusters_before = crate::clusters::snapshot(&mut tx).await?;
+    // Deleting the entity rows cascades to their hints; they come back from the sidecars.
+    let hints_before = erepo::all_hints(&mut tx).await?;
     vrepo::clear_derived(&mut tx).await?;
     let mut batch: Vec<(NoteId, Derived)> = derived.into_iter().collect();
     batch.sort_by_key(|(id, _)| *id);
     let batch: Vec<Derived> = batch.into_iter().map(|(_, d)| d).collect();
     indexer::write(&mut tx, &batch).await?;
+    rebuild_hints(&mut tx, &sidecars, &hints_before).await?;
     let clusters_now = cluster_file
         .as_ref()
         .map(crate::clusters::ClusterRows::of_file)
@@ -706,4 +712,57 @@ pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
     tx.commit().await?;
     core.state = Some(state);
     Ok(batch.len())
+}
+
+/// Rebuilds `disambiguation_hints` (§9.8) from the `hints` mirrored in the sidecars of the
+/// entities the index now holds: the vault is the source of truth, the table the cache the
+/// resolution prompts read. A hint keeps its ID, text and time; the correction decision it
+/// came from (app state, not in the sidecar) is carried over from the row it had before, by
+/// ID. Unreadable entries and repeated IDs are skipped.
+pub(crate) async fn rebuild_hints(
+    tx: &mut ScopedTx,
+    sidecars: &HashMap<NoteId, NoteSidecar>,
+    before: &[erepo::Hint],
+) -> Result<usize> {
+    let decisions: HashMap<HintId, _> = before
+        .iter()
+        .map(|h| (h.id, h.source_decision_id))
+        .collect();
+    let mut seen = BTreeSet::new();
+    let mut written = 0;
+    for entity in erepo::entity_ids(tx).await? {
+        let Some(list) = sidecars
+            .get(&entity)
+            .and_then(|sc| sc.extra.get(crate::ops::ai_apply::HINTS_KEY))
+            .and_then(|v| v.as_array())
+        else {
+            continue;
+        };
+        for value in list {
+            let Ok(h) =
+                serde_json::from_value::<crate::ops::ai_apply::SidecarHint>(value.clone())
+            else {
+                continue;
+            };
+            let Ok(id) = h.id.parse::<HintId>() else {
+                continue;
+            };
+            if !seen.insert(id) {
+                continue;
+            }
+            erepo::add_hint(
+                tx,
+                &erepo::Hint {
+                    id,
+                    entity_id: entity,
+                    hint: h.text,
+                    source_decision_id: decisions.get(&id).copied().flatten(),
+                    created: h.at,
+                },
+            )
+            .await?;
+            written += 1;
+        }
+    }
+    Ok(written)
 }

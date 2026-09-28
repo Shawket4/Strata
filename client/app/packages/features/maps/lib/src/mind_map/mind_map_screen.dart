@@ -67,8 +67,18 @@ class _MindMap extends HookConsumerWidget {
     final selectedEdge = useState<int?>(null);
     final transform = useTransformationController();
 
-    final async = ref.watch(localGraphProvider(center.value, depth.value));
-    final graph = async.value;
+    // The core drops the hidden edge classes (L15); one list per selection so
+    // the provider keeps its key.
+    final edgeKinds = useMemoized(() => selectedEdgeKinds(hiddenEdges.value), [
+      hiddenEdges.value,
+    ]);
+    final async = ref.watch(
+      localGraphFilteredProvider(center.value, depth.value, edgeKinds),
+    );
+    // While a new selection loads, the previous map stays up.
+    final shown = useRef<LocalGraphView?>(null);
+    if (async case AsyncData(:final value)) shown.value = value;
+    final graph = async.value ?? shown.value;
 
     Widget body;
     GraphNode? focusNode;
@@ -88,7 +98,6 @@ class _MindMap extends HookConsumerWidget {
         graph: graph,
         compact: compact,
         transform: transform,
-        hiddenEdges: hiddenEdges.value,
         selectedNode: selectedNode.value,
         selectedEdge: selectedEdge.value,
         onTapNode: (node) {
@@ -236,7 +245,6 @@ class _Canvas extends HookWidget {
     required this.graph,
     required this.compact,
     required this.transform,
-    required this.hiddenEdges,
     required this.selectedNode,
     required this.selectedEdge,
     required this.onTapNode,
@@ -247,7 +255,6 @@ class _Canvas extends HookWidget {
   final LocalGraphView graph;
   final bool compact;
   final TransformationController transform;
-  final Set<EdgeClass> hiddenEdges;
   final String? selectedNode;
   final int? selectedEdge;
   final ValueChanged<GraphNode> onTapNode;
@@ -302,7 +309,6 @@ class _Canvas extends HookWidget {
                       child: MindMapCanvas(
                         layout: layout,
                         centerId: graph.center,
-                        hiddenEdges: hiddenEdges,
                         selectedNodeId: selectedNode,
                         selectedEdge: edge,
                         onTapNode: (i) => onTapNode(scene.nodes[i]),

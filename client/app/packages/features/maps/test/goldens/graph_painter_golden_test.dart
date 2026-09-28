@@ -58,6 +58,28 @@ void main() {
     MapFixtures.globalSmall.nodes,
     MapFixtures.globalSmall.edges,
   );
+  // What the core answers for "contradicts and body links off, people off"
+  // (the core filters, L15; the painter only paints).
+  final small = MapFixtures.globalSmall;
+  final kept = {
+    for (final n in small.nodes)
+      if (n.kind != GraphNodeKind.person) n.id,
+  };
+  final filteredScene = GraphScene.from(
+    [
+      for (final n in small.nodes)
+        if (kept.contains(n.id)) n,
+    ],
+    [
+      for (final e in small.edges)
+        if (kept.contains(e.src) &&
+            kept.contains(e.dst) &&
+            e.kind != 'relation:contradicts' &&
+            e.kind != 'link' &&
+            e.kind != 'embed')
+          e,
+    ],
+  );
   const viewport = Size(640, 480);
   final fit = GraphCamera.fit(scene.bounds, viewport);
   GraphCamera at(double scale) => const GraphCamera()
@@ -87,13 +109,9 @@ void main() {
       'fit_dark_rtl': () =>
           _PaintedGraph(scene: scene, camera: fit, dark: true, rtl: true),
       'filtered_light': () => _PaintedGraph(
-        scene: scene,
+        scene: filteredScene,
         camera: fit,
-        options: const GraphPaintOptions(
-          hiddenEdges: {EdgeClass.contradicts, EdgeClass.bodyLink},
-          hiddenKinds: {NodeKind.person},
-          focusCluster: 'k-pricing',
-        ),
+        options: const GraphPaintOptions(focusCluster: 'k-pricing'),
       ),
       'hover_light': () => _PaintedGraph(
         scene: scene,

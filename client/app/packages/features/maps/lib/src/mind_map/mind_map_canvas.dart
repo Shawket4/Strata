@@ -80,7 +80,6 @@ class MindMapCanvas extends StatelessWidget {
     required this.onTapNode,
     required this.onTapEdge,
     super.key,
-    this.hiddenEdges = const {},
     this.selectedNodeId,
     this.selectedEdge,
   });
@@ -90,9 +89,6 @@ class MindMapCanvas extends StatelessWidget {
 
   /// The focused note.
   final String centerId;
-
-  /// Edge classes hidden by the viewer.
-  final Set<EdgeClass> hiddenEdges;
 
   /// Selected node (ring).
   final String? selectedNodeId;
@@ -121,14 +117,12 @@ class MindMapCanvas extends StatelessWidget {
               painter: MindMapEdgePainter(
                 layout: layout,
                 graph: context.strataGraphColors,
-                hiddenEdges: hiddenEdges,
                 selectedEdge: selectedEdge,
               ),
             ),
           ),
           for (var e = 0; e < scene.edgeCount; e++)
-            if (!hiddenEdges.contains(scene.edgeClasses[e]) &&
-                scene.edgeClasses[e] != EdgeClass.bodyLink)
+            if (scene.edgeClasses[e] != EdgeClass.bodyLink)
               _EdgeLabel(
                 centre:
                     (layout.centreOf(scene.edgeSrc[e]) +
@@ -322,21 +316,13 @@ class _EdgeLabel extends StatelessWidget {
 /// ending at the target card's border.
 class MindMapEdgePainter extends CustomPainter {
   /// Creates the painter.
-  const new({
-    required this.layout,
-    required this.graph,
-    required this.hiddenEdges,
-    this.selectedEdge,
-  });
+  const new({required this.layout, required this.graph, this.selectedEdge});
 
   /// Geometry.
   final MindMapLayout layout;
 
   /// Colours.
   final StrataGraphColors graph;
-
-  /// Hidden edge classes.
-  final Set<EdgeClass> hiddenEdges;
 
   /// Selected edge (drawn wider).
   final int? selectedEdge;
@@ -346,7 +332,6 @@ class MindMapEdgePainter extends CustomPainter {
     final scene = layout.scene;
     for (var e = 0; e < scene.edgeCount; e++) {
       final cls = scene.edgeClasses[e];
-      if (hiddenEdges.contains(cls)) continue;
       final a = layout.centreOf(scene.edgeSrc[e]);
       final b = layout.centreOf(scene.edgeDst[e]);
       final delta = b - a;
@@ -374,6 +359,5 @@ class MindMapEdgePainter extends CustomPainter {
   bool shouldRepaint(MindMapEdgePainter oldDelegate) =>
       !identical(oldDelegate.layout, layout) ||
       oldDelegate.graph != graph ||
-      oldDelegate.hiddenEdges != hiddenEdges ||
       oldDelegate.selectedEdge != selectedEdge;
 }

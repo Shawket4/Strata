@@ -96,6 +96,18 @@ Stream<LocalGraphView> watchLocalGraph({
 }) =>
     StrataCore.instance.api.crateApiViewsWatchLocalGraph(id: id, depth: depth);
 
+/// A note's local mind map with only the edges of `edge_kinds` (families such as `link`,
+/// or full kinds such as `relation:supports`; empty = all), filtered in the core.
+Stream<LocalGraphView> watchLocalGraphFiltered({
+  required String id,
+  required int depth,
+  required List<String> edgeKinds,
+}) => StrataCore.instance.api.crateApiViewsWatchLocalGraphFiltered(
+  id: id,
+  depth: depth,
+  edgeKinds: edgeKinds,
+);
+
 /// The global map (positions from the cached, warm-started force layout).
 Future<GlobalGraphView> globalGraph() =>
     StrataCore.instance.api.crateApiViewsGlobalGraph();

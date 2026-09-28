@@ -16,7 +16,7 @@ void main() {
     tester,
   ) async {
     final fake = FakeCoreApi()
-      ..globalGraphAnswer.returns(MapFixtures.globalSmall);
+      ..globalGraphFilteredAnswer.returns(MapFixtures.globalSmall);
     await pumpVariant(tester, variants().first, const GlobalMapScreen(), fake);
     final l10n = lookupMapsLocalizations(const Locale('en'));
     expect(find.text(l10n.mapCompactTitle), findsOneWidget);

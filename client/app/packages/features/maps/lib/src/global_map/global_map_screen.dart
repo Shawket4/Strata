@@ -37,7 +37,7 @@ class GlobalMapScreen extends StatelessWidget {
   );
 }
 
-class _GlobalMap extends ConsumerWidget {
+class _GlobalMap extends HookConsumerWidget {
   const new({required this.onOpenNote, required this.onOpenMindMap});
 
   final ValueChanged<String>? onOpenNote;
@@ -46,6 +46,10 @@ class _GlobalMap extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.mapsL10n;
+    final filters = useState(const MapFilters());
+    // One query object per filter choice, so the provider keeps its key.
+    final query = useMemoized(() => filters.value.toCore(), [filters.value]);
+    final shown = useRef<GlobalGraphView?>(null);
     if (SizeClass.of(context) == SizeClass.compact) {
       return StrataEmptyState(
         icon: GlobalMapScreen.icon,
@@ -53,21 +57,27 @@ class _GlobalMap extends ConsumerWidget {
         message: l10n.mapCompactMessage,
       );
     }
+    final graph = ref.watch(globalGraphFilteredProvider(query));
+    if (graph case AsyncData(:final value)) shown.value = value;
+    // While a new filter choice loads, the previous map stays up.
+    final view = shown.value;
     return ColoredBox(
       color: context.strataColors.surface,
-      child: switch (ref.watch(globalGraphProvider)) {
-        AsyncData(:final value) when value.nodes.isEmpty => StrataEmptyState(
+      child: switch (graph) {
+        AsyncError(:final error) => MapsError(error: error),
+        _ when view == null => const MapsLoading(),
+        _ when view.nodeCounts.isEmpty => StrataEmptyState(
           icon: GlobalMapScreen.icon,
           title: l10n.mapEmptyTitle,
           message: l10n.mapEmptyMessage,
         ),
-        AsyncData(:final value) => _MapBody(
-          view: value,
+        _ => _MapBody(
+          view: view,
+          filters: filters.value,
+          onFiltersChanged: (value) => filters.value = value,
           onOpenNote: onOpenNote,
           onOpenMindMap: onOpenMindMap,
         ),
-        AsyncError(:final error) => MapsError(error: error),
-        _ => const MapsLoading(),
       },
     );
   }
@@ -76,11 +86,15 @@ class _GlobalMap extends ConsumerWidget {
 class _MapBody extends HookConsumerWidget {
   const new({
     required this.view,
+    required this.filters,
+    required this.onFiltersChanged,
     required this.onOpenNote,
     required this.onOpenMindMap,
   });
 
   final GlobalGraphView view;
+  final MapFilters filters;
+  final ValueChanged<MapFilters> onFiltersChanged;
   final ValueChanged<String>? onOpenNote;
   final ValueChanged<String>? onOpenMindMap;
 
@@ -93,14 +107,19 @@ class _MapBody extends HookConsumerWidget {
     ]);
     final camera = useMemoized(GraphViewController.new);
     useEffect(() => camera.dispose, [camera]);
-    final filters = useState(const MapFilters());
-    final selected = useState<int?>(null);
+    // By node ID: a new filter choice rebuilds the scene (new indices).
+    final selected = useState<String?>(null);
     final hovered = useState<(int, Offset)?>(null);
+    useValueChanged<GlobalGraphView, void>(
+      view,
+      (_, _) => hovered.value = null,
+    );
     final filtersOpen = useState(false);
     final searchFocus = useFocusNode();
     final expanded = SizeClass.of(context) == SizeClass.expanded;
 
-    final selectedIndex = selected.value;
+    final selectedId = selected.value;
+    final selectedIndex = selectedId == null ? null : scene.index[selectedId];
     final selectedNode = selectedIndex == null
         ? null
         : scene.nodes[selectedIndex];
@@ -114,22 +133,20 @@ class _MapBody extends HookConsumerWidget {
       };
     }
     final options = GraphPaintOptions(
-      hiddenEdges: filters.value.hiddenEdges,
-      hiddenKinds: filters.value.hiddenKinds,
-      focusCluster: filters.value.focusCluster,
+      focusCluster: filters.focusCluster,
       selected: selectedIndex,
       highlight: highlight,
       hovered: hovered.value?.$1,
     );
 
     void select(int? index) {
-      selected.value = index;
+      selected.value = index == null ? null : scene.nodes[index].id;
     }
 
     void focusOn(String id) {
       final index = scene.index[id];
       if (index == null) return;
-      selected.value = index;
+      selected.value = id;
       camera.centreOn(scene.positionOf(index), minZoom: 1);
     }
 
@@ -154,8 +171,8 @@ class _MapBody extends HookConsumerWidget {
     final hover = hovered.value;
     final panel = MapFiltersPanel(
       clusters: view.clusters,
-      filters: filters.value,
-      onChanged: (value) => filters.value = value,
+      filters: filters,
+      onChanged: onFiltersChanged,
       onClose: expanded ? null : () => filtersOpen.value = false,
     );
 

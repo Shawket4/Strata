@@ -42,6 +42,21 @@ class MapFilters {
     focusCluster: focusCluster,
   );
 
+  /// The core's map query for these choices: the core drops the hidden edge
+  /// classes and node kinds (L15); the cluster focus only dims (painting).
+  GraphFilter toCore() => GraphFilter(
+    edgeKinds: selectedEdgeKinds(hiddenEdges),
+    nodeKinds: hiddenKinds.isEmpty
+        ? const []
+        : [
+            for (final kind in filterableNodeKinds)
+              if (!hiddenKinds.contains(kind)) kind.name,
+          ],
+    similarity: true,
+    lens: GraphLens.notes,
+    includeTags: false,
+  );
+
   /// A copy focused on [cluster] (`null`: all clusters).
   MapFilters focus(String? cluster) => MapFilters(
     hiddenEdges: hiddenEdges,

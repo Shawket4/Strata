@@ -521,16 +521,11 @@ pub async fn relink(
         return Err(Problem::new(ProblemType::NotFound));
     }
     let api = ai_api(api.as_ref())?;
-    let kind = if view.path.starts_with("inbox/") {
-        strata_jobs::pipeline::FILE_INBOX
-    } else {
-        strata_jobs::pipeline::LINK
-    };
     let job = strata_jobs::link::enqueue_forced(
         &api.db,
         auth.scope(),
         api.ids.as_ref(),
-        kind,
+        strata_jobs::link::relink_kind(&view.path),
         note,
         api.clock.now(),
     )

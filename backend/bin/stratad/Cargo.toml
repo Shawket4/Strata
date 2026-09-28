@@ -39,6 +39,7 @@ strata-testkit = { workspace = true }
 tempfile = { workspace = true }
 pretty_assertions = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+ulid = { workspace = true }
 
 [lints]
 workspace = true

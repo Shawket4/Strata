@@ -14,20 +14,12 @@ import 'package:strata_ui/strata_ui.dart';
 class GraphPaintOptions {
   /// Creates paint options.
   const new({
-    this.hiddenEdges = const {},
-    this.hiddenKinds = const {},
     this.focusCluster,
     this.selected,
     this.highlight,
     this.hovered,
     this.labels = true,
   });
-
-  /// Edge classes not drawn.
-  final Set<EdgeClass> hiddenEdges;
-
-  /// Node kinds not drawn (with their edges).
-  final Set<NodeKind> hiddenKinds;
 
   /// Cluster in focus: nodes and edges outside it are dimmed.
   final String? focusCluster;
@@ -262,7 +254,6 @@ class GraphPainter extends CustomPainter {
     final ys = scene.ys;
     final kinds = scene.kinds;
     final nodes = scene.nodes;
-    final hiddenKinds = options.hiddenKinds;
     final focus = options.focusCluster;
     final highlight = options.highlight;
     final selected = options.selected;
@@ -277,7 +268,6 @@ class GraphPainter extends CustomPainter {
       final y = ys[i] * s + oy;
       sx[i] = x;
       sy[i] = y;
-      if (hiddenKinds.contains(kinds[i])) continue;
       visible[i] = 1;
       if ((highlight != null && !highlight.contains(i)) ||
           (focus != null && nodes[i].clusterId != focus)) {
@@ -320,7 +310,6 @@ class GraphPainter extends CustomPainter {
     }
 
     // Edges, batched by (class, dimmed, mention target kind).
-    final hiddenEdges = options.hiddenEdges;
     final src = scene.edgeSrc;
     final dst = scene.edgeDst;
     final classes = scene.edgeClasses;
@@ -328,7 +317,6 @@ class GraphPainter extends CustomPainter {
     final styled = band != ZoomBand.far;
     for (var e = 0; e < src.length; e++) {
       final cls = classes[e];
-      if (hiddenEdges.contains(cls)) continue;
       final a = src[e];
       final b = dst[e];
       if (visible[a] == 0 || visible[b] == 0) continue;

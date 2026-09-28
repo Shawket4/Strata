@@ -41,9 +41,9 @@ use chrono::{DateTime, Utc};
 use dedupe::DuplicateCandidate;
 use domain::{DedupeKind, MatchLevel, NoteKind};
 use strata_common::{
-    Clock, DeviceId, IdGenerator, JobId, NoteId, OpId, ReplyId, SuggestionId, UserId,
+    Clock, DeviceId, IdGenerator, NoteId, OpId, ReplyId, SuggestionId, UserId,
 };
-use strata_index::repo::{devices, jobs, sync as log};
+use strata_index::repo::{devices, sync as log};
 use strata_index::types::ChangeOp;
 use strata_index::{AppDb, UserScope};
 use strata_vault::ops::entities::{EntityPatch as VPatch, NewCustodyEvent, NewEntity};
@@ -390,20 +390,8 @@ async fn apply(
                 Err(e) => from_vault(&e)?,
             }
         }
-        Op::SuggestionAccept(p) => {
-            if p.edits
-                .as_ref()
-                .is_some_and(|e| *e != sm_ops::SuggestionEdits::default())
-            {
-                rejected_kind(
-                    ProblemType::InvalidBody,
-                    "edits are not supported for this suggestion kind",
-                )
-            } else {
-                decide(ctx, rc, p.id, true).await?
-            }
-        }
-        Op::SuggestionReject(p) => decide(ctx, rc, p.id, false).await?,
+        Op::SuggestionAccept(p) => decide(ctx, rc, p.id, true, p.edits.clone()).await?,
+        Op::SuggestionReject(p) => decide(ctx, rc, p.id, false, None).await?,
         Op::SuggestionReply(p) => {
             match rc
                 .armed(
@@ -555,11 +543,12 @@ async fn apply(
         | Op::TaskDelete(_) => task_edit(ctx, rc, &op.op, base).await?,
         Op::RelinkRequest(p) => {
             let id = NoteId::from_ulid(p.id);
-            if live(ctx, id).await {
-                relink(ctx, rc, id).await?;
-                applied(None, false)
-            } else {
-                not_found()
+            match ctx.vault.note(ctx.scope, id).await {
+                Ok(n) if !n.trashed => {
+                    relink(ctx, rc, id, strata_jobs::link::relink_kind(&n.path)).await?;
+                    applied(None, false)
+                }
+                _ => not_found(),
             }
         }
         Op::DeviceSettings(p) => device_settings(ctx, rc, p).await?,
@@ -839,17 +828,24 @@ async fn conflict_copy(
     Ok(result)
 }
 
+/// `suggestion.accept` (with optional edits, as `POST /suggestions/{id}/accept-with-edits`)
+/// and `suggestion.reject`.
 async fn decide(
     ctx: &PushContext<'_>,
     rc: &OpReceipt,
     id: ulid::Ulid,
     accept: bool,
+    edits: Option<sm_ops::SuggestionEdits>,
 ) -> Result<OpResult, Problem> {
     match rc
         .armed(
             applied_plain(),
-            ctx.vault
-                .decide_suggestion(ctx.scope, SuggestionId::from_ulid(id), accept),
+            ctx.vault.decide_suggestion_with(
+                ctx.scope,
+                SuggestionId::from_ulid(id),
+                accept,
+                edits,
+            ),
         )
         .await
     {
@@ -1045,24 +1041,22 @@ async fn store_result(
     Ok(rec.result)
 }
 
-async fn relink(ctx: &PushContext<'_>, rc: &OpReceipt, id: NoteId) -> Result<(), Problem> {
+/// `relink.request`: a forced `kind` job (`link`, or `file_inbox` for a capture), exactly as
+/// `POST /notes/{id}/relink`, queued in the transaction that stores the op's result.
+async fn relink(
+    ctx: &PushContext<'_>,
+    rc: &OpReceipt,
+    id: NoteId,
+    kind: &str,
+) -> Result<(), Problem> {
     let now = ctx.clock.now();
     let mut tx = ctx.db.begin(ctx.scope).await.map_err(|e| index(&e))?;
-    jobs::enqueue(
-        &mut tx,
-        &jobs::NewJob {
-            id: JobId::generate(ctx.ids.as_ref()),
-            kind: "link".to_owned(),
-            note_id: Some(id),
-            payload: Vec::new(),
-            run_after: now,
-            max_attempts: 5,
-            dedupe_key: Some(id.to_string()),
-        },
-        now,
-    )
-    .await
-    .map_err(|e| index(&e))?;
+    strata_jobs::link::enqueue_forced_in(&mut tx, ctx.ids.as_ref(), kind, id, now)
+        .await
+        .map_err(|e| {
+            tracing::error!(error = %e, "queueing a relink job failed");
+            Problem::new(ProblemType::Internal)
+        })?;
     let stored = store_result(ctx, rc, &mut tx, &applied(None, false)).await?;
     tx.commit().await.map_err(|e| index(&e))?;
     rc.mark_settled(stored);

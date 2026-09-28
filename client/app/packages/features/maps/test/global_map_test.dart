@@ -15,7 +15,7 @@ import 'helpers/fixtures.dart';
 import 'helpers/matrix.dart';
 
 FakeCoreApi _fake() => FakeCoreApi()
-  ..globalGraphAnswer.returns(MapFixtures.globalSmall)
+  ..globalGraphFilteredAnswer.returns(MapFixtures.globalSmall)
   ..localGraph[('c-acme-logistics', 1)].add(MapFixtures.acmeLocal);
 
 /// Screen position of a node of the painted map.
@@ -79,9 +79,15 @@ void main() {
           const GlobalMapScreen(),
           _fake(),
           overrides: [
-            globalGraphProvider.overrideWith(
-              (ref) => Completer<GlobalGraphView>().future,
-            ),
+            globalGraphFilteredProvider(
+              const GraphFilter(
+                edgeKinds: [],
+                nodeKinds: [],
+                similarity: true,
+                lens: GraphLens.notes,
+                includeTags: false,
+              ),
+            ).overrideWith((ref) => Completer<GlobalGraphView>().future),
           ],
         );
         expect(
@@ -93,7 +99,7 @@ void main() {
 
       testWidgets('empty $v', (tester) async {
         final fake = _fake()
-          ..globalGraphAnswer.returns(
+          ..globalGraphFilteredAnswer.returns(
             const GlobalGraphView(
               nodes: [],
               edges: [],
@@ -121,7 +127,7 @@ void main() {
 
       testWidgets('error $v', (tester) async {
         final fake = _fake()
-          ..globalGraphAnswer.throws(
+          ..globalGraphFilteredAnswer.throws(
             const CoreFailure(code: 'store', messageKey: 'error.store'),
           );
         await pumpVariant(tester, v, const GlobalMapScreen(), fake);
@@ -243,7 +249,8 @@ void main() {
     });
 
     testWidgets('filters hide edge classes and node kinds', (tester) async {
-      await pumpVariant(tester, expanded, const GlobalMapScreen(), _fake());
+      final fake = _fake();
+      await pumpVariant(tester, expanded, const GlobalMapScreen(), fake);
       await tester.tap(find.widgetWithText(CheckboxListTile, 'contradicts'));
       await tester.pump();
       await tester.tap(find.widgetWithText(FilterChip, 'Person'));
@@ -264,15 +271,24 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(radio);
       await tester.pump();
+      // The core filters: the last query leaves out the hidden edge class
+      // and node kind; the cluster focus only dims.
+      GraphFilter lastQuery() =>
+          fake.calls
+                  .lastWhere((c) => c.method == 'globalGraphFiltered')
+                  .args['filter']!
+              as GraphFilter;
+      expect(lastQuery().edgeKinds, isNot(contains('relation:contradicts')));
+      expect(lastQuery().edgeKinds, contains('relation:supports'));
+      expect(lastQuery().nodeKinds, isNot(contains('person')));
+      expect(lastQuery().nodeKinds, contains('note'));
       var viewport = tester.widget<GraphViewport>(find.byType(GraphViewport));
-      expect(viewport.options.hiddenEdges, {EdgeClass.contradicts});
-      expect(viewport.options.hiddenKinds, {NodeKind.person});
       expect(viewport.options.focusCluster, 'k-pricing');
       await tester.tap(find.text('Reset'));
       await tester.pump();
       viewport = tester.widget<GraphViewport>(find.byType(GraphViewport));
-      expect(viewport.options.hiddenEdges, isEmpty);
-      expect(viewport.options.hiddenKinds, isEmpty);
+      expect(lastQuery().edgeKinds, isEmpty);
+      expect(lastQuery().nodeKinds, isEmpty);
       expect(viewport.options.focusCluster, isNull);
     });
 

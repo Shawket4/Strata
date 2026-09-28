@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1637109564;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 85507987;
 
 // Section: executor
 
@@ -4949,6 +4949,50 @@ fn wire__crate__api__views__watch_local_graph_impl(
                 transform_result_sse::<_, crate::view::model::CoreFailure>((move || {
                     let output_ok =
                         crate::api::views::watch_local_graph(api_id, api_depth, api_sink)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__views__watch_local_graph_filtered_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "watch_local_graph_filtered",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_depth = <u8>::sse_decode(&mut deserializer);
+            let api_edge_kinds = <Vec<String>>::sse_decode(&mut deserializer);
+            let api_sink = <StreamSink<
+                crate::view::model::LocalGraphView,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::view::model::CoreFailure>((move || {
+                    let output_ok = crate::api::views::watch_local_graph_filtered(
+                        api_id,
+                        api_depth,
+                        api_edge_kinds,
+                        api_sink,
+                    )?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -10408,22 +10452,28 @@ fn pde_ffi_dispatcher_primary_impl(
             wire__crate__api__views__watch_inbox_filtered_impl(port, ptr, rust_vec_len, data_len)
         }
         140 => wire__crate__api__views__watch_local_graph_impl(port, ptr, rust_vec_len, data_len),
-        141 => wire__crate__api__views__watch_nav_impl(port, ptr, rust_vec_len, data_len),
-        142 => wire__crate__api__views__watch_note_impl(port, ptr, rust_vec_len, data_len),
-        143 => wire__crate__api__views__watch_notes_list_impl(port, ptr, rust_vec_len, data_len),
-        144 => wire__crate__api__reminders__watch_notification_ops_impl(
+        141 => wire__crate__api__views__watch_local_graph_filtered_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        145 => wire__crate__api__views__watch_recent_impl(port, ptr, rust_vec_len, data_len),
-        146 => wire__crate__api__app__watch_session_impl(port, ptr, rust_vec_len, data_len),
-        147 => wire__crate__api__views__watch_settings_impl(port, ptr, rust_vec_len, data_len),
-        148 => wire__crate__api__views__watch_sync_status_impl(port, ptr, rust_vec_len, data_len),
-        149 => wire__crate__api__views__watch_task_impl(port, ptr, rust_vec_len, data_len),
-        150 => wire__crate__api__views__watch_task_homes_impl(port, ptr, rust_vec_len, data_len),
-        151 => wire__crate__api__views__watch_tasks_impl(port, ptr, rust_vec_len, data_len),
+        142 => wire__crate__api__views__watch_nav_impl(port, ptr, rust_vec_len, data_len),
+        143 => wire__crate__api__views__watch_note_impl(port, ptr, rust_vec_len, data_len),
+        144 => wire__crate__api__views__watch_notes_list_impl(port, ptr, rust_vec_len, data_len),
+        145 => wire__crate__api__reminders__watch_notification_ops_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        146 => wire__crate__api__views__watch_recent_impl(port, ptr, rust_vec_len, data_len),
+        147 => wire__crate__api__app__watch_session_impl(port, ptr, rust_vec_len, data_len),
+        148 => wire__crate__api__views__watch_settings_impl(port, ptr, rust_vec_len, data_len),
+        149 => wire__crate__api__views__watch_sync_status_impl(port, ptr, rust_vec_len, data_len),
+        150 => wire__crate__api__views__watch_task_impl(port, ptr, rust_vec_len, data_len),
+        151 => wire__crate__api__views__watch_task_homes_impl(port, ptr, rust_vec_len, data_len),
+        152 => wire__crate__api__views__watch_tasks_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

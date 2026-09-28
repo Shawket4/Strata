@@ -268,7 +268,17 @@ impl JobHandler for LinkHandler {
     }
 }
 
-/// Enqueues a forced `kind` job (`link` or `file_inbox`) for `note` now
+/// The job a forced relink of the note at `path` runs: `file_inbox` for an inbox capture
+/// (its filing job links it), `link` otherwise.
+pub fn relink_kind(path: &str) -> &'static str {
+    if path.starts_with("inbox/") {
+        pipeline::FILE_INBOX
+    } else {
+        pipeline::LINK
+    }
+}
+
+/// Enqueues a forced `kind` job (`link` or `file_inbox`, see [`relink_kind`]) for `note` now
 /// (`POST /notes/{id}/relink`).
 pub async fn enqueue_forced(
     db: &AppDb,
@@ -279,8 +289,22 @@ pub async fn enqueue_forced(
     now: chrono::DateTime<chrono::Utc>,
 ) -> Result<strata_common::JobId, JobError> {
     let mut tx = db.begin(scope).await?;
+    let job = enqueue_forced_in(&mut tx, ids, kind, note, now).await?;
+    tx.commit().await?;
+    Ok(job)
+}
+
+/// [`enqueue_forced`] inside the caller's transaction (the sync push stores the op's result in
+/// the same transaction). A queued job of `kind` for the note becomes the forced run.
+pub async fn enqueue_forced_in(
+    tx: &mut strata_index::ScopedTx,
+    ids: &dyn IdGenerator,
+    kind: &str,
+    note: NoteId,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<strata_common::JobId, JobError> {
     let job = crate::repo::enqueue(
-        &mut tx,
+        tx,
         &strata_index::repo::jobs::NewJob {
             id: strata_common::JobId::generate(ids),
             kind: kind.to_owned(),
@@ -293,6 +317,5 @@ pub async fn enqueue_forced(
         now,
     )
     .await?;
-    tx.commit().await?;
     Ok(job.id)
 }

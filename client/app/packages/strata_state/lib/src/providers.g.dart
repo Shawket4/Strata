@@ -1307,6 +1307,111 @@ final class AskConversationProvider
 
 String _$askConversationHash() => r'3287ef6363445af2b1074cbebd4f2796e1a38032';
 
+/// A note's local mind map with only the edges of [edgeKinds] (empty: all),
+/// filtered in the core (`CoreApi.watchLocalGraphFiltered`). Pass the same
+/// list instance while the selection is unchanged.
+
+@ProviderFor(localGraphFiltered)
+final localGraphFilteredProvider = LocalGraphFilteredFamily._();
+
+/// A note's local mind map with only the edges of [edgeKinds] (empty: all),
+/// filtered in the core (`CoreApi.watchLocalGraphFiltered`). Pass the same
+/// list instance while the selection is unchanged.
+
+final class LocalGraphFilteredProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<LocalGraphView>,
+          LocalGraphView,
+          Stream<LocalGraphView>
+        >
+    with $FutureModifier<LocalGraphView>, $StreamProvider<LocalGraphView> {
+  /// A note's local mind map with only the edges of [edgeKinds] (empty: all),
+  /// filtered in the core (`CoreApi.watchLocalGraphFiltered`). Pass the same
+  /// list instance while the selection is unchanged.
+  LocalGraphFilteredProvider._({
+    required LocalGraphFilteredFamily super.from,
+    required (String, int, List<String>) super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'localGraphFilteredProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$localGraphFilteredHash();
+
+  @override
+  String toString() {
+    return r'localGraphFilteredProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<LocalGraphView> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<LocalGraphView> create(Ref ref) {
+    final argument = this.argument as (String, int, List<String>);
+    return localGraphFiltered(ref, argument.$1, argument.$2, argument.$3);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LocalGraphFilteredProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$localGraphFilteredHash() =>
+    r'aaa6411d70b15eb30610cce1d9252a1bf0a97169';
+
+/// A note's local mind map with only the edges of [edgeKinds] (empty: all),
+/// filtered in the core (`CoreApi.watchLocalGraphFiltered`). Pass the same
+/// list instance while the selection is unchanged.
+
+final class LocalGraphFilteredFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          Stream<LocalGraphView>,
+          (String, int, List<String>)
+        > {
+  LocalGraphFilteredFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'localGraphFilteredProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A note's local mind map with only the edges of [edgeKinds] (empty: all),
+  /// filtered in the core (`CoreApi.watchLocalGraphFiltered`). Pass the same
+  /// list instance while the selection is unchanged.
+
+  LocalGraphFilteredProvider call(
+    String id,
+    int depth,
+    List<String> edgeKinds,
+  ) => LocalGraphFilteredProvider._(
+    argument: (id, depth, edgeKinds),
+    from: this,
+  );
+
+  @override
+  String toString() => r'localGraphFilteredProvider';
+}
+
 /// A note's local mind map at [depth] (`CoreApi.watchLocalGraph`).
 
 @ProviderFor(localGraph)

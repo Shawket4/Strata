@@ -182,6 +182,19 @@ Stream<TaskHomesView> taskHomes(Ref ref) =>
 Stream<AskView> askConversation(Ref ref) =>
     ref.watch(coreApiProvider).watchAsk();
 
+/// A note's local mind map with only the edges of [edgeKinds] (empty: all),
+/// filtered in the core (`CoreApi.watchLocalGraphFiltered`). Pass the same
+/// list instance while the selection is unchanged.
+@Riverpod(retry: noCoreRetry)
+Stream<LocalGraphView> localGraphFiltered(
+  Ref ref,
+  String id,
+  int depth,
+  List<String> edgeKinds,
+) => ref
+    .watch(coreApiProvider)
+    .watchLocalGraphFiltered(id: id, depth: depth, edgeKinds: edgeKinds);
+
 /// A note's local mind map at [depth] (`CoreApi.watchLocalGraph`).
 @Riverpod(retry: noCoreRetry)
 Stream<LocalGraphView> localGraph(Ref ref, String id, int depth) =>
