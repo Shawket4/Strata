@@ -193,7 +193,10 @@ void main() {
         'The server answered with an error (502).',
       );
       expect(l10n.failure(f('storage')), 'Something went wrong (storage).');
-      expect(l10n.failure(Exception()), 'Something went wrong (internal).');
+      expect(
+        l10n.failure(Exception()),
+        "Couldn't reach the server. Check your connection and try again.",
+      );
       expect(l10n.role('admin'), 'Admin');
       expect(l10n.role('member'), 'Member');
       expect(SignInScreen.icon, Icons.login);
