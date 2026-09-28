@@ -64,7 +64,8 @@ async fn setup(h: &Harness, body: &str) -> (std::sync::Arc<Session>, Recorder<No
     );
     let s = h.sign_in_a().await;
     let rec = Recorder::new();
-    s.attach_notifications(Box::new(rec.clone()));
+    h.core.env().notifications.attach(Box::new(rec.clone()));
+    s.flush_notifications();
     (s, rec)
 }
 
@@ -339,12 +340,14 @@ async fn done_and_snooze_go_through_the_outbox() {
     rec.take();
     let watanya_id = stable_id("t-watanya", "2026-10-01 09:00");
 
+    // The snooze length is a device setting (default 15 minutes).
+    s.set_snooze_minutes(10).expect("snooze length");
+    assert_eq!(rec.take(), Vec::new(), "the plan did not change");
     h.clock.set(utc("2026-10-01T06:00:00Z"));
     s.notification_action(
         watanya_id,
         NotificationAction {
             kind: NotificationActionKind::Snooze,
-            minutes: 10,
         },
     )
     .expect("snooze");
@@ -380,7 +383,6 @@ async fn done_and_snooze_go_through_the_outbox() {
         snoozed_id,
         NotificationAction {
             kind: NotificationActionKind::Done,
-            minutes: 0,
         },
     )
     .expect("done");

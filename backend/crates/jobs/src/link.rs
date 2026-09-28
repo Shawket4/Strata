@@ -245,11 +245,13 @@ impl JobHandler for LinkHandler {
     }
 }
 
-/// Enqueues a forced `link` job for `note` now (`POST /notes/{id}/relink`).
-pub async fn enqueue_relink(
+/// Enqueues a forced `kind` job (`link` or `file_inbox`) for `note` now
+/// (`POST /notes/{id}/relink`).
+pub async fn enqueue_forced(
     db: &AppDb,
     scope: &UserScope,
     ids: &dyn IdGenerator,
+    kind: &str,
     note: NoteId,
     now: chrono::DateTime<chrono::Utc>,
 ) -> Result<strata_common::JobId, JobError> {
@@ -258,7 +260,7 @@ pub async fn enqueue_relink(
         &mut tx,
         &strata_index::repo::jobs::NewJob {
             id: strata_common::JobId::generate(ids),
-            kind: pipeline::LINK.to_owned(),
+            kind: kind.to_owned(),
             note_id: Some(note),
             payload: pipeline::rmp(&LinkParams { force: true })?,
             run_after: now,

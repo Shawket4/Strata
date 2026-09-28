@@ -243,7 +243,10 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
         Arc::new(strata_jobs::StaticUsers(vec![a])),
         chrono_tz::UTC,
         3,
-        strata_jobs::standard_periodic(),
+        vec![strata_jobs::Periodic {
+            kind: strata_jobs::dedupe_sweep::DEDUPE,
+            cadence: strata_jobs::Cadence::Nightly,
+        }],
     );
     assert_eq!(scheduler.ensure().await, 1);
     w.db.clock

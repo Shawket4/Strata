@@ -34,12 +34,13 @@ fn columns(conn: &Connection, table: &str) -> Vec<String> {
 #[test]
 fn fresh_account_database_has_the_full_schema() {
     let conn = Connection::open_in_memory().expect("db");
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("migrates"), 2);
-    assert_eq!(migrations::version(&conn).expect("version"), 2);
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("migrates"), 3);
+    assert_eq!(migrations::version(&conn).expect("version"), 3);
     assert_eq!(
         tables(&conn),
         [
             "account",
+            "acknowledged_suggestions",
             "auth_tokens",
             "bootstrap_seen",
             "cluster_names",
@@ -58,13 +59,16 @@ fn fresh_account_database_has_the_full_schema() {
             "notes",
             "notes_fts",
             "outbox",
+            "pinned_notes",
             "places",
             "rejected",
             "rejections",
             "relation_meta",
             "relations",
+            "remote_cache",
             "scheduled_notifications",
             "suggestions",
+            "sync_log",
             "sync_state",
             "tags",
             "task_reminders",
@@ -85,7 +89,8 @@ fn fresh_account_database_has_the_full_schema() {
             "status",
             "attempts",
             "last_error",
-            "created"
+            "created",
+            "base_content"
         ]
     );
     assert_eq!(
@@ -104,7 +109,8 @@ fn fresh_account_database_has_the_full_schema() {
             "base_path",
             "base_content",
             "base_version",
-            "local_updated_at"
+            "local_updated_at",
+            "summary"
         ]
     );
     assert_eq!(
@@ -119,7 +125,9 @@ fn fresh_account_database_has_the_full_schema() {
             "last_pull_at",
             "last_push_at",
             "consecutive_failures",
-            "last_error"
+            "last_error",
+            "events_seq",
+            "paused"
         ]
     );
     // The sync state row exists from the start.
@@ -176,7 +184,7 @@ fn v1_to_v2_keeps_every_row_and_adds_the_notification_table() {
     .expect("fixture");
     assert!(!tables(&conn).contains(&"scheduled_notifications".to_owned()));
 
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("v2"), 2);
+    assert_eq!(migrations::migrate_to(&conn, ACCOUNT, 2).expect("v2"), 2);
 
     assert!(tables(&conn).contains(&"scheduled_notifications".to_owned()));
     let note: (String, String) = conn
@@ -210,18 +218,70 @@ fn v1_to_v2_keeps_every_row_and_adds_the_notification_table() {
 }
 
 #[test]
+fn v2_to_v3_keeps_every_row_and_adds_server_columns() {
+    let conn = Connection::open_in_memory().expect("db");
+    assert_eq!(migrations::migrate_to(&conn, ACCOUNT, 2).expect("v2"), 2);
+    conn.execute_batch(
+        "INSERT INTO notes (id, path, title, kind, content, frontmatter, local_updated_at)
+           VALUES ('n1', 'notes/a.md', 'a', 'note', 'body', x'90', '2026-09-27T10:00:00+00:00');
+         INSERT INTO outbox (op_id, ord, kind, entity_id, local_entity, payload, status, created)
+           VALUES ('op1', 1, 'note.update', 'n1', 'note:n1', x'80', 'pending', 'now');
+         INSERT INTO suggestions (id, note_id, kind, payload, status, base_status, created)
+           VALUES ('s1', 'n1', 'filing', x'80', 'pending', 'pending', 'now');
+         INSERT INTO relation_meta (src_id, dst_id, rel_type, by) VALUES ('n1', 'n2', 'related', 'ai');
+         UPDATE sync_state SET epoch = 3, cursor_seq = 42, bootstrap_complete = 1;",
+    )
+    .expect("fixture");
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("v3"), 3);
+    let note: (String, Option<String>) = conn
+        .query_row(
+            "SELECT content, summary FROM notes WHERE id = 'n1'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .expect("note kept");
+    assert_eq!(note, ("body".to_owned(), None));
+    let op: (String, Option<String>) = conn
+        .query_row("SELECT status, base_content FROM outbox", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .expect("op kept");
+    assert_eq!(op, ("pending".to_owned(), None));
+    let suggestion: (String, Option<Vec<u8>>) = conn
+        .query_row("SELECT status, replies FROM suggestions", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .expect("suggestion kept");
+    assert_eq!(suggestion, ("pending".to_owned(), None));
+    let rel: (String, Option<String>) = conn
+        .query_row("SELECT by, created FROM relation_meta", [], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })
+        .expect("relation kept");
+    assert_eq!(rel, ("ai".to_owned(), None));
+    let state: (i64, i64, Option<i64>, bool) = conn
+        .query_row(
+            "SELECT epoch, cursor_seq, events_seq, paused FROM sync_state",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+        )
+        .expect("state kept");
+    assert_eq!(state, (3, 42, None, false));
+}
+
+#[test]
 fn migrating_twice_is_a_no_op_and_newer_databases_are_refused() {
     let conn = Connection::open_in_memory().expect("db");
     migrations::migrate(&conn, ACCOUNT).expect("first");
     let before = tables(&conn);
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("second"), 2);
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("second"), 3);
     assert_eq!(tables(&conn), before);
 
     conn.pragma_update(None, "user_version", 9).expect("bump");
     assert_eq!(
         migrations::migrate(&conn, ACCOUNT),
         Err(CoreError::Storage(
-            "database schema v9 is newer than this app (v2)".into()
+            "database schema v9 is newer than this app (v3)".into()
         ))
     );
 }

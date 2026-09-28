@@ -3,6 +3,9 @@
 
 pub mod admin;
 pub mod ai;
+// The AI pipelines (decisions, corrections, refresh/relink, AI settings; documented by
+// `ai_pipelines::AiPipelinesApiDoc`).
+pub mod ai_pipelines;
 pub mod auth;
 pub mod devices;
 pub mod events;

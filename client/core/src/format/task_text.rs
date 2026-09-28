@@ -67,7 +67,7 @@ fn tokens(text: &str) -> Vec<Tok<'_>> {
     out.into_iter()
         .map(|(s, e)| {
             let t = &text[s..e];
-            let trimmed = t.trim_end_matches([',', '.', '،', '!', '?', '؟']);
+            let trimmed = t.trim_end_matches([',', '.', '،', '?', '؟']);
             Tok {
                 text: t,
                 lower: trimmed.to_lowercase(),
@@ -361,7 +361,7 @@ pub fn parse(text: &str, today: NaiveDate) -> ParsedTaskText {
             description = stripped.to_owned();
         }
     }
-    out.description = description.trim().to_owned();
+    description.trim().clone_into(&mut out.description);
     out
 }
 

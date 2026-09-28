@@ -5,7 +5,7 @@
 //! together. The median of three runs is compared.
 //!
 //! Measured in the dev container (4 vCPU Intel Xeon @ 2.10 GHz, `cargo test` debug profile,
-//! PostgreSQL 16 on the same host, 2026-09-27): 0.53 s median. The 2 s budget leaves about
+//! `PostgreSQL` 16 on the same host, 2026-09-27): 0.53 s median. The 2 s budget leaves about
 //! 4× headroom for slower CI machines; the release build is several times faster.
 #![allow(
     clippy::expect_used,

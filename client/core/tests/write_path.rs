@@ -15,8 +15,9 @@ use strata_core::store::outbox::{self, OpStatus, OutboxOp};
 use strata_core::sync::model::{Op, Version, ops};
 use strata_core::view::hub::Recorder;
 use strata_core::view::model::{
-    Availability, Connectivity, CreateOutcome, HomeView, NoteListItem, NoteSyncKind, NoteSyncState,
-    SyncActivity, SyncPill, TaskItem, TaskSections, TaskState,
+    Availability, Connectivity, CreateOutcome, HomeView, InboxFilter, InboxPreviewItem,
+    NoteListItem, NoteSyncKind, NoteSyncState, SyncActivity, SyncPill, SyncPillKind, TaskItem,
+    TaskSections, TaskState, TextDir,
 };
 use strata_core::view::{Topics, build};
 use ulid::Ulid;
@@ -43,6 +44,15 @@ fn pill(pending: u32) -> SyncPill {
         conflicts: 0,
         duplicates: 0,
         last_sync_at: None,
+        display: SyncPillKind::Synced,
+        progress_done: 0,
+        progress_total: 0,
+        last_sync_label: None,
+        label: if pending == 0 {
+            "Synced".to_owned()
+        } else {
+            format!("Synced · {pending} queued")
+        },
     }
 }
 
@@ -83,6 +93,7 @@ async fn capture_queues_one_op_and_updates_home() {
             status: OpStatus::Pending,
             attempts: 0,
             created: "2026-09-27T10:00:00+00:00".into(),
+            base_content: None,
         }]
     );
     assert_eq!(
@@ -97,6 +108,20 @@ async fn capture_queues_one_op_and_updates_home() {
         inbox_count: 0,
         tasks: TaskSections::default(),
         sync: pill(0),
+        // 13:00 in Cairo on Sunday 27 September.
+        today_label: "Sunday 27 September".into(),
+        greeting: "Good afternoon, shawket".into(),
+        display_name: "shawket".into(),
+        inbox_preview: Vec::new(),
+        needs_you_count: 0,
+        contradictions_count: 0,
+        inbox_summary: String::new(),
+        ai_activity: Availability::NotYetAvailable,
+        ai_activity_items: Vec::new(),
+        ai_activity_headline: String::new(),
+        open_items: Availability::Available,
+        open_item_list: Vec::new(),
+        pinned: Vec::new(),
     };
     assert_eq!(
         home.take(),
@@ -105,12 +130,21 @@ async fn capture_queues_one_op_and_updates_home() {
             HomeView {
                 inbox_count: 1,
                 sync: pill(1),
+                inbox_preview: vec![InboxPreviewItem {
+                    note_id: id.clone(),
+                    text: "كلمت أحمد النهارده".into(),
+                    text_dir: TextDir::Rtl,
+                    summary: String::new(),
+                    needs_you: false,
+                }],
                 ..empty
             }
         ]
     );
     // The inbox shows it immediately, marked as not synced yet.
-    let inbox = s.read(|c, _| build::inbox(c)).expect("inbox");
+    let inbox = s
+        .read(|c, ctx| build::inbox(c, ctx, InboxFilter::All))
+        .expect("inbox");
     assert_eq!(inbox.captures.len(), 1);
     assert_eq!(inbox.captures[0].note_id, id);
     assert_eq!(inbox.captures[0].title, "2026-09-27-130000");
@@ -211,10 +245,15 @@ async fn note_create_update_move_delete_ops_and_note_view() {
         NoteSyncState {
             kind: NoteSyncKind::Pending,
             pending_ops: 1,
-            conflict_op_id: None
+            conflict_op_id: None,
+            duplicate_op_id: None,
+            label: "Saved on this device · 1 change to sync".into(),
         }
     );
-    assert_eq!(first.history, Availability::NotYetAvailable);
+    // History is fetched on demand while online (`refresh_history`).
+    assert_eq!(first.history, Availability::Available);
+    assert_eq!(first.history_entries, Vec::new());
+    assert_eq!(first.version_label, None);
     let second = screens[1].note.as_ref().expect("note");
     assert_eq!(second.content, v2);
     assert_eq!(second.sync.pending_ops, 2);
@@ -264,8 +303,24 @@ async fn failed_intents_write_nothing() {
     assert_eq!(outbox(&s), Vec::new());
 }
 
-fn task(id: &str, note_id: &str, description: &str, due: &str) -> TaskItem {
+fn task(
+    id: &str,
+    note_id: &str,
+    description: &str,
+    due: &str,
+    line_number: u32,
+    due_label: &str,
+) -> TaskItem {
     TaskItem {
+        description_dir: TextDir::Ltr,
+        note_path: "tasks/Tasks.md".to_owned(),
+        line_number,
+        due_label: Some(due_label.to_owned()),
+        lateness_label: None,
+        completion_label: None,
+        next_in_label: None,
+        origin_label: None,
+        is_overdue: false,
         id: id.to_owned(),
         note_id: note_id.to_owned(),
         note_title: "Tasks".to_owned(),
@@ -412,7 +467,9 @@ async fn tasks_create_complete_recurring_and_sections() {
             &t1,
             &home_id,
             "Send weekly invoicing proposal to Ahmed",
-            "2026-09-29"
+            "2026-09-29",
+            1,
+            "Tue 29 Sep"
         )]
     );
     let reminder_at = DateTime::parse_from_rfc3339("2026-09-27T07:00:00Z")
@@ -423,8 +480,20 @@ async fn tasks_create_complete_recurring_and_sections() {
         reminders: vec![strata_core::view::model::ReminderItem {
             local: "2026-09-27 10:00".into(),
             at: reminder_at,
+            local_at: NaiveDateTime::parse_from_str("2026-09-27 10:00", "%Y-%m-%d %H:%M")
+                .expect("dt"),
+            time_label: "10:00".into(),
+            offset_label: "on the day".into(),
         }],
-        ..task(&t2, &home_id, "Petrol Arrows invoice", "2026-09-27")
+        next_in_label: Some("next today".into()),
+        ..task(
+            &t2,
+            &home_id,
+            "Petrol Arrows invoice",
+            "2026-09-27",
+            2,
+            "Today",
+        )
     };
     assert_eq!(views[2].sections.today, vec![petrol_today.clone()]);
     assert_eq!(views[2].sections.recurring, vec![petrol_today]);
@@ -588,6 +657,11 @@ async fn recent_notes_on_home_are_newest_first() {
                 tags: vec!["tag".into()],
                 updated_at: now() + chrono::Duration::minutes(5),
                 pending_sync: true,
+                title_dir: TextDir::Ltr,
+                snippet_dir: TextDir::Ltr,
+                updated_label: "13:05".into(),
+                link_count: 0,
+                highlights: Vec::new(),
             },
             NoteListItem {
                 id: seq_id(1),
@@ -598,6 +672,11 @@ async fn recent_notes_on_home_are_newest_first() {
                 tags: Vec::new(),
                 updated_at: now(),
                 pending_sync: true,
+                title_dir: TextDir::Ltr,
+                snippet_dir: TextDir::Ltr,
+                updated_label: "13:00".into(),
+                link_count: 0,
+                highlights: Vec::new(),
             },
         ]
     );

@@ -113,12 +113,10 @@ pub fn search(
     mode: SearchMode,
     folder: Option<&str>,
 ) -> CoreResult<SearchView> {
-    let availability = match mode {
-        SearchMode::Keyword => Availability::Available,
-        SearchMode::Semantic | SearchMode::Hybrid if ctx.connectivity == Connectivity::Offline => {
-            Availability::Offline
-        }
-        SearchMode::Semantic | SearchMode::Hybrid => Availability::Available,
+    let availability = if mode != SearchMode::Keyword && ctx.connectivity == Connectivity::Offline {
+        Availability::Offline
+    } else {
+        Availability::Available
     };
     let folder_owned = folder
         .map(str::to_owned)

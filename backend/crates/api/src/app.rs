@@ -29,6 +29,7 @@ pub fn routes(cfg: &mut web::ServiceConfig) {
     crate::routes::sync::configure(cfg);
     crate::routes::events::configure(cfg);
     crate::routes::ai::configure(cfg);
+    crate::routes::ai_pipelines::configure(cfg);
     crate::routes::graph::configure(cfg);
 }
 

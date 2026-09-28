@@ -96,6 +96,16 @@ pub enum SuggestionPayload {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         reason: Option<String>,
     },
+    /// A filing proposal for an inbox capture (`filing`, §9.3).
+    Filing(crate::routes::ai_pipelines::FilingProposal),
+    /// Link a mention to an entity or create it (`entity_link`, §6.7, D13 = b).
+    EntityLink(crate::routes::ai_pipelines::EntityLinkProposal),
+    /// A custody event not applied automatically (`custody`, §6.12, D30).
+    Custody(Box<crate::routes::ai_pipelines::CustodyProposal>),
+    /// A task proposed from a note (`task`, §6.11).
+    Task(crate::routes::ai_pipelines::TaskProposal),
+    /// A correction in words not applied automatically (`correction`, §9.8).
+    Correction(crate::routes::ai_pipelines::CorrectionProposal),
     /// A kind this version does not describe (MessagePack as stored).
     Opaque {
         /// The raw payload.
@@ -202,7 +212,17 @@ impl From<SuggestionView> for Suggestion {
                     data: Binary(v.suggestion.payload.clone()),
                 },
             },
-            Payload::Opaque(data) => SuggestionPayload::Opaque { data: Binary(data) },
+            Payload::Opaque(data) => {
+                use crate::routes::ai_pipelines::{AiPayload, ai_payload};
+                match ai_payload(&v.suggestion.kind, &data) {
+                    Some(AiPayload::Filing(p)) => SuggestionPayload::Filing(p),
+                    Some(AiPayload::EntityLink(p)) => SuggestionPayload::EntityLink(p),
+                    Some(AiPayload::Custody(p)) => SuggestionPayload::Custody(Box::new(p)),
+                    Some(AiPayload::Task(p)) => SuggestionPayload::Task(p),
+                    Some(AiPayload::Correction(p)) => SuggestionPayload::Correction(p),
+                    None => SuggestionPayload::Opaque { data: Binary(data) },
+                }
+            }
         };
         let s = v.suggestion;
         Self {

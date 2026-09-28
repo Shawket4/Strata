@@ -27,7 +27,10 @@ pub fn zip_note_count(bytes: &[u8]) -> u32 {
     for i in 0..archive.len() {
         if let Ok(f) = archive.by_index(i) {
             let name = f.name();
-            if name.ends_with(".md") && !name.starts_with(".trash/") {
+            let md = std::path::Path::new(name)
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("md"));
+            if md && !name.starts_with(".trash/") {
                 n += 1;
             }
         }

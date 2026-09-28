@@ -4839,6 +4839,7 @@ dependencies = [
 name = "text-normalize"
 version = "0.1.0"
 dependencies = [
+ "criterion",
  "proptest",
  "unicode-normalization",
 ]
@@ -5462,6 +5463,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "chrono-tz",
+ "criterion",
  "domain",
  "insta",
  "pretty_assertions",

@@ -226,9 +226,10 @@ pub fn completions(
                  ORDER BY e.display_name COLLATE NOCASE, e.note_id LIMIT ?2",
             )?;
             let rows: Vec<(String, String, String, String)> = st
-                .query_map(params![q, COMPLETION_LIMIT as i64], |r| {
-                    Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?))
-                })?
+                .query_map(
+                    params![q, i64::try_from(COMPLETION_LIMIT).unwrap_or(20)],
+                    |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)),
+                )?
                 .collect::<Result<_, _>>()?;
             Completions {
                 kind: CompletionKind::Mention,
@@ -293,9 +294,7 @@ pub fn task_homes(conn: &Connection, ctx: &ViewCtx) -> CoreResult<TaskHomesView>
             .transpose()?
             .unwrap_or(0),
         note_id: home.as_ref().map(|h| h.0.clone()),
-        title: home
-            .map(|h| h.1)
-            .unwrap_or_else(|| tr(ctx.lang, "Tasks", "المهام")),
+        title: home.map_or_else(|| tr(ctx.lang, "Tasks", "المهام"), |h| h.1),
         path: crate::store::write::TASK_HOME.to_owned(),
         is_default: true,
     }];
@@ -566,7 +565,7 @@ pub fn task_draft_preview(
                     });
                 }
             }
-            Piece::Time => {}
+            Piece::Time | Piece::Mention => {}
             Piece::Priority => chips.push(TaskChip {
                 kind: TaskChipKind::Priority,
                 label: match (parsed.priority.as_deref(), lang) {
@@ -579,7 +578,6 @@ pub fn task_draft_preview(
                     _ => String::new(),
                 },
             }),
-            Piece::Mention => {}
         }
     }
     for r in &parsed.reminders {

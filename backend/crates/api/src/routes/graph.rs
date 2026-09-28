@@ -231,7 +231,7 @@ pub fn wire(view: assemble::GraphView) -> Graph {
 
 /// The registered [`GraphApi`] (a composition error when missing).
 pub fn graph_api(api: Option<&web::Data<GraphApi>>) -> Result<&GraphApi, Problem> {
-    api.map(|a| a.get_ref())
+    api.map(|a| a.as_ref())
         .ok_or_else(|| Problem::internal(&"graph API not registered"))
 }
 

@@ -165,7 +165,7 @@ async fn with_auto_file_off_filing_is_a_suggestion_and_accepting_files_in_one_co
             "- [ ] Make Watanya's ETA invoice (@2026-10-01 09:00) 🔁 every month on the 1st 📅 2026-10-01"
         )
     );
-    assert_eq!(w.log(a)[0], "user: create task tasks/Tasks.md");
+    assert_eq!(w.log(a)[0], "user: task create tasks/Tasks.md");
     w.finish().await;
 }
 

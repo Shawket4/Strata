@@ -33,6 +33,11 @@ fn summary(user_id: &str, username: &str, timezone: &str) -> AccountSummary {
         server_url: SERVER.to_owned(),
         timezone: timezone.to_owned(),
         ui_language: "en".to_owned(),
+        initials: username
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().to_string())
+            .unwrap_or_default(),
     }
 }
 
@@ -42,6 +47,11 @@ fn known(user_id: &str, username: &str) -> KnownAccountItem {
         username: username.to_owned(),
         display_name: username.to_owned(),
         server_url: SERVER.to_owned(),
+        initials: username
+            .chars()
+            .next()
+            .map(|c| c.to_uppercase().to_string())
+            .unwrap_or_default(),
     }
 }
 
@@ -293,6 +303,8 @@ async fn deletion_pending_is_export_only() {
                     .into()
             ),
             days_remaining: Some(30),
+            // The account's local date (Africa/Cairo).
+            deletion_label: Some("27 Oct 2026".into()),
             ..SessionState::of(SessionKind::DeletionPending)
         }
     );

@@ -33,29 +33,26 @@ async fn the_cluster_job_is_registered_and_scheduled_nightly() {
         clock,
         ids: db.ids.clone(),
         thresholds: strata_vault::dup::thresholds(&std::collections::BTreeMap::new()),
+        ai_thresholds: strata_jobs::thresholds::AiThresholds::default(),
+        default_tz: config.default_tz().expect("timezone"),
     };
     let kinds: Vec<&str> =
         stratad::jobs::handlers(&deps, Arc::new(EventBus::new(BusConfig::default())))
             .iter()
             .map(|h| h.kind())
             .collect();
-    assert_eq!(
-        kinds,
-        vec!["embed", "embed_backfill", "summarize", "dedupe", "cluster"]
-    );
-    assert_eq!(
-        stratad::jobs::periodic(),
-        vec![
-            Periodic {
-                kind: "dedupe",
-                cadence: Cadence::Nightly
-            },
-            Periodic {
-                kind: "cluster",
-                cadence: Cadence::Nightly
-            },
-        ]
-    );
+    let mut expected: Vec<&str> = strata_jobs::standard_handlers(&deps)
+        .iter()
+        .map(|h| h.kind())
+        .collect();
+    expected.push("cluster");
+    assert_eq!(kinds, expected);
+    let mut periodic = strata_jobs::standard_periodic();
+    periodic.push(Periodic {
+        kind: "cluster",
+        cadence: Cadence::Nightly,
+    });
+    assert_eq!(stratad::jobs::periodic(), periodic);
     db.cleanup().await.expect("cleanup");
 }
 

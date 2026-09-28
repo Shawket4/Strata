@@ -155,7 +155,14 @@ async fn bootstrap_pages_the_snapshot_then_pulls_incrementally() {
     );
     // Derived tables come from the content (vault-format), e.g. the entity and its alias.
     let dir = s
-        .read(|c, _| build::directory(c, strata_core::view::model::DirectoryTab::People, "احمد"))
+        .read(|c, ctx| {
+            build::directory(
+                c,
+                ctx,
+                strata_core::view::model::DirectoryTab::People,
+                "احمد",
+            )
+        })
         .expect("directory");
     assert_eq!(
         dir.items
@@ -164,7 +171,9 @@ async fn bootstrap_pages_the_snapshot_then_pulls_incrementally() {
             .collect::<Vec<_>>(),
         vec![(N3, "Ahmed Samir")]
     );
-    let inbox = s.read(|c, _| build::inbox(c)).expect("inbox");
+    let inbox = s
+        .read(|c, ctx| build::inbox(c, ctx, strata_core::view::model::InboxFilter::All))
+        .expect("inbox");
     assert_eq!(inbox.suggestions.len(), 1);
     assert_eq!(inbox.suggestions[0].detail.line, "- [ ] Call Ahmed");
 
@@ -235,7 +244,7 @@ async fn epoch_change_rebootstraps_and_keeps_live_local_ops() {
     let state = s.read(|c, _| sync_state::get(c)).expect("state");
     assert_eq!((state.epoch, state.bootstrap_complete), (Some(2), true));
     assert_eq!(
-        s.read(|c, _| build::duplicate_prompts(c))
+        s.read(build::duplicate_prompts)
             .expect("prompts")
             .prompts
             .len(),
@@ -336,7 +345,7 @@ async fn stale_edits_merge_or_conflict_per_d19() {
     assert_eq!(note.sync.kind, NoteSyncKind::Conflict);
     assert_eq!(note.sync.conflict_op_id.as_deref(), Some(op.as_str()));
     let screen = s
-        .read(|c, _| build::conflict_screen(c, &op))
+        .read(|c, ctx| build::conflict_screen(c, ctx, &op))
         .expect("conflict");
     let detail = screen.conflict.expect("conflict exists");
     let theirs = merged.replace("Second line.", "Second line (theirs).");
@@ -374,7 +383,7 @@ async fn stale_edits_merge_or_conflict_per_d19() {
     assert_eq!(local_notes(&s).get(N2).map(|n| n.1.clone()), Some(mine));
     assert_eq!(local_notes(&s), server_view(&h));
     assert_eq!(
-        s.read(|c, _| build::conflict_screen(c, &op))
+        s.read(|c, ctx| build::conflict_screen(c, ctx, &op))
             .expect("screen")
             .conflict,
         None
@@ -415,7 +424,7 @@ async fn duplicate_result_holds_later_ops_until_the_user_decides() {
     assert_eq!(report, synced(0, 0, false));
     assert_eq!(h.server.pushes().len(), 1);
 
-    let prompts = s.read(|c, _| build::duplicate_prompts(c)).expect("prompts");
+    let prompts = s.read(build::duplicate_prompts).expect("prompts");
     assert_eq!(prompts.prompts.len(), 1);
     let p = &prompts.prompts[0];
     assert_eq!(

@@ -1,6 +1,8 @@
-//! The recurrence editor (TaskEdit "Repeat"): the structured form of a Tasks-plugin
+//! The recurrence editor (`TaskEdit` "Repeat"): the structured form of a Tasks-plugin
 //! recurrence rule, its compiler back to the canonical phrase (`vault-format`
 //! `RecurrenceRule::to_phrase`), a localised summary, and the next occurrences.
+
+use std::fmt::Write as _;
 
 use chrono::{NaiveDate, Weekday};
 use vault_format::tasks::{Frequency, MonthDay, NthWeekday, RecurrenceRule, parse_recurrence};
@@ -189,7 +191,7 @@ pub fn summary(rule: &RecurrenceRule, labels: &Labels) -> String {
                     let mut s = every(n, WEEKS, "week", "أسبوع", lang);
                     if !rule.weekdays.is_empty() {
                         let names: Vec<String> = rule.weekdays.iter().map(|w| wd(*w)).collect();
-                        s.push_str(&format!(" يوم {}", names.join(" و")));
+                        let _ = write!(s, " يوم {}", names.join(" و"));
                     }
                     s
                 }
@@ -202,7 +204,7 @@ pub fn summary(rule: &RecurrenceRule, labels: &Labels) -> String {
                 } else {
                     nw.nth.to_string()
                 };
-                s.push_str(&format!(" في {} رقم {pos}", wd(nw.weekday)));
+                let _ = write!(s, " في {} رقم {pos}", wd(nw.weekday));
             } else if !rule.month_days.is_empty() {
                 let days: Vec<String> = rule
                     .month_days
@@ -212,7 +214,7 @@ pub fn summary(rule: &RecurrenceRule, labels: &Labels) -> String {
                         MonthDay::Last => "الأخير".to_owned(),
                     })
                     .collect();
-                s.push_str(&format!(" في يوم {}", days.join(" و")));
+                let _ = write!(s, " في يوم {}", days.join(" و"));
             }
             if !rule.months.is_empty() {
                 let names: Vec<String> = rule
@@ -227,7 +229,7 @@ pub fn summary(rule: &RecurrenceRule, labels: &Labels) -> String {
                             .unwrap_or_default()
                     })
                     .collect();
-                s.push_str(&format!(" من {}", names.join(" و")));
+                let _ = write!(s, " من {}", names.join(" و"));
             }
             if rule.when_done {
                 s.push_str(" بعد الإنجاز");

@@ -354,13 +354,13 @@ impl Labels {
         )
     }
 
-    /// A date in a list: "Today", "Sat" (this past week), "21 Sep", "21 Sep 2025".
+    /// A date in a list: "Today", "Sat" (the last five days), "21 Sep", "21 Sep 2025".
     pub fn date_in_list(&self, d: NaiveDate) -> String {
         let today = self.today();
         let back = (today - d).num_days();
         if back == 0 {
             self.t("Today", "اليوم")
-        } else if (1..7).contains(&back) {
+        } else if (1..6).contains(&back) {
             self.weekday_short(d)
         } else if d.year() == today.year() {
             self.day_month(d)
@@ -388,7 +388,7 @@ impl Labels {
         let time = self.hm(t);
         if back == 0 {
             time
-        } else if (1..7).contains(&back) {
+        } else if (1..6).contains(&back) {
             format!("{} {time}", self.weekday_short(d))
         } else if d.year() == today.year() {
             format!("{} {time}", self.day_month(d))
@@ -711,7 +711,8 @@ mod tests {
         let l = cairo("2026-10-29T20:59:00Z", Lang::En);
         assert_eq!(l.hm(at("2026-10-29T20:59:00Z")), "23:59");
         assert_eq!(l.hm(at("2026-10-29T22:30:00Z")), "00:30");
-        assert_eq!(l.list_label(at("2026-10-29T22:30:00Z")), "Fri");
+        // A future day is shown as its date.
+        assert_eq!(l.list_label(at("2026-10-29T22:30:00Z")), "30 Oct");
         let after = cairo("2026-10-30T10:00:00Z", Lang::En);
         assert_eq!(after.today(), d("2026-10-30"));
         assert_eq!(after.hm(at("2026-10-30T10:00:00Z")), "12:00");

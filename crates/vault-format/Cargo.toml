@@ -20,8 +20,13 @@ pulldown-cmark = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+criterion = { workspace = true }
 insta = { workspace = true }
 pretty_assertions = { workspace = true }
+
+[[bench]]
+name = "format"
+harness = false
 
 [lints]
 workspace = true

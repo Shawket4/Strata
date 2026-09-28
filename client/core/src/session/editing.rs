@@ -1,4 +1,4 @@
-//! Intents behind the screens' explicit actions (CORE_GAPS): saving an editor's content
+//! Intents behind the screens' explicit actions (`CORE_GAPS.md`): saving an editor's content
 //! against the version it was built on, capture-level inbox decisions, link-or-create,
 //! custody choices, suggestion threads, documents and places, merges, corrections of AI links
 //! (D13), the user-owned `## Notes` section, properties and aliases, custody moves, reminders
@@ -46,31 +46,28 @@ pub fn with_user_notes(content: &str, text: &str) -> String {
     let section = vault_format::sections::sections(&body)
         .into_iter()
         .find(|s| s.level == 2 && s.title.eq_ignore_ascii_case("notes"));
-    let new_body = match section {
-        Some(s) => {
-            let mut out = String::new();
-            out.push_str(&body[..s.content_span.start]);
-            out.push_str(&text);
-            let rest = &body[s.content_span.end..];
-            if !rest.is_empty() && !text.is_empty() {
-                out.push_str(nl);
-            }
-            out.push_str(rest);
-            out
-        }
-        None => {
-            let mut out = body.clone();
-            if !out.is_empty() && !out.ends_with('\n') {
-                out.push_str(nl);
-            }
-            if !out.is_empty() {
-                out.push_str(nl);
-            }
-            out.push_str("## Notes");
+    let new_body = if let Some(s) = section {
+        let mut out = String::new();
+        out.push_str(&body[..s.content_span.start]);
+        out.push_str(&text);
+        let rest = &body[s.content_span.end..];
+        if !rest.is_empty() && !text.is_empty() {
             out.push_str(nl);
-            out.push_str(&text);
-            out
         }
+        out.push_str(rest);
+        out
+    } else {
+        let mut out = body.clone();
+        if !out.is_empty() && !out.ends_with('\n') {
+            out.push_str(nl);
+        }
+        if !out.is_empty() {
+            out.push_str(nl);
+        }
+        out.push_str("## Notes");
+        out.push_str(nl);
+        out.push_str(&text);
+        out
     };
     doc.set_body(new_body);
     doc.render()
@@ -398,7 +395,7 @@ impl Session {
         );
         self.create_item(
             &id.to_string(),
-            item,
+            &item,
             force,
             Op::DocumentCreate(sm::DocumentCreate {
                 id,
@@ -436,7 +433,7 @@ impl Session {
         );
         self.create_item(
             &id.to_string(),
-            item,
+            &item,
             force,
             Op::PlaceCreate(sm::PlaceCreate {
                 id,
@@ -452,13 +449,13 @@ impl Session {
     fn create_item(
         &self,
         id: &str,
-        item: dedupe::Item,
+        item: &dedupe::Item,
         force: bool,
         op: Op,
     ) -> CoreResult<CreateOutcome> {
         if !force {
             let candidates: Vec<_> = self
-                .read(|c, _| crate::search::duplicates::check(c, &item))?
+                .read(|c, _| crate::search::duplicates::check(c, item))?
                 .into_iter()
                 .map(super::candidate_item)
                 .collect();

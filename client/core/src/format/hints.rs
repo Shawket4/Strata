@@ -343,7 +343,7 @@ mod tests {
                 (SpanKind::Italic, 9, 13),
                 (SpanKind::Strike, 14, 22),
                 (SpanKind::Mark, 23, 29),
-                (SpanKind::Italic, 66, 69),
+                (SpanKind::Italic, 65, 68),
             ]
         );
     }

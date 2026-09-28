@@ -1,6 +1,7 @@
 //! Test-only harness (PLAN §7.1 `testkit/`, §16.1): a fresh Postgres database per test cloned
 //! from a migrated template, pools for every role, user builders, temp data roots, and
-//! re-exports of the deterministic clock and ID generator.
+//! re-exports of the deterministic clock and ID generator, and a synthetic vault generator for
+//! the performance suite (§16.7).
 //!
 //! ```no_run
 //! # async fn demo() -> Result<(), strata_testkit::TestkitError> {
@@ -16,6 +17,7 @@ mod ai;
 mod db;
 mod error;
 mod fixtures;
+mod synthetic;
 
 pub use ai::{FakeLlmProvider, Fixture, detached_scope};
 pub use db::{
@@ -25,3 +27,4 @@ pub use db::{
 pub use error::TestkitError;
 pub use fixtures::{TempDataRoot, TestUser};
 pub use strata_common::{FakeClock, SequentialIdGenerator, clock::default_test_epoch};
+pub use synthetic::{SyntheticConfig, SyntheticCounts, SyntheticFile, SyntheticVault};

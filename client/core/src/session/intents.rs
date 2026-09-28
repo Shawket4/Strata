@@ -528,11 +528,11 @@ impl Session {
                 if !server_copied && let Some(local) = conflict.local_content.clone() {
                     let path = self
                         .read(|c, _| notes::current(c, &conflict.entity_id))?
-                        .map(|n| n.path)
-                        .unwrap_or_else(|| "notes/Conflict.md".to_owned());
+                        .map_or_else(|| "notes/Conflict.md".to_owned(), |n| n.path);
                     let stem = path.strip_suffix(".md").unwrap_or(&path);
                     let stamp = self.ctx().labels().local(self.env.clock.now());
-                    let copy_path = format!("{stem} (conflict {}).md", stamp.format("%Y-%m-%d %H%M%S"));
+                    let copy_path =
+                        format!("{stem} (conflict {}).md", stamp.format("%Y-%m-%d %H%M%S"));
                     let body = vault_format::Document::parse(&local).body().to_owned();
                     self.create_note(&copy_path, &body, true)?;
                 }

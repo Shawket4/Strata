@@ -63,25 +63,25 @@ pub fn line_diff(old: &str, new: &str) -> Vec<DiffLine> {
 }
 
 fn removed(out: &mut Vec<DiffLine>, a: &[&str], from: usize, len: usize) {
-    for k in from..from + len {
+    for (k, line) in a.iter().enumerate().skip(from).take(len) {
         out.push(DiffLine {
             kind: DiffLineKind::Removed,
             old_line: Some(n32(k + 1)),
             new_line: None,
-            text: a[k].to_owned(),
-            dir: dir_of(a[k]),
+            text: (*line).to_owned(),
+            dir: dir_of(line),
         });
     }
 }
 
 fn added(out: &mut Vec<DiffLine>, b: &[&str], from: usize, len: usize) {
-    for k in from..from + len {
+    for (k, line) in b.iter().enumerate().skip(from).take(len) {
         out.push(DiffLine {
             kind: DiffLineKind::Added,
             old_line: None,
             new_line: Some(n32(k + 1)),
-            text: b[k].to_owned(),
-            dir: dir_of(b[k]),
+            text: (*line).to_owned(),
+            dir: dir_of(line),
         });
     }
 }

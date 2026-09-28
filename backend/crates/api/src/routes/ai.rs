@@ -312,6 +312,20 @@ pub async fn ask(
     tokio::spawn(async move {
         run.run(move |event| entry.push(event, clock.now())).await;
     });
+    // A question that corrects an earlier AI decision also goes to the correction job (§9.8).
+    let now = api.clock.now();
+    if let Err(e) = strata_jobs::correct::enqueue_for_message(
+        &api.db,
+        auth.scope(),
+        api.ids.as_ref(),
+        &req.question,
+        now.fixed_offset(),
+        now,
+    )
+    .await
+    {
+        tracing::warn!(error = %e, "queueing a correction from Ask failed");
+    }
     Ok(MsgPack(AskStarted { id }))
 }
 

@@ -1,7 +1,12 @@
 //! Graph assembly from the index (PLAN §7.5 Graph, §9.6, §10) on the fixture vault: exact
 //! node and edge payloads, type and kind filters, the entity lens with co-mention weights,
 //! local neighbourhoods by depth and filter, similarity edges, and isolation between users.
-#![allow(clippy::expect_used, clippy::too_many_lines, clippy::float_cmp)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::float_cmp,
+    clippy::many_single_char_names
+)]
 
 mod common;
 

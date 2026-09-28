@@ -930,7 +930,7 @@ pub fn tasks_view(conn: &Connection, ctx: &ViewCtx) -> CoreResult<TasksView> {
     })
 }
 
-/// Devices reminders go to ("Pixel 9, MacBook Pro"), from the cached device list.
+/// Devices reminders go to (`Pixel 9, MacBook Pro`), from the cached device list.
 fn delivery_label(conn: &Connection) -> CoreResult<Option<String>> {
     Ok(
         cache::get::<Vec<crate::net::DeviceInfo>>(conn, cache::DEVICES)?.map(|(d, _)| {
@@ -2780,14 +2780,14 @@ pub fn directory_filtered(
     let suggestions = suggestion_items(conn, ctx, true)?
         .into_iter()
         .filter(|s| match (tab, s.detail.kind) {
-            (
-                DirectoryTab::People | DirectoryTab::Companies,
-                SuggestionKind::EntityLinkOrCreate,
-            ) => true,
             (_, SuggestionKind::Duplicates) => {
                 s.detail.duplicates.first().is_some_and(|c| c.kind == kind)
             }
-            (DirectoryTab::Documents, SuggestionKind::Custody) => true,
+            (
+                DirectoryTab::People | DirectoryTab::Companies,
+                SuggestionKind::EntityLinkOrCreate,
+            )
+            | (DirectoryTab::Documents, SuggestionKind::Custody) => true,
             _ => false,
         })
         .collect();
@@ -3604,9 +3604,7 @@ pub fn ask_spans(text: &str, citations: &[crate::session::ask::AskCitation]) -> 
     let mut last = 0;
     for l in wikilink::find_all(text) {
         let target = l.target();
-        let hit = citations
-            .iter()
-            .find(|c| c.target == target || c.target == format!("{target}"));
+        let hit = citations.iter().find(|c| c.target == target);
         if let Some(c) = hit {
             if l.span.start > last {
                 out.push(AskSpan {
@@ -3810,10 +3808,10 @@ pub fn settings_view(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Option<Sett
     } else {
         Availability::Available
     };
-    let admin = if !account.is_admin {
-        Availability::NotAllowed
-    } else {
+    let admin = if account.is_admin {
         online
+    } else {
+        Availability::NotAllowed
     };
     let (quiet_enabled, quiet_from, quiet_until) = settings::quiet_hours(conn)?;
     let devices = cache::get::<Vec<crate::net::DeviceInfo>>(conn, cache::DEVICES)?;
@@ -3823,20 +3821,21 @@ pub fn settings_view(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Option<Sett
     });
     let ai_status = cache::get::<crate::net::AiStatusInfo>(conn, cache::AI_STATUS)?
         .map(|(s, _)| ai_status_view(ctx, &s));
-    let integrity_warnings: Vec<IntegrityItem> = cache::get::<Vec<crate::net::IntegrityInfo>>(conn, cache::INTEGRITY)?
-        .map(|(mut w, _)| {
-            w.sort_by(|a, b| b.created.cmp(&a.created).then_with(|| a.id.cmp(&b.id)));
-            w.into_iter()
-                .map(|w| IntegrityItem {
-                    message_key: format!("integrity.{}", w.kind),
-                    created_label: labels.moment_label(w.created),
-                    id: w.id,
-                    kind: w.kind,
-                    path: w.path,
-                })
-                .collect()
-        })
-        .unwrap_or_default();
+    let integrity_warnings: Vec<IntegrityItem> =
+        cache::get::<Vec<crate::net::IntegrityInfo>>(conn, cache::INTEGRITY)?
+            .map(|(mut w, _)| {
+                w.sort_by(|a, b| b.created.cmp(&a.created).then_with(|| a.id.cmp(&b.id)));
+                w.into_iter()
+                    .map(|w| IntegrityItem {
+                        message_key: format!("integrity.{}", w.kind),
+                        created_label: labels.moment_label(w.created),
+                        id: w.id,
+                        kind: w.kind,
+                        path: w.path,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
     Ok(Some(SettingsView {
         reminders: RemindersSetting {
             enabled: settings::reminders_enabled(conn)?,

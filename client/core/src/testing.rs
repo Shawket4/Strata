@@ -17,7 +17,10 @@ use sync_model::{UpdateDecision, decide_update};
 use ulid::Ulid;
 use vault_format::PathIndex;
 
-use crate::net::{AccountApi, AdminUserInfo, MeInfo, NetError, SessionTokens, SyncApi, Tokens};
+use crate::net::{
+    AccountApi, AdminUserInfo, EventSignal, EventStream, EventsApi, MeInfo, NetError,
+    SessionTokens, SyncApi, Tokens,
+};
 use crate::store::notes::NoteState;
 use crate::store::write::{Links, apply_to_note, task_op_id};
 use crate::sync::model::{
@@ -63,6 +66,8 @@ struct State {
     applied_ops: Vec<Ulid>,
     bootstrap_calls: u32,
     changes_calls: Vec<(u64, u64)>,
+    events: VecDeque<Result<EventSignal, NetError>>,
+    subscriptions: Vec<Option<u64>>,
 }
 
 struct ServerLinks<'a>(&'a BTreeMap<Ulid, ServerNote>);
@@ -587,5 +592,46 @@ impl AccountApi for FakeAccountApi {
     ) -> BoxFuture<'_, Result<Vec<AdminUserInfo>, NetError>> {
         self.call("admin_users".to_owned());
         Box::pin(async { Ok(Vec::new()) })
+    }
+}
+
+impl FakeServer {
+    /// Queues a signal for the next `/events` subscription.
+    pub fn push_event(&self, signal: Result<EventSignal, NetError>) {
+        lock(&self.state).events.push_back(signal);
+    }
+
+    /// `resume_from` of every `/events` subscription.
+    pub fn subscriptions(&self) -> Vec<Option<u64>> {
+        lock(&self.state).subscriptions.clone()
+    }
+}
+
+struct FakeEventStream {
+    state: Arc<Mutex<State>>,
+}
+
+impl EventStream for FakeEventStream {
+    fn next(&mut self) -> BoxFuture<'_, Option<Result<EventSignal, NetError>>> {
+        let next = lock(&self.state).events.pop_front();
+        Box::pin(async move { next })
+    }
+}
+
+impl EventsApi for FakeServer {
+    fn subscribe(
+        &self,
+        _server_url: &str,
+        _tokens: Tokens,
+        resume_from: Option<u64>,
+    ) -> Result<Box<dyn EventStream>, NetError> {
+        let mut s = lock(&self.state);
+        if s.offline {
+            return Err(NetError::Offline("fake".into()));
+        }
+        s.subscriptions.push(resume_from);
+        Ok(Box::new(FakeEventStream {
+            state: self.state.clone(),
+        }))
     }
 }

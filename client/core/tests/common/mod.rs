@@ -47,12 +47,15 @@ pub fn env(
     platform: Platform,
 ) -> CoreEnv {
     let server = server.clone();
+    let events = server.clone();
     CoreEnv {
         paths: StorePaths::new(dir),
         platform,
         clock: Arc::new(clock.clone()),
         ids: ids.clone(),
         account_api: accounts.clone(),
+        events_api: Arc::new(events),
+        notifications: strata_core::session::NotifyHub::default(),
         sync_api: Arc::new(move |_url: &str, _tokens: Tokens| -> Arc<dyn SyncApi> {
             Arc::new(server.clone())
         }),

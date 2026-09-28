@@ -250,8 +250,9 @@ async fn a_model_change_triggers_a_resumable_full_re_embed_with_progress() {
                 embedded: 3,
                 total: 3
             }),
-            // Three summaries wait for fixtures (the fake provider has none): queued for retry.
-            Some(3)
+            // Three summaries wait for fixtures (the fake provider has none): queued for retry;
+            // three `link` jobs wait for their debounce (30 s after the edit).
+            Some(6)
         )
     );
 
@@ -387,7 +388,14 @@ async fn without_an_embedder_embed_jobs_complete_without_vectors() {
         strata_jobs::standard_handlers(&w.deps_with(None)),
     );
     runner.run_until_idle().await;
-    assert_eq!(w.jobs(a).await, vec![("embed".into(), "done".into(), 1)]);
+    // Linking does not need vectors: it is queued (debounced) all the same.
+    assert_eq!(
+        w.jobs(a).await,
+        vec![
+            ("embed".into(), "done".into(), 1),
+            ("link".into(), "queued".into(), 0)
+        ]
+    );
     assert_eq!(note_vector(&w, a, note).await, None);
     w.finish().await;
 }

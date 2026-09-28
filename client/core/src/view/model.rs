@@ -678,7 +678,7 @@ pub enum RecentFilter {
     FiledByAi,
 }
 
-/// The "Recent" block with a filter (HomeExpanded).
+/// The "Recent" block with a filter (`HomeExpanded`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecentNotesView {
     /// Filter.
@@ -898,7 +898,7 @@ pub struct TaskChip {
     pub label: String,
 }
 
-/// A new task's text as the core understands it (TaskEditCompact "Understood as").
+/// A new task's text as the core understands it (`TaskEditCompact` "Understood as").
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TaskDraftPreview {
     /// Description without the understood phrases.
@@ -974,7 +974,7 @@ pub struct TaskScreen {
     pub history: Vec<TaskItem>,
     /// "tasks/Tasks.md · line 14".
     pub location_label: String,
-    /// Devices reminders go to ("Pixel 9, MacBook Pro"), once the device list was fetched.
+    /// Devices reminders go to (`Pixel 9, MacBook Pro`), once the device list was fetched.
     pub delivery_label: Option<String>,
     /// "Next occurrence in 4 days".
     pub next_occurrence_label: Option<String>,
@@ -1136,6 +1136,7 @@ pub struct ThreadMessage {
 
 /// A suggestion.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::struct_excessive_bools)] // independent display flags
 pub struct SuggestionItem {
     /// ID.
     pub id: String,
@@ -1168,6 +1169,7 @@ pub struct SuggestionItem {
 
 /// A capture in the inbox.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(clippy::struct_excessive_bools)] // independent display flags
 pub struct InboxItem {
     /// Note ID.
     pub note_id: String,
@@ -1227,7 +1229,7 @@ pub struct InboxView {
     pub all_count: u32,
 }
 
-/// Edits to a proposal before accepting it (InboxExpanded).
+/// Edits to a proposal before accepting it (`InboxExpanded`).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct SuggestionEdits {
     /// Filing: title.

@@ -517,7 +517,10 @@ async fn the_scheduler_keeps_one_nightly_job_per_user() {
         Arc::new(StaticUsers(vec![a, b])),
         "Africa/Cairo".parse().expect("tz"),
         3,
-        strata_jobs::standard_periodic(),
+        vec![strata_jobs::Periodic {
+            kind: strata_jobs::dedupe_sweep::DEDUPE,
+            cadence: strata_jobs::Cadence::Nightly,
+        }],
     );
     assert_eq!(scheduler.ensure().await, 2);
     assert_eq!(scheduler.ensure().await, 0, "idempotent");

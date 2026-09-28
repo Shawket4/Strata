@@ -370,7 +370,8 @@ impl JobHandler for DigestHandler {
                 .map(|p| index.link_text_for(&p.0))
         };
         let mut blocks_needed: Vec<BlockIdRequest> = Vec::new();
-        let mut render = |items: &[CitedItem]| -> String {
+        // A contradicting note may be cited as a whole, in the contradictions section only.
+        let mut render = |items: &[CitedItem], sides_ok: bool| -> String {
             let mut out = String::new();
             for it in items {
                 let mut cites = Vec::new();
@@ -385,7 +386,7 @@ impl JobHandler for DigestHandler {
                             });
                         }
                         link_of(*id).map(|l| format!("[[{l}#^{}]]", c.block_id))
-                    } else if let Some(id) = sides.get(&c.note_id) {
+                    } else if let Some(id) = sides.get(&c.note_id).filter(|_| sides_ok) {
                         link_of(*id).map(|l| format!("[[{l}]]"))
                     } else {
                         None
@@ -404,9 +405,9 @@ impl JobHandler for DigestHandler {
             }
             out
         };
-        let highlights = render(&out.highlights);
-        let open = render(&out.open_questions);
-        let contra = render(&out.contradictions);
+        let highlights = render(&out.highlights, false);
+        let open = render(&out.open_questions, false);
+        let contra = render(&out.contradictions, true);
         let mut body = format!("Week {week}: {start} – {end}.\n");
         for (heading, content) in [
             ("Highlights", highlights),
