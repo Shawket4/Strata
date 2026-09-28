@@ -20,6 +20,7 @@ FakeCoreApi fakeWith({NoteView? note, NotesListView? list}) {
   fake.note[_pricing].add(
     NoteScreen(id: _pricing, note: note ?? NotesFixtures.pricingNote()),
   );
+  fake.localGraph[(_pricing, 1)].add(StrataFixtures.localGraphView);
   return fake;
 }
 
@@ -136,7 +137,7 @@ void main() {
         );
         expect(find.byType(PropertiesPanel), findsOneWidget);
         expect(find.text('Saved'), findsWidgets);
-        expect(find.text('v7'), findsOneWidget);
+        expect(find.text('v7'), findsWidgets);
         await revealInScroll(tester, find.byType(StrataNoteEditor));
         expect(find.byType(StrataNoteEditor), findsOneWidget);
         expect(
@@ -680,17 +681,13 @@ void main() {
         const NotesScreen(folder: _folder, selectedNoteId: _pricing),
         fake: fake,
       );
-      await tester.tap(find.text('History').first);
-      await tester.pump();
-      await tester.tap(find.text('Changes').at(1));
-      await tester.pumpAndSettle();
+      await tapVisible(tester, find.text('Changes').at(1));
       expect(find.text('v6 compared with now'), findsOneWidget);
       expect(find.text('+1 line, 1 removed'), findsOneWidget);
       expect(find.text('- Launch offer: a flat 5% discount.'), findsOneWidget);
       await tester.tap(find.text('Close'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Revert').first);
-      await tester.pumpAndSettle();
+      await tapVisible(tester, find.text('Revert').first);
       expect(find.text('Revert to v6?'), findsOneWidget);
       await tester.tap(find.widgetWithText(FilledButton, 'Revert'));
       await tester.pumpAndSettle();

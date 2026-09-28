@@ -222,7 +222,9 @@ pub async fn keep_both_pairs_of(
     item: &str,
 ) -> Result<Vec<(String, String, String)>> {
     Ok(sqlx::query_as(
-        "SELECT kind, a_id, b_id FROM dedupe_keep_both WHERE a_id = $1 OR b_id = $1 \
+        // One index lookup per side (`dedupe_keep_both_a`, `_b`) whatever the table size.
+        "SELECT kind, a_id, b_id FROM dedupe_keep_both WHERE a_id = $1 \
+         UNION SELECT kind, a_id, b_id FROM dedupe_keep_both WHERE b_id = $1 \
          ORDER BY kind, a_id, b_id",
     )
     .bind(item)

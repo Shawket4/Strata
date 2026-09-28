@@ -27,6 +27,12 @@ FakeCoreApi _fake({NoteView? note}) {
   fake.note[NotesFixtures.arabicId].add(
     NoteScreen(id: NotesFixtures.arabicId, note: NotesFixtures.arabicNote),
   );
+  fake.localGraph[(NotesFixtures.pricingId, 1)].add(
+    StrataFixtures.localGraphView,
+  );
+  fake.localGraph[(NotesFixtures.arabicId, 1)].add(
+    StrataFixtures.localGraphView,
+  );
   return fake;
 }
 

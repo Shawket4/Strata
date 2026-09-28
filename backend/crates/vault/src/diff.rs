@@ -69,8 +69,11 @@ impl Snapshot {
         let mut out = Self::default();
         if !ids.is_empty() {
             let rows: Vec<RelationRow> = sqlx::query_as(
+                // One index lookup per side (primary key, `relations_dst`).
                 "SELECT src_id, type, dst_id, by, confidence, reason FROM relations \
-                     WHERE src_id = ANY($1) OR dst_id = ANY($1)",
+                     WHERE src_id = ANY($1) \
+                 UNION SELECT src_id, type, dst_id, by, confidence, reason FROM relations \
+                     WHERE dst_id = ANY($1)",
             )
             .bind(&ids)
             .fetch_all(tx.conn())

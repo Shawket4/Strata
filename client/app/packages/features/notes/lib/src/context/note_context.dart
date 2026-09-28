@@ -358,10 +358,13 @@ class _HistorySectionState extends ConsumerState<HistorySection> {
               ),
               if (entries.isNotEmpty)
                 Flexible(
-                  child: Text(
-                    l10n.historyAll(count: entries.length),
-                    textAlign: TextAlign.end,
-                    style: text.caption.copyWith(color: colors.text2),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: Text(
+                      l10n.historyAll(count: entries.length),
+                      textAlign: TextAlign.end,
+                      style: text.caption.copyWith(color: colors.text2),
+                    ),
                   ),
                 ),
             ],

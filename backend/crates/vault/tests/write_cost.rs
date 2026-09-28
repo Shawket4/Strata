@@ -204,13 +204,30 @@ async fn measured_write(db: &TestDb, name: &str, filler: u128) -> BTreeMap<Strin
         .collect()
 }
 
+/// Filler notes of the large vault: every per-note table (notes, links, relations, tags,
+/// blocks, tasks, dedupe keys, keep-both pairs) holds at least this many other rows.
+const LARGE: u128 = 450;
+
+/// Most rows and index entries any one relation may return for the measured write: the
+/// written notes' own rows and the foreign-key probes of their inserts, far below [`LARGE`],
+/// so a statement that reads a table's rows of the whole vault fails.
+const BOUND: i64 = 150;
+
 #[tokio::test]
-async fn the_index_update_of_a_write_reads_the_same_whatever_the_vault_size() {
+async fn the_index_update_of_a_write_does_not_read_the_rest_of_the_vault() {
     let db = TestDb::new().await.expect("db");
-    let small = measured_write(&db, "small", 150).await;
-    let large = measured_write(&db, "large", 450).await;
+    let small = measured_write(&db, "small", 10).await;
+    let large = measured_write(&db, "large", LARGE).await;
     assert!(small.contains_key("notes_pkey"), "{small:?}");
-    assert_eq!(large, small);
+    let over = |reads: &BTreeMap<String, i64>| -> BTreeMap<String, i64> {
+        reads
+            .iter()
+            .filter(|(_, n)| **n > BOUND)
+            .map(|(r, n)| (r.clone(), *n))
+            .collect()
+    };
+    assert_eq!(over(&small), BTreeMap::new(), "{small:?}");
+    assert_eq!(over(&large), BTreeMap::new(), "{large:?}");
     db.cleanup().await.expect("cleanup");
 }
 

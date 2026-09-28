@@ -127,7 +127,10 @@ pub async fn add_keep_both_many(tx: &mut ScopedTx, pairs: &[KeepBothPair<'_>]) -
         ats.push(*at);
     }
     sqlx::query(
-        "INSERT INTO dedupe_keep_both (user_id, kind, a_id, b_id, at)          SELECT strata_current_user(), k, a, b, t          FROM unnest($1::text[], $2::text[], $3::text[], $4::timestamptz[]) AS p(k, a, b, t)          ON CONFLICT DO NOTHING",
+        "INSERT INTO dedupe_keep_both (user_id, kind, a_id, b_id, at) \
+         SELECT strata_current_user(), k, a, b, t \
+         FROM unnest($1::text[], $2::text[], $3::text[], $4::timestamptz[]) AS p(k, a, b, t) \
+         ON CONFLICT DO NOTHING",
     )
     .bind(&kinds)
     .bind(&los)
@@ -157,7 +160,11 @@ pub async fn keep_both_among(
         his.push(hi);
     }
     Ok(sqlx::query_as(
-        "SELECT DISTINCT k.kind, k.a_id, k.b_id          FROM unnest($1::text[], $2::text[], $3::text[]) AS p(kind, a, b)          JOIN dedupe_keep_both k ON k.kind = p.kind AND k.a_id = p.a AND k.b_id = p.b          ORDER BY 1, 2, 3",
+        "SELECT DISTINCT k.kind, k.a_id, k.b_id \
+         FROM unnest($1::text[], $2::text[], $3::text[]) AS p(kind, a, b) \
+         CROSS JOIN LATERAL (SELECT kind, a_id, b_id FROM dedupe_keep_both \
+             WHERE kind = p.kind AND a_id = p.a AND b_id = p.b) k \
+         ORDER BY 1, 2, 3",
     )
     .bind(&kinds)
     .bind(&los)
