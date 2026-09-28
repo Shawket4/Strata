@@ -74,6 +74,7 @@ class TimeZonePickerDialog extends HookConsumerWidget {
                           ),
                           subtitle: Wrap(
                             spacing: StrataSpacing.s2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               if (zone.region.isNotEmpty)
                                 Text(
@@ -89,23 +90,17 @@ class TimeZonePickerDialog extends HookConsumerWidget {
                                   color: colors.text2,
                                 ),
                               ),
-                            ],
-                          ),
-                          trailing: Wrap(
-                            spacing: StrataSpacing.s2,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
                               if (zone.isCurrent)
                                 StatusPill(
                                   label: l10n.timezoneCurrent,
                                   tone: StatusTone.info,
                                 ),
-                              Text(
-                                zone.offsetLabel,
-                                textDirection: TextDirection.ltr,
-                                style: text.monoSmall,
-                              ),
                             ],
+                          ),
+                          trailing: Text(
+                            zone.offsetLabel,
+                            textDirection: TextDirection.ltr,
+                            style: text.monoSmall,
                           ),
                           onTap: () => Navigator.of(context).pop(zone.id),
                         );

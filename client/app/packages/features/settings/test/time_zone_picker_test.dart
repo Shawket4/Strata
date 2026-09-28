@@ -46,14 +46,27 @@ void main() {
         ]);
         // Every row: the core's name, region, IANA ID and offset; the
         // account's zone is marked.
+        final list = find.descendant(
+          of: find.byType(ListView),
+          matching: find.byType(Scrollable),
+        );
         for (final zone in StrataFixtures.timezones) {
+          await tester.scrollUntilVisible(
+            find.text(zone.id),
+            60,
+            scrollable: list,
+          );
           expect(find.text(zone.name), findsOneWidget);
-          expect(find.text(zone.id), findsOneWidget);
+          expect(find.text(zone.offsetLabel), findsWidgets);
         }
-        expect(find.text('UTC+3'), findsNWidgets(2));
+        await tester.scrollUntilVisible(
+          find.text(l10n.timezoneCurrent),
+          -60,
+          scrollable: list,
+        );
         expect(find.text(l10n.timezoneCurrent), findsOneWidget);
         expect(
-          directionOf(tester, find.text('Cairo')),
+          directionOf(tester, find.text(l10n.timezoneCurrent)),
           v.rtl ? TextDirection.rtl : TextDirection.ltr,
         );
         expectNoErrors(tester);
