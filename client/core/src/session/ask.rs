@@ -1,16 +1,17 @@
 //! Ask (PLAN §9.5, §11 screen 10): one conversation per session, answers streamed from the
 //! server's `/ask` WebSocket (D24) into the `watch_ask` view. Online only.
 
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, MutexGuard, PoisonError};
 
 use chrono::{DateTime, Utc};
 
 use super::Session;
 use crate::error::{CoreError, CoreResult};
 use crate::net::{AskEvent, NetError};
-use crate::view::Topics;
+use crate::view::model::AskView;
 use crate::view::model::Connectivity;
+use crate::view::{Topics, ViewSink, WatchId};
 
 /// A cited source of an answer.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -76,11 +77,12 @@ impl AskState {
 }
 
 impl Session {
+    pub(super) fn ask_state(&self) -> MutexGuard<'_, AskState> {
+        self.ask.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     fn ask_update(&self, f: impl FnOnce(&mut AskState)) {
-        {
-            let mut g = self.lock();
-            f(&mut g.ask);
-        }
+        f(&mut self.ask_state());
         if let Err(e) = self.write(|_, _| Ok(((), Topics::ASK))) {
             tracing::warn!("ask view refresh failed: {e}");
         }
@@ -88,7 +90,25 @@ impl Session {
 
     /// A copy of the conversation (view builder input).
     pub fn ask_entries(&self) -> Vec<AskEntry> {
-        self.lock().ask.messages.clone()
+        self.ask_state().messages.clone()
+    }
+
+    /// The Ask screen's stream: the conversation as it streams. The builder reads the
+    /// conversation through its own lock, never the session lock it runs under.
+    pub fn watch_ask(&self, sink: impl ViewSink<AskView> + 'static) -> CoreResult<WatchId> {
+        let ask = Arc::clone(&self.ask);
+        self.watch(
+            Topics::ASK | Topics::SYNC | Topics::REMOTE | Topics::ENTITIES | Topics::ACCOUNT,
+            move |c, ctx| {
+                let entries = ask
+                    .lock()
+                    .unwrap_or_else(PoisonError::into_inner)
+                    .messages
+                    .clone();
+                crate::view::build::ask(c, ctx, &entries)
+            },
+            sink,
+        )
     }
 
     /// Asks a question (online only) and streams the answer into the conversation. Returns
@@ -107,15 +127,15 @@ impl Session {
         if self.ctx().connectivity == Connectivity::Offline {
             return Err(CoreError::Offline);
         }
-        if self.lock().ask.streaming() {
+        if self.ask_state().streaming() {
             return Err(CoreError::invalid("ask", "busy"));
         }
         let now = self.env.clock.now();
         let stop = Arc::new(AtomicBool::new(false));
         let local_id = {
-            let mut g = self.lock();
-            g.ask.next_local += 1;
-            format!("local-{}", g.ask.next_local)
+            let mut a = self.ask_state();
+            a.next_local += 1;
+            format!("local-{}", a.next_local)
         };
         self.ask_update(|a| {
             a.stop = Some(stop.clone());
@@ -226,13 +246,13 @@ impl Session {
                 }
             }
         }
-        self.lock().ask.stop = None;
+        self.ask_state().stop = None;
         Ok(ask_id)
     }
 
     /// Stops the streaming answer.
     pub fn stop_ask(&self) {
-        self.lock().ask.stop();
+        self.ask_state().stop();
     }
 
     /// Starts a new conversation (stops a streaming answer).
@@ -246,8 +266,7 @@ impl Session {
     /// Saves an answer as a note (the server writes it with its citations as links, §9.5).
     pub async fn save_answer_as_note(&self, message_id: &str) -> CoreResult<String> {
         let done = self
-            .lock()
-            .ask
+            .ask_state()
             .messages
             .iter()
             .any(|m| m.id == message_id && m.role == "assistant" && !m.streaming);

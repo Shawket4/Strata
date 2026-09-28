@@ -24,6 +24,7 @@ use strata_core::session::{Core, Session};
 use strata_core::sync::engine::Trigger;
 use strata_core::testing::FakeAccountApi;
 use strata_core::view::build;
+use strata_core::view::hub::Recorder;
 use strata_core::view::model::{
     AiStatusView, AskSource, AskSpan, AskView, Availability, Platform, SignInRequest,
 };
@@ -500,5 +501,42 @@ async fn the_ai_status_panel_reads_the_cached_status() {
     assert_eq!(
         s.ask("Q4?", None, "All notes").await,
         Err(CoreError::Offline)
+    );
+}
+
+#[tokio::test]
+async fn the_ask_stream_starts_and_follows_an_answer_without_locking_the_core() {
+    // The Ask screen's stream (`watch_ask`) used to read the conversation back through the
+    // session lock it was built under: it deadlocked on its first build and every core call
+    // behind it hung. Watched from a thread so a regression fails instead of hanging.
+    let (_h, api, s) = world().await;
+    let rec = Recorder::new();
+    let (tx, rx) = std::sync::mpsc::channel();
+    let (s2, rec2) = (s.clone(), rec.clone());
+    std::thread::spawn(move || {
+        let _ = tx.send(s2.watch_ask(rec2).map(|_| ()));
+    });
+    rx.recv_timeout(std::time::Duration::from_secs(10))
+        .expect("watch_ask returned (no deadlock)")
+        .expect("watch");
+    assert_eq!(rec.take(), [view(&s)]);
+
+    api.asks.lock().unwrap().push_back(Ok("ask-1".into()));
+    api.streams
+        .lock()
+        .unwrap()
+        .push_back(Ok(vec![tokens("Mona leads it.")]));
+    assert_eq!(
+        s.ask("Who leads?", None, "All notes").await,
+        Ok("ask-1".into())
+    );
+    let seen = rec.take();
+    assert_eq!(seen.last(), Some(&view(&s)));
+    assert_eq!(
+        messages(&s),
+        [
+            msg("local-1-q", "user", "Who leads?", None),
+            msg("ask-1", "assistant", "Mona leads it.", None),
+        ]
     );
 }

@@ -318,20 +318,7 @@ pub fn ask_view() -> Result<AskView, CoreFailure> {
 
 /// Ask: the conversation as it streams.
 pub fn watch_ask(sink: StreamSink<AskView>) -> Result<(), CoreFailure> {
-    lift(|| {
-        let session = core()?.session()?;
-        let weak = std::sync::Arc::downgrade(&session);
-        session
-            .watch(
-                Topics::ASK | Topics::SYNC | Topics::REMOTE | Topics::ENTITIES | Topics::ACCOUNT,
-                move |c, ctx| {
-                    let entries = weak.upgrade().map(|s| s.ask_entries()).unwrap_or_default();
-                    build::ask(c, ctx, &entries)
-                },
-                DartSink(sink),
-            )
-            .map(|_| ())
-    })
+    lift(|| core()?.session()?.watch_ask(DartSink(sink)).map(|_| ()))
 }
 
 /// Editor highlight spans for text being typed (UTF-16 offsets); with a signed-in session,

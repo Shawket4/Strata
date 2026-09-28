@@ -55,7 +55,6 @@ struct Inner {
     activity: SyncActivity,
     notify_buffer: Vec<NotificationOp>,
     session_changed: bool,
-    ask: AskState,
 }
 
 /// One signed-in account.
@@ -63,6 +62,9 @@ pub struct Session {
     env: Arc<CoreEnv>,
     user_id: Ulid,
     inner: Mutex<Inner>,
+    /// The Ask conversation, under its own lock: view builders run under `inner` and read it,
+    /// so it is always taken after `inner` (or alone), never while holding it the other way.
+    ask: Arc<Mutex<AskState>>,
     engine: SyncEngine,
     tokens: Arc<CoreTokenProvider>,
 }
@@ -136,8 +138,8 @@ impl Session {
                     activity: SyncActivity::default(),
                     notify_buffer: Vec::new(),
                     session_changed: false,
-                    ask: AskState::default(),
                 }),
+                ask: Arc::default(),
                 tokens,
             }
         }))
@@ -488,7 +490,8 @@ impl Session {
     pub fn close(&self) {
         let mut g = self.lock();
         g.hub.clear();
-        g.ask.stop();
+        drop(g);
+        self.ask_state().stop();
     }
 
     /// Number of live view streams.
