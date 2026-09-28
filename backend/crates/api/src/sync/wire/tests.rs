@@ -44,6 +44,7 @@ fn d(y: i32, m: u32, day: u32) -> NaiveDate {
     NaiveDate::from_ymd_opt(y, m, day).expect("date")
 }
 
+#[allow(clippy::too_many_lines)] // one value of every op kind
 fn every_op() -> Vec<Op> {
     let rel = "related".parse().expect("relation");
     let at = Utc

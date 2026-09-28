@@ -240,7 +240,9 @@ pub async fn push(
             rec.result
         } else {
             let rc = OpReceipt::new(op_id, ctx.device);
-            let outcome = rc.scope(apply(ctx, &rc, &op, &mut submitted)).await;
+            let outcome = rc
+                .scope(Box::pin(apply(ctx, &rc, &op, &mut submitted)))
+                .await;
             // A write that stored the result committed it: those bytes are the answer.
             if let Some(bytes) = rc.settled() {
                 bytes

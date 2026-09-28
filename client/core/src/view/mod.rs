@@ -3,6 +3,7 @@
 //! behind them changes ([`hub`]).
 
 pub mod build;
+pub mod extra;
 pub mod hub;
 pub mod model;
 

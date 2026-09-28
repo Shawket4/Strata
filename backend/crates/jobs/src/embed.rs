@@ -53,6 +53,7 @@ pub struct EmbedHandler {
     clock: Arc<dyn Clock>,
     ids: Arc<dyn IdGenerator>,
     summarize: bool,
+    link_delay: Option<chrono::Duration>,
 }
 
 impl EmbedHandler {
@@ -72,7 +73,38 @@ impl EmbedHandler {
             clock,
             ids,
             summarize,
+            link_delay: None,
         }
+    }
+
+    /// Also enqueues the note's `link` job, debounced `delay` after this run (PLAN §9.2:
+    /// linking runs 30 s after the last edit; the link job itself skips an unchanged note).
+    #[must_use]
+    pub fn with_link_delay(mut self, delay: chrono::Duration) -> Self {
+        self.link_delay = Some(delay);
+        self
+    }
+
+    async fn enqueue_link(&self, ctx: &JobContext, note: strata_common::NoteId) -> Result<(), JobError> {
+        let Some(delay) = self.link_delay else {
+            return Ok(());
+        };
+        let now = self.clock.now();
+        let mut tx = self.db.begin(&ctx.scope).await?;
+        let row = notes::get_note(&mut tx, note).await?;
+        if row.is_some_and(|r| !r.trashed && r.kind == strata_index::types::NoteKind::Note) {
+            repo::enqueue_for_note(
+                &mut tx,
+                self.ids.as_ref(),
+                crate::pipeline::LINK,
+                note,
+                now + delay,
+                now,
+            )
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
     }
 
     async fn embed_one(&self, embedder: &dyn Embedder, text: String) -> Result<Vec<f32>, JobError> {
@@ -149,6 +181,7 @@ impl JobHandler for EmbedHandler {
         let Some(note) = ctx.job.note_id else {
             return Err(JobError::Fatal("embed job without a note".into()));
         };
+        self.enqueue_link(&ctx, note).await?;
         let Some(embedder) = self.embedder.clone() else {
             return Ok(());
         };

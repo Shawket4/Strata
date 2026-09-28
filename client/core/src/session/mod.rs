@@ -6,7 +6,7 @@
 //! Everything here is callable headless: the frb facade in [`crate::api`] only forwards to it.
 
 mod account;
-mod ask;
+pub mod ask;
 mod core;
 mod editing;
 mod intents;

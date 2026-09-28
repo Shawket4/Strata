@@ -41,7 +41,7 @@ fn setup() -> Vec<SyncOp> {
                 kind: domain::NoteKind::Person,
                 name: "Sam Hany".into(),
                 aliases: vec![],
-                fields: Default::default(),
+                fields: std::collections::BTreeMap::new(),
                 force: false,
             }),
         ),
@@ -284,7 +284,14 @@ async fn crash_every_op_at(point: CrashPoint) {
         assert!(!new_a.is_empty(), "{label}");
 
         // What recovery reported.
-        let notes: Vec<&String> = paths.iter().filter(|p| p.ends_with(".md")).collect();
+        let notes: Vec<&String> = paths
+            .iter()
+            .filter(|p| {
+                std::path::Path::new(p)
+                    .extension()
+                    .is_some_and(|e| e == "md")
+            })
+            .collect();
         let mut expected: Vec<(String, Option<String>)> = match point {
             CrashPoint::AfterFileWrite => paths
                 .iter()

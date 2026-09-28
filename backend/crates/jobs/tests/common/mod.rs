@@ -92,6 +92,8 @@ impl World {
             clock: Arc::new(self.db.clock.clone()),
             ids: self.db.ids.clone(),
             thresholds: dedupe::Thresholds::new(),
+            ai_thresholds: strata_jobs::thresholds::AiThresholds::default(),
+            default_tz: chrono_tz::UTC,
         }
     }
 

@@ -150,6 +150,32 @@ impl Core {
         Ok(format!("[[{}]]", state.path_index().link_text_for(path)))
     }
 
+    /// Adds user relations from the note about to be created at `path` to `targets` (live
+    /// paths), with the link text `relation add` would write once the note exists.
+    fn link_new_note(
+        &self,
+        doc: &mut Document,
+        path: &str,
+        targets: &[(vault_format::RelationKey, String)],
+    ) -> Result<()> {
+        if targets.is_empty() {
+            return Ok(());
+        }
+        let state = self.state()?;
+        let index = vault_format::PathIndex::new(
+            state
+                .notes
+                .keys()
+                .cloned()
+                .chain(state.attachments.iter().cloned())
+                .chain(std::iter::once(path.to_owned())),
+        );
+        for (rel, dst_path) in targets {
+            crate::ops::relations::add_link(doc, *rel, dst_path, &index, path)?;
+        }
+        Ok(())
+    }
+
     fn kind_of_id(&self, id: NoteId) -> Option<NoteKind> {
         self.state().ok()?.note(id).map(|(_, m)| m.kind)
     }
@@ -162,6 +188,7 @@ impl Core {
     /// [`Self::create_entity`] with user relations to existing notes written in the same
     /// commit (a pushed `document.create` with `copy_of`, `companies`, `people`). Every target
     /// must be a live note (`NotFound` otherwise, and nothing is created).
+    #[allow(clippy::too_many_lines)] // one linear pass: validate, check duplicates, render
     pub async fn create_entity_linked(
         &mut self,
         scope: UserScope,
@@ -195,11 +222,10 @@ impl Core {
         {
             return Err(VaultError::invalid("a note with this id already exists"));
         }
-        let mut targets = Vec::with_capacity(links.len());
-        for (rel, dst) in links {
-            let (dst_path, _) = self.live(*dst)?;
-            targets.push((*rel, dst_path));
-        }
+        let targets = links
+            .iter()
+            .map(|(rel, dst)| self.live(*dst).map(|(p, _)| (*rel, p)))
+            .collect::<Result<Vec<_>>>()?;
         let aliases = clean_list(&req.aliases);
         let mut tx = self.begin(&scope).await?;
         let id = req.id.unwrap_or_else(|| NoteId::generate(self.ids()));
@@ -262,21 +288,7 @@ impl Core {
         let tz = self.tz(&mut tx).await?;
         let now = self.local_now(tz);
         prepare::stamp(&mut doc, id, Some(&now), Some(&now))?;
-        if !targets.is_empty() {
-            // Link text as `relation add` would write it once the note exists.
-            let state = self.state()?;
-            let index = vault_format::PathIndex::new(
-                state
-                    .notes
-                    .keys()
-                    .cloned()
-                    .chain(state.attachments.iter().cloned())
-                    .chain(std::iter::once(path.clone())),
-            );
-            for (rel, dst_path) in &targets {
-                crate::ops::relations::add_link(&mut doc, *rel, dst_path, &index, &path)?;
-            }
-        }
+        self.link_new_note(&mut doc, &path, &targets)?;
         let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
         if !candidates.is_empty() {
             let mut sc = NoteSidecar::new(id.as_ulid());

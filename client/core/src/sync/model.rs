@@ -30,6 +30,9 @@ pub enum SuggestionPayload {
         folder: String,
         /// Proposed tags.
         tags: Vec<String>,
+        /// Filing confidence.
+        #[serde(default)]
+        confidence: Option<f64>,
     },
     /// A mention to link to an existing entity or create one (§6.7 nicknames).
     EntityLinkOrCreate {

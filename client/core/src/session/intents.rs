@@ -66,6 +66,8 @@ pub fn candidate_item(c: dedupe::DuplicateCandidate) -> CandidateItem {
         snippet: c.snippet,
         match_level: c.level.as_str().to_owned(),
         score: f64::from(c.score),
+        path: None,
+        reason: String::new(),
     }
 }
 
