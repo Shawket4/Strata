@@ -10,15 +10,80 @@ use crate::auth::stored;
 use crate::clock::{Clock, SystemClock};
 use crate::error::{CoreError, CoreResult};
 use crate::ids::{IdGenerator, UlidGenerator};
-use crate::net::client::{ClientAccountApi, ClientSyncApi};
-use crate::net::{AccountApi, NetError, SyncApi, Tokens};
+use crate::net::client::{ClientAccountApi, ClientEventsApi, ClientSyncApi};
+use crate::net::{AccountApi, EventsApi, NetError, SyncApi, Tokens};
 use crate::store::registry::{self, KnownAccount, Registry};
 use crate::store::{StorePaths, account, tokens};
 use crate::view::model::{
-    CoreConfig, KnownAccountItem, Platform, SessionKind, SessionState, SignInRequest,
-    SignOutOutcome, SignUpOutcome, SignUpRequest,
+    CoreConfig, KnownAccountItem, NotificationOp, PasswordLevel, PasswordStrength,
+    PendingApproval, Platform, SessionKind, SessionState, SignInRequest, SignOutOutcome,
+    SignUpOutcome, SignUpRequest,
 };
 use crate::view::{Topics, ViewSink};
+
+/// The notification adapter's stream(s): kept by the core, not by a session, so the adapter
+/// can subscribe while signed out (it receives nothing then) and keeps its subscription across
+/// sign-in, switching and sign-out.
+#[derive(Default)]
+pub struct NotifyHub {
+    sinks: Mutex<Vec<Box<dyn ViewSink<NotificationOp>>>>,
+}
+
+impl std::fmt::Debug for NotifyHub {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NotifyHub")
+            .field("sinks", &lock(&self.sinks).len())
+            .finish()
+    }
+}
+
+impl NotifyHub {
+    /// Adds a stream.
+    pub fn attach(&self, sink: Box<dyn ViewSink<NotificationOp>>) {
+        lock(&self.sinks).push(sink);
+    }
+
+    /// Whether any stream is attached.
+    pub fn is_attached(&self) -> bool {
+        !lock(&self.sinks).is_empty()
+    }
+
+    /// Sends one op to every stream (closed streams are dropped).
+    pub fn emit(&self, op: &NotificationOp) {
+        lock(&self.sinks).retain(|s| s.emit(op.clone()));
+    }
+}
+
+/// The server's default minimum password length (`auth.min_password_length`).
+pub const MIN_PASSWORD_LENGTH: u32 = 10;
+
+/// Password strength for the sign-up meter (the server enforces only the minimum length).
+pub fn password_strength(password: &str) -> PasswordStrength {
+    let length = u32::try_from(password.chars().count()).unwrap_or(u32::MAX);
+    let classes = [
+        password.chars().any(char::is_lowercase),
+        password.chars().any(char::is_uppercase),
+        password.chars().any(char::is_numeric),
+        password.chars().any(|c| !c.is_alphanumeric()),
+    ]
+    .iter()
+    .filter(|b| **b)
+    .count();
+    let level = if length < MIN_PASSWORD_LENGTH {
+        PasswordLevel::TooShort
+    } else if classes >= 4 || length >= 20 {
+        PasswordLevel::Strong
+    } else if classes >= 2 || length >= 14 {
+        PasswordLevel::Fair
+    } else {
+        PasswordLevel::Weak
+    };
+    PasswordStrength {
+        level,
+        length,
+        min_length: MIN_PASSWORD_LENGTH,
+    }
+}
 
 /// Builds the sync transport of a session from its server URL and token provider.
 pub type SyncApiFactory = Arc<dyn Fn(&str, Tokens) -> Arc<dyn SyncApi> + Send + Sync>;
@@ -37,6 +102,10 @@ pub struct CoreEnv {
     pub account_api: Arc<dyn AccountApi>,
     /// Sync endpoints per session.
     pub sync_api: SyncApiFactory,
+    /// The `/events` stream.
+    pub events_api: Arc<dyn EventsApi>,
+    /// The notification adapter's streams.
+    pub notifications: NotifyHub,
     /// Default device name for the login form.
     pub default_device_name: String,
     /// Default server URL for the login form.
@@ -62,6 +131,8 @@ impl CoreEnv {
             ids: Arc::new(UlidGenerator::new(clock.clone())),
             clock,
             account_api: Arc::new(ClientAccountApi {}),
+            events_api: Arc::new(ClientEventsApi {}),
+            notifications: NotifyHub::default(),
             sync_api: Arc::new(|url: &str, tokens: Tokens| -> Arc<dyn SyncApi> {
                 match ClientSyncApi::new(url, tokens) {
                     Ok(api) => Arc::new(api),
@@ -81,6 +152,11 @@ pub struct Core {
     active: Mutex<Option<Arc<Session>>>,
     state_sinks: Mutex<Vec<Box<dyn ViewSink<SessionState>>>>,
     last_state: Mutex<Option<SessionState>>,
+    /// The sign-in of an account awaiting approval, kept in memory only (it holds the
+    /// password) for "Check again".
+    pending_request: Mutex<Option<SignInRequest>>,
+    /// Bumped whenever the active session changes (the events loop re-subscribes).
+    generation: std::sync::atomic::AtomicU64,
 }
 
 impl std::fmt::Debug for Core {
@@ -117,7 +193,19 @@ impl Core {
             active: Mutex::new(active),
             state_sinks: Mutex::new(Vec::new()),
             last_state: Mutex::new(None),
+            pending_request: Mutex::new(None),
+            generation: std::sync::atomic::AtomicU64::new(0),
         })
+    }
+
+    /// Changes whenever the active session changes.
+    pub fn generation(&self) -> u64 {
+        self.generation.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    fn bump_generation(&self) {
+        self.generation
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
     }
 
     /// The environment.
@@ -130,13 +218,55 @@ impl Core {
         lock(&self.active).clone().ok_or(CoreError::NotSignedIn)
     }
 
+    fn pending_approval(&self, reg: &Registry) -> CoreResult<Option<(PendingApproval, bool)>> {
+        let (Some(username), Some(server_url), Some(requested)) = (
+            reg.device_value(registry::PENDING_USERNAME)?,
+            reg.device_value(registry::PENDING_SERVER)?,
+            reg.device_value(registry::PENDING_REQUESTED_AT)?,
+        ) else {
+            return Ok(None);
+        };
+        let labels = crate::format::labels::Labels::new(
+            self.env.clock.now(),
+            chrono_tz::UTC,
+            crate::format::labels::Lang::En,
+        );
+        let requested_at = crate::view::build::ts(&requested);
+        let checked = reg
+            .device_value(registry::PENDING_CHECKED_AT)?
+            .map(|c| crate::view::build::ts(&c));
+        let rejected = reg.device_value(registry::PENDING_REJECTED)?.as_deref() == Some("true");
+        Ok(Some((
+            PendingApproval {
+                requested_label: labels.ago(requested_at),
+                last_checked_label: checked.map(|c| labels.hm(c)),
+                last_checked_at: checked,
+                can_check: lock(&self.pending_request)
+                    .as_ref()
+                    .is_some_and(|r| r.username == username),
+                requested_at,
+                username,
+                server_url,
+            },
+            rejected,
+        )))
+    }
+
     fn signed_out(&self) -> CoreResult<SessionState> {
         let reg = lock(&self.registry);
+        let pending = self.pending_approval(&reg)?;
+        let kind = match &pending {
+            Some((_, true)) => SessionKind::Rejected,
+            Some((_, false)) => SessionKind::PendingApproval,
+            None => SessionKind::SignedOut,
+        };
         Ok(SessionState {
+            pending: pending.map(|(p, _)| p),
             known_accounts: reg
                 .accounts()?
                 .into_iter()
                 .map(|a| KnownAccountItem {
+                    initials: crate::format::labels::initials(&a.display_name),
                     user_id: a.user_id,
                     username: a.username,
                     display_name: a.display_name,
@@ -149,8 +279,61 @@ impl Core {
             device_name: reg
                 .device_value(registry::DEVICE_NAME)?
                 .unwrap_or_else(|| self.env.default_device_name.clone()),
-            ..SessionState::of(SessionKind::SignedOut)
+            ..SessionState::of(kind)
         })
+    }
+
+    fn set_pending(&self, username: &str, server_url: &str, rejected: bool) -> CoreResult<()> {
+        let reg = lock(&self.registry);
+        let now = self.env.clock.now().to_rfc3339();
+        let same = reg.device_value(registry::PENDING_USERNAME)?.as_deref() == Some(username);
+        if !same {
+            reg.set_device_value(registry::PENDING_USERNAME, username)?;
+            reg.set_device_value(registry::PENDING_REQUESTED_AT, &now)?;
+            reg.remove_device_value(registry::PENDING_CHECKED_AT)?;
+        }
+        reg.set_device_value(registry::PENDING_SERVER, server_url)?;
+        reg.set_device_value(registry::PENDING_REJECTED, if rejected { "true" } else { "false" })?;
+        Ok(())
+    }
+
+    fn clear_pending(&self) -> CoreResult<()> {
+        let reg = lock(&self.registry);
+        for key in [
+            registry::PENDING_USERNAME,
+            registry::PENDING_SERVER,
+            registry::PENDING_REQUESTED_AT,
+            registry::PENDING_CHECKED_AT,
+            registry::PENDING_REJECTED,
+        ] {
+            reg.remove_device_value(key)?;
+        }
+        *lock(&self.pending_request) = None;
+        Ok(())
+    }
+
+    /// "Check again" on the waiting-for-approval screen: signs in with the request kept in
+    /// memory. Still pending → the state with the new "last checked" time; rejected →
+    /// `Rejected`; approved → signed in.
+    pub async fn check_approval(&self) -> CoreResult<SessionState> {
+        let Some(request) = lock(&self.pending_request).clone() else {
+            return Err(CoreError::invalid("password", "required"));
+        };
+        lock(&self.registry).set_device_value(
+            registry::PENDING_CHECKED_AT,
+            &self.env.clock.now().to_rfc3339(),
+        )?;
+        match self.sign_in(request).await {
+            Ok(state) => Ok(state),
+            Err(CoreError::AccountPending | CoreError::AccountRejected) => self.publish_state(),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Leaves the waiting-for-approval / rejected screen (back to sign-in).
+    pub fn dismiss_pending(&self) -> CoreResult<SessionState> {
+        self.clear_pending()?;
+        self.publish_state()
     }
 
     /// The current session state.
@@ -205,24 +388,47 @@ impl Core {
             .await
             .map_err(login_error)?;
         lock(&self.registry).set_device_value(registry::LAST_SERVER_URL, &req.server_url)?;
+        let device_name = lock(&self.registry)
+            .device_value(registry::DEVICE_NAME)?
+            .unwrap_or_else(|| self.env.default_device_name.clone());
+        self.set_pending(&username, &req.server_url, false)?;
+        *lock(&self.pending_request) = Some(SignInRequest {
+            server_url: req.server_url.clone(),
+            username: username.clone(),
+            password: req.password.clone(),
+            device_name,
+        });
+        self.publish_state()?;
         Ok(SignUpOutcome { username })
     }
 
     /// Signs in as a device; opens (or reuses) the account's own database.
     pub async fn sign_in(&self, req: SignInRequest) -> CoreResult<SessionState> {
         let server_url = req.server_url.trim_end_matches('/').to_owned();
-        let t = self
+        let login = self
             .env
             .account_api
             .login(
                 server_url.clone(),
                 req.username.clone(),
-                req.password,
+                req.password.clone(),
                 req.device_name.clone(),
                 self.env.platform,
             )
-            .await
-            .map_err(login_error)?;
+            .await;
+        let t = match login {
+            Ok(t) => t,
+            Err(e @ (NetError::AccountPending | NetError::AccountRejected)) => {
+                // Waiting for (or refused) approval: a session state of its own (D22).
+                let rejected = e == NetError::AccountRejected;
+                self.set_pending(&req.username, &server_url, rejected)?;
+                *lock(&self.pending_request) = (!rejected).then(|| req.clone());
+                self.publish_state()?;
+                return Err(login_error(e));
+            }
+            Err(e) => return Err(login_error(e)),
+        };
+        self.clear_pending()?;
         let user_id = crate::store::parse_ulid(&t.user_id)?;
         let now = self.env.clock.now().to_rfc3339();
         self.deactivate()?;
@@ -279,6 +485,7 @@ impl Core {
             reg.set_device_value(registry::DEVICE_NAME, &req.device_name)?;
         }
         *lock(&self.active) = Some(session.clone());
+        self.bump_generation();
         // Best effort: the profile (role, timezone, deletion date). Offline keeps defaults.
         let _ = self.refresh_account().await;
         self.publish_state()
@@ -325,6 +532,7 @@ impl Core {
         if let Some(s) = lock(&self.active).take() {
             s.close();
         }
+        self.bump_generation();
         lock(&self.registry).deactivate_all()
     }
 
@@ -345,6 +553,7 @@ impl Core {
             ..known
         })?;
         *lock(&self.active) = Some(session);
+        self.bump_generation();
         self.publish_state()
     }
 
@@ -374,6 +583,7 @@ impl Core {
     fn wipe(&self, session: Arc<Session>) -> CoreResult<()> {
         let user_id = session.user_id().to_string();
         *lock(&self.active) = None;
+        self.bump_generation();
         lock(&self.registry).remove(&user_id)?;
         session.destroy()?;
         self.publish_state()?;

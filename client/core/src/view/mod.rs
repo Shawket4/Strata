@@ -35,6 +35,10 @@ impl Topics {
     pub const ACCOUNT: Self = Self(1 << 7);
     /// The clock moved (date-dependent views: task sections, days remaining).
     pub const TIME: Self = Self(1 << 8);
+    /// The Ask conversation.
+    pub const ASK: Self = Self(1 << 9);
+    /// Cached online reads (devices, history, AI status, integrity, export).
+    pub const REMOTE: Self = Self(1 << 10);
     /// Everything.
     pub const ALL: Self = Self(u32::MAX);
 

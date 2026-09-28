@@ -139,10 +139,7 @@ fn similarity_view(p: &SimilarPair) -> EdgeView {
 }
 
 fn sort_edges(edges: &mut [EdgeView]) {
-    edges.sort_by(|a, b| {
-        (a.source, a.target, a.kind)
-            .cmp(&(b.source, b.target, b.kind))
-    });
+    edges.sort_by(|a, b| (a.source, a.target, a.kind).cmp(&(b.source, b.target, b.kind)));
 }
 
 /// Builds the node views of `ids` (in ID order) with degrees counted over `edges`.
@@ -276,7 +273,11 @@ pub fn lens<S: BuildHasher>(
         for n in &data.nodes {
             let _ = b.add_node(&n.id.to_string(), n.kind.into());
         }
-        for e in data.edges.iter().filter(|e| e.kind == GraphEdgeKind::Mention) {
+        for e in data
+            .edges
+            .iter()
+            .filter(|e| e.kind == GraphEdgeKind::Mention)
+        {
             let _ = b.add_edge(&EdgeInput::user(
                 &e.source.to_string(),
                 &e.target.to_string(),
@@ -320,36 +321,32 @@ pub fn local<S: BuildHasher>(
     // Edge index in the graph → the view it came from.
     let mut views: Vec<EdgeView> = Vec::with_capacity(data.edges.len() + similar.len());
     for e in &data.edges {
-        if b
-            .add_edge(&EdgeInput {
-                source: e.source.to_string(),
-                target: e.target.to_string(),
-                kind: e.kind,
-                by: e.by,
-                confidence: e.confidence,
-            })
-            .is_ok()
+        if b.add_edge(&EdgeInput {
+            source: e.source.to_string(),
+            target: e.target.to_string(),
+            kind: e.kind,
+            by: e.by,
+            confidence: e.confidence,
+        })
+        .is_ok()
         {
             views.push(typed_view(e));
         }
     }
     for p in similar {
-        if b
-            .add_edge(&EdgeInput::ai(
-                &p.source.to_string(),
-                &p.target.to_string(),
-                GraphEdgeKind::Similarity,
-                0.0,
-            ))
-            .is_ok()
+        if b.add_edge(&EdgeInput::ai(
+            &p.source.to_string(),
+            &p.target.to_string(),
+            GraphEdgeKind::Similarity,
+            0.0,
+        ))
+        .is_ok()
         {
             views.push(similarity_view(p));
         }
     }
     let g = b.build();
-    let focus_ix = g
-        .index_of(&focus.to_string())
-        .ok_or(GraphError::NotFound)?;
+    let focus_ix = g.index_of(&focus.to_string()).ok_or(GraphError::NotFound)?;
     let filter = Filter {
         edge_kinds: query.edges.typed(),
         node_kinds: query.nodes.graph_kinds(),

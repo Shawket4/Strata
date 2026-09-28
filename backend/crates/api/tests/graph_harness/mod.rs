@@ -227,7 +227,10 @@ impl H {
         operation: &str,
     ) -> (u16, Option<String>, Vec<u8>) {
         let resp = reqwest::Client::new()
-            .request(method, format!("{}{path_and_query}", self.server.base_url()))
+            .request(
+                method,
+                format!("{}{path_and_query}", self.server.base_url()),
+            )
             .header("Authorization", format!("Bearer {token}"))
             .header("Accept", "application/vnd.msgpack")
             .send()

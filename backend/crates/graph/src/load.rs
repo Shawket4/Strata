@@ -75,7 +75,11 @@ pub struct GraphData {
 impl GraphData {
     /// Index of every node by ID (positions in [`GraphData::nodes`]).
     pub fn positions(&self) -> BTreeMap<NoteId, usize> {
-        self.nodes.iter().enumerate().map(|(i, n)| (n.id, i)).collect()
+        self.nodes
+            .iter()
+            .enumerate()
+            .map(|(i, n)| (n.id, i))
+            .collect()
     }
 }
 
@@ -107,7 +111,14 @@ pub fn relation_edge_kind(rel_type: &str, src: NoteKind, dst: NoteKind) -> Optio
         .map(GraphEdgeKind::Entity)
 }
 
-type NoteTuple = (NoteId, String, String, String, Option<String>, DateTime<Utc>);
+type NoteTuple = (
+    NoteId,
+    String,
+    String,
+    String,
+    Option<String>,
+    DateTime<Utc>,
+);
 type RelationTuple = (
     NoteId,
     NoteId,

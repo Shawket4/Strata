@@ -286,3 +286,51 @@ async fn idempotency_put_keeps_the_first_result() {
         "A's record untouched"
     );
 }
+
+#[tokio::test]
+async fn vault_head_is_per_user_and_leaves_the_sync_position_alone() {
+    let db = TestDb::new().await.expect("db");
+    let a = TestUser::new("alice").create(&db).await.expect("a").id;
+    let b = TestUser::new("bob").create(&db).await.expect("b").id;
+    let t = db.clock.now();
+    let (h1, h2) = ("a".repeat(40), format!("{}0", "b".repeat(39)));
+    let mut tx = db.begin(a).await.expect("tx");
+    assert_eq!(sync::vault_head(&mut tx).await.expect("head"), None);
+    // Before any change: the row is created at epoch 1, seq 0.
+    sync::set_vault_head(&mut tx, &h1, t).await.expect("set");
+    assert_eq!(sync::vault_head(&mut tx).await.expect("head"), Some(h1.clone()));
+    assert_eq!(
+        sync::sync_position(&mut tx).await.expect("pos"),
+        SyncPosition {
+            epoch: 1,
+            last_seq: 0
+        }
+    );
+    let first = sync::append_change(&mut tx, &change("n1", t))
+        .await
+        .expect("append");
+    assert_eq!(first.seq, 1);
+    sync::set_vault_head(&mut tx, &h2, t).await.expect("set");
+    assert_eq!(sync::vault_head(&mut tx).await.expect("head"), Some(h2.clone()));
+    assert_eq!(
+        sync::sync_position(&mut tx).await.expect("pos"),
+        SyncPosition {
+            epoch: 1,
+            last_seq: 1
+        }
+    );
+    tx.commit().await.expect("commit");
+
+    // Another user's head is invisible and separate.
+    let mut tx = db.begin(b).await.expect("tx");
+    assert_eq!(sync::vault_head(&mut tx).await.expect("head"), None);
+    // Only full commit IDs are stored.
+    let err = sync::set_vault_head(&mut tx, "HEAD", t)
+        .await
+        .expect_err("not a commit id");
+    assert!(err.to_string().contains("check"), "{err}");
+    tx.rollback().await.expect("rollback");
+    let mut tx = db.begin(a).await.expect("tx");
+    assert_eq!(sync::vault_head(&mut tx).await.expect("head"), Some(h2));
+    tx.commit().await.expect("commit");
+}

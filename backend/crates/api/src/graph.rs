@@ -80,7 +80,8 @@ pub fn problem(err: &GraphError) -> Problem {
             message,
         } => crate::vault::invalid_parameter(name, code, message),
         GraphError::InvalidMap(issues) => issues.iter().fold(
-            Problem::new(ProblemType::InvalidBody).with_detail("the map is not a valid canvas for this vault"),
+            Problem::new(ProblemType::InvalidBody)
+                .with_detail("the map is not a valid canvas for this vault"),
             |p, i| {
                 p.with_error(ProblemFieldError {
                     code: i.code.to_owned(),

@@ -104,6 +104,11 @@ impl VaultService {
                 if s.status != SuggestionStatus::Pending {
                     return Err(VaultError::invalid("the suggestion was already decided"));
                 }
+                // AI suggestions (filing, entity links, custody, tasks, corrections, accepted
+                // duplicates) are decided by the AI pipelines' rules.
+                if crate::ops::ai_decide::handles(&s.kind, accept) {
+                    return core.decide_ai(scope, s, accept, None).await;
+                }
                 // A pushed op's result is stored with the decision below, not with the
                 // keep-both writes before it (they are idempotent if the op is replayed).
                 let receipt = core.receipt.take();
@@ -230,6 +235,8 @@ impl VaultService {
             },
         )
         .await?;
+        // The AI re-proposes with the reply in context (§9.8 threaded suggestions).
+        Self::enqueue_reply_job(&mut tx, self.inner.ids.as_ref(), &s, now).await?;
         let id_text = id.to_string();
         sync::append_change(
             &mut tx,

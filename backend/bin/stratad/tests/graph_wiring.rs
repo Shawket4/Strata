@@ -34,10 +34,11 @@ async fn the_cluster_job_is_registered_and_scheduled_nightly() {
         ids: db.ids.clone(),
         thresholds: strata_vault::dup::thresholds(&std::collections::BTreeMap::new()),
     };
-    let kinds: Vec<&str> = stratad::jobs::handlers(&deps, Arc::new(EventBus::new(BusConfig::default())))
-        .iter()
-        .map(|h| h.kind())
-        .collect();
+    let kinds: Vec<&str> =
+        stratad::jobs::handlers(&deps, Arc::new(EventBus::new(BusConfig::default())))
+            .iter()
+            .map(|h| h.kind())
+            .collect();
     assert_eq!(
         kinds,
         vec!["embed", "embed_backfill", "summarize", "dedupe", "cluster"]

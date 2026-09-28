@@ -68,6 +68,10 @@ pub enum CoreError {
         /// Stable reason code from `vault-format` (`not_open`, `not_recurring`, …).
         reason: String,
     },
+    /// An edit was made against a version of the note that is no longer current and does
+    /// not merge cleanly with the current content (reload and edit again).
+    #[error("the note changed since it was opened")]
+    StaleEdit,
     /// The server answered with a problem this client does not map.
     #[error("server error {status} {problem_type}")]
     Server {
@@ -148,6 +152,7 @@ impl CoreError {
             Self::RateLimited => "rate_limited",
             Self::PendingChanges { .. } => "pending_changes",
             Self::TaskChange { .. } => "task_change",
+            Self::StaleEdit => "stale_edit",
             Self::Server { .. } => "server",
             Self::Storage(_) => "storage",
             Self::Internal(_) => "internal",

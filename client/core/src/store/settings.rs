@@ -12,6 +12,34 @@ pub const NOTIFICATION_PERMISSION: &str = "notification_permission";
 /// Time used for date-only reminders (`HH:MM`, default `09:00`).
 pub const DEFAULT_REMINDER_TIME: &str = "default_reminder_time";
 
+/// Snooze length in minutes (default 15).
+pub const SNOOZE_MINUTES: &str = "snooze_minutes";
+/// Quiet hours on (`true`/`false`).
+pub const QUIET_ENABLED: &str = "quiet_enabled";
+/// Quiet hours start (`HH:MM`, default `22:00`).
+pub const QUIET_FROM: &str = "quiet_from";
+/// Quiet hours end (`HH:MM`, default `07:00`).
+pub const QUIET_UNTIL: &str = "quiet_until";
+
+/// Default snooze length.
+pub const DEFAULT_SNOOZE_MINUTES: u32 = 15;
+
+/// Snooze length.
+pub fn snooze_minutes(conn: &Connection) -> CoreResult<u32> {
+    Ok(get(conn, SNOOZE_MINUTES)?
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_SNOOZE_MINUTES))
+}
+
+/// Quiet hours: `(enabled, from, until)` as `HH:MM`.
+pub fn quiet_hours(conn: &Connection) -> CoreResult<(bool, String, String)> {
+    Ok((
+        get(conn, QUIET_ENABLED)?.as_deref() == Some("true"),
+        get(conn, QUIET_FROM)?.unwrap_or_else(|| "22:00".to_owned()),
+        get(conn, QUIET_UNTIL)?.unwrap_or_else(|| "07:00".to_owned()),
+    ))
+}
+
 /// Reads a setting.
 pub fn get(conn: &Connection, key: &str) -> CoreResult<Option<String>> {
     Ok(conn

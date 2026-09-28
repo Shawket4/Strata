@@ -46,6 +46,12 @@ pub enum SuggestionPayload {
         line: String,
         /// Confidence.
         confidence: f64,
+        /// Applied automatically (above the custody threshold, D30).
+        #[serde(default)]
+        auto_applied: bool,
+        /// Documents the event may be about when ambiguous (id, title).
+        #[serde(default)]
+        document_choices: Vec<(String, String)>,
     },
     /// The capture resembles existing items (§9.7).
     Duplicate {
@@ -68,6 +74,31 @@ pub enum SuggestionPayload {
         /// The proposed task line.
         line: String,
     },
+    /// The server's `duplicate` suggestion on a capture (§9.7; accepting keeps both).
+    DuplicateOf {
+        /// Candidates.
+        candidates: Vec<ServerCandidate>,
+    },
+    /// The nightly sweep's `duplicates` pair (rejecting keeps both for good).
+    Duplicates {
+        /// First item (its note is the suggestion's note).
+        a: ServerCandidate,
+        /// Second item.
+        b: ServerCandidate,
+        /// Why the model confirmed a borderline pair.
+        reason: Option<String>,
+    },
+    /// The server kept its version and saved the device's edit as a conflict copy (D19).
+    Conflict {
+        /// The op that conflicted.
+        op_id: String,
+        /// The conflict copy note.
+        copy_id: String,
+        /// Its path.
+        copy_path: String,
+        /// Conflicting hunks.
+        hunks: u32,
+    },
     /// A kind this client cannot show.
     Other {
         /// The record's kind string.
@@ -75,12 +106,79 @@ pub enum SuggestionPayload {
     },
 }
 
+/// A candidate in the server's duplicate payloads.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServerCandidate {
+    /// Existing item's note ID.
+    pub id: String,
+    /// Stored item ID (note ULID or task block ID).
+    pub item: String,
+    /// Snippet.
+    pub snippet: Option<String>,
+    /// Kind.
+    pub kind: String,
+    /// Title.
+    pub title: String,
+    /// `exact` | `near` | `semantic`.
+    pub match_level: String,
+    /// Score.
+    pub score: f64,
+}
+
+#[derive(Deserialize)]
+struct DuplicateOfWire {
+    candidates: Vec<ServerCandidate>,
+}
+
+#[derive(Deserialize)]
+struct DuplicatesWire {
+    a: ServerCandidate,
+    b: ServerCandidate,
+    #[serde(default)]
+    reason: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ConflictWire {
+    op_id: String,
+    copy_id: String,
+    copy_path: String,
+    hunks: u32,
+}
+
 impl SuggestionPayload {
-    /// Decodes a record's payload (unknown shapes become [`SuggestionPayload::Other`]).
+    /// Decodes a record's payload: the server's own kinds (`duplicate`, `duplicates`,
+    /// `conflict`) by their stored shapes, AI kinds by their tagged shape; anything else is
+    /// [`SuggestionPayload::Other`], never dropped.
     pub fn decode(kind: &str, bytes: &[u8]) -> Self {
-        rmp_serde::from_slice(bytes).unwrap_or_else(|_| Self::Other {
-            kind: kind.to_owned(),
-        })
+        let server = match kind {
+            "duplicate" => rmp_serde::from_slice::<DuplicateOfWire>(bytes)
+                .ok()
+                .map(|d| Self::DuplicateOf {
+                    candidates: d.candidates,
+                }),
+            "duplicates" => rmp_serde::from_slice::<DuplicatesWire>(bytes)
+                .ok()
+                .map(|d| Self::Duplicates {
+                    a: d.a,
+                    b: d.b,
+                    reason: d.reason,
+                }),
+            "conflict" => rmp_serde::from_slice::<ConflictWire>(bytes)
+                .ok()
+                .map(|c| Self::Conflict {
+                    op_id: c.op_id,
+                    copy_id: c.copy_id,
+                    copy_path: c.copy_path,
+                    hunks: c.hunks,
+                }),
+            _ => None,
+        };
+        server
+            .or_else(|| rmp_serde::from_slice(bytes).ok())
+            .unwrap_or_else(|| Self::Other {
+                kind: kind.to_owned(),
+            })
     }
 }
 

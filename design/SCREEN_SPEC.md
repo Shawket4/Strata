@@ -22,7 +22,7 @@ Light (default):
 - surface-2 `#E8EFF2` (sidebar, rail, hover rows, inputs)
 - border `#CBD8DE` (1px hairlines)
 - text `#0F1B26`, text-2 `#52616B` (secondary, min for small text), text-3 `#7C8C96` (only ≥ 16px or icons)
-- accent fill `#2477B3` (tide — primary buttons, selected nav indicator, the mark), accent text `#1D5C8C` (links, small accent text), accent tint `#DCEAF4` (selected row / nav pill background)
+- accent `#2477B3` (tide — the mark, icons, focus rings, selected indicators, large graphics); **accent fill for filled buttons/FAB `#1D5C8C` with white text** (light) and surf `#6CB4DD` with abyss text (dark), so button text stays ≥ 4.5:1 incl. hover/pressed overlays, accent text `#1D5C8C` (links, small accent text), accent tint `#DCEAF4` (selected row / nav pill background)
 - sand `#D8B47E` (only the thin seam in strata-band decoration; do not use elsewhere)
 - danger `#B3412E`, warning `#9A6A12`, success `#2F7A55`
 

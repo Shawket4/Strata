@@ -208,11 +208,8 @@ async fn the_people_lens_weights_co_mentions_by_how_many_people_a_note_names() {
         ]
     );
     // Call names 2 people (1/(2−1) = 1 each pair), Meeting names 3 (1/2 each pair).
-    let weights: Vec<(Option<f64>, Option<u32>, Option<RelationOrigin>)> = g
-        .edges
-        .iter()
-        .map(|e| (e.weight, e.notes, e.by))
-        .collect();
+    let weights: Vec<(Option<f64>, Option<u32>, Option<RelationOrigin>)> =
+        g.edges.iter().map(|e| (e.weight, e.notes, e.by)).collect();
     assert_eq!(
         weights,
         vec![
@@ -264,17 +261,17 @@ fn local(depth: u8, types: Option<&str>, kinds: Option<&str>) -> LocalQuery {
 }
 
 fn depths(g: &strata_graph::assemble::GraphView) -> Vec<(String, Option<u8>)> {
-    g.nodes
-        .iter()
-        .map(|n| (n.title.clone(), n.depth))
-        .collect()
+    g.nodes.iter().map(|n| (n.title.clone(), n.depth)).collect()
 }
 
 #[tokio::test]
 async fn local_neighbourhoods_grow_with_depth_and_respect_filters() {
     let (w, s, f) = world().await;
     let svc = w.service(None);
-    let d1 = svc.local(&s, f.plan, &local(1, None, None)).await.expect("d1");
+    let d1 = svc
+        .local(&s, f.plan, &local(1, None, None))
+        .await
+        .expect("d1");
     assert_eq!(
         depths(&d1),
         vec![
@@ -292,7 +289,10 @@ async fn local_neighbourhoods_grow_with_depth_and_respect_filters() {
             t("Call", "Plan", "relation:related"),
         ]
     );
-    let d2 = svc.local(&s, f.plan, &local(2, None, None)).await.expect("d2");
+    let d2 = svc
+        .local(&s, f.plan, &local(2, None, None))
+        .await
+        .expect("d2");
     assert_eq!(
         depths(&d2),
         vec![
@@ -318,7 +318,10 @@ async fn local_neighbourhoods_grow_with_depth_and_respect_filters() {
             d("Call", 7),
         ]
     );
-    let d3 = svc.local(&s, f.plan, &local(3, None, None)).await.expect("d3");
+    let d3 = svc
+        .local(&s, f.plan, &local(3, None, None))
+        .await
+        .expect("d3");
     assert_eq!(
         depths(&d3)
             .into_iter()
@@ -400,7 +403,12 @@ async fn trashed_notes_leave_the_graph_with_their_edges() {
         .expect("graph");
     assert_eq!(
         node_degrees(&g),
-        vec![d("Budget", 0), d("Call", 0), d("Meeting", 0), d("Lonely", 0)]
+        vec![
+            d("Budget", 0),
+            d("Call", 0),
+            d("Meeting", 0),
+            d("Lonely", 0)
+        ]
     );
     assert_eq!(edge_triples(&g), vec![]);
     w.finish().await;
@@ -525,11 +533,18 @@ async fn similarity_edges_are_computed_on_request_from_note_vectors() {
             max_notes: 2,
         },
     ));
-    let g = w.service(Some(small)).graph(&s, &with).await.expect("graph");
+    let g = w
+        .service(Some(small))
+        .graph(&s, &with)
+        .await
+        .expect("graph");
     assert_eq!(g.similarity, SimilarityStatus::Truncated);
     // Without a model the graph still answers (principle 6).
     let g = w.service(None).graph(&s, &with).await.expect("graph");
-    assert_eq!((g.edges.len(), g.similarity), (0, SimilarityStatus::Unavailable));
+    assert_eq!(
+        (g.edges.len(), g.similarity),
+        (0, SimilarityStatus::Unavailable)
+    );
     // Local: the focus's neighbours join at depth 1.
     let mut q = local(1, Some("similarity"), None);
     q.include_similarity = true;
@@ -549,7 +564,11 @@ async fn a_graph_never_contains_another_users_notes() {
     let (_, sb) = w.user("bob").await;
     let fa = fixture(&w, &sa).await;
     let bob_note = w
-        .create(&sb, "notes/Plan.md", "---\nrelated: [\"[[Budget]]\"]\n---\nBob's plan.\n")
+        .create(
+            &sb,
+            "notes/Plan.md",
+            "---\nrelated: [\"[[Budget]]\"]\n---\nBob's plan.\n",
+        )
         .await;
     let bob_budget = w.create(&sb, "notes/Budget.md", "Bob's budget.\n").await;
     let svc = w.service(None);
@@ -558,10 +577,17 @@ async fn a_graph_never_contains_another_users_notes() {
         gb.nodes.iter().map(|n| n.id).collect::<Vec<_>>(),
         vec![bob_note, bob_budget]
     );
-    assert_eq!(edge_triples(&gb), vec![t("Plan", "Budget", "relation:related")]);
+    assert_eq!(
+        edge_triples(&gb),
+        vec![t("Plan", "Budget", "relation:related")]
+    );
     let ga = svc.graph(&sa, &GraphQuery::default()).await.expect("alice");
     assert_eq!(ga.nodes.len(), 14);
-    assert!(ga.nodes.iter().all(|n| n.id != bob_note && n.id != bob_budget));
+    assert!(
+        ga.nodes
+            .iter()
+            .all(|n| n.id != bob_note && n.id != bob_budget)
+    );
     // Alice's note is not Bob's focus.
     assert!(matches!(
         svc.local(&sb, fa.plan, &local(1, None, None)).await,

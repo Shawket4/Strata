@@ -1351,3 +1351,146 @@ async fn task_edits_use_the_devices_dates_and_ids_and_conflict_per_line() {
     assert!(h.read(uid, "tasks/Tasks.md").contains(&done));
     h.finish().await;
 }
+
+fn entity(n: u128, kind: NoteKind, name: &str) -> Op {
+    Op::EntityCreate(o::EntityCreate {
+        id: id(n),
+        kind,
+        name: name.into(),
+        aliases: vec![],
+        fields: Default::default(),
+        force: false,
+    })
+}
+
+fn document(n: u128, name: &str, copy_of: Option<Ulid>, companies: &[u128], people: &[u128]) -> Op {
+    Op::DocumentCreate(o::DocumentCreate {
+        id: id(n),
+        name: name.into(),
+        aliases: vec![],
+        doc_type: Some("contract".into()),
+        copy: Some(domain::CopyKind::Copy),
+        copy_of,
+        companies: companies.iter().map(|c| id(*c)).collect(),
+        people: people.iter().map(|p| id(*p)).collect(),
+        expires: None,
+        force: false,
+    })
+}
+
+#[tokio::test]
+async fn document_create_writes_its_links_in_the_same_single_commit() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let uid = alice.id;
+    one(&h, &alice, op(1, None, entity(1, NoteKind::Person, "Sam Hany"))).await;
+    one(&h, &alice, op(2, None, entity(2, NoteKind::Company, "Watanya"))).await;
+    one(&h, &alice, op(3, None, entity(3, NoteKind::Person, "Mona Adel"))).await;
+    one(&h, &alice, op(4, None, document(4, "Lease original", None, &[], &[]))).await;
+    let commits = h.log(uid).len();
+
+    let r = one(
+        &h,
+        &alice,
+        op(5, None, document(5, "Lease copy", Some(id(4)), &[2], &[1, 3])),
+    )
+    .await;
+    let copy = h.read(uid, "documents/Lease copy.md");
+    assert_eq!(
+        copy,
+        format!(
+            "---\nid: {}\nkind: document\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\ndoc-type: contract\ncopy: copy\npeople: [\"[[Sam Hany]]\", \"[[Mona Adel]]\"]\ncompanies: [\"[[Watanya]]\"]\ncopy-of: [\"[[Lease original]]\"]\n---\n## Notes\n",
+            id(5)
+        )
+    );
+    assert_eq!(r, applied(&copy));
+    assert_eq!(h.log(uid).len(), commits + 1, "one commit for the create and its links");
+    assert_eq!(h.log(uid)[0], "user: create documents/Lease copy.md");
+    let mut paths = strata_vault::git::changed_paths(
+        &h.dir(uid),
+        &strata_vault::git::head(&h.dir(uid)).expect("head").expect("commit").id,
+    )
+    .expect("paths");
+    paths.sort();
+    assert_eq!(paths, vec!["documents/Lease copy.md".to_owned()]);
+    // The links are indexed as relations of the new document.
+    let related = ops::get_document(&alice.client, id(5)).await.expect("document");
+    assert_eq!(related.document.copy_of, Some(id(4)));
+    let original = ops::get_document(&alice.client, id(4)).await.expect("document");
+    assert_eq!(original.copies, vec![id(5).to_string()]);
+
+    // A link to a missing note refuses the whole create: nothing is written.
+    let r = one(
+        &h,
+        &alice,
+        op(6, None, document(6, "Orphan copy", Some(id(99)), &[], &[1])),
+    )
+    .await;
+    assert_eq!(r, not_found());
+    assert_eq!(h.log(uid).len(), commits + 1);
+    assert!(!h.exists(uid, "documents/Orphan copy.md"));
+    h.finish().await;
+}
+
+/// A semantic source that reports one stored note as a near-certain paraphrase.
+struct Paraphrase(dedupe::Item);
+
+impl strata_vault::semantic::SemanticDuplicates for Paraphrase {
+    fn evidence<'a>(
+        &'a self,
+        _tx: &'a mut strata_index::ScopedTx,
+        _item: &'a dedupe::Item,
+    ) -> futures_util::future::BoxFuture<'a, Vec<strata_vault::semantic::SemanticMatch>> {
+        Box::pin(async move {
+            vec![strata_vault::semantic::SemanticMatch {
+                item: self.0.clone(),
+                cosine: 0.99,
+            }]
+        })
+    }
+}
+
+#[tokio::test]
+async fn semantic_duplicates_are_answered_with_the_semantic_level() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let uid = alice.id;
+    one(
+        &h,
+        &alice,
+        op(1, None, create(1, "notes/Quarterly budget review.md", "Numbers for Q3\n")),
+    )
+    .await;
+    let text = h.read(uid, "notes/Quarterly budget review.md");
+    let stored = strata_vault::dup::note_item(
+        "notes/Quarterly budget review.md",
+        Some(strata_common::NoteId::from_ulid(id(1))),
+        &vault_format::Document::parse(&text),
+    );
+    h.vault.set_semantic(std::sync::Arc::new(Paraphrase(stored)));
+    let commits = h.log(uid).len();
+    let r = one(
+        &h,
+        &alice,
+        op(2, None, create(2, "notes/Money planning.md", "Spending plan\n")),
+    )
+    .await;
+    let OpResult::Duplicate { candidates } = &r else {
+        panic!("expected duplicate, got {r:?}");
+    };
+    assert_eq!(
+        candidates
+            .iter()
+            .map(|c| (c.id.clone(), c.kind, c.title.clone(), c.level))
+            .collect::<Vec<_>>(),
+        vec![(
+            id(1).to_string(),
+            DedupeKind::Note,
+            "Quarterly budget review".to_owned(),
+            MatchLevel::Semantic
+        )]
+    );
+    assert_eq!(candidates[0].score, 0.99);
+    assert_eq!(h.log(uid).len(), commits, "nothing written");
+    h.finish().await;
+}

@@ -36,7 +36,9 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
             20_260_927_000_007,
             20_260_927_000_008,
             20_260_927_000_010,
-            20_260_927_000_011
+            20_260_927_000_011,
+            20_260_927_000_013,
+            20_260_927_000_014
         ]
     );
     assert!(after_first.iter().all(|r| r.1));
@@ -58,7 +60,7 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
 #[tokio::test]
 async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
     let db = TestDb::new_unmigrated().await.expect("db");
-    let expected_new_tables: [&[&str]; 10] = [
+    let expected_new_tables: [&[&str]; 12] = [
         &[
             "_sqlx_migrations",
             "audit_log",
@@ -107,6 +109,10 @@ async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
         // 010: columns only (devices.reminders_enabled, users.must_change_password).
         &[],
         &["dedupe_vectors", "dedupe_verdicts", "note_vectors"],
+        // 013: column only (sync_epochs.vault_head).
+        &[],
+        // 014: columns only (ai_decisions.rel_type, mention, detail).
+        &[],
     ];
     let mut before = tables(&db).await;
     let mut user = None;
@@ -158,6 +164,19 @@ async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
                 .expect("note");
                 tx.commit().await.expect("commit");
             }
+            // 006 creates sync_epochs; 013 adds vault_head to the existing row (NULL).
+            5 => {
+                let u = user.expect("user from step 0");
+                let mut tx = db.begin(u).await.expect("tx");
+                sqlx::query(
+                    "INSERT INTO sync_epochs (user_id, epoch, last_seq, updated) \
+                     VALUES (strata_current_user(), 3, 7, now())",
+                )
+                .execute(tx.conn())
+                .await
+                .expect("sync position");
+                tx.commit().await.expect("commit");
+            }
             _ => {}
         }
     }
@@ -177,6 +196,21 @@ async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
     assert_eq!(
         (note.title.as_str(), note.word_count, note.trashed),
         ("Keep", 0, false)
+    );
+    assert_eq!(
+        strata_index::repo::sync::sync_position(&mut tx)
+            .await
+            .expect("position"),
+        strata_index::repo::sync::SyncPosition {
+            epoch: 3,
+            last_seq: 7
+        }
+    );
+    assert_eq!(
+        strata_index::repo::sync::vault_head(&mut tx)
+            .await
+            .expect("head"),
+        None
     );
 }
 

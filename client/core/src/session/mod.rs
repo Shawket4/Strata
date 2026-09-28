@@ -5,10 +5,17 @@
 //!
 //! Everything here is callable headless: the frb facade in [`crate::api`] only forwards to it.
 
+mod account;
+mod ask;
 mod core;
+mod editing;
 mod intents;
+mod online;
 
-pub use self::core::{Core, CoreEnv, SyncApiFactory};
+pub use self::core::{
+    Core, CoreEnv, MIN_PASSWORD_LENGTH, NotifyHub, SyncApiFactory, password_strength,
+};
+pub use ask::AskState;
 pub use intents::{NewTask, TaskEdit, candidate_item};
 
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -22,13 +29,14 @@ use crate::auth::{AccountMode, CoreTokenProvider, TokenStore, account_mode};
 use crate::error::{CoreError, CoreResult};
 use crate::net::{NetError, Tokens};
 use crate::notify;
-use crate::store::{AccountDb, account, notes, outbox, tokens};
+use crate::store::{AccountDb, account, cache, notes, outbox, tokens};
 use crate::sync::engine::{CycleOutcome, CycleReport, SyncEngine, SyncHost, Trigger};
 use crate::view::build;
 use crate::view::model::{
     Connectivity, NotificationMode, NotificationOp, NotificationResult, Platform, SessionKind,
     SessionState, SyncActivity,
 };
+use crate::format::labels::Lang;
 use crate::view::{Topics, ViewCtx, ViewHub, ViewSink, WatchId};
 
 /// Notification mode of a platform.
@@ -44,9 +52,9 @@ struct Inner {
     hub: ViewHub,
     connectivity: Connectivity,
     activity: SyncActivity,
-    notify_sinks: Vec<Box<dyn ViewSink<NotificationOp>>>,
     notify_buffer: Vec<NotificationOp>,
     session_changed: bool,
+    ask: AskState,
 }
 
 /// One signed-in account.
@@ -127,9 +135,9 @@ impl Session {
                     hub: ViewHub::new(),
                     connectivity: Connectivity::Unknown,
                     activity: SyncActivity::default(),
-                    notify_sinks: Vec::new(),
                     notify_buffer: Vec::new(),
                     session_changed: false,
+                    ask: AskState::default(),
                 }),
                 tokens,
             }
@@ -160,21 +168,18 @@ impl Session {
         &self.env
     }
 
-    fn tz(conn: &Connection) -> Tz {
-        account::get(conn)
-            .ok()
-            .flatten()
-            .and_then(|a| a.timezone.parse::<Tz>().ok())
-            .unwrap_or(chrono_tz::UTC)
-    }
-
     fn ctx_of(&self, g: &Inner) -> ViewCtx {
+        let a = account::get(g.db.conn()).ok().flatten();
         ViewCtx {
             now: self.env.clock.now(),
-            tz: Self::tz(g.db.conn()),
+            tz: a
+                .as_ref()
+                .and_then(|a| a.timezone.parse::<Tz>().ok())
+                .unwrap_or(chrono_tz::UTC),
             connectivity: g.connectivity,
             activity: g.activity.clone(),
             notification_mode: notification_mode(self.env.platform),
+            lang: a.map_or_else(Lang::default, |a| Lang::from_code(&a.ui_language)),
         }
     }
 
@@ -217,7 +222,7 @@ impl Session {
         hub.notify(db.conn(), &ctx, topics)?;
         if topics.intersects(Topics::TASKS | Topics::SETTINGS | Topics::ACCOUNT) {
             let ops = notify::recompute(db.conn(), ctx.now, ctx.tz, ctx.notification_mode)?;
-            Self::emit_notifications(g, ops);
+            self.emit_notifications(g, ops);
             let ctx = self.ctx_of(g);
             let Inner { db, hub, .. } = &mut *g;
             hub.notify(db.conn(), &ctx, Topics::SETTINGS)?;
@@ -225,16 +230,17 @@ impl Session {
         Ok(())
     }
 
-    fn emit_notifications(g: &mut Inner, ops: Vec<NotificationOp>) {
+    fn emit_notifications(&self, g: &mut Inner, ops: Vec<NotificationOp>) {
         if ops.is_empty() {
             return;
         }
-        if g.notify_sinks.is_empty() {
+        let hub = &self.env.notifications;
+        if !hub.is_attached() {
             g.notify_buffer.extend(ops);
             return;
         }
         for op in ops {
-            g.notify_sinks.retain(|s| s.emit(op.clone()));
+            hub.emit(&op);
         }
     }
 
@@ -319,14 +325,31 @@ impl Session {
     pub fn session_state(&self) -> CoreResult<SessionState> {
         let g = self.lock();
         let conn = g.db.conn();
+        let ctx = self.ctx_of(&g);
+        let labels = ctx.labels();
         let Some(summary) = build::account_summary(conn)? else {
             return Err(CoreError::Internal("session without account row".into()));
         };
         let a = account::get(conn)?.ok_or(CoreError::NotSignedIn)?;
         let has_tokens = tokens::get(conn)?.is_some();
         let unsynced = outbox::unsynced_count(conn)?;
+        let devices = build::device_items(conn, &ctx)?;
+        let pending_approvals = crate::store::cache::get::<u32>(conn, cache::ADMIN_PENDING)?
+            .map(|(n, _)| n)
+            .filter(|_| summary.is_admin);
+        let export = crate::store::cache::get::<(u64, u32)>(conn, cache::EXPORT)?.map(|(e, _)| e);
         let state = |kind| SessionState {
             account: Some(summary.clone()),
+            this_device: devices
+                .as_ref()
+                .and_then(|d| d.iter().find(|d| d.is_this_device).cloned()),
+            device_count: devices
+                .as_ref()
+                .map(|d| u32::try_from(d.len()).unwrap_or(u32::MAX)),
+            pending_approvals,
+            export_size_bytes: export.map(|e| e.0),
+            export_note_count: export.map(|e| e.1),
+            export_label: export.map(|(b, n)| build::export_label(&labels, b, n)),
             ..SessionState::of(kind)
         };
         Ok(match account_mode(&a.status, a.password_change_required) {
@@ -338,6 +361,7 @@ impl Session {
                 let at = a.deletion_at.as_deref().map(build::ts);
                 SessionState {
                     days_remaining: at.map(|t| build::days_until(self.env.clock.now(), t)),
+                    deletion_label: at.map(|t| labels.date_long(labels.local(t).date())),
                     deletion_at: at,
                     unsynced_ops: unsynced,
                     ..state(SessionKind::DeletionPending)
@@ -349,16 +373,12 @@ impl Session {
         })
     }
 
-    /// Attaches the notification-ops stream (Dart's adapter); buffered ops are flushed.
-    pub fn attach_notifications(&self, sink: Box<dyn ViewSink<NotificationOp>>) {
+    /// Sends ops buffered while no notification stream was attached.
+    pub fn flush_notifications(&self) {
         let mut g = self.lock();
         let buffered = std::mem::take(&mut g.notify_buffer);
-        let mut open = true;
         for op in buffered {
-            open = open && sink.emit(op);
-        }
-        if open {
-            g.notify_sinks.push(sink);
+            self.env.notifications.emit(&op);
         }
     }
 
@@ -367,7 +387,7 @@ impl Session {
         let mut g = self.lock();
         let ctx = self.ctx_of(&g);
         let ops = notify::recompute(g.db.conn(), ctx.now, ctx.tz, ctx.notification_mode)?;
-        Self::emit_notifications(&mut g, ops);
+        self.emit_notifications(&mut g, ops);
         let Inner { db, hub, .. } = &mut *g;
         hub.notify(db.conn(), &ctx, Topics::SETTINGS)
     }
@@ -380,7 +400,7 @@ impl Session {
         }
         let now = self.env.clock.now();
         let ops = notify::due_now(g.db.conn(), now)?;
-        Self::emit_notifications(&mut g, ops);
+        self.emit_notifications(&mut g, ops);
         notify::next_fire_at(g.db.conn())
     }
 
@@ -405,7 +425,7 @@ impl Session {
         let mut g = self.lock();
         let now = self.env.clock.now();
         let ops = notify::cancel_all(g.db.conn(), now, notification_mode(self.env.platform))?;
-        Self::emit_notifications(&mut g, ops);
+        self.emit_notifications(&mut g, ops);
         Ok(())
     }
 
@@ -413,7 +433,7 @@ impl Session {
     pub fn close(&self) {
         let mut g = self.lock();
         g.hub.clear();
-        g.notify_sinks.clear();
+        g.ask.stop();
     }
 
     /// Number of live view streams.

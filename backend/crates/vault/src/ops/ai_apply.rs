@@ -25,7 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use chrono::{DateTime, NaiveDate, Utc};
 use domain::NoteKind;
 use serde::{Deserialize, Serialize};
-use strata_common::{DecisionId, HintId, JobId, NoteId, SuggestionId};
+use strata_common::{DecisionId, HintId, JobId, NoteId, ReplyId, SuggestionId};
 use strata_index::repo::entities as erepo;
 use strata_index::repo::jobs::{self, NewJob};
 use strata_index::repo::suggestions as srepo;
@@ -173,6 +173,19 @@ pub struct AiSections {
     pub bullets: Vec<(AiSection, Vec<AiBullet>)>,
 }
 
+/// A note in an AI-owned folder (`_ai/`) written whole by a job (the weekly digest, §9.2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AiNoteWrite {
+    /// Its ID (the existing note's ID when the path exists).
+    pub id: NoteId,
+    /// Path under `_ai/`.
+    pub path: String,
+    /// Display title (frontmatter `title`).
+    pub title: String,
+    /// The body.
+    pub body: String,
+}
+
 /// Title, tags and folder for an inbox capture (§9.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Filing {
@@ -314,6 +327,8 @@ pub struct AiChangeSet {
     pub concepts: Vec<NewConcept>,
     /// Entity notes to create.
     pub entities: Vec<NewEntityNote>,
+    /// Notes in `_ai/` to create or replace.
+    pub ai_notes: Vec<AiNoteWrite>,
     /// Aliases to add to entities.
     pub aliases: Vec<(NoteId, Vec<String>)>,
     /// Custody events to record.
@@ -338,6 +353,8 @@ pub struct AiChangeSet {
     pub decide: Vec<DecideSuggestion>,
     /// Hints to store.
     pub hints: Vec<NewHint>,
+    /// AI replies to add to suggestion threads (§9.8).
+    pub ai_replies: Vec<(SuggestionId, ReplyId, String)>,
     /// Jobs to enqueue.
     pub jobs: Vec<NewJob>,
 }
@@ -359,6 +376,7 @@ impl AiChangeSet {
             remove: Vec::new(),
             concepts: Vec::new(),
             entities: Vec::new(),
+            ai_notes: Vec::new(),
             aliases: Vec::new(),
             custody: Vec::new(),
             custody_remove: Vec::new(),
@@ -371,6 +389,7 @@ impl AiChangeSet {
             suggestions: Vec::new(),
             decide: Vec::new(),
             hints: Vec::new(),
+            ai_replies: Vec::new(),
             jobs: Vec::new(),
         }
     }
@@ -578,7 +597,7 @@ impl Core {
     }
 
     /// A free path `<folder>/<name>.md` in the overlay.
-    fn free_path(&self, ov: &Overlay, folder: &str, name: &str, own: Option<&str>) -> Result<String> {
+    fn ov_free_path(&self, ov: &Overlay, folder: &str, name: &str, own: Option<&str>) -> Result<String> {
         let stem = sanitize_file_name(name);
         let state = self.state()?;
         let mut taken: BTreeSet<String> = state
@@ -791,12 +810,16 @@ impl Core {
     /// Writes an [`AiChangeSet`] as one commit. See the module docs.
     #[allow(clippy::too_many_lines)] // one linear pass over the parts of the change set
     pub async fn ai_apply(&mut self, scope: UserScope, set: AiChangeSet) -> Result<AiApplied> {
-        let Some((subject_path, version)) = self
+        let live = self
             .state()?
             .note(set.subject)
-            .map(|(p, m)| (p.to_owned(), m.version.clone()))
-        else {
-            return Ok(AiApplied::Stale);
+            .map(|(p, m)| (p.to_owned(), m.version.clone()));
+        let (subject_path, version) = match live {
+            Some(l) => l,
+            None => match set.ai_notes.iter().find(|n| n.id == set.subject) {
+                Some(n) => (n.path.clone(), String::new()),
+                None => return Ok(AiApplied::Stale),
+            },
         };
         if set.expect_version.as_ref().is_some_and(|v| *v != version) {
             return Ok(AiApplied::Stale);
@@ -809,7 +832,7 @@ impl Core {
 
         // New notes first, so edges and citations can point at them.
         for c in &set.concepts {
-            let path = self.free_path(&ov, "concepts", &c.name, None)?;
+            let path = self.ov_free_path(&ov, "concepts", &c.name, None)?;
             let stem = paths::file_name(&path).trim_end_matches(".md").to_owned();
             let body = match &c.summary {
                 Some(s) if !s.trim().is_empty() => {
@@ -828,7 +851,7 @@ impl Core {
         }
         for e in &set.entities {
             let folder = e.kind.default_folder();
-            let path = self.free_path(&ov, folder, &e.name, None)?;
+            let path = self.ov_free_path(&ov, folder, &e.name, None)?;
             let stem = paths::file_name(&path).trim_end_matches(".md").to_owned();
             let mut doc = Document::parse("## Notes\n");
             let fm = doc.frontmatter_mut();
@@ -850,6 +873,38 @@ impl Core {
                     .map_err(frontmatter_err)?;
             }
             self.ov_create(&mut ov, e.id, &path, doc, &local_now)?;
+        }
+        for n in &set.ai_notes {
+            if !n.path.starts_with("_ai/") || !n.path.ends_with(".md") {
+                return Err(VaultError::invalid("AI notes live under _ai/"));
+            }
+            paths::validate_note_path(&n.path)?;
+            let body = if n.body.ends_with('\n') {
+                n.body.clone()
+            } else {
+                format!("{}\n", n.body)
+            };
+            match self.ov_path(&ov, n.id) {
+                Some(existing) => {
+                    let text = self.ov_text(&mut ov, &existing).await?;
+                    let mut doc = Document::parse(&text);
+                    doc.set_body(body);
+                    let fm = doc.frontmatter_mut();
+                    fm.set_text(KnownKey::Title, n.title.trim())
+                        .map_err(frontmatter_err)?;
+                    Self::ov_put(&mut ov, &existing, doc.render());
+                }
+                None => {
+                    if self.state()?.notes.contains_key(&n.path) {
+                        return Err(VaultError::invalid("another note has this path"));
+                    }
+                    let mut doc = Document::parse(&body);
+                    doc.frontmatter_mut()
+                        .set_text(KnownKey::Title, n.title.trim())
+                        .map_err(frontmatter_err)?;
+                    self.ov_create(&mut ov, n.id, &n.path, doc, &local_now)?;
+                }
+            }
         }
         self.ov_block_ids(&mut ov, &set.block_ids).await?;
         for rm in &set.remove {
@@ -1035,6 +1090,7 @@ impl Core {
                 .filter(|h| hints_known.contains(&h.entity))
                 .cloned()
                 .collect(),
+            replies: set.ai_replies.clone(),
             jobs: set.jobs.clone(),
             job_id: set.job_id,
             now,
@@ -1090,6 +1146,17 @@ impl Core {
                 status: "pending".to_owned(),
                 created: true,
             });
+        }
+        for (s, _, _) in &set.ai_replies {
+            if !set.decide.iter().any(|d| d.id == *s) {
+                notice.suggestions.push(crate::events::SuggestionEvent {
+                    id: *s,
+                    note_id: None,
+                    kind: String::new(),
+                    status: "pending".to_owned(),
+                    created: false,
+                });
+            }
         }
         for d in &set.decide {
             notice.suggestions.push(crate::events::SuggestionEvent {
@@ -1149,7 +1216,7 @@ impl Core {
         if !tags.is_empty() {
             fm.set_list(KnownKey::Tags, tags).map_err(frontmatter_err)?;
         }
-        let new_path = self.free_path(ov, &folder, title, Some(&path))?;
+        let new_path = self.ov_free_path(ov, &folder, title, Some(&path))?;
         let stem = paths::file_name(&new_path).trim_end_matches(".md");
         if stem == title {
             if fm.title().is_some() {
@@ -1266,6 +1333,7 @@ struct RowWork {
     suggestions: Vec<NewSuggestion>,
     decide: Vec<DecideSuggestion>,
     hints: Vec<NewHint>,
+    replies: Vec<(SuggestionId, ReplyId, String)>,
     jobs: Vec<NewJob>,
     job_id: Option<JobId>,
     now: DateTime<Utc>,
@@ -1309,6 +1377,20 @@ impl RowWork {
                 },
             )
             .await?;
+        }
+        for (s, id, body) in &self.replies {
+            srepo::add_reply(
+                tx,
+                &srepo::Reply {
+                    id: *id,
+                    suggestion_id: *s,
+                    author: strata_index::types::ReplyAuthor::Ai,
+                    body: body.clone(),
+                    created: now,
+                },
+            )
+            .await?;
+            log_suggestion(tx, *s, now).await?;
         }
         for j in &self.jobs {
             jobs::enqueue(tx, j, now).await?;

@@ -2,6 +2,11 @@
 
 Records every locked decision, principle change, and owner pick. `PLAN.md` is the spec; this file is the history of how it got there. Newest first.
 
+## 2026-09-28
+
+### Accessibility: button fill token
+- Filled buttons and the FAB use `accentFill` `#1D5C8C` + white (light, 7.1:1) and surf `#6CB4DD` + abyss (dark, 7.6:1); tide `#2477B3` remains the lead colour for the mark, icons and large graphics. White on tide fell to 4.16:1 under the hover overlay. Dark danger buttons use abyss text on `#E07A66`.
+
 ## 2026-09-27
 
 ### Embeddings: fp32, chunk-averaged note vectors, idle offload

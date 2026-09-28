@@ -127,7 +127,14 @@ impl GraphService {
                 SimilarityStatus::Complete,
             ),
         };
-        let view = assemble::local(&data, focus, query, &similar, status, &std::collections::HashMap::new())?;
+        let view = assemble::local(
+            &data,
+            focus,
+            query,
+            &similar,
+            status,
+            &std::collections::HashMap::new(),
+        )?;
         let ids = view.nodes.iter().map(|n| n.id).collect();
         let summaries = self.summaries(scope, ids).await;
         let mut view = view;

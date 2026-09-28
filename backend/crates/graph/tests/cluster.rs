@@ -44,7 +44,12 @@ async fn groups(w: &World, s: &UserScope) -> Groups {
         .create(s, "concepts/Hiring.md", "---\nkind: concept\n---\n")
         .await;
     let mut a = Vec::new();
-    let names_a = ["Discount policy", "Price list", "Offer to Watanya", "Quote template"];
+    let names_a = [
+        "Discount policy",
+        "Price list",
+        "Offer to Watanya",
+        "Quote template",
+    ];
     for (i, name) in names_a.iter().enumerate() {
         let later: Vec<&str> = names_a[i + 1..].to_vec();
         let concepts = if i < 2 {
@@ -233,15 +238,17 @@ async fn the_first_run_writes_the_file_the_tables_and_the_change_log_in_one_ai_c
     expected.sort();
     assert_eq!(assign, expected);
     assert_eq!(names, vec![(1, "Pricing".into()), (2, "Hiring".into())]);
-    assert!(!assign.iter().any(|(n, _)| *n == g.lonely), "loners stay unclustered");
+    assert!(
+        !assign.iter().any(|(n, _)| *n == g.lonely),
+        "loners stay unclustered"
+    );
     // Sync: one upsert per assignment and per name.
     let log = cluster_changes(&w, alice).await;
-    let mut expected_log: Vec<(String, String, String)> = sorted(
-        a_members.iter().chain(&b_members).copied().collect(),
-    )
-    .into_iter()
-    .map(|n| ("cluster_assignment".into(), n.to_string(), "upsert".into()))
-    .collect();
+    let mut expected_log: Vec<(String, String, String)> =
+        sorted(a_members.iter().chain(&b_members).copied().collect())
+            .into_iter()
+            .map(|n| ("cluster_assignment".into(), n.to_string(), "upsert".into()))
+            .collect();
     expected_log.push(("cluster_name".into(), "1".into(), "upsert".into()));
     expected_log.push(("cluster_name".into(), "2".into(), "upsert".into()));
     assert_eq!(log, expected_log);
@@ -264,7 +271,11 @@ async fn the_first_run_writes_the_file_the_tables_and_the_change_log_in_one_ai_c
             .collect::<Vec<_>>(),
         vec![("1", "Pricing", 5), ("2", "Hiring", 5)]
     );
-    let lonely = graph.nodes.iter().find(|n| n.id == g.lonely).expect("lonely");
+    let lonely = graph
+        .nodes
+        .iter()
+        .find(|n| n.id == g.lonely)
+        .expect("lonely");
     assert_eq!(lonely.cluster_id, None);
 
     // Same graph again: deterministic, nothing to write, no call, no event.
@@ -305,7 +316,10 @@ async fn ids_and_names_persist_and_only_changed_clusters_are_renamed() {
     let input = push_names(&w, &s, alice, &[(2, "Recruiting")]).await;
     assert!(input.contains("\"cluster_id\": \"2\""));
     assert!(input.contains("\"previous_name\": \"Hiring\""));
-    assert!(!input.contains("\"cluster_id\": \"1\""), "cluster 1 is unchanged");
+    assert!(
+        !input.contains("\"cluster_id\": \"1\""),
+        "cluster 1 is unchanged"
+    );
     let out = w
         .clusterer()
         .run_for(&s, "alice", w.db.clock.now())
@@ -329,7 +343,11 @@ async fn ids_and_names_persist_and_only_changed_clusters_are_renamed() {
     assert_eq!(
         log[log.len() - 2..].to_vec(),
         vec![
-            ("cluster_assignment".into(), extra.to_string(), "upsert".into()),
+            (
+                "cluster_assignment".into(),
+                extra.to_string(),
+                "upsert".into()
+            ),
             ("cluster_name".into(), "2".into(), "upsert".into()),
         ]
     );

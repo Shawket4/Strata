@@ -240,9 +240,21 @@ mod tests {
                 EdgeKind::CoMention,
             ])
         );
-        assert_eq!(EdgeFilter::parse(Some(" ")).expect("empty"), EdgeFilter::all());
-        assert_eq!(EdgeFilter::parse(Some("relation")).expect("ok").typed().len(), 6);
-        assert_eq!(EdgeFilter::parse(Some("entity")).expect("ok").typed().len(), 10);
+        assert_eq!(
+            EdgeFilter::parse(Some(" ")).expect("empty"),
+            EdgeFilter::all()
+        );
+        assert_eq!(
+            EdgeFilter::parse(Some("relation"))
+                .expect("ok")
+                .typed()
+                .len(),
+            6
+        );
+        assert_eq!(
+            EdgeFilter::parse(Some("entity")).expect("ok").typed().len(),
+            10
+        );
         let err = EdgeFilter::parse(Some("link,relation:likes")).expect_err("unknown");
         assert_eq!(
             err.to_string(),

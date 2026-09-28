@@ -63,7 +63,9 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     let h = H::new(RECLUSTER_LIMIT).await;
     let alice = h.user("alice").await;
     let a = alice.id;
-    let shady = h.note(a, "people/Shady.md", "---\nkind: person\n---\n").await;
+    let shady = h
+        .note(a, "people/Shady.md", "---\nkind: person\n---\n")
+        .await;
     let mona = h
         .note(
             a,
@@ -82,7 +84,9 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     let t = h.now();
     let c = &alice.client;
 
-    let g = ops::get_graph(c, None, None, None, None).await.expect("graph");
+    let g = ops::get_graph(c, None, None, None, None)
+        .await
+        .expect("graph");
     assert_eq!(
         g,
         types::Graph {
@@ -94,10 +98,42 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
                 user_edge(call, plan, "link"),
             ],
             nodes: vec![
-                node(shady, "Shady", types::NoteKind::Person, "people/Shady.md", 2, None, t),
-                node(mona, "Mona", types::NoteKind::Person, "people/Mona.md", 2, None, t),
-                node(plan, "Plan", types::NoteKind::Note, "notes/Plan.md", 1, None, t),
-                node(call, "Call", types::NoteKind::Note, "notes/Call.md", 3, None, t),
+                node(
+                    shady,
+                    "Shady",
+                    types::NoteKind::Person,
+                    "people/Shady.md",
+                    2,
+                    None,
+                    t
+                ),
+                node(
+                    mona,
+                    "Mona",
+                    types::NoteKind::Person,
+                    "people/Mona.md",
+                    2,
+                    None,
+                    t
+                ),
+                node(
+                    plan,
+                    "Plan",
+                    types::NoteKind::Note,
+                    "notes/Plan.md",
+                    1,
+                    None,
+                    t
+                ),
+                node(
+                    call,
+                    "Call",
+                    types::NoteKind::Note,
+                    "notes/Call.md",
+                    3,
+                    None,
+                    t
+                ),
             ],
             similarity: types::SimilarityStatus::Off,
         }
@@ -137,7 +173,10 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
         ]
     );
     assert_eq!(
-        g.nodes.iter().map(|n| (n.title.as_str(), n.degree)).collect::<Vec<_>>(),
+        g.nodes
+            .iter()
+            .map(|n| (n.title.as_str(), n.degree))
+            .collect::<Vec<_>>(),
         vec![("Shady", 2), ("Mona", 2)]
     );
 
@@ -148,8 +187,24 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     assert_eq!(
         l.nodes,
         vec![
-            node(plan, "Plan", types::NoteKind::Note, "notes/Plan.md", 1, Some(0), t),
-            node(call, "Call", types::NoteKind::Note, "notes/Call.md", 1, Some(1), t),
+            node(
+                plan,
+                "Plan",
+                types::NoteKind::Note,
+                "notes/Plan.md",
+                1,
+                Some(0),
+                t
+            ),
+            node(
+                call,
+                "Call",
+                types::NoteKind::Note,
+                "notes/Call.md",
+                1,
+                Some(1),
+                t
+            ),
         ]
     );
     let l = ops::get_local_graph(c, plan.as_ulid(), Some(2), Some("link,mention"), None, None)
@@ -160,7 +215,12 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
             .iter()
             .map(|n| (n.title.as_str(), n.depth))
             .collect::<Vec<_>>(),
-        vec![("Shady", Some(2)), ("Mona", Some(2)), ("Plan", Some(0)), ("Call", Some(1))]
+        vec![
+            ("Shady", Some(2)),
+            ("Mona", Some(2)),
+            ("Plan", Some(0)),
+            ("Call", Some(1))
+        ]
     );
     assert_eq!(l.edges.len(), 3, "entity:knows is filtered out");
 
@@ -184,7 +244,11 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     assert_problem(
         ops::get_graph(c, None, Some("tag"), None, None).await,
         &types::Problem {
-            errors: vec![field("unknown_node_kind", "kinds", "unknown node kind `tag`")],
+            errors: vec![field(
+                "unknown_node_kind",
+                "kinds",
+                "unknown node kind `tag`",
+            )],
             ..plain(
                 "invalid_parameter",
                 "Request parameter is invalid",
@@ -303,7 +367,10 @@ async fn maps_are_saved_as_validated_json_canvas_and_follow_note_renames() {
         current_version: Some(version.clone()),
         ..plain("version_conflict", "Version conflict", 409, None)
     };
-    assert_problem(ops::put_map(c, "Roadmap", None, &put(CANVAS)).await, &conflict);
+    assert_problem(
+        ops::put_map(c, "Roadmap", None, &put(CANVAS)).await,
+        &conflict,
+    );
     assert_problem(
         ops::put_map(c, "Roadmap", Some("sha256:0000"), &put(CANVAS)).await,
         &conflict,
@@ -342,13 +409,21 @@ async fn maps_are_saved_as_validated_json_canvas_and_follow_note_renames() {
         ops::put_map(c, "Bad", None, &put(bad)).await,
         &types::Problem {
             errors: vec![
-                field("bad_size", "/content", "node `b` needs a positive width and height"),
+                field(
+                    "bad_size",
+                    "/content",
+                    "node `b` needs a positive width and height",
+                ),
                 field(
                     "bad_color",
                     "/content",
                     "colour `#12` is neither a preset 1-6 nor #RRGGBB",
                 ),
-                field("dangling_edge", "/content", "edge `e` points at missing node `zz`"),
+                field(
+                    "dangling_edge",
+                    "/content",
+                    "edge `e` points at missing node `zz`",
+                ),
                 field(
                     "invalid_file",
                     "/content",

@@ -169,8 +169,12 @@ pub struct Fixture {
 ///   Watanya; concept Pricing; related Plan; links and embeds Plan); Meeting (mentions
 ///   Shady, Mona, Omar); Lonely (no edges).
 pub async fn fixture(w: &World, s: &UserScope) -> Fixture {
-    let shady = w.create(s, "people/Shady.md", "---\nkind: person\n---\n").await;
-    let omar = w.create(s, "people/Omar.md", "---\nkind: person\n---\n").await;
+    let shady = w
+        .create(s, "people/Shady.md", "---\nkind: person\n---\n")
+        .await;
+    let omar = w
+        .create(s, "people/Omar.md", "---\nkind: person\n---\n")
+        .await;
     let watanya = w
         .create(s, "companies/Watanya.md", "---\nkind: company\n---\n")
         .await;
@@ -202,14 +206,16 @@ pub async fn fixture(w: &World, s: &UserScope) -> Fixture {
         )
         .await;
     let pricing = w
-        .create(s, "concepts/Pricing.md", "---\nkind: concept\n---\n## Summary\n")
+        .create(
+            s,
+            "concepts/Pricing.md",
+            "---\nkind: concept\n---\n## Summary\n",
+        )
         .await;
     let budget = w
         .create(s, "notes/Budget.md", "Budget caps discounts at 5%.\n")
         .await;
-    let plan = w
-        .create(s, "notes/Plan.md", "A flat 10% discount.\n")
-        .await;
+    let plan = w.create(s, "notes/Plan.md", "A flat 10% discount.\n").await;
     w.vault
         .ai_add_relations(
             s,
@@ -239,7 +245,9 @@ pub async fn fixture(w: &World, s: &UserScope) -> Fixture {
             "---\npeople: [\"[[Shady]]\", \"[[Mona]]\", \"[[Omar]]\"]\n---\nWeekly.\n",
         )
         .await;
-    let lonely = w.create(s, "notes/Lonely.md", "Nothing links here.\n").await;
+    let lonely = w
+        .create(s, "notes/Lonely.md", "Nothing links here.\n")
+        .await;
     Fixture {
         shady,
         mona,
@@ -276,7 +284,13 @@ pub fn edge_triples(view: &GraphView) -> Vec<(String, String, String)> {
     let t = titles(view);
     view.edges
         .iter()
-        .map(|e| (t[&e.source].clone(), t[&e.target].clone(), e.kind.to_string()))
+        .map(|e| {
+            (
+                t[&e.source].clone(),
+                t[&e.target].clone(),
+                e.kind.to_string(),
+            )
+        })
         .collect()
 }
 

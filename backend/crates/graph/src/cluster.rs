@@ -165,7 +165,12 @@ fn next_id_of(previous: Option<&Clusters>) -> u32 {
         .and_then(serde_json::Value::as_u64)
         .and_then(|n| u32::try_from(n).ok())
         .unwrap_or(1);
-    let above_max = p.clusters.iter().map(|c| c.id.saturating_add(1)).max().unwrap_or(1);
+    let above_max = p
+        .clusters
+        .iter()
+        .map(|c| c.id.saturating_add(1))
+        .max()
+        .unwrap_or(1);
     stored.max(above_max).max(1)
 }
 
@@ -194,7 +199,11 @@ pub fn plan(
     for n in &data.nodes {
         let _ = b.add_node(&n.id.to_string(), n.kind.into());
     }
-    for e in data.edges.iter().filter(|e| e.kind != GraphEdgeKind::Similarity) {
+    for e in data
+        .edges
+        .iter()
+        .filter(|e| e.kind != GraphEdgeKind::Similarity)
+    {
         let _ = b.add_edge(&EdgeInput {
             source: e.source.to_string(),
             target: e.target.to_string(),
@@ -227,9 +236,7 @@ pub fn plan(
                 v
             };
             match prev_of.get(&n.id.as_ulid()) {
-                Some(c) => *compact
-                    .entry(*c)
-                    .or_insert_with(|| fresh(&mut next_index)),
+                Some(c) => *compact.entry(*c).or_insert_with(|| fresh(&mut next_index)),
                 None => fresh(&mut next_index),
             }
         })
@@ -278,8 +285,11 @@ pub fn plan(
         .map(|p| p.clusters.iter().map(|c| (c.id, c)).collect())
         .unwrap_or_default();
 
-    let title_of: BTreeMap<NoteId, &str> =
-        data.nodes.iter().map(|n| (n.id, n.title.as_str())).collect();
+    let title_of: BTreeMap<NoteId, &str> = data
+        .nodes
+        .iter()
+        .map(|n| (n.id, n.title.as_str()))
+        .collect();
     let concept_edges: Vec<(NoteId, NoteId)> = data
         .edges
         .iter()
@@ -338,7 +348,9 @@ pub fn plan(
             let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
             for (s, t) in &concept_edges {
                 if member_set.contains(s) && is_concept.contains(t) {
-                    *counts.entry(title_of.get(t).copied().unwrap_or("")).or_default() += 1;
+                    *counts
+                        .entry(title_of.get(t).copied().unwrap_or(""))
+                        .or_default() += 1;
                 }
             }
             let mut concepts: Vec<(usize, &str)> =

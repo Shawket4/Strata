@@ -185,12 +185,7 @@ pub async fn list(vault: &VaultService, scope: &UserScope) -> Result<Vec<MapSumm
 }
 
 /// `GET /maps/{id}`.
-pub async fn get(
-    vault: &VaultService,
-    db: &AppDb,
-    scope: &UserScope,
-    id: &str,
-) -> Result<MapView> {
+pub async fn get(vault: &VaultService, db: &AppDb, scope: &UserScope, id: &str) -> Result<MapView> {
     let path = map_path(id)?;
     let bytes = vault
         .read_file_bytes(scope, &path)
@@ -319,7 +314,13 @@ mod tests {
         .collect();
         assert_eq!(
             codes,
-            ["duplicate_id", "dangling_edge", "bad_color", "bad_subpath", "bad_size"]
+            [
+                "duplicate_id",
+                "dangling_edge",
+                "bad_color",
+                "bad_subpath",
+                "bad_size"
+            ]
         );
     }
 }

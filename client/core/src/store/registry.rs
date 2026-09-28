@@ -29,6 +29,16 @@ pub struct KnownAccount {
 pub const LAST_SERVER_URL: &str = "last_server_url";
 /// Device-wide default: the device name used at login.
 pub const DEVICE_NAME: &str = "device_name";
+/// A sign-up/sign-in awaiting approval: username.
+pub const PENDING_USERNAME: &str = "pending_username";
+/// … its server.
+pub const PENDING_SERVER: &str = "pending_server";
+/// … when it was requested (RFC 3339).
+pub const PENDING_REQUESTED_AT: &str = "pending_requested_at";
+/// … last "Check again" (RFC 3339).
+pub const PENDING_CHECKED_AT: &str = "pending_checked_at";
+/// … `true` once rejected.
+pub const PENDING_REJECTED: &str = "pending_rejected";
 
 /// The registry database.
 #[derive(Debug)]
@@ -111,6 +121,12 @@ impl Registry {
                 r.get(0)
             })
             .optional()?)
+    }
+
+    /// Removes a device-wide value.
+    pub fn remove_device_value(&self, key: &str) -> CoreResult<()> {
+        self.conn.execute("DELETE FROM device WHERE key = ?1", [key])?;
+        Ok(())
     }
 
     /// Sets a device-wide default.

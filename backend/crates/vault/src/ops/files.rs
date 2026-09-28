@@ -148,7 +148,12 @@ mod tests {
             writable("notes/a.md"),
             Err(VaultError::InvalidName(_))
         ));
-        for bad in [".meta/notes/x.json", ".trash/maps/a.canvas", "../x.canvas", ".git/config"] {
+        for bad in [
+            ".meta/notes/x.json",
+            ".trash/maps/a.canvas",
+            "../x.canvas",
+            ".git/config",
+        ] {
             assert!(
                 matches!(writable(bad), Err(VaultError::InvalidName(_))),
                 "{bad}"
