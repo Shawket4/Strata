@@ -6,6 +6,7 @@
 //! response (Content-Length, chunked or until EOF; for `101 Switching Protocols` only the
 //! head).
 
+use std::fmt::Write as _;
 use std::net::SocketAddr;
 use std::time::Duration;
 
@@ -86,17 +87,18 @@ impl Req {
             head.push_str("Connection: close\r\n");
         }
         if let Some(token) = &self.token {
-            head.push_str(&format!("Authorization: Bearer {token}\r\n"));
+            let _ = write!(head, "Authorization: Bearer {token}\r\n");
         }
         for (k, v) in &self.headers {
-            head.push_str(&format!("{k}: {v}\r\n"));
+            let _ = write!(head, "{k}: {v}\r\n");
         }
         let mut out;
         if let Some((ct, body)) = &self.body {
-            head.push_str(&format!(
+            let _ = write!(
+                head,
                 "Content-Type: {ct}\r\nContent-Length: {}\r\n\r\n",
                 self.declared_len.unwrap_or(body.len())
-            ));
+            );
             out = head.into_bytes();
             out.extend_from_slice(body);
         } else {
@@ -166,7 +168,8 @@ async fn exchange(addr: SocketAddr, req: &Req) -> Resp {
     // The server may answer (413) and close before reading a declared-but-unsent body.
     let _ = stream.write_all(&req.to_bytes()).await;
     let mut buf = Vec::new();
-    let mut chunk = [0u8; 16 * 1024];
+    // On the heap: a 16 KiB array would make every caller's future too large.
+    let mut chunk = vec![0u8; 16 * 1024];
     let head_end = loop {
         if let Some(i) = find(&buf, b"\r\n\r\n") {
             break i;
@@ -258,7 +261,7 @@ pub fn encode(s: &str) -> String {
         if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'.' | b'_' | b'~') {
             out.push(char::from(b));
         } else {
-            out.push_str(&format!("%{b:02X}"));
+            let _ = write!(out, "%{b:02X}");
         }
     }
     out

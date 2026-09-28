@@ -1,6 +1,7 @@
-//! The user's side of the AI pipelines (PLAN §6.7, §6.12, §9.3, §9.7, §9.8): the payloads of
-//! AI suggestions, accepting (with optional edits) and rejecting them, the AI decision log,
-//! and corrections of applied decisions (repoint, retype, reject) with disambiguation hints.
+//! The user's side of the AI pipelines (PLAN §6.7, §6.12, §9.3, §9.7, §9.8): accepting (with
+//! optional edits) and rejecting AI suggestions (their payloads are the shared
+//! `sync_model::suggestions` types, L16), the AI decision log, and corrections of applied
+//! decisions (repoint, retype, reject) with disambiguation hints.
 //!
 //! Suggestion kinds and what accepting does (one commit each):
 //!
@@ -16,7 +17,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 
-use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use domain::{NoteKind, RelationType};
 use serde::{Deserialize, Serialize};
 use strata_common::{DecisionId, HintId, JobId, NoteId, SuggestionId};
@@ -25,13 +26,16 @@ use strata_index::repo::jobs::NewJob;
 use strata_index::repo::suggestions::{self as srepo, Suggestion};
 use strata_index::types::{DecisionKind, SuggestionStatus};
 use sync_model::ops::SuggestionEdits;
+use sync_model::suggestions::{
+    CorrectionPayload, CustodyPayload, CustodyTarget, DuplicatesPayload, EntityLinkPayload,
+    FilingPayload, TaskPayload,
+};
 use vault_format::custody::CustodyEventType;
 use vault_format::frontmatter::KnownKey;
 use vault_format::sidecar::{By, NoteSidecar};
 use vault_format::{Document, RelationKey};
 
 use crate::error::{Result, VaultError};
-use crate::ops::ai::DuplicatesPayload;
 use crate::ops::ai_apply::{
     AiApplied, AiChangeSet, AiCustody, Cite, DecideSuggestion, EdgeAdd, EdgeRemove, Filing,
     NewEntityNote, NewHint, SuggestionDecision,
@@ -42,18 +46,10 @@ use crate::ops::tasks::{NewTask, Transition};
 use crate::paths;
 use crate::store::{Author, Core, VaultService};
 
-/// Suggestion kind: filing proposal of an inbox capture (§9.3).
-pub const KIND_FILING: &str = "filing";
-/// Suggestion kind: link a mention to an entity or create it (§6.7, D13 = b).
-pub const KIND_ENTITY_LINK: &str = "entity_link";
-/// Suggestion kind: a custody event below the threshold or ambiguous (§6.12, D30).
-pub const KIND_CUSTODY: &str = "custody";
-/// Suggestion kind: a task proposed from a note (§6.11).
-pub const KIND_TASK: &str = "task";
-/// Suggestion kind: a correction in words that was not applied automatically (§9.8).
-pub const KIND_CORRECTION: &str = "correction";
-/// Suggestion kind: two stored items that are duplicates (§9.7).
-pub const KIND_DUPLICATES: &str = "duplicates";
+pub use sync_model::suggestions::kinds::{
+    CORRECTION as KIND_CORRECTION, CUSTODY as KIND_CUSTODY, DUPLICATES as KIND_DUPLICATES,
+    ENTITY_LINK as KIND_ENTITY_LINK, FILING as KIND_FILING, TASK as KIND_TASK,
+};
 
 /// Job kind the vault enqueues when the user replies to an AI suggestion (§9.8 threads).
 pub const SUGGESTION_REPLY_JOB: &str = "suggestion_reply";
@@ -72,150 +68,6 @@ pub fn replies_reach_ai(kind: &str) -> bool {
         kind,
         KIND_FILING | KIND_ENTITY_LINK | KIND_CUSTODY | KIND_TASK | KIND_CORRECTION
     )
-}
-
-/// `filing` payload.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FilingPayload {
-    /// The decision.
-    pub decision_id: DecisionId,
-    /// Proposed title.
-    pub title: String,
-    /// Proposed tags.
-    pub tags: Vec<String>,
-    /// Proposed folder.
-    pub folder: String,
-}
-
-/// `entity_link` payload.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct EntityLinkPayload {
-    /// The decision.
-    pub decision_id: DecisionId,
-    /// The mention as written.
-    pub mention: String,
-    /// `person`, `company`, `document` or `place`.
-    pub kind: String,
-    /// The note that mentions it.
-    pub source_note: NoteId,
-    /// The block stating it.
-    pub block_id: Option<String>,
-    /// The entity proposed, if one.
-    pub proposed: Option<NoteId>,
-    /// Plausible entities (ambiguous).
-    pub candidates: Vec<NoteId>,
-    /// A nickname or kinship term.
-    pub is_nickname: bool,
-    /// Model confidence.
-    pub confidence: f64,
-    /// Why it is a suggestion: `ambiguous`, `nickname`, `new`, `low_confidence`.
-    pub reason: String,
-}
-
-/// One participant of a custody suggestion.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CustodyTarget {
-    /// Mention as written.
-    pub mention: String,
-    /// Resolved entity.
-    pub id: Option<NoteId>,
-    /// Plausible entities when ambiguous.
-    pub candidates: Vec<NoteId>,
-}
-
-/// `custody` payload.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CustodyPayload {
-    /// The decision.
-    pub decision_id: DecisionId,
-    /// The note stating it.
-    pub source_note: NoteId,
-    /// The block stating it.
-    pub block_id: Option<String>,
-    /// Event type (`stored-at`, …).
-    pub event: String,
-    /// Resolved date.
-    pub date: NaiveDate,
-    /// The document.
-    pub document: CustodyTarget,
-    /// The place.
-    pub place: Option<CustodyTarget>,
-    /// The enclosing place mention.
-    pub place_part_of: Option<String>,
-    /// The person.
-    pub person: Option<CustodyTarget>,
-    /// The third party.
-    pub counterparty: Option<CustodyTarget>,
-    /// Model confidence.
-    pub confidence: f64,
-    /// Why it is a suggestion: `low_confidence`, `ambiguous`, `unknown`, `conflict`.
-    pub reason: String,
-    /// The span stating it.
-    pub quote: String,
-}
-
-/// `task` payload.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TaskPayload {
-    /// The decision.
-    pub decision_id: DecisionId,
-    /// The note it came from.
-    pub source_note: NoteId,
-    /// The block stating it.
-    pub block_id: Option<String>,
-    /// Title.
-    pub title: String,
-    /// Due date.
-    pub due: Option<NaiveDate>,
-    /// Recurrence phrase (Tasks plugin language).
-    pub recurrence: Option<String>,
-    /// Reminder times (user's time zone).
-    pub reminders: Vec<NaiveDateTime>,
-    /// Entities the task concerns (linked in the line).
-    pub entities: Vec<NoteId>,
-    /// Model confidence.
-    pub confidence: f64,
-}
-
-/// One proposed fix of a `correction` suggestion.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FixPayload {
-    /// The decision to fix.
-    pub decision_id: DecisionId,
-    /// `repoint`, `retype`, `reject`.
-    pub action: String,
-    /// New target (`repoint`).
-    pub new_target: Option<NoteId>,
-    /// New relation type (`retype`).
-    pub new_type: Option<String>,
-    /// Model confidence.
-    pub confidence: f64,
-    /// One sentence.
-    pub reason: String,
-}
-
-/// A hint of a `correction` suggestion.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct HintPayload {
-    /// Entity.
-    pub entity: NoteId,
-    /// Text.
-    pub text: String,
-}
-
-/// `correction` payload.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct CorrectionPayload {
-    /// The correction decision.
-    pub decision_id: DecisionId,
-    /// The user's words.
-    pub message: String,
-    /// Proposed fixes.
-    pub fixes: Vec<FixPayload>,
-    /// Hints to remember.
-    pub hints: Vec<HintPayload>,
-    /// The question to ask when ambiguous.
-    pub question: Option<String>,
 }
 
 /// Custody decision context (`ai_decisions.detail`).
@@ -503,17 +355,18 @@ impl Core {
     fn plan_reject(set: &mut AiChangeSet, s: &Suggestion) -> Result<()> {
         if s.kind == KIND_ENTITY_LINK {
             let p: EntityLinkPayload = decode(&s.payload)?;
+            let source = NoteId::from_ulid(p.source_note);
             set.rejected_mentions
-                .push((p.source_note, p.mention.clone(), p.kind.clone()));
+                .push((source, p.mention.clone(), p.kind.clone()));
             if let (Some(target), Some(rel)) = (
                 p.proposed,
                 p.kind.parse::<NoteKind>().ok().and_then(entity_rel),
             ) {
                 // Records the rejected link even though it was never written.
                 set.remove.push(EdgeRemove {
-                    src: p.source_note,
+                    src: source,
                     rel,
-                    dst: target,
+                    dst: NoteId::from_ulid(target),
                     reject: true,
                 });
             }
@@ -548,9 +401,14 @@ impl Core {
                 }
                 t
             }
-            None => match (p.proposed, p.candidates.as_slice()) {
+            None => match (
+                p.proposed.map(NoteId::from_ulid),
+                p.candidates.as_slice(),
+            ) {
                 (Some(t), _) if self.live_kind(t) == Some(kind) => t,
-                (_, [only]) if self.live_kind(*only) == Some(kind) => *only,
+                (_, [only]) if self.live_kind(NoteId::from_ulid(*only)) == Some(kind) => {
+                    NoteId::from_ulid(*only)
+                }
                 (_, []) | (None, _) if p.candidates.is_empty() => {
                     let id = NoteId::generate(self.ids());
                     let name = edits
@@ -573,10 +431,11 @@ impl Core {
                 }
             },
         };
+        let source = NoteId::from_ulid(p.source_note);
         if let Some(rel) = entity_rel(kind)
-            && self.live_kind(p.source_note).is_some()
+            && self.live_kind(source).is_some()
         {
-            set.add.push(user_edge(p.source_note, rel, target));
+            set.add.push(user_edge(source, rel, target));
         }
         let mut aliases: Vec<String> = Vec::new();
         if add_alias {
@@ -607,13 +466,18 @@ impl Core {
         set: &mut AiChangeSet,
         create: bool,
     ) -> Result<NoteId> {
-        if let Some(id) = t.id.filter(|i| self.live_kind(*i) == Some(kind)) {
+        if let Some(id) = t
+            .id
+            .map(NoteId::from_ulid)
+            .filter(|i| self.live_kind(*i) == Some(kind))
+        {
             return Ok(id);
         }
         let live: Vec<NoteId> = t
             .candidates
             .iter()
             .copied()
+            .map(NoteId::from_ulid)
             .filter(|i| self.live_kind(*i) == Some(kind))
             .collect();
         if live.len() == 1 {
@@ -683,8 +547,9 @@ impl Core {
             }
             None => None,
         };
-        let cite = self.live_kind(p.source_note).map(|_| Cite {
-            note: p.source_note,
+        let source = NoteId::from_ulid(p.source_note);
+        let cite = self.live_kind(source).map(|_| Cite {
+            note: source,
             block: p.block_id.clone(),
         });
         set.custody.push(AiCustody {
@@ -764,7 +629,7 @@ impl Core {
                             edits
                                 .target_id
                                 .map(NoteId::from_ulid)
-                                .or(f.new_target)
+                                .or(f.new_target.map(NoteId::from_ulid))
                                 .ok_or_else(|| VaultError::invalid("the fix has no new target"))?,
                         ),
                         "retype" => FixAction::Retype(
@@ -774,19 +639,20 @@ impl Core {
                         _ => FixAction::Reject,
                     };
                     let fix = DecisionFix {
-                        decision: f.decision_id,
+                        decision: DecisionId::from_ulid(f.decision_id),
                         action,
                         hint: None,
                     };
                     self.plan_fix(&scope, &mut set, &fix).await?;
                 }
                 for h in &p.hints {
-                    if self.live_kind(h.entity).is_some() {
+                    let entity = NoteId::from_ulid(h.entity);
+                    if self.live_kind(entity).is_some() {
                         set.hints.push(NewHint {
                             id: HintId::generate(self.ids()),
-                            entity: h.entity,
+                            entity,
                             text: h.text.clone(),
-                            source_decision: Some(p.decision_id),
+                            source_decision: Some(DecisionId::from_ulid(p.decision_id)),
                         });
                     }
                 }
@@ -804,7 +670,7 @@ impl Core {
                     let state = self.state()?;
                     let index = state.path_index();
                     for e in &p.entities {
-                        if let Some((path, _)) = state.note(*e) {
+                        if let Some((path, _)) = state.note(NoteId::from_ulid(*e)) {
                             let link = format!("[[{}]]", index.link_text_for(path));
                             if !text.contains(&link) {
                                 text.push(' ');

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:strata_bridge/strata_bridge.dart';
 
 /// Shared sample data for every feature's widget and golden tests: one
@@ -76,6 +78,7 @@ abstract final class StrataFixtures {
   static const CitedBullet citedBullet = CitedBullet(
     text: 'Prefers weekly invoicing',
     citations: [citation],
+    dir: TextDir.ltr,
   );
 
   /// A property row.
@@ -91,6 +94,8 @@ abstract final class StrataFixtures {
     by: 'ai',
     confidence: 0.94,
     reason: 'Ahmed is described as Acme’s operations manager in the call note.',
+    relLabel: '',
+    citations: [],
   );
 
   // ---------------------------------------------------------------------------
@@ -115,6 +120,7 @@ abstract final class StrataFixtures {
     serverUrl: serverUrl,
     timezone: 'Africa/Cairo',
     uiLanguage: 'en',
+    initials: '',
   );
 
   /// An account with local data on this device.
@@ -123,6 +129,7 @@ abstract final class StrataFixtures {
     username: 'shawket',
     displayName: 'Shawket',
     serverUrl: serverUrl,
+    initials: '',
   );
 
   /// Signed in and usable.
@@ -209,6 +216,11 @@ abstract final class StrataFixtures {
     tags: const ['pricing', 'sales'],
     updatedAt: DateTime.utc(2026, 9, 27, 9, 5),
     pendingSync: false,
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
+    updatedLabel: '',
+    linkCount: 0,
+    highlights: [],
   );
 
   /// "Call 2026-09-12 — Acme", mixed Arabic/English, not yet synced.
@@ -221,6 +233,11 @@ abstract final class StrataFixtures {
     tags: const ['acme', 'invoicing'],
     updatedAt: DateTime.utc(2026, 9, 26, 16, 40),
     pendingSync: true,
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
+    updatedLabel: '',
+    linkCount: 0,
+    highlights: [],
   );
 
   /// "تجارب التسعير — ملخص" (Arabic title).
@@ -233,18 +250,26 @@ abstract final class StrataFixtures {
     tags: const ['pricing'],
     updatedAt: DateTime.utc(2026, 9, 25, 12),
     pendingSync: false,
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
+    updatedLabel: '',
+    linkCount: 0,
+    highlights: [],
   );
 
   /// A backlink source.
   static const BacklinkItem backlinkItem = BacklinkItem(
     noteId: 'n-weekly-invoicing-proposal',
     title: 'Weekly invoicing proposal',
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
   );
 
   /// Backlinks of type `follows-up`.
   static const BacklinkGroup backlinkGroup = BacklinkGroup(
     kind: 'follows-up',
     items: [backlinkItem],
+    label: '',
   );
 
   /// A heading span.
@@ -252,18 +277,20 @@ abstract final class StrataFixtures {
     kind: HintKind.heading,
     start: 0,
     end: 24,
+    level: 0,
   );
 
   /// The hints of [noteView]'s content.
   static const List<EditorHint> editorHints = [
     editorHint,
-    EditorHint(kind: HintKind.wikiLink, start: 26, end: 41),
+    EditorHint(kind: HintKind.wikiLink, start: 26, end: 41, level: 0),
   ];
 
   /// A note with local changes waiting to sync.
   static const NoteSyncState noteSyncState = NoteSyncState(
     kind: NoteSyncKind.pending,
     pendingOps: 1,
+    label: '',
   );
 
   /// The "Call 2026-09-12 — Acme" note.
@@ -283,7 +310,13 @@ abstract final class StrataFixtures {
       PropertyItem(key: 'companies', values: ['Acme Logistics']),
     ],
     relations: const [
-      RelationChip(relType: 'about', target: acmeLogisticsRef, by: 'user'),
+      RelationChip(
+        relType: 'about',
+        target: acmeLogisticsRef,
+        by: 'user',
+        relLabel: '',
+        citations: [],
+      ),
     ],
     backlinks: const [backlinkGroup],
     tags: const ['acme', 'invoicing'],
@@ -291,6 +324,12 @@ abstract final class StrataFixtures {
     hints: editorHints,
     sync_: noteSyncState,
     history: Availability.available,
+    titleDir: TextDir.ltr,
+    contentVersion: '',
+    wordCount: 0,
+    backlinkCount: 0,
+    historyEntries: [],
+    pinned: false,
   );
 
   /// The note screen of [noteView].
@@ -314,6 +353,8 @@ abstract final class StrataFixtures {
       FolderItem(path: 'notes/sales', name: 'sales', noteCount: 6),
     ],
     notes: [noteListItem, noteListItemArabic],
+    breadcrumb: [],
+    noteCount: 0,
   );
 
   // ---------------------------------------------------------------------------
@@ -324,6 +365,9 @@ abstract final class StrataFixtures {
   static final ReminderItem reminderItem = ReminderItem(
     local: '2026-10-01 09:00',
     at: DateTime.utc(2026, 10, 1, 6),
+    localAt: StrataFixtures.now,
+    timeLabel: '',
+    offsetLabel: '',
   );
 
   /// "Make Watanya's ETA invoice" — monthly on the 1st, due Thu 1 Oct.
@@ -340,6 +384,10 @@ abstract final class StrataFixtures {
     reminders: [reminderItem],
     links: const [watanyaRef],
     pendingSync: false,
+    descriptionDir: TextDir.ltr,
+    notePath: '',
+    lineNumber: 0,
+    isOverdue: false,
   );
 
   /// "Petrol Arrows invoice" — weekly on Sunday, due today 10:00.
@@ -354,10 +402,20 @@ abstract final class StrataFixtures {
     recurrence: 'every week on Sunday',
     recurrenceUnderstood: true,
     reminders: [
-      ReminderItem(local: '2026-09-27 10:00', at: DateTime.utc(2026, 9, 27, 7)),
+      ReminderItem(
+        local: '2026-09-27 10:00',
+        at: DateTime.utc(2026, 9, 27, 7),
+        localAt: StrataFixtures.now,
+        timeLabel: '',
+        offsetLabel: '',
+      ),
     ],
     links: const [EntityRef(id: 'c-petrol-arrows', title: 'Petrol Arrows')],
     pendingSync: false,
+    descriptionDir: TextDir.ltr,
+    notePath: '',
+    lineNumber: 0,
+    isOverdue: false,
   );
 
   /// "Send weekly invoicing proposal to Ahmed" — due Tue 29 Sep.
@@ -373,6 +431,10 @@ abstract final class StrataFixtures {
     reminders: const [],
     links: const [ahmedSamirRef, acmeLogisticsRef],
     pendingSync: true,
+    descriptionDir: TextDir.ltr,
+    notePath: '',
+    lineNumber: 0,
+    isOverdue: false,
   );
 
   /// "Pay Nile Freight September invoice" — overdue since Thu 24 Sep.
@@ -388,6 +450,10 @@ abstract final class StrataFixtures {
     reminders: const [],
     links: const [EntityRef(id: 'c-nile-freight', title: 'Nile Freight')],
     pendingSync: false,
+    descriptionDir: TextDir.ltr,
+    notePath: '',
+    lineNumber: 0,
+    isOverdue: false,
   );
 
   /// "Make Watanya's ETA invoice" done on 1 Sep (history).
@@ -405,6 +471,10 @@ abstract final class StrataFixtures {
     reminders: const [],
     links: const [watanyaRef],
     pendingSync: false,
+    descriptionDir: TextDir.ltr,
+    notePath: '',
+    lineNumber: 0,
+    isOverdue: false,
   );
 
   /// Home's task sections.
@@ -414,12 +484,18 @@ abstract final class StrataFixtures {
     upcoming: [taskAhmedProposal, taskWatanyaEtaInvoice],
     recurring: [taskPetrolArrowsInvoice, taskWatanyaEtaInvoice],
     noDate: const [],
+    upcomingGroups: [],
+    todayCount: 0,
   );
 
   /// The Tasks destination.
   static final TasksView tasksView = TasksView(
     sections: taskSections,
     done: [taskWatanyaDoneSeptember],
+    openCount: 0,
+    doneThisWeek: 0,
+    doneThisWeekLabel: '',
+    notesWithTasks: 0,
   );
 
   /// Task detail of the Watanya ETA invoice.
@@ -430,6 +506,8 @@ abstract final class StrataFixtures {
         "- [ ] Make Watanya's ETA invoice [[Watanya]] 🔁 every month on the "
         '1st 📅 2026-10-01 ⏰ 2026-10-01 09:00 ^t-watanya-eta',
     history: [taskWatanyaDoneSeptember],
+    locationLabel: '',
+    recurrencePreview: [],
   );
 
   /// A new task as drafted in the task editor.
@@ -456,6 +534,9 @@ abstract final class StrataFixtures {
     phase: SyncPhase.idle,
     pagesDone: 0,
     ops: 0,
+    opsDone: 0,
+    opsTotal: 0,
+    pulled: 0,
   );
 
   /// "Synced · 14:32".
@@ -466,6 +547,10 @@ abstract final class StrataFixtures {
     conflicts: 0,
     duplicates: 0,
     lastSyncAt: now,
+    display: SyncPillKind.synced,
+    progressDone: 0,
+    progressTotal: 0,
+    label: '',
   );
 
   /// "Offline · 3 changes queued".
@@ -476,6 +561,10 @@ abstract final class StrataFixtures {
     conflicts: 0,
     duplicates: 0,
     lastSyncAt: DateTime.utc(2026, 9, 27, 8, 15),
+    display: SyncPillKind.synced,
+    progressDone: 0,
+    progressTotal: 0,
+    label: '',
   );
 
   /// "Syncing 12/40".
@@ -485,11 +574,18 @@ abstract final class StrataFixtures {
       phase: SyncPhase.pushing,
       pagesDone: 0,
       ops: 40,
+      opsDone: 0,
+      opsTotal: 0,
+      pulled: 0,
     ),
     pendingOps: 28,
     conflicts: 0,
     duplicates: 0,
     lastSyncAt: DateTime.utc(2026, 9, 27, 8, 15),
+    display: SyncPillKind.synced,
+    progressDone: 0,
+    progressTotal: 0,
+    label: '',
   );
 
   /// "1 conflict".
@@ -500,6 +596,10 @@ abstract final class StrataFixtures {
     conflicts: 1,
     duplicates: 0,
     lastSyncAt: now,
+    display: SyncPillKind.synced,
+    progressDone: 0,
+    progressTotal: 0,
+    label: '',
   );
 
   /// A queued op.
@@ -510,6 +610,9 @@ abstract final class StrataFixtures {
     status: OutboxStatus.pending,
     attempts: 0,
     created: DateTime.utc(2026, 9, 26, 16, 40),
+    detail: '',
+    detailDir: TextDir.ltr,
+    createdLabel: '',
   );
 
   /// A conflict row.
@@ -518,6 +621,7 @@ abstract final class StrataFixtures {
     noteId: 'n-discount-policy',
     title: 'Discount policy',
     created: DateTime.utc(2026, 9, 27, 10, 2),
+    createdLabel: '',
   );
 
   /// A rolled-back op.
@@ -535,6 +639,8 @@ abstract final class StrataFixtures {
     outbox: [outboxItem],
     conflicts: [conflictItem],
     rejections: const [rejectionItem],
+    paused: false,
+    log: [],
   );
 
   /// One conflicting hunk.
@@ -545,6 +651,8 @@ abstract final class StrataFixtures {
     base: 'Discounts are capped at 3%.\n',
     ours: 'Discounts are capped at 5% for loyal customers.\n',
     theirs: 'Discounts are capped at 4%.\n',
+    locationLabel: '',
+    allowedChoices: [],
   );
 
   /// The conflict on "Discount policy".
@@ -562,6 +670,12 @@ abstract final class StrataFixtures {
         'server\n',
     mergeClean: false,
     hunks: [conflictHunkView],
+    path: '',
+    localOriginLabel: '',
+    serverOriginLabel: '',
+    baseLines: [],
+    localLines: [],
+    serverLines: [],
   );
 
   /// The conflict screen of [conflictDetail].
@@ -594,6 +708,7 @@ abstract final class StrataFixtures {
     snippet: 'monthly on the 1st · next Thu 1 Oct',
     matchLevel: 'near',
     score: 0.91,
+    reason: '',
   );
 
   /// Created.
@@ -638,6 +753,7 @@ abstract final class StrataFixtures {
     relType: '',
     reason: '',
     serverKind: '',
+    documentChoices: [],
   );
 
   /// The filing suggestion of [inboxItem].
@@ -648,6 +764,12 @@ abstract final class StrataFixtures {
     detail: suggestionDetail,
     created: DateTime.utc(2026, 9, 27, 7, 12),
     pendingSync: false,
+    createdLabel: '',
+    sourceDir: TextDir.ltr,
+    autoApplied: false,
+    canAccept: false,
+    needsYou: false,
+    thread: [],
   );
 
   /// "Who is “بابا”?" — a link-or-create suggestion.
@@ -667,9 +789,16 @@ abstract final class StrataFixtures {
       relType: '',
       reason: '',
       serverKind: '',
+      documentChoices: [],
     ),
     created: DateTime.utc(2026, 9, 27, 8),
     pendingSync: false,
+    createdLabel: '',
+    sourceDir: TextDir.ltr,
+    autoApplied: false,
+    canAccept: false,
+    needsYou: false,
+    thread: [],
   );
 
   /// The mixed-script Acme capture.
@@ -682,6 +811,11 @@ abstract final class StrataFixtures {
     created: DateTime.utc(2026, 9, 27, 7, 12),
     suggestions: [suggestionItem],
     pendingSync: false,
+    textDir: TextDir.ltr,
+    createdLabel: '',
+    needsYou: false,
+    ready: false,
+    isDuplicate: false,
   );
 
   /// An English capture without suggestions yet.
@@ -692,12 +826,22 @@ abstract final class StrataFixtures {
     created: DateTime.utc(2026, 9, 27, 6, 40),
     suggestions: const [],
     pendingSync: true,
+    textDir: TextDir.ltr,
+    createdLabel: '',
+    needsYou: false,
+    ready: false,
+    isDuplicate: false,
   );
 
   /// The inbox.
   static final InboxView inboxView = InboxView(
     captures: [inboxItem, inboxItemEnglish],
     suggestions: [suggestionLinkOrCreate],
+    filter: InboxFilter.all,
+    readyCount: 0,
+    needsYouCount: 0,
+    conflictsCount: 0,
+    allCount: 0,
   );
 
   // ---------------------------------------------------------------------------
@@ -710,6 +854,19 @@ abstract final class StrataFixtures {
     inboxCount: 2,
     tasks: taskSections,
     sync_: syncPill,
+    todayLabel: '',
+    greeting: '',
+    displayName: '',
+    inboxPreview: [],
+    needsYouCount: 0,
+    contradictionsCount: 0,
+    inboxSummary: '',
+    aiActivity: Availability.available,
+    aiActivityItems: [],
+    aiActivityHeadline: '',
+    openItems: Availability.available,
+    openItemList: [],
+    pinned: [],
   );
 
   // ---------------------------------------------------------------------------
@@ -730,6 +887,16 @@ abstract final class StrataFixtures {
     title: 'Ahmed Samir',
     subtitle: 'Operations manager, Acme Logistics',
     aliases: ['أحمد سمير', 'Ahmed Sameer'],
+    kind: '',
+    titleDir: TextDir.ltr,
+    initials: '',
+    mentionCount: 0,
+    tags: [],
+    location: [],
+    expiringSoon: false,
+    breadcrumb: [],
+    documentCount: 0,
+    hasOpenItems: false,
   );
 
   /// The People tab.
@@ -743,9 +910,25 @@ abstract final class StrataFixtures {
         title: 'Mona Hassan',
         subtitle: 'Finance lead, Nile Freight',
         aliases: ['منى حسن'],
+        kind: '',
+        titleDir: TextDir.ltr,
+        initials: '',
+        mentionCount: 0,
+        tags: [],
+        location: [],
+        expiringSoon: false,
+        breadcrumb: [],
+        documentCount: 0,
+        hasOpenItems: false,
       ),
     ],
     counts: directoryCounts,
+    filter: DirectoryFilter(tags: [], expiring: false, hasOpenItems: false),
+    sort: DirectorySort.name,
+    filterOptions: [],
+    sections: [],
+    suggestions: [],
+    expiringCount: 0,
   );
 
   /// The Watanya contract as listed on a page.
@@ -754,6 +937,9 @@ abstract final class StrataFixtures {
     title: 'Watanya contract',
     status: 'stored',
     location: safeRef,
+    locationPath: [],
+    expiringSoon: false,
+    titleDir: TextDir.ltr,
   );
 
   /// "20 Sep 2026 — returned to the safe by Shady".
@@ -770,6 +956,11 @@ abstract final class StrataFixtures {
         anchor: 'c7d8',
       ),
     ],
+    by: '',
+    sentenceKey: '',
+    sentence: '',
+    dateLabel: '',
+    here: false,
   );
 
   /// The Watanya contract page.
@@ -790,12 +981,22 @@ abstract final class StrataFixtures {
         kind: 'handed-to',
         person: shadyRef,
         citations: const [citation],
+        by: '',
+        sentenceKey: '',
+        sentence: '',
+        dateLabel: '',
+        here: false,
       ),
       CustodyItem(
         date: DateTime.utc(2026, 3, 2),
         kind: 'stored-at',
         place: safeRef,
         citations: const [citation],
+        by: '',
+        sentenceKey: '',
+        sentence: '',
+        dateLabel: '',
+        here: false,
       ),
     ],
     copies: const [
@@ -805,6 +1006,13 @@ abstract final class StrataFixtures {
       ),
     ],
     concerns: const [watanyaRef],
+    titleDir: TextDir.ltr,
+    path: '',
+    pendingSync: false,
+    expiringSoon: false,
+    mentions: [],
+    copyBriefs: [],
+    userNotes: '',
   );
 
   /// Nasr City office (مكتب مدينة نصر).
@@ -824,9 +1032,17 @@ abstract final class StrataFixtures {
         title: 'Petrol Arrows commercial register',
         status: 'stored',
         location: EntityRef(id: 'pl-nasr-city-cabinet-b', title: 'Cabinet B'),
+        locationPath: [],
+        expiringSoon: false,
+        titleDir: TextDir.ltr,
       ),
     ],
     recentMovements: [custodyItem],
+    titleDir: TextDir.ltr,
+    tree: [],
+    outWithPeople: [],
+    userNotes: '',
+    path: '',
   );
 
   /// Ahmed Samir's page.
@@ -847,6 +1063,7 @@ abstract final class StrataFixtures {
       CitedBullet(
         text: 'Send the weekly invoicing proposal',
         citations: [citation],
+        dir: TextDir.ltr,
       ),
     ],
     timeline: [
@@ -854,12 +1071,23 @@ abstract final class StrataFixtures {
         text: 'Asked for weekly invoicing from October',
         date: DateTime.utc(2026, 9, 12),
         citations: const [citation],
+        dir: TextDir.ltr,
       ),
     ],
     mentions: [noteListItemMixed],
     related: const [relationChip],
     documents: const [],
     pendingSync: false,
+    titleDir: TextDir.ltr,
+    initials: '',
+    path: '',
+    tags: [],
+    userNotes: '',
+    summaryCitations: [],
+    openCount: 0,
+    doneCount: 0,
+    mentionCount: 0,
+    summaryDir: TextDir.ltr,
   );
 
   /// Entity screen: Ahmed Samir.
@@ -891,12 +1119,16 @@ abstract final class StrataFixtures {
   static const GraphNode graphNode = GraphNode(
     id: 'p-ahmed-samir',
     title: 'Ahmed Samir',
-    kind: 'person',
+    kind: GraphNodeKind.person,
     depth: 0,
     clusterId: 'k-clients',
     degree: 5,
     x: 0,
     y: 0,
+    titleDir: TextDir.ltr,
+    updatedLabel: '',
+    labelRank: 0,
+    isHub: false,
   );
 
   /// Ahmed works at Acme (AI, 0.94).
@@ -906,6 +1138,8 @@ abstract final class StrataFixtures {
     kind: 'relation:works-at',
     by: 'ai',
     confidence: 0.94,
+    id: '',
+    label: '',
   );
 
   /// The Clients cluster.
@@ -913,6 +1147,10 @@ abstract final class StrataFixtures {
     id: 'k-clients',
     name: 'Clients',
     size: 12,
+    x: 0,
+    y: 0,
+    hull: [],
+    radius: 0,
   );
 
   static const List<GraphNode> _graphNodes = [
@@ -920,22 +1158,30 @@ abstract final class StrataFixtures {
     GraphNode(
       id: 'c-acme-logistics',
       title: 'Acme Logistics',
-      kind: 'company',
+      kind: GraphNodeKind.company,
       depth: 1,
       clusterId: 'k-clients',
       degree: 7,
       x: 120,
       y: -40,
+      titleDir: TextDir.ltr,
+      updatedLabel: '',
+      labelRank: 0,
+      isHub: false,
     ),
     GraphNode(
       id: 'n-call-2026-09-12-acme',
       title: 'Call 2026-09-12 — Acme',
-      kind: 'note',
+      kind: GraphNodeKind.note,
       depth: 1,
       clusterId: 'k-clients',
       degree: 3,
       x: -90,
       y: 80,
+      titleDir: TextDir.ltr,
+      updatedLabel: '',
+      labelRank: 0,
+      isHub: false,
     ),
   ];
 
@@ -945,6 +1191,8 @@ abstract final class StrataFixtures {
       src: 'n-call-2026-09-12-acme',
       dst: 'p-ahmed-samir',
       kind: 'mention',
+      id: '',
+      label: '',
     ),
   ];
 
@@ -955,6 +1203,11 @@ abstract final class StrataFixtures {
     depth: 1,
     nodes: _graphNodes,
     edges: _graphEdges,
+    relationCount: 0,
+    aiRelationCount: 0,
+    relationLabel: '',
+    saveLayout: Availability.available,
+    proposeRelation: Availability.available,
   );
 
   /// The global map.
@@ -962,6 +1215,17 @@ abstract final class StrataFixtures {
     nodes: _graphNodes,
     edges: _graphEdges,
     clusters: [clusterLabel],
+    filter: GraphFilter(
+      edgeKinds: [],
+      nodeKinds: [],
+      similarity: false,
+      lens: GraphLens.notes,
+      includeTags: false,
+    ),
+    edgeCounts: [],
+    nodeCounts: [],
+    neighbours: [],
+    similarity: Availability.available,
   );
 
   // ---------------------------------------------------------------------------
@@ -975,6 +1239,10 @@ abstract final class StrataFixtures {
     path: 'notes/sales/Pricing experiments.md',
     kind: 'note',
     snippet: '… a 5% loyalty discount on renewals …',
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
+    highlights: [],
+    score: 0,
   );
 
   /// Keyword search for "pricing".
@@ -989,9 +1257,14 @@ abstract final class StrataFixtures {
         path: 'notes/sales/تجارب التسعير — ملخص.md',
         kind: 'note',
         snippet: 'ملخص نتائج تجارب pricing للربع الثالث',
+        titleDir: TextDir.ltr,
+        snippetDir: TextDir.ltr,
+        highlights: [],
+        score: 0,
       ),
     ],
     availability: Availability.available,
+    availableModes: [],
   );
 
   /// An answer with a citation.
@@ -999,15 +1272,37 @@ abstract final class StrataFixtures {
     role: 'assistant',
     text: 'Ahmed asked for weekly invoicing starting in October.',
     citations: [citation],
+    id: '',
+    streaming: false,
+    spans: [],
+    sources: [],
+    scopeLabel: '',
+    sourceCount: 0,
+    createdLabel: '',
+    dir: TextDir.ltr,
   );
 
   /// Ask (not available until `/ask` exists).
   static const AskView askView = AskView(
     availability: Availability.notYetAvailable,
     messages: [
-      AskMessage(role: 'user', text: 'What did Ahmed ask for?', citations: []),
+      AskMessage(
+        role: 'user',
+        text: 'What did Ahmed ask for?',
+        citations: [],
+        id: '',
+        streaming: false,
+        spans: [],
+        sources: [],
+        scopeLabel: '',
+        sourceCount: 0,
+        createdLabel: '',
+        dir: TextDir.ltr,
+      ),
       askMessage,
     ],
+    scopes: [],
+    streaming: false,
   );
 
   // ---------------------------------------------------------------------------
@@ -1021,6 +1316,10 @@ abstract final class StrataFixtures {
     mode: NotificationMode.osScheduled,
     scheduled: 4,
     defaultTime: '09:00',
+    snoozeMinutes: 0,
+    quietEnabled: false,
+    quietFrom: '',
+    quietUntil: '',
   );
 
   /// Settings.
@@ -1032,6 +1331,8 @@ abstract final class StrataFixtures {
     export_: Availability.available,
     integrity: Availability.notYetAvailable,
     admin: Availability.available,
+    deviceList: [],
+    integrityWarnings: [],
   );
 
   /// Mona Hassan, waiting for approval.
@@ -1042,6 +1343,10 @@ abstract final class StrataFixtures {
     role: 'member',
     status: 'pending',
     created: DateTime.utc(2026, 9, 26, 18, 20),
+    initials: '',
+    isSelf: false,
+    createdLabel: '',
+    passwordChangeRequired: false,
   );
 
   /// Admin → Users.
@@ -1056,8 +1361,13 @@ abstract final class StrataFixtures {
         role: 'admin',
         status: 'active',
         created: DateTime.utc(2026, 1, 4, 9),
+        initials: '',
+        isSelf: false,
+        createdLabel: '',
+        passwordChangeRequired: false,
       ),
     ],
+    query: '',
   );
 
   /// "Petrol Arrows invoice · due today 10:00".
@@ -1070,9 +1380,383 @@ abstract final class StrataFixtures {
     taskId: 't-petrol-arrows',
   );
 
-  /// Snooze 10 minutes.
+  /// Snooze (for the length set in Settings).
   static const NotificationAction notificationAction = NotificationAction(
     kind: NotificationActionKind.snooze,
-    minutes: 10,
+  );
+
+  // ---------------------------------------------------------------------------
+  // Further view-model types (defaults; build variants with the constructors)
+  // ---------------------------------------------------------------------------
+
+  /// A sample [AiActivityItem].
+  static const AiActivityItem aiActivityItem = AiActivityItem(
+    atLabel: '',
+    kind: '',
+    summary: '',
+    decisionId: '',
+    reverted: false,
+  );
+
+  /// A sample [AiStatusView].
+  static const AiStatusView aiStatusView = AiStatusView(
+    enabled: false,
+    queueDepth: 0,
+    budgetUsedPercent: 0,
+    budgetLabel: '',
+  );
+
+  /// A sample [AnnotatedLine].
+  static const AnnotatedLine annotatedLine = AnnotatedLine(
+    line: 0,
+    text: '',
+    change: LineChange.same,
+    dir: TextDir.ltr,
+  );
+
+  /// A sample [AskScope].
+  static const AskScope askScope = AskScope(kind: AskScopeKind.all, label: '');
+
+  /// A sample [AskSource].
+  static final AskSource askSource = AskSource(
+    noteId: '',
+    title: '',
+    path: '',
+    anchors: [],
+    indexes: Uint32List(0),
+  );
+
+  /// A sample [AskSpan].
+  static const AskSpan askSpan = AskSpan(text: '');
+
+  /// A sample [BlockItem].
+  static const BlockItem blockItem = BlockItem(
+    text: '',
+    textDir: TextDir.ltr,
+    line: 0,
+  );
+
+  /// A sample [CitationPreview].
+  static const CitationPreview citationPreview = CitationPreview(
+    title: '',
+    path: '',
+    blockDir: TextDir.ltr,
+    tags: [],
+  );
+
+  /// A sample [CompletionItem].
+  static const CompletionItem completionItem = CompletionItem(
+    label: '',
+    detail: '',
+    insertText: '',
+    labelDir: TextDir.ltr,
+  );
+
+  /// A sample [Completions].
+  static const Completions completions = Completions(
+    kind: CompletionKind.none,
+    replaceStart: 0,
+    replaceEnd: 0,
+    query: '',
+    items: [],
+  );
+
+  /// A sample [CustodyDraft].
+  static final CustodyDraft custodyDraft = CustodyDraft(kind: '', date: now);
+
+  /// A sample [DeviceItem].
+  static final DeviceItem deviceItem = DeviceItem(
+    id: '',
+    name: '',
+    platform: '',
+    lastSeen: now,
+    lastSeenLabel: '',
+    signedIn: now,
+    signedInLabel: '',
+    isThisDevice: false,
+    remindersEnabled: false,
+  );
+
+  /// A sample [DiffLine].
+  static const DiffLine diffLine = DiffLine(
+    kind: DiffLineKind.same,
+    text: '',
+    dir: TextDir.ltr,
+  );
+
+  /// A sample [DirectoryFilter].
+  static const DirectoryFilter directoryFilter = DirectoryFilter(
+    tags: [],
+    expiring: false,
+    hasOpenItems: false,
+  );
+
+  /// A sample [DirectorySection].
+  static const DirectorySection directorySection = DirectorySection(
+    label: '',
+    items: [],
+  );
+
+  /// A sample [DocumentDraft].
+  static const DocumentDraft documentDraft = DocumentDraft(
+    name: '',
+    aliases: [],
+    companies: [],
+    people: [],
+  );
+
+  /// A sample [ExportSummary].
+  static final ExportSummary exportSummary = ExportSummary(
+    path: '',
+    sizeBytes: BigInt.zero,
+    noteCount: 0,
+    label: '',
+  );
+
+  /// A sample [FilterOption].
+  static const FilterOption filterOption = FilterOption(
+    facet: '',
+    value: '',
+    label: '',
+    count: 0,
+    selected: false,
+  );
+
+  /// A sample [GraphFilter].
+  static const GraphFilter graphFilter = GraphFilter(
+    edgeKinds: [],
+    nodeKinds: [],
+    similarity: false,
+    lens: GraphLens.notes,
+    includeTags: false,
+  );
+
+  /// A sample [GraphPoint].
+  static const GraphPoint graphPoint = GraphPoint(x: 0, y: 0);
+
+  /// A sample [HistoryEntry].
+  static final HistoryEntry historyEntry = HistoryEntry(
+    commit: '',
+    versionLabel: '',
+    message: '',
+    author: '',
+    at: now,
+    atLabel: '',
+    canRevert: false,
+  );
+
+  /// A sample [ImportSummary].
+  static const ImportSummary importSummary = ImportSummary(
+    imported: 0,
+    skipped: 0,
+  );
+
+  /// A sample [InboxPreviewItem].
+  static const InboxPreviewItem inboxPreviewItem = InboxPreviewItem(
+    noteId: '',
+    text: '',
+    textDir: TextDir.ltr,
+    summary: '',
+    needsYou: false,
+  );
+
+  /// A sample [IntegrityItem].
+  static const IntegrityItem integrityItem = IntegrityItem(
+    id: '',
+    kind: '',
+    messageKey: '',
+    createdLabel: '',
+  );
+
+  /// A sample [KindCount].
+  static const KindCount kindCount = KindCount(kind: '', label: '', count: 0);
+
+  /// A sample [LinkOrCreateChoice].
+  static const LinkOrCreateChoice linkOrCreateChoice = LinkOrCreateChoice(
+    kind: LinkOrCreateKind.link,
+    force: false,
+  );
+
+  /// A sample [MentionEdit].
+  static const MentionEdit mentionEdit = MentionEdit(content: '', cursor: 0);
+
+  /// A sample [MergePreview].
+  static const MergePreview mergePreview = MergePreview(
+    source: ahmedSamirRef,
+    into: ahmedSamirRef,
+    aliases: [],
+    mentionCount: 0,
+    relationCount: 0,
+  );
+
+  /// A sample [NavView].
+  static final NavView navView = NavView(
+    inboxCount: 0,
+    tasksDueCount: 0,
+    notesCount: 0,
+    directoryCount: 0,
+    clusterCount: 0,
+    pinned: [],
+    sync_: syncPill,
+  );
+
+  /// A sample [NewUserRequest].
+  static const NewUserRequest newUserRequest = NewUserRequest(
+    username: '',
+    displayName: '',
+    password: '',
+    role: '',
+  );
+
+  /// A sample [NodePosition].
+  static const NodePosition nodePosition = NodePosition(id: '', x: 0, y: 0);
+
+  /// A sample [NoteDiffView].
+  static const NoteDiffView noteDiffView = NoteDiffView(
+    noteId: '',
+    commit: '',
+    summary: '',
+    lines: [],
+  );
+
+  /// A sample [OpenItem].
+  static const OpenItem openItem = OpenItem(
+    id: '',
+    text: '',
+    textDir: TextDir.ltr,
+    person: ahmedSamirRef,
+    done: false,
+  );
+
+  /// A sample [PasswordStrength].
+  static const PasswordStrength passwordStrength = PasswordStrength(
+    level: PasswordLevel.tooShort,
+    length: 0,
+    minLength: 0,
+  );
+
+  /// A sample [PendingApproval].
+  static final PendingApproval pendingApproval = PendingApproval(
+    username: '',
+    serverUrl: '',
+    requestedAt: now,
+    requestedLabel: '',
+    canCheck: false,
+  );
+
+  /// A sample [PlaceDraft].
+  static const PlaceDraft placeDraft = PlaceDraft(name: '', aliases: []);
+
+  /// A sample [PlaceNode].
+  static const PlaceNode placeNode = PlaceNode(
+    place: ahmedSamirRef,
+    depth: 0,
+    documentCount: 0,
+    parentId: '',
+  );
+
+  /// A sample [PlaceOption].
+  static const PlaceOption placeOption = PlaceOption(
+    id: '',
+    title: '',
+    breadcrumb: [],
+    depth: 0,
+    isCurrent: false,
+  );
+
+  /// A sample [RecentNotesView].
+  static const RecentNotesView recentNotesView = RecentNotesView(
+    filter: RecentFilter.edited,
+    notes: [],
+  );
+
+  /// A sample [RecurrenceCompose].
+  static const RecurrenceCompose recurrenceCompose = RecurrenceCompose(
+    phrase: '',
+    understood: false,
+    label: '',
+  );
+
+  /// A sample [RecurrenceForm].
+  static final RecurrenceForm recurrenceForm = RecurrenceForm(
+    frequency: RecurrenceFrequency.daily,
+    interval: 0,
+    weekdays: [],
+    monthDayMode: MonthDayMode.sameDay,
+    monthDays: Uint32List(0),
+    nth: 0,
+    months: Uint32List(0),
+    whenDone: false,
+  );
+
+  /// A sample [RecurrencePreviewItem].
+  static final RecurrencePreviewItem recurrencePreviewItem =
+      RecurrencePreviewItem(date: now, label: '', isDue: false);
+
+  /// A sample [RelationTypeItem].
+  static const RelationTypeItem relationTypeItem = RelationTypeItem(
+    key: '',
+    label: '',
+  );
+
+  /// A sample [SuggestionEdits].
+  static const SuggestionEdits suggestionEdits = SuggestionEdits();
+
+  /// A sample [SyncLogItem].
+  static final SyncLogItem syncLogItem = SyncLogItem(
+    at: now,
+    atLabel: '',
+    kind: '',
+    detail: '',
+  );
+
+  /// A sample [TagItem].
+  static const TagItem tagItem = TagItem(tag: '', count: 0);
+
+  /// A sample [TaskChip].
+  static const TaskChip taskChip = TaskChip(kind: TaskChipKind.due, label: '');
+
+  /// A sample [TaskDraftPreview].
+  static final TaskDraftPreview taskDraftPreview = TaskDraftPreview(
+    description: '',
+    descriptionDir: TextDir.ltr,
+    reminders: [],
+    links: [],
+    chips: [],
+    draft: taskDraft,
+  );
+
+  /// A sample [TaskGroup].
+  static const TaskGroup taskGroup = TaskGroup(label: '', tasks: []);
+
+  /// A sample [TaskHomeItem].
+  static const TaskHomeItem taskHomeItem = TaskHomeItem(
+    title: '',
+    path: '',
+    isDefault: false,
+    openTasks: 0,
+  );
+
+  /// A sample [TaskHomesView].
+  static const TaskHomesView taskHomesView = TaskHomesView(homes: []);
+
+  /// A sample [TextSpan].
+  static const TextSpan textSpan = TextSpan(start: 0, end: 0);
+
+  /// A sample [ThreadMessage].
+  static const ThreadMessage threadMessage = ThreadMessage(
+    id: '',
+    author: '',
+    text: '',
+    textDir: TextDir.ltr,
+    createdLabel: '',
+    pendingSync: false,
+  );
+
+  /// A sample [TimelineChip].
+  static const TimelineChip timelineChip = TimelineChip(
+    dateLabel: '',
+    sourcePhrase: '',
+    targets: [],
   );
 }

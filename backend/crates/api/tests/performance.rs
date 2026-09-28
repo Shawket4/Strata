@@ -16,7 +16,11 @@
 //! Ignored in normal runs (minutes of work). Run in release mode, alone:
 //! `cargo test --release -p strata-api --test performance -- --ignored --nocapture --test-threads=1`
 //! (`STRATA_PERF_FILES` overrides the vault size for quick checks; budgets apply at 10 000).
-#![allow(clippy::expect_used, clippy::too_many_lines, clippy::cast_precision_loss)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::cast_precision_loss
+)]
 
 mod hardening;
 
@@ -50,9 +54,10 @@ fn zip_of(vault: &SyntheticVault) -> Vec<u8> {
     z.finish().expect("zip").into_inner()
 }
 
-fn percentile(sorted: &[Duration], p: f64) -> Duration {
-    let rank = ((p / 100.0) * (sorted.len() as f64 - 1.0)).round();
-    sorted[usize::try_from(rank as u64).unwrap_or(0).min(sorted.len() - 1)]
+/// The `p`-th percentile (whole percent) of sorted samples: index `round(p / 100 · (len − 1))`.
+fn percentile(sorted: &[Duration], p: usize) -> Duration {
+    let last = sorted.len() - 1;
+    sorted[((p.min(100) * last + 50) / 100).min(last)]
 }
 
 fn ms(d: Duration) -> String {
@@ -119,8 +124,14 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
     let started = Instant::now();
     let reindexed = h.vault.reindex(&scope).await.expect("reindex");
     let reindex_time = started.elapsed();
-    assert!(reindexed >= vault.files.len(), "{reindexed} notes reindexed");
-    report.push(format!("full reindex ({reindexed} notes): {}", ms(reindex_time)));
+    assert!(
+        reindexed >= vault.files.len(),
+        "{reindexed} notes reindexed"
+    );
+    report.push(format!(
+        "full reindex ({reindexed} notes): {}",
+        ms(reindex_time)
+    ));
 
     // Graph assembly.
     let mut graph_times = Vec::new();
@@ -128,7 +139,10 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
     for _ in 0..5 {
         let started = Instant::now();
         let resp = h
-            .send(Some("get_graph"), &Req::new("GET", "/api/v1/graph").token(&alice.token))
+            .send(
+                Some("get_graph"),
+                &Req::new("GET", "/api/v1/graph").token(&alice.token),
+            )
             .await;
         graph_times.push(started.elapsed());
         assert_eq!(resp.status, 200);
@@ -150,7 +164,9 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
     for q in vault.queries(200, 7) {
         let target = format!("/api/v1/search?q={}&mode=keyword&limit=20", encode(&q));
         let started = Instant::now();
-        let resp = h.send(Some("search"), &Req::new("GET", target).token(&alice.token)).await;
+        let resp = h
+            .send(Some("search"), &Req::new("GET", target).token(&alice.token))
+            .await;
         latencies.push(started.elapsed());
         assert_eq!(resp.status, 200);
         let results: strata_client::types::SearchResults =
@@ -160,7 +176,7 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
         }
     }
     latencies.sort();
-    let (p50, p95) = (percentile(&latencies, 50.0), percentile(&latencies, 95.0));
+    let (p50, p95) = (percentile(&latencies, 50), percentile(&latencies, 95));
     report.push(format!(
         "keyword search (200 queries): p50 {}, p95 {}, max {}, {empty} without hits",
         ms(p50),
@@ -178,13 +194,20 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
             |c| format!("/api/v1/sync/bootstrap?cursor={c}"),
         );
         let resp = h
-            .send(Some("sync_bootstrap"), &Req::new("GET", target).token(&alice.token))
+            .send(
+                Some("sync_bootstrap"),
+                &Req::new("GET", target).token(&alice.token),
+            )
             .await;
         assert_eq!(resp.status, 200);
         let page: BootstrapPage = rmp_serde::from_slice(&resp.body).expect("page");
         pages += 1;
         records += page.records.len();
-        notes += page.records.iter().filter(|r| matches!(r, Record::Note(_))).count();
+        notes += page
+            .records
+            .iter()
+            .filter(|r| matches!(r, Record::Note(_)))
+            .count();
         match page.next_cursor {
             Some(c) => cursor = Some(c),
             None => break,
@@ -218,7 +241,9 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
     let resp = h
         .send(
             Some("sync_push"),
-            &Req::new("POST", "/api/v1/sync/push").token(&alice.token).msgpack(body),
+            &Req::new("POST", "/api/v1/sync/push")
+                .token(&alice.token)
+                .msgpack(body),
         )
         .await;
     let push_time = started.elapsed();

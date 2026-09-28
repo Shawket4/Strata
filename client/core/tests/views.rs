@@ -840,7 +840,7 @@ async fn directory_filters_facets_sections_and_sort_run_in_the_core() {
 
 #[tokio::test]
 async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
-    use strata_core::view::model::{GraphFilter, GraphLens, KindCount};
+    use strata_core::view::model::{GraphFilter, GraphLens, GraphNodeKind, KindCount};
     let (_h, s) = vault().await;
     let all = GraphFilter {
         edge_kinds: vec![],
@@ -857,7 +857,8 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
     };
     let g = map(&all);
     assert_eq!(g.nodes.len(), 8);
-    assert_eq!(g.edges.len(), 11);
+    // Place nesting appears once, as `part-of-place` (the shared edge-kind mapping, L16).
+    assert_eq!(g.edges.len(), 9);
     let kc = |kind: &str, label: &str, count: u32| KindCount {
         kind: kind.into(),
         label: label.into(),
@@ -870,7 +871,6 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
             kc("link", "Links", 5),
             kc("mention", "Mentions", 1),
             kc("part-of-place", "Inside", 2),
-            kc("relation", "Relations", 2),
         ]
     );
     assert_eq!(
@@ -899,13 +899,17 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
             .collect::<Vec<_>>(),
         ["Home", "Safe", "Desk drawer"]
     );
-    assert!(
+    assert_eq!(
         places
             .edges
             .iter()
-            .all(|e| e.kind == "relation:part-of" || e.kind == "part-of-place")
+            .map(|e| (e.src.as_str(), e.dst.as_str(), e.kind.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            (SAFE, HOME, "part-of-place"),
+            (DRAWER, SAFE, "part-of-place")
+        ]
     );
-    assert_eq!(places.edges.len(), 4);
     assert_eq!(places.neighbours, [HOME, DRAWER]);
     // Counts are before filtering: the panel keeps showing every kind.
     assert_eq!(places.node_counts, g.node_counts);
@@ -928,7 +932,7 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
     // The people lens shows people only.
     let people = map(&GraphFilter {
         lens: GraphLens::People,
-        ..all
+        ..all.clone()
     });
     assert_eq!(
         people
@@ -937,6 +941,69 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
             .map(|n| n.title.as_str())
             .collect::<Vec<_>>(),
         ["Shady"]
+    );
+    assert_eq!(people.nodes[0].kind, GraphNodeKind::Person);
+    assert_eq!(people.nodes[0].path.as_deref(), Some("people/Shady.md"));
+
+    // The tag toggle adds `tag:<tag>` nodes and note → tag edges, like the server's graph.
+    s.update_note(
+        PRICING,
+        &format!("---\nid: {PRICING}\ntags: [Pricing]\n---\nالأسعار زادت في سبتمبر.\n"),
+    )
+    .expect("tag");
+    let tagged = map(&GraphFilter {
+        include_tags: true,
+        node_kinds: vec!["tag".into(), "note".into()],
+        ..all.clone()
+    });
+    let tag = tagged
+        .nodes
+        .iter()
+        .find(|n| n.kind == GraphNodeKind::Tag)
+        .expect("tag node");
+    assert_eq!(
+        (
+            tag.id.as_str(),
+            tag.title.as_str(),
+            tag.path.as_deref(),
+            tag.updated
+        ),
+        ("tag:pricing", "pricing", None, None)
+    );
+    assert_eq!(
+        tagged
+            .edges
+            .iter()
+            .map(|e| (e.src.as_str(), e.dst.as_str(), e.kind.as_str()))
+            .collect::<Vec<_>>(),
+        [(PRICING, "tag:pricing", "tag")]
+    );
+
+    // A document copy links to its original with `document:copy-of`.
+    let copy = s
+        .create_note(
+            "documents/Car license copy.md",
+            "---\nkind: document\ncopy: true\ncopy-of: \"[[Car license]]\"\n---\n",
+            true,
+        )
+        .expect("copy")
+        .id
+        .expect("created");
+    let docs = map(&GraphFilter {
+        edge_kinds: vec!["document".into()],
+        ..all
+    });
+    assert_eq!(
+        docs.edges
+            .iter()
+            .map(|e| (
+                e.src.as_str(),
+                e.dst.as_str(),
+                e.kind.as_str(),
+                e.label.as_str()
+            ))
+            .collect::<Vec<_>>(),
+        [(copy.as_str(), LICENSE, "document:copy-of", "copy of")]
     );
 }
 

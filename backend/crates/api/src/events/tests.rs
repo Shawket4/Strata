@@ -26,13 +26,13 @@ fn note(id: NoteId, kind: domain::NoteKind, change: NoteChange, v: Option<&str>)
 
 #[test]
 fn commit_notices_map_to_events_in_a_fixed_order() {
-    let g = ids();
+    let idgen = ids();
     let (a, b, c) = (
-        NoteId::from_ulid(g.next_ulid()),
-        NoteId::from_ulid(g.next_ulid()),
-        NoteId::from_ulid(g.next_ulid()),
+        NoteId::from_ulid(idgen.next_ulid()),
+        NoteId::from_ulid(idgen.next_ulid()),
+        NoteId::from_ulid(idgen.next_ulid()),
     );
-    let s = SuggestionId::from_ulid(g.next_ulid());
+    let s = SuggestionId::from_ulid(idgen.next_ulid());
     let notice = Committed {
         user: None,
         op: "merge".into(),

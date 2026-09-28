@@ -46,17 +46,14 @@ impl Pools {
 /// The fixture kind a ULID body/query field refers to, by field name.
 pub fn field_kind(field: &str) -> &'static str {
     match field {
-        "src_id" | "dst_id" | "note_id" | "source_note_id" | "note" | "copy_of" | "other_id" => {
-            "note"
-        }
-        "into_id" | "person_id" | "counterparty_id" | "entity" | "holder" | "entity_id" => {
-            "entity"
-        }
+        "into_id" | "person_id" | "counterparty_id" | "entity" | "holder" | "entity_id" => "entity",
         "place_id" | "parent_id" | "place" => "place",
         "document_id" => "document",
         "device_id" => "device",
         "suggestion_id" => "suggestion",
         "task_id" => "task",
+        // `src_id`, `dst_id`, `note_id`, `source_note_id`, `note`, `copy_of`, `other_id` and
+        // any other ID field.
         _ => "note",
     }
 }
@@ -127,7 +124,10 @@ pub fn json_to_mp(v: &J) -> M {
         J::Null => M::Nil,
         J::Bool(b) => M::Boolean(*b),
         J::Number(n) => n.as_i64().map_or_else(
-            || n.as_u64().map_or_else(|| M::F64(n.as_f64().unwrap_or(0.0)), M::from),
+            || {
+                n.as_u64()
+                    .map_or_else(|| M::F64(n.as_f64().unwrap_or(0.0)), M::from)
+            },
             M::from,
         ),
         J::String(s) => M::from(s.as_str()),
@@ -547,8 +547,8 @@ pub fn apply(value: &M, mutation: &Mutation) -> (String, Vec<u8>) {
             if let Some(p) = pick(&v, *sel, |n| matches!(n, M::Map(e) if !e.is_empty()))
                 && let M::Map(entries) = node_mut(&mut v, &p)
             {
-                let i = usize::try_from(*sel % u64::try_from(entries.len()).unwrap_or(1))
-                    .unwrap_or(0);
+                let i =
+                    usize::try_from(*sel % u64::try_from(entries.len()).unwrap_or(1)).unwrap_or(0);
                 entries.remove(i);
             }
             encode(&v)

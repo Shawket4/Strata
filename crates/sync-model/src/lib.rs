@@ -12,6 +12,7 @@
 //! - [`apply`]: pure op application rules (relations, patches, custody, task edits).
 //! - [`settings`]: how stored user settings become setting records, and which records a
 //!   change touches.
+//! - [`suggestions`]: the payload of every suggestion kind ([`SuggestionPayload`]).
 //! - [`Version`]: content-hash versions.
 //!
 //! These are internal models: the API layer maps them to its `OpenAPI` DTOs. They serialise
@@ -24,6 +25,7 @@ pub mod merge;
 pub mod ops;
 pub mod results;
 pub mod settings;
+pub mod suggestions;
 mod version;
 
 pub use changes::{
@@ -34,5 +36,6 @@ pub use merge::{
     MergeOutcome, ResolveError, UpdateDecision, decide_update, merge, merge_text_only,
 };
 pub use ops::{Op, OpError, OpKind, SyncOp};
+pub use suggestions::{PayloadError, SuggestionPayload};
 pub use results::{ConflictResolution, OpOutcome, OpResult, Problem, PushRequest, PushResponse};
 pub use version::{InvalidVersion, Version};

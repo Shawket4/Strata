@@ -346,6 +346,7 @@ pub async fn list_tasks(
     request_body = CreateTaskRequest,
     responses(
         (status = 201, description = "Created; one `user: task create <path>` commit.", body = Task),
+        (status = 404, description = "`not_found`: `note_id` names no note of the caller.", body = Problem),
         (status = 409, description = "`duplicate_candidates`.", body = Problem),
     ),
 )]

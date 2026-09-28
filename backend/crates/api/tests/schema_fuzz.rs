@@ -8,7 +8,7 @@
 //! Every response must be below 500, conform to the contract for its operation, never carry
 //! another user's data, and never reveal the server's data root.
 //!
-//! Deterministic: a fixed seed (ChaCha) and operations visited round-robin, so a failure
+//! Deterministic: a fixed seed (`ChaCha`) and operations visited round-robin, so a failure
 //! reproduces with the same seed and case count. Normal runs use `STRATA_FUZZ_CASES` = 4 per
 //! operation; long runs set it (and optionally `STRATA_FUZZ_SEED`), e.g.
 //! `STRATA_FUZZ_CASES=20000 cargo test -p strata-api --test schema_fuzz -- --nocapture`.
@@ -57,8 +57,12 @@ fn garbage() -> BoxedStrategy<String> {
 }
 
 fn path_param(pools: &Pools, kind: Option<&str>) -> BoxedStrategy<String> {
-    let known = kind.map(|k| pools.get(k).to_vec()).unwrap_or_default();
-    let ulid = generate::ulid_for(pools, kind.unwrap_or("note"));
+    let known: Vec<String> = kind
+        .map(|k| pools.get(k).iter().map(|v| encode(v)).collect())
+        .unwrap_or_default();
+    let ulid = generate::ulid_for(pools, kind.unwrap_or("note"))
+        .prop_map(|v| encode(&v))
+        .boxed();
     if known.is_empty() {
         prop_oneof![3 => ulid, 1 => garbage()].boxed()
     } else {
@@ -143,12 +147,11 @@ fn case_strategy(ctx: &Arc<Ctx>, op: &Op) -> BoxedStrategy<Case> {
     let body = match &op.body {
         None => Just(BodyCase::None).boxed(),
         Some(Body::Zip) => zip_case(),
-        Some(Body::MsgPack(schema)) => (
-            generate::strategy(ctx, schema, "", 0),
-            generate::mutation(),
-        )
-            .prop_map(|(v, m)| BodyCase::MsgPack(v, m))
-            .boxed(),
+        Some(Body::MsgPack(schema)) => {
+            (generate::strategy(ctx, schema, "", 0), generate::mutation())
+                .prop_map(|(v, m)| BodyCase::MsgPack(v, m))
+                .boxed()
+        }
     };
     (path, query, if_match, body)
         .prop_map(|(path, query, if_match, body)| Case {
@@ -163,8 +166,7 @@ fn case_strategy(ctx: &Arc<Ctx>, op: &Op) -> BoxedStrategy<Case> {
 fn zip_bytes(entries: &[(String, String)]) -> Vec<u8> {
     let mut z = zip::ZipWriter::new(Cursor::new(Vec::new()));
     for (name, content) in entries {
-        if z
-            .start_file(name.as_str(), zip::write::SimpleFileOptions::default())
+        if z.start_file(name.as_str(), zip::write::SimpleFileOptions::default())
             .is_ok()
         {
             let _ = z.write_all(content.as_bytes());
@@ -236,7 +238,9 @@ async fn every_operation_survives_schema_driven_fuzzing() {
     let other = populate(&h, &bystander, "bystander-secret-5e7d").await;
     let private = other.private_strings();
     let mut pools = fx.pools();
-    pools.by_kind.insert("user".to_owned(), vec![victim.id.to_string()]);
+    pools
+        .by_kind
+        .insert("user".to_owned(), vec![victim.id.to_string()]);
     pools.add("version", fx.note.version.clone());
     pools.add("version", fx.task.version.clone());
     let contract = Contract::production();
@@ -245,7 +249,8 @@ async fn every_operation_survives_schema_driven_fuzzing() {
         pools,
     });
     let all = ops::operations(&contract);
-    let strategies: Vec<BoxedStrategy<Case>> = all.iter().map(|op| case_strategy(&ctx, op)).collect();
+    let strategies: Vec<BoxedStrategy<Case>> =
+        all.iter().map(|op| case_strategy(&ctx, op)).collect();
     let seed = env_u64("STRATA_FUZZ_SEED").unwrap_or(DEFAULT_SEED);
     let cases = env_u64("STRATA_FUZZ_CASES")
         .map_or(all.len() * 4, |n| usize::try_from(n).unwrap_or(usize::MAX));
@@ -284,7 +289,7 @@ async fn every_operation_survives_schema_driven_fuzzing() {
             .or_default() += 1;
         let repro = || {
             let body = req.body.as_ref().map(|(ct, b)| {
-                let hex: String = b.iter().take(256).map(|x| format!("{x:02x}")).collect();
+                let hex = hex::encode(&b[..b.len().min(256)]);
                 format!("{ct} {hex}")
             });
             format!(
@@ -304,7 +309,11 @@ async fn every_operation_survives_schema_driven_fuzzing() {
         let texts = hardening::strings_in(&resp.body);
         for t in &texts {
             if let Some(p) = private.iter().find(|p| t.contains(p.as_str())) {
-                failures.push(format!("{} leaked bystander data {p:?}: {}", op.id, repro()));
+                failures.push(format!(
+                    "{} leaked bystander data {p:?}: {}",
+                    op.id,
+                    repro()
+                ));
             }
             let mut echo = req.target.as_bytes().to_vec();
             echo.extend(hardening::http::decode(&req.target));
@@ -319,7 +328,9 @@ async fn every_operation_survives_schema_driven_fuzzing() {
         // A generated request may legitimately end the fuzzer's own session (e.g. removing
         // its current device); sign in again and continue.
         if resp.status == 401 && op.secured && !op.is_admin() && op.id != "logout" {
-            let check = h.send(None, &Req::new("GET", "/api/v1/me").token(&token)).await;
+            let check = h
+                .send(None, &Req::new("GET", "/api/v1/me").token(&token))
+                .await;
             if check.status == 401 {
                 token = h.login(&fuzzer.name, &fuzzer.password).await;
                 relogins += 1;
@@ -351,7 +362,7 @@ async fn every_operation_survives_schema_driven_fuzzing() {
 }
 
 /// Regression (found by this fuzzer; seeds and cases below): a NUL character in a name,
-/// alias, tag, field, task text or reply reached PostgreSQL (which cannot store it) and
+/// alias, tag, field, task text or reply reached `PostgreSQL` (which cannot store it) and
 /// answered `500`. Every such input is now `422 invalid_body` and nothing is written; a
 /// username with NUL is an unknown user (`401 invalid_credentials`).
 #[tokio::test]
@@ -378,32 +389,103 @@ async fn regression_nul_characters_in_text_are_422_not_500() {
     let reply = format!("/api/v1/suggestions/{}/reply", fx.suggestion);
     let task = format!("/api/v1/tasks/{}", fx.task.id);
     let cases: Vec<(&str, &str, &str, M)> = vec![
-        ("create_place", "POST", "/api/v1/places", map(&[("name", M::from(z))])),
-        ("create_place", "POST", "/api/v1/places", map(&[("name", M::from("A")), ("aliases", list(z))])),
-        ("create_place", "POST", "/api/v1/places", map(&[("name", M::from("A")), ("tags", list(z))])),
-        ("create_entity", "POST", "/api/v1/entities", map(&[("kind", M::from("person")), ("name", M::from(z))])),
-        ("create_entity", "POST", "/api/v1/entities", map(&[("kind", M::from("person")), ("name", M::from("F")), ("fields", map(&[("role", M::from(z))]))])),
-        ("create_document", "POST", "/api/v1/documents", map(&[("name", M::from("G")), ("doc_type", M::from(z))])),
+        (
+            "create_place",
+            "POST",
+            "/api/v1/places",
+            map(&[("name", M::from(z))]),
+        ),
+        (
+            "create_place",
+            "POST",
+            "/api/v1/places",
+            map(&[("name", M::from("A")), ("aliases", list(z))]),
+        ),
+        (
+            "create_place",
+            "POST",
+            "/api/v1/places",
+            map(&[("name", M::from("A")), ("tags", list(z))]),
+        ),
+        (
+            "create_entity",
+            "POST",
+            "/api/v1/entities",
+            map(&[("kind", M::from("person")), ("name", M::from(z))]),
+        ),
+        (
+            "create_entity",
+            "POST",
+            "/api/v1/entities",
+            map(&[
+                ("kind", M::from("person")),
+                ("name", M::from("F")),
+                ("fields", map(&[("role", M::from(z))])),
+            ]),
+        ),
+        (
+            "create_document",
+            "POST",
+            "/api/v1/documents",
+            map(&[("name", M::from("G")), ("doc_type", M::from(z))]),
+        ),
         ("patch_place", "PATCH", &place, map(&[("name", M::from(z))])),
-        ("patch_entity", "PATCH", &person, map(&[("aliases", list(z))])),
+        (
+            "patch_entity",
+            "PATCH",
+            &person,
+            map(&[("aliases", list(z))]),
+        ),
         ("patch_entity", "PATCH", &person, map(&[("tags", list(z))])),
-        ("patch_entity", "PATCH", &person, map(&[("set_fields", map(&[("role", M::from(z))]))])),
-        ("reply_suggestion", "POST", &reply, map(&[("body", M::from(z))])),
+        (
+            "patch_entity",
+            "PATCH",
+            &person,
+            map(&[("set_fields", map(&[("role", M::from(z))]))]),
+        ),
+        (
+            "reply_suggestion",
+            "POST",
+            &reply,
+            map(&[("body", M::from(z))]),
+        ),
         // Seed 0x12d687, case 1494: a forced task create.
-        ("create_task", "POST", "/api/v1/tasks", map(&[("text", M::from("\u{0} rent")), ("force", M::from(true))])),
+        (
+            "create_task",
+            "POST",
+            "/api/v1/tasks",
+            map(&[("text", M::from("\u{0} rent")), ("force", M::from(true))]),
+        ),
         ("patch_task", "PATCH", &task, map(&[("text", M::from(z))])),
     ];
     let log = h.log(u.id);
     let mut got = Vec::new();
     for (op, method, path, body) in &cases {
         let resp = h
-            .send(Some(op), &Req::new(method, *path).token(&u.token).msgpack(mp(body)))
+            .send(
+                Some(op),
+                &Req::new(method, *path).token(&u.token).msgpack(mp(body)),
+            )
             .await;
-        got.push((*op, resp.status, resp.problem_type(), rmp_serde::from_slice::<strata_client::types::Problem>(&resp.body).ok().and_then(|p| p.detail)));
+        got.push((
+            *op,
+            resp.status,
+            resp.problem_type(),
+            rmp_serde::from_slice::<strata_client::types::Problem>(&resp.body)
+                .ok()
+                .and_then(|p| p.detail),
+        ));
     }
     let expected: Vec<_> = cases
         .iter()
-        .map(|(op, ..)| (*op, 422, Some("invalid_body".to_owned()), Some("text must not contain NUL characters".to_owned())))
+        .map(|(op, ..)| {
+            (
+                *op,
+                422,
+                Some("invalid_body".to_owned()),
+                Some("text must not contain NUL characters".to_owned()),
+            )
+        })
         .collect();
     assert_eq!(got, expected);
     assert_eq!(h.log(u.id), log, "nothing written");
@@ -423,5 +505,40 @@ async fn regression_nul_characters_in_text_are_422_not_500() {
         (login.status, login.problem_type()),
         (401, Some("invalid_credentials".to_owned()))
     );
+    h.finish().await;
+}
+
+/// Regression (found by this fuzzer, seed `0x5354524154410016`): `POST /tasks` with a
+/// `note_id` that names no note of the caller answers `404 not_found`, which the contract did
+/// not document (a conformance violation).
+#[tokio::test]
+async fn regression_create_task_documents_404_for_an_unknown_note() {
+    let h = H::with(Options::default()).await;
+    let u = h.user("alice").await;
+    let body = {
+        let mut o = Vec::new();
+        rmpv::encode::write_value(
+            &mut o,
+            &M::Map(vec![
+                (M::from("text"), M::from("Pay the rent")),
+                (M::from("note_id"), M::from(generate::FALLBACK_ULID)),
+            ]),
+        )
+        .expect("encode");
+        o
+    };
+    let resp = h
+        .send(
+            Some("create_task"),
+            &Req::new("POST", "/api/v1/tasks")
+                .token(&u.token)
+                .msgpack(body),
+        )
+        .await;
+    assert_eq!(
+        (resp.status, resp.problem_type()),
+        (404, Some("not_found".to_owned()))
+    );
+    assert_eq!(h.conformance.violations(), Vec::<String>::new());
     h.finish().await;
 }

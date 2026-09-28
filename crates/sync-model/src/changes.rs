@@ -134,6 +134,17 @@ pub enum SuggestionStatus {
     Superseded,
 }
 
+/// Who wrote a reply in a suggestion thread (§9.8).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReplyAuthor {
+    /// The user.
+    #[default]
+    User,
+    /// The AI (a re-proposal or an answer in the thread).
+    Ai,
+}
+
 /// A reply in a suggestion thread.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SuggestionReplyRecord {
@@ -143,10 +154,13 @@ pub struct SuggestionReplyRecord {
     pub text: String,
     /// When.
     pub at: DateTime<FixedOffset>,
+    /// Who wrote it (absent from older servers: the user).
+    #[serde(default)]
+    pub author: ReplyAuthor,
 }
 
 /// A suggestion (payload kept as the stored `MessagePack` blob; its schema belongs to the
-/// suggestion kind).
+/// suggestion kind: [`crate::suggestions`], decoded with [`SuggestionRecord::decode_payload`]).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SuggestionRecord {
     /// Suggestion ID.

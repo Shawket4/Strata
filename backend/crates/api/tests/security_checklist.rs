@@ -60,7 +60,11 @@ fn request(doc: &serde_json::Value, op: &Op, u: &User, fx: &Fixtures) -> Req {
     });
     let ids = |field: &str| Some(fx.id_of(field_kind(field)));
     let mut query = Vec::new();
-    for p in op.params.iter().filter(|p| p.loc == Loc::Query && p.required) {
+    for p in op
+        .params
+        .iter()
+        .filter(|p| p.loc == Loc::Query && p.required)
+    {
         let v = generate::example(doc, &p.schema, &p.name, &ids);
         query.push(format!("{}={}", p.name, encode(&scalar(&v))));
     }
@@ -71,20 +75,22 @@ fn request(doc: &serde_json::Value, op: &Op, u: &User, fx: &Fixtures) -> Req {
     };
     let mut req = Req::new(&op.method, target).token(&u.token);
     req.upgrade = op.stream;
-    if op.params.iter().any(|p| p.name == "If-Match") {
-        if let Some(v) = if_match(op, fx) {
-            req = req.header("If-Match", &v);
-        }
+    if op.params.iter().any(|p| p.name == "If-Match")
+        && let Some(v) = if_match(op, fx)
+    {
+        req = req.header("If-Match", &v);
     }
     match &op.body {
         Some(Body::MsgPack(schema)) => {
-            let body = override_body(op, fx).unwrap_or_else(|| {
-                generate::example(doc, schema, "", &ids)
-            });
+            let body =
+                override_body(op, fx).unwrap_or_else(|| generate::example(doc, schema, "", &ids));
             req = req.msgpack(msgpack(&body));
         }
         Some(Body::Zip) => {
-            req = req.body(strata_api::wire::ZIP, zip_of(&[("notes/Imported.md", b"Imported.\n")]));
+            req = req.body(
+                strata_api::wire::ZIP,
+                zip_of(&[("notes/Imported.md", b"Imported.\n")]),
+            );
         }
         None => {}
     }
@@ -153,17 +159,17 @@ fn phase(op: &Op) -> u8 {
         3
     } else if op.method == "DELETE" || op.id.contains("merge") || op.id == "move_note" {
         2
-    } else if op.method == "GET" {
-        0
     } else {
-        1
+        u8::from(op.method != "GET")
     }
 }
 
 fn scan(h: &H, what: &str, req: &Req, resp: &Resp, leaks: &mut Vec<String>, forbidden: &[String]) {
     let mut echo = req.target.as_bytes().to_vec();
     echo.extend(hardening::http::decode(&req.target));
-    echo.extend(hardening::http::decode(&String::from_utf8_lossy(&hardening::http::decode(&req.target))));
+    echo.extend(hardening::http::decode(&String::from_utf8_lossy(
+        &hardening::http::decode(&req.target),
+    )));
     for (_, v) in &req.headers {
         echo.extend_from_slice(v.as_bytes());
     }
@@ -218,18 +224,27 @@ async fn no_operation_returns_a_filesystem_path() {
             req.token = Some(h.login(&alice.name, &alice.password).await);
         }
         if op.id == "login" {
-            req.body = Some((strata_api::wire::MSGPACK.to_owned(), login_body(&alice.name, &alice.password)));
+            req.body = Some((
+                strata_api::wire::MSGPACK.to_owned(),
+                login_body(&alice.name, &alice.password),
+            ));
         }
         if op.id == "refresh" {
-            let session = api::login(&h.anon(), &types::LoginRequest {
-                username: alice.name.clone(),
-                password: alice.password.clone(),
-                device_name: "refresh-device".into(),
-                platform: types::DevicePlatform::Android,
-            })
+            let session = api::login(
+                &h.anon(),
+                &types::LoginRequest {
+                    username: alice.name.clone(),
+                    password: alice.password.clone(),
+                    device_name: "refresh-device".into(),
+                    platform: types::DevicePlatform::Android,
+                },
+            )
             .await
             .expect("login");
-            req.body = Some((strata_api::wire::MSGPACK.to_owned(), msgpack(&map(&[("refresh_token", M::from(session.refresh_token))]))));
+            req.body = Some((
+                strata_api::wire::MSGPACK.to_owned(),
+                msgpack(&map(&[("refresh_token", M::from(session.refresh_token))])),
+            ));
         }
         if op.is_admin() {
             let path = op.fill(|_| victim.id.to_string());
@@ -246,13 +261,53 @@ async fn no_operation_returns_a_filesystem_path() {
     // Error paths that name files: a missing path, an invalid path, a taken path, a stale
     // version, a broken archive, a canvas pointing outside the vault.
     let extra: Vec<(&str, Req)> = vec![
-        ("get_note_by_path", Req::new("GET", format!("/api/v1/notes/by-path?path={}", encode("notes/Missing.md")))),
-        ("get_note_by_path", Req::new("GET", format!("/api/v1/notes/by-path?path={}", encode("../../etc/passwd")))),
-        ("create_note", Req::new("POST", "/api/v1/notes").msgpack(msgpack(&map(&[("path", M::from("notes/Plan.md")), ("content", M::from("x"))])))),
-        ("create_note", Req::new("POST", "/api/v1/notes").msgpack(msgpack(&map(&[("path", M::from("../outside.md")), ("content", M::from("x"))])))),
-        ("create_note", Req::new("POST", "/api/v1/notes").msgpack(msgpack(&map(&[("path", M::from("/etc/cron.d/x.md")), ("content", M::from("x"))])))),
-        ("put_map", Req::new("PUT", "/api/v1/maps/Outside").msgpack(msgpack(&map(&[("content", M::from(canvas("../../../etc/passwd")))])))),
-        ("import_vault", Req::new("POST", "/api/v1/import").body(strata_api::wire::ZIP, zip_of(&[("../evil.md", b"x")]))),
+        (
+            "get_note_by_path",
+            Req::new(
+                "GET",
+                format!("/api/v1/notes/by-path?path={}", encode("notes/Missing.md")),
+            ),
+        ),
+        (
+            "get_note_by_path",
+            Req::new(
+                "GET",
+                format!("/api/v1/notes/by-path?path={}", encode("../../etc/passwd")),
+            ),
+        ),
+        (
+            "create_note",
+            Req::new("POST", "/api/v1/notes").msgpack(msgpack(&map(&[
+                ("path", M::from("notes/Plan.md")),
+                ("content", M::from("x")),
+            ]))),
+        ),
+        (
+            "create_note",
+            Req::new("POST", "/api/v1/notes").msgpack(msgpack(&map(&[
+                ("path", M::from("../outside.md")),
+                ("content", M::from("x")),
+            ]))),
+        ),
+        (
+            "create_note",
+            Req::new("POST", "/api/v1/notes").msgpack(msgpack(&map(&[
+                ("path", M::from("/etc/cron.d/x.md")),
+                ("content", M::from("x")),
+            ]))),
+        ),
+        (
+            "put_map",
+            Req::new("PUT", "/api/v1/maps/Outside").msgpack(msgpack(&map(&[(
+                "content",
+                M::from(canvas("../../../etc/passwd")),
+            )]))),
+        ),
+        (
+            "import_vault",
+            Req::new("POST", "/api/v1/import")
+                .body(strata_api::wire::ZIP, zip_of(&[("../evil.md", b"x")])),
+        ),
     ];
     for (op, req) in extra {
         let req = req.token(&alice.token);
@@ -283,23 +338,53 @@ const OUTSIDE: &str = "OUTSIDE-THE-VAULT-7c1e";
 fn attacks(data_root: &std::path::Path, bob: strata_common::UserId) -> Vec<(&'static str, String)> {
     vec![
         ("dotdot", "../../../secret-outside.md".to_owned()),
-        ("dotdot-encoded", "..%2F..%2F..%2Fsecret-outside.md".to_owned()),
-        ("dot-encoded", "%2e%2e%2f%2e%2e%2f%2e%2e%2fsecret-outside.md".to_owned()),
-        ("dot-encoded-mixed", "%2e%2e/%2e%2e/secret-outside.md".to_owned()),
-        ("double-encoded", "%252e%252e%252fsecret-outside.md".to_owned()),
+        (
+            "dotdot-encoded",
+            "..%2F..%2F..%2Fsecret-outside.md".to_owned(),
+        ),
+        (
+            "dot-encoded",
+            "%2e%2e%2f%2e%2e%2f%2e%2e%2fsecret-outside.md".to_owned(),
+        ),
+        (
+            "dot-encoded-mixed",
+            "%2e%2e/%2e%2e/secret-outside.md".to_owned(),
+        ),
+        (
+            "double-encoded",
+            "%252e%252e%252fsecret-outside.md".to_owned(),
+        ),
         ("backslash", "..\\..\\..\\secret-outside.md".to_owned()),
-        ("backslash-encoded", "..%5C..%5C..%5Csecret-outside.md".to_owned()),
+        (
+            "backslash-encoded",
+            "..%5C..%5C..%5Csecret-outside.md".to_owned(),
+        ),
         ("absolute", "%2Fetc%2Fpasswd".to_owned()),
-        ("absolute-data-root", encode(&data_root.join("secret-outside.md").to_string_lossy())),
+        (
+            "absolute-data-root",
+            encode(&data_root.join("secret-outside.md").to_string_lossy()),
+        ),
         ("drive", "C:%5CWindows%5Cwin.ini".to_owned()),
         ("nul", "notes%2FPlan.md%00.png".to_owned()),
         ("nul-dotdot", "..%00%2F..%2Fsecret-outside.md".to_owned()),
-        ("fullwidth-dots", "%EF%BC%8E%EF%BC%8E%EF%BC%8Fsecret-outside.md".to_owned()),
+        (
+            "fullwidth-dots",
+            "%EF%BC%8E%EF%BC%8E%EF%BC%8Fsecret-outside.md".to_owned(),
+        ),
         ("two-dot-leader", "%E2%80%A5%2Fsecret-outside.md".to_owned()),
-        ("division-slash", "..%E2%88%95..%E2%88%95secret-outside.md".to_owned()),
-        ("overlong-utf8", "%C0%AE%C0%AE%C0%AFsecret-outside.md".to_owned()),
+        (
+            "division-slash",
+            "..%E2%88%95..%E2%88%95secret-outside.md".to_owned(),
+        ),
+        (
+            "overlong-utf8",
+            "%C0%AE%C0%AE%C0%AFsecret-outside.md".to_owned(),
+        ),
         ("notes-escape", encode("notes/../../../secret-outside.md")),
-        ("neighbour-vault", encode(&format!("../../{bob}/vault/notes/Plan.md"))),
+        (
+            "neighbour-vault",
+            encode(&format!("../../{bob}/vault/notes/Plan.md")),
+        ),
     ]
 }
 
@@ -335,7 +420,11 @@ async fn path_traversal_on_every_parameter_is_refused() {
     populate(&h, &bob, OUTSIDE).await;
     std::fs::write(h.data.path().join("secret-outside.md"), OUTSIDE).expect("plant");
     std::fs::write(
-        h.data.path().join("users").join(alice.id.to_string()).join("secret-outside.md"),
+        h.data
+            .path()
+            .join("users")
+            .join(alice.id.to_string())
+            .join("secret-outside.md"),
         OUTSIDE,
     )
     .expect("plant");
@@ -378,33 +467,51 @@ async fn path_traversal_on_every_parameter_is_refused() {
                             });
                         let mut pairs: Vec<String> = query
                             .split('&')
-                            .filter(|kv| !kv.is_empty() && !kv.starts_with(&format!("{}=", param.name)))
+                            .filter(|kv| {
+                                !kv.is_empty() && !kv.starts_with(&format!("{}=", param.name))
+                            })
                             .map(str::to_owned)
                             .collect();
                         pairs.push(format!("{}={attack}", param.name));
                         req.target = format!("{path}?{}", pairs.join("&"));
                     }
                     Loc::Header => {
-                        req.headers.retain(|(k, _)| !k.eq_ignore_ascii_case(&param.name));
-                        req.headers.push((param.name.clone(), attack.replace('%', "%25")));
+                        req.headers
+                            .retain(|(k, _)| !k.eq_ignore_ascii_case(&param.name));
+                        req.headers
+                            .push((param.name.clone(), attack.replace('%', "%25")));
                     }
                 }
                 probes += 1;
                 let resp = h.send(None, &req).await;
                 let ptype = resp.problem_type();
                 *outcomes
-                    .entry((format!("{}:{}", op.id, param.name), resp.status, ptype.clone()))
+                    .entry((
+                        format!("{}:{}", op.id, param.name),
+                        resp.status,
+                        ptype.clone(),
+                    ))
                     .or_default() += 1;
-                let what = format!("{} {}={label} → {} {ptype:?}", op.id, param.name, resp.status);
+                let what = format!(
+                    "{} {}={label} → {} {ptype:?}",
+                    op.id, param.name, resp.status
+                );
                 if resp.status >= 500 || !allowed(&op, param).contains(&resp.status) {
                     failures.push(format!("{what}: status not allowed"));
                 }
-                if ptype.as_deref() != Some("route_not_found") && resp.status != 101 {
-                    if let Some(v) = h.conformance.check(&op.id, resp.status, resp.content_type(), &resp.body) {
-                        failures.push(format!("{what}: {v}"));
-                    }
+                if ptype.as_deref() != Some("route_not_found")
+                    && resp.status != 101
+                    && let Some(v) =
+                        h.conformance
+                            .check(&op.id, resp.status, resp.content_type(), &resp.body)
+                {
+                    failures.push(format!("{what}: {v}"));
                 }
-                if resp.body.windows(OUTSIDE.len()).any(|w| w == OUTSIDE.as_bytes()) {
+                if resp
+                    .body
+                    .windows(OUTSIDE.len())
+                    .any(|w| w == OUTSIDE.as_bytes())
+                {
                     failures.push(format!("{what}: content from outside the vault"));
                 }
                 let mut leaks = Vec::new();
@@ -418,7 +525,11 @@ async fn path_traversal_on_every_parameter_is_refused() {
     }
     assert_eq!(failures, Vec::<String>::new());
     assert!(probes > 1_000, "{probes} probes");
-    assert_eq!(hardening::files_under(h.data.path(), &vaults), outside_before, "nothing written outside the vaults");
+    assert_eq!(
+        hardening::files_under(h.data.path(), &vaults),
+        outside_before,
+        "nothing written outside the vaults"
+    );
     assert_eq!(h.log(bob.id), bob_log, "the neighbour's vault is untouched");
     h.finish().await;
 }
@@ -491,16 +602,56 @@ async fn import_rejects_hostile_archives_whole() {
     let many: Vec<(&str, &[u8])> = many.iter().map(|(n, b)| (n.as_str(), *b)).collect();
     let big = vec![b'a'; 1024 * 1024 + 1];
     let cases: Vec<(&str, Vec<u8>, types::Problem)> = vec![
-        ("symlink out of the vault", symlink("notes/link.md", "/etc/passwd"), invalid_archive("the archive contains a symlink")),
-        ("symlink to a sibling", symlink("notes/link.md", "../../other/vault/notes/x.md"), invalid_archive("the archive contains a symlink")),
-        ("absolute path", zip_of(&[("notes/ok.md", ok), ("/etc/cron.d/evil.md", ok)]), invalid_archive("an entry has an absolute path")),
-        ("dot-dot first", zip_of(&[("../evil.md", ok)]), invalid_archive("an entry path contains ..")),
-        ("dot-dot inside", zip_of(&[("notes/ok.md", ok), ("notes/../../evil.md", ok)]), invalid_archive("an entry path contains ..")),
-        ("dot-dot at the end", zip_of(&[("notes/..", ok)]), invalid_archive("an entry path contains ..")),
-        ("backslash", zip_of(&[("notes\\..\\evil.md", ok)]), invalid_archive("an entry path contains a backslash")),
-        ("drive prefix", zip_of(&[("C:/evil.md", ok)]), invalid_archive("an entry path has a drive prefix")),
-        ("oversized entry", zip_of(&[("notes/big.md", &big)]), too_large("an entry is larger than 1048576 bytes")),
-        ("too many entries", zip_of(&many), too_large("the archive has more than 50 entries")),
+        (
+            "symlink out of the vault",
+            symlink("notes/link.md", "/etc/passwd"),
+            invalid_archive("the archive contains a symlink"),
+        ),
+        (
+            "symlink to a sibling",
+            symlink("notes/link.md", "../../other/vault/notes/x.md"),
+            invalid_archive("the archive contains a symlink"),
+        ),
+        (
+            "absolute path",
+            zip_of(&[("notes/ok.md", ok), ("/etc/cron.d/evil.md", ok)]),
+            invalid_archive("an entry has an absolute path"),
+        ),
+        (
+            "dot-dot first",
+            zip_of(&[("../evil.md", ok)]),
+            invalid_archive("an entry path contains .."),
+        ),
+        (
+            "dot-dot inside",
+            zip_of(&[("notes/ok.md", ok), ("notes/../../evil.md", ok)]),
+            invalid_archive("an entry path contains .."),
+        ),
+        (
+            "dot-dot at the end",
+            zip_of(&[("notes/..", ok)]),
+            invalid_archive("an entry path contains .."),
+        ),
+        (
+            "backslash",
+            zip_of(&[("notes\\..\\evil.md", ok)]),
+            invalid_archive("an entry path contains a backslash"),
+        ),
+        (
+            "drive prefix",
+            zip_of(&[("C:/evil.md", ok)]),
+            invalid_archive("an entry path has a drive prefix"),
+        ),
+        (
+            "oversized entry",
+            zip_of(&[("notes/big.md", &big)]),
+            too_large("an entry is larger than 1048576 bytes"),
+        ),
+        (
+            "too many entries",
+            zip_of(&many),
+            too_large("the archive has more than 50 entries"),
+        ),
     ];
     let log = h.log(alice.id);
     let outside = hardening::files_under(h.data.path(), &[h.dir(alice.id)]);
@@ -511,11 +662,20 @@ async fn import_rejects_hostile_archives_whole() {
         got.push((*label, problem_of(&resp)));
         assert_eq!(u32::from(resp.status), expected.status, "{label}");
     }
-    let expected: Vec<(&str, types::Problem)> = cases.iter().map(|(l, _, p)| (*l, p.clone())).collect();
+    let expected: Vec<(&str, types::Problem)> =
+        cases.iter().map(|(l, _, p)| (*l, p.clone())).collect();
     assert_eq!(got, expected);
     assert_eq!(h.log(alice.id), log, "nothing committed");
-    assert_eq!(api::get_tree(&alice.client).await.expect("tree"), tree, "nothing imported");
-    assert_eq!(hardening::files_under(h.data.path(), &[h.dir(alice.id)]), outside, "nothing written outside");
+    assert_eq!(
+        api::get_tree(&alice.client).await.expect("tree"),
+        tree,
+        "nothing imported"
+    );
+    assert_eq!(
+        hardening::files_under(h.data.path(), &[h.dir(alice.id)]),
+        outside,
+        "nothing written outside"
+    );
     for name in ["evil.md", "../evil.md", "notes/link.md"] {
         assert!(!h.dir(alice.id).join(name).exists(), "{name}");
     }
@@ -558,10 +718,28 @@ async fn import_stops_zip_bombs_while_decompressing() {
     // A high-ratio archive whose every entry is within limits (1 MiB of zeros each, ~1 KiB
     // compressed) but whose total is not.
     let ratio = lying_zip(
-        &(0..6).map(|i| (["notes/b0.md", "notes/b1.md", "notes/b2.md", "notes/b3.md", "notes/b4.md", "notes/b5.md"][i], mib)).collect::<Vec<_>>(),
+        &(0..6)
+            .map(|i| {
+                (
+                    [
+                        "notes/b0.md",
+                        "notes/b1.md",
+                        "notes/b2.md",
+                        "notes/b3.md",
+                        "notes/b4.md",
+                        "notes/b5.md",
+                    ][i],
+                    mib,
+                )
+            })
+            .collect::<Vec<_>>(),
         u32::try_from(mib).expect("fits"),
     );
-    assert!(ratio.len() < 64 * 1024, "compression ratio above 90:1 ({} bytes)", ratio.len());
+    assert!(
+        ratio.len() < 64 * 1024,
+        "compression ratio above 90:1 ({} bytes)",
+        ratio.len()
+    );
     let log = h.log(alice.id);
     let liar_resp = import(&h, &alice, liar).await;
     let ratio_resp = import(&h, &alice, ratio).await;
@@ -571,7 +749,10 @@ async fn import_stops_zip_bombs_while_decompressing() {
     );
     assert_eq!(
         (ratio_resp.status, problem_of(&ratio_resp)),
-        (413, too_large("the archive is larger than 4194304 bytes uncompressed"))
+        (
+            413,
+            too_large("the archive is larger than 4194304 bytes uncompressed")
+        )
     );
     assert_eq!(h.log(alice.id), log, "nothing committed");
     h.finish().await;
@@ -607,7 +788,10 @@ fn login_body(name: &str, password: &str) -> Vec<u8> {
 #[tokio::test]
 async fn rate_limit_login() {
     let h = H::with(limits(|l| {
-        l.login_per_username = RateLimit { max: 3, window_secs: 60 };
+        l.login_per_username = RateLimit {
+            max: 3,
+            window_secs: 60,
+        };
     }))
     .await;
     let alice = h.user("alice").await; // one login spent
@@ -615,14 +799,25 @@ async fn rate_limit_login() {
         Req::new("POST", "/api/v1/auth/login").msgpack(login_body("alice", password))
     };
     let wrong = h.send(Some("login"), &attempt("wrong-password-1")).await;
-    assert_eq!((wrong.status, problem_of(&wrong).type_), (401, "invalid_credentials".to_owned()));
+    assert_eq!(
+        (wrong.status, problem_of(&wrong).type_),
+        (401, "invalid_credentials".to_owned())
+    );
     let wrong = h.send(Some("login"), &attempt("wrong-password-1")).await;
     assert_eq!(wrong.status, 401);
     // The fourth attempt in the window is refused even with the right password.
     let limited = h.send(Some("login"), &attempt(&alice.password)).await;
     assert_eq!(
-        (limited.status, limited.header("retry-after"), problem_of(&limited)),
-        (429, Some("60"), rate_limited("too many login attempts for this account"))
+        (
+            limited.status,
+            limited.header("retry-after"),
+            problem_of(&limited)
+        ),
+        (
+            429,
+            Some("60"),
+            rate_limited("too many login attempts for this account")
+        )
     );
     h.clock.advance(chrono::Duration::seconds(60));
     let ok = h.send(Some("login"), &attempt(&alice.password)).await;
@@ -641,22 +836,46 @@ fn signup_body(name: &str) -> Vec<u8> {
 #[tokio::test]
 async fn rate_limit_signup() {
     let h = H::with(limits(|l| {
-        l.signup_per_ip = RateLimit { max: 2, window_secs: 3600 };
+        l.signup_per_ip = RateLimit {
+            max: 2,
+            window_secs: 3600,
+        };
     }))
     .await;
     for name in ["carol", "dave"] {
-        let r = h.send(Some("signup"), &Req::new("POST", "/api/v1/auth/signup").msgpack(signup_body(name))).await;
+        let r = h
+            .send(
+                Some("signup"),
+                &Req::new("POST", "/api/v1/auth/signup").msgpack(signup_body(name)),
+            )
+            .await;
         assert_eq!(r.status, 201, "{name}");
     }
     let limited = h
-        .send(Some("signup"), &Req::new("POST", "/api/v1/auth/signup").msgpack(signup_body("erin")))
+        .send(
+            Some("signup"),
+            &Req::new("POST", "/api/v1/auth/signup").msgpack(signup_body("erin")),
+        )
         .await;
     assert_eq!(
-        (limited.status, limited.header("retry-after"), problem_of(&limited)),
-        (429, Some("3600"), rate_limited("too many sign-ups from this address"))
+        (
+            limited.status,
+            limited.header("retry-after"),
+            problem_of(&limited)
+        ),
+        (
+            429,
+            Some("3600"),
+            rate_limited("too many sign-ups from this address")
+        )
     );
     h.clock.advance(chrono::Duration::seconds(3600));
-    let r = h.send(Some("signup"), &Req::new("POST", "/api/v1/auth/signup").msgpack(signup_body("erin"))).await;
+    let r = h
+        .send(
+            Some("signup"),
+            &Req::new("POST", "/api/v1/auth/signup").msgpack(signup_body("erin")),
+        )
+        .await;
     assert_eq!(r.status, 201);
     h.finish().await;
 }
@@ -670,26 +889,54 @@ fn capture_req(u: &User, text: &str) -> Req {
 #[tokio::test]
 async fn rate_limit_capture() {
     let h = H::with(limits(|l| {
-        l.capture_per_user = RateLimit { max: 3, window_secs: 60 };
+        l.capture_per_user = RateLimit {
+            max: 3,
+            window_secs: 60,
+        };
     }))
     .await;
     let alice = h.user("alice").await;
     let bob = h.user("bob").await;
     for i in 0..3 {
-        let r = h.send(Some("capture"), &capture_req(&alice, &format!("thought {i}"))).await;
+        let r = h
+            .send(
+                Some("capture"),
+                &capture_req(&alice, &format!("thought {i}")),
+            )
+            .await;
         assert_eq!(r.status, 201);
     }
     let log = h.log(alice.id);
-    let limited = h.send(Some("capture"), &capture_req(&alice, "one too many")).await;
+    let limited = h
+        .send(Some("capture"), &capture_req(&alice, "one too many"))
+        .await;
     assert_eq!(
-        (limited.status, limited.header("retry-after"), problem_of(&limited)),
-        (429, Some("60"), rate_limited("too many captures; try again later"))
+        (
+            limited.status,
+            limited.header("retry-after"),
+            problem_of(&limited)
+        ),
+        (
+            429,
+            Some("60"),
+            rate_limited("too many captures; try again later")
+        )
     );
     assert_eq!(h.log(alice.id), log, "a refused capture writes nothing");
     // Per user: another user is not affected.
-    assert_eq!(h.send(Some("capture"), &capture_req(&bob, "bob's thought")).await.status, 201);
+    assert_eq!(
+        h.send(Some("capture"), &capture_req(&bob, "bob's thought"))
+            .await
+            .status,
+        201
+    );
     h.clock.advance(chrono::Duration::seconds(60));
-    assert_eq!(h.send(Some("capture"), &capture_req(&alice, "later")).await.status, 201);
+    assert_eq!(
+        h.send(Some("capture"), &capture_req(&alice, "later"))
+            .await
+            .status,
+        201
+    );
     h.finish().await;
 }
 
@@ -702,22 +949,43 @@ fn ask_req(u: &User, question: &str) -> Req {
 #[tokio::test]
 async fn rate_limit_ask() {
     let h = H::with(limits(|l| {
-        l.ask_per_user = RateLimit { max: 2, window_secs: 60 };
+        l.ask_per_user = RateLimit {
+            max: 2,
+            window_secs: 60,
+        };
     }))
     .await;
     let alice = h.user("alice").await;
     let bob = h.user("bob").await;
     for q in ["first?", "second?"] {
-        assert_eq!(h.send(Some("ask"), &ask_req(&alice, q)).await.status, 200, "{q}");
+        assert_eq!(
+            h.send(Some("ask"), &ask_req(&alice, q)).await.status,
+            200,
+            "{q}"
+        );
     }
     let limited = h.send(Some("ask"), &ask_req(&alice, "third?")).await;
     assert_eq!(
-        (limited.status, limited.header("retry-after"), problem_of(&limited)),
-        (429, Some("60"), rate_limited("too many questions; try again later"))
+        (
+            limited.status,
+            limited.header("retry-after"),
+            problem_of(&limited)
+        ),
+        (
+            429,
+            Some("60"),
+            rate_limited("too many questions; try again later")
+        )
     );
-    assert_eq!(h.send(Some("ask"), &ask_req(&bob, "bob?")).await.status, 200);
+    assert_eq!(
+        h.send(Some("ask"), &ask_req(&bob, "bob?")).await.status,
+        200
+    );
     h.clock.advance(chrono::Duration::seconds(60));
-    assert_eq!(h.send(Some("ask"), &ask_req(&alice, "later?")).await.status, 200);
+    assert_eq!(
+        h.send(Some("ask"), &ask_req(&alice, "later?")).await.status,
+        200
+    );
     h.finish().await;
 }
 
@@ -814,15 +1082,25 @@ async fn content_never_reaches_logs_or_error_messages() {
         assert!(resp.status < 500, "{op} → {}", resp.status);
         if resp.is_problem() {
             let p = problem_of(&resp);
-            let mut texts = vec![p.title.clone(), p.detail.clone().unwrap_or_default(), p.type_.clone()];
-            texts.extend(p.errors.iter().map(|e| format!("{} {:?} {}", e.code, e.pointer, e.message)));
+            let mut texts = vec![
+                p.title.clone(),
+                p.detail.clone().unwrap_or_default(),
+                p.type_.clone(),
+            ];
+            texts.extend(
+                p.errors
+                    .iter()
+                    .map(|e| format!("{} {:?} {}", e.code, e.pointer, e.message)),
+            );
             if texts.iter().any(|t| t.contains(S)) && !KNOWN_ECHOES.contains(&op) {
                 problems.push(format!("{op} {}: {texts:?}", resp.status));
             }
         }
     }
     // Updates with a stale version, a note read, then the background work of the flow.
-    let note = api::get_note_by_path(&alice.client, &format!("notes/{S}.md")).await.expect("note");
+    let note = api::get_note_by_path(&alice.client, &format!("notes/{S}.md"))
+        .await
+        .expect("note");
     let stale = h
         .send(
             Some("update_note"),
@@ -836,10 +1114,20 @@ async fn content_never_reaches_logs_or_error_messages() {
     let p = problem_of(&stale);
     assert!(!p.detail.unwrap_or_default().contains(S));
     h.embed_all().await;
-    assert_eq!(problems, Vec::<String>::new(), "error messages carry no content");
+    assert_eq!(
+        problems,
+        Vec::<String>::new(),
+        "error messages carry no content"
+    );
     let text = String::from_utf8_lossy(&logs.lock().expect("lock")).into_owned();
-    assert!(text.contains("\"message\":\"request\""), "the request logger ran");
-    let hits: Vec<&str> = text.lines().filter(|l| l.contains(S) || l.contains(&S.to_lowercase())).collect();
+    assert!(
+        text.contains("\"message\":\"request\""),
+        "the request logger ran"
+    );
+    let hits: Vec<&str> = text
+        .lines()
+        .filter(|l| l.contains(S) || l.contains(&S.to_lowercase()))
+        .collect();
     assert_eq!(hits, Vec::<&str>::new(), "no log line carries content");
     h.finish().await;
 }
@@ -859,8 +1147,12 @@ async fn startup_refuses_secret_files_open_to_others() {
     let role_url = |role: &str| {
         let mut url = url::Url::parse(&strata_testkit::admin_url()).expect("admin url");
         url.set_username(role).expect("username");
-        url.set_password(std::env::var(strata_testkit::ROLE_PASSWORD_ENV).ok().as_deref())
-            .expect("password");
+        url.set_password(
+            std::env::var(strata_testkit::ROLE_PASSWORD_ENV)
+                .ok()
+                .as_deref(),
+        )
+        .expect("password");
         url.set_path(db.name());
         url.to_string()
     };
@@ -883,22 +1175,54 @@ async fn startup_refuses_secret_files_open_to_others() {
     config.database.accounts_url = role_url("strata_accounts");
     config.database.max_connections = 2;
     config.ai.anthropic_api.api_key_file = Some(secret("anthropic.key", "sk-ant-SECRETVALUE"));
-    config.push.fcm_service_account_path = Some(secret("fcm.json", "{\"private_key\":\"SECRETVALUE\"}"));
+    config.push.fcm_service_account_path =
+        Some(secret("fcm.json", "{\"private_key\":\"SECRETVALUE\"}"));
     config.push.apns_key_path = Some(secret("apns.p8", "SECRETVALUE"));
     config.push.wns_credentials_path = Some(secret("wns.json", "SECRETVALUE"));
     let files = stratad::checks::secret_files(&config);
     assert_eq!(files.len(), 5, "every configured secret is checked");
-    assert_eq!(stratad::serve::prepare(&config).await.map(|_| ()), Ok(()), "0600 everywhere starts");
+    assert_eq!(
+        stratad::serve::prepare(&config).await.map(|_| ()),
+        Ok(()),
+        "0600 everywhere starts"
+    );
     for file in &files {
-        for mode in [0o640, 0o604, 0o620, 0o602, 0o660, 0o644, 0o666, 0o700 | 0o040] {
+        for mode in [
+            0o640,
+            0o604,
+            0o620,
+            0o602,
+            0o660,
+            0o644,
+            0o666,
+            0o700 | 0o040,
+        ] {
             std::fs::set_permissions(file, std::fs::Permissions::from_mode(mode)).expect("chmod");
-            let err = stratad::serve::prepare(&config).await.map(|_| ()).expect_err("refused");
-            assert_eq!(err, StartupError::SecretPermissions { path: file.clone(), mode }, "{} {mode:o}", file.display());
-            assert!(!err.to_string().contains("SECRETVALUE"), "the message never carries the secret");
+            let err = stratad::serve::prepare(&config)
+                .await
+                .map(|_| ())
+                .expect_err("refused");
+            assert_eq!(
+                err,
+                StartupError::SecretPermissions {
+                    path: file.clone(),
+                    mode
+                },
+                "{} {mode:o}",
+                file.display()
+            );
+            assert!(
+                !err.to_string().contains("SECRETVALUE"),
+                "the message never carries the secret"
+            );
         }
         for mode in [0o400, 0o600] {
             std::fs::set_permissions(file, std::fs::Permissions::from_mode(mode)).expect("chmod");
-            assert_eq!(stratad::serve::prepare(&config).await.map(|_| ()), Ok(()), "{mode:o}");
+            assert_eq!(
+                stratad::serve::prepare(&config).await.map(|_| ()),
+                Ok(()),
+                "{mode:o}"
+            );
         }
     }
     // A directory, a missing file, and a symlink to an open file are refused too.
@@ -908,9 +1232,25 @@ async fn startup_refuses_secret_files_open_to_others() {
     let link = dir.path().join("link.key");
     std::os::unix::fs::symlink(&open_target, &link).expect("symlink");
     let cases = [
-        (dir.path().to_path_buf(), StartupError::NotAFile { path: dir.path().to_path_buf() }),
-        (dir.path().join("absent.key"), StartupError::MissingSecret { path: dir.path().join("absent.key") }),
-        (link.clone(), StartupError::SecretPermissions { path: link.clone(), mode: 0o644 }),
+        (
+            dir.path().to_path_buf(),
+            StartupError::NotAFile {
+                path: dir.path().to_path_buf(),
+            },
+        ),
+        (
+            dir.path().join("absent.key"),
+            StartupError::MissingSecret {
+                path: dir.path().join("absent.key"),
+            },
+        ),
+        (
+            link.clone(),
+            StartupError::SecretPermissions {
+                path: link.clone(),
+                mode: 0o644,
+            },
+        ),
     ];
     for (path, expected) in cases {
         let mut c = config.clone();
@@ -947,14 +1287,49 @@ async fn msgpack_decode_limits_hold_on_every_body() {
     let attacks: Vec<(&str, Vec<u8>, u16, &str)> = vec![
         ("depth bomb (arrays)", depth_bomb, 422, "depth_exceeded"),
         ("depth bomb (maps)", nested_maps, 422, "depth_exceeded"),
-        ("str32 header 4 GiB", vec![0xdb, 0xff, 0xff, 0xff, 0xff, b'a'], 422, "string_too_long"),
-        ("bin32 header 4 GiB", vec![0xc6, 0xff, 0xff, 0xff, 0xff, 0x00], 422, "binary_too_long"),
-        ("array32 header 4G", vec![0xdd, 0xff, 0xff, 0xff, 0xff, 0x01], 422, "array_too_long"),
-        ("map32 header 4G", vec![0xdf, 0xff, 0xff, 0xff, 0xff, 0xa1, b'a', 0x01], 422, "map_too_long"),
-        ("trailing bytes", vec![0x80, 0x01, 0x02], 422, "trailing_bytes"),
+        (
+            "str32 header 4 GiB",
+            vec![0xdb, 0xff, 0xff, 0xff, 0xff, b'a'],
+            422,
+            "string_too_long",
+        ),
+        (
+            "bin32 header 4 GiB",
+            vec![0xc6, 0xff, 0xff, 0xff, 0xff, 0x00],
+            422,
+            "binary_too_long",
+        ),
+        (
+            "array32 header 4G",
+            vec![0xdd, 0xff, 0xff, 0xff, 0xff, 0x01],
+            422,
+            "array_too_long",
+        ),
+        (
+            "map32 header 4G",
+            vec![0xdf, 0xff, 0xff, 0xff, 0xff, 0xa1, b'a', 0x01],
+            422,
+            "map_too_long",
+        ),
+        (
+            "trailing bytes",
+            vec![0x80, 0x01, 0x02],
+            422,
+            "trailing_bytes",
+        ),
         ("truncated", vec![0x92, 0x01], 422, "truncated"),
-        ("extension type", vec![0xd4, 0x01, 0x00], 422, "extension_not_allowed"),
-        ("invalid UTF-8", vec![0x81, 0xa1, b'a', 0xa2, 0xff, 0xfe], 422, "invalid_utf8"),
+        (
+            "extension type",
+            vec![0xd4, 0x01, 0x00],
+            422,
+            "extension_not_allowed",
+        ),
+        (
+            "invalid UTF-8",
+            vec![0x81, 0xa1, b'a', 0xa2, 0xff, 0xfe],
+            422,
+            "invalid_utf8",
+        ),
         ("reserved marker", vec![0xc1], 422, "invalid_marker"),
         ("empty body", vec![], 422, "empty_body"),
     ];
@@ -972,7 +1347,12 @@ async fn msgpack_decode_limits_hold_on_every_body() {
             req.body = Some((strata_api::wire::MSGPACK.to_owned(), bytes.clone()));
             let resp = h.send(Some(&op.id), &req).await;
             let p = resp.is_problem().then(|| problem_of(&resp));
-            got.push((op.id.clone(), *label, resp.status, p.and_then(|p| p.errors.first().map(|e| e.code.clone()))));
+            got.push((
+                op.id.clone(),
+                *label,
+                resp.status,
+                p.and_then(|p| p.errors.first().map(|e| e.code.clone())),
+            ));
             expected.push((op.id.clone(), *label, *status, Some((*code).to_owned())));
         }
         // A declared body over any route's limit (16 MiB is the largest) is refused before
@@ -981,8 +1361,18 @@ async fn msgpack_decode_limits_hold_on_every_body() {
         req.body = Some((strata_api::wire::MSGPACK.to_owned(), vec![0xc0; 16]));
         req.declared_len = Some(16 * 1024 * 1024 + 1);
         let resp = h.send(Some(&op.id), &req).await;
-        got.push((op.id.clone(), "declared 16 MiB + 1", resp.status, resp.problem_type()));
-        expected.push((op.id.clone(), "declared 16 MiB + 1", 413, Some("payload_too_large".to_owned())));
+        got.push((
+            op.id.clone(),
+            "declared 16 MiB + 1",
+            resp.status,
+            resp.problem_type(),
+        ));
+        expected.push((
+            op.id.clone(),
+            "declared 16 MiB + 1",
+            413,
+            Some("payload_too_large".to_owned()),
+        ));
         checked += 1;
     }
     let mismatches: Vec<String> = got
@@ -993,7 +1383,10 @@ async fn msgpack_decode_limits_hold_on_every_body() {
         .collect();
     assert_eq!(mismatches, Vec::<String>::new());
     assert_eq!(got.len(), expected.len());
-    assert!(checked >= 25, "{checked} operations with MessagePack bodies");
+    assert!(
+        checked >= 25,
+        "{checked} operations with MessagePack bodies"
+    );
     h.finish().await;
 }
 
@@ -1037,7 +1430,14 @@ async fn tenant_isolation_sweep_answers_404_for_foreign_ids() {
         own.token = Some(token.clone());
         let resp = h.send(Some(&op.id), &own).await;
         let mut leaks = Vec::new();
-        scan(&h, &format!("{} (own)", op.id), &own, &resp, &mut leaks, &private);
+        scan(
+            &h,
+            &format!("{} (own)", op.id),
+            &own,
+            &resp,
+            &mut leaks,
+            &private,
+        );
         failures.extend(leaks);
         // 2. Alice's IDs in every ID position (path, query, body) of Bob's request.
         let has_path_id = op.path_params().next().is_some();
@@ -1045,7 +1445,10 @@ async fn tenant_isolation_sweep_answers_404_for_foreign_ids() {
         let query_ids: Vec<&ops::Param> = op
             .params
             .iter()
-            .filter(|p| p.loc == Loc::Query && p.schema.get("format").and_then(|f| f.as_str()) == Some("ulid"))
+            .filter(|p| {
+                p.loc == Loc::Query
+                    && p.schema.get("format").and_then(|f| f.as_str()) == Some("ulid")
+            })
             .collect();
         if !has_path_id && !body_ids && query_ids.is_empty() {
             continue;
@@ -1054,12 +1457,25 @@ async fn tenant_isolation_sweep_answers_404_for_foreign_ids() {
         let mut foreign = request(&doc, op, &bob, &a);
         foreign.token = Some(token.clone());
         if !query_ids.is_empty() {
-            let path = foreign.target.split('?').next().unwrap_or_default().to_owned();
-            let q: Vec<String> = query_ids.iter().map(|p| format!("{}={}", p.name, a.id_of(field_kind(&p.name)))).collect();
+            let path = foreign
+                .target
+                .split('?')
+                .next()
+                .unwrap_or_default()
+                .to_owned();
+            let q: Vec<String> = query_ids
+                .iter()
+                .map(|p| format!("{}={}", p.name, a.id_of(field_kind(&p.name))))
+                .collect();
             foreign.target = format!("{path}?{}", q.join("&"));
         }
         let resp = h.send(Some(&op.id), &foreign).await;
-        let what = format!("{} with alice's ids → {} {:?}", op.id, resp.status, resp.problem_type());
+        let what = format!(
+            "{} with alice's ids → {} {:?}",
+            op.id,
+            resp.status,
+            resp.problem_type()
+        );
         if op.id == "put_map" {
             // A map ID is a name in the caller's own namespace: Bob creates his own map of
             // that name (Alice's is untouched: her log is compared below).
@@ -1072,7 +1488,8 @@ async fn tenant_isolation_sweep_answers_404_for_foreign_ids() {
             continue;
         }
         let expected_404 = has_path_id || body_ids || op.statuses.contains(&404);
-        if expected_404 && (resp.status, resp.problem_type().as_deref()) != (404, Some("not_found")) {
+        if expected_404 && (resp.status, resp.problem_type().as_deref()) != (404, Some("not_found"))
+        {
             failures.push(format!("{what}: expected 404 not_found"));
         }
         if !expected_404 && resp.status != 200 {
@@ -1085,13 +1502,24 @@ async fn tenant_isolation_sweep_answers_404_for_foreign_ids() {
     assert_eq!(failures, Vec::<String>::new());
     let expected_swept: BTreeSet<String> = all
         .iter()
-        .filter(|op| !op.is_admin() && (op.path_params().next().is_some() || matches!(&op.body, Some(Body::MsgPack(s)) if schema_has_ulid(&doc, s, 0))))
+        .filter(|op| {
+            !op.is_admin()
+                && (op.path_params().next().is_some()
+                    || matches!(&op.body, Some(Body::MsgPack(s)) if schema_has_ulid(&doc, s, 0)))
+        })
         .map(|op| op.id.clone())
         .collect();
-    assert!(swept.is_superset(&expected_swept), "missing {:?}", expected_swept.difference(&swept).collect::<Vec<_>>());
+    assert!(
+        swept.is_superset(&expected_swept),
+        "missing {:?}",
+        expected_swept.difference(&swept).collect::<Vec<_>>()
+    );
     assert!(swept.len() >= 40, "{} operations swept", swept.len());
     assert_eq!(h.log(alice.id), alice_log, "alice's vault untouched");
-    assert_eq!(api::export_vault(&alice.client).await.expect("export"), export_before);
+    assert_eq!(
+        api::export_vault(&alice.client).await.expect("export"),
+        export_before
+    );
     h.finish().await;
 }
 
@@ -1112,6 +1540,11 @@ fn schema_has_ulid(doc: &serde_json::Value, schema: &serde_json::Value, depth: u
         .map(|r| r.iter().filter_map(|v| v.as_str()).collect())
         .unwrap_or_default();
     props.is_some_and(|props| {
-        props.iter().any(|(k, p)| required.contains(k.as_str()) && k != "id" && k != "op_id" && schema_has_ulid(doc, p, depth + 1))
+        props.iter().any(|(k, p)| {
+            required.contains(k.as_str())
+                && k != "id"
+                && k != "op_id"
+                && schema_has_ulid(doc, p, depth + 1)
+        })
     })
 }

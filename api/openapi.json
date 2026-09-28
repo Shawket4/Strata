@@ -13294,6 +13294,16 @@
           "403": {
             "$ref": "#/components/responses/Restricted"
           },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: `note_id` names no note of the caller."
+          },
           "406": {
             "$ref": "#/components/responses/NotAcceptable"
           },

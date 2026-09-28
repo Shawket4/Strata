@@ -124,7 +124,9 @@ pub fn operations(contract: &Contract) -> Vec<Op> {
                 .unwrap_or_default();
             let body = op.pointer("/requestBody/content").and_then(|c| {
                 if let Some(m) = c.get(strata_api::wire::MSGPACK) {
-                    Some(Body::MsgPack(m.get("schema").cloned().unwrap_or(Value::Null)))
+                    Some(Body::MsgPack(
+                        m.get("schema").cloned().unwrap_or(Value::Null),
+                    ))
                 } else if c.get(strata_api::wire::ZIP).is_some() {
                     Some(Body::Zip)
                 } else {
