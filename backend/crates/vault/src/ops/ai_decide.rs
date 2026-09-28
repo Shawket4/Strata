@@ -401,10 +401,7 @@ impl Core {
                 }
                 t
             }
-            None => match (
-                p.proposed.map(NoteId::from_ulid),
-                p.candidates.as_slice(),
-            ) {
+            None => match (p.proposed.map(NoteId::from_ulid), p.candidates.as_slice()) {
                 (Some(t), _) if self.live_kind(t) == Some(kind) => t,
                 (_, [only]) if self.live_kind(NoteId::from_ulid(*only)) == Some(kind) => {
                     NoteId::from_ulid(*only)
@@ -466,10 +463,9 @@ impl Core {
         set: &mut AiChangeSet,
         create: bool,
     ) -> Result<NoteId> {
-        if let Some(id) = t
-            .id
-            .map(NoteId::from_ulid)
-            .filter(|i| self.live_kind(*i) == Some(kind))
+        if let Some(id) =
+            t.id.map(NoteId::from_ulid)
+                .filter(|i| self.live_kind(*i) == Some(kind))
         {
             return Ok(id);
         }

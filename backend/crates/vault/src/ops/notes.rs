@@ -3,9 +3,9 @@
 
 use std::collections::BTreeSet;
 
+use domain::MatchLevel as WireLevel;
 use strata_common::{NoteId, SuggestionId};
 use strata_index::repo::suggestions;
-use domain::MatchLevel as WireLevel;
 use strata_index::{ScopedTx, UserScope};
 use sync_model::suggestions::{DuplicateItem, DuplicatePayload, kinds};
 use vault_format::canvas::Canvas;
@@ -758,8 +758,15 @@ impl Core {
             suggestion = Some(sid);
             extra = Some(Box::new(move |tx: &mut ScopedTx| {
                 Box::pin(async move {
-                    suggestions::create_suggestion(tx, sid, Some(id), kinds::DUPLICATE, &payload, now)
-                        .await?;
+                    suggestions::create_suggestion(
+                        tx,
+                        sid,
+                        Some(id),
+                        kinds::DUPLICATE,
+                        &payload,
+                        now,
+                    )
+                    .await?;
                     let sid_text = sid.to_string();
                     strata_index::repo::sync::append_change(
                         tx,

@@ -625,8 +625,11 @@ impl JobHandler for ReplyHandler {
                 if s.kind == decide::KIND_ENTITY_LINK
                     && let Ok(p) = rmp_serde::from_slice::<EntityLinkPayload>(&s.payload)
                 {
-                    set.rejected_mentions
-                        .push((NoteId::from_ulid(p.source_note), p.mention.clone(), p.kind.clone()));
+                    set.rejected_mentions.push((
+                        NoteId::from_ulid(p.source_note),
+                        p.mention.clone(),
+                        p.kind.clone(),
+                    ));
                 }
                 supersede(&mut set, SuggestionDecision::Rejected);
                 set.ai_replies.push((

@@ -103,7 +103,10 @@ mod tests {
             near.into_iter().collect::<Vec<_>>(),
             DedupeKind::ALL
                 .iter()
-                .map(|k| (k.as_str().to_owned(), DedupeThresholds::default_for(*k).near))
+                .map(|k| (
+                    k.as_str().to_owned(),
+                    DedupeThresholds::default_for(*k).near
+                ))
                 .collect::<BTreeMap<_, _>>()
                 .into_iter()
                 .collect::<Vec<_>>()

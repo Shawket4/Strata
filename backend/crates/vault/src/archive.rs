@@ -180,6 +180,25 @@ fn read_archive(bytes: &[u8], limits: ImportLimits) -> Result<(Vec<Entry>, Vec<S
     Ok((entries, skipped))
 }
 
+/// Archive entries split into notes (live or trashed `.md` notes) and everything else.
+type Files = Vec<(String, Vec<u8>)>;
+
+fn split_notes(entries: Vec<Entry>) -> (Files, Files) {
+    entries
+        .into_iter()
+        .fold((Vec::new(), Vec::new()), |(mut notes, mut others), e| {
+            let is_note = e.path.ends_with(".md")
+                && (paths::is_note(&e.path)
+                    || paths::untrash_path(&e.path).is_some_and(paths::is_note));
+            if is_note {
+                notes.push((e.path, e.bytes));
+            } else {
+                others.push((e.path, e.bytes));
+            }
+            (notes, others)
+        })
+}
+
 impl Core {
     /// Imports a zip archive (see the module docs).
     pub async fn import(&mut self, scope: UserScope, bytes: Vec<u8>) -> Result<ImportReport> {
@@ -190,18 +209,7 @@ impl Core {
         let mut used: BTreeSet<NoteId> = BTreeSet::new();
         let mut kept_ids: BTreeSet<NoteId> = BTreeSet::new();
         let mut assigned = Vec::new();
-        let mut notes: Vec<(String, Vec<u8>)> = Vec::new();
-        let mut others: Vec<(String, Vec<u8>)> = Vec::new();
-        for e in entries {
-            let is_note = e.path.ends_with(".md")
-                && (paths::is_note(&e.path)
-                    || paths::untrash_path(&e.path).is_some_and(paths::is_note));
-            if is_note {
-                notes.push((e.path, e.bytes));
-            } else {
-                others.push((e.path, e.bytes));
-            }
-        }
+        let (notes, others) = split_notes(entries);
         let mut changes: Vec<(String, Option<Vec<u8>>)> = Vec::new();
         let mut seen_tasks: BTreeSet<String> = BTreeSet::new();
         for (path, bytes) in notes {

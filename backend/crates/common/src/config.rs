@@ -963,11 +963,13 @@ mod tests {
     #[allow(clippy::cast_possible_truncation)] // the domain thresholds are f32
     fn default_dedupe_thresholds_equal_the_calibrated_domain_defaults() {
         let config = Config::default();
-        let kinds: Vec<&str> = domain::DedupeKind::ALL
-            .iter()
-            .map(|k| k.as_str())
+        let kinds: Vec<&str> = domain::DedupeKind::ALL.iter().map(|k| k.as_str()).collect();
+        let mut configured: Vec<&str> = config
+            .thresholds
+            .dedupe
+            .keys()
+            .map(String::as_str)
             .collect();
-        let mut configured: Vec<&str> = config.thresholds.dedupe.keys().map(String::as_str).collect();
         configured.sort_unstable();
         let mut sorted = kinds.clone();
         sorted.sort_unstable();

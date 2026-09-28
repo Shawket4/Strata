@@ -40,9 +40,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use dedupe::DuplicateCandidate;
 use domain::{DedupeKind, MatchLevel, NoteKind};
-use strata_common::{
-    Clock, DeviceId, IdGenerator, NoteId, OpId, ReplyId, SuggestionId, UserId,
-};
+use strata_common::{Clock, DeviceId, IdGenerator, NoteId, OpId, ReplyId, SuggestionId, UserId};
 use strata_index::repo::{devices, sync as log};
 use strata_index::types::ChangeOp;
 use strata_index::{AppDb, UserScope};
@@ -840,12 +838,8 @@ async fn decide(
     match rc
         .armed(
             applied_plain(),
-            ctx.vault.decide_suggestion_with(
-                ctx.scope,
-                SuggestionId::from_ulid(id),
-                accept,
-                edits,
-            ),
+            ctx.vault
+                .decide_suggestion_with(ctx.scope, SuggestionId::from_ulid(id), accept, edits),
         )
         .await
     {

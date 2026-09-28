@@ -33,7 +33,9 @@ void main() {
       testWidgets('approvals and users $v', (tester) async {
         final l10n = lookupAdminLocalizations(v.locale);
         final fake = await _pump(tester, v, AdminFixtures.view);
-        expect(fake.calls, [const CoreCall('loadAdminUsers')]);
+        expect(fake.calls, [
+          const CoreCall('loadAdminUsers', {'query': ''}),
+        ]);
         expect(
           find.textContaining(l10n.pendingTitle, findRichText: true),
           findsOneWidget,

@@ -377,6 +377,7 @@ async fn hint_rows(
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)] // one scenario: build the vault, reindex twice
 async fn reindex_rebuilds_disambiguation_hints_from_entity_sidecars() {
     use strata_common::{DecisionId, HintId, NoteId};
 

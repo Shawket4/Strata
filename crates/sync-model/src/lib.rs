@@ -36,6 +36,6 @@ pub use merge::{
     MergeOutcome, ResolveError, UpdateDecision, decide_update, merge, merge_text_only,
 };
 pub use ops::{Op, OpError, OpKind, SyncOp};
-pub use suggestions::{PayloadError, SuggestionPayload};
 pub use results::{ConflictResolution, OpOutcome, OpResult, Problem, PushRequest, PushResponse};
+pub use suggestions::{PayloadError, SuggestionPayload};
 pub use version::{InvalidVersion, Version};

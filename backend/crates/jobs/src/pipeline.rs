@@ -29,11 +29,10 @@ use strata_vault::ops::ai_apply::{
 use strata_vault::ops::ai_decide::{self as decide, CustodyDetail};
 use strata_vault::ops::relations::AiEdge;
 use strata_vault::ops::suggestions::SuggestionView;
-use text_normalize::{normalize_for_search, transliteration_key, trigram_similarity};
 use sync_model::suggestions::{
-    CustodyPayload, CustodyTarget, DuplicateItem, DuplicatesPayload, EntityLinkPayload,
-    TaskPayload,
+    CustodyPayload, CustodyTarget, DuplicateItem, DuplicatesPayload, EntityLinkPayload, TaskPayload,
 };
+use text_normalize::{normalize_for_search, transliteration_key, trigram_similarity};
 use vault_format::custody::CustodyEventType;
 use vault_format::sidecar::{By, NoteSidecar};
 use vault_format::{Document, RelationKey};

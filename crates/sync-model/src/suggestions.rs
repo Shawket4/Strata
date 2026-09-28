@@ -289,6 +289,7 @@ pub struct ConflictPayload {
 /// untagged struct ([`Self::to_bytes`], [`Self::decode`]).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[allow(clippy::large_enum_variant)] // decoded one at a time for display; plain variants match simply
 pub enum SuggestionPayload {
     /// `duplicate`.
     Duplicate(DuplicatePayload),

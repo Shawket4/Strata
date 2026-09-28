@@ -739,8 +739,7 @@ pub(crate) async fn rebuild_hints(
             continue;
         };
         for value in list {
-            let Ok(h) =
-                serde_json::from_value::<crate::ops::ai_apply::SidecarHint>(value.clone())
+            let Ok(h) = serde_json::from_value::<crate::ops::ai_apply::SidecarHint>(value.clone())
             else {
                 continue;
             };

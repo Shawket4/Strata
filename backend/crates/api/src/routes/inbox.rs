@@ -298,12 +298,16 @@ fn candidate_of(c: shared::DuplicateItem) -> DuplicateCandidate {
     }
 }
 
-fn target_of(t: shared::CustodyTarget) -> Box<CustodyTargetDto> {
-    Box::new(CustodyTargetDto {
+fn target_of(t: shared::CustodyTarget) -> CustodyTargetDto {
+    CustodyTargetDto {
         mention: t.mention,
         id: t.id,
         candidates: t.candidates,
-    })
+    }
+}
+
+fn boxed_target(t: shared::CustodyTarget) -> Box<CustodyTargetDto> {
+    Box::new(target_of(t))
 }
 
 impl SuggestionPayload {
@@ -355,11 +359,11 @@ impl SuggestionPayload {
                 block_id: p.block_id,
                 event: p.event,
                 date: p.date,
-                document: target_of(p.document),
-                place: p.place.map(target_of),
+                document: boxed_target(p.document),
+                place: p.place.map(boxed_target),
                 place_part_of: p.place_part_of,
-                person: p.person.map(target_of),
-                counterparty: p.counterparty.map(target_of),
+                person: p.person.map(boxed_target),
+                counterparty: p.counterparty.map(boxed_target),
                 confidence: p.confidence,
                 reason: p.reason,
                 quote: p.quote,
