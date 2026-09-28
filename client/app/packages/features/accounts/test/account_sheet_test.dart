@@ -108,6 +108,7 @@ void main() {
         // "Manage users" and moves below it; otherwise they share a line.
         final label = tester.getRect(find.text(l10n.adminUsers));
         final count = tester.getRect(find.text(l10n.pendingCount(count: 2)));
+        debugPrint("DBG $label $count");
         final stacked = v.sizeClass == SizeClass.compact && v.textScale == 2;
         expect(count.top >= label.bottom, stacked);
         expect(count.center.dy < label.bottom, !stacked);

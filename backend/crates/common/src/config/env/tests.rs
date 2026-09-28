@@ -95,7 +95,7 @@ fn every_value_changed() -> Config {
     c.push.apns_key_path = Some("/etc/strata/apns.p8".into());
     c.push.apns_key_id = Some("ABC123".into());
     c.push.apns_team_id = Some("1234567890".into());
-    c.push.apns_topic = Some("app.strata".into());
+    c.push.apns_topic = Some("com.shawket.strata".into());
     c.push.wns_credentials_path = Some("/etc/strata/wns.json".into());
     let auth = &mut c.auth;
     auth.signing_key_file = "/k.pem".into();

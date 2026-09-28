@@ -287,12 +287,16 @@ In the app, sign in with server `https://strata.example.com`.
 
 Then check from your machine: `curl -sI https://strata.example.com/api/v1/health` returns
 `200`, and set the GitHub repository variable `STRATA_DEFAULT_SERVER` to
-`https://strata.example.com` (Settings → Secrets and variables → Actions → Variables) before the
-next CI build.
+`https://strata.example.com` (Settings → Secrets and variables → Actions → **Variables**, a
+variable, not a secret), then re-run the Build workflow. CI passes it to the apps with
+`--dart-define=STRATA_DEFAULT_SERVER=…`: sign-in and sign-up start with it filled in (still
+editable). Unset, the server field starts empty; a value that is not `https://…` fails the
+build (RUNBOOK §13).
 
-**Before the domain exists:** test from the macOS app through an SSH tunnel
-(`ssh -N -L 8080:127.0.0.1:8080 you@vps`, server `http://127.0.0.1:8080`). Android blocks
-plain HTTP, so it needs the domain and HTTPS.
+**Before the domain exists:** the app refuses plain `http://` addresses except this device
+(`localhost`, `127.0.0.1`, `[::1]`), so `http://187.124.33.153` does not work. Test from the
+macOS app through an SSH tunnel (`ssh -N -L 8080:127.0.0.1:8080 you@vps`, server
+`http://127.0.0.1:8080`). Android blocks plain HTTP as well, so it needs the domain and HTTPS.
 
 ## 10. Upgrades
 

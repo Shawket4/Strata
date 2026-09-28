@@ -485,6 +485,29 @@ limit is reached, or AI is off for the account.
 use the workflow run number as the build number (Android `versionCode`), so a newer CI build
 installs over an older one.
 
+**App ID.** `com.shawket.strata` on every platform: Android `applicationId`/`namespace`
+(`MainActivity` in `com/shawket/strata`), the iOS and macOS bundle identifier (test targets
+`com.shawket.strata.RunnerTests`), the Linux `APPLICATION_ID` (desktop entry
+`com.shawket.strata.desktop`, which also names the data directory
+`~/.local/share/com.shawket.strata`) and the Windows notification app user model ID. The
+workflow checks the APK package name and the macOS bundle identifier;
+`brand_assets_test.dart` checks the platform files. APNs pushes use it as the topic
+(`STRATA_PUSH__APNS_TOPIC=com.shawket.strata`).
+
+**Default server address.** The Android and macOS builds bake a default server into the app
+with `--dart-define=STRATA_DEFAULT_SERVER=<url>`, read from the repository **variable**
+`STRATA_DEFAULT_SERVER` (Settings → Secrets and variables → Actions → **Variables** → New
+repository variable; not a secret). Set it to the HTTPS address of the server once the domain
+and TLS work (§6, `deploy/VPS_SETUP.md`), e.g. `https://strata.example.com`, then re-run the
+Build workflow. The value goes to the Rust core at startup (`CoreConfig.default_server_url`);
+sign-in and sign-up prefill the server field with it until an address has been used on the
+device, and the field stays editable. Unset, the field starts empty (the workflow warns); a
+value that is not `https://…` fails the build. The core refuses plain `http://` server
+addresses except this device (`localhost`, `127.0.0.1`, `[::1]`), which stays allowed for
+testing through an SSH tunnel (`ssh -L 8080:127.0.0.1:8080 <vps>`, then
+`http://127.0.0.1:8080`). For a local build use the same flag, e.g.
+`flutter build linux --release --dart-define=STRATA_DEFAULT_SERVER=https://strata.example.com`.
+
 **stratad.** Built on Ubuntu 22.04 (glibc 2.35) so it runs on Debian 12+, Ubuntu 22.04+ and
 other glibc ≥ 2.35 systems. It is deliberately not a static musl build: `ort` loads ONNX
 Runtime at run time with `dlopen`. Deploy it as in §6 ("Manual deploy / upgrade") or, the first
