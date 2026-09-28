@@ -114,7 +114,10 @@ pub fn relative_date(text: &str, created: NaiveDate) -> Option<NaiveDate> {
         let Some(pos) = find_phrase(&hay, name) else {
             continue;
         };
-        let before = pos.checked_sub(1).and_then(|p| hay.get(p)).map(String::as_str);
+        let before = pos
+            .checked_sub(1)
+            .and_then(|p| hay.get(p))
+            .map(String::as_str);
         let after = hay.get(pos + 1).map(String::as_str);
         let next = matches!(before, Some("next" | "this" | "on" | "coming"))
             || matches!(after, Some("الجاي" | "الجايه" | "القادم"))
@@ -170,16 +173,43 @@ mod tests {
     #[test]
     fn relative_phrases_resolve_against_created() {
         let created = d("2026-09-27"); // a Sunday
-        assert_eq!(relative_date("هبعت العقد لشادي بكرة", created), Some(d("2026-09-28")));
-        assert_eq!(relative_date("هبعت العقد بكره", created), Some(d("2026-09-28")));
-        assert_eq!(relative_date("send it tomorrow", created), Some(d("2026-09-28")));
-        assert_eq!(relative_date("met him yesterday", created), Some(d("2026-09-26")));
-        assert_eq!(relative_date("امبارح قابلته", created), Some(d("2026-09-26")));
-        assert_eq!(relative_date("the day after tomorrow", created), Some(d("2026-09-29")));
+        assert_eq!(
+            relative_date("هبعت العقد لشادي بكرة", created),
+            Some(d("2026-09-28"))
+        );
+        assert_eq!(
+            relative_date("هبعت العقد بكره", created),
+            Some(d("2026-09-28"))
+        );
+        assert_eq!(
+            relative_date("send it tomorrow", created),
+            Some(d("2026-09-28"))
+        );
+        assert_eq!(
+            relative_date("met him yesterday", created),
+            Some(d("2026-09-26"))
+        );
+        assert_eq!(
+            relative_date("امبارح قابلته", created),
+            Some(d("2026-09-26"))
+        );
+        assert_eq!(
+            relative_date("the day after tomorrow", created),
+            Some(d("2026-09-29"))
+        );
         assert_eq!(relative_date("بعد بكرة", created), Some(d("2026-09-29")));
-        assert_eq!(relative_date("call next Sunday", created), Some(d("2026-10-04")));
-        assert_eq!(relative_date("call on Thursday", created), Some(d("2026-10-01")));
-        assert_eq!(relative_date("الخميس الجاي", created), Some(d("2026-10-01")));
+        assert_eq!(
+            relative_date("call next Sunday", created),
+            Some(d("2026-10-04"))
+        );
+        assert_eq!(
+            relative_date("call on Thursday", created),
+            Some(d("2026-10-01"))
+        );
+        assert_eq!(
+            relative_date("الخميس الجاي", created),
+            Some(d("2026-10-01"))
+        );
         assert_eq!(relative_date("Sunday meetings are long", created), None);
         assert_eq!(relative_date("no date here", created), None);
     }
@@ -187,21 +217,39 @@ mod tests {
     #[test]
     fn explicit_dates_win_and_the_model_date_is_the_fallback() {
         let created = d("2026-09-27");
-        assert_eq!(explicit_date("due 2026-10-01, not 12026-10-011"), Some(d("2026-10-01")));
+        assert_eq!(
+            explicit_date("due 2026-10-01, not 12026-10-011"),
+            Some(d("2026-10-01"))
+        );
         assert_eq!(
             resolve("on 2026-10-05 tomorrow", created),
             Some((d("2026-10-05"), DateSource::Explicit))
         );
         assert_eq!(
-            event_date("gave it to Shady", created, Some("2026-09-01"), Some(DateSource::Created)),
+            event_date(
+                "gave it to Shady",
+                created,
+                Some("2026-09-01"),
+                Some(DateSource::Created)
+            ),
             created
         );
         assert_eq!(
-            event_date("gave it to Shady", created, Some("2026-09-01"), Some(DateSource::Relative)),
+            event_date(
+                "gave it to Shady",
+                created,
+                Some("2026-09-01"),
+                Some(DateSource::Relative)
+            ),
             d("2026-09-01")
         );
         assert_eq!(
-            event_date("بكرة", created, Some("2026-09-27"), Some(DateSource::Created)),
+            event_date(
+                "بكرة",
+                created,
+                Some("2026-09-27"),
+                Some(DateSource::Created)
+            ),
             d("2026-09-28")
         );
         assert_eq!(event_date("x", created, Some("bad"), None), created);

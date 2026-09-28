@@ -172,25 +172,33 @@ pub fn validate(out: &EntityInsights, notes: &[SourceNote]) -> Validated {
         rejected: Rejections::default(),
         cited_generated: BTreeSet::new(),
     };
-    let cites = |citations: &[Citation], v: &mut Validated| -> Vec<(Cite, bool, String, NaiveDate)> {
-        let mut out = Vec::new();
-        for c in citations {
-            let Some(n) = by_id.get(&c.note_id) else { continue };
-            let Some(text) = n.block_text(&c.block_id) else { continue };
-            if n.generated.contains_key(&c.block_id) {
-                v.cited_generated.insert((n.id, c.block_id.clone()));
+    let cites =
+        |citations: &[Citation], v: &mut Validated| -> Vec<(Cite, bool, String, NaiveDate)> {
+            let mut out = Vec::new();
+            for c in citations {
+                let Some(n) = by_id.get(&c.note_id) else {
+                    continue;
+                };
+                let Some(text) = n.block_text(&c.block_id) else {
+                    continue;
+                };
+                if n.generated.contains_key(&c.block_id) {
+                    v.cited_generated.insert((n.id, c.block_id.clone()));
+                }
+                let one_line = is_one_line(&n.body());
+                let cite = Cite {
+                    note: n.id,
+                    block: Some(c.block_id.clone()),
+                };
+                if !out
+                    .iter()
+                    .any(|(x, _, _, _): &(Cite, bool, String, NaiveDate)| *x == cite)
+                {
+                    out.push((cite, one_line, text.to_owned(), n.created_date()));
+                }
             }
-            let one_line = is_one_line(&n.body());
-            let cite = Cite {
-                note: n.id,
-                block: Some(c.block_id.clone()),
-            };
-            if !out.iter().any(|(x, _, _, _): &(Cite, bool, String, NaiveDate)| *x == cite) {
-                out.push((cite, one_line, text.to_owned(), n.created_date()));
-            }
-        }
-        out
-    };
+            out
+        };
     let bullets = |items: &[CitedItem], v: &mut Validated| -> Vec<AiBullet> {
         let mut out = Vec::new();
         for it in items {
@@ -236,10 +244,7 @@ pub fn validate(out: &EntityInsights, notes: &[SourceNote]) -> Validated {
     }
     // Newest first; the model's order breaks ties.
     v.timeline.sort_by(|a, b| b.date.cmp(&a.date));
-    let sentences: Vec<&str> = out
-        .summary
-        .split_inclusive(['.', '!', '?', '؟'])
-        .collect();
+    let sentences: Vec<&str> = out.summary.split_inclusive(['.', '!', '?', '؟']).collect();
     let kept: Vec<&str> = sentences
         .iter()
         .copied()
@@ -311,7 +316,9 @@ impl JobHandler for InsightsHandler {
     #[allow(clippy::too_many_lines)] // one linear pass: input, skip check, call, validate, write
     async fn run(&self, ctx: JobContext) -> Result<(), JobError> {
         let Some(id) = ctx.job.note_id else {
-            return Err(JobError::Fatal("entity_insights job without an entity".into()));
+            return Err(JobError::Fatal(
+                "entity_insights job without an entity".into(),
+            ));
         };
         let params = InsightsParams::decode(&ctx.job.payload);
         let Some(entity) = SourceNote::load(&self.vault, &ctx.scope, id).await? else {

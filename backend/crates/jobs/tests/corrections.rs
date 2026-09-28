@@ -4,7 +4,14 @@
 //! commit — the wrong link removed and recorded as rejected, the right one added, hints
 //! stored — and the hint is shown to the next resolution, which then links the right person.
 //! An ambiguous correction becomes a suggestion with the model's question.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::many_single_char_names,
+    clippy::float_cmp
+)]
 
 mod common;
 mod pipeline_support;
@@ -89,7 +96,9 @@ async fn a_correction_in_words_repoints_the_decision_and_its_hint_changes_the_ne
     };
     // 1. The AI links "Ahmed" in the Acme call to Ahmed Samir.
     let text = "Call with Ahmed from Acme.";
-    let call = w.create(&sa, "notes/Acme call.md", &format!("{text}\n")).await;
+    let call = w
+        .create(&sa, "notes/Acme call.md", &format!("{text}\n"))
+        .await;
     let mut i = link_input(call, "Acme call", text);
     i.entities = people(&[]);
     push(&w, ids::LINKING, &i, ahmed_link(samir, text));
@@ -97,11 +106,20 @@ async fn a_correction_in_words_repoints_the_decision_and_its_hint_changes_the_ne
     let r = runner(&w, &["link", "file_inbox", "correct"]);
     r.run_until_idle().await;
     assert_input(&w, ids::LINKING, &i);
-    assert!(w.read(a, "notes/Acme call.md").contains("people: [\"[[Ahmed Samir]]\"]"));
+    assert!(
+        w.read(a, "notes/Acme call.md")
+            .contains("people: [\"[[Ahmed Samir]]\"]")
+    );
     assert_eq!(decisions(&w, a).await.len(), 1);
 
     // 2. The user captures the correction; filing flags it and queues the correction job.
-    let capture = w.vault.capture(&sa, CORRECTION.into()).await.expect("capture").note.id;
+    let capture = w
+        .vault
+        .capture(&sa, CORRECTION.into())
+        .await
+        .expect("capture")
+        .note
+        .id;
     let filing = FilingInput {
         note: FilingNote {
             id: capture.to_string(),
@@ -197,10 +215,16 @@ async fn a_correction_in_words_repoints_the_decision_and_its_hint_changes_the_ne
     // Repointed in one `ai: correct` commit: Samir removed and rejected, Fathy linked.
     assert_eq!(w.log(a)[0], "ai: correct inbox/2026-09-27-120000.md");
     let call_text = w.read(a, "notes/Acme call.md");
-    assert!(call_text.contains("people: [\"[[Ahmed Fathy]]\"]"), "{call_text}");
+    assert!(
+        call_text.contains("people: [\"[[Ahmed Fathy]]\"]"),
+        "{call_text}"
+    );
     let sc = pipeline_support::sidecar(&w, a, call);
     assert_eq!(
-        (sc["rejected"][0]["type"].clone(), sc["rejected"][0]["target_id"].clone()),
+        (
+            sc["rejected"][0]["type"].clone(),
+            sc["rejected"][0]["target_id"].clone()
+        ),
         (json!("people"), json!(samir.to_string()))
     );
     let d = decisions(&w, a).await;
@@ -230,7 +254,9 @@ async fn a_correction_in_words_repoints_the_decision_and_its_hint_changes_the_ne
 
     // 3. The next Acme note: the hints are in the prompt, and the model links Fathy.
     let text2 = "Ahmed from Acme sent the invoice.";
-    let next = w.create(&sa, "notes/Invoice.md", &format!("{text2}\n")).await;
+    let next = w
+        .create(&sa, "notes/Invoice.md", &format!("{text2}\n"))
+        .await;
     let mut i2 = link_input(next, "Invoice", text2);
     i2.entities = people(&[
         "Ahmed at Acme = Ahmed Fathy",
@@ -244,9 +270,16 @@ async fn a_correction_in_words_repoints_the_decision_and_its_hint_changes_the_ne
     enqueue(&w, a, "link", next).await;
     r.run_until_idle().await;
     assert_input(&w, ids::LINKING, &i2);
-    assert!(w.read(a, "notes/Invoice.md").contains("people: [\"[[Ahmed Fathy]]\"]"));
+    assert!(
+        w.read(a, "notes/Invoice.md")
+            .contains("people: [\"[[Ahmed Fathy]]\"]")
+    );
     assert_eq!(
-        suggestions(&w, a).await.into_iter().map(|s| s.0).collect::<Vec<_>>(),
+        suggestions(&w, a)
+            .await
+            .into_iter()
+            .map(|s| s.0)
+            .collect::<Vec<_>>(),
         vec!["filing".to_owned()]
     );
     w.finish().await;

@@ -75,10 +75,34 @@ mod tests {
     #[test]
     fn configured_semantic_levels_replace_the_candidate_threshold() {
         let config: BTreeMap<String, DedupeThreshold> = [
-            ("note".to_owned(), DedupeThreshold { near: 0.1, semantic: 0.8 }),
-            ("task".to_owned(), DedupeThreshold { near: 0.6, semantic: 0.99 }),
-            ("alias".to_owned(), DedupeThreshold { near: 0.8, semantic: 0.5 }),
-            ("bogus".to_owned(), DedupeThreshold { near: 0.8, semantic: 0.5 }),
+            (
+                "note".to_owned(),
+                DedupeThreshold {
+                    near: 0.1,
+                    semantic: 0.8,
+                },
+            ),
+            (
+                "task".to_owned(),
+                DedupeThreshold {
+                    near: 0.6,
+                    semantic: 0.99,
+                },
+            ),
+            (
+                "alias".to_owned(),
+                DedupeThreshold {
+                    near: 0.8,
+                    semantic: 0.5,
+                },
+            ),
+            (
+                "bogus".to_owned(),
+                DedupeThreshold {
+                    near: 0.8,
+                    semantic: 0.5,
+                },
+            ),
         ]
         .into();
         let t = dedupe_thresholds(&config);
@@ -102,11 +126,20 @@ mod tests {
                 })
             }
         );
-        assert_eq!(t.get(DedupeKind::Alias), DedupeThresholds::default_for(DedupeKind::Alias));
+        assert_eq!(
+            t.get(DedupeKind::Alias),
+            DedupeThresholds::default_for(DedupeKind::Alias)
+        );
         assert_eq!(
             t.get(DedupeKind::Person),
             DedupeThresholds::default_for(DedupeKind::Person)
         );
-        assert_eq!(AiThresholds::default(), AiThresholds { relation: 0.7, custody: 0.85 });
+        assert_eq!(
+            AiThresholds::default(),
+            AiThresholds {
+                relation: 0.7,
+                custody: 0.85
+            }
+        );
     }
 }

@@ -398,7 +398,7 @@ impl AiChangeSet {
     #[must_use]
     pub fn by_user(mut self, op: &str) -> Self {
         self.author = Author::User;
-        self.op = op.to_owned();
+        op.clone_into(&mut self.op);
         self
     }
 }
@@ -763,7 +763,6 @@ impl Core {
 
     /// Creates a new note in the overlay from `doc`, stamping id/created/updated.
     fn ov_create(
-        &self,
         ov: &mut Overlay,
         id: NoteId,
         path: &str,
@@ -848,7 +847,7 @@ impl Core {
                 fm.set_text(KnownKey::Title, c.name.trim())
                     .map_err(frontmatter_err)?;
             }
-            self.ov_create(&mut ov, c.id, &path, doc, &local_now)?;
+            Self::ov_create(&mut ov, c.id, &path, doc, &local_now)?;
         }
         for e in &set.entities {
             let folder = e.kind.default_folder();
@@ -872,7 +871,7 @@ impl Core {
                 fm.set_list(KnownKey::Aliases, aliases)
                     .map_err(frontmatter_err)?;
             }
-            self.ov_create(&mut ov, e.id, &path, doc, &local_now)?;
+            Self::ov_create(&mut ov, e.id, &path, doc, &local_now)?;
         }
         for n in &set.ai_notes {
             if !n.path.starts_with("_ai/") || !n.path.ends_with(".md") {
@@ -884,26 +883,23 @@ impl Core {
             } else {
                 format!("{}\n", n.body)
             };
-            match self.ov_path(&ov, n.id) {
-                Some(existing) => {
-                    let text = self.ov_text(&mut ov, &existing).await?;
-                    let mut doc = Document::parse(&text);
-                    doc.set_body(body);
-                    let fm = doc.frontmatter_mut();
-                    fm.set_text(KnownKey::Title, n.title.trim())
-                        .map_err(frontmatter_err)?;
-                    Self::ov_put(&mut ov, &existing, doc.render());
+            if let Some(existing) = self.ov_path(&ov, n.id) {
+                let text = self.ov_text(&mut ov, &existing).await?;
+                let mut doc = Document::parse(&text);
+                doc.set_body(body);
+                let fm = doc.frontmatter_mut();
+                fm.set_text(KnownKey::Title, n.title.trim())
+                    .map_err(frontmatter_err)?;
+                Self::ov_put(&mut ov, &existing, doc.render());
+            } else {
+                if self.state()?.notes.contains_key(&n.path) {
+                    return Err(VaultError::invalid("another note has this path"));
                 }
-                None => {
-                    if self.state()?.notes.contains_key(&n.path) {
-                        return Err(VaultError::invalid("another note has this path"));
-                    }
-                    let mut doc = Document::parse(&body);
-                    doc.frontmatter_mut()
-                        .set_text(KnownKey::Title, n.title.trim())
-                        .map_err(frontmatter_err)?;
-                    self.ov_create(&mut ov, n.id, &n.path, doc, &local_now)?;
-                }
+                let mut doc = Document::parse(&body);
+                doc.frontmatter_mut()
+                    .set_text(KnownKey::Title, n.title.trim())
+                    .map_err(frontmatter_err)?;
+                Self::ov_create(&mut ov, n.id, &n.path, doc, &local_now)?;
             }
         }
         self.ov_block_ids(&mut ov, &set.block_ids).await?;

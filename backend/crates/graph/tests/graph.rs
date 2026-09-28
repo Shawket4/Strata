@@ -13,11 +13,11 @@ mod common;
 use std::sync::Arc;
 
 use common::{Fixture, World, edge, edge_triples, fixture, node_degrees};
-use domain::{NoteKind, RelationOrigin};
+use domain::{GraphNodeKind, RelationOrigin};
 use pretty_assertions::assert_eq;
 use strata_common::NoteId;
 use strata_graph::GraphError;
-use strata_graph::assemble::{NodeView, SimilarityStatus};
+use strata_graph::assemble::{NodeId, NodeView, SimilarityStatus};
 use strata_graph::query::{EdgeFilter, GraphQuery, Lens, LocalQuery, NodeFilter};
 use strata_graph::similarity::{NoteVectorSimilarity, SimilarityConfig, SimilaritySource};
 use strata_index::UserScope;
@@ -110,10 +110,10 @@ async fn the_global_graph_has_every_live_note_and_every_typed_edge() {
     assert_eq!(
         contract,
         &NodeView {
-            id: f.contract,
+            id: f.contract.into(),
             title: "Watanya contract".into(),
-            kind: NoteKind::Document,
-            path: "documents/Watanya contract.md".into(),
+            kind: GraphNodeKind::Document,
+            path: Some("documents/Watanya contract.md".into()),
             cluster_id: None,
             degree: 3,
             lang: None,
@@ -122,7 +122,7 @@ async fn the_global_graph_has_every_live_note_and_every_typed_edge() {
             depth: None,
         }
     );
-    assert_eq!(contract.updated, strata_testkit::default_test_epoch());
+    assert_eq!(contract.updated, Some(strata_testkit::default_test_epoch()));
     assert_eq!(g.clusters, vec![]);
     assert_eq!(g.similarity, SimilarityStatus::Off);
     w.finish().await;
@@ -262,6 +262,7 @@ fn local(depth: u8, types: Option<&str>, kinds: Option<&str>) -> LocalQuery {
         edges: EdgeFilter::parse(types).expect("types"),
         nodes: NodeFilter::parse(kinds).expect("kinds"),
         include_similarity: false,
+        include_tags: false,
     }
 }
 
@@ -579,8 +580,8 @@ async fn a_graph_never_contains_another_users_notes() {
     let svc = w.service(None);
     let gb = svc.graph(&sb, &GraphQuery::default()).await.expect("bob");
     assert_eq!(
-        gb.nodes.iter().map(|n| n.id).collect::<Vec<_>>(),
-        vec![bob_note, bob_budget]
+        gb.nodes.iter().map(|n| n.id.clone()).collect::<Vec<_>>(),
+        vec![bob_note.into(), bob_budget.into()]
     );
     assert_eq!(
         edge_triples(&gb),
@@ -609,5 +610,247 @@ async fn a_graph_never_contains_another_users_notes() {
         .await
         .expect("lens");
     assert_eq!((lens.nodes.len(), lens.edges.len()), (0, 0));
+    w.finish().await;
+}
+
+#[tokio::test]
+async fn copies_of_documents_are_document_copy_of_edges() {
+    let w = World::new().await;
+    let (_, s) = w.user("alice").await;
+    let original = w
+        .create(
+            &s,
+            "documents/Contract.md",
+            "---\nkind: document\ncopy: original\n---\n",
+        )
+        .await;
+    let copy = w
+        .create(
+            &s,
+            "documents/Contract copy.md",
+            "---\nkind: document\ncopy: copy\ncopy-of: [\"[[Contract]]\"]\n---\n",
+        )
+        .await;
+    let other = w.create(&s, "notes/Other.md", "Unrelated.\n").await;
+    let svc = w.service(None);
+    let g = svc.graph(&s, &GraphQuery::default()).await.expect("graph");
+    assert_eq!(
+        edge_triples(&g),
+        vec![t("Contract copy", "Contract", "document:copy-of")]
+    );
+    let e = edge(&g, copy, original, "document:copy-of");
+    assert_eq!(
+        (e.by, e.confidence, e.reason.as_deref(), e.weight, e.notes),
+        (Some(RelationOrigin::User), None, None, None, None)
+    );
+    assert_eq!(
+        node_degrees(&g),
+        vec![d("Contract", 1), d("Contract copy", 1), d("Other", 0)]
+    );
+    // The family and the exact kind select it; other kinds leave it out.
+    for types in ["document", "document:copy-of"] {
+        let only = GraphQuery {
+            edges: EdgeFilter::parse(Some(types)).expect("types"),
+            ..GraphQuery::default()
+        };
+        let g = svc.graph(&s, &only).await.expect("filtered");
+        assert_eq!(
+            edge_triples(&g),
+            vec![t("Contract copy", "Contract", "document:copy-of")],
+            "{types}"
+        );
+    }
+    let links = GraphQuery {
+        edges: EdgeFilter::parse(Some("link,relation")).expect("types"),
+        ..GraphQuery::default()
+    };
+    assert_eq!(
+        edge_triples(&svc.graph(&s, &links).await.expect("links")),
+        vec![]
+    );
+    // A local graph follows the edge from the original to its copy.
+    let l = svc
+        .local(&s, original, &local(1, None, None))
+        .await
+        .expect("local");
+    assert_eq!(
+        depths(&l),
+        vec![
+            ("Contract".into(), Some(0)),
+            ("Contract copy".into(), Some(1))
+        ]
+    );
+    assert_eq!(
+        edge_triples(&l),
+        vec![t("Contract copy", "Contract", "document:copy-of")]
+    );
+    let _ = other;
+    w.finish().await;
+}
+
+fn with_tags(types: Option<&str>, kinds: Option<&str>) -> GraphQuery {
+    GraphQuery {
+        edges: EdgeFilter::parse(types).expect("types"),
+        nodes: NodeFilter::parse(kinds).expect("kinds"),
+        include_tags: true,
+        ..GraphQuery::default()
+    }
+}
+
+#[tokio::test]
+async fn the_tag_toggle_adds_tag_nodes_and_note_to_tag_edges() {
+    let w = World::new().await;
+    let (_, s) = w.user("alice").await;
+    let a = w
+        .create(
+            &s,
+            "notes/A.md",
+            "---\ntags: [Pricing, client]\n---\nSee [[B]].\n",
+        )
+        .await;
+    let b = w
+        .create(
+            &s,
+            "notes/B.md",
+            "Body #pricing and #project/strata and #PRICING.\n",
+        )
+        .await;
+    w.create(&s, "notes/C.md", "Nothing.\n").await;
+    let svc = w.service(None);
+
+    // Off by default.
+    let g = svc.graph(&s, &GraphQuery::default()).await.expect("graph");
+    assert_eq!(node_degrees(&g), vec![d("A", 1), d("B", 1), d("C", 0)]);
+
+    // On: one node per tag (case folded, titled by the smallest spelling), after the notes.
+    let g = svc.graph(&s, &with_tags(None, None)).await.expect("tags");
+    assert_eq!(
+        node_degrees(&g),
+        vec![
+            d("A", 3),
+            d("B", 3),
+            d("C", 0),
+            d("#client", 1),
+            d("#PRICING", 2),
+            d("#project/strata", 1),
+        ]
+    );
+    assert_eq!(
+        edge_triples(&g),
+        vec![
+            t("A", "B", "link"),
+            t("A", "#client", "tag"),
+            t("A", "#PRICING", "tag"),
+            t("B", "#PRICING", "tag"),
+            t("B", "#project/strata", "tag"),
+        ]
+    );
+    let pricing = g
+        .nodes
+        .iter()
+        .find(|n| n.id == NodeId::Tag("pricing".into()))
+        .expect("pricing tag");
+    assert_eq!(
+        pricing,
+        &NodeView {
+            id: NodeId::Tag("pricing".into()),
+            title: "PRICING".into(),
+            kind: GraphNodeKind::Tag,
+            path: None,
+            cluster_id: None,
+            degree: 2,
+            lang: None,
+            updated: None,
+            summary: None,
+            depth: None,
+        }
+    );
+    assert_eq!(pricing.id.to_string(), "tag:pricing");
+    let e = g
+        .edges
+        .iter()
+        .find(|e| e.source == b && e.target == NodeId::Tag("project/strata".into()))
+        .expect("tag edge");
+    assert_eq!(
+        (e.by, e.confidence, e.reason.as_deref(), e.weight),
+        (Some(RelationOrigin::User), None, None, None)
+    );
+
+    // Filters: `tag` names both the node kind and the edge kind.
+    let g = svc
+        .graph(&s, &with_tags(Some("tag"), Some("tag,note")))
+        .await
+        .expect("filtered");
+    assert_eq!(
+        edge_triples(&g),
+        vec![
+            t("A", "#client", "tag"),
+            t("A", "#PRICING", "tag"),
+            t("B", "#PRICING", "tag"),
+            t("B", "#project/strata", "tag"),
+        ]
+    );
+    let g = svc
+        .graph(&s, &with_tags(None, Some("note")))
+        .await
+        .expect("notes only");
+    assert_eq!(node_degrees(&g), vec![d("A", 1), d("B", 1), d("C", 0)]);
+    assert_eq!(edge_triples(&g), vec![t("A", "B", "link")]);
+
+    // Local: notes sharing a tag are two hops apart.
+    let l = svc
+        .local(
+            &s,
+            a,
+            &LocalQuery {
+                include_tags: true,
+                ..local(2, Some("tag"), None)
+            },
+        )
+        .await
+        .expect("local");
+    assert_eq!(
+        depths(&l),
+        vec![
+            ("A".into(), Some(0)),
+            ("B".into(), Some(2)),
+            ("client".into(), Some(1)),
+            ("PRICING".into(), Some(1)),
+        ]
+    );
+    assert_eq!(
+        edge_triples(&l),
+        vec![
+            t("A", "#client", "tag"),
+            t("A", "#PRICING", "tag"),
+            t("B", "#PRICING", "tag"),
+        ]
+    );
+    // Without the toggle the same query finds nothing but the focus.
+    let l = svc
+        .local(&s, a, &local(2, Some("tag"), None))
+        .await
+        .expect("local");
+    assert_eq!(depths(&l), vec![("A".into(), Some(0))]);
+
+    // A lens never has tag nodes; a trashed note's tags go with it.
+    let lens = svc
+        .graph(
+            &s,
+            &GraphQuery {
+                lens: Some(Lens::People),
+                include_tags: true,
+                ..GraphQuery::default()
+            },
+        )
+        .await
+        .expect("lens");
+    assert_eq!((lens.nodes.len(), lens.edges.len()), (0, 0));
+    w.vault.delete_note(&s, b).await.expect("trash");
+    let g = svc.graph(&s, &with_tags(None, None)).await.expect("tags");
+    assert_eq!(
+        node_degrees(&g),
+        vec![d("A", 2), d("C", 0), d("#client", 1), d("#Pricing", 1)]
+    );
     w.finish().await;
 }

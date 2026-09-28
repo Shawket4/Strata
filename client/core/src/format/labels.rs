@@ -652,6 +652,23 @@ pub fn relation_label(rel: &str, lang: Lang) -> String {
     tr(lang, en, ar)
 }
 
+/// Localised label of an edge kind in the map's filter panel.
+pub fn edge_kind_label(kind: &str, lang: Lang) -> String {
+    let (en, ar) = match kind {
+        "link" => ("Links", "روابط"),
+        "embed" => ("Embeds", "تضمينات"),
+        "relation" => ("Relations", "علاقات"),
+        "mention" => ("Mentions", "إشارات"),
+        "concept" => ("Concepts", "مفاهيم"),
+        "entity" => ("Entity relations", "علاقات الكيانات"),
+        "custody" => ("Custody", "العهدة"),
+        "part-of-place" => ("Inside", "داخل"),
+        "similarity" => ("Similar", "متشابهة"),
+        other => return relation_label(other, lang),
+    };
+    tr(lang, en, ar)
+}
+
 /// Localised label of a note kind.
 pub fn kind_label(kind: &str, lang: Lang) -> String {
     let (en, ar) = match kind {

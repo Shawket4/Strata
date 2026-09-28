@@ -164,9 +164,19 @@ async fn decisions_are_listed_repointed_and_rejected_through_the_api() {
         ent(fathy, "person", "Ahmed Fathy", &["Ahmed"]),
         ent(samir, "person", "Ahmed Samir", &["Ahmed"]),
     ];
-    push(&h, &input(call, "Call", text, people.clone()), "Ahmed", Some(samir), false, text);
+    push(
+        &h,
+        &input(call, "Call", text, people.clone()),
+        "Ahmed",
+        Some(samir),
+        false,
+        text,
+    );
     run_link(&h, &alice, call).await;
-    assert!(h.read(alice.id, "notes/Call.md").contains("people: [\"[[Ahmed Samir]]\"]"));
+    assert!(
+        h.read(alice.id, "notes/Call.md")
+            .contains("people: [\"[[Ahmed Samir]]\"]")
+    );
 
     let list = ops::list_ai_decisions(&alice.client, None)
         .await
@@ -237,12 +247,13 @@ async fn decisions_are_listed_repointed_and_rejected_through_the_api() {
     assert_eq!(h.log(alice.id)[0], "user: repoint notes/Call.md");
     assert_eq!(r.commit.map(|c| c.len()), Some(40));
     let text_now = h.read(alice.id, "notes/Call.md");
-    assert!(text_now.contains("people: [\"[[Ahmed Fathy]]\"]"), "{text_now}");
-    let sidecar: serde_json::Value = serde_json::from_str(&h.read(
-        alice.id,
-        &format!(".meta/notes/{fathy}.json"),
-    ))
-    .expect("json");
+    assert!(
+        text_now.contains("people: [\"[[Ahmed Fathy]]\"]"),
+        "{text_now}"
+    );
+    let sidecar: serde_json::Value =
+        serde_json::from_str(&h.read(alice.id, &format!(".meta/notes/{fathy}.json")))
+            .expect("json");
     assert_eq!(
         sidecar["hints"][0]["text"],
         json!("\"Ahmed\" in \"Call\" = Ahmed Fathy")
@@ -292,7 +303,14 @@ async fn suggestion_payloads_are_typed_and_accepting_with_edits_creates_the_enti
     let s = scope(&h, &alice);
     let text = "بابا called about the apartment.";
     let n = note(&h, &s, "notes/Apartment.md", text).await;
-    push(&h, &input(n, "Apartment", text, vec![]), "بابا", None, true, text);
+    push(
+        &h,
+        &input(n, "Apartment", text, vec![]),
+        "بابا",
+        None,
+        true,
+        text,
+    );
     run_link(&h, &alice, n).await;
     let list = ops::list_suggestions(&alice.client, None)
         .await
@@ -352,7 +370,10 @@ async fn suggestion_payloads_are_typed_and_accepting_with_edits_creates_the_enti
     .await
     .expect("accept");
     assert_eq!(accepted.status, types::SuggestionStatus::Accepted);
-    assert_eq!(h.log(alice.id)[0], "user: accept entity_link notes/Apartment.md");
+    assert_eq!(
+        h.log(alice.id)[0],
+        "user: accept entity_link notes/Apartment.md"
+    );
     let person = h.read(alice.id, "people/Ibrahim Nasr.md");
     assert!(person.contains("kind: person"), "{person}");
     assert!(person.contains("aliases: [بابا, Baba]"), "{person}");

@@ -518,7 +518,7 @@ fn kind_counts<'a>(kinds: impl Iterator<Item = &'a str>, lang: Lang, node: bool)
             label: if node {
                 labels::kind_label(&kind, lang)
             } else {
-                labels::relation_label(&kind, lang)
+                labels::edge_kind_label(&kind, lang)
             },
             kind,
             count,

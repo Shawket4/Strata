@@ -159,20 +159,19 @@ pub fn note_blocks(body: &str) -> (Vec<BlockInput>, BTreeMap<String, String>) {
         if chars > MAX_BODY_CHARS && !out.is_empty() {
             break;
         }
-        let id = match &b.id {
-            Some(i) => i.id.clone(),
-            None => {
-                let base = generated_block_id(&text);
-                let mut id = base.clone();
-                let mut n = 2;
-                while taken.contains(&id) {
-                    id = format!("{base}-{n}");
-                    n += 1;
-                }
-                taken.insert(id.clone());
-                generated.insert(id.clone(), text.clone());
-                id
+        let id = if let Some(i) = &b.id {
+            i.id.clone()
+        } else {
+            let base = generated_block_id(&text);
+            let mut id = base.clone();
+            let mut n = 2;
+            while taken.contains(&id) {
+                id = format!("{base}-{n}");
+                n += 1;
             }
+            taken.insert(id.clone());
+            generated.insert(id.clone(), text.clone());
+            id
         };
         out.push(BlockInput { block_id: id, text });
     }
@@ -275,11 +274,15 @@ impl SourceNote {
                 mention: None,
             })
             .collect();
-        out.extend(rejected_mentions(&self.sidecar).into_iter().map(|m| RejectedInput {
-            kind: m.kind,
-            target_id: None,
-            mention: Some(m.text),
-        }));
+        out.extend(
+            rejected_mentions(&self.sidecar)
+                .into_iter()
+                .map(|m| RejectedInput {
+                    kind: m.kind,
+                    target_id: None,
+                    mention: Some(m.text),
+                }),
+        );
         out
     }
 }
@@ -491,9 +494,7 @@ impl Directory {
                 out.push(e);
             }
         }
-        out.sort_by(|a, b| {
-            (a.kind.as_str(), &a.name, a.id).cmp(&(b.kind.as_str(), &b.name, b.id))
-        });
+        out.sort_by(|a, b| (a.kind.as_str(), &a.name, a.id).cmp(&(b.kind.as_str(), &b.name, b.id)));
         out.truncate(MAX_ENTITIES);
         out
     }
@@ -589,10 +590,7 @@ pub async fn candidates(
     tx.commit().await?;
     let mut inputs = Vec::with_capacity(out.len());
     for (id, title) in out {
-        let summary = vault
-            .note_sidecar(scope, id)
-            .await?
-            .and_then(|s| s.summary);
+        let summary = vault.note_sidecar(scope, id).await?.and_then(|s| s.summary);
         inputs.push(CandidateInput {
             id: id.to_string(),
             title,
@@ -683,7 +681,6 @@ fn entity_rel_type(t: AiErt) -> EntityRelationType {
 /// The kind a relation of type `t` points at.
 fn entity_rel_target(t: EntityRelationType) -> NoteKind {
     match t {
-        EntityRelationType::WorksAt | EntityRelationType::WorkedAt => NoteKind::Company,
         EntityRelationType::ReportsTo
         | EntityRelationType::Knows
         | EntityRelationType::IntroducedBy => NoteKind::Person,
@@ -710,7 +707,8 @@ fn mention_rel(k: NoteKind) -> Option<RelationKey> {
 
 #[allow(clippy::cast_possible_truncation)] // confidences are in 0..=1
 fn conf32(c: f64) -> Option<f32> {
-    Some(c.clamp(0.0, 1.0) as f32)
+    let c = c.clamp(0.0, 1.0) as f32;
+    c.is_finite().then_some(c)
 }
 
 /// Existing suggestions of the note, to avoid proposing the same thing twice.
@@ -853,7 +851,10 @@ impl<'a> Planner<'a> {
         Self {
             note,
             dir,
-            candidates: candidates.iter().filter_map(|c| c.id.parse().ok()).collect(),
+            candidates: candidates
+                .iter()
+                .filter_map(|c| c.id.parse().ok())
+                .collect(),
             offered: offered.iter().filter_map(|e| e.id.parse().ok()).collect(),
             thresholds,
             model,
@@ -937,9 +938,7 @@ impl<'a> Planner<'a> {
 
     fn cite_block(&mut self, block: Option<&str>) -> Option<String> {
         let b = block?;
-        if self.note.block_text(b).is_none() {
-            return None;
-        }
+        self.note.block_text(b)?;
         if self.note.generated.contains_key(b) {
             self.needs_block.insert(b.to_owned());
         }
@@ -1022,12 +1021,10 @@ impl<'a> Planner<'a> {
                     .concepts
                     .iter()
                     .find(|x| {
-                        std::iter::once(&x.name)
-                            .chain(x.aliases.iter())
-                            .any(|a| {
-                                let an = normalize_for_search(a);
-                                an == n || trigram_similarity(&an, &n) >= 0.8
-                            })
+                        std::iter::once(&x.name).chain(x.aliases.iter()).any(|a| {
+                            let an = normalize_for_search(a);
+                            an == n || trigram_similarity(&an, &n) >= 0.8
+                        })
                     })
                     .map(|x| x.id)
             };
@@ -1037,17 +1034,16 @@ impl<'a> Planner<'a> {
                 .iter()
                 .find(|x| normalize_for_search(&x.name) == n)
                 .map(|x| x.id);
-            let target = match by_id.or_else(by_name).or(created_here) {
-                Some(t) => t,
-                None => {
-                    let id = NoteId::generate(self.ids);
-                    self.set.concepts.push(NewConcept {
-                        id,
-                        name: c.name.trim().to_owned(),
-                        summary: c.summary.clone(),
-                    });
-                    id
-                }
+            let target = if let Some(t) = by_id.or_else(by_name).or(created_here) {
+                t
+            } else {
+                let id = NoteId::generate(self.ids);
+                self.set.concepts.push(NewConcept {
+                    id,
+                    name: c.name.trim().to_owned(),
+                    summary: c.summary.clone(),
+                });
+                id
             };
             if self.note.sidecar.is_blocked(rel, target.as_ulid())
                 || self.applied.contains(&(rel, target))
@@ -1086,11 +1082,8 @@ impl<'a> Planner<'a> {
             };
             let alias_hits = self.dir.by_alias(&m.text, &[kind]);
             let existing = m.existing_id.as_deref().and_then(valid);
-            let mut candidates: Vec<NoteId> = m
-                .candidate_ids
-                .iter()
-                .filter_map(|c| valid(c))
-                .collect();
+            let mut candidates: Vec<NoteId> =
+                m.candidate_ids.iter().filter_map(|c| valid(c)).collect();
             if m.is_nickname {
                 for a in &alias_hits {
                     if !candidates.contains(a) {
@@ -1102,9 +1095,8 @@ impl<'a> Planner<'a> {
                 self.ambiguous.insert(norm.clone(), candidates.clone());
             }
             let rel = mention_rel(kind);
-            let blocked = |t: NoteId| {
-                rel.is_some_and(|r| self.note.sidecar.is_blocked(r, t.as_ulid()))
-            };
+            let blocked =
+                |t: NoteId| rel.is_some_and(|r| self.note.sidecar.is_blocked(r, t.as_ulid()));
             // Nicknames and kinship terms link only through an existing alias (§6.7).
             let auto = if m.is_nickname {
                 match alias_hits.as_slice() {
@@ -1130,7 +1122,7 @@ impl<'a> Planner<'a> {
                 }
                 self.edge(self.note.id, rel, t, m.confidence, "");
                 let mut d = self.new_decision(DecisionKind::EntityMention);
-                d.source_block = m.evidence_block_id.clone();
+                d.source_block.clone_from(&m.evidence_block_id);
                 d.target_type = "entity".into();
                 d.target_id = t.to_string();
                 d.summary = format!("\"{}\" → {}", m.text, self.title(t));
@@ -1184,7 +1176,7 @@ impl<'a> Planner<'a> {
             let sid = self.suggest(decide::KIND_ENTITY_LINK, bytes);
             let mut d = self.new_decision(DecisionKind::EntityMention);
             d.id = decision_id;
-            d.source_block = m.evidence_block_id.clone();
+            d.source_block.clone_from(&m.evidence_block_id);
             d.target_type = "entity".into();
             d.target_id = proposed.map_or_else(String::new, |p| p.to_string());
             d.summary = match proposed {
@@ -1202,7 +1194,10 @@ impl<'a> Planner<'a> {
     fn resolve_text(&self, text: &str, kinds: &[NoteKind]) -> Result<NoteId, Vec<NoteId>> {
         let norm = normalize_for_search(text);
         if let Some(id) = self.resolved.get(&norm)
-            && self.dir.entity(*id).is_some_and(|e| kinds.contains(&e.kind))
+            && self
+                .dir
+                .entity(*id)
+                .is_some_and(|e| kinds.contains(&e.kind))
         {
             return Ok(*id);
         }
@@ -1243,7 +1238,7 @@ impl<'a> Planner<'a> {
             self.touched_entities.insert(from);
             let mut d = self.new_decision(DecisionKind::Relation);
             d.source_note = Some(from);
-            d.source_block = r.evidence_block_id.clone();
+            d.source_block.clone_from(&r.evidence_block_id);
             d.target_type = "entity".into();
             d.target_id = to.to_string();
             d.summary = format!(
@@ -1464,7 +1459,12 @@ impl<'a> Planner<'a> {
                 .unwrap_or_default()
                 .to_owned();
             let due = t.due.as_deref().map(|d| {
-                dates::event_date(&block_text, self.note.created_date(), Some(d), t.date_source)
+                dates::event_date(
+                    &block_text,
+                    self.note.created_date(),
+                    Some(d),
+                    t.date_source,
+                )
             });
             let reminders: Vec<NaiveDateTime> = t
                 .reminders
@@ -1505,7 +1505,7 @@ impl<'a> Planner<'a> {
             d.id = decision_id;
             d.source_block.clone_from(&t.evidence_block_id);
             d.target_type = "task".into();
-            d.target_id = title.to_owned();
+            title.clone_into(&mut d.target_id);
             d.summary = format!("task: {title}");
             d.confidence = conf32(t.confidence);
             d.suggestion = Some(sid);
@@ -1654,7 +1654,12 @@ pub fn linked_mentions(note: &SourceNote, dir: &Directory) -> BTreeSet<NoteId> {
     note.sidecar
         .relations
         .iter()
-        .filter(|r| matches!(r.kind, RelationKey::Mention(MentionType::People | MentionType::Companies)))
+        .filter(|r| {
+            matches!(
+                r.kind,
+                RelationKey::Mention(MentionType::People | MentionType::Companies)
+            )
+        })
         .map(|r| NoteId::from_ulid(r.target_id))
         .collect()
 }
@@ -1686,14 +1691,11 @@ mod tests {
                 },
             ]
         );
-        assert_eq!(
-            generated.keys().cloned().collect::<Vec<_>>(),
-            {
-                let mut v = vec![first.clone(), task];
-                v.sort();
-                v
-            }
-        );
+        assert_eq!(generated.keys().cloned().collect::<Vec<_>>(), {
+            let mut v = vec![first.clone(), task];
+            v.sort();
+            v
+        });
         assert!(first.starts_with("b-") && first.len() == 8);
     }
 
@@ -1720,7 +1722,10 @@ mod tests {
                 .map(|e| e.name.clone())
                 .collect::<Vec<_>>()
         };
-        assert_eq!(names("كلمت أحمد سمير عن عقد وطنية"), vec!["Watanya", "Ahmed Samir"]);
+        assert_eq!(
+            names("كلمت أحمد سمير عن عقد وطنية"),
+            vec!["Watanya", "Ahmed Samir"]
+        );
         // Transliteration key: Latin spelling of an Arabic-only alias and vice versa.
         assert_eq!(names("Called Ahmad Sameer today"), vec!["Ahmed Samir"]);
         assert_eq!(names("اتكلمت مع شادي"), vec!["Shady"]);

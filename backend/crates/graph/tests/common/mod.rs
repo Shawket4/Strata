@@ -10,7 +10,7 @@ use strata_ai::{AiService, BudgetGuard, BudgetLimits, MemoryUsageStore, Provider
 use strata_common::config::AiProviderKind;
 use strata_common::{NoteId, UserId};
 use strata_graph::GraphService;
-use strata_graph::assemble::{EdgeView, GraphView};
+use strata_graph::assemble::{EdgeView, GraphView, NodeId};
 use strata_graph::cluster::{ClusterConfig, ClusterHandler, RecordedClusterEvents};
 use strata_graph::similarity::SimilaritySource;
 use strata_index::UserScope;
@@ -266,16 +266,26 @@ pub async fn fixture(w: &World, s: &UserScope) -> Fixture {
     }
 }
 
-/// Titles by ID, for readable assertions.
-pub fn titles(view: &GraphView) -> BTreeMap<NoteId, String> {
-    view.nodes.iter().map(|n| (n.id, n.title.clone())).collect()
-}
-
-/// `(title, degree)` of every node, in response order.
-pub fn node_degrees(view: &GraphView) -> Vec<(String, u32)> {
+/// Titles by ID, for readable assertions (tag nodes as `#tag`).
+pub fn titles(view: &GraphView) -> BTreeMap<NodeId, String> {
     view.nodes
         .iter()
-        .map(|n| (n.title.clone(), n.degree))
+        .map(|n| {
+            let title = match n.id {
+                NodeId::Note(_) => n.title.clone(),
+                NodeId::Tag(_) => format!("#{}", n.title),
+            };
+            (n.id.clone(), title)
+        })
+        .collect()
+}
+
+/// `(title, degree)` of every node, in response order (tag nodes as `#tag`).
+pub fn node_degrees(view: &GraphView) -> Vec<(String, u32)> {
+    let t = titles(view);
+    view.nodes
+        .iter()
+        .map(|n| (t[&n.id].clone(), n.degree))
         .collect()
 }
 

@@ -29,6 +29,16 @@ pub enum GraphError {
         /// Message.
         message: String,
     },
+    /// A request body field is invalid (`422 invalid_body` with one field error).
+    #[error("invalid {pointer}: {message}")]
+    InvalidField {
+        /// JSON pointer of the field (`/name`).
+        pointer: &'static str,
+        /// Stable code.
+        code: &'static str,
+        /// Message.
+        message: String,
+    },
     /// A map is not a valid JSON Canvas for this vault.
     #[error("invalid map")]
     InvalidMap(Vec<MapIssue>),

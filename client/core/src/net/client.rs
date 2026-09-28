@@ -716,7 +716,7 @@ impl AccountApi for ClientAccountApi {
     ) -> BoxFuture<'_, Result<Vec<SimilarityEdge>, NetError>> {
         Box::pin(async move {
             let c = client(&server_url, Some(tokens))?;
-            let g = operations::get_graph(&c, Some("similarity"), None, Some(true), None)
+            let g = operations::get_graph(&c, Some("similarity"), None, Some(true), None, None)
                 .await
                 .map_err(|e| classify(&e))?;
             Ok(g.edges

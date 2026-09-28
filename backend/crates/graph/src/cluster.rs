@@ -35,16 +35,16 @@ use strata_ai::prompts::{self, ids};
 use strata_ai::{AiCaller, AiService};
 use strata_common::{IdGenerator, JobId, NoteId, UserId};
 use strata_index::repo::jobs::{Job, NewJob};
-use strata_index::repo::sync::{self as sync_repo, NewChange};
-use strata_index::types::ChangeOp;
 use strata_index::{AppDb, ScopedTx, UserScope};
 use strata_jobs::{JobClass, JobContext, JobError, JobHandler};
+use strata_vault::clusters::{self as vault_clusters, ClusterRows};
 use strata_vault::ops::files::{Expect, FileWrite};
 use strata_vault::{Author, VaultError, VaultService, fsio};
 use ulid::Ulid;
 use vault_format::clusters::{CLUSTERS_PATH, Cluster, Clusters};
 use vault_format::sidecar::By;
 
+use crate::error::GraphError;
 use crate::load::{self, GraphData};
 
 /// The job kind.
@@ -661,20 +661,7 @@ impl ClusterHandler {
         let json = file
             .to_json()
             .map_err(|e| JobError::Fatal(format!("clusters encoding: {e}")))?;
-        let assignment: Vec<(NoteId, i64)> = file
-            .clusters
-            .iter()
-            .flat_map(|c| {
-                c.notes
-                    .iter()
-                    .map(move |n| (NoteId::from_ulid(*n), i64::from(c.id)))
-            })
-            .collect();
-        let names: Vec<(i64, String)> = file
-            .clusters
-            .iter()
-            .map(|c| (i64::from(c.id), c.name.clone()))
-            .collect();
+        let rows = ClusterRows::of_file(&file);
         let written = self
             .vault
             .write_file(
@@ -685,9 +672,7 @@ impl ClusterHandler {
                     expect: previous_version.map_or(Expect::Absent, Expect::Version),
                     author: Author::Ai(CLUSTER.to_owned()),
                     op: CLUSTER.to_owned(),
-                    index: Some(Box::new(move |tx| {
-                        Box::pin(store_tables(tx, assignment, names, now))
-                    })),
+                    index: Some(Box::new(move |tx| Box::pin(store_tables(tx, rows, now)))),
                 },
             )
             .await
@@ -708,92 +693,144 @@ impl ClusterHandler {
     }
 }
 
-/// Replaces the `clusters` and `cluster_names` rows and logs the differences for sync.
+/// Replaces the `clusters` and `cluster_names` rows with `rows` and logs the differences
+/// for sync (`strata_vault::clusters`).
 async fn store_tables(
     tx: &mut ScopedTx,
-    assignment: Vec<(NoteId, i64)>,
-    names: Vec<(i64, String)>,
+    rows: ClusterRows,
     now: DateTime<Utc>,
 ) -> Result<(), VaultError> {
-    let old_assign: BTreeMap<NoteId, i64> =
-        sqlx::query_as::<_, (NoteId, i64)>("SELECT note_id, cluster_id FROM clusters")
-            .fetch_all(tx.conn())
-            .await?
-            .into_iter()
-            .collect();
-    let old_names: BTreeMap<i64, String> =
-        sqlx::query_as::<_, (i64, String)>("SELECT cluster_id, name FROM cluster_names")
-            .fetch_all(tx.conn())
-            .await?
-            .into_iter()
-            .collect();
-    sqlx::query("DELETE FROM clusters")
-        .execute(tx.conn())
-        .await?;
-    let (notes, ids): (Vec<NoteId>, Vec<i64>) = assignment.into_iter().unzip();
-    // Notes purged since the graph was read are skipped (the foreign key needs them).
-    sqlx::query(
-        "INSERT INTO clusters (user_id, note_id, cluster_id) \
-         SELECT strata_current_user(), u.note_id, u.cluster_id \
-         FROM unnest($1::uuid[], $2::bigint[]) AS u(note_id, cluster_id) \
-         JOIN notes n ON n.user_id = strata_current_user() AND n.id = u.note_id",
-    )
-    .bind(&notes)
-    .bind(&ids)
-    .execute(tx.conn())
-    .await?;
-    sqlx::query("DELETE FROM cluster_names")
-        .execute(tx.conn())
-        .await?;
-    let (cids, cnames): (Vec<i64>, Vec<String>) = names.into_iter().unzip();
-    sqlx::query(
-        "INSERT INTO cluster_names (user_id, cluster_id, name) \
-         SELECT strata_current_user(), u.cluster_id, u.name \
-         FROM unnest($1::bigint[], $2::text[]) AS u(cluster_id, name)",
-    )
-    .bind(&cids)
-    .bind(&cnames)
-    .execute(tx.conn())
-    .await?;
-
-    let new_assign: BTreeMap<NoteId, i64> =
-        sqlx::query_as::<_, (NoteId, i64)>("SELECT note_id, cluster_id FROM clusters")
-            .fetch_all(tx.conn())
-            .await?
-            .into_iter()
-            .collect();
-    let new_names: BTreeMap<i64, String> = cids.into_iter().zip(cnames).collect();
-    let mut changes: Vec<(&'static str, String, ChangeOp)> = Vec::new();
-    for (note, c) in &new_assign {
-        if old_assign.get(note) != Some(c) {
-            changes.push(("cluster_assignment", note.to_string(), ChangeOp::Upsert));
-        }
-    }
-    for note in old_assign.keys().filter(|n| !new_assign.contains_key(n)) {
-        changes.push(("cluster_assignment", note.to_string(), ChangeOp::Delete));
-    }
-    for (id, name) in &new_names {
-        if old_names.get(id) != Some(name) {
-            changes.push(("cluster_name", id.to_string(), ChangeOp::Upsert));
-        }
-    }
-    for id in old_names.keys().filter(|i| !new_names.contains_key(i)) {
-        changes.push(("cluster_name", id.to_string(), ChangeOp::Delete));
-    }
-    for (entity_type, entity_id, op) in changes {
-        sync_repo::append_change(
-            tx,
-            &NewChange {
-                entity_type,
-                entity_id: &entity_id,
-                op,
-                version: None,
-                at: now,
-            },
-        )
-        .await?;
-    }
+    let before = vault_clusters::snapshot(tx).await?;
+    vault_clusters::replace(tx, &before, &rows, now).await?;
     Ok(())
+}
+
+/// Longest cluster name a user may give, in characters.
+pub const MAX_NAME_CHARS: usize = 100;
+
+/// A user's cluster rename (`PATCH /graph/clusters/{id}`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Renamed {
+    /// Stable ID.
+    pub id: String,
+    /// The name now.
+    pub name: String,
+    /// Member notes.
+    pub size: u32,
+    /// The commit (`None` when the cluster already had this user-given name).
+    pub commit: Option<String>,
+}
+
+/// The name a user gave, with whitespace runs collapsed; `422` when empty or longer than
+/// [`MAX_NAME_CHARS`].
+pub fn user_name(name: &str) -> crate::Result<String> {
+    let name = name.split_whitespace().collect::<Vec<_>>().join(" ");
+    if name.is_empty() {
+        return Err(GraphError::InvalidField {
+            pointer: "/name",
+            code: "empty_name",
+            message: "the cluster name is empty".into(),
+        });
+    }
+    if name.chars().count() > MAX_NAME_CHARS {
+        return Err(GraphError::InvalidField {
+            pointer: "/name",
+            code: "name_too_long",
+            message: format!("the cluster name is longer than {MAX_NAME_CHARS} characters"),
+        });
+    }
+    Ok(name)
+}
+
+/// Renames cluster `id` to `name` for the scope's user: `.meta/clusters.json` gets the name
+/// with `named_by: user` (so the `cluster` job never replaces it) and loses the cluster from
+/// `unnamed`, in one `user: rename cluster .meta/clusters.json` commit whose index hook
+/// updates `cluster_names` and logs the `cluster_name` change; then `cluster.updated
+/// {[id]}` is published. A cluster that already has this user-given name writes nothing.
+/// `404` when the file or the cluster does not exist. A concurrent write of the file (a
+/// `cluster` run) is retried on the new content.
+pub async fn rename(
+    vault: &VaultService,
+    events: &dyn ClusterEvents,
+    scope: &UserScope,
+    id: &str,
+    name: &str,
+    now: DateTime<Utc>,
+) -> crate::Result<Renamed> {
+    const ATTEMPTS: usize = 3;
+    let cluster_id: u32 = id.parse().map_err(|_| GraphError::NotFound)?;
+    let name = user_name(name)?;
+    let mut attempt = 0;
+    loop {
+        attempt += 1;
+        let raw = vault
+            .read_file_bytes(scope, CLUSTERS_PATH)
+            .await?
+            .ok_or(GraphError::NotFound)?;
+        let version = fsio::version_of(&raw);
+        let mut file = std::str::from_utf8(&raw)
+            .ok()
+            .and_then(|s| Clusters::from_json(s).ok())
+            .ok_or(GraphError::NotFound)?;
+        let unnamed = unnamed_of(Some(&file));
+        let cluster = file
+            .clusters
+            .iter_mut()
+            .find(|c| c.id == cluster_id)
+            .ok_or(GraphError::NotFound)?;
+        let size = u32::try_from(cluster.notes.len()).unwrap_or(u32::MAX);
+        if cluster.name == name && cluster.named_by == By::User && !unnamed.contains(&cluster_id)
+        {
+            return Ok(Renamed {
+                id: cluster_id.to_string(),
+                name,
+                size,
+                commit: None,
+            });
+        }
+        cluster.name.clone_from(&name);
+        cluster.named_by = By::User;
+        let rest: Vec<u32> = unnamed.into_iter().filter(|u| *u != cluster_id).collect();
+        if rest.is_empty() {
+            file.extra.remove(UNNAMED_KEY);
+        } else {
+            file.extra
+                .insert(UNNAMED_KEY.into(), serde_json::json!(rest));
+        }
+        let json = file
+            .to_json()
+            .map_err(|e| GraphError::Vault(VaultError::Internal(format!("clusters encoding: {e}"))))?;
+        let rows = ClusterRows::of_file(&file);
+        let written = vault
+            .write_file(
+                scope,
+                FileWrite {
+                    path: CLUSTERS_PATH.to_owned(),
+                    content: Some(json.into_bytes()),
+                    expect: Expect::Version(version),
+                    author: Author::User,
+                    op: "rename cluster".to_owned(),
+                    index: Some(Box::new(move |tx| Box::pin(store_tables(tx, rows, now)))),
+                },
+            )
+            .await;
+        match written {
+            Ok(w) => {
+                if w.commit.is_some() {
+                    events.clusters_updated(scope.user_id(), &[cluster_id.to_string()]);
+                }
+                return Ok(Renamed {
+                    id: cluster_id.to_string(),
+                    name,
+                    size,
+                    commit: w.commit,
+                });
+            }
+            Err(VaultError::VersionConflict { .. } | VaultError::NotFound) if attempt < ATTEMPTS => {}
+            Err(VaultError::NotFound) => return Err(GraphError::NotFound),
+            Err(e) => return Err(e.into()),
+        }
+    }
 }
 
 #[async_trait::async_trait]

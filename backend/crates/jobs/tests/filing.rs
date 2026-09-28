@@ -2,7 +2,14 @@
 //! created with an AI-owned Summary and linked; task suggestions; with auto-file off a
 //! `filing` suggestion whose acceptance (with edits) moves, titles and tags the capture in one
 //! commit; with auto-file on the same in the job's one `ai:` commit.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::many_single_char_names,
+    clippy::float_cmp
+)]
 
 mod common;
 mod pipeline_support;
@@ -54,9 +61,19 @@ fn filing_output() -> serde_json::Value {
 
 async fn setup(w: &World, s: &strata_index::UserScope) -> (NoteId, NoteId) {
     let clients = w
-        .create(s, "notes/Clients/Watanya.md", "---\ntags: [client]\n---\nWatanya invoices monthly.\n")
+        .create(
+            s,
+            "notes/Clients/Watanya.md",
+            "---\ntags: [client]\n---\nWatanya invoices monthly.\n",
+        )
         .await;
-    let capture = w.vault.capture(s, TEXT.into()).await.expect("capture").note.id;
+    let capture = w
+        .vault
+        .capture(s, TEXT.into())
+        .await
+        .expect("capture")
+        .note
+        .id;
     (clients, capture)
 }
 
@@ -93,7 +110,9 @@ async fn with_auto_file_off_filing_is_a_suggestion_and_accepting_files_in_one_co
     );
     let s = suggestions(&w, a).await;
     assert_eq!(
-        s.iter().map(|x| (x.0.clone(), x.1.clone())).collect::<Vec<_>>(),
+        s.iter()
+            .map(|x| (x.0.clone(), x.1.clone()))
+            .collect::<Vec<_>>(),
         vec![
             ("task".to_owned(), "pending".to_owned()),
             ("filing".to_owned(), "pending".to_owned())
@@ -123,8 +142,18 @@ async fn with_auto_file_off_filing_is_a_suggestion_and_accepting_files_in_one_co
             .collect::<Vec<_>>(),
         vec![
             ("concept".to_owned(), concept_id.clone(), false, true),
-            ("task_suggestion".to_owned(), "Make Watanya's ETA invoice".to_owned(), true, false),
-            ("filing".to_owned(), "notes/Clients/Watanya ETA invoice.md".to_owned(), true, false),
+            (
+                "task_suggestion".to_owned(),
+                "Make Watanya's ETA invoice".to_owned(),
+                true,
+                false
+            ),
+            (
+                "filing".to_owned(),
+                "notes/Clients/Watanya ETA invoice.md".to_owned(),
+                true,
+                false
+            ),
         ]
     );
     // Accept the filing with an edited title: move + title + tags in one `user:` commit.

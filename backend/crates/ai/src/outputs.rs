@@ -602,10 +602,9 @@ mod tests {
             crate::schema::validate(&v, &value).expect("v1 sample matches v1");
         }
         // A v1 linking reply still reads as the current type (concepts without summaries).
-        let l: Linking = serde_json::from_str(include_str!(
-            "../tests/fixtures/outputs/linking.v1.json"
-        ))
-        .expect("v1 fits");
+        let l: Linking =
+            serde_json::from_str(include_str!("../tests/fixtures/outputs/linking.v1.json"))
+                .expect("v1 fits");
         assert_eq!(l.concepts[0].summary, None);
     }
 

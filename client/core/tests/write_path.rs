@@ -116,7 +116,7 @@ async fn capture_queues_one_op_and_updates_home() {
         needs_you_count: 0,
         contradictions_count: 0,
         inbox_summary: String::new(),
-        ai_activity: Availability::NotYetAvailable,
+        ai_activity: Availability::Available,
         ai_activity_items: Vec::new(),
         ai_activity_headline: String::new(),
         open_items: Availability::Available,

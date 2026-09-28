@@ -301,28 +301,32 @@ pub fn ai_payload(kind: &str, bytes: &[u8]) -> Option<SuggestionPayload> {
     let ids = |v: Vec<NoteId>| v.into_iter().map(|n| n.as_ulid()).collect::<Vec<_>>();
     let target = |t: CustodyTarget| Box::new(CustodyTargetDto::from(t));
     match kind {
-        decide::KIND_FILING => rmp_serde::from_slice::<FilingPayload>(bytes)
-            .ok()
-            .map(|p| SuggestionPayload::Filing {
-                decision_id: p.decision_id.as_ulid(),
-                title: p.title,
-                tags: p.tags,
-                folder: p.folder,
-            }),
-        decide::KIND_ENTITY_LINK => rmp_serde::from_slice::<EntityLinkPayload>(bytes)
-            .ok()
-            .map(|p| SuggestionPayload::EntityLink {
-                decision_id: p.decision_id.as_ulid(),
-                mention: p.mention,
-                entity_kind: p.kind,
-                source_note: p.source_note.as_ulid(),
-                block_id: p.block_id,
-                proposed: p.proposed.map(|n| n.as_ulid()),
-                candidates: ids(p.candidates),
-                is_nickname: p.is_nickname,
-                confidence: p.confidence,
-                reason: p.reason,
-            }),
+        decide::KIND_FILING => {
+            rmp_serde::from_slice::<FilingPayload>(bytes)
+                .ok()
+                .map(|p| SuggestionPayload::Filing {
+                    decision_id: p.decision_id.as_ulid(),
+                    title: p.title,
+                    tags: p.tags,
+                    folder: p.folder,
+                })
+        }
+        decide::KIND_ENTITY_LINK => {
+            rmp_serde::from_slice::<EntityLinkPayload>(bytes)
+                .ok()
+                .map(|p| SuggestionPayload::EntityLink {
+                    decision_id: p.decision_id.as_ulid(),
+                    mention: p.mention,
+                    entity_kind: p.kind,
+                    source_note: p.source_note.as_ulid(),
+                    block_id: p.block_id,
+                    proposed: p.proposed.map(|n| n.as_ulid()),
+                    candidates: ids(p.candidates),
+                    is_nickname: p.is_nickname,
+                    confidence: p.confidence,
+                    reason: p.reason,
+                })
+        }
         decide::KIND_CUSTODY => rmp_serde::from_slice::<CustodyPayload>(bytes)
             .ok()
             .map(|p| SuggestionPayload::Custody {
@@ -340,46 +344,50 @@ pub fn ai_payload(kind: &str, bytes: &[u8]) -> Option<SuggestionPayload> {
                 reason: p.reason,
                 quote: p.quote,
             }),
-        decide::KIND_TASK => rmp_serde::from_slice::<TaskPayload>(bytes)
-            .ok()
-            .map(|p| SuggestionPayload::Task {
-                decision_id: p.decision_id.as_ulid(),
-                source_note: p.source_note.as_ulid(),
-                block_id: p.block_id,
-                title: p.title,
-                due: p.due,
-                recurrence: p.recurrence,
-                reminders: p.reminders,
-                entities: ids(p.entities),
-                confidence: p.confidence,
-            }),
-        decide::KIND_CORRECTION => rmp_serde::from_slice::<CorrectionPayload>(bytes)
-            .ok()
-            .map(|p| SuggestionPayload::Correction {
-                decision_id: p.decision_id.as_ulid(),
-                message: p.message,
-                fixes: p
-                    .fixes
-                    .into_iter()
-                    .map(|f| CorrectionFixDto {
-                        decision_id: f.decision_id.as_ulid(),
-                        action: f.action,
-                        new_target: f.new_target.map(|n| n.as_ulid()),
-                        new_type: f.new_type,
-                        confidence: f.confidence,
-                        reason: f.reason,
-                    })
-                    .collect(),
-                hints: p
-                    .hints
-                    .into_iter()
-                    .map(|h| HintDto {
-                        entity: h.entity.as_ulid(),
-                        text: h.text,
-                    })
-                    .collect(),
-                question: p.question,
-            }),
+        decide::KIND_TASK => {
+            rmp_serde::from_slice::<TaskPayload>(bytes)
+                .ok()
+                .map(|p| SuggestionPayload::Task {
+                    decision_id: p.decision_id.as_ulid(),
+                    source_note: p.source_note.as_ulid(),
+                    block_id: p.block_id,
+                    title: p.title,
+                    due: p.due,
+                    recurrence: p.recurrence,
+                    reminders: p.reminders,
+                    entities: ids(p.entities),
+                    confidence: p.confidence,
+                })
+        }
+        decide::KIND_CORRECTION => {
+            rmp_serde::from_slice::<CorrectionPayload>(bytes)
+                .ok()
+                .map(|p| SuggestionPayload::Correction {
+                    decision_id: p.decision_id.as_ulid(),
+                    message: p.message,
+                    fixes: p
+                        .fixes
+                        .into_iter()
+                        .map(|f| CorrectionFixDto {
+                            decision_id: f.decision_id.as_ulid(),
+                            action: f.action,
+                            new_target: f.new_target.map(|n| n.as_ulid()),
+                            new_type: f.new_type,
+                            confidence: f.confidence,
+                            reason: f.reason,
+                        })
+                        .collect(),
+                    hints: p
+                        .hints
+                        .into_iter()
+                        .map(|h| HintDto {
+                            entity: h.entity.as_ulid(),
+                            text: h.text,
+                        })
+                        .collect(),
+                    question: p.question,
+                })
+        }
         _ => None,
     }
 }
@@ -443,7 +451,10 @@ async fn correct(
         strata_vault::ops::ai_apply::AiApplied::Done { commit, .. } => commit,
         strata_vault::ops::ai_apply::AiApplied::Stale => None,
     };
-    let view = vault.ai_decision(auth.scope(), decision).await.or_problem()?;
+    let view = vault
+        .ai_decision(auth.scope(), decision)
+        .await
+        .or_problem()?;
     Ok(MsgPack(CorrectionResult {
         decision: view.into(),
         commit,
@@ -500,7 +511,9 @@ pub async fn retype(
     let t = body.into_inner().new_type;
     let rel = RelationKey::all()
         .find(|k| k.as_str() == t)
-        .ok_or_else(|| Problem::new(ProblemType::InvalidBody).with_detail("unknown relation type"))?;
+        .ok_or_else(|| {
+            Problem::new(ProblemType::InvalidBody).with_detail("unknown relation type")
+        })?;
     correct(&auth, &vault, *id, FixAction::Retype(rel), None).await
 }
 
@@ -676,7 +689,8 @@ pub async fn put_settings(
     body: MsgPack<AiSettings>,
 ) -> Result<MsgPack<AiSettings>, Problem> {
     let api = ai_api(api.as_ref())?;
-    let value = rmp_serde::to_vec(&body.auto_file).map_err(|_| Problem::new(ProblemType::Internal))?;
+    let value =
+        rmp_serde::to_vec(&body.auto_file).map_err(|_| Problem::new(ProblemType::Internal))?;
     let mut tx = api.db.begin(auth.scope()).await.or_problem()?;
     strata_index::repo::settings::put_setting(
         &mut tx,

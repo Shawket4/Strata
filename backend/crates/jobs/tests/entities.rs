@@ -6,7 +6,9 @@
     clippy::expect_used,
     clippy::too_many_lines,
     clippy::float_cmp,
-    clippy::many_single_char_names
+    clippy::many_single_char_names,
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments
 )]
 
 mod common;
@@ -32,13 +34,7 @@ use strata_jobs::correct::{
 use strata_jobs::link::{LinkInput, LinkNote};
 use strata_vault::ops::entities::NewEntity;
 
-pub async fn entity(
-    w: &World,
-    s: &UserScope,
-    kind: NoteKind,
-    name: &str,
-    aliases: &[&str],
-) -> NoteId {
+async fn entity(w: &World, s: &UserScope, kind: NoteKind, name: &str, aliases: &[&str]) -> NoteId {
     w.vault
         .create_entity(
             s,
@@ -73,7 +69,15 @@ fn link_input(note: NoteId, title: &str, text: &str) -> LinkInput {
     }
 }
 
-fn mention(text: &str, kind: &str, existing: Option<NoteId>, cands: &[NoteId], nick: bool, conf: f64, block_text: &str) -> serde_json::Value {
+fn mention(
+    text: &str,
+    kind: &str,
+    existing: Option<NoteId>,
+    cands: &[NoteId],
+    nick: bool,
+    conf: f64,
+    block_text: &str,
+) -> serde_json::Value {
     json!({
         "text": text, "kind": kind, "existing_id": existing.map(|e| e.to_string()),
         "candidate_ids": cands.iter().map(ToString::to_string).collect::<Vec<_>>(),
@@ -82,7 +86,10 @@ fn mention(text: &str, kind: &str, existing: Option<NoteId>, cands: &[NoteId], n
     })
 }
 
-fn out(mentions: Vec<serde_json::Value>, entity_relations: Vec<serde_json::Value>) -> serde_json::Value {
+fn out(
+    mentions: Vec<serde_json::Value>,
+    entity_relations: Vec<serde_json::Value>,
+) -> serde_json::Value {
     json!({
         "relations": [], "concepts": [], "mentions": mentions,
         "entity_relations": entity_relations, "custody": [], "tasks": []
@@ -165,18 +172,29 @@ async fn mentions_resolve_across_arabic_and_latin_aliases_with_entity_relations(
                 Some("أكمي".to_owned()),
                 true
             ),
-            ("relation".to_owned(), acme.to_string(), Some("works-at".to_owned()), None, true),
+            (
+                "relation".to_owned(),
+                acme.to_string(),
+                Some("works-at".to_owned()),
+                None,
+                true
+            ),
         ]
     );
     // Both entities' insights are refreshed five minutes later.
     assert_eq!(
         jobs_of(&w, a, "entity_insights").await,
-        vec![("queued".to_owned(), 0, at(300)), ("queued".to_owned(), 0, at(300))]
+        vec![
+            ("queued".to_owned(), 0, at(300)),
+            ("queued".to_owned(), 0, at(300))
+        ]
     );
 
     // A Latin spelling of the Arabic-only alias still offers the entity (transliteration).
     let text2 = "Called Ahmad Sameer about invoices.";
-    let note2 = w.create(&sa, "notes/Call 2.md", &format!("{text2}\n")).await;
+    let note2 = w
+        .create(&sa, "notes/Call 2.md", &format!("{text2}\n"))
+        .await;
     let mut i2 = link_input(note2, "Call 2", text2);
     i2.entities = vec![ent(ahmed, "person", "Ahmed Samir", &["أحمد سمير"], &[])];
     i2.candidates = vec![pipeline_support::cand(note, "Call")];
@@ -184,12 +202,26 @@ async fn mentions_resolve_across_arabic_and_latin_aliases_with_entity_relations(
         &w,
         ids::LINKING,
         &i2,
-        out(vec![mention("Ahmad Sameer", "person", Some(ahmed), &[], false, 0.9, text2)], vec![]),
+        out(
+            vec![mention(
+                "Ahmad Sameer",
+                "person",
+                Some(ahmed),
+                &[],
+                false,
+                0.9,
+                text2,
+            )],
+            vec![],
+        ),
     );
     enqueue(&w, a, "link", note2).await;
     r.run_until_idle().await;
     assert_input(&w, ids::LINKING, &i2);
-    assert!(w.read(a, "notes/Call 2.md").contains("people: [\"[[Ahmed Samir]]\"]"));
+    assert!(
+        w.read(a, "notes/Call 2.md")
+            .contains("people: [\"[[Ahmed Samir]]\"]")
+    );
     w.finish().await;
 }
 
@@ -201,7 +233,9 @@ async fn an_ambiguous_mention_is_a_suggestion_and_a_reply_re_proposes() {
     let fathy = entity(&w, &sa, NoteKind::Person, "Ahmed Fathy", &["Ahmed"]).await;
     let petrol = entity(&w, &sa, NoteKind::Company, "Petrol Arrows", &[]).await;
     let text = "Ahmed called about the invoice.";
-    let note = w.create(&sa, "notes/Invoice call.md", &format!("{text}\n")).await;
+    let note = w
+        .create(&sa, "notes/Invoice call.md", &format!("{text}\n"))
+        .await;
     let mut i = link_input(note, "Invoice call", text);
     i.entities = vec![
         ent(fathy, "person", "Ahmed Fathy", &["Ahmed"], &[]),
@@ -212,7 +246,15 @@ async fn an_ambiguous_mention_is_a_suggestion_and_a_reply_re_proposes() {
         ids::LINKING,
         &i,
         out(
-            vec![mention("Ahmed", "person", None, &[samir, fathy], false, 0.5, text)],
+            vec![mention(
+                "Ahmed",
+                "person",
+                None,
+                &[samir, fathy],
+                false,
+                0.5,
+                text,
+            )],
             vec![],
         ),
     );
@@ -311,15 +353,25 @@ async fn an_ambiguous_mention_is_a_suggestion_and_a_reply_re_proposes() {
     assert_input(&w, ids::CORRECTION, &reply_input);
     let s = suggestions(&w, a).await;
     assert_eq!(
-        s.iter().map(|x| (x.0.clone(), x.1.clone())).collect::<Vec<_>>(),
+        s.iter()
+            .map(|x| (x.0.clone(), x.1.clone()))
+            .collect::<Vec<_>>(),
         vec![
             ("entity_link".to_owned(), "superseded".to_owned()),
             ("entity_link".to_owned(), "pending".to_owned())
         ]
     );
     assert_eq!(
-        (s[1].2["proposed"].clone(), s[1].2["candidates"].clone(), s[1].2["reason"].clone()),
-        (json!(fathy.to_string()), json!([fathy.to_string()]), json!("reply"))
+        (
+            s[1].2["proposed"].clone(),
+            s[1].2["candidates"].clone(),
+            s[1].2["reason"].clone()
+        ),
+        (
+            json!(fathy.to_string()),
+            json!([fathy.to_string()]),
+            json!("reply")
+        )
     );
     let thread = w
         .vault
@@ -345,7 +397,10 @@ async fn an_ambiguous_mention_is_a_suggestion_and_a_reply_re_proposes() {
     );
     // The hint is remembered on the entity (table and sidecar).
     let sc = pipeline_support::sidecar(&w, a, fathy);
-    assert_eq!(sc["hints"][0]["text"], json!("Ahmed at Petrol Arrows = Ahmed Fathy"));
+    assert_eq!(
+        sc["hints"][0]["text"],
+        json!("Ahmed at Petrol Arrows = Ahmed Fathy")
+    );
     // Accepting the re-proposal links the note.
     let new_sid = suggestion_ids(&w, a).await[1];
     w.vault
@@ -356,7 +411,10 @@ async fn an_ambiguous_mention_is_a_suggestion_and_a_reply_re_proposes() {
         w.read(a, "notes/Invoice call.md")
             .contains("people: [\"[[Ahmed Fathy]]\"]")
     );
-    assert_eq!(w.log(a)[0], "user: accept entity_link notes/Invoice call.md");
+    assert_eq!(
+        w.log(a)[0],
+        "user: accept entity_link notes/Invoice call.md"
+    );
     w.finish().await;
 }
 
@@ -366,14 +424,19 @@ async fn a_nickname_is_a_link_or_create_suggestion_and_its_alias_links_the_next_
     let (a, sa) = w.user("alice").await;
     let ibrahim = entity(&w, &sa, NoteKind::Person, "Ibrahim Nasr", &[]).await;
     let text = "بابا عنده عقد الشقة.";
-    let note = w.create(&sa, "notes/Apartment.md", &format!("{text}\n")).await;
+    let note = w
+        .create(&sa, "notes/Apartment.md", &format!("{text}\n"))
+        .await;
     let i = link_input(note, "Apartment", text);
     // Even a confident guess never links a nickname without an existing alias.
     push(
         &w,
         ids::LINKING,
         &i,
-        out(vec![mention("بابا", "person", None, &[], true, 0.9, text)], vec![]),
+        out(
+            vec![mention("بابا", "person", None, &[], true, 0.9, text)],
+            vec![],
+        ),
     );
     enqueue(&w, a, "link", note).await;
     let r = runner(&w, &["link"]);
@@ -388,7 +451,12 @@ async fn a_nickname_is_a_link_or_create_suggestion_and_its_alias_links_the_next_
             s[0].2["is_nickname"].clone(),
             s[0].2["proposed"].clone()
         ),
-        ("entity_link".to_owned(), json!("nickname"), json!(true), json!(null))
+        (
+            "entity_link".to_owned(),
+            json!("nickname"),
+            json!(true),
+            json!(null)
+        )
     );
     // No entity was created.
     assert!(!w.dir(a).join("people/بابا.md").exists());
@@ -422,13 +490,30 @@ async fn a_nickname_is_a_link_or_create_suggestion_and_its_alias_links_the_next_
     let text2 = "كلمت بابا النهارده.";
     let note2 = w.create(&sa, "notes/Call.md", &format!("{text2}\n")).await;
     let mut i2 = link_input(note2, "Call", text2);
-    i2.entities = vec![ent(ibrahim, "person", "Ibrahim Nasr", &["Baba", "بابا"], &[])];
+    i2.entities = vec![ent(
+        ibrahim,
+        "person",
+        "Ibrahim Nasr",
+        &["Baba", "بابا"],
+        &[],
+    )];
     i2.candidates = vec![pipeline_support::cand(note, "Apartment")];
     push(
         &w,
         ids::LINKING,
         &i2,
-        out(vec![mention("بابا", "person", Some(ibrahim), &[], true, 0.9, text2)], vec![]),
+        out(
+            vec![mention(
+                "بابا",
+                "person",
+                Some(ibrahim),
+                &[],
+                true,
+                0.9,
+                text2,
+            )],
+            vec![],
+        ),
     );
     enqueue(&w, a, "link", note2).await;
     r.run_until_idle().await;
@@ -438,7 +523,10 @@ async fn a_nickname_is_a_link_or_create_suggestion_and_its_alias_links_the_next_
             .contains("people: [\"[[Ibrahim Nasr]]\"]")
     );
     assert_eq!(
-        decisions(&w, a).await.last().map(|d| (d.kind.clone(), d.committed)),
+        decisions(&w, a)
+            .await
+            .last()
+            .map(|d| (d.kind.clone(), d.committed)),
         Some(("entity_mention".to_owned(), true))
     );
     w.finish().await;

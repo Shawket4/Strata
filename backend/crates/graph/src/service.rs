@@ -50,8 +50,16 @@ impl GraphService {
 
     /// The scope's graph as stored in the index.
     pub async fn data(&self, scope: &UserScope) -> Result<GraphData> {
+        self.data_with(scope, false).await
+    }
+
+    /// The scope's graph, with every live note's tags when `tags` (one transaction).
+    pub async fn data_with(&self, scope: &UserScope, tags: bool) -> Result<GraphData> {
         let mut tx = self.db.begin(scope).await?;
-        let data = load::load(&mut tx).await?;
+        let mut data = load::load(&mut tx).await?;
+        if tags {
+            data.tags = load::load_tags(&mut tx).await?;
+        }
         tx.commit().await?;
         Ok(data)
     }
@@ -66,7 +74,9 @@ impl GraphService {
 
     /// `GET /graph`.
     pub async fn graph(&self, scope: &UserScope, query: &GraphQuery) -> Result<GraphView> {
-        let data = self.data(scope).await?;
+        let data = self
+            .data_with(scope, query.include_tags && query.lens.is_none())
+            .await?;
         if let Some(lens) = query.lens {
             let ids = data
                 .nodes
@@ -107,7 +117,7 @@ impl GraphService {
         focus: NoteId,
         query: &LocalQuery,
     ) -> Result<GraphView> {
-        let data = self.data(scope).await?;
+        let data = self.data_with(scope, query.include_tags).await?;
         if !data.nodes.iter().any(|n| n.id == focus) {
             return Err(GraphError::NotFound);
         }
@@ -135,11 +145,11 @@ impl GraphService {
             status,
             &std::collections::HashMap::new(),
         )?;
-        let ids = view.nodes.iter().map(|n| n.id).collect();
+        let ids = view.nodes.iter().filter_map(|n| n.id.note()).collect();
         let summaries = self.summaries(scope, ids).await;
         let mut view = view;
         for n in &mut view.nodes {
-            n.summary = summaries.get(&n.id).cloned();
+            n.summary = n.id.note().and_then(|id| summaries.get(&id).cloned());
         }
         Ok(view)
     }

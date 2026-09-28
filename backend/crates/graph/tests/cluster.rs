@@ -564,3 +564,216 @@ async fn planning_is_deterministic_and_user_names_are_kept() {
     let _ = alice;
     w.finish().await;
 }
+
+async fn reindex(w: &World, s: &UserScope) {
+    w.vault.reindex(s).await.expect("reindex");
+}
+
+#[tokio::test]
+async fn reindex_reloads_the_cluster_rows_from_the_file_and_logs_only_differences() {
+    let w = World::new().await;
+    let (alice, s) = w.user("alice").await;
+    let g = groups(&w, &s).await;
+    push_names(&w, &s, alice, &[(1, "Pricing"), (2, "Hiring")]).await;
+    w.clusterer()
+        .run_for(&s, "alice", w.db.clock.now())
+        .await
+        .expect("run");
+    let before = rows(&w, alice).await;
+    let log = cluster_changes(&w, alice).await;
+    assert_eq!(before.0.len(), 10);
+
+    // Unchanged file: the rows come back as they were, and nothing is logged.
+    reindex(&w, &s).await;
+    assert_eq!(rows(&w, alice).await, before);
+    assert_eq!(cluster_changes(&w, alice).await, log);
+    let graph = w
+        .service(None)
+        .graph(&s, &strata_graph::query::GraphQuery::default())
+        .await
+        .expect("graph");
+    assert_eq!(
+        graph
+            .clusters
+            .iter()
+            .map(|c| (c.id.as_str(), c.name.as_str(), c.size))
+            .collect::<Vec<_>>(),
+        vec![("1", "Pricing", 5), ("2", "Hiring", 5)]
+    );
+
+    // The file changed out of band (a name, a member moved): exactly those differences.
+    let mut file = read_clusters(&w, alice);
+    file.clusters[0].name = "Prices".into();
+    let moved = g.a[0].as_ulid();
+    file.clusters[0].notes.retain(|n| *n != moved);
+    file.clusters[1].notes.push(moved);
+    file.clusters[1].notes.sort();
+    w.write_raw(alice, CLUSTERS_PATH, &file.to_json().expect("json"));
+    reindex(&w, &s).await;
+    let (assign, names) = rows(&w, alice).await;
+    assert_eq!(names, vec![(1, "Prices".into()), (2, "Hiring".into())]);
+    assert_eq!(
+        assign.iter().find(|(n, _)| *n == g.a[0]).copied(),
+        Some((g.a[0], 2))
+    );
+    assert_eq!(assign.len(), 10);
+    let now = cluster_changes(&w, alice).await;
+    assert_eq!(
+        now[log.len()..].to_vec(),
+        vec![
+            (
+                "cluster_assignment".into(),
+                g.a[0].to_string(),
+                "upsert".into()
+            ),
+            ("cluster_name".into(), "1".into(), "upsert".into()),
+        ]
+    );
+    assert_eq!(w.log(alice)[0], "system: recovered changes");
+
+    // No file: no rows, and every former row is logged as deleted.
+    std::fs::remove_file(w.dir(alice).join(CLUSTERS_PATH)).expect("remove");
+    reindex(&w, &s).await;
+    assert_eq!(rows(&w, alice).await, (vec![], vec![]));
+    let after = cluster_changes(&w, alice).await;
+    let mut expected: Vec<(String, String, String)> = assign
+        .iter()
+        .map(|(n, _)| ("cluster_assignment".into(), n.to_string(), "delete".into()))
+        .collect();
+    expected.push(("cluster_name".into(), "1".into(), "delete".into()));
+    expected.push(("cluster_name".into(), "2".into(), "delete".into()));
+    assert_eq!(after[now.len()..].to_vec(), expected);
+    w.finish().await;
+}
+
+#[tokio::test]
+async fn a_user_rename_is_one_user_commit_and_the_job_never_replaces_it() {
+    let w = World::new().await;
+    let (alice, s) = w.user("alice").await;
+    let (bob, sb) = w.user("bob").await;
+    groups(&w, &s).await;
+    // AI down on the first run: placeholders, both listed as unnamed.
+    w.clusterer()
+        .run_for(&s, "alice", w.db.clock.now())
+        .await
+        .expect("run");
+    w.events.take();
+    let commits = w.log(alice).len();
+    let log = cluster_changes(&w, alice).await;
+    let generated = read_clusters(&w, alice).generated;
+
+    let renamed = cluster::rename(
+        &w.vault,
+        w.events.as_ref(),
+        &s,
+        "2",
+        "  My \t hiring  ",
+        w.db.clock.now(),
+    )
+    .await
+    .expect("rename");
+    assert_eq!(
+        (
+            renamed.id.as_str(),
+            renamed.name.as_str(),
+            renamed.size,
+            renamed.commit.is_some()
+        ),
+        ("2", "My hiring", 5, true)
+    );
+    assert_eq!(w.log(alice).len(), commits + 1);
+    assert_eq!(w.log(alice)[0], "user: rename cluster .meta/clusters.json");
+    assert_eq!(w.last_commit_paths(alice), vec![CLUSTERS_PATH.to_owned()]);
+    let file = read_clusters(&w, alice);
+    assert_eq!(
+        file.clusters
+            .iter()
+            .map(|c| (c.id, c.name.as_str(), c.named_by))
+            .collect::<Vec<_>>(),
+        vec![
+            (1, "Cluster 1", vault_format::sidecar::By::Ai),
+            (2, "My hiring", vault_format::sidecar::By::User),
+        ]
+    );
+    assert_eq!(file.generated, generated, "the clustering itself is unchanged");
+    assert_eq!(file.extra.get("unnamed"), Some(&json!([1])));
+    assert_eq!(
+        rows(&w, alice).await.1,
+        vec![(1, "Cluster 1".into()), (2, "My hiring".into())]
+    );
+    let now = cluster_changes(&w, alice).await;
+    assert_eq!(
+        now[log.len()..].to_vec(),
+        vec![("cluster_name".into(), "2".into(), "upsert".into())]
+    );
+    assert_eq!(w.events.take(), vec![(alice, vec!["2".to_owned()])]);
+
+    // The same name again writes nothing.
+    let again = cluster::rename(&w.vault, w.events.as_ref(), &s, "2", "My hiring", w.db.clock.now())
+        .await
+        .expect("again");
+    assert_eq!(again.commit, None);
+    assert_eq!(w.log(alice).len(), commits + 1);
+    assert_eq!(cluster_changes(&w, alice).await, now);
+    assert_eq!(w.events.take(), vec![]);
+
+    // Problems: unknown or foreign cluster, bad names.
+    for id in ["3", "x", ""] {
+        assert!(matches!(
+            cluster::rename(&w.vault, w.events.as_ref(), &s, id, "N", w.db.clock.now()).await,
+            Err(strata_graph::GraphError::NotFound)
+        ));
+    }
+    assert!(matches!(
+        cluster::rename(&w.vault, w.events.as_ref(), &sb, "1", "N", w.db.clock.now()).await,
+        Err(strata_graph::GraphError::NotFound)
+    ));
+    assert!(!w.dir(bob).join(CLUSTERS_PATH).exists());
+    let long = "x".repeat(cluster::MAX_NAME_CHARS + 1);
+    for (name, want) in [
+        (" \t ", "invalid /name: the cluster name is empty"),
+        (
+            long.as_str(),
+            "invalid /name: the cluster name is longer than 100 characters",
+        ),
+    ] {
+        let err = cluster::rename(&w.vault, w.events.as_ref(), &s, "1", name, w.db.clock.now())
+            .await
+            .expect_err("invalid");
+        assert_eq!(err.to_string(), want);
+    }
+    assert_eq!(w.log(alice).len(), commits + 1);
+
+    // Cluster 2 gains a member and the AI is back. Only cluster 1 (a placeholder) is sent
+    // for naming; the AI's name for cluster 2 is never asked for, and the user's stays.
+    let extra = w
+        .create(
+            &s,
+            "notes/Offer letter.md",
+            "---\nrelated: [\"[[Hiring plan]]\", \"[[Job ad]]\", \"[[Onboarding]]\"]\n---\nOffer.\n",
+        )
+        .await;
+    let input = push_names(&w, &s, alice, &[(1, "Pricing"), (2, "Recruiting")]).await;
+    assert!(input.contains("\"cluster_id\": \"1\""));
+    assert!(!input.contains("\"cluster_id\": \"2\""), "{input}");
+    let out = w
+        .clusterer()
+        .run_for(&s, "alice", w.db.clock.now())
+        .await
+        .expect("run");
+    assert_eq!(out.changed, vec!["1".to_owned(), "2".to_owned()]);
+    let file = read_clusters(&w, alice);
+    assert_eq!(
+        file.clusters
+            .iter()
+            .map(|c| (c.id, c.name.as_str(), c.named_by, c.notes.len()))
+            .collect::<Vec<_>>(),
+        vec![
+            (1, "Pricing", vault_format::sidecar::By::Ai, 5),
+            (2, "My hiring", vault_format::sidecar::By::User, 6),
+        ]
+    );
+    assert!(file.clusters[1].notes.contains(&extra.as_ulid()));
+    assert_eq!(file.extra.get("unnamed"), None);
+    w.finish().await;
+}

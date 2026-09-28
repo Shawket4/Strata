@@ -126,7 +126,8 @@ impl PipelineDeps {
         model: String,
     ) -> Result<strata_vault::ops::ai_apply::AiChangeSet, JobError> {
         let events = pipeline::document_events(&self.vault, &ctx.scope, dir).await?;
-        let pending = PendingKeys::from_views(&self.vault.note_suggestions(&ctx.scope, note.id).await?);
+        let pending =
+            PendingKeys::from_views(&self.vault.note_suggestions(&ctx.scope, note.id).await?);
         let linked_before = pipeline::linked_mentions(note, dir);
         let mut p = Planner::new(
             job,
@@ -143,12 +144,21 @@ impl PipelineDeps {
             pending,
         );
         let titles = pipeline::candidate_titles(candidates);
-        p.relations(&self.db, &ctx.scope, &self.vault, &extraction.relations, &titles)
-            .await?;
+        p.relations(
+            &self.db,
+            &ctx.scope,
+            &self.vault,
+            &extraction.relations,
+            &titles,
+        )
+        .await?;
         p.concepts(&extraction.concepts);
         p.mentions(&extraction.mentions);
         p.entity_relations(&extraction.entity_relations);
-        p.custody(&extraction.custody, &pipeline::nickname_set(&extraction.mentions));
+        p.custody(
+            &extraction.custody,
+            &pipeline::nickname_set(&extraction.mentions),
+        );
         p.tasks(&extraction.tasks);
         p.stale();
         Ok(p.finish(&linked_before))
@@ -221,7 +231,11 @@ impl JobHandler for LinkHandler {
             scope: ctx.scope,
             username: ctx.username.clone(),
         };
-        let out = match d.ai.complete::<Linking>(caller, prompt, &input, MAX_TOKENS).await {
+        let out = match d
+            .ai
+            .complete::<Linking>(caller, prompt, &input, MAX_TOKENS)
+            .await
+        {
             Ok(o) => o,
             Err(AiError::Disabled | AiError::ProviderNotConfigured(_)) => return Ok(()),
             Err(e) => return Err(e.into()),
@@ -237,7 +251,16 @@ impl JobHandler for LinkHandler {
             tasks: l.tasks,
         };
         let set = d
-            .plan(&ctx, pipeline::LINK, &note, &dir, &candidates, &offered, &extraction, model)
+            .plan(
+                &ctx,
+                pipeline::LINK,
+                &note,
+                &dir,
+                &candidates,
+                &offered,
+                &extraction,
+                model,
+            )
             .await?;
         match d.vault.ai_apply(&ctx.scope, set).await? {
             AiApplied::Done { .. } | AiApplied::Stale => Ok(()),

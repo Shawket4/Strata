@@ -805,6 +805,7 @@ pub async fn get_graph(
     kinds: ::std::option::Option<&str>,
     include_similarity: ::std::option::Option<bool>,
     lens: ::std::option::Option<&str>,
+    include_tags: ::std::option::Option<bool>,
 ) -> ::std::result::Result<types::Graph, crate::Error> {
     let request = crate::Request::new(
         crate::Method::GET,
@@ -830,6 +831,33 @@ pub async fn get_graph(
         ::std::option::Option::Some(value) => request.query("lens", (*value).to_owned()),
         ::std::option::Option::None => request,
     };
+    let request = match &include_tags {
+        ::std::option::Option::Some(value) => request.query("include_tags", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/// Rename a cluster. The name is the user's from now on: re-clustering keeps it.
+///
+/// `PATCH /api/v1/graph/clusters/{id}`
+pub async fn rename_cluster(
+    client: &crate::Client,
+    id: &str,
+    body: &types::RenameClusterRequest,
+) -> ::std::result::Result<types::GraphCluster, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PATCH,
+        ::std::format!(
+            "/api/v1/graph/clusters/{}",
+            crate::encode_path_segment(&{
+                let value = &id;
+                (*value).to_owned()
+            })?
+        ),
+        "rename_cluster",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
     client.send(request).await
 }
 /// The neighbourhood of a note.
@@ -842,6 +870,7 @@ pub async fn get_local_graph(
     types: ::std::option::Option<&str>,
     kinds: ::std::option::Option<&str>,
     include_similarity: ::std::option::Option<bool>,
+    include_tags: ::std::option::Option<bool>,
 ) -> ::std::result::Result<types::Graph, crate::Error> {
     let request = crate::Request::new(
         crate::Method::GET,
@@ -871,6 +900,10 @@ pub async fn get_local_graph(
         ::std::option::Option::Some(value) => {
             request.query("include_similarity", value.to_string())
         }
+        ::std::option::Option::None => request,
+    };
+    let request = match &include_tags {
+        ::std::option::Option::Some(value) => request.query("include_tags", value.to_string()),
         ::std::option::Option::None => request,
     };
     client.send(request).await

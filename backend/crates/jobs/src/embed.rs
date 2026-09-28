@@ -85,7 +85,11 @@ impl EmbedHandler {
         self
     }
 
-    async fn enqueue_link(&self, ctx: &JobContext, note: strata_common::NoteId) -> Result<(), JobError> {
+    async fn enqueue_link(
+        &self,
+        ctx: &JobContext,
+        note: strata_common::NoteId,
+    ) -> Result<(), JobError> {
         let Some(delay) = self.link_delay else {
             return Ok(());
         };

@@ -748,3 +748,315 @@ async fn settings_ask_and_admin_views() {
     );
     assert_eq!(found.users, []);
 }
+
+fn no_filter() -> strata_core::view::model::DirectoryFilter {
+    strata_core::view::model::DirectoryFilter {
+        tags: vec![],
+        role: None,
+        company_id: None,
+        industry: None,
+        doc_type: None,
+        status: None,
+        place_id: None,
+        holder_id: None,
+        expiring: false,
+        has_open_items: false,
+    }
+}
+
+#[tokio::test]
+async fn directory_filters_facets_sections_and_sort_run_in_the_core() {
+    use strata_core::view::model::{DirectoryFilter, DirectorySort, FilterOption};
+    let (_h, s) = vault().await;
+    let docs = |f: DirectoryFilter| {
+        s.read(|c, ctx| {
+            build::directory_filtered(c, ctx, DirectoryTab::Documents, "", &f, DirectorySort::Name)
+        })
+        .expect("docs")
+    };
+    // "In Home" includes documents stored in nested places (Home › Safe › Desk drawer).
+    let in_home = docs(DirectoryFilter {
+        place_id: Some(HOME.into()),
+        ..no_filter()
+    });
+    assert_eq!(
+        in_home.items.iter().map(|i| i.title.as_str()).collect::<Vec<_>>(),
+        ["Car license"]
+    );
+    let opt = |facet: &str, value: &str, label: &str, selected: bool| FilterOption {
+        facet: facet.into(),
+        value: value.into(),
+        label: label.into(),
+        count: 1,
+        selected,
+    };
+    assert_eq!(
+        in_home.filter_options,
+        [
+            opt("doc_type", "license", "license", false),
+            opt("place", HOME, "Home", true),
+            opt("status", "stored", "stored", false),
+        ]
+    );
+    assert_eq!(
+        in_home
+            .sections
+            .iter()
+            .map(|x| (x.label.as_str(), x.items.len()))
+            .collect::<Vec<_>>(),
+        [("All documents · A–Z", 1)]
+    );
+    let lost = docs(DirectoryFilter {
+        status: Some("lost".into()),
+        ..no_filter()
+    });
+    assert_eq!(lost.items, []);
+    let places = s
+        .read(|c, ctx| {
+            build::directory_filtered(
+                c,
+                ctx,
+                DirectoryTab::Places,
+                "",
+                &no_filter(),
+                DirectorySort::LastActive,
+            )
+        })
+        .expect("places");
+    // Same activity: ties fall back to the title.
+    assert_eq!(
+        places.items.iter().map(|i| i.title.as_str()).collect::<Vec<_>>(),
+        ["Desk drawer", "Home", "Safe"]
+    );
+}
+
+#[tokio::test]
+async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
+    use strata_core::view::model::{GraphFilter, GraphLens, KindCount};
+    let (_h, s) = vault().await;
+    let all = GraphFilter {
+        edge_kinds: vec![],
+        node_kinds: vec![],
+        similarity: false,
+        cluster: None,
+        lens: GraphLens::Notes,
+        focus: None,
+    };
+    let map = |f: &GraphFilter| {
+        s.read(|c, ctx| graph::global_graph_filtered(c, ctx, f))
+            .expect("map")
+    };
+    let g = map(&all);
+    assert_eq!(g.nodes.len(), 8);
+    assert_eq!(g.edges.len(), 11);
+    let kc = |kind: &str, label: &str, count: u32| KindCount {
+        kind: kind.into(),
+        label: label.into(),
+        count,
+    };
+    assert_eq!(
+        g.edge_counts,
+        [
+            kc("custody", "Custody", 1),
+            kc("link", "Links", 5),
+            kc("mention", "Mentions", 1),
+            kc("part-of-place", "Inside", 2),
+            kc("relation", "Relations", 2),
+        ]
+    );
+    assert_eq!(
+        g.node_counts,
+        [
+            kc("company", "Companies", 1),
+            kc("document", "Documents", 1),
+            kc("note", "Notes", 2),
+            kc("person", "People", 1),
+            kc("place", "Places", 3),
+        ]
+    );
+    assert_eq!(g.similarity, Availability::Available);
+
+    // Node-kind filter plus a focus: only places, and the focused place's neighbours.
+    let places = map(&GraphFilter {
+        node_kinds: vec!["place".into()],
+        focus: Some(SAFE.into()),
+        ..all.clone()
+    });
+    assert_eq!(
+        places.nodes.iter().map(|n| n.title.as_str()).collect::<Vec<_>>(),
+        ["Home", "Safe", "Desk drawer"]
+    );
+    assert!(
+        places
+            .edges
+            .iter()
+            .all(|e| e.kind == "relation:part-of" || e.kind == "part-of-place")
+    );
+    assert_eq!(places.edges.len(), 4);
+    assert_eq!(places.neighbours, [HOME, DRAWER]);
+    // Counts are before filtering: the panel keeps showing every kind.
+    assert_eq!(places.node_counts, g.node_counts);
+
+    // Edge-kind filter keeps every node and only the custody edge.
+    let custody = map(&GraphFilter {
+        edge_kinds: vec!["custody".into()],
+        ..all.clone()
+    });
+    assert_eq!(custody.nodes.len(), 8);
+    assert_eq!(
+        custody
+            .edges
+            .iter()
+            .map(|e| (e.src.as_str(), e.dst.as_str(), e.kind.as_str()))
+            .collect::<Vec<_>>(),
+        [(LICENSE, DRAWER, "custody:location")]
+    );
+
+    // The people lens shows people only.
+    let people = map(&GraphFilter {
+        lens: GraphLens::People,
+        ..all
+    });
+    assert_eq!(
+        people.nodes.iter().map(|n| n.title.as_str()).collect::<Vec<_>>(),
+        ["Shady"]
+    );
+}
+
+#[tokio::test]
+async fn editor_completions_mentions_and_pickers() {
+    use strata_core::view::extra;
+    use strata_core::view::model::{
+        CompletionItem, CompletionKind, Completions, MentionEdit, PlaceOption,
+    };
+    let (_h, s) = vault().await;
+    let len = |t: &str| u32::try_from(t.encode_utf16().count()).expect("len");
+    let link = "---\nid: X\n---\nMet [[Sha";
+    let c = s
+        .read(|c, ctx| extra::completions(c, ctx, CAPTURE, link, len(link)))
+        .expect("completions");
+    assert_eq!(
+        c,
+        Completions {
+            kind: CompletionKind::WikiLink,
+            replace_start: 20,
+            replace_end: 23,
+            query: "Sha".into(),
+            items: vec![CompletionItem {
+                label: "Shady".into(),
+                detail: "people/Shady.md".into(),
+                insert_text: "Shady]]".into(),
+                target_id: Some(SHADY.into()),
+                entity_kind: Some("person".into()),
+                label_dir: TextDir::Ltr,
+            }],
+        }
+    );
+    let mention = "---\nid: X\n---\nMet @Wat";
+    let m = s
+        .read(|c, ctx| extra::completions(c, ctx, CAPTURE, mention, len(mention)))
+        .expect("mention");
+    assert_eq!(m.kind, CompletionKind::Mention);
+    assert_eq!(
+        m.items
+            .iter()
+            .map(|i| (i.label.as_str(), i.target_id.as_deref()))
+            .collect::<Vec<_>>(),
+        [("Watanya", Some(WATANYA))]
+    );
+    // Picking it writes the link and adds the company to the note's frontmatter.
+    let edit = s
+        .read(|c, _| extra::insert_mention(c, mention, len(mention) - 4, len(mention), WATANYA))
+        .expect("insert");
+    assert_eq!(
+        edit,
+        MentionEdit {
+            content: "---\nid: X\ncompanies: [\"[[Watanya]]\"]\n---\nMet [[Watanya]]".into(),
+            cursor: 56,
+        }
+    );
+
+    let options = s
+        .read(|c, _| extra::place_options(c, Some(LICENSE)))
+        .expect("places");
+    assert_eq!(
+        options,
+        [
+            PlaceOption {
+                id: HOME.into(),
+                title: "Home".into(),
+                breadcrumb: vec![],
+                depth: 0,
+                is_current: false,
+            },
+            PlaceOption {
+                id: SAFE.into(),
+                title: "Safe".into(),
+                breadcrumb: vec![r(HOME, "Home")],
+                depth: 1,
+                is_current: false,
+            },
+            PlaceOption {
+                id: DRAWER.into(),
+                title: "Desk drawer".into(),
+                breadcrumb: vec![r(HOME, "Home"), r(SAFE, "Safe")],
+                depth: 2,
+                is_current: true,
+            },
+        ]
+    );
+    let merge = s
+        .read(|c, _| extra::merge_preview(c, SAFE, DRAWER))
+        .expect("merge");
+    assert_eq!(
+        (
+            merge.source,
+            merge.into,
+            merge.aliases,
+            merge.mention_count,
+            merge.relation_count
+        ),
+        (
+            r(SAFE, "Safe"),
+            r(DRAWER, "Desk drawer"),
+            vec!["Safe".to_owned()],
+            1,
+            2
+        )
+    );
+}
+
+#[tokio::test]
+async fn new_task_sheet_understands_mentions_dates_times_and_recurrence() {
+    use strata_core::view::extra;
+    use strata_core::view::model::TaskChipKind;
+    let (_h, s) = vault().await;
+    let p = s
+        .read(|c, ctx| {
+            extra::task_draft_preview(c, ctx, "Call @Shady tomorrow 3pm every week !high")
+        })
+        .expect("preview");
+    let d = NaiveDate::from_ymd_opt(2026, 9, 28).expect("date");
+    assert_eq!(p.description, "Call [[Shady]]");
+    assert_eq!(p.due, Some(d));
+    assert_eq!(p.due_label.as_deref(), Some("Tomorrow"));
+    assert_eq!(p.recurrence.as_deref(), Some("every week"));
+    assert_eq!(p.priority.as_deref(), Some("high"));
+    assert_eq!(p.links, [r(SHADY, "Shady")]);
+    assert_eq!(p.reminders, [d.and_hms_opt(15, 0, 0).expect("time")]);
+    assert_eq!(
+        p.chips
+            .iter()
+            .map(|c| (c.kind, c.label.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            (TaskChipKind::Due, "Tomorrow"),
+            (TaskChipKind::Recurrence, "Every week"),
+            (TaskChipKind::Priority, "High priority"),
+            (TaskChipKind::Reminder, "15:00"),
+            (TaskChipKind::Link, "Shady"),
+        ]
+    );
+    assert_eq!(p.draft.description, p.description);
+    assert_eq!(p.draft.priority.as_deref(), Some("high"));
+}

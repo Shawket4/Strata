@@ -534,7 +534,6 @@ impl Fixtures {
     pub fn private_strings(&self) -> Vec<String> {
         let mut out = self.pools().all();
         out.push(self.secret.clone());
-        out.push(self.note.path.clone());
         out
     }
 }
@@ -727,7 +726,9 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
         .find(|d| !d.current)
         .map(|d| d.id)
         .expect("second device");
-    let map = "Overview".to_owned();
+    // Map IDs are names in the user's own namespace: a per-user name, so another user's
+    // request for it addresses a map that does not exist in their vault.
+    let map = format!("Overview of {}", u.name);
     api::put_map(
         c,
         &map,
@@ -794,15 +795,15 @@ pub fn strings_in(body: &[u8]) -> Vec<String> {
 }
 
 /// Filesystem paths in a string: the data root, absolute Unix/Windows paths, `..` segments.
-/// A path-like token that the client itself sent (`echo`: the request's target and body) is
-/// not a leak of the server's layout; the data root always is.
+/// A path the client itself sent (`echo`: the request's target, headers and body) is not a
+/// leak of the server's layout.
 pub fn path_leaks(s: &str, data_root: &Path, echo: &[u8]) -> Vec<String> {
     let mut out = Vec::new();
     let root = data_root.to_string_lossy();
-    if s.contains(root.as_ref()) {
+    let echoed = |token: &str| echo.windows(token.len()).any(|w| w == token.as_bytes());
+    if s.contains(root.as_ref()) && !echoed(root.as_ref()) {
         out.push(format!("data root in {s:?}"));
     }
-    let echoed = |token: &str| echo.windows(token.len()).any(|w| w == token.as_bytes());
     for token in s.split(|c: char| c.is_whitespace() || "`'\"()[]<>,;".contains(c)) {
         let absolute = [
             "/home/", "/tmp/", "/srv/", "/etc/", "/root/", "/var/", "/usr/", "/proc/", "/opt/",

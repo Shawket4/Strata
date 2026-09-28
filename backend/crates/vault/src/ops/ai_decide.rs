@@ -14,6 +14,7 @@
 //! | `duplicates` | merges the pair (see [`Core::merge_notes`]; entities: entity merge; tasks: the newer one is cancelled) | keep-both (in `ops::suggestions`) |
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use domain::{NoteKind, RelationType};
@@ -416,7 +417,7 @@ impl Core {
         if let Some(s) = pending {
             match (&fix.action, s.kind.as_str()) {
                 (FixAction::Reject, _) => {
-                    self.plan_reject(set, &s)?;
+                    Self::plan_reject(set, &s)?;
                 }
                 (FixAction::Repoint(target), KIND_ENTITY_LINK) => {
                     let edits = SuggestionEdits {
@@ -499,7 +500,7 @@ impl Core {
         Ok(())
     }
 
-    fn plan_reject(&self, set: &mut AiChangeSet, s: &Suggestion) -> Result<()> {
+    fn plan_reject(set: &mut AiChangeSet, s: &Suggestion) -> Result<()> {
         if s.kind == KIND_ENTITY_LINK {
             let p: EntityLinkPayload = decode(&s.payload)?;
             set.rejected_mentions
@@ -723,7 +724,7 @@ impl Core {
         )
         .by_user(&format!("{op} {}", s.kind));
         if !accept {
-            self.plan_reject(&mut set, &s)?;
+            Self::plan_reject(&mut set, &s)?;
             return self.finish_decision(scope, set, subject, id).await;
         }
         match s.kind.as_str() {
@@ -1049,10 +1050,11 @@ impl Core {
             if !body.is_empty() {
                 body.push('\n');
             }
-            body.push_str(&format!(
+            let _ = write!(
+                body,
                 "## Merged from {ltitle} ({today})\n\n{}\n",
                 ldoc.body().trim_end()
-            ));
+            );
             sdoc.set_body(body);
         }
         let mut changes: BTreeMap<String, Option<Vec<u8>>> = BTreeMap::new();

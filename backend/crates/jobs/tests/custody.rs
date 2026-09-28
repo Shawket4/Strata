@@ -3,7 +3,14 @@
 //! ID appended, one `ai:` commit); below the threshold, ambiguous ("gave the contract to
 //! Shady" with two contracts) and conflicting statements become suggestions; accepting with
 //! the chosen document records the event.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::many_single_char_names,
+    clippy::float_cmp
+)]
 
 mod common;
 mod pipeline_support;
@@ -60,8 +67,24 @@ struct Vault {
 }
 
 async fn setup(w: &World, s: &UserScope) -> Vault {
-    let doc = entity(w, s, NoteKind::Document, "Watanya contract", &["عقد وطنية"], None).await;
-    let office = entity(w, s, NoteKind::Place, "Nasr City office", &["مكتب مدينة نصر"], None).await;
+    let doc = entity(
+        w,
+        s,
+        NoteKind::Document,
+        "Watanya contract",
+        &["عقد وطنية"],
+        None,
+    )
+    .await;
+    let office = entity(
+        w,
+        s,
+        NoteKind::Place,
+        "Nasr City office",
+        &["مكتب مدينة نصر"],
+        None,
+    )
+    .await;
     let safe = entity(
         w,
         s,
@@ -129,12 +152,28 @@ fn watanya_entities(v: &Vault, arabic_first: bool) -> Vec<EntityInput> {
     vec![
         ent(v.doc, "document", "Watanya contract", &["عقد وطنية"], &[]),
         ent(v.shady, "person", "Shady", &["شادي"], &[]),
-        ent(v.office, "place", "Nasr City office", &["مكتب مدينة نصر"], &[]),
+        ent(
+            v.office,
+            "place",
+            "Nasr City office",
+            &["مكتب مدينة نصر"],
+            &[],
+        ),
         safe,
     ]
 }
 
-async fn run_example(w: &World, a: strata_common::UserId, s: &UserScope, v: &Vault, text: &str, doc_mention: &str, safe_mention: &str, office_mention: &str, shady_mention: &str) -> NoteId {
+async fn run_example(
+    w: &World,
+    a: strata_common::UserId,
+    s: &UserScope,
+    v: &Vault,
+    text: &str,
+    doc_mention: &str,
+    safe_mention: &str,
+    office_mention: &str,
+    shady_mention: &str,
+) -> NoteId {
     let note = w.create(s, "notes/Contract.md", &format!("{text}\n")).await;
     let i = input(note, "Contract", text, watanya_entities(v, false));
     push(
@@ -143,8 +182,28 @@ async fn run_example(w: &World, a: strata_common::UserId, s: &UserScope, v: &Vau
         &i,
         out(
             vec![
-                event("returned-by", doc_mention, Some(v.doc), None, None, Some((shady_mention, v.shady)), 0.95, text, text),
-                event("stored-at", doc_mention, Some(v.doc), Some((safe_mention, v.safe)), Some(office_mention), None, 0.95, text, text),
+                event(
+                    "returned-by",
+                    doc_mention,
+                    Some(v.doc),
+                    None,
+                    None,
+                    Some((shady_mention, v.shady)),
+                    0.95,
+                    text,
+                    text,
+                ),
+                event(
+                    "stored-at",
+                    doc_mention,
+                    Some(v.doc),
+                    Some((safe_mention, v.safe)),
+                    Some(office_mention),
+                    None,
+                    0.95,
+                    text,
+                    text,
+                ),
             ],
             vec![],
         ),
@@ -167,7 +226,18 @@ async fn the_watanya_example_in_english_is_applied_with_cited_events() {
     let (a, sa) = w.user("alice").await;
     let v = setup(&w, &sa).await;
     let text = "Watanya's contract is at the Nasr City office in the safe, last with Shady.";
-    let note = run_example(&w, a, &sa, &v, text, "Watanya's contract", "the safe", "the Nasr City office", "Shady").await;
+    let note = run_example(
+        &w,
+        a,
+        &sa,
+        &v,
+        text,
+        "Watanya's contract",
+        "the safe",
+        "the Nasr City office",
+        "Shady",
+    )
+    .await;
     let b = generated_block_id(text);
     // The cited block got its ID (the one automated body edit); one `ai:` commit.
     assert_eq!(
@@ -186,8 +256,20 @@ async fn the_watanya_example_in_english_is_applied_with_cited_events() {
             .map(|d| (d.kind, d.target, d.rel, d.committed, d.suggested))
             .collect::<Vec<_>>(),
         vec![
-            ("custody_event".to_owned(), v.doc.to_string(), Some("returned-by".to_owned()), true, false),
-            ("custody_event".to_owned(), v.doc.to_string(), Some("stored-at".to_owned()), true, false),
+            (
+                "custody_event".to_owned(),
+                v.doc.to_string(),
+                Some("returned-by".to_owned()),
+                true,
+                false
+            ),
+            (
+                "custody_event".to_owned(),
+                v.doc.to_string(),
+                Some("stored-at".to_owned()),
+                true,
+                false
+            ),
         ]
     );
     assert_eq!(suggestions(&w, a).await, vec![]);
@@ -200,7 +282,18 @@ async fn the_watanya_example_in_arabic_is_applied_with_cited_events() {
     let (a, sa) = w.user("alice").await;
     let v = setup(&w, &sa).await;
     let text = "عقد وطنية في الخزنة في مكتب مدينة نصر، وآخر مرة كان مع شادي.";
-    run_example(&w, a, &sa, &v, text, "عقد وطنية", "الخزنة", "مكتب مدينة نصر", "شادي").await;
+    run_example(
+        &w,
+        a,
+        &sa,
+        &v,
+        text,
+        "عقد وطنية",
+        "الخزنة",
+        "مكتب مدينة نصر",
+        "شادي",
+    )
+    .await;
     let b = generated_block_id(text);
     assert_eq!(
         w.read(a, "documents/Watanya contract.md"),
@@ -217,7 +310,9 @@ async fn ambiguous_low_confidence_and_conflicting_statements_are_suggestions() {
     let acme = entity(&w, &sa, NoteKind::Document, "Acme contract", &[], None).await;
     // "gave the contract to Shady": two contracts fit.
     let text = "Gave the contract to Shady.";
-    let note = w.create(&sa, "notes/Handover.md", &format!("{text}\n")).await;
+    let note = w
+        .create(&sa, "notes/Handover.md", &format!("{text}\n"))
+        .await;
     let i = input(
         note,
         "Handover",
@@ -229,10 +324,22 @@ async fn ambiguous_low_confidence_and_conflicting_statements_are_suggestions() {
         ids::LINKING,
         &i,
         out(
-            vec![event("handed-to", "the contract", None, None, None, Some(("Shady", v.shady)), 0.95, text, text)],
-            vec![json!({"text": "the contract", "kind": "document", "existing_id": null,
+            vec![event(
+                "handed-to",
+                "the contract",
+                None,
+                None,
+                None,
+                Some(("Shady", v.shady)),
+                0.95,
+                text,
+                text,
+            )],
+            vec![
+                json!({"text": "the contract", "kind": "document", "existing_id": null,
                         "candidate_ids": [v.doc.to_string(), acme.to_string()], "is_nickname": false,
-                        "confidence": 0.5, "evidence_block_id": generated_block_id(text)})],
+                        "confidence": 0.5, "evidence_block_id": generated_block_id(text)}),
+            ],
         ),
     );
     enqueue(&w, a, "link", note).await;
@@ -299,7 +406,13 @@ async fn ambiguous_low_confidence_and_conflicting_statements_are_suggestions() {
         text2,
         vec![
             ent(v.doc, "document", "Watanya contract", &["عقد وطنية"], &[]),
-            ent(v.office, "place", "Nasr City office", &["مكتب مدينة نصر"], &[]),
+            ent(
+                v.office,
+                "place",
+                "Nasr City office",
+                &["مكتب مدينة نصر"],
+                &[],
+            ),
             safe,
         ],
     );
@@ -309,7 +422,17 @@ async fn ambiguous_low_confidence_and_conflicting_statements_are_suggestions() {
         ids::LINKING,
         &i2,
         out(
-            vec![event("stored-at", "The Watanya contract", Some(v.doc), Some(("the safe", v.safe)), None, None, 0.8, text2, text2)],
+            vec![event(
+                "stored-at",
+                "The Watanya contract",
+                Some(v.doc),
+                Some(("the safe", v.safe)),
+                None,
+                None,
+                0.8,
+                text2,
+                text2,
+            )],
             vec![],
         ),
     );

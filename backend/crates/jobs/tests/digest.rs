@@ -2,7 +2,14 @@
 //! notes, entity open items, AI contradictions), uncited bullets dropped, citations rendered
 //! as links (cited blocks made citable), one `ai: digest _ai/digests/<week>.md` commit, and
 //! the schedule (weekly on the configured day at the nightly hour).
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::many_single_char_names,
+    clippy::float_cmp
+)]
 
 mod common;
 mod pipeline_support;
@@ -33,10 +40,18 @@ async fn the_weekly_digest_summarises_new_notes_open_items_and_contradictions() 
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
     let pricing = w
-        .create(&sa, "notes/Pricing.md", "Discounts are capped at 5 percent.\n")
+        .create(
+            &sa,
+            "notes/Pricing.md",
+            "Discounts are capped at 5 percent.\n",
+        )
         .await;
     let deal = w
-        .create(&sa, "notes/Deal.md", "Flat 10 percent discount for Acme. ^d1\n")
+        .create(
+            &sa,
+            "notes/Deal.md",
+            "Flat 10 percent discount for Acme. ^d1\n",
+        )
         .await;
     // An AI `contradicts` edge found this week.
     let mut set = AiChangeSet::new("link", deal);
@@ -70,9 +85,10 @@ async fn the_weekly_digest_summarises_new_notes_open_items_and_contradictions() 
         )
         .await
         .expect("entity");
-    let page = w
-        .read(a, "people/Shady.md")
-        .replace("## Notes\n", "## Open items\n- Owes the signed copy [[Deal#^d1]]\n\n## Notes\n");
+    let page = w.read(a, "people/Shady.md").replace(
+        "## Notes\n",
+        "## Open items\n- Owes the signed copy [[Deal#^d1]]\n\n## Notes\n",
+    );
     w.vault
         .update_note(&sa, shady.id, page, shady.version.clone())
         .await

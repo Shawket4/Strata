@@ -4,7 +4,14 @@
 //! against the note's `created`, user sections preserved byte for byte, contact fields
 //! untouched, cited blocks made citable, one `ai:` commit, and no second call for unchanged
 //! input.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments,
+    clippy::many_single_char_names,
+    clippy::float_cmp
+)]
 
 mod common;
 mod pipeline_support;
@@ -47,7 +54,9 @@ async fn insights_are_cited_validated_dated_and_leave_user_content_alone() {
         .expect("entity");
     // The user's own sections on the page.
     let user_body = "## Notes\nMet him at the fair. Keep this.\n\n## Family\nUser heading kept.\n";
-    let page = w.read(a, "people/Shady.md").replace("## Notes\n", user_body);
+    let page = w
+        .read(a, "people/Shady.md")
+        .replace("## Notes\n", user_body);
     w.vault
         .update_note(&sa, shady.id, page, shady.version.clone())
         .await
@@ -100,7 +109,8 @@ async fn insights_are_cited_validated_dated_and_leave_user_content_alone() {
     };
     let cb = generated_block_id(capture_text);
     let mb = generated_block_id("Met Shady about the Watanya contract.");
-    let cite = |n: strata_common::NoteId, b: &str| json!([{"note_id": n.to_string(), "block_id": b}]);
+    let cite =
+        |n: strata_common::NoteId, b: &str| json!([{"note_id": n.to_string(), "block_id": b}]);
     push(
         &w,
         ids::ENTITY_INSIGHTS,
@@ -140,7 +150,10 @@ async fn insights_are_cited_validated_dated_and_leave_user_content_alone() {
     );
     assert!(page.contains("phone: +20 100 000 0000"));
     // The cited blocks got their IDs; one `ai:` commit for everything.
-    assert!(w.read(a, "notes/Capture.md").contains(&format!("{capture_text} ^{cb}")));
+    assert!(
+        w.read(a, "notes/Capture.md")
+            .contains(&format!("{capture_text} ^{cb}"))
+    );
     assert!(
         w.read(a, "notes/Meeting.md")
             .contains(&format!("Met Shady about the Watanya contract. ^{mb}"))

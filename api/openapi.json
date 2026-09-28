@@ -2941,7 +2941,7 @@
             ]
           },
           "kind": {
-            "description": "`link`, `embed`, `relation:<type>`, `similarity`, `concept`, `mention`,\n`entity:<type>`, `custody:<location|holder|last-holder>`, `part-of-place`, or\n`co-mention` (entity lens).",
+            "description": "`link`, `embed`, `relation:<type>`, `similarity`, `concept`, `mention`,\n`entity:<type>`, `custody:<location|holder|last-holder>`, `part-of-place`,\n`document:copy-of`, `tag` (note → tag node), or `co-mention` (entity lens).",
             "type": "string"
           },
           "notes": {
@@ -2961,13 +2961,11 @@
             ]
           },
           "source": {
-            "description": "Source note.",
-            "format": "ulid",
+            "description": "Source node ID.",
             "type": "string"
           },
           "target": {
-            "description": "Target note.",
-            "format": "ulid",
+            "description": "Target node ID (`tag:<tag>` for `tag` edges).",
             "type": "string"
           },
           "weight": {
@@ -2987,7 +2985,7 @@
         "type": "object"
       },
       "GraphNode": {
-        "description": "A node (a live note).",
+        "description": "A node: a live note, or a tag (`include_tags=true`).",
         "properties": {
           "cluster_id": {
             "description": "Stable cluster ID, if clustered.",
@@ -3012,12 +3010,11 @@
             ]
           },
           "id": {
-            "description": "Note ID.",
-            "format": "ulid",
+            "description": "Note ID (ULID), or `tag:<tag>` for a tag node (the tag in lowercase; tags compare\nwithout case).",
             "type": "string"
           },
           "kind": {
-            "$ref": "#/components/schemas/NoteKind",
+            "$ref": "#/components/schemas/GraphNodeKind",
             "description": "Kind."
           },
           "lang": {
@@ -3028,8 +3025,11 @@
             ]
           },
           "path": {
-            "description": "Vault path.",
-            "type": "string"
+            "description": "Vault path (absent on tag nodes).",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "summary": {
             "description": "Short AI summary (hover), at most 200 characters.",
@@ -3039,24 +3039,38 @@
             ]
           },
           "title": {
-            "description": "Title.",
+            "description": "Title (a tag node's is the tag, without `#`).",
             "type": "string"
           },
           "updated": {
-            "description": "Last update.",
+            "description": "Last update (absent on tag nodes).",
             "format": "date-time",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "id",
           "title",
           "kind",
-          "path",
-          "degree",
-          "updated"
+          "degree"
         ],
         "type": "object"
+      },
+      "GraphNodeKind": {
+        "description": "Kind of a graph node (§10): a note kind, or `tag` (with `include_tags`).",
+        "enum": [
+          "note",
+          "concept",
+          "person",
+          "company",
+          "document",
+          "place",
+          "tag"
+        ],
+        "type": "string"
       },
       "Health": {
         "description": "Liveness response.",
@@ -4369,6 +4383,19 @@
         "required": [
           "date",
           "time"
+        ],
+        "type": "object"
+      },
+      "RenameClusterRequest": {
+        "description": "`PATCH /graph/clusters/{id}` body.",
+        "properties": {
+          "name": {
+            "description": "The new name (whitespace runs collapse; 1–100 characters).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
         ],
         "type": "object"
       },
@@ -10675,7 +10702,7 @@
         "operationId": "get_graph",
         "parameters": [
           {
-            "description": "Edge kinds, comma-separated: `link`, `embed`, `relation` or `relation:<type>`,\n`similarity`, `concept`, `mention`, `entity` or `entity:<type>`, `custody` or\n`custody:<location|holder|last-holder>`, `part-of-place`, `co-mention` (lens). Empty:\nall.",
+            "description": "Edge kinds, comma-separated: `link`, `embed`, `relation` or `relation:<type>`,\n`similarity`, `concept`, `mention`, `entity` or `entity:<type>`, `custody` or\n`custody:<location|holder|last-holder>`, `part-of-place`, `document` or\n`document:copy-of`, `tag`, `co-mention` (lens). Empty: all.",
             "in": "query",
             "name": "types",
             "required": false,
@@ -10684,7 +10711,7 @@
             }
           },
           {
-            "description": "Node kinds, comma-separated (`note`, `concept`, `person`, `company`, `document`,\n`place`). Empty: all. Ignored with a lens.",
+            "description": "Node kinds, comma-separated (`note`, `concept`, `person`, `company`, `document`,\n`place`, `tag`). Empty: all. Ignored with a lens.",
             "in": "query",
             "name": "kinds",
             "required": false,
@@ -10708,6 +10735,15 @@
             "required": false,
             "schema": {
               "type": "string"
+            }
+          },
+          {
+            "description": "Add tag nodes (`tag:<tag>`) and note → tag edges. Ignored with a lens.",
+            "in": "query",
+            "name": "include_tags",
+            "required": false,
+            "schema": {
+              "type": "boolean"
             }
           }
         ],
@@ -10739,6 +10775,86 @@
           }
         },
         "summary": "The caller's graph.",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/api/v1/graph/clusters/{id}": {
+      "patch": {
+        "operationId": "rename_cluster",
+        "parameters": [
+          {
+            "description": "Stable cluster ID (as in `clusters[].id`).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/RenameClusterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphCluster"
+                }
+              }
+            },
+            "description": "The renamed cluster (`size` = its member notes). `.meta/clusters.json` is written with `named_by: user` in one `user:` commit (nothing when the cluster already has this name from the user); `cluster.updated` follows on `/events`."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such cluster."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: code `empty_name` or `name_too_long`, or a decoding error."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Rename a cluster. The name is the user's from now on: re-clustering keeps it.",
         "tags": [
           "graph"
         ]
@@ -10792,6 +10908,15 @@
             "description": "Add the focus's similarity edges.",
             "in": "query",
             "name": "include_similarity",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Add tag nodes and note → tag edges (notes sharing a tag are two hops apart).",
+            "in": "query",
+            "name": "include_tags",
             "required": false,
             "schema": {
               "type": "boolean"

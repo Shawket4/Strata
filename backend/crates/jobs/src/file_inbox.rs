@@ -185,7 +185,11 @@ impl JobHandler for FileInboxHandler {
             .people
             .iter()
             .map(|m| m.to_mention(MentionKind::Person))
-            .chain(f.companies.iter().map(|m| m.to_mention(MentionKind::Company)))
+            .chain(
+                f.companies
+                    .iter()
+                    .map(|m| m.to_mention(MentionKind::Company)),
+            )
             .collect();
         let extraction = Extraction {
             relations: f.relations.clone(),
@@ -249,7 +253,10 @@ impl JobHandler for FileInboxHandler {
             });
         } else {
             let pending = d.vault.note_suggestions(&ctx.scope, id).await?;
-            if !pending.iter().any(|s| s.suggestion.kind == decide::KIND_FILING) {
+            if !pending
+                .iter()
+                .any(|s| s.suggestion.kind == decide::KIND_FILING)
+            {
                 let sid = SuggestionId::generate(d.ids.as_ref());
                 set.suggestions.push(NewSuggestion {
                     id: sid,

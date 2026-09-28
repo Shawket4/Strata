@@ -7,7 +7,9 @@
     clippy::expect_used,
     clippy::too_many_lines,
     clippy::float_cmp,
-    clippy::many_single_char_names
+    clippy::many_single_char_names,
+    clippy::needless_pass_by_value,
+    clippy::too_many_arguments
 )]
 
 mod common;
@@ -26,7 +28,11 @@ use strata_jobs::link::{LinkInput, LinkNote};
 use strata_testkit::Fixture;
 use vault_format::RelationKey;
 
-fn input(note: strata_common::NoteId, title: &str, blocks: Vec<strata_jobs::pipeline::BlockInput>) -> LinkInput {
+fn input(
+    note: strata_common::NoteId,
+    title: &str,
+    blocks: Vec<strata_jobs::pipeline::BlockInput>,
+) -> LinkInput {
     LinkInput {
         note: LinkNote {
             id: note.to_string(),
@@ -41,7 +47,12 @@ fn input(note: strata_common::NoteId, title: &str, blocks: Vec<strata_jobs::pipe
     }
 }
 
-fn rel(target: strata_common::NoteId, kind: &str, confidence: f64, reason: &str) -> serde_json::Value {
+fn rel(
+    target: strata_common::NoteId,
+    kind: &str,
+    confidence: f64,
+    reason: &str,
+) -> serde_json::Value {
     json!({"target_id": target.to_string(), "type": kind, "confidence": confidence, "reason": reason})
 }
 
@@ -57,10 +68,18 @@ async fn edits_are_linked_30_seconds_later_with_relations_at_or_above_the_thresh
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
     let churn = w
-        .create(&sa, "notes/Churn notes.md", "Churn rose after the pricing change.\n")
+        .create(
+            &sa,
+            "notes/Churn notes.md",
+            "Churn rose after the pricing change.\n",
+        )
         .await;
     let caps = w
-        .create(&sa, "notes/Discount caps.md", "Discounts are capped at five percent.\n")
+        .create(
+            &sa,
+            "notes/Discount caps.md",
+            "Discounts are capped at five percent.\n",
+        )
         .await;
     let note = w
         .create(
@@ -102,10 +121,18 @@ async fn edits_are_linked_30_seconds_later_with_relations_at_or_above_the_thresh
         ]),
     );
     // The other two notes get empty linking results.
-    let mut ic = input(caps, "Discount caps", vec![block("Discounts are capped at five percent.")]);
+    let mut ic = input(
+        caps,
+        "Discount caps",
+        vec![block("Discounts are capped at five percent.")],
+    );
     ic.candidates = vec![cand(note, "Pricing tiers")];
     push(&w, ids::LINKING, &ic, linking(vec![]));
-    let mut ich = input(churn, "Churn notes", vec![block("Churn rose after the pricing change.")]);
+    let mut ich = input(
+        churn,
+        "Churn notes",
+        vec![block("Churn rose after the pricing change.")],
+    );
     ich.candidates = vec![cand(note, "Pricing tiers")];
     push(&w, ids::LINKING, &ich, linking(vec![]));
     advance(&w, 30);
@@ -138,7 +165,10 @@ async fn edits_are_linked_30_seconds_later_with_relations_at_or_above_the_thresh
     paths.sort();
     assert_eq!(
         paths,
-        vec![format!(".meta/notes/{note}.json"), "notes/Pricing tiers.md".to_owned()]
+        vec![
+            format!(".meta/notes/{note}.json"),
+            "notes/Pricing tiers.md".to_owned()
+        ]
     );
     assert_eq!(
         decisions(&w, a).await,
@@ -172,7 +202,11 @@ async fn duplicates_become_a_suggestion_and_accepting_merges_the_notes() {
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
     let old = w
-        .create(&sa, "notes/ETA invoices.md", "Watanya invoices go through ETA.\n")
+        .create(
+            &sa,
+            "notes/ETA invoices.md",
+            "Watanya invoices go through ETA.\n",
+        )
         .await;
     advance(&w, 60);
     let new = w
@@ -182,14 +216,23 @@ async fn duplicates_become_a_suggestion_and_accepting_merges_the_notes() {
             "---\ntags: [watanya]\n---\nWatanya invoices go through the ETA portal.\n",
         )
         .await;
-    let mut i = input(new, "Watanya ETA", vec![block("Watanya invoices go through the ETA portal.")]);
+    let mut i = input(
+        new,
+        "Watanya ETA",
+        vec![block("Watanya invoices go through the ETA portal.")],
+    );
     i.note.created = "2026-09-27T12:01:00+00:00".into();
     i.candidates = vec![cand(old, "ETA invoices")];
     push(
         &w,
         ids::LINKING,
         &i,
-        linking(vec![rel(old, "duplicates", 0.97, "Same statement about ETA.")]),
+        linking(vec![rel(
+            old,
+            "duplicates",
+            0.97,
+            "Same statement about ETA.",
+        )]),
     );
     enqueue(&w, a, "link", new).await;
     runner(&w, &["link"]).run_until_idle().await;
@@ -218,10 +261,16 @@ async fn duplicates_become_a_suggestion_and_accepting_merges_the_notes() {
         .decide_suggestion(&sa, sid, true)
         .await
         .expect("accept");
-    assert_eq!(view.suggestion.status, strata_index::types::SuggestionStatus::Accepted);
+    assert_eq!(
+        view.suggestion.status,
+        strata_index::types::SuggestionStatus::Accepted
+    );
     // The older note survives with the newer one's text under a dated heading; the newer one
     // is in the trash; one `user: merge` commit.
-    assert_eq!(w.log(a)[0], "user: merge notes/Watanya ETA.md -> notes/ETA invoices.md");
+    assert_eq!(
+        w.log(a)[0],
+        "user: merge notes/Watanya ETA.md -> notes/ETA invoices.md"
+    );
     assert_eq!(
         w.read(a, "notes/ETA invoices.md"),
         format!(
@@ -237,19 +286,37 @@ async fn duplicates_become_a_suggestion_and_accepting_merges_the_notes() {
 async fn rejected_edges_are_never_re_added_and_only_stale_ai_edges_are_removed() {
     let w = World::new().await;
     let (a, sa) = w.user("alice").await;
-    let b = w.create(&sa, "notes/Budget.md", "Budget for the pricing work.\n").await;
-    let c = w.create(&sa, "notes/Churn.md", "Churn after pricing.\n").await;
-    let d = w.create(&sa, "notes/Deals.md", "Deals and pricing.\n").await;
-    let e = w.create(&sa, "notes/Enterprise.md", "Enterprise pricing.\n").await;
+    let b = w
+        .create(&sa, "notes/Budget.md", "Budget for the pricing work.\n")
+        .await;
+    let c = w
+        .create(&sa, "notes/Churn.md", "Churn after pricing.\n")
+        .await;
+    let d = w
+        .create(&sa, "notes/Deals.md", "Deals and pricing.\n")
+        .await;
+    let e = w
+        .create(&sa, "notes/Enterprise.md", "Enterprise pricing.\n")
+        .await;
     let note = w.create(&sa, "notes/Pricing.md", "Pricing plan.\n").await;
     // A user edge that no linking run may remove.
     w.vault
-        .add_relation(&sa, note, e, RelationKey::Note(domain::RelationType::Related))
+        .add_relation(
+            &sa,
+            note,
+            e,
+            RelationKey::Note(domain::RelationType::Related),
+        )
         .await
         .expect("user edge");
     let r = runner(&w, &["link"]);
     let mut i1 = input(note, "Pricing", vec![block("Pricing plan.")]);
-    i1.candidates = vec![cand(b, "Budget"), cand(c, "Churn"), cand(d, "Deals"), cand(e, "Enterprise")];
+    i1.candidates = vec![
+        cand(b, "Budget"),
+        cand(c, "Churn"),
+        cand(d, "Deals"),
+        cand(e, "Enterprise"),
+    ];
     push(
         &w,
         ids::LINKING,
@@ -262,21 +329,27 @@ async fn rejected_edges_are_never_re_added_and_only_stale_ai_edges_are_removed()
     enqueue(&w, a, "link", note).await;
     r.run_until_idle().await;
     assert_eq!(
-        w.read(a, "notes/Pricing.md").lines().find(|l| l.starts_with("related")),
+        w.read(a, "notes/Pricing.md")
+            .lines()
+            .find(|l| l.starts_with("related")),
         Some("related: [\"[[Enterprise]]\", \"[[Budget]]\", \"[[Churn]]\"]")
     );
     // The user rejects the AI edge to Budget.
     w.vault
-        .remove_relation(&sa, note, b, RelationKey::Note(domain::RelationType::Related))
+        .remove_relation(
+            &sa,
+            note,
+            b,
+            RelationKey::Note(domain::RelationType::Related),
+        )
         .await
         .expect("reject");
     // The note changes; the next run no longer offers Budget and gets it back anyway.
     let v = version_of(&w, &sa, note).await;
-    let text = w.read(a, "notes/Pricing.md").replace("Pricing plan.", "Pricing plan for deals.");
-    w.vault
-        .update_note(&sa, note, text, v)
-        .await
-        .expect("edit");
+    let text = w
+        .read(a, "notes/Pricing.md")
+        .replace("Pricing plan.", "Pricing plan for deals.");
+    w.vault.update_note(&sa, note, text, v).await.expect("edit");
     let mut i2 = input(note, "Pricing", vec![block("Pricing plan for deals.")]);
     // Keyword ranking: "deals" now matches too.
     i2.candidates = vec![cand(d, "Deals"), cand(c, "Churn"), cand(e, "Enterprise")];
@@ -303,7 +376,10 @@ async fn rejected_edges_are_never_re_added_and_only_stale_ai_edges_are_removed()
         text.lines()
             .filter(|l| l.starts_with("related") || l.starts_with("follows-up"))
             .collect::<Vec<_>>(),
-        vec!["related: [\"[[Enterprise]]\"]", "follows-up: [\"[[Deals]]\"]"]
+        vec![
+            "related: [\"[[Enterprise]]\"]",
+            "follows-up: [\"[[Deals]]\"]"
+        ]
     );
     let sc = sidecar(&w, a, note);
     assert_eq!(
@@ -353,14 +429,21 @@ async fn invalid_output_is_retried_then_the_job_fails_and_retries_later() {
     r.run_until_idle().await;
     assert_eq!(w.llm.calls().len(), 3);
     assert_eq!(
-        w.llm.calls().iter().map(|c| c.user.clone()).collect::<Vec<_>>(),
+        w.llm
+            .calls()
+            .iter()
+            .map(|c| c.user.clone())
+            .collect::<Vec<_>>(),
         vec![
             strata_ai::prompts::render_input(&i).expect("render"),
             not_json_retry(&i),
             not_json_retry(&i)
         ]
     );
-    assert_eq!(jobs_of(&w, a, "link").await, vec![("queued".to_owned(), 1, at(30))]);
+    assert_eq!(
+        jobs_of(&w, a, "link").await,
+        vec![("queued".to_owned(), 1, at(30))]
+    );
     let mut tx = w.db.begin(a).await.expect("tx");
     let err: Option<String> = sqlx::query_scalar("SELECT last_error FROM jobs WHERE kind = 'link'")
         .fetch_one(tx.conn())
@@ -380,7 +463,10 @@ async fn invalid_output_is_retried_then_the_job_fails_and_retries_later() {
     advance(&w, 30);
     r.run_until_idle().await;
     assert_eq!(w.llm.calls().len(), 6);
-    assert_eq!(jobs_of(&w, a, "link").await, vec![("done".to_owned(), 2, at(30))]);
+    assert_eq!(
+        jobs_of(&w, a, "link").await,
+        vec![("done".to_owned(), 2, at(30))]
+    );
     assert_eq!(w.log(a)[0], "ai: link notes/Solo.md");
     assert_eq!(w.log(a).len(), commits + 1);
     w.finish().await;
@@ -396,8 +482,18 @@ async fn a_reached_budget_pauses_linking_until_the_next_day() {
     let (a, sa) = w.user("alice").await;
     let one = w.create(&sa, "notes/One.md", "First.\n").await;
     let two = w.create(&sa, "notes/Two.md", "Second.\n").await;
-    push(&w, ids::LINKING, &input(one, "One", vec![block("First.")]), linking(vec![]));
-    push(&w, ids::LINKING, &input(two, "Two", vec![block("Second.")]), linking(vec![]));
+    push(
+        &w,
+        ids::LINKING,
+        &input(one, "One", vec![block("First.")]),
+        linking(vec![]),
+    );
+    push(
+        &w,
+        ids::LINKING,
+        &input(two, "Two", vec![block("Second.")]),
+        linking(vec![]),
+    );
     let r = runner(&w, &["link"]);
     enqueue(&w, a, "link", one).await;
     r.run_until_idle().await;
@@ -409,7 +505,11 @@ async fn a_reached_budget_pauses_linking_until_the_next_day() {
         jobs,
         vec![
             ("done".to_owned(), 1, at(0)),
-            ("queued".to_owned(), 0, "2026-09-28T00:00:00Z".parse().expect("t")),
+            (
+                "queued".to_owned(),
+                0,
+                "2026-09-28T00:00:00Z".parse().expect("t")
+            ),
         ]
     );
     w.db.clock.set("2026-09-28T00:00:00Z".parse().expect("t"));
@@ -425,21 +525,38 @@ async fn users_are_isolated_in_linking() {
     let (a, sa) = w.user("alice").await;
     let (b, sb) = w.user("bob").await;
     // Same titles in both vaults: each user's candidates are their own notes only.
-    let a_other = w.create(&sa, "notes/Pricing.md", "Alice pricing notes.\n").await;
-    let _b_other = w.create(&sb, "notes/Pricing.md", "Bob pricing notes.\n").await;
+    let a_other = w
+        .create(&sa, "notes/Pricing.md", "Alice pricing notes.\n")
+        .await;
+    let b_other = w
+        .create(&sb, "notes/Pricing.md", "Bob pricing notes.\n")
+        .await;
     let a_note = w.create(&sa, "notes/Plan.md", "Pricing plan.\n").await;
     let b_note = w.create(&sb, "notes/Plan.md", "Pricing plan.\n").await;
     let mut ia = input(a_note, "Plan", vec![block("Pricing plan.")]);
     ia.candidates = vec![cand(a_other, "Pricing")];
-    push(&w, ids::LINKING, &ia, linking(vec![rel(a_other, "related", 0.9, "Pricing.")]));
+    push(
+        &w,
+        ids::LINKING,
+        &ia,
+        linking(vec![rel(a_other, "related", 0.9, "Pricing.")]),
+    );
     let mut ib = input(b_note, "Plan", vec![block("Pricing plan.")]);
-    ib.candidates = vec![cand(_b_other, "Pricing")];
+    ib.candidates = vec![cand(b_other, "Pricing")];
     // Bob's model reply names Alice's note: it is not a candidate and is ignored.
-    push(&w, ids::LINKING, &ib, linking(vec![rel(a_other, "related", 0.9, "Leak.")]));
+    push(
+        &w,
+        ids::LINKING,
+        &ib,
+        linking(vec![rel(a_other, "related", 0.9, "Leak.")]),
+    );
     enqueue(&w, a, "link", a_note).await;
     enqueue(&w, b, "link", b_note).await;
     runner(&w, &["link"]).run_until_idle().await;
-    assert!(w.read(a, "notes/Plan.md").contains("related: [\"[[Pricing]]\"]"));
+    assert!(
+        w.read(a, "notes/Plan.md")
+            .contains("related: [\"[[Pricing]]\"]")
+    );
     assert!(!w.read(b, "notes/Plan.md").contains("related"));
     assert_eq!(decisions(&w, b).await, vec![]);
     assert_eq!(decisions(&w, a).await.len(), 1);

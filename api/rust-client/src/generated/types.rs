@@ -1844,8 +1844,8 @@ pub struct GraphEdge {
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub confidence: ::std::option::Option<f64>,
     /**`link`, `embed`, `relation:<type>`, `similarity`, `concept`, `mention`,
-    `entity:<type>`, `custody:<location|holder|last-holder>`, `part-of-place`, or
-    `co-mention` (entity lens).*/
+    `entity:<type>`, `custody:<location|holder|last-holder>`, `part-of-place`,
+    `document:copy-of`, `tag` (note → tag node), or `co-mention` (entity lens).*/
     pub kind: ::std::string::String,
     ///Notes mentioning both entities (`co-mention`).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
@@ -1853,15 +1853,15 @@ pub struct GraphEdge {
     ///AI one-line reason (relations).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub reason: ::std::option::Option<::std::string::String>,
-    ///Source note.
-    pub source: ::ulid::Ulid,
-    ///Target note.
-    pub target: ::ulid::Ulid,
+    ///Source node ID.
+    pub source: ::std::string::String,
+    ///Target node ID (`tag:<tag>` for `tag` edges).
+    pub target: ::std::string::String,
     ///Cosine similarity (`similarity`) or co-mention strength (`co-mention`).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub weight: ::std::option::Option<f64>,
 }
-///A node (a live note).
+///A node: a live note, or a tag (`include_tags=true`).
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct GraphNode {
     ///Stable cluster ID, if clustered.
@@ -1872,22 +1872,96 @@ pub struct GraphNode {
     ///Hops from the focus (local graphs only; the focus is 0).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub depth: ::std::option::Option<i32>,
-    ///Note ID.
-    pub id: ::ulid::Ulid,
+    /**Note ID (ULID), or `tag:<tag>` for a tag node (the tag in lowercase; tags compare
+    without case).*/
+    pub id: ::std::string::String,
     ///Kind.
-    pub kind: NoteKind,
+    pub kind: GraphNodeKind,
     ///Dominant language (`ar`, `en`, `mixed`).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub lang: ::std::option::Option<::std::string::String>,
-    ///Vault path.
-    pub path: ::std::string::String,
+    ///Vault path (absent on tag nodes).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub path: ::std::option::Option<::std::string::String>,
     ///Short AI summary (hover), at most 200 characters.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub summary: ::std::option::Option<::std::string::String>,
-    ///Title.
+    ///Title (a tag node's is the tag, without `#`).
     pub title: ::std::string::String,
-    ///Last update.
-    pub updated: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///Last update (absent on tag nodes).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub updated: ::std::option::Option<::chrono::DateTime<::chrono::offset::Utc>>,
+}
+///Kind of a graph node (§10): a note kind, or `tag` (with `include_tags`).
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum GraphNodeKind {
+    #[serde(rename = "note")]
+    Note,
+    #[serde(rename = "concept")]
+    Concept,
+    #[serde(rename = "person")]
+    Person,
+    #[serde(rename = "company")]
+    Company,
+    #[serde(rename = "document")]
+    Document,
+    #[serde(rename = "place")]
+    Place,
+    #[serde(rename = "tag")]
+    Tag,
+}
+impl ::std::fmt::Display for GraphNodeKind {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::Note => f.write_str("note"),
+            Self::Concept => f.write_str("concept"),
+            Self::Person => f.write_str("person"),
+            Self::Company => f.write_str("company"),
+            Self::Document => f.write_str("document"),
+            Self::Place => f.write_str("place"),
+            Self::Tag => f.write_str("tag"),
+        }
+    }
+}
+impl ::std::str::FromStr for GraphNodeKind {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "note" => Ok(Self::Note),
+            "concept" => Ok(Self::Concept),
+            "person" => Ok(Self::Person),
+            "company" => Ok(Self::Company),
+            "document" => Ok(Self::Document),
+            "place" => Ok(Self::Place),
+            "tag" => Ok(Self::Tag),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for GraphNodeKind {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for GraphNodeKind {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
 }
 ///Liveness response.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -2572,6 +2646,12 @@ pub struct ReminderAt {
     pub date: ::chrono::naive::NaiveDate,
     ///Time `HH:MM` (24 h, e.g. `09:00`).
     pub time: ::std::string::String,
+}
+///`PATCH /graph/clusters/{id}` body.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct RenameClusterRequest {
+    ///The new name (whitespace runs collapse; 1–100 characters).
+    pub name: ::std::string::String,
 }
 ///Who wrote a reply.
 #[derive(

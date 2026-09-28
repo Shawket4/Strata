@@ -16,7 +16,7 @@ use std::fmt;
 use std::hash::BuildHasher;
 
 use chrono::{DateTime, Utc};
-use domain::{GraphEdgeKind, GraphNodeKind, NoteKind, RelationOrigin};
+use domain::{GraphEdgeKind, GraphNodeKind, RelationOrigin};
 use graph_algo::{EdgeInput, Filter, GraphBuilder, co_mentions, neighbourhood};
 use strata_common::NoteId;
 

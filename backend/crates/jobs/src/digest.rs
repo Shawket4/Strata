@@ -6,6 +6,7 @@
 //! `ai: digest _ai/digests/<week>.md` commit.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::sync::Arc;
 
 use chrono::{DateTime, Datelike, Duration, NaiveDate, TimeZone, Utc};
@@ -161,9 +162,10 @@ impl DigestHandler {
 fn day_start(tz: Tz, d: NaiveDate) -> DateTime<Utc> {
     tz.from_local_datetime(&d.and_hms_opt(0, 0, 0).unwrap_or_default())
         .earliest()
-        .map_or_else(|| d.and_hms_opt(0, 0, 0).unwrap_or_default().and_utc(), |t| {
-            t.with_timezone(&Utc)
-        })
+        .map_or_else(
+            || d.and_hms_opt(0, 0, 0).unwrap_or_default().and_utc(),
+            |t| t.with_timezone(&Utc),
+        )
 }
 
 /// Bullets of an AI section with the note and block of their first citation.
@@ -262,8 +264,7 @@ impl JobHandler for DigestHandler {
                 continue;
             };
             let doc = Document::parse(&view.content);
-            let Some(section) =
-                strata_vault::ops::entities::section_text(doc.body(), "Open items")
+            let Some(section) = strata_vault::ops::entities::section_text(doc.body(), "Open items")
             else {
                 continue;
             };
@@ -401,7 +402,7 @@ impl JobHandler for DigestHandler {
                     continue;
                 }
                 let text = it.text.split_whitespace().collect::<Vec<_>>().join(" ");
-                out.push_str(&format!("- {text} {}\n", cites.join(" ")));
+                let _ = writeln!(out, "- {text} {}", cites.join(" "));
             }
             out
         };
@@ -415,15 +416,13 @@ impl JobHandler for DigestHandler {
             ("Contradictions", contra),
         ] {
             if !content.is_empty() {
-                body.push_str(&format!("\n## {heading}\n{content}"));
+                let _ = write!(body, "\n## {heading}\n{content}");
             }
         }
         let path = format!("_ai/digests/{week}.md");
         let id = match self.vault.note_by_path(&ctx.scope, &path).await {
             Ok(v) => v.id,
-            Err(strata_vault::VaultError::NotFound) => {
-                NoteId::from_ulid(ctx.job.id.as_ulid())
-            }
+            Err(strata_vault::VaultError::NotFound) => NoteId::from_ulid(ctx.job.id.as_ulid()),
             Err(e) => return Err(e.into()),
         };
         let mut set = AiChangeSet::new(DIGEST, id);

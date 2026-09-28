@@ -239,8 +239,8 @@ pub fn assert_input<T: Serialize>(w: &World, id: &str, input: &T) {
         .llm
         .calls()
         .into_iter()
-        .filter(|c| c.prompt.id == id)
-        .last()
+        .rev()
+        .find(|c| c.prompt.id == id)
         .map(|c| c.user)
         .unwrap_or_default();
     pretty_assertions::assert_eq!(got, want);

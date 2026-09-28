@@ -144,8 +144,21 @@ pub struct CorrectionInput {
 /// English or Arabic (normalised).
 pub fn looks_like_correction(text: &str) -> bool {
     const CUES: &[&str] = &[
-        "is not", "isn't", "wasn't", "wrong", "actually", "not the", "i meant", "should be",
-        "مش", "غلط", "قصدي", "اقصد", "الصح", "مو", "ليس",
+        "is not",
+        "isn't",
+        "wasn't",
+        "wrong",
+        "actually",
+        "not the",
+        "i meant",
+        "should be",
+        "مش",
+        "غلط",
+        "قصدي",
+        "اقصد",
+        "الصح",
+        "مو",
+        "ليس",
     ];
     let n = format!(" {} ", normalize_for_search(text));
     let lower = format!(" {} ", text.to_lowercase());
@@ -269,7 +282,9 @@ fn valid_fixes(
 ) -> Option<Vec<(DecisionFix, f64, String)>> {
     let mut fixes = Vec::new();
     for f in &out.fixes {
-        let d = decisions.iter().find(|d| d.row.id.to_string() == f.decision_id)?;
+        let d = decisions
+            .iter()
+            .find(|d| d.row.id.to_string() == f.decision_id)?;
         let action = match f.action {
             CorrectionAction::Repoint => {
                 let t: NoteId = f.new_target_id.as_deref()?.parse().ok()?;
@@ -394,7 +409,10 @@ impl JobHandler for CorrectHandler {
         });
         let mut set = AiChangeSet::new(CORRECT, subject);
         set.job_id = Some(ctx.job.id);
-        let summary = format!("correction: {}", params.message.chars().take(120).collect::<String>());
+        let summary = format!(
+            "correction: {}",
+            params.message.chars().take(120).collect::<String>()
+        );
         let mut decision = NewDecision {
             id: decision_id,
             kind: DecisionKind::Correction,
@@ -447,11 +465,7 @@ impl JobHandler for CorrectHandler {
             decision_id,
             message: params.message.clone(),
             fixes: fixes
-                .map(|f| {
-                    f.iter()
-                        .map(|(fx, c, r)| fix_payload(fx, *c, r))
-                        .collect()
-                })
+                .map(|f| f.iter().map(|(fx, c, r)| fix_payload(fx, *c, r)).collect())
                 .unwrap_or_default(),
             hints: hints
                 .into_iter()
@@ -531,9 +545,14 @@ impl JobHandler for ReplyHandler {
             }
             decide::KIND_CUSTODY => {
                 if let Ok(p) = rmp_serde::from_slice::<CustodyPayload>(&s.payload) {
-                    for t in [Some(&p.document), p.place.as_ref(), p.person.as_ref(), p.counterparty.as_ref()]
-                        .into_iter()
-                        .flatten()
+                    for t in [
+                        Some(&p.document),
+                        p.place.as_ref(),
+                        p.person.as_ref(),
+                        p.counterparty.as_ref(),
+                    ]
+                    .into_iter()
+                    .flatten()
                     {
                         extra.extend(t.candidates.iter().copied());
                         extra.extend(t.id);
@@ -607,24 +626,21 @@ impl JobHandler for ReplyHandler {
                         .push((p.source_note, p.mention.clone(), p.kind.clone()));
                 }
                 supersede(&mut set, SuggestionDecision::Rejected);
-                set.ai_replies
-                    .push((sid, reply_id, "Understood — I withdrew this suggestion.".to_owned()));
+                set.ai_replies.push((
+                    sid,
+                    reply_id,
+                    "Understood — I withdrew this suggestion.".to_owned(),
+                ));
             }
             (decide::KIND_ENTITY_LINK, _, Some((t, name, kind))) => {
                 let mut p: EntityLinkPayload = rmp_serde::from_slice(&s.payload)
                     .map_err(|_| JobError::Fatal("unreadable suggestion payload".into()))?;
-                if p.kind != kind.as_str() {
-                    set.ai_replies.push((
-                        sid,
-                        reply_id,
-                        format!("{name} is not a {}; I kept the suggestion.", p.kind),
-                    ));
-                } else {
+                if p.kind == kind.as_str() {
                     let new_decision = DecisionId::generate(d.ids.as_ref());
                     p.decision_id = new_decision;
                     p.proposed = Some(t);
                     p.candidates = vec![t];
-                    p.reason = "reply".to_owned();
+                    "reply".clone_into(&mut p.reason);
                     let new_sid = SuggestionId::generate(d.ids.as_ref());
                     set.suggestions.push(NewSuggestion {
                         id: new_sid,
@@ -655,6 +671,12 @@ impl JobHandler for ReplyHandler {
                         reply_id,
                         format!("New suggestion: \"{}\" → {name}.", p.mention),
                     ));
+                } else {
+                    set.ai_replies.push((
+                        sid,
+                        reply_id,
+                        format!("{name} is not a {}; I kept the suggestion.", p.kind),
+                    ));
                 }
             }
             (decide::KIND_CUSTODY, _, Some((t, name, kind))) => {
@@ -681,7 +703,7 @@ impl JobHandler for ReplyHandler {
                 if done {
                     let new_decision = DecisionId::generate(d.ids.as_ref());
                     p.decision_id = new_decision;
-                    p.reason = "reply".to_owned();
+                    "reply".clone_into(&mut p.reason);
                     let new_sid = SuggestionId::generate(d.ids.as_ref());
                     set.suggestions.push(NewSuggestion {
                         id: new_sid,
@@ -704,7 +726,7 @@ impl JobHandler for ReplyHandler {
                             detail: own.detail.clone(),
                             suggestion: Some(new_sid),
                         };
-                        nd.summary = nd.summary.trim().to_owned();
+                        nd.summary = nd.summary.trim().to_string();
                         set.decisions.push(nd);
                         set.revert_decisions.push(own.id);
                     }
@@ -740,8 +762,7 @@ impl JobHandler for ReplyHandler {
             }
         }
         match d.vault.ai_apply(&ctx.scope, set).await {
-            Ok(_) => Ok(()),
-            Err(strata_vault::VaultError::Invalid(_)) => Ok(()),
+            Ok(_) | Err(strata_vault::VaultError::Invalid(_)) => Ok(()),
             Err(e) => Err(e.into()),
         }
     }
@@ -791,10 +812,16 @@ mod tests {
         assert!(looks_like_correction(
             "the Ahmed in yesterday's Acme call is actually Ahmed Fathy"
         ));
-        assert!(looks_like_correction("أحمد اللي في مكالمة أكمي مش أحمد سمير"));
+        assert!(looks_like_correction(
+            "أحمد اللي في مكالمة أكمي مش أحمد سمير"
+        ));
         assert!(looks_like_correction("Ahmed = Ahmed Fathy"));
-        assert!(looks_like_correction("the Ahmed in yesterday's Acme call is Ahmed Fathy"));
-        assert!(looks_like_correction("أحمد اللي في مكالمة أكمي هو أحمد فتحي"));
+        assert!(looks_like_correction(
+            "the Ahmed in yesterday's Acme call is Ahmed Fathy"
+        ));
+        assert!(looks_like_correction(
+            "أحمد اللي في مكالمة أكمي هو أحمد فتحي"
+        ));
         assert!(!looks_like_correction("the invoice is due tomorrow?"));
         assert!(!looks_like_correction("where is the Watanya contract?"));
         assert!(!looks_like_correction("فين عقد وطنية؟"));

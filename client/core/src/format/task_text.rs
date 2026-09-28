@@ -308,10 +308,21 @@ pub fn parse(text: &str, today: NaiveDate) -> ParsedTaskText {
             i += n;
             continue;
         }
+        // A bare time with its meridiem attached: "3pm", "9:30am".
+        if t.starts_with(|c: char| c.is_ascii_digit())
+            && (t.ends_with("am") || t.ends_with("pm"))
+            && let Some((time, _)) = time_of(t, None)
+        {
+            times.push(time);
+            take(1, Piece::Time, &mut used, &mut out);
+            i += 1;
+            continue;
+        }
         // Priority.
         let prio = match (t, next) {
             ("!!!" | "urgent" | "عاجل", _) => Some(("highest", 1)),
-            ("!!" | "important" | "مهم", _) => Some(("high", 1)),
+            ("!!" | "!high" | "important" | "مهم", _) => Some(("high", 1)),
+            ("!low", _) => Some(("low", 1)),
             ("high", Some("priority")) | ("priority", Some("high")) => Some(("high", 2)),
             ("low", Some("priority")) | ("priority", Some("low")) => Some(("low", 2)),
             _ => None,
@@ -425,6 +436,10 @@ mod tests {
             (y.description.as_str(), y.due),
             ("Pay rent", Some(d("2026-10-01")))
         );
+        let bare = parse("Call Shady tomorrow 3pm !high #car", d(TODAY));
+        assert_eq!(bare.description, "Call Shady #car");
+        assert_eq!(bare.reminders, vec![dt("2026-09-28 15:00")]);
+        assert_eq!(bare.priority.as_deref(), Some("high"));
         let z = parse("Submit report in 3 days", d(TODAY));
         assert_eq!(z.due, Some(d("2026-09-30")));
         let sunday = parse("Plan week sunday", d(TODAY));

@@ -25,7 +25,7 @@ use strata_graph::cluster::ClusterEvents;
 fn node(
     id: strata_common::NoteId,
     title: &str,
-    kind: types::NoteKind,
+    kind: types::GraphNodeKind,
     path: &str,
     degree: u32,
     depth: Option<i32>,
@@ -35,13 +35,13 @@ fn node(
         cluster_id: None,
         degree,
         depth,
-        id: id.as_ulid(),
+        id: id.to_string(),
         kind,
         lang: None,
-        path: path.to_owned(),
+        path: Some(path.to_owned()),
         summary: None,
         title: title.to_owned(),
-        updated,
+        updated: Some(updated),
     }
 }
 
@@ -56,8 +56,8 @@ fn user_edge(
         kind: kind.to_owned(),
         notes: None,
         reason: None,
-        source: source.as_ulid(),
-        target: target.as_ulid(),
+        source: source.to_string(),
+        target: target.to_string(),
         weight: None,
     }
 }
@@ -88,8 +88,8 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     let t = h.now();
     let c = &alice.client;
 
-    let g = ops::get_graph(c, None, None, None, None)
-        .await
+    let g = ops::get_graph(c, None, None, None, None, None)
+.await
         .expect("graph");
     assert_eq!(
         g,
@@ -105,7 +105,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
                 node(
                     shady,
                     "Shady",
-                    types::NoteKind::Person,
+                    types::GraphNodeKind::Person,
                     "people/Shady.md",
                     2,
                     None,
@@ -114,7 +114,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
                 node(
                     mona,
                     "Mona",
-                    types::NoteKind::Person,
+                    types::GraphNodeKind::Person,
                     "people/Mona.md",
                     2,
                     None,
@@ -123,7 +123,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
                 node(
                     plan,
                     "Plan",
-                    types::NoteKind::Note,
+                    types::GraphNodeKind::Note,
                     "notes/Plan.md",
                     1,
                     None,
@@ -132,7 +132,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
                 node(
                     call,
                     "Call",
-                    types::NoteKind::Note,
+                    types::GraphNodeKind::Note,
                     "notes/Call.md",
                     3,
                     None,
@@ -144,8 +144,8 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     );
 
     // Filters, and similarity without a model.
-    let g = ops::get_graph(c, Some("link"), Some("note"), Some(true), None)
-        .await
+    let g = ops::get_graph(c, Some("link"), Some("note"), Some(true), None, None)
+.await
         .expect("filtered");
     assert_eq!(
         (g.edges, g.nodes.len(), g.similarity),
@@ -157,8 +157,8 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     );
 
     // People lens: Call names both people, so they are tied with strength 1.
-    let g = ops::get_graph(c, None, None, None, Some("people"))
-        .await
+    let g = ops::get_graph(c, None, None, None, Some("people"), None)
+.await
         .expect("lens");
     assert_eq!(
         g.edges,
@@ -169,8 +169,8 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
                 kind: "co-mention".into(),
                 notes: Some(1),
                 reason: None,
-                source: shady.as_ulid(),
-                target: mona.as_ulid(),
+                source: shady.to_string(),
+                target: mona.to_string(),
                 weight: Some(1.0),
             },
             user_edge(mona, shady, "entity:knows"),
@@ -185,7 +185,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     );
 
     // Local: Plan at depth 1 and 2.
-    let l = ops::get_local_graph(c, plan.as_ulid(), Some(1), None, None, None)
+    let l = ops::get_local_graph(c, plan.as_ulid(), Some(1), None, None, None, None)
         .await
         .expect("local");
     assert_eq!(
@@ -194,7 +194,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
             node(
                 plan,
                 "Plan",
-                types::NoteKind::Note,
+                types::GraphNodeKind::Note,
                 "notes/Plan.md",
                 1,
                 Some(0),
@@ -203,7 +203,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
             node(
                 call,
                 "Call",
-                types::NoteKind::Note,
+                types::GraphNodeKind::Note,
                 "notes/Call.md",
                 1,
                 Some(1),
@@ -211,7 +211,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
             ),
         ]
     );
-    let l = ops::get_local_graph(c, plan.as_ulid(), Some(2), Some("link,mention"), None, None)
+    let l = ops::get_local_graph(c, plan.as_ulid(), Some(2), Some("link,mention"), None, None, None)
         .await
         .expect("local");
     assert_eq!(
@@ -230,7 +230,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
 
     // Parameter problems.
     assert_problem(
-        ops::get_graph(c, Some("link,likes"), None, None, None).await,
+        ops::get_graph(c, Some("link,likes"), None, None, None, None).await,
         &types::Problem {
             errors: vec![field(
                 "unknown_edge_type",
@@ -246,23 +246,25 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
         },
     );
     assert_problem(
-        ops::get_graph(c, None, Some("tag"), None, None).await,
+        ops::get_graph(c, None, Some("cluster"), None, None, None)
+.await,
         &types::Problem {
             errors: vec![field(
                 "unknown_node_kind",
                 "kinds",
-                "unknown node kind `tag`",
+                "unknown node kind `cluster`",
             )],
             ..plain(
                 "invalid_parameter",
                 "Request parameter is invalid",
                 422,
-                Some("unknown node kind `tag`"),
+                Some("unknown node kind `cluster`"),
             )
         },
     );
     assert_problem(
-        ops::get_graph(c, None, None, None, Some("places")).await,
+        ops::get_graph(c, None, None, None, Some("places"), None)
+.await,
         &types::Problem {
             errors: vec![field(
                 "unknown_lens",
@@ -278,7 +280,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
         },
     );
     assert_problem(
-        ops::get_local_graph(c, plan.as_ulid(), Some(4), None, None, None).await,
+        ops::get_local_graph(c, plan.as_ulid(), Some(4), None, None, None, None).await,
         &types::Problem {
             errors: vec![field("invalid_depth", "depth", "depth must be 1, 2 or 3")],
             ..plain(
@@ -292,12 +294,12 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
 
     // Isolation: Bob sees none of Alice's graph; her note IDs are 404 for him.
     let bob = h.user("bob").await;
-    let g = ops::get_graph(&bob.client, None, None, None, None)
-        .await
+    let g = ops::get_graph(&bob.client, None, None, None, None, None)
+.await
         .expect("bob");
     assert_eq!((g.nodes.len(), g.edges.len()), (0, 0));
     assert_problem(
-        ops::get_local_graph(&bob.client, plan.as_ulid(), None, None, None, None).await,
+        ops::get_local_graph(&bob.client, plan.as_ulid(), None, None, None, None, None).await,
         &plain("not_found", "Not found", 404, None),
     );
     h.finish().await;
