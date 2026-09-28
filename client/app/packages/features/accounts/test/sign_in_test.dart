@@ -133,9 +133,7 @@ void main() {
       await pumpVariant(tester, v, const SignInScreen(), fake: fake);
       await tapVisible(tester, find.text('Continue as Shawket'));
       expect(
-        find.text(
-          "Can't reach the server. Check your connection.",
-        ),
+        find.text("Can't reach the server. Check your connection."),
         findsOneWidget,
       );
     });

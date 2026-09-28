@@ -93,11 +93,19 @@ Otherwise the three roles need a `host strata strata_owner,strata_app,strata_acc
 
 ## 3. The binary
 
-From CI: download the `stratad-linux-x86_64` artifact of a green `build` workflow run (a zip
-holding the tarball and its `.sha256`), or the two files from the draft GitHub Release of a
-`v*` tag. A branch build is named `stratad-sha-<short sha>-linux-x86_64.tar.gz` (e.g.
-`stratad-sha-4ff0b09-linux-x86_64.tar.gz`), a tag build `stratad-<version>-linux-x86_64.tar.gz`
-(e.g. `stratad-v0.1.0-linux-x86_64.tar.gz`). Copy both files to the VPS, check and install:
+Every green Build run publishes a GitHub release: pushes replace the rolling pre-release
+**`latest`**, a `v*` tag gets a release of that name. Take the tarball and its `.sha256` from
+Releases → `latest` (or the tag). A branch build is named
+`stratad-sha-<short sha>-linux-x86_64.tar.gz` (e.g. `stratad-sha-4ff0b09-linux-x86_64.tar.gz`),
+a tag build `stratad-<version>-linux-x86_64.tar.gz` (e.g. `stratad-v0.1.0-linux-x86_64.tar.gz`).
+The repository is private: on the VPS download with the GitHub CLI and a token that can read
+it, or copy the two files over (`scp`):
+
+```sh
+GH_TOKEN=<token> gh release download latest -R Shawket4/Strata -p 'stratad-*'   # or: -R … v0.1.0
+```
+
+Check and install:
 
 ```sh
 sha256sum -c stratad-*-linux-x86_64.tar.gz.sha256
@@ -353,13 +361,23 @@ build may use this device over plain HTTP through an SSH tunnel:
 `ssh -N -L 8080:127.0.0.1:8080 you@vps` (your port on the VPS side), then
 `flutter run --dart-define=STRATA_SERVER_URL=http://127.0.0.1:8080`.
 
-## 10. Upgrades
+## 10. Upgrading the server
+
+Download the new tarball and its `.sha256` into an empty directory (step 3: Releases →
+`latest` or the tag, so the globs below match one file), verify the checksum **before**
+unpacking, then install, migrate and restart:
 
 ```sh
+sha256sum -c stratad-*-linux-x86_64.tar.gz.sha256
+tar xzf stratad-*-linux-x86_64.tar.gz && cd stratad-*-linux-x86_64/
 install -m 0755 stratad /usr/local/bin/stratad
 sudo -u strata stratad --env-file /etc/strata/stratad.env migrate
 systemctl restart stratad
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/api/v1/health   # 200 (your port)
 ```
+
+Compare `/etc/strata/stratad.env` with the new `stratad.env.example` for added settings
+(unknown or renamed ones stop `stratad` with the variable's name).
 
 ## 11. Checks after install
 

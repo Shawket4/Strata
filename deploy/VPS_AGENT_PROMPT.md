@@ -96,10 +96,13 @@ these points:
 
 ## The binary
 
-The owner provides the tarball and its `.sha256` (from the GitHub Actions `Build` run, artifact
-`stratad-linux-x86_64`: `stratad-sha-<short sha>-linux-x86_64.tar.gz` for a branch build,
-`stratad-<version>-linux-x86_64.tar.gz` for a tag), placed in this directory. Verify
-the checksum **before** unpacking. Never build or download a binary from anywhere else.
+The tarball and its `.sha256` come from the GitHub release of a green Build run: the rolling
+pre-release `latest`, or a `v*` tag (`stratad-sha-<short sha>-linux-x86_64.tar.gz` for a
+branch build, `stratad-<version>-linux-x86_64.tar.gz` for a tag). The repository is private:
+either the owner copies the two files into this directory, or you run
+`gh release download latest -R Shawket4/Strata -p 'stratad-*'` with a token the owner provides
+in `GH_TOKEN` (never print it). Verify the checksum **before** unpacking. Never build or
+download a binary from anywhere else.
 
 ## Verification (do not report success without it)
 

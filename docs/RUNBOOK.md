@@ -195,8 +195,8 @@ Run exactly **one** `stratad` process: revocations and rate limits are held in m
 Liveness (GET): `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/api/v1/health`
 prints `200` (use the port of `STRATA_BIND`).
 
-**Manual deploy / upgrade** (until deploys are automated): copy the release tarball (§13) to the
-VPS, verify it (`sha256sum -c stratad-*-linux-x86_64.tar.gz.sha256`), unpack it, then
+**Manual deploy / upgrade** (until deploys are automated): download the release tarball and its
+`.sha256` (§13: Releases → `latest` or the tag) to the VPS, verify it (`sha256sum -c stratad-*-linux-x86_64.tar.gz.sha256`), unpack it, then
 
 ```sh
 install -m 0755 stratad /usr/local/bin/stratad
@@ -478,13 +478,19 @@ limit is reached, or AI is off for the account.
 
 ## 13. Build artifacts (CI) and signing
 
-`.github/workflows/build.yml` runs on pushes to `main`, pull requests, `v*` tags and by hand
-(Actions → Build → Run workflow). Download the artifacts from the run's summary page
-(artifacts are kept 90 days by default).
+`.github/workflows/build.yml` runs on pushes to `main` and `claude/**`, pull requests, `v*`
+tags and by hand (Actions → Build → Run workflow). The artifacts are on the run's summary page
+(kept 90 days by default). When all three build jobs are green, the final `release` job (pushes
+and manual runs, not pull requests) publishes every file as a GitHub release: a `v*` tag gets
+the release of that name, any other push replaces the rolling pre-release **`latest`** (its tag
+moves to the new commit). Each app's `SHA256SUMS` is renamed `SHA256SUMS-<artifact>` there. The
+repository is private, so a download on the VPS needs a token:
+`GH_TOKEN=<token> gh release download latest -R Shawket4/Strata -p 'stratad-*'` (or copy the
+files over).
 
 | Artifact | Contents |
 |---|---|
-| `stratad-linux-x86_64` | `stratad-<version>-linux-x86_64.tar.gz` (the stripped `stratad`, `stratad.env.example`, `stratad.service`, `README.md`, `VPS_SETUP.md`) and its `.sha256`. On a `v*` tag the two files are also attached to a **draft** GitHub Release (publish it by hand). |
+| `stratad-linux-x86_64` | `stratad-<version>-linux-x86_64.tar.gz` (the stripped `stratad`, `stratad.env.example`, `stratad.service`, `README.md`, `VPS_SETUP.md`) and its `.sha256`. |
 | `strata-android-release-signed` or `strata-android-debug-signed` | `strata-<version>-android-universal-<kind>.apk`, one APK per ABI (`arm64-v8a`, `armeabi-v7a`, `x86_64`) and `SHA256SUMS`. |
 | `strata-macos-universal-adhoc` | `Strata-<version>-macos-universal.zip` and `.dmg` (arm64 + x86_64, ad-hoc signed) and `SHA256SUMS`. |
 
