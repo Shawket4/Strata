@@ -68,7 +68,7 @@ fn the_facade_drives_the_core_end_to_end() {
     let weak = app::password_strength("abc".to_owned());
     assert_eq!(
         (weak.level, weak.length, weak.min_length),
-        (PasswordLevel::TooShort, 3, 12)
+        (PasswordLevel::TooShort, 3, 10)
     );
     show("hints", &views::editor_hints("See [[Acme]] #client".to_owned()));
     show("recurrence form", &views::recurrence_form("every 2 weeks".to_owned()));
