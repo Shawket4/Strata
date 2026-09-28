@@ -7,7 +7,6 @@ import 'package:strata_ui/testing.dart';
 
 import 'helpers/boot.dart';
 import 'helpers/fakes.dart';
-import 'helpers/matrix.dart';
 
 final DateTime _at = DateTime.utc(2026, 9, 27, 7);
 

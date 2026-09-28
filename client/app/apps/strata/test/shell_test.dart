@@ -13,11 +13,10 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 import 'package:strata_ui/testing.dart';
 
 import 'helpers/boot.dart';
-import 'helpers/matrix.dart';
 
 void main() {
   group('shell matrix', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('navigation and sync pill $v', (tester) async {
         final l10n = await StrataLocalizations.delegate.load(v.locale);
         final sync = lookupSyncLocalizations(v.locale);

@@ -15,11 +15,7 @@ const _acme =
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
   if (finder.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      finder,
-      200,
-      scrollable: _list,
-    );
+    await tester.scrollUntilVisible(finder, 200, scrollable: _list);
   }
   await tapVisible(tester, finder.first);
 }
@@ -32,11 +28,7 @@ final Finder _list = find
 /// Scrolls [finder] into view when the list has not built it yet.
 Future<void> _reveal(WidgetTester tester, Finder finder) async {
   if (finder.evaluate().isNotEmpty) return;
-  await tester.scrollUntilVisible(
-    finder,
-    200,
-    scrollable: _list,
-  );
+  await tester.scrollUntilVisible(finder, 200, scrollable: _list);
 }
 
 /// The one recorded call of [method].
@@ -148,11 +140,7 @@ void main() {
           RegExp('^${strata.relationContradicts}: Discount policy'),
         );
         if (chip.evaluate().isEmpty) {
-          await tester.scrollUntilVisible(
-            chip,
-            200,
-            scrollable: _list,
-          );
+          await tester.scrollUntilVisible(chip, 200, scrollable: _list);
         }
         expect(chip, findsOneWidget);
         expect(
@@ -255,10 +243,7 @@ void main() {
               'documentId': 'd-petrol-arrows-register',
             }),
           );
-          tester
-              .state<ScrollableState>(_list)
-              .position
-              .jumpTo(0);
+          tester.state<ScrollableState>(_list).position.jumpTo(0);
           await settle(tester);
           await _tap(tester, find.text(s.inboxLooksRight));
           expect(

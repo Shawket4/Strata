@@ -10,7 +10,6 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 import 'package:strata_ui/testing.dart';
 
 import 'fakes.dart';
-import 'matrix.dart';
 
 /// The pieces of a booted app.
 class Booted {

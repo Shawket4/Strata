@@ -130,6 +130,13 @@ RouteBase get $appShellRoute => StatefulShellRouteData.$route(
           path: '/ask',
           hasOverriddenOnExit: false,
           factory: $AskRoute._fromState,
+          routes: [
+            GoRouteData.$route(
+              path: 'search',
+              hasOverriddenOnExit: false,
+              factory: $SearchRoute._fromState,
+            ),
+          ],
         ),
       ],
     ),
@@ -321,14 +328,18 @@ mixin $ConflictRoute on GoRouteData {
 }
 
 mixin $NoteEditorRoute on GoRouteData {
-  static NoteEditorRoute _fromState(GoRouterState state) =>
-      NoteEditorRoute(noteId: state.pathParameters['noteId']!);
+  static NoteEditorRoute _fromState(GoRouterState state) => NoteEditorRoute(
+    noteId: state.pathParameters['noteId']!,
+    anchor: state.uri.queryParameters['anchor'],
+  );
 
   NoteEditorRoute get _self => this as NoteEditorRoute;
 
   @override
-  String get location =>
-      GoRouteData.$location('/notes/${Uri.encodeComponent(_self.noteId)}');
+  String get location => GoRouteData.$location(
+    '/notes/${Uri.encodeComponent(_self.noteId)}',
+    queryParams: {if (_self.anchor != null) 'anchor': _self.anchor},
+  );
 
   @override
   void go(BuildContext context) => context.go(location);
@@ -526,6 +537,32 @@ mixin $AskRoute on GoRouteData {
   void replace(BuildContext context) => context.replace(location);
 }
 
+mixin $SearchRoute on GoRouteData {
+  static SearchRoute _fromState(GoRouterState state) =>
+      SearchRoute(q: state.uri.queryParameters['q'] ?? '');
+
+  SearchRoute get _self => this as SearchRoute;
+
+  @override
+  String get location => GoRouteData.$location(
+    '/ask/search',
+    queryParams: {if (_self.q != '') 'q': _self.q},
+  );
+
+  @override
+  void go(BuildContext context) => context.go(location);
+
+  @override
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
+
+  @override
+  void pushReplacement(BuildContext context) =>
+      context.pushReplacement(location);
+
+  @override
+  void replace(BuildContext context) => context.replace(location);
+}
+
 mixin $SettingsRoute on GoRouteData {
   static SettingsRoute _fromState(GoRouterState state) => const SettingsRoute();
 
@@ -696,52 +733,23 @@ RouteBase get $approvalRoute => GoRouteData.$route(
 );
 
 mixin $ApprovalRoute on GoRouteData {
-  static ApprovalRoute _fromState(GoRouterState state) => ApprovalRoute(
-    rejected:
-        _$convertMapValue(
-          'rejected',
-          state.uri.queryParameters,
-          _$boolConverter,
-        ) ??
-        false,
-    $extra: state.extra as SignInRequest?,
-  );
-
-  ApprovalRoute get _self => this as ApprovalRoute;
+  static ApprovalRoute _fromState(GoRouterState state) => const ApprovalRoute();
 
   @override
-  String get location => GoRouteData.$location(
-    '/approval',
-    queryParams: {
-      if (_self.rejected != false) 'rejected': _self.rejected.toString(),
-    },
-  );
+  String get location => GoRouteData.$location('/approval');
 
   @override
-  void go(BuildContext context) => context.go(location, extra: _self.$extra);
+  void go(BuildContext context) => context.go(location);
 
   @override
-  Future<T?> push<T>(BuildContext context) =>
-      context.push<T>(location, extra: _self.$extra);
+  Future<T?> push<T>(BuildContext context) => context.push<T>(location);
 
   @override
   void pushReplacement(BuildContext context) =>
-      context.pushReplacement(location, extra: _self.$extra);
+      context.pushReplacement(location);
 
   @override
-  void replace(BuildContext context) =>
-      context.replace(location, extra: _self.$extra);
-}
-
-bool _$boolConverter(String value) {
-  switch (value) {
-    case 'true':
-      return true;
-    case 'false':
-      return false;
-    default:
-      throw UnsupportedError('Cannot convert "$value" into a bool.');
-  }
+  void replace(BuildContext context) => context.replace(location);
 }
 
 RouteBase get $accountDisabledRoute => GoRouteData.$route(

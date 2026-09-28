@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:strata/src/shell/app_shell.dart';
@@ -198,7 +200,7 @@ class HomeRoute extends GoRouteData with $HomeRoute {
   Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
     state,
     HomeScreen(
-      onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
+      onOpenNote: (id, anchor) => _openNote(context, id, anchor),
       onOpenNotes: () => const NotesRoute().go(context),
       onOpenInbox: () => const InboxRoute().go(context),
       onOpenTasks: () => const TasksRoute().go(context),
@@ -290,6 +292,23 @@ class TaskRoute extends GoRouteData with $TaskRoute {
 void _openNote(BuildContext context, String id, [String? anchor]) =>
     NoteEditorRoute(noteId: id, anchor: anchor).go(context);
 
+/// The "Already exists" prompt of a note whose push the server flagged
+/// (the shared sheet answers the oldest open prompt); Open existing goes to
+/// the candidate's page.
+void _showDuplicate(BuildContext context) => unawaited(
+  DuplicatePromptSheet.show(
+    context,
+    onOpenExisting: (candidate) => switch (candidate.kind) {
+      'task' => TaskRoute(taskId: candidate.id).go(context),
+      'person' ||
+      'company' => EntityRoute(entityId: candidate.id).go(context),
+      'document' => DocumentRoute(documentId: candidate.id).go(context),
+      'place' => PlaceRoute(placeId: candidate.id).go(context),
+      _ => NoteEditorRoute(noteId: candidate.id).go(context),
+    },
+  ),
+);
+
 /// `/notes?folder=`: the notes list of a folder.
 class NotesRoute extends GoRouteData with $NotesRoute {
   /// Creates the route for [folder] (`''` = vault root).
@@ -307,6 +326,7 @@ class NotesRoute extends GoRouteData with $NotesRoute {
       onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
       onOpenLink: (id, anchor) => _openNote(context, id, anchor),
       onOpenConflict: (opId) => ConflictRoute(opId: opId).go(context),
+      onOpenDuplicate: (_) => _showDuplicate(context),
       onOpenLocalMap: (id) => MindMapRoute(noteId: id).go(context),
     ),
   );
@@ -335,6 +355,7 @@ class NoteEditorRoute extends GoRouteData with $NoteEditorRoute {
       onCloseNote: () => const NotesRoute().go(context),
       onOpenLink: (id, anchor) => _openNote(context, id, anchor),
       onOpenConflict: (opId) => ConflictRoute(opId: opId).go(context),
+      onOpenDuplicate: (_) => _showDuplicate(context),
       onOpenLocalMap: (id) => MindMapRoute(noteId: id).go(context),
     ),
   );

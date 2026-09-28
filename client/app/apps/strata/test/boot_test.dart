@@ -12,7 +12,6 @@ import 'package:strata_ui/testing.dart';
 
 import 'helpers/boot.dart';
 import 'helpers/fakes.dart';
-import 'helpers/matrix.dart';
 
 void main() {
   group('startup', () {
