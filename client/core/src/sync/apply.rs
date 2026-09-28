@@ -373,10 +373,27 @@ pub fn record_result(
             server_version,
             resolution,
         } => {
-            outbox::set_status(conn, &op.op_id, OpStatus::Conflict)?;
             let LocalEntity::Note(id) = &local else {
-                return Err(CoreError::Internal("conflict on a non-note op".into()));
+                // Only notes have a conflict to resolve. Elsewhere (a suggestion another
+                // device already decided, a reply to it) the server's state stands: the op
+                // is refused and rolled back like a rejection.
+                outbox::set_status(conn, &op.op_id, OpStatus::Rejected)?;
+                conflicts::put_rejection(
+                    conn,
+                    &RejectionRow {
+                        op_id: op.op_id.clone(),
+                        kind: op.kind().as_str().to_owned(),
+                        entity_id: op.entity_id.clone(),
+                        problem_type: "version_conflict".to_owned(),
+                        status: 409,
+                        created: now.to_owned(),
+                    },
+                )?;
+                write::rebuild(conn, &local, now, re)?;
+                re.topics(Topics::SYNC);
+                return Ok(());
             };
+            outbox::set_status(conn, &op.op_id, OpStatus::Conflict)?;
             let base = notes::base(conn, id)?;
             let local_content = notes::current(conn, id)?.map(|s| s.content);
             conflicts::put_conflict(

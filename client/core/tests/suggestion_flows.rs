@@ -626,3 +626,60 @@ async fn replies_join_the_thread_as_pending_until_synced() {
     );
     assert!(item.pending_sync);
 }
+
+#[tokio::test]
+async fn an_accept_the_server_already_decided_leaves_the_queue_with_the_rest_of_its_batch() {
+    use strata_core::store::conflicts;
+    use strata_core::sync::model::{ConflictResolution, OpResult};
+    let (h, s) = world(vec![suggestion(
+        1,
+        CAP1,
+        SuggestionStatus::Pending,
+        &link(1, "Mona", "person"),
+    )])
+    .await;
+    // Accepted here while another device (or the server) already decided it; a note delete
+    // rides in the same push.
+    let accept_op = s.accept_suggestion(&sid(1)).expect("accept");
+    s.delete_note(PERSON).expect("delete");
+    h.server.script(
+        &sid(1),
+        OpResult::Conflict {
+            server_version: None,
+            resolution: ConflictResolution::ServerKept {
+                reason: "the suggestion was already decided".into(),
+            },
+        },
+    );
+    s.sync(Trigger::Manual).await.expect("push");
+
+    assert_eq!(ops(&s), [], "nothing is left sending");
+    assert!(
+        !h.server.notes().contains_key(&ulid(PERSON)),
+        "the delete in the same batch reached the server"
+    );
+    let rejections = s.read(|c, _| conflicts::rejections(c)).expect("rejections");
+    assert_eq!(
+        rejections
+            .iter()
+            .map(|r| (
+                r.op_id.as_str(),
+                r.kind.as_str(),
+                r.entity_id.as_str(),
+                r.problem_type.as_str(),
+                r.status
+            ))
+            .collect::<Vec<_>>(),
+        [(
+            accept_op.as_str(),
+            "suggestion.accept",
+            sid(1).as_str(),
+            "version_conflict",
+            409
+        )]
+    );
+    // The next cycle has nothing to send.
+    let pushes = h.server.pushes().len();
+    s.sync(Trigger::Manual).await.expect("again");
+    assert_eq!(h.server.pushes().len(), pushes);
+}
