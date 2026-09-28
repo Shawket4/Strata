@@ -80,15 +80,6 @@ jobs:
             dist/${{ steps.version.outputs.name }}.tar.gz
             dist/${{ steps.version.outputs.name }}.tar.gz.sha256
           if-no-files-found: error
-      - name: Draft release (v* tags)
-        if: github.ref_type == 'tag'
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-        with:
-          draft: true
-          files: |
-            dist/${{ steps.version.outputs.name }}.tar.gz
-            dist/${{ steps.version.outputs.name }}.tar.gz.sha256
-          fail_on_unmatched_files: true
 
   app-android:
     name: Android APK (release)
@@ -249,3 +240,52 @@ jobs:
           name: strata-macos-universal-adhoc
           path: client/app/apps/strata/dist/
           if-no-files-found: error
+
+  # Publishes every green build as a GitHub release, so the files have stable download links
+  # (run artifacts expire and sit behind the run page):
+  #   v* tag          -> release "<tag>" (the version)
+  #   other pushes    -> the rolling pre-release "latest", replaced on every green build
+  release:
+    name: Publish release
+    needs: [stratad-linux-x86_64, app-android, app-macos]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download this run's artifacts
+        run: gh run download "$GITHUB_RUN_ID" --dir dl
+      - name: Collect files
+        run: |
+          mkdir -p out
+          for d in dl/*/; do
+            a=$(basename "$d")
+            for f in "$d"*; do
+              n=$(basename "$f")
+              # Each app artifact carries its own SHA256SUMS; keep them apart.
+              if [ "$n" = SHA256SUMS ]; then n="SHA256SUMS-$a"; fi
+              cp "$f" "out/$n"
+            done
+          done
+          ls -l out
+      - name: Publish
+        env:
+          SHA: ${{ github.sha }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          SERVER: ${{ env.STRATA_SERVER_URL }}
+        run: |
+          notes="Built from ${SHA::7} on ${REF_NAME}. Apps connect to ${SERVER}.
+          Server: stratad-*-linux-x86_64.tar.gz (install with VPS_SETUP.md inside it; upgrades: RUNBOOK §10).
+          Android: strata-*-android-universal-*.apk, or the arm64-v8a one for most phones.
+          macOS: Strata-*-macos-universal.dmg or .zip (ad-hoc signed: right-click → Open the first time)."
+          if [ "$REF_TYPE" = tag ]; then
+            gh release create "$REF_NAME" out/* --verify-tag --title "Strata $REF_NAME" --notes "$notes"
+          else
+            gh release delete latest --cleanup-tag --yes || true
+            gh release create latest out/* --target "$SHA" --prerelease \
+              --title "Latest build (${SHA::7})" --notes "$notes"
+          fi
