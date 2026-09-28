@@ -193,6 +193,28 @@ void main() {
       ]);
     });
 
+    test('alchemist is a runtime dependency of strata_state only', () {
+      final root = _workspace(
+        members: {
+          'packages/strata_state': _pubspec(
+            'strata_state',
+            deps: '  alchemist: ^0.14.0\n',
+          ),
+          'packages/features/home': _pubspec(
+            'strata_home',
+            deps: '  alchemist: ^0.14.0\n',
+          ),
+        },
+      );
+      expect(runGuard(root), [
+        const Violation(
+          'strata_home',
+          'dependencies "alchemist" is not allowed: '
+              'not in the §11.1 allow-list',
+        ),
+      ]);
+    });
+
     test('refuses path/git dependencies, unknown SDK packages, overrides', () {
       final root = _workspace(
         members: {

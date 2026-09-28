@@ -48,6 +48,9 @@ const Map<String, Set<String>> scopedRuntime = {
   'strata_bridge': {'flutter_rust_bridge', 'ffi', 'path_provider'},
   // Rich-text editor (D2 = b).
   'strata_editor': {'super_editor', 'super_editor_markdown'},
+  // `package:strata_state/testing.dart` (imported by tests only) holds the
+  // shared §16.5 matrix and golden helpers, next to `flutter_test`.
+  'strata_state': {'alchemist'},
 };
 
 /// Dev dependencies every package may use (tests, codegen, lints).
