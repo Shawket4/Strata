@@ -118,8 +118,9 @@ pub fn sanitize_file_name(title: &str) -> String {
         }
     }
     let collapsed = mapped.split_whitespace().collect::<Vec<_>>().join(" ");
+    // Leading dots and spaces together (". .a" must not become ".a").
     let mut name = collapsed
-        .trim_start_matches('.')
+        .trim_start_matches(['.', ' '])
         .trim_end_matches(['.', ' '])
         .trim()
         .to_owned();
@@ -239,6 +240,8 @@ mod tests {
         );
         assert_eq!(sanitize_file_name("What? #1 [draft]"), "What 1 draft");
         assert_eq!(sanitize_file_name("  ..hidden..  "), "hidden");
+        // Regression (item-render proptest): a leading dot after a forbidden character.
+        assert_eq!(sanitize_file_name(".?.a"), "a");
         assert_eq!(sanitize_file_name("عقد وطنية: نسخة"), "عقد وطنية - نسخة");
         assert_eq!(sanitize_file_name("***"), "Untitled");
         assert_eq!(sanitize_file_name("CON"), "CON_");

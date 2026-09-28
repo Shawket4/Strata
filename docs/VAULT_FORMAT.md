@@ -48,7 +48,7 @@ A path segment is rejected if it:
 Turns any title into a valid name (without `.md`):
 
 1. `/ \ |` → `-`; `:` → ` -`; other forbidden and control characters → space.
-2. Collapse whitespace runs to one space; strip leading dots and trailing dots/spaces.
+2. Collapse whitespace runs to one space; strip leading and trailing dots and spaces.
 3. Cut to 200 bytes on a character boundary.
 4. Windows device stems get `_` appended (`CON` → `CON_`, `aux.notes` → `aux_.notes`).
 5. Empty result → `Untitled`.
