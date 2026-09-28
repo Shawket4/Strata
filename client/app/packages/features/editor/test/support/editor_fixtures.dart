@@ -10,6 +10,10 @@ EditorHint hintOf(
   HintKind kind,
   String text, {
   int occurrence = 0,
+  String? targetId,
+  String? targetAnchor,
+  String? taskId,
+  int level = 0,
 }) {
   var start = -1;
   for (var i = 0; i <= occurrence; i++) {
@@ -20,9 +24,26 @@ EditorHint hintOf(
     kind: kind,
     start: start,
     end: start + text.length,
-    level: 0,
+    targetId: targetId,
+    targetAnchor: targetAnchor,
+    taskId: taskId,
+    level: level,
   );
 }
+
+/// The core's per-line direction hints for the lines of [content] listed in
+/// [directions] (the line's text → its direction).
+List<EditorHint> lineDirections(
+  String content,
+  Map<String, TextDir> directions,
+) => [
+  for (final MapEntry(key: line, value: dir) in directions.entries)
+    hintOf(
+      content,
+      dir == TextDir.rtl ? HintKind.rtlLine : HintKind.ltrLine,
+      line,
+    ),
+];
 
 /// The frontmatter hint of [content] as the core emits it: from the opening
 /// `---` line up to and including the closing `---` line (and its
@@ -61,7 +82,10 @@ List<EditorHint> shiftedHints(List<EditorHint> hints, int offset, int delta) =>
           kind: h.kind,
           start: h.start >= offset ? h.start + delta : h.start,
           end: h.end > offset ? h.end + delta : h.end,
-          level: 0,
+          targetId: h.targetId,
+          targetAnchor: h.targetAnchor,
+          taskId: h.taskId,
+          level: h.level,
         ),
     ];
 
@@ -96,16 +120,34 @@ abstract final class EditorFixtures {
   /// The core's hints of [content].
   static final List<EditorHint> hints = [
     ...frontmatterHint(content),
-    hintOf(content, HintKind.wikiLink, '[[Subscription tiers]]'),
-    hintOf(content, HintKind.wikiLink, '[[Ahmed Samir]]'),
-    hintOf(content, HintKind.heading, '## Hypotheses'),
+    hintOf(
+      content,
+      HintKind.wikiLink,
+      '[[Subscription tiers]]',
+      targetId: 'n-subscription-tiers',
+    ),
+    hintOf(
+      content,
+      HintKind.wikiLink,
+      '[[Ahmed Samir]]',
+      targetId: 'p-ahmed-samir',
+    ),
+    hintOf(content, HintKind.heading, '## Hypotheses', level: 2),
+    hintOf(content, HintKind.bold, '**flat 10% discount**'),
     hintOf(content, HintKind.blockId, '^a1b2'),
-    hintOf(content, HintKind.wikiLink, '[[Churn notes]]', occurrence: 1),
-    hintOf(content, HintKind.heading, '## Next steps'),
+    hintOf(
+      content,
+      HintKind.wikiLink,
+      '[[Churn notes]]',
+      occurrence: 1,
+      targetId: 'n-churn-notes',
+    ),
+    hintOf(content, HintKind.heading, '## Next steps', level: 2),
     hintOf(
       content,
       HintKind.taskLine,
       '- [ ] Draft two pricing page variants #pricing ^t-01j9p1',
+      taskId: 't-01j9p1',
     ),
     hintOf(content, HintKind.tag, '#pricing'),
     hintOf(content, HintKind.blockId, '^t-01j9p1'),
@@ -113,6 +155,7 @@ abstract final class EditorFixtures {
       content,
       HintKind.taskLine,
       '- [x] Pull churn by tenure from billing ✅ 2026-09-26 ^t-01j9p2',
+      taskId: 't-01j9p2',
     ),
     hintOf(content, HintKind.blockId, '^t-01j9p2'),
   ];
@@ -158,7 +201,14 @@ abstract final class EditorFixtures {
   static const NoteSyncState synced = NoteSyncState(
     kind: NoteSyncKind.synced,
     pendingOps: 0,
-    label: '',
+    label: 'Saved',
+  );
+
+  /// Two ops waiting to sync.
+  static const NoteSyncState pending = NoteSyncState(
+    kind: NoteSyncKind.pending,
+    pendingOps: 2,
+    label: 'Saved on this device · 2 changes to sync',
   );
 
   /// A conflict on op [conflictOpId].
@@ -166,7 +216,7 @@ abstract final class EditorFixtures {
     kind: NoteSyncKind.conflict,
     pendingOps: 1,
     conflictOpId: conflictOpId,
-    label: '',
+    label: 'Conflict',
   );
 
   /// The conflicting op.
@@ -198,6 +248,7 @@ abstract final class EditorFixtures {
     history: Availability.available,
     titleDir: TextDir.ltr,
     contentVersion: EditorFixtures.contentVersion,
+    versionLabel: 'v7',
     wordCount: 0,
     backlinkCount: 0,
     historyEntries: [],

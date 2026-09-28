@@ -39,13 +39,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get channelDescription => 'Task reminders from Strata';
 
   @override
-  String get pinnedTitle => 'Folders';
-
-  @override
   String folderSemantics({required String name, required int count}) {
     return '$name, $count notes';
   }
 
   @override
   String get accountLabel => 'Account';
+
+  @override
+  String get foldersTitle => 'Folders';
+
+  @override
+  String get pinnedNotesTitle => 'Pinned';
+
+  @override
+  String pinnedSemantics({required String title}) {
+    return 'Pinned note: $title';
+  }
 }

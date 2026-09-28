@@ -91,6 +91,47 @@ pub async fn append_change(tx: &mut ScopedTx, change: &NewChange<'_>) -> Result<
     .await?)
 }
 
+/// Appends `changes` in order with consecutive seqs, in two statements whatever their number
+/// (same locking and ordering guarantees as [`append_change`]).
+pub async fn append_changes(tx: &mut ScopedTx, changes: &[NewChange<'_>]) -> Result<()> {
+    if changes.is_empty() {
+        return Ok(());
+    }
+    let n = i64::try_from(changes.len())
+        .map_err(|_| IndexError::InvalidArgument("too many changes".into()))?;
+    let pos: SyncPosition = sqlx::query_as(
+        "INSERT INTO sync_epochs AS s (user_id, epoch, last_seq, updated) \
+         VALUES (strata_current_user(), 1, $2, $1) \
+         ON CONFLICT (user_id) DO UPDATE SET last_seq = s.last_seq + $2, updated = EXCLUDED.updated \
+         RETURNING epoch, last_seq",
+    )
+    .bind(changes[changes.len() - 1].at)
+    .bind(n)
+    .fetch_one(tx.conn())
+    .await?;
+    let types: Vec<&str> = changes.iter().map(|c| c.entity_type).collect();
+    let ids: Vec<&str> = changes.iter().map(|c| c.entity_id).collect();
+    let ops: Vec<&str> = changes.iter().map(|c| c.op.as_str()).collect();
+    let versions: Vec<Option<&str>> = changes.iter().map(|c| c.version).collect();
+    let ats: Vec<DateTime<Utc>> = changes.iter().map(|c| c.at).collect();
+    sqlx::query(
+        "INSERT INTO change_log (user_id, seq, epoch, entity_type, entity_id, op, version, at) \
+         SELECT strata_current_user(), $1 + c.n, $2, c.t, c.i, c.o, c.v, c.a \
+         FROM unnest($3::text[], $4::text[], $5::text[], $6::text[], $7::timestamptz[]) \
+              WITH ORDINALITY AS c(t, i, o, v, a, n)",
+    )
+    .bind(pos.last_seq - n)
+    .bind(pos.epoch)
+    .bind(&types)
+    .bind(&ids)
+    .bind(&ops)
+    .bind(&versions)
+    .bind(&ats)
+    .execute(tx.conn())
+    .await?;
+    Ok(())
+}
+
 /// The user's current position (epoch 1, seq 0 before any change).
 pub async fn sync_position(tx: &mut ScopedTx) -> Result<SyncPosition> {
     let pos: Option<SyncPosition> = sqlx::query_as("SELECT epoch, last_seq FROM sync_epochs")

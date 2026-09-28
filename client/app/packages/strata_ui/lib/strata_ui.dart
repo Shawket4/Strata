@@ -19,6 +19,7 @@ export 'src/tokens/typography.dart';
 export 'src/widgets/avatar.dart';
 export 'src/widgets/citation_chip.dart';
 export 'src/widgets/empty_state.dart';
+export 'src/widgets/highlighted_text.dart';
 export 'src/widgets/keyboard_hint_chip.dart';
 export 'src/widgets/labels.dart';
 export 'src/widgets/node_kind_glyph.dart';

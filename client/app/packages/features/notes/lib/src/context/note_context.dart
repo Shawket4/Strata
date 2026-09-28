@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:strata_l10n/strata_l10n.dart';
+import 'package:strata_maps/strata_maps.dart' show MiniGraph;
 import 'package:strata_notes/src/generated/notes_localizations.dart';
 import 'package:strata_notes/src/notes_scope.dart';
-import 'package:strata_state/strata_state.dart'
-    show Availability, BacklinkGroup, NoteView;
+import 'package:strata_state/strata_state.dart' hide RelationChip;
 import 'package:strata_ui/strata_ui.dart';
 
-/// Backlinks grouped by relation type (`link` = plain body links), as the
-/// core groups and orders them. Each source opens on tap.
+/// Backlinks grouped by relation type as the core groups, labels and
+/// orders them: each source with its linking sentence (in its own
+/// direction) and, for AI relations, the confidence. Each source opens on
+/// tap.
 class BacklinksSection extends StatelessWidget {
   /// Creates the section.
   const new({required this.groups, super.key, this.onOpenNote});
@@ -32,6 +37,7 @@ class BacklinksSection extends StatelessWidget {
         ),
       );
     }
+    final open = onOpenNote;
     return Semantics(
       container: true,
       explicitChildNodes: true,
@@ -53,9 +59,7 @@ class BacklinksSection extends StatelessWidget {
                     ),
                     child: InkWell(
                       borderRadius: StrataRadii.inputRadius,
-                      onTap: onOpenNote == null
-                          ? null
-                          : () => onOpenNote!(item.noteId),
+                      onTap: open == null ? null : () => open(item.noteId),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(
                           minHeight: StrataLayout.minTouchTarget,
@@ -65,17 +69,7 @@ class BacklinksSection extends StatelessWidget {
                             horizontal: StrataSpacing.s3,
                             vertical: StrataSpacing.s2,
                           ),
-                          child: Align(
-                            alignment: AlignmentDirectional.centerStart,
-                            child: Text(
-                              item.title,
-                              textAlign: TextAlign.start,
-                              style: text.bodySmall.copyWith(
-                                color: colors.text,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                          child: _BacklinkBody(item: item),
                         ),
                       ),
                     ),
@@ -90,6 +84,68 @@ class BacklinksSection extends StatelessWidget {
   }
 }
 
+class _BacklinkBody extends StatelessWidget {
+  const new({required this.item});
+
+  final BacklinkItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = NotesLocalizations.of(context);
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final snippet = item.snippet;
+    final confidence = item.confidence;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                item.title,
+                textDirection: textDirectionOf(item.titleDir),
+                textAlign: TextAlign.start,
+                style: text.bodySmall.copyWith(
+                  color: colors.text,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (item.by == 'ai' && confidence != null) ...[
+              const SizedBox(width: StrataSpacing.s2),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: StrataSpacing.s2 - 2,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.infoTint,
+                  borderRadius: StrataRadii.pillRadius,
+                ),
+                child: Text(
+                  l10n.aiConfidenceTag(value: confidence.toStringAsFixed(2)),
+                  style: text.caption
+                      .withWeight(FontWeight.w600)
+                      .copyWith(color: colors.infoText),
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (snippet != null && snippet.isNotEmpty)
+          Text(
+            snippet,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textDirection: textDirectionOf(item.snippetDir),
+            textAlign: TextAlign.start,
+            style: text.caption.copyWith(color: colors.text2),
+          ),
+      ],
+    );
+  }
+}
+
 class _GroupHeader extends StatelessWidget {
   const new({required this.group});
 
@@ -97,15 +153,8 @@ class _GroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = NotesLocalizations.of(context);
     final colors = context.strataColors;
     final text = context.strataText;
-    final type = relationTypeOf(group.kind);
-    final label = group.kind == 'link'
-        ? l10n.backlinkKindLink
-        : isNamedRelation(group.kind)
-        ? context.l10n.relationTypeLabel(type)
-        : group.kind;
     return Padding(
       padding: const EdgeInsets.only(bottom: StrataSpacing.s1 + 2),
       child: Semantics(
@@ -113,13 +162,13 @@ class _GroupHeader extends StatelessWidget {
         child: Row(
           children: [
             RelationLineSample(
-              type: type,
+              type: relationTypeOf(group.kind),
               mentionOf: mentionKindOf(group.kind),
             ),
             const SizedBox(width: StrataSpacing.s2),
             Flexible(
               child: Text(
-                label,
+                group.label,
                 style: text.caption
                     .copyWith(color: colors.text)
                     .copyWith(fontWeight: FontWeight.w600),
@@ -137,17 +186,24 @@ class _GroupHeader extends StatelessWidget {
   }
 }
 
-/// The local mini-graph slot. The maps feature exports no embeddable mini
-/// graph yet, so the slot shows a placeholder with "Open map"
-/// (docs/CORE_GAPS.md, wiring note).
+/// The local mini graph of the note (the maps feature's [MiniGraph] over
+/// the core's local graph stream), with "Open map" for the mind map.
 class LocalGraphSlot extends StatelessWidget {
-  /// Creates the slot.
-  const new({super.key, this.onOpenMap, this.height = 160});
+  /// Creates the slot for [noteId].
+  const new({
+    required this.noteId,
+    super.key,
+    this.onOpenMap,
+    this.height = 180,
+  });
+
+  /// The note in the centre.
+  final String noteId;
 
   /// Opens the local mind map.
   final VoidCallback? onOpenMap;
 
-  /// Height of the placeholder canvas.
+  /// Height of the graph canvas.
   final double height;
 
   @override
@@ -185,40 +241,12 @@ class LocalGraphSlot extends StatelessWidget {
               ),
             ],
           ),
-          Container(
-            constraints: BoxConstraints(minHeight: height),
-            padding: const EdgeInsets.all(StrataSpacing.s4),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border.all(color: colors.border),
-              borderRadius: StrataRadii.cardRadius,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    NodeKindGlyph(kind: NodeKind.concept, decorative: true),
-                    SizedBox(width: StrataSpacing.s3),
-                    NodeKindGlyph(
-                      kind: NodeKind.note,
-                      size: 22,
-                      selected: true,
-                      decorative: true,
-                    ),
-                    SizedBox(width: StrataSpacing.s3),
-                    NodeKindGlyph(kind: NodeKind.person, decorative: true),
-                  ],
-                ),
-                const SizedBox(height: StrataSpacing.s3),
-                Text(
-                  l10n.localGraphPlaceholder,
-                  textAlign: TextAlign.center,
-                  style: text.caption.copyWith(color: colors.text2),
-                ),
-              ],
-            ),
+          // The mini graph brings its own card; its header is ours.
+          MiniGraph(
+            noteId,
+            height: height,
+            showHeader: false,
+            padding: EdgeInsets.zero,
           ),
         ],
       ),
@@ -226,31 +254,88 @@ class LocalGraphSlot extends StatelessWidget {
   }
 }
 
-/// Version history with revert. The core streams only whether history can
-/// be used (`NoteView.history`); the entries and the revert intent are not
-/// in the core yet (docs/CORE_GAPS.md), so each availability state renders
-/// its message.
-class HistorySection extends StatelessWidget {
-  /// Creates the section for [availability].
-  const new({required this.availability, super.key});
+/// Version history with revert (online): the core's entries
+/// (`refresh_history` fills them when the section opens), each with its
+/// version, message, author and time; "Changes" shows the revision against
+/// the current text (`note_revision_diff`), "Revert" asks first and calls
+/// `revert_note`. Offline or unavailable history renders its message.
+class HistorySection extends ConsumerStatefulWidget {
+  /// Creates the section for [note].
+  const new({required this.note, super.key});
 
-  /// Whether history can be used.
-  final Availability availability;
+  /// The note.
+  final NoteView note;
+
+  @override
+  ConsumerState<HistorySection> createState() => _HistorySectionState();
+}
+
+class _HistorySectionState extends ConsumerState<HistorySection> {
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  @override
+  void didUpdateWidget(HistorySection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.note.id != widget.note.id ||
+        oldWidget.note.history != widget.note.history) {
+      _refresh();
+    }
+  }
+
+  void _refresh() {
+    if (widget.note.history != Availability.available) return;
+    unawaited(
+      ref
+          .read(coreApiProvider)
+          .refreshHistory(noteId: widget.note.id)
+          .catchError((Object _) {}),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = NotesLocalizations.of(context);
     final colors = context.strataColors;
     final text = context.strataText;
-    final (icon, message) = switch (availability) {
-      Availability.available => (Icons.history, l10n.historyAvailable),
-      Availability.offline => (Icons.cloud_off_outlined, l10n.historyOffline),
-      Availability.notYetAvailable => (
-        Icons.hourglass_empty,
-        l10n.historyNotYetAvailable,
-      ),
-      Availability.notAllowed => (Icons.block, l10n.historyNotAllowed),
-    };
+    final note = widget.note;
+    final entries = note.historyEntries;
+    final Widget body;
+    if (note.history != Availability.available) {
+      final (icon, message) = switch (note.history) {
+        Availability.offline => (Icons.cloud_off_outlined, l10n.historyOffline),
+        Availability.notAllowed => (Icons.block, l10n.historyNotAllowed),
+        _ => (Icons.hourglass_empty, l10n.historyNotYetAvailable),
+      };
+      body = Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: colors.text2),
+          const SizedBox(width: StrataSpacing.s2),
+          Expanded(
+            child: Text(
+              message,
+              style: text.bodySmall.copyWith(color: colors.text2),
+            ),
+          ),
+        ],
+      );
+    } else if (entries.isEmpty) {
+      body = Text(
+        l10n.historyEmpty,
+        style: text.bodySmall.copyWith(color: colors.text2),
+      );
+    } else {
+      body = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final entry in entries) _HistoryRow(note: note, entry: entry),
+        ],
+      );
+    }
     return Semantics(
       container: true,
       explicitChildNodes: true,
@@ -258,31 +343,239 @@ class HistorySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Semantics(
-            header: true,
-            child: Text(
-              l10n.historyTitle,
-              style: text.caption
-                  .copyWith(color: colors.text2)
-                  .copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(height: StrataSpacing.s2),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 18, color: colors.text2),
-              const SizedBox(width: StrataSpacing.s2),
               Expanded(
-                child: Text(
-                  message,
-                  style: text.bodySmall.copyWith(color: colors.text2),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    l10n.historyTitle,
+                    style: text.caption
+                        .copyWith(color: colors.text2)
+                        .copyWith(fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
+              if (entries.isNotEmpty)
+                Flexible(
+                  child: Text(
+                    l10n.historyAll(count: entries.length),
+                    textAlign: TextAlign.end,
+                    style: text.caption.copyWith(color: colors.text2),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: StrataSpacing.s2),
+          body,
+        ],
+      ),
+    );
+  }
+}
+
+String _author(NotesLocalizations l10n, String author) => switch (author) {
+  'ai' => l10n.authorAi,
+  'system' => l10n.authorSystem,
+  _ => l10n.authorUser,
+};
+
+class _HistoryRow extends ConsumerWidget {
+  const new({required this.note, required this.entry});
+
+  final NoteView note;
+  final HistoryEntry entry;
+
+  Future<void> _diff(BuildContext context, WidgetRef ref) async {
+    final l10n = NotesLocalizations.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    try {
+      final diff = await ref
+          .read(coreApiProvider)
+          .noteRevisionDiff(noteId: note.id, commit: entry.commit);
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialog) => NotesLocalizationsScope(
+          child: NoteDiffDialog(version: entry.versionLabel, diff: diff),
+        ),
+      );
+    } on Object catch (error) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text(noteFailure(l10n, error))),
+      );
+    }
+  }
+
+  Future<void> _revert(BuildContext context, WidgetRef ref) async {
+    final l10n = NotesLocalizations.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text(l10n.revertTitle(version: entry.versionLabel)),
+        content: Text(l10n.revertBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialog).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialog).pop(true),
+            child: Text(l10n.revert),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref
+          .read(coreApiProvider)
+          .revertNote(noteId: note.id, commit: entry.commit);
+    } on Object catch (error) {
+      messenger?.showSnackBar(
+        SnackBar(content: Text(noteFailure(l10n, error))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = NotesLocalizations.of(context);
+    final colors = context.strataColors;
+    final text = context.strataText;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: StrataSpacing.s2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          MergeSemantics(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 32,
+                  child: Text(
+                    entry.versionLabel,
+                    style: text.monoSmall.copyWith(color: colors.text2),
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.message,
+                        style: text.bodySmall.copyWith(color: colors.text),
+                      ),
+                      Text(
+                        l10n.historyWho(
+                          author: _author(l10n, entry.author),
+                          when: entry.atLabel,
+                        ),
+                        style: text.caption.copyWith(color: colors.text2),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Wrap(
+            alignment: WrapAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => unawaited(_diff(context, ref)),
+                child: Text(l10n.viewChanges),
+              ),
+              if (entry.canRevert)
+                TextButton(
+                  onPressed: () => unawaited(_revert(context, ref)),
+                  child: Text(l10n.revert),
+                ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The message of a failed intent.
+String noteFailure(NotesLocalizations l10n, Object error) => switch (error) {
+  CoreFailure(:final code) => l10n.noteFailed(code: code),
+  _ => l10n.noteFailed(code: 'internal'),
+};
+
+/// A revision compared with the note's current text, line by line as the
+/// core diffed it.
+class NoteDiffDialog extends StatelessWidget {
+  /// Creates the dialog.
+  const new({required this.version, required this.diff, super.key});
+
+  /// The revision's label ("v6").
+  final String version;
+
+  /// The core's diff.
+  final NoteDiffView diff;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = NotesLocalizations.of(context);
+    final colors = context.strataColors;
+    final text = context.strataText;
+    return AlertDialog(
+      title: Text(l10n.diffTitle(version: version)),
+      scrollable: true,
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(diff.summary, style: text.caption.copyWith(color: colors.text2)),
+          const SizedBox(height: StrataSpacing.s2),
+          for (final line in diff.lines)
+            ColoredBox(
+              color: switch (line.kind) {
+                DiffLineKind.added => colors.successTint,
+                DiffLineKind.removed => colors.dangerTint,
+                DiffLineKind.same => Colors.transparent,
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: StrataSpacing.s2,
+                  vertical: 1,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      child: Text(switch (line.kind) {
+                        DiffLineKind.added => '+',
+                        DiffLineKind.removed => '−',
+                        DiffLineKind.same => '',
+                      }, style: text.monoSmall.copyWith(color: colors.text2)),
+                    ),
+                    Expanded(
+                      child: Text(
+                        line.text,
+                        textDirection: textDirectionOf(line.dir),
+                        textAlign: TextAlign.start,
+                        style: text.monoSmall.copyWith(color: colors.text),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.close),
+        ),
+      ],
     );
   }
 }
@@ -344,16 +637,20 @@ class _NoteContextPanelState extends State<NoteContextPanel> {
         const SizedBox(height: StrataSpacing.s3),
         Divider(color: colors.border, height: 1),
         const SizedBox(height: StrataSpacing.s3),
-        LocalGraphSlot(onOpenMap: widget.onOpenMap),
+        LocalGraphSlot(noteId: note.id, onOpenMap: widget.onOpenMap),
         const SizedBox(height: StrataSpacing.s3),
         Divider(color: colors.border, height: 1),
         const SizedBox(height: StrataSpacing.s3),
-        HistorySection(availability: note.history),
+        HistorySection(note: note),
       ],
       ContextTab.graph => [
-        LocalGraphSlot(onOpenMap: widget.onOpenMap, height: 280),
+        LocalGraphSlot(
+          noteId: note.id,
+          onOpenMap: widget.onOpenMap,
+          height: 280,
+        ),
       ],
-      ContextTab.history => [HistorySection(availability: note.history)],
+      ContextTab.history => [HistorySection(note: note)],
     };
     return Material(
       color: close == null ? colors.background : colors.surface,
@@ -399,7 +696,9 @@ class _NoteContextPanelState extends State<NoteContextPanel> {
                   for (final tab in ContextTab.values)
                     _TabButton(
                       label: switch (tab) {
-                        ContextTab.backlinks => l10n.tabBacklinks,
+                        ContextTab.backlinks => l10n.backlinksTab(
+                          count: note.backlinkCount,
+                        ),
                         ContextTab.graph => l10n.tabGraph,
                         ContextTab.history => l10n.tabHistory,
                       },

@@ -110,29 +110,11 @@ abstract class EditorLocalizations {
   /// **'Note body'**
   String get editorBodyLabel;
 
-  /// Note status: the note has no local changes waiting.
-  ///
-  /// In en, this message translates to:
-  /// **'Saved'**
-  String get statusSaved;
-
   /// Note status: the editor has edits that were not saved yet.
   ///
   /// In en, this message translates to:
   /// **'Unsaved changes'**
   String get statusUnsaved;
-
-  /// Note status: saved locally, ops waiting to sync.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{Saved on this device · 1 change to sync} other{Saved on this device · {count} changes to sync}}'**
-  String statusPending({required int count});
-
-  /// Note status: an edit conflicts with the server.
-  ///
-  /// In en, this message translates to:
-  /// **'Conflict'**
-  String get statusConflict;
 
   /// Title of the conflict banner above the editor.
   ///
@@ -284,59 +266,11 @@ abstract class EditorLocalizations {
   /// **'Suggestions'**
   String get suggestionsLabel;
 
-  /// Autocomplete section: people.
-  ///
-  /// In en, this message translates to:
-  /// **'People'**
-  String get suggestionsPeople;
-
-  /// Autocomplete section: companies.
-  ///
-  /// In en, this message translates to:
-  /// **'Companies'**
-  String get suggestionsCompanies;
-
-  /// Autocomplete section: notes.
-  ///
-  /// In en, this message translates to:
-  /// **'Notes'**
-  String get suggestionsNotes;
-
-  /// Autocomplete: results are loading.
-  ///
-  /// In en, this message translates to:
-  /// **'Searching…'**
-  String get suggestionsLoading;
-
   /// Autocomplete: nothing matches.
   ///
   /// In en, this message translates to:
   /// **'No matches'**
   String get suggestionsNone;
-
-  /// Autocomplete: the query is still empty.
-  ///
-  /// In en, this message translates to:
-  /// **'Type to search'**
-  String get suggestionsTypeToSearch;
-
-  /// Autocomplete: the core has no tag list yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Tag suggestions aren\'t available yet.'**
-  String get suggestionsTagsUnavailable;
-
-  /// Block reference picker: the core has no block list yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Block references can\'t be listed yet.'**
-  String get suggestionsBlocksUnavailable;
-
-  /// Autocomplete: search is unavailable.
-  ///
-  /// In en, this message translates to:
-  /// **'Search isn\'t available right now.'**
-  String get suggestionsSearchUnavailable;
 
   /// Button that closes the autocomplete panel.
   ///
@@ -361,6 +295,42 @@ abstract class EditorLocalizations {
   /// In en, this message translates to:
   /// **'Save'**
   String get shortcutSave;
+
+  /// Completions heading for [[ links.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get suggestionsKindWikiLink;
+
+  /// Completions heading for @ mentions.
+  ///
+  /// In en, this message translates to:
+  /// **'People and companies'**
+  String get suggestionsKindMention;
+
+  /// Completions heading for # tags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get suggestionsKindTag;
+
+  /// Completions heading for [[Note#^ block references.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocks'**
+  String get suggestionsKindBlock;
+
+  /// Live preview toggle (turns preview off).
+  ///
+  /// In en, this message translates to:
+  /// **'Show markdown'**
+  String get showMarkdown;
+
+  /// Live preview toggle (turns preview on).
+  ///
+  /// In en, this message translates to:
+  /// **'Hide markdown'**
+  String get hideMarkdown;
 }
 
 class _EditorLocalizationsDelegate

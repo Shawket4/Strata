@@ -47,9 +47,24 @@ pub struct Diff {
     pub custody: Vec<NoteId>,
 }
 
+/// Which keep-both pairs a [`Snapshot`] reads.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeepBoth<'a> {
+    /// None (the write cannot change them).
+    Skip,
+    /// Every pair of the vault (a rebuild).
+    All,
+    /// Only these (kind, a, b) pairs, order-insensitive: the pairs a write can add or remove.
+    Among(&'a [(String, String, String)]),
+}
+
 impl Snapshot {
-    /// Reads the rows around `ids` (keep-both pairs too when `keep_both`).
-    pub async fn take(tx: &mut ScopedTx, ids: &BTreeSet<NoteId>, keep_both: bool) -> Result<Self> {
+    /// Reads the rows around `ids` and the keep-both pairs `keep_both` selects.
+    pub async fn take(
+        tx: &mut ScopedTx,
+        ids: &BTreeSet<NoteId>,
+        keep_both: KeepBoth<'_>,
+    ) -> Result<Self> {
         let ids: Vec<Uuid> = ids.iter().map(NoteId::as_uuid).collect();
         let mut out = Self::default();
         if !ids.is_empty() {
@@ -86,12 +101,19 @@ impl Snapshot {
                 out.custody.entry(doc).or_default().insert(id);
             }
         }
-        if keep_both {
-            let rows: Vec<(String, String, String)> =
-                sqlx::query_as("SELECT kind, a_id, b_id FROM dedupe_keep_both")
-                    .fetch_all(tx.conn())
-                    .await?;
-            out.keep_both = Some(rows.into_iter().collect());
+        match keep_both {
+            KeepBoth::Skip => {}
+            KeepBoth::All => {
+                let rows: Vec<(String, String, String)> =
+                    sqlx::query_as("SELECT kind, a_id, b_id FROM dedupe_keep_both")
+                        .fetch_all(tx.conn())
+                        .await?;
+                out.keep_both = Some(rows.into_iter().collect());
+            }
+            KeepBoth::Among(pairs) => {
+                let rows = strata_index::repo::dedupe::keep_both_among(tx, pairs).await?;
+                out.keep_both = Some(rows.into_iter().collect());
+            }
         }
         Ok(out)
     }

@@ -57,9 +57,12 @@ pub async fn write(tx: &mut ScopedTx, batch: &[Derived]) -> Result<()> {
         for (dst, t, at) in &d.rejected {
             graph::add_rejected(tx, id, *dst, t, *at).await?;
         }
-        for k in &d.keep_both {
-            dedupe::add_keep_both(tx, &k.kind, &k.a, &k.b, k.at).await?;
-        }
+        let pairs: Vec<dedupe::KeepBothPair<'_>> = d
+            .keep_both
+            .iter()
+            .map(|k| (k.kind.as_str(), k.a.as_str(), k.b.as_str(), k.at))
+            .collect();
+        dedupe::add_keep_both_many(tx, &pairs).await?;
         graph::replace_tags(tx, id, &d.tags).await?;
         graph::replace_aliases(tx, id, &d.aliases).await?;
         graph::replace_links(tx, id, &d.links).await?;

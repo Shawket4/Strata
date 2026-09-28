@@ -9,7 +9,6 @@ import 'package:super_editor/super_editor.dart';
 import 'package:super_editor/super_editor_test.dart';
 
 import 'support/editor_fixtures.dart';
-import 'support/harness.dart';
 
 const String _id = EditorFixtures.noteId;
 
@@ -26,7 +25,7 @@ Future<FakeCoreApi> pumpEditor(
   NoteView? note,
   FakeCoreApi? fake,
   SizeClass sizeClass = SizeClass.expanded,
-  ValueChanged<String>? onOpenLink,
+  OpenNoteAt? onOpenLink,
   ValueChanged<String>? onOpenConflict,
 }) async {
   final api = fake ?? fakeWith(note ?? EditorFixtures.note);
@@ -62,10 +61,16 @@ void main() {
     for (final v in variants()) {
       testWidgets('content $v', (tester) async {
         final fake = fakeWith(EditorFixtures.note);
-        await pumpVariant(tester, v, const NoteEditorScreen(noteId: _id), fake);
-        final l10n = v.rtl ? 'محفوظة' : 'Saved';
+        await pumpVariant(
+          tester,
+          v,
+          const NoteEditorScreen(noteId: _id),
+          fake: fake,
+        );
         expect(find.text('Pricing experiments'), findsOneWidget);
-        expect(find.text(l10n), findsOneWidget);
+        // The status line is the core's ready label; the version too.
+        expect(find.text('Saved'), findsOneWidget);
+        expect(find.text('v7'), findsOneWidget);
         expect(find.byType(SuperEditor), findsOneWidget);
         expect(
           find.byType(FormattingToolbar),
@@ -73,7 +78,7 @@ void main() {
         );
         expect(find.byType(NoteConflictBanner), findsNothing);
         expect(fake.calls, contains(const CoreCall('watchNote', {'id': _id})));
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
       });
 
@@ -81,7 +86,12 @@ void main() {
         final fake = fakeWith(
           EditorFixtures.noteWith(sync: EditorFixtures.conflict),
         );
-        await pumpVariant(tester, v, const NoteEditorScreen(noteId: _id), fake);
+        await pumpVariant(
+          tester,
+          v,
+          const NoteEditorScreen(noteId: _id),
+          fake: fake,
+        );
         expect(find.byType(NoteConflictBanner), findsOneWidget);
         expect(
           find.text(
@@ -91,13 +101,18 @@ void main() {
           ),
           findsOneWidget,
         );
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
       });
 
       testWidgets('loading, not found and error $v', (tester) async {
         final fake = fakeWith(null);
-        await pumpVariant(tester, v, const NoteEditorScreen(noteId: _id), fake);
+        await pumpVariant(
+          tester,
+          v,
+          const NoteEditorScreen(noteId: _id),
+          fake: fake,
+        );
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
         fake.note[_id].add(const NoteScreen(id: _id));
         await tester.pump();
@@ -105,7 +120,7 @@ void main() {
           find.text(v.rtl ? 'الملاحظة مش موجودة' : 'Note not found'),
           findsOneWidget,
         );
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
         fake.note[_id].addError(StrataFixtures.coreFailure);
         await tester.pump();
@@ -115,7 +130,7 @@ void main() {
           ),
           findsOneWidget,
         );
-        expectNoRenderErrors(tester);
+        expectNoErrors(tester);
         await expectAccessible(tester);
       });
     }
@@ -125,13 +140,7 @@ void main() {
     testWidgets('styles hints and shows the note status', (tester) async {
       await pumpEditor(
         tester,
-        note: EditorFixtures.noteWith(
-          sync: const NoteSyncState(
-            kind: NoteSyncKind.pending,
-            pendingOps: 2,
-            label: '',
-          ),
-        ),
+        note: EditorFixtures.noteWith(sync: EditorFixtures.pending),
       );
       expect(
         find.text('Saved on this device · 2 changes to sync'),
@@ -146,50 +155,106 @@ void main() {
       );
     });
 
-    testWidgets('lays out each paragraph in its own direction', (tester) async {
+    testWidgets('lays out each line in the direction the core sent', (
+      tester,
+    ) async {
       const content =
           'English first paragraph.\n'
-          'فقرة عربية بعدها [[Acme Logistics]] mixed.\n';
+          'فقرة عربية بعدها [[Acme Logistics]] mixed.\n'
+          '## الفرضيات\n'
+          '---\n';
       await pumpEditor(
         tester,
-        note: EditorFixtures.noteWith(content: content, hints: const []),
+        note: EditorFixtures.noteWith(
+          content: content,
+          hints: lineDirections(content, const {
+            'English first paragraph.': TextDir.ltr,
+            'فقرة عربية بعدها [[Acme Logistics]] mixed.': TextDir.rtl,
+            '## الفرضيات': TextDir.rtl,
+          }),
+        ),
       );
       final components = tester
           .widgetList<TextComponent>(find.byType(TextComponent))
           .toList();
-      expect(components[0].textDirection, TextDirection.ltr);
-      expect(components[1].textDirection, TextDirection.rtl);
+      expect(
+        [for (final c in components) c.textDirection],
+        [
+          TextDirection.ltr,
+          TextDirection.rtl,
+          TextDirection.rtl,
+          // No strong character: no direction hint, laid out left to right.
+          TextDirection.ltr,
+          TextDirection.ltr,
+        ],
+      );
+      expect(
+        [for (final c in components) c.textAlign],
+        [
+          TextAlign.left,
+          TextAlign.right,
+          TextAlign.right,
+          TextAlign.left,
+          TextAlign.left,
+        ],
+      );
     });
 
-    testWidgets('a line takes the direction of its first strong letter', (
+    testWidgets('live preview hides markers off the caret line', (
       tester,
     ) async {
-      const content =
-          '## الفرضيات\n'
-          '- خصم ولاء 5% على التجديد.\n'
-          '12. Twelfth item\n'
-          '- [ ] مهمة 📅 2026-10-01\n'
-          '> 5% English quote\n'
-          '---\n';
-      await pumpEditor(
-        tester,
-        note: EditorFixtures.noteWith(content: content, hints: const []),
-      );
-      final directions = [
-        for (final c in tester.widgetList<TextComponent>(
-          find.byType(TextComponent),
-        ))
-          c.textDirection,
-      ];
-      expect(directions, [
-        TextDirection.rtl,
-        TextDirection.rtl,
-        TextDirection.ltr,
-        TextDirection.rtl,
-        TextDirection.ltr,
-        TextDirection.ltr,
-        TextDirection.ltr,
+      await pumpEditor(tester);
+      bool hidden(String line, int offset) {
+        final component = tester
+            .widgetList<TextComponent>(find.byType(TextComponent))
+            .firstWhere((c) => c.text.toPlainText().startsWith(line));
+        return component.text
+            .getAllAttributionsAt(offset)
+            .contains(hiddenMarkerAttribution);
+      }
+
+      const bold = '- Launch offer: a ';
+      // No caret: the bold markers and the heading's "## " are hidden, the
+      // bold text and heading text are not.
+      expect(hidden(bold, bold.length), isTrue);
+      expect(hidden(bold, bold.length + 1), isTrue);
+      expect(hidden(bold, bold.length + 2), isFalse);
+      expect(hidden('## Hypotheses', 0), isTrue);
+      expect(hidden('## Hypotheses', 2), isTrue);
+      expect(hidden('## Hypotheses', 3), isFalse);
+      expect(hidden('Three experiments', 50), isTrue, reason: '[[');
+      expect(hidden('Three experiments', 52), isFalse);
+      // The caret's line shows its source.
+      await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Hyp'), 5);
+      await tester.pump();
+      expect(hidden('## Hypotheses', 0), isFalse);
+      expect(hidden(bold, bold.length), isTrue);
+      // Preview off: every marker shows.
+      await tester.tap(find.byTooltip('Show markdown'));
+      await tester.pump();
+      expect(hidden(bold, bold.length), isFalse);
+      expect(find.byTooltip('Hide markdown'), findsOneWidget);
+    });
+
+    test('marker ranges come from the span bounds and its kind', () {
+      expect(markerRanges(const LineSpan(HintKind.bold, 4, 12)), [
+        (4, 6),
+        (10, 12),
       ]);
+      expect(markerRanges(const LineSpan(HintKind.italic, 0, 5)), [
+        (0, 1),
+        (4, 5),
+      ]);
+      expect(markerRanges(const LineSpan(HintKind.embed, 0, 9)), [
+        (0, 3),
+        (7, 9),
+      ]);
+      expect(markerRanges(const LineSpan(HintKind.heading, 0, 9, level: 3)), [
+        (0, 4),
+      ]);
+      expect(markerRanges(const LineSpan(HintKind.heading, 0, 9)), isEmpty);
+      expect(markerRanges(const LineSpan(HintKind.bold, 0, 4)), isEmpty);
+      expect(markerRanges(const LineSpan(HintKind.tag, 0, 4)), isEmpty);
     });
 
     testWidgets('renders task lines with checkboxes in their state', (
@@ -394,143 +459,130 @@ void main() {
     });
   });
 
-  group('autocomplete', () {
-    testWidgets('@ suggests people and companies and inserts a mention', (
+  group('completions', () {
+    Completions completions(
+      CompletionKind kind,
+      int start,
+      int end,
+      List<CompletionItem> items,
+    ) => Completions(
+      kind: kind,
+      replaceStart: start,
+      replaceEnd: end,
+      query: '',
+      items: items,
+    );
+
+    final nextSteps = EditorFixtures.content.indexOf('## Next steps') + 13;
+
+    testWidgets('each edit asks the core at the caret', (tester) async {
+      final fake = await pumpEditor(tester);
+      await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Next'), 13);
+      await tester.typeImeText(' @Ah');
+      await tester.pump();
+      expect(
+        callsOf(fake, 'editorCompletions').last,
+        CoreCall('editorCompletions', {
+          'noteId': _id,
+          'content': EditorFixtures.content.replaceFirst(
+            '## Next steps',
+            '## Next steps @Ah',
+          ),
+          'cursor': nextSteps + 4,
+        }),
+      );
+      // The core found nothing to complete: no popup.
+      expect(find.byType(CompletionsPopup), findsNothing);
+    });
+
+    testWidgets('@ shows the core items and inserts the mention', (
       tester,
     ) async {
-      final fake = fakeWith(EditorFixtures.note);
-      fake.directory[(DirectoryTab.people, 'Ah')].add(
-        EditorFixtures.people('Ah', const [EditorFixtures.ahmed]),
+      final mentioned = EditorFixtures.content.replaceFirst(
+        '## Next steps',
+        '## Next steps with [[Ahmed Samir]]',
       );
-      fake.directory[(DirectoryTab.companies, 'Ah')].add(
-        EditorFixtures.companies('Ah', const []),
-      );
+      final fake = fakeWith(EditorFixtures.note)
+        ..editorCompletionsAnswer.returns(
+          completions(CompletionKind.mention, nextSteps + 6, nextSteps + 9, [
+            const CompletionItem(
+              label: 'Ahmed Samir',
+              detail: 'Operations manager, Acme Logistics',
+              insertText: '[[Ahmed Samir]]',
+              targetId: 'p-ahmed-samir',
+              entityKind: 'person',
+              labelDir: TextDir.ltr,
+            ),
+            const CompletionItem(
+              label: 'أحمد فتحي',
+              detail: 'Nile Freight',
+              insertText: '[[أحمد فتحي]]',
+              targetId: 'p-ahmed-fathy',
+              entityKind: 'person',
+              labelDir: TextDir.rtl,
+            ),
+          ]),
+        )
+        ..insertMentionAnswer.returns(
+          MentionEdit(content: mentioned, cursor: nextSteps + 20),
+        );
       await pumpEditor(tester, fake: fake, sizeClass: SizeClass.compact);
-      final line = nodeIdOfLine(tester, '## Next steps');
-      await tester.placeCaretInParagraph(line, 13);
+      await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Next'), 13);
       await tester.typeImeText(' with @Ah');
       await tester.pump();
-      expect(find.byType(CompletionsPanel), findsOneWidget);
-      expect(find.text('People'), findsOneWidget);
-      expect(find.text('Ahmed Samir'), findsOneWidget);
+      expect(find.byType(CompletionsPopup), findsOneWidget);
+      expect(find.text('People and companies'), findsOneWidget);
+      expect(find.text('Operations manager, Acme Logistics'), findsOneWidget);
       expect(
-        fake.calls,
-        contains(
-          const CoreCall('watchDirectory', {
-            'tab': DirectoryTab.people,
-            'query': 'Ah',
-          }),
-        ),
+        tester.widget<Text>(find.text('أحمد فتحي')).textDirection,
+        TextDirection.rtl,
       );
       await tester.tap(find.text('Ahmed Samir'));
       await tester.pump();
-      expect(
-        fake.calls,
-        contains(
-          const CoreCall('addRelation', {
-            'srcId': _id,
-            'dstId': '01J8ZK0AHMED00000000000000',
-            'relType': 'people',
-          }),
-        ),
-      );
-      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
       await tester.pump();
-      expect(
-        callsOf(fake, 'updateNote').single.args['content'],
-        EditorFixtures.content.replaceFirst(
-          '## Next steps',
-          '## Next steps with [[Ahmed Samir]]',
-        ),
-      );
-    });
-
-    testWidgets('@ offers companies as companies: relations', (tester) async {
-      final fake = fakeWith(EditorFixtures.note);
-      fake.directory[(DirectoryTab.people, 'Ac')].add(
-        EditorFixtures.people('Ac', const []),
-      );
-      fake.directory[(DirectoryTab.companies, 'Ac')].add(
-        EditorFixtures.companies('Ac', const [EditorFixtures.acme]),
-      );
-      await pumpEditor(tester, fake: fake);
-      await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Next'), 13);
-      await tester.typeImeText(' @Ac');
-      await tester.pump();
-      expect(find.text('Companies'), findsOneWidget);
-      await tester.tap(find.text('Acme Logistics'));
-      await tester.pump();
-      expect(callsOf(fake, 'addRelation'), [
-        const CoreCall('addRelation', {
-          'srcId': _id,
-          'dstId': '01J8ZK0ACME000000000000000',
-          'relType': 'companies',
+      expect(callsOf(fake, 'insertMention'), [
+        CoreCall('insertMention', {
+          'noteId': _id,
+          'content': EditorFixtures.content.replaceFirst(
+            '## Next steps',
+            '## Next steps with @Ah',
+          ),
+          'start': nextSteps + 6,
+          'end': nextSteps + 9,
+          'entityId': 'p-ahmed-samir',
         }),
       ]);
+      // The core's content (link + people: entry) is saved at once.
+      expect(callsOf(fake, 'updateNote'), [
+        CoreCall('updateNote', {
+          'id': _id,
+          'content': mentioned,
+          'baseVersion': EditorFixtures.contentVersion,
+        }),
+      ]);
+      expect(find.byType(CompletionsPopup), findsNothing);
     });
 
-    testWidgets('# opens tag autocomplete (the core has no tag list yet)', (
+    testWidgets('[[ replaces the typed range with the core insert text', (
       tester,
     ) async {
-      await pumpEditor(tester);
-      await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Next'), 13);
-      await tester.typeImeText(' #pri');
-      await tester.pump();
-      expect(
-        find.text("Tag suggestions aren't available yet."),
-        findsOneWidget,
-      );
-      await tester.tap(find.byTooltip('Dismiss suggestions'));
-      await tester.pump();
-      expect(find.text("Tag suggestions aren't available yet."), findsNothing);
-    });
-
-    testWidgets('a heading marker is not a tag trigger', (tester) async {
-      await pumpEditor(tester);
-      await tester.placeCaretInParagraph(nodeIdOfLine(tester, 'Three'), 0);
-      await tester.typeImeText('## ');
-      await tester.pump();
-      expect(find.byType(CompletionsPanel), findsOneWidget);
-      expect(find.text("Tag suggestions aren't available yet."), findsNothing);
-    });
-
-    testWidgets('[[ searches notes and completes the link', (tester) async {
       final fake = fakeWith(EditorFixtures.note)
-        ..searchAnswer.returns(
-          const SearchView(
-            query: 'Chu',
-            mode: SearchMode.keyword,
-            results: [
-              SearchHit(
-                noteId: 'n-churn',
-                title: 'Churn notes',
-                path: 'notes/sales/Churn notes.md',
-                kind: 'note',
-                snippet: 'Customers past 12 months churn 40% less.',
-                titleDir: TextDir.ltr,
-                snippetDir: TextDir.ltr,
-                highlights: [],
-                score: 0,
-              ),
-            ],
-            availability: Availability.available,
-            availableModes: [],
-          ),
+        ..editorCompletionsAnswer.returns(
+          completions(CompletionKind.wikiLink, nextSteps + 5, nextSteps + 10, [
+            const CompletionItem(
+              label: 'Churn notes',
+              detail: 'notes/sales/Churn notes.md',
+              insertText: '[[Churn notes]]',
+              targetId: 'n-churn-notes',
+              labelDir: TextDir.ltr,
+            ),
+          ]),
         );
       await pumpEditor(tester, fake: fake);
       await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Next'), 13);
       await tester.typeImeText(' see [[Chu');
       await tester.pump();
-      await tester.pump();
-      expect(
-        fake.calls,
-        contains(
-          const CoreCall('search', {
-            'query': 'Chu',
-            'mode': SearchMode.keyword,
-          }),
-        ),
-      );
+      expect(find.text('Notes'), findsOneWidget);
       await tester.tap(find.text('Churn notes'));
       await tester.pump();
       await tester.tap(find.widgetWithText(FilledButton, 'Save'));
@@ -544,17 +596,68 @@ void main() {
       );
     });
 
-    testWidgets('[[Note#^ opens the block reference picker state', (
-      tester,
-    ) async {
-      await pumpEditor(tester);
+    for (final (kind, heading) in [
+      (CompletionKind.tag, 'Tags'),
+      (CompletionKind.blockRef, 'Blocks'),
+    ]) {
+      testWidgets('$kind: heading, items, dismiss', (tester) async {
+        final fake = fakeWith(EditorFixtures.note)
+          ..editorCompletionsAnswer.returns(
+            completions(kind, nextSteps + 1, nextSteps + 5, [
+              const CompletionItem(
+                label: 'pricing',
+                detail: '12',
+                insertText: '#pricing',
+                labelDir: TextDir.ltr,
+              ),
+            ]),
+          );
+        await pumpEditor(tester, fake: fake);
+        await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Next'), 13);
+        await tester.typeImeText(' #pri');
+        await tester.pump();
+        expect(find.text(heading), findsOneWidget);
+        expect(find.text('pricing'), findsOneWidget);
+        await tester.tap(find.byTooltip('Dismiss suggestions'));
+        await tester.pump();
+        expect(find.byType(CompletionsPopup), findsNothing);
+      });
+    }
+
+    testWidgets('no matches', (tester) async {
+      final fake = fakeWith(EditorFixtures.note)
+        ..editorCompletionsAnswer.returns(
+          completions(CompletionKind.wikiLink, 0, 0, const []),
+        );
+      await pumpEditor(tester, fake: fake);
       await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Next'), 13);
-      await tester.typeImeText(' [[Churn notes#^');
+      await tester.typeImeText(' [[zz');
       await tester.pump();
+      expect(find.text('No matches'), findsOneWidget);
+    });
+
+    testWidgets('Escape closes the completions', (tester) async {
+      final fake = fakeWith(EditorFixtures.note)
+        ..editorCompletionsAnswer.returns(
+          completions(CompletionKind.wikiLink, 0, 0, const []),
+        );
+      await pumpEditor(tester, fake: fake);
+      await tester.placeCaretInParagraph(nodeIdOfLine(tester, '## Next'), 13);
+      await tester.typeImeText(' [[zz');
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(find.byType(CompletionsPopup), findsNothing);
+    });
+
+    test('glyphs map the completion and entity kinds', () {
       expect(
-        find.text("Block references can't be listed yet."),
-        findsOneWidget,
+        completionGlyph(CompletionKind.mention, 'company'),
+        NodeKind.company,
       );
+      expect(completionGlyph(CompletionKind.mention, null), NodeKind.person);
+      expect(completionGlyph(CompletionKind.tag, null), NodeKind.concept);
+      expect(completionGlyph(CompletionKind.blockRef, null), NodeKind.note);
     });
   });
 
@@ -587,7 +690,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.byTooltip('Mention a person or company'));
       await tester.pump();
-      expect(find.byType(CompletionsPanel), findsOneWidget);
+      expect(callsOf(fake, 'editorCompletions'), isNotEmpty);
       await tester.tap(find.widgetWithText(FilledButton, 'Save'));
       await tester.pump();
       expect(
@@ -609,20 +712,50 @@ void main() {
       expect(find.text('Saved'), findsOneWidget);
     });
 
-    testWidgets('Open link forwards the wikilink under the caret', (
-      tester,
-    ) async {
-      final opened = <String>[];
+    testWidgets('Open link opens the target the core resolved', (tester) async {
+      final opened = <(String, String?)>[];
       await pumpEditor(
         tester,
         sizeClass: SizeClass.compact,
-        onOpenLink: opened.add,
+        onOpenLink: (id, anchor) => opened.add((id, anchor)),
       );
       await tester.placeCaretInParagraph(nodeIdOfLine(tester, 'Three'), 55);
       await tester.pump();
       await tester.ensureVisible(find.byTooltip('Open link'));
       await tester.tap(find.byTooltip('Open link'));
-      expect(opened, ['[[Subscription tiers]]']);
+      expect(opened, [('n-subscription-tiers', null)]);
+    });
+
+    testWidgets('a link to a block opens at its anchor', (tester) async {
+      const content = 'See [[Churn notes#^a1b2]] and [[Nowhere]].\n';
+      final opened = <(String, String?)>[];
+      await pumpEditor(
+        tester,
+        sizeClass: SizeClass.compact,
+        note: EditorFixtures.noteWith(
+          content: content,
+          hints: [
+            hintOf(
+              content,
+              HintKind.wikiLink,
+              '[[Churn notes#^a1b2]]',
+              targetId: 'n-churn-notes',
+              targetAnchor: 'a1b2',
+            ),
+            hintOf(content, HintKind.wikiLink, '[[Nowhere]]'),
+          ],
+        ),
+        onOpenLink: (id, anchor) => opened.add((id, anchor)),
+      );
+      final line = nodeIdOfLine(tester, 'See');
+      await tester.placeCaretInParagraph(line, 8);
+      await tester.pump();
+      await tester.tap(find.byTooltip('Open link'));
+      expect(opened, [('n-churn-notes', 'a1b2')]);
+      // An unresolved link offers nothing to open.
+      await tester.placeCaretInParagraph(line, 33);
+      await tester.pump();
+      expect(find.byTooltip('Open link'), findsNothing);
     });
 
     testWidgets('Resolve opens the conflict screen for the op', (tester) async {

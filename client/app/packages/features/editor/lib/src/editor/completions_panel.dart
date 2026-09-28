@@ -14,11 +14,7 @@ import 'package:super_editor/super_editor.dart';
 /// scroll view) while the core has completions for the caret.
 class CompletionsCaretLayer extends DocumentLayoutLayerStatefulWidget {
   /// Creates the layer for [controller].
-  const new({
-    required this.controller,
-    required this.composer,
-    super.key,
-  });
+  const new({required this.controller, required this.composer, super.key});
 
   /// The editing session (its completions).
   final NoteEditorController controller;
@@ -166,7 +162,10 @@ class CompletionsPopup extends StatelessWidget {
                 boxShadow: StrataElevation.popover,
               ),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 320, maxHeight: 280),
+                constraints: const BoxConstraints(
+                  maxWidth: 320,
+                  maxHeight: 280,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -218,9 +217,8 @@ class CompletionsPopup extends StatelessWidget {
                               CompletionTile(
                                 item: item,
                                 kind: completions.kind,
-                                onTap: () => unawaited(
-                                  controller.applyCompletion(item),
-                                ),
+                                onTap: () =>
+                                    unawaited(controller.applyCompletion(item)),
                               ),
                           ],
                         ),

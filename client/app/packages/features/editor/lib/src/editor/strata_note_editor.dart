@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:strata_editor/src/editor/completions_panel.dart';
 import 'package:strata_editor/src/editor/hint_styling.dart';
 import 'package:strata_editor/src/editor/link_tap.dart';
 import 'package:strata_editor/src/editor/note_editor_controller.dart';
@@ -9,8 +10,10 @@ import 'package:strata_ui/strata_ui.dart';
 import 'package:super_editor/super_editor.dart';
 
 /// The markdown editor of a note: `super_editor` over the note's source
-/// lines (see `MarkdownSource`), styled from the core's hints, with task-line
-/// checkboxes and wikilinks that open on ⌘/Ctrl-click.
+/// lines (see `MarkdownSource`), styled from the core's hints (live preview
+/// hides the markers off the caret line), with task-line checkboxes,
+/// wikilinks that open their resolved target on ⌘/Ctrl-click, and the
+/// core's completions in a popup at the caret.
 ///
 /// Shows [controller]'s current document; the owner feeds the controller the
 /// note views the core streams (`NoteEditorController.show`). The editor is a
@@ -31,8 +34,8 @@ class StrataNoteEditor extends StatefulWidget {
   /// The editing session.
   final NoteEditorController controller;
 
-  /// Receives a wikilink's source text (`[[Note|alias]]`) when it is opened.
-  final ValueChanged<String>? onOpenLink;
+  /// Opens a wikilink's target (the note and anchor the core resolved).
+  final OpenNoteAt? onOpenLink;
 
   /// ⌘/Ctrl-S.
   final VoidCallback? onSave;
@@ -126,8 +129,9 @@ class _StrataNoteEditorState extends State<StrataNoteEditor> {
       widget.controller.wrapSelection('_');
       return ExecutionInstruction.haltExecution;
     }
-    if (key == LogicalKeyboardKey.escape && widget.controller.trigger != null) {
-      widget.controller.dismissTrigger();
+    if (key == LogicalKeyboardKey.escape &&
+        widget.controller.completions != null) {
+      widget.controller.dismissCompletions();
       return ExecutionInstruction.haltExecution;
     }
     return ExecutionInstruction.continueExecution;
@@ -168,12 +172,18 @@ class _StrataNoteEditorState extends State<StrataNoteEditor> {
           (editContext) => WikilinkTapDelegate(
             controller: controller,
             composer: editContext.composer,
-            onOpenLink: (link) => widget.onOpenLink?.call(link),
+            onOpenLink: (id, anchor) => widget.onOpenLink?.call(id, anchor),
           ),
         ],
         documentOverlayBuilders: [
           DefaultCaretOverlayBuilder(
             caretStyle: CaretStyle(color: colors.accent),
+          ),
+          FunctionalSuperEditorLayerBuilder(
+            (context, editContext) => CompletionsCaretLayer(
+              controller: controller,
+              composer: editContext.composer,
+            ),
           ),
           ...defaultSuperEditorDocumentOverlayBuilders.where(
             (builder) => builder is! DefaultCaretOverlayBuilder,

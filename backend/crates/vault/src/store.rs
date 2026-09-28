@@ -716,11 +716,26 @@ impl Core {
             std::time::Duration::from_micros(affected.len() as u64),
         );
         let watch_sidecars = paths.iter().any(|p| sidecar_id(p).is_some());
+        let derived = self.derive_ids(&affected, tz).await?;
+        // Keep-both rows only change as the derived rows of these notes say (they are added
+        // from sidecars; purging a note removes its own), so the snapshots look at those pairs
+        // only instead of every pair of the vault.
+        let pairs: Option<Vec<(String, String, String)>> = watch_sidecars.then(|| {
+            derived
+                .iter()
+                .flat_map(|(_, d)| d.keep_both.iter())
+                .map(|k| (k.kind.clone(), k.a.clone(), k.b.clone()))
+                .collect()
+        });
+        let keep_both = match &pairs {
+            Some(p) => crate::diff::KeepBoth::Among(p),
+            None => crate::diff::KeepBoth::Skip,
+        };
         let pt = crate::prof::g("sync.snapshot_before");
-        let before = crate::diff::Snapshot::take(tx, &affected, watch_sidecars).await?;
+        let before = crate::diff::Snapshot::take(tx, &affected, keep_both).await?;
         drop(pt);
         let pt = crate::prof::g("sync.reindex_ids");
-        let synced = self.reindex_ids(tx, &affected, tz).await?;
+        let synced = self.write_derived(tx, derived).await?;
         drop(pt);
         let state = self.state()?;
         let mut out = Synced::default();
@@ -748,7 +763,7 @@ impl Core {
         self.log_changes(tx, &out).await?;
         drop(pt);
         let pt = crate::prof::g("sync.snapshot_after");
-        let after = crate::diff::Snapshot::take(tx, &affected, watch_sidecars).await?;
+        let after = crate::diff::Snapshot::take(tx, &affected, keep_both).await?;
         drop(pt);
         let pt = crate::prof::g("sync.derived_diff");
         let mut notice = self.log_derived_diff(tx, &before, &after).await?;
@@ -826,19 +841,18 @@ impl Core {
     ) -> Result<Committed> {
         let now = self.now();
         let diff = crate::diff::diff(before, after);
-        for (entity_type, entity_id, op) in &diff.log {
-            sync::append_change(
-                tx,
-                &NewChange {
-                    entity_type,
-                    entity_id,
-                    op: *op,
-                    version: None,
-                    at: now,
-                },
-            )
-            .await?;
-        }
+        let changes: Vec<NewChange<'_>> = diff
+            .log
+            .iter()
+            .map(|(entity_type, entity_id, op)| NewChange {
+                entity_type,
+                entity_id,
+                op: *op,
+                version: None,
+                at: now,
+            })
+            .collect();
+        sync::append_changes(tx, &changes).await?;
         let mut notice = Committed {
             relations: diff.relations,
             ..Committed::default()
@@ -905,6 +919,17 @@ impl Core {
         ids: &BTreeSet<NoteId>,
         tz: Tz,
     ) -> Result<HashMap<NoteId, Derived>> {
+        let derived = self.derive_ids(ids, tz).await?;
+        self.write_derived(tx, derived).await
+    }
+
+    /// Derives the rows of the given notes (live or trashed) from their files, without
+    /// writing them.
+    pub(crate) async fn derive_ids(
+        &self,
+        ids: &BTreeSet<NoteId>,
+        tz: Tz,
+    ) -> Result<Vec<(NoteId, Derived)>> {
         let mut files: Vec<(NoteId, String, bool)> = Vec::new();
         {
             let state = self.state()?;
@@ -916,43 +941,47 @@ impl Core {
                 }
             }
         }
-        let pt = crate::prof::g("reidx.read");
-        let mut batch = Vec::with_capacity(files.len());
         let mut texts = Vec::with_capacity(files.len());
         for (id, path, trashed) in &files {
             let text = self.read_text(path).await?.unwrap_or_default();
             let sidecar = self.sidecar(*id).await?;
             texts.push((*id, path.clone(), *trashed, text, sidecar));
         }
-        drop(pt);
-        let pt = crate::prof::g("reidx.path_index");
-        let state = self.state()?;
-        let index = state.path_index();
-        drop(pt);
         let pt = crate::prof::g("reidx.derive");
+        let state = self.state()?;
         let ctx = Context {
-            index: &index,
+            index: state.path_index(),
             state,
             tz,
         };
-        let mut link_names = Vec::new();
-        let mut out = HashMap::new();
+        let mut out = Vec::with_capacity(texts.len());
         for (id, path, trashed, text, sidecar) in &texts {
             if let Some(d) = derive::derive(path, text, sidecar.as_ref(), &ctx, *trashed) {
-                link_names.push((*id, d.link_names.clone()));
-                out.insert(*id, d.clone());
-                batch.push(d);
+                out.push((*id, d));
             }
         }
         drop(pt);
+        Ok(out)
+    }
+
+    /// Writes rows from [`Self::derive_ids`] and records the notes' link names. Returns the
+    /// rows by ID.
+    pub(crate) async fn write_derived(
+        &mut self,
+        tx: &mut ScopedTx,
+        derived: Vec<(NoteId, Derived)>,
+    ) -> Result<HashMap<NoteId, Derived>> {
         let pt = crate::prof::g("reidx.indexer_write");
+        let batch: Vec<Derived> = derived.iter().map(|(_, d)| d.clone()).collect();
         indexer::write(tx, &batch).await?;
         drop(pt);
         let state = self.state_mut()?;
-        for (id, names) in link_names {
+        let mut out = HashMap::with_capacity(derived.len());
+        for (id, d) in derived {
             if let Some(path) = state.by_id.get(&id).cloned() {
-                state.set_link_names(&path, names);
+                state.set_link_names(&path, d.link_names.clone());
             }
+            out.insert(id, d);
         }
         Ok(out)
     }

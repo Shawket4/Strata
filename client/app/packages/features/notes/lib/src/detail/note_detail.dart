@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,17 +19,22 @@ class NoteActions {
     this.onOpenNote,
     this.onOpenLink,
     this.onOpenConflict,
+    this.onOpenDuplicate,
     this.onOpenLocalMap,
   });
 
   /// Opens a note by ID.
   final ValueChanged<String>? onOpenNote;
 
-  /// Opens a wikilink (its source text).
-  final ValueChanged<String>? onOpenLink;
+  /// Opens a wikilink's or citation's target (the note and block or heading
+  /// the core resolved).
+  final OpenNoteAt? onOpenLink;
 
   /// Opens the conflict screen for an op ID.
   final ValueChanged<String>? onOpenConflict;
+
+  /// Opens the "Already exists" prompt of a duplicate-flagged op.
+  final ValueChanged<String>? onOpenDuplicate;
 
   /// Opens the local mind map of a note ID.
   final ValueChanged<String>? onOpenLocalMap;
@@ -66,6 +73,228 @@ VoidCallback? _conflict(NoteView note, NoteActions actions) {
   return open == null ? null : () => open(opId);
 }
 
+VoidCallback? _duplicate(NoteView note, NoteActions actions) {
+  final opId = note.sync_.duplicateOpId;
+  final open = actions.onOpenDuplicate;
+  if (opId == null || open == null) return null;
+  return () => open(opId);
+}
+
+/// The banners above the note: the conflict hand-off, the "Already exists"
+/// prompt of a duplicate-flagged note, and the block a link pointed at.
+List<Widget> _banners(NoteView note, NoteActions actions, String? anchor) => [
+  if (note.sync_.kind == NoteSyncKind.conflict) ...[
+    NoteConflictBanner(onResolve: _conflict(note, actions)),
+    const SizedBox(height: StrataSpacing.s4),
+  ],
+  if (note.sync_.kind == NoteSyncKind.duplicate) ...[
+    NoteDuplicateBanner(onReview: _duplicate(note, actions)),
+    const SizedBox(height: StrataSpacing.s4),
+  ],
+  if (anchor != null) ...[
+    LinkedBlockCard(noteId: note.id, anchor: anchor),
+    const SizedBox(height: StrataSpacing.s4),
+  ],
+];
+
+/// "Created 18 Sep · edited today 14:31 by Shawket · 214 words", from the
+/// core's labels.
+class NoteMetaLine extends StatelessWidget {
+  /// Creates the line for [note].
+  const new({required this.note, super.key});
+
+  /// The note.
+  final NoteView note;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = NotesLocalizations.of(context);
+    final colors = context.strataColors;
+    final style = context.strataText.caption.copyWith(color: colors.text2);
+    final created = note.createdLabel;
+    final edited = note.editedLabel;
+    final by = note.editedBy;
+    final parts = [
+      if (created != null) l10n.metaCreated(date: created),
+      if (edited != null && by == null) l10n.metaEdited(date: edited),
+      if (edited != null && by != null)
+        l10n.metaEditedBy(date: edited, name: by),
+      l10n.wordCount(count: note.wordCount),
+    ];
+    return Wrap(
+      spacing: StrataSpacing.s2,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final (i, part) in parts.indexed) ...[
+          if (i > 0) ExcludeSemantics(child: Text('·', style: style)),
+          Text(part, style: style),
+        ],
+      ],
+    );
+  }
+}
+
+/// Pin to / unpin from the sidebar (`pin_note`, this device).
+class PinNoteButton extends ConsumerWidget {
+  /// Creates the button for [note].
+  const new({required this.note, super.key});
+
+  /// The note.
+  final NoteView note;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = NotesLocalizations.of(context);
+    final colors = context.strataColors;
+    return IconButton(
+      tooltip: note.pinned ? l10n.unpinNote : l10n.pinNote,
+      isSelected: note.pinned,
+      icon: const Icon(Icons.push_pin_outlined),
+      selectedIcon: const Icon(Icons.push_pin),
+      color: colors.text2,
+      onPressed: () => unawaited(
+        ref.read(coreApiProvider).pinNote(id: note.id, pinned: !note.pinned),
+      ),
+    );
+  }
+}
+
+/// The block a link or citation pointed at (`#^id` or a heading), as the
+/// core resolves it (`resolve_citation`): its heading and text in its own
+/// direction, or that it is gone.
+class LinkedBlockCard extends ConsumerWidget {
+  /// Creates the card for [anchor] in [noteId].
+  const new({required this.noteId, required this.anchor, super.key});
+
+  /// The note.
+  final String noteId;
+
+  /// The block ID (without `^`) or heading.
+  final String anchor;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = NotesLocalizations.of(context);
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final preview = ref.watch(resolveCitationProvider(noteId, anchor)).value;
+    if (preview == null) return const SizedBox.shrink();
+    final block = preview.blockText;
+    final heading = preview.heading;
+    return Semantics(
+      container: true,
+      label: l10n.linkedBlockTitle,
+      explicitChildNodes: true,
+      child: Container(
+        padding: const EdgeInsets.all(StrataSpacing.s3),
+        decoration: BoxDecoration(
+          color: colors.accentTint,
+          borderRadius: StrataRadii.inputRadius,
+          border: BorderDirectional(
+            start: BorderSide(color: colors.accent, width: 3),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: StrataSpacing.s2,
+              children: [
+                Text(
+                  l10n.linkedBlockTitle,
+                  style: text.caption
+                      .withWeight(FontWeight.w600)
+                      .copyWith(color: colors.accentText),
+                ),
+                Text(
+                  anchor,
+                  textDirection: TextDirection.ltr,
+                  style: text.monoSmall.copyWith(color: colors.text2),
+                ),
+              ],
+            ),
+            if (heading != null)
+              Text(heading, style: text.bodySmall.withWeight(FontWeight.w600)),
+            Text(
+              block ?? l10n.linkedBlockMissing,
+              textDirection: block == null
+                  ? null
+                  : textDirectionOf(preview.blockDir),
+              textAlign: TextAlign.start,
+              style: text.bodySmall.copyWith(
+                color: block == null ? colors.text2 : colors.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A note the core flagged as a possible duplicate (`NoteSyncKind.duplicate`):
+/// "Review" opens the "Already exists" prompt.
+class NoteDuplicateBanner extends StatelessWidget {
+  /// Creates the banner.
+  const new({required this.onReview, super.key});
+
+  /// Opens the prompt.
+  final VoidCallback? onReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = NotesLocalizations.of(context);
+    final colors = context.strataColors;
+    final text = context.strataText;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsetsDirectional.fromSTEB(
+          StrataSpacing.s4,
+          StrataSpacing.s3,
+          StrataSpacing.s2,
+          StrataSpacing.s2,
+        ),
+        decoration: BoxDecoration(
+          color: colors.warningTint,
+          border: BorderDirectional(
+            start: BorderSide(color: colors.warning, width: 3),
+          ),
+          borderRadius: StrataRadii.inputRadius,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.duplicateBannerTitle,
+              style: text.bodySmall.copyWith(
+                color: colors.warningText,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            Text(
+              l10n.duplicateBannerMessage,
+              style: text.caption.copyWith(color: colors.warningText),
+            ),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                onPressed: onReview,
+                style: TextButton.styleFrom(
+                  foregroundColor: colors.warningText,
+                  minimumSize: const Size(64, StrataLayout.minTouchTarget),
+                ),
+                child: Text(l10n.duplicateReview),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// The note view of medium and expanded layouts: a toolbar row (path,
 /// status, Save, local map, context panel toggle), then the title, the
 /// conflict banner, the Properties panel and the editor in one scroll.
@@ -77,10 +306,14 @@ class NoteDetailPane extends StatelessWidget {
     required this.onToggleContext,
     super.key,
     this.actions = const NoteActions(),
+    this.anchor,
   });
 
   /// The note.
   final String noteId;
+
+  /// The block or heading a link pointed at.
+  final String? anchor;
 
   /// Whether the context panel (or drawer) is shown.
   final bool contextVisible;
@@ -106,6 +339,7 @@ class NoteDetailPane extends StatelessWidget {
           contextVisible: contextVisible,
           onToggleContext: onToggleContext,
           actions: actions,
+          anchor: anchor,
         ),
       ),
     ),
@@ -119,6 +353,7 @@ class _NoteDetailBody extends StatelessWidget {
     required this.contextVisible,
     required this.onToggleContext,
     required this.actions,
+    required this.anchor,
   });
 
   final NoteView note;
@@ -126,6 +361,7 @@ class _NoteDetailBody extends StatelessWidget {
   final bool contextVisible;
   final VoidCallback onToggleContext;
   final NoteActions actions;
+  final String? anchor;
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +369,6 @@ class _NoteDetailBody extends StatelessWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final save = saveNote(context, controller);
-    final conflict = note.sync_.kind == NoteSyncKind.conflict;
     final openMap = actions.onOpenLocalMap;
     return CallbackShortcuts(
       bindings: {
@@ -168,8 +403,13 @@ class _NoteDetailBody extends StatelessWidget {
                       ),
                       NoteStatusLabel(
                         status: controller.status,
-                        pendingOps: note.sync_.pendingOps,
+                        label: note.sync_.label,
                       ),
+                      if (note.versionLabel case final version?)
+                        Text(
+                          version,
+                          style: text.monoSmall.copyWith(color: colors.text2),
+                        ),
                     ],
                   ),
                 ),
@@ -189,6 +429,8 @@ class _NoteDetailBody extends StatelessWidget {
                       child: Text(context.l10n.actionSave),
                     ),
                   ),
+                LivePreviewToggle(controller: controller),
+                PinNoteButton(note: note),
                 IconButton(
                   tooltip: l10n.openLocalMap,
                   icon: const Icon(Icons.hub_outlined),
@@ -222,6 +464,7 @@ class _NoteDetailBody extends StatelessWidget {
                         header: true,
                         child: Text(
                           note.title,
+                          textDirection: textDirectionOf(note.titleDir),
                           textAlign: TextAlign.start,
                           style: text.display.copyWith(
                             color: colors.text,
@@ -229,14 +472,14 @@ class _NoteDetailBody extends StatelessWidget {
                           ),
                         ),
                       ),
+                      const SizedBox(height: StrataSpacing.s1),
+                      NoteMetaLine(note: note),
                       const SizedBox(height: StrataSpacing.s4),
-                      if (conflict) ...[
-                        NoteConflictBanner(onResolve: _conflict(note, actions)),
-                        const SizedBox(height: StrataSpacing.s4),
-                      ],
+                      ..._banners(note, actions, anchor),
                       PropertiesPanel(
                         note: note,
                         onOpenNote: actions.onOpenNote,
+                        onOpenCitation: actions.onOpenLink,
                         hoverCards: true,
                       ),
                     ],
@@ -258,7 +501,6 @@ class _NoteDetailBody extends StatelessWidget {
               ],
             ),
           ),
-          CompletionsPanel(controller: controller),
         ],
       ),
     );
@@ -287,10 +529,14 @@ class CompactNotePage extends StatefulWidget {
     super.key,
     this.onBack,
     this.actions = const NoteActions(),
+    this.anchor,
   });
 
   /// The note.
   final String noteId;
+
+  /// The block or heading a link pointed at.
+  final String? anchor;
 
   /// Back to the list.
   final VoidCallback? onBack;
@@ -359,12 +605,15 @@ class _CompactNotePageState extends State<CompactNotePage> {
                           note: note,
                           collapsible: true,
                           onOpenNote: actions.onOpenNote,
+                          onOpenCitation: actions.onOpenLink,
                         ),
                         const SizedBox(height: StrataSpacing.s4),
                         Semantics(
                           header: true,
                           child: Text(
                             note.title,
+                            textDirection: textDirectionOf(note.titleDir),
+                            textAlign: TextAlign.start,
                             style: text.display.copyWith(
                               color: colors.text,
                               fontSize: 26,
@@ -372,12 +621,9 @@ class _CompactNotePageState extends State<CompactNotePage> {
                             ),
                           ),
                         ),
-                        if (note.sync_.kind == NoteSyncKind.conflict) ...[
-                          const SizedBox(height: StrataSpacing.s3),
-                          NoteConflictBanner(
-                            onResolve: _conflict(note, actions),
-                          ),
-                        ],
+                        NoteMetaLine(note: note),
+                        const SizedBox(height: StrataSpacing.s3),
+                        ..._banners(note, actions, widget.anchor),
                       ],
                     ),
                   ),
@@ -399,7 +645,6 @@ class _CompactNotePageState extends State<CompactNotePage> {
               ),
             ),
           ),
-          CompletionsPanel(controller: controller),
           FormattingToolbar(
             controller: controller,
             onOpenLink: actions.onOpenLink,
@@ -412,7 +657,11 @@ class _CompactNotePageState extends State<CompactNotePage> {
         primary: false,
         padding: const EdgeInsets.all(StrataSpacing.s4),
         children: [
-          PropertiesPanel(note: note, onOpenNote: actions.onOpenNote),
+          PropertiesPanel(
+            note: note,
+            onOpenNote: actions.onOpenNote,
+            onOpenCitation: actions.onOpenLink,
+          ),
           const SizedBox(height: StrataSpacing.s4),
           BacklinksSection(
             groups: note.backlinks,
@@ -420,6 +669,7 @@ class _CompactNotePageState extends State<CompactNotePage> {
           ),
           const SizedBox(height: StrataSpacing.s3),
           LocalGraphSlot(
+            noteId: note.id,
             onOpenMap: openMap == null ? null : () => openMap(note.id),
           ),
         ],
@@ -428,7 +678,7 @@ class _CompactNotePageState extends State<CompactNotePage> {
         key: const PageStorageKey('history'),
         primary: false,
         padding: const EdgeInsets.all(StrataSpacing.s4),
-        children: [HistorySection(availability: note.history)],
+        children: [HistorySection(note: note)],
       ),
     };
     return Column(
@@ -468,7 +718,7 @@ class _CompactNotePageState extends State<CompactNotePage> {
                     ),
                     NoteStatusLabel(
                       status: controller.status,
-                      pendingOps: note.sync_.pendingOps,
+                      label: note.sync_.label,
                     ),
                   ],
                 ),
@@ -481,6 +731,7 @@ class _CompactNotePageState extends State<CompactNotePage> {
                   ),
                   child: Text(context.l10n.actionSave),
                 ),
+              PinNoteButton(note: note),
             ],
           ),
         ),
@@ -504,7 +755,7 @@ class _CompactNotePageState extends State<CompactNotePage> {
                 ),
                 ButtonSegment(
                   value: CompactNoteTab.links,
-                  label: Text(l10n.tabLinks),
+                  label: Text(l10n.linksTab(count: note.backlinkCount)),
                 ),
                 ButtonSegment(
                   value: CompactNoteTab.history,

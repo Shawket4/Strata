@@ -188,7 +188,10 @@ pub(crate) async fn settle(
     let Some(hook) = slot.take_hook() else {
         return Ok(None);
     };
+    let pt = crate::prof::g("settle.hook");
     let bytes = hook(after).map_err(|e| VaultError::Internal(format!("op result: {e}")))?;
+    drop(pt);
+    let _pt = crate::prof::g("settle.idem_put");
     let stored = log::idempotency_put(tx, slot.op_id, slot.device, &bytes, now).await?;
     Ok(Some(Pending {
         slot: slot.clone(),

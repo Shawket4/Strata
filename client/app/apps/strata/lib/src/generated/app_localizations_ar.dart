@@ -39,13 +39,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get channelDescription => 'تذكيرات المهام من Strata';
 
   @override
-  String get pinnedTitle => 'المجلدات';
-
-  @override
   String folderSemantics({required String name, required int count}) {
     return '$name، $count ملاحظة';
   }
 
   @override
   String get accountLabel => 'الحساب';
+
+  @override
+  String get foldersTitle => 'المجلدات';
+
+  @override
+  String get pinnedNotesTitle => 'المثبّتة';
+
+  @override
+  String pinnedSemantics({required String title}) {
+    return 'ملاحظة مثبّتة: $title';
+  }
 }

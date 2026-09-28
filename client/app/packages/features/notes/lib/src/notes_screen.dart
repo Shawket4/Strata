@@ -26,11 +26,13 @@ class NotesScreen extends StatefulWidget {
     super.key,
     this.folder = '',
     this.selectedNoteId,
+    this.anchor,
     this.onOpenFolder,
     this.onOpenNote,
     this.onCloseNote,
     this.onOpenLink,
     this.onOpenConflict,
+    this.onOpenDuplicate,
     this.onOpenLocalMap,
   });
 
@@ -39,6 +41,10 @@ class NotesScreen extends StatefulWidget {
 
   /// The note shown next to (or, on compact, instead of) the list.
   final String? selectedNoteId;
+
+  /// A block ID (without `^`) or heading of the selected note a link
+  /// pointed at (the core resolves it).
+  final String? anchor;
 
   /// Navigates to a folder.
   final ValueChanged<String>? onOpenFolder;
@@ -49,11 +55,15 @@ class NotesScreen extends StatefulWidget {
   /// Leaves the note (compact back).
   final VoidCallback? onCloseNote;
 
-  /// Opens a wikilink (its source text, `[[Note|alias]]`).
-  final ValueChanged<String>? onOpenLink;
+  /// Opens a wikilink's or citation's target (note and anchor, resolved by
+  /// the core).
+  final OpenNoteAt? onOpenLink;
 
   /// Opens the conflict screen for an op ID (sync feature).
   final ValueChanged<String>? onOpenConflict;
+
+  /// Opens the "Already exists" prompt of an op ID.
+  final ValueChanged<String>? onOpenDuplicate;
 
   /// Opens the local mind map of a note (maps feature).
   final ValueChanged<String>? onOpenLocalMap;
@@ -130,6 +140,7 @@ class _NotesScreenState extends State<NotesScreen> {
       onOpenNote: _openNote,
       onOpenLink: widget.onOpenLink,
       onOpenConflict: widget.onOpenConflict,
+      onOpenDuplicate: widget.onOpenDuplicate,
       onOpenLocalMap: widget.onOpenLocalMap,
     );
     final list = NotesListPane(
@@ -149,6 +160,7 @@ class _NotesScreenState extends State<NotesScreen> {
                 : CompactNotePage(
                     key: ValueKey(selected),
                     noteId: selected,
+                    anchor: widget.anchor,
                     onBack: _closeNote,
                     actions: actions,
                   );
@@ -172,6 +184,7 @@ class _NotesScreenState extends State<NotesScreen> {
               : NoteDetailPane(
                   key: ValueKey(selected),
                   noteId: selected,
+                  anchor: widget.anchor,
                   contextVisible: contextVisible,
                   onToggleContext: () => _toggleContext(sizeClass),
                   actions: actions,

@@ -107,6 +107,65 @@ pub async fn add_keep_both(
     Ok(())
 }
 
+/// A keep-both pair to store: (kind, a, b, when). Order-insensitive.
+pub type KeepBothPair<'a> = (&'a str, &'a str, &'a str, DateTime<Utc>);
+
+/// [`add_keep_both`] for many pairs in one statement (a forced create can record hundreds).
+pub async fn add_keep_both_many(tx: &mut ScopedTx, pairs: &[KeepBothPair<'_>]) -> Result<()> {
+    if pairs.is_empty() {
+        return Ok(());
+    }
+    let mut kinds = Vec::with_capacity(pairs.len());
+    let mut los = Vec::with_capacity(pairs.len());
+    let mut his = Vec::with_capacity(pairs.len());
+    let mut ats = Vec::with_capacity(pairs.len());
+    for (kind, a, b, at) in pairs {
+        let (lo, hi) = ordered(a, b);
+        kinds.push(*kind);
+        los.push(lo);
+        his.push(hi);
+        ats.push(*at);
+    }
+    sqlx::query(
+        "INSERT INTO dedupe_keep_both (user_id, kind, a_id, b_id, at)          SELECT strata_current_user(), k, a, b, t          FROM unnest($1::text[], $2::text[], $3::text[], $4::timestamptz[]) AS p(k, a, b, t)          ON CONFLICT DO NOTHING",
+    )
+    .bind(&kinds)
+    .bind(&los)
+    .bind(&his)
+    .bind(&ats)
+    .execute(tx.conn())
+    .await?;
+    Ok(())
+}
+
+/// Which of the (kind, a, b) pairs (order-insensitive) are stored as keep-both, as stored
+/// (a < b), sorted. One primary-key probe per pair, whatever the size of the table.
+pub async fn keep_both_among(
+    tx: &mut ScopedTx,
+    pairs: &[(String, String, String)],
+) -> Result<Vec<(String, String, String)>> {
+    if pairs.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut kinds = Vec::with_capacity(pairs.len());
+    let mut los = Vec::with_capacity(pairs.len());
+    let mut his = Vec::with_capacity(pairs.len());
+    for (kind, a, b) in pairs {
+        let (lo, hi) = ordered(a, b);
+        kinds.push(kind.as_str());
+        los.push(lo);
+        his.push(hi);
+    }
+    Ok(sqlx::query_as(
+        "SELECT DISTINCT k.kind, k.a_id, k.b_id          FROM unnest($1::text[], $2::text[], $3::text[]) AS p(kind, a, b)          JOIN dedupe_keep_both k ON k.kind = p.kind AND k.a_id = p.a AND k.b_id = p.b          ORDER BY 1, 2, 3",
+    )
+    .bind(&kinds)
+    .bind(&los)
+    .bind(&his)
+    .fetch_all(tx.conn())
+    .await?)
+}
+
 /// True if the pair was marked keep-both (either order).
 pub async fn is_keep_both(tx: &mut ScopedTx, kind: &str, a: &str, b: &str) -> Result<bool> {
     let (lo, hi) = ordered(a, b);

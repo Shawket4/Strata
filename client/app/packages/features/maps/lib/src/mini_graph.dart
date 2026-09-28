@@ -19,6 +19,7 @@ class MiniGraph extends StatelessWidget {
     this.height = 200,
     this.onOpenMindMap,
     this.showHeader = true,
+    this.padding = const EdgeInsets.symmetric(horizontal: StrataSpacing.s4),
   });
 
   /// The note or entity in the centre.
@@ -33,6 +34,9 @@ class MiniGraph extends StatelessWidget {
   /// Whether the "Graph · Open in map" header is shown.
   final bool showHeader;
 
+  /// Space around the graph card (none when the host frames it).
+  final EdgeInsetsGeometry padding;
+
   @override
   Widget build(BuildContext context) => MapsLocalizationScope(
     child: _MiniGraph(
@@ -40,6 +44,7 @@ class MiniGraph extends StatelessWidget {
       height: height,
       onOpenMindMap: onOpenMindMap,
       showHeader: showHeader,
+      padding: padding,
     ),
   );
 }
@@ -50,12 +55,14 @@ class _MiniGraph extends HookConsumerWidget {
     required this.height,
     required this.onOpenMindMap,
     required this.showHeader,
+    required this.padding,
   });
 
   final String noteId;
   final double height;
   final ValueChanged<String>? onOpenMindMap;
   final bool showHeader;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -133,7 +140,7 @@ class _MiniGraph extends HookConsumerWidget {
             ),
           ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s4),
+          padding: padding,
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: colors.surface,

@@ -1,5 +1,5 @@
-import 'package:flutter/painting.dart' show TextDirection;
 import 'package:flutter/foundation.dart' show immutable;
+import 'package:flutter/painting.dart' show TextDirection;
 import 'package:strata_editor/src/source/markdown_source.dart';
 import 'package:strata_state/strata_state.dart' show EditorHint, HintKind;
 import 'package:super_editor/super_editor.dart';
@@ -164,17 +164,16 @@ final class LineHints {
         if (hint.start == lineEnd && hint.end > lineEnd) continue;
         final start = (hint.start - lineStart).clamp(0, lines[i].text.length);
         final end = (hint.end - lineStart).clamp(0, lines[i].text.length);
-        switch (hint.kind) {
-          case HintKind.rtlLine:
-            directions[ids[i]] = TextDirection.rtl;
-            continue;
-          case HintKind.ltrLine:
-            directions[ids[i]] = TextDirection.ltr;
-            continue;
-          case HintKind.taskLine:
-            if (hint.taskId case final id?) taskIds[ids[i]] = id;
-          default:
-            break;
+        if (hint.kind == HintKind.rtlLine) {
+          directions[ids[i]] = TextDirection.rtl;
+          continue;
+        }
+        if (hint.kind == HintKind.ltrLine) {
+          directions[ids[i]] = TextDirection.ltr;
+          continue;
+        }
+        if (hint.kind == HintKind.taskLine) {
+          if (hint.taskId case final id?) taskIds[ids[i]] = id;
         }
         if (end <= start && hint.kind != HintKind.taskLine) continue;
         (spans[ids[i]] ??= []).add(

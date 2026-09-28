@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_notes/src/generated/notes_localizations.dart';
 import 'package:strata_notes/src/notes_scope.dart';
 import 'package:strata_state/strata_state.dart' as core;
@@ -19,6 +18,7 @@ class NoteRelationChip extends StatefulWidget {
     required this.relation,
     super.key,
     this.onOpenNote,
+    this.onOpenCitation,
     this.hoverCard = false,
   });
 
@@ -30,6 +30,9 @@ class NoteRelationChip extends StatefulWidget {
 
   /// Opens a note.
   final ValueChanged<String>? onOpenNote;
+
+  /// Opens a citation of an AI relation at its block.
+  final OpenNoteAt? onOpenCitation;
 
   /// Whether hovering shows the reason card (pointer layouts).
   final bool hoverCard;
@@ -64,6 +67,7 @@ class _NoteRelationChipState extends State<NoteRelationChip> {
     final chip = RelationChip(
       type: relationTypeOf(relation.relType),
       mentionOf: mentionKindOf(relation.relType),
+      typeLabel: relation.relLabel,
       label: relation.target.title,
       aiConfidence: _isAi ? relation.confidence : null,
       onPressed: target == null || open == null ? null : () => open(target),
@@ -73,6 +77,7 @@ class _NoteRelationChipState extends State<NoteRelationChip> {
                 context,
                 noteId: widget.noteId,
                 relation: relation,
+                onOpenCitation: widget.onOpenCitation,
               ),
             )
           : null,
@@ -112,6 +117,7 @@ class _NoteRelationChipState extends State<NoteRelationChip> {
                     child: AiRelationCard(
                       noteId: widget.noteId,
                       relation: relation,
+                      onOpenCitation: widget.onOpenCitation,
                       onDone: () => _hover(chip: false, card: false),
                     ),
                   ),
@@ -136,6 +142,7 @@ Future<void> showAiRelationSheet(
   BuildContext context, {
   required String noteId,
   required core.RelationChip relation,
+  OpenNoteAt? onOpenCitation,
 }) => showModalBottomSheet<void>(
   context: context,
   useSafeArea: true,
@@ -145,14 +152,17 @@ Future<void> showAiRelationSheet(
       child: AiRelationCard(
         noteId: noteId,
         relation: relation,
+        onOpenCitation: onOpenCitation,
         onDone: () => Navigator.of(sheetContext).pop(),
       ),
     ),
   ),
 );
 
-/// "Suggested by AI · confidence 0.72", the AI's reason, and Reject /
-/// Retype (`removeRelation` / `retypeRelation`).
+/// "Suggested by AI · confidence 0.72 · 14:05", the AI's reason with the
+/// cited blocks, and Reject / Retype: `reject_relation` (recorded, never
+/// re-proposed, D13) and `retype_relation` to one of the core's
+/// `relation_types`.
 class AiRelationCard extends ConsumerWidget {
   /// Creates the card.
   const new({
@@ -160,6 +170,7 @@ class AiRelationCard extends ConsumerWidget {
     required this.relation,
     super.key,
     this.onDone,
+    this.onOpenCitation,
   });
 
   /// The note the relation is stored on.
@@ -170,6 +181,9 @@ class AiRelationCard extends ConsumerWidget {
 
   /// Called after an action (closes the sheet / card).
   final VoidCallback? onDone;
+
+  /// Opens a cited block.
+  final OpenNoteAt? onOpenCitation;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -208,14 +222,17 @@ class AiRelationCard extends ConsumerWidget {
                   l10n.aiConfidence(value: confidence.toStringAsFixed(2)),
                   style: text.caption.copyWith(color: colors.text2),
                 ),
+              if (relation.createdLabel case final created?)
+                Text(
+                  created,
+                  style: text.caption.copyWith(color: colors.text2),
+                ),
             ],
           ),
           const SizedBox(height: StrataSpacing.s1),
           Text(
             l10n.relationLine(
-              type: isNamedRelation(relation.relType)
-                  ? context.l10n.relationTypeLabel(type)
-                  : relation.relType,
+              type: relation.relLabel,
               title: relation.target.title,
             ),
             style: text.caption.copyWith(color: colors.text2),
@@ -225,6 +242,27 @@ class AiRelationCard extends ConsumerWidget {
             reason ?? l10n.noReason,
             style: text.bodySmall.copyWith(color: colors.text),
           ),
+          if (relation.citations.isNotEmpty) ...[
+            const SizedBox(height: StrataSpacing.s2),
+            Wrap(
+              spacing: StrataSpacing.s1 + 2,
+              runSpacing: StrataSpacing.s1,
+              children: [
+                for (final citation in relation.citations)
+                  CitationChip(
+                    label: citation.target,
+                    blockRef: citation.anchor,
+                    onPressed: switch ((citation.noteId, onOpenCitation)) {
+                      (final id?, final open?) => () => open(
+                        id,
+                        citation.anchor,
+                      ),
+                      _ => null,
+                    },
+                  ),
+              ],
+            ),
+          ],
           const SizedBox(height: StrataSpacing.s3),
           Wrap(
             spacing: StrataSpacing.s2,
@@ -237,7 +275,7 @@ class AiRelationCard extends ConsumerWidget {
                         unawaited(
                           ref
                               .read(coreApiProvider)
-                              .removeRelation(
+                              .rejectRelation(
                                 srcId: noteId,
                                 dstId: target,
                                 relType: relation.relType,
@@ -278,6 +316,8 @@ class AiRelationCard extends ConsumerWidget {
     String target,
   ) async {
     final api = ref.read(coreApiProvider);
+    final types = await api.relationTypes();
+    if (!context.mounted) return;
     final chosen = await showDialog<String>(
       context: context,
       builder: (dialogContext) => NotesLocalizationsScope(
@@ -285,29 +325,30 @@ class AiRelationCard extends ConsumerWidget {
           builder: (context) => SimpleDialog(
             title: Text(NotesLocalizations.of(context).retypeTitle),
             children: [
-              for (final entry in retypeTargets.entries)
-                if (entry.key != relation.relType)
-                  SimpleDialogOption(
-                    onPressed: () => Navigator.of(dialogContext).pop(entry.key),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        minHeight: StrataLayout.minTouchTarget - 16,
-                      ),
-                      child: Row(
-                        children: [
-                          RelationLineSample(type: entry.value),
-                          const SizedBox(width: StrataSpacing.s3),
-                          Text(context.l10n.relationTypeLabel(entry.value)),
-                        ],
-                      ),
+              for (final type in types)
+                SimpleDialogOption(
+                  onPressed: () => Navigator.of(dialogContext).pop(type.key),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: StrataLayout.minTouchTarget - 16,
+                    ),
+                    child: Row(
+                      children: [
+                        RelationLineSample(type: relationTypeOf(type.key)),
+                        const SizedBox(width: StrataSpacing.s3),
+                        Expanded(child: Text(type.label)),
+                        if (type.key == relation.relType)
+                          const Icon(Icons.check, size: 18),
+                      ],
                     ),
                   ),
+                ),
             ],
           ),
         ),
       ),
     );
-    if (chosen == null) return;
+    if (chosen == null || chosen == relation.relType) return;
     await api.retypeRelation(
       srcId: noteId,
       dstId: target,

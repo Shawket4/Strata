@@ -43,21 +43,3 @@ NodeKind mentionKindOf(String relType) => switch (relType) {
   'people' => NodeKind.person,
   _ => NodeKind.note,
 };
-
-/// The relation keys a relation can be retyped to (PLAN §6.4), with the
-/// design system's type of each.
-const Map<String, RelationType> retypeTargets = {
-  'related': RelationType.related,
-  'part-of': RelationType.partOf,
-  'supports': RelationType.supports,
-  'contradicts': RelationType.contradicts,
-  'follows-up': RelationType.followsUp,
-  'duplicates': RelationType.duplicates,
-};
-
-/// Whether [relType] is one of the keys the design system names.
-bool isNamedRelation(String relType) =>
-    retypeTargets.containsKey(relType) ||
-    relType == 'people' ||
-    relType == 'companies' ||
-    relType == 'concepts';

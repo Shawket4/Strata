@@ -14,6 +14,7 @@ class PropertiesPanel extends StatefulWidget {
     required this.note,
     super.key,
     this.onOpenNote,
+    this.onOpenCitation,
     this.collapsible = false,
     this.hoverCards = false,
   });
@@ -23,6 +24,9 @@ class PropertiesPanel extends StatefulWidget {
 
   /// Opens a related note.
   final ValueChanged<String>? onOpenNote;
+
+  /// Opens a cited block of an AI relation.
+  final OpenNoteAt? onOpenCitation;
 
   /// Whether the panel can collapse to its chips (compact).
   final bool collapsible;
@@ -53,6 +57,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> {
             noteId: note.id,
             relation: relation,
             onOpenNote: widget.onOpenNote,
+            onOpenCitation: widget.onOpenCitation,
             hoverCard: widget.hoverCards,
           ),
       ],

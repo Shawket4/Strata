@@ -189,23 +189,13 @@ class NotesLocalizationsAr extends NotesLocalizations {
   String get noBacklinks => 'مفيش ملاحظات بتشاور هنا لسه.';
 
   @override
-  String get backlinkKindLink => 'روابط في النص';
-
-  @override
   String get localGraphTitle => 'الخريطة المحلية';
 
   @override
   String get openMap => 'فتح الخريطة';
 
   @override
-  String get localGraphPlaceholder =>
-      'الخريطة الذهنية للملاحظة دي بتتفتح في الخريطة.';
-
-  @override
   String get historyTitle => 'السجل';
-
-  @override
-  String get historyAvailable => 'نسخ الملاحظة دي بتظهر هنا.';
 
   @override
   String get historyOffline => 'السجل محتاج اتصال. هيرجع أول ما تبقى أونلاين.';
@@ -229,4 +219,130 @@ class NotesLocalizationsAr extends NotesLocalizations {
 
   @override
   String get shortcutsSearch => 'دور في الملاحظات';
+
+  @override
+  String metaCreated({required String date}) {
+    return 'اتعملت $date';
+  }
+
+  @override
+  String metaEdited({required String date}) {
+    return 'اتعدلت $date';
+  }
+
+  @override
+  String metaEditedBy({required String date, required String name}) {
+    return 'اتعدلت $date بواسطة $name';
+  }
+
+  @override
+  String wordCount({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count كلمة',
+      few: '$count كلمات',
+      two: 'كلمتين',
+      one: 'كلمة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pinNote => 'ثبّت في الشريط الجانبي';
+
+  @override
+  String get unpinNote => 'شيل من الشريط الجانبي';
+
+  @override
+  String get linkedBlockTitle => 'الفقرة المرتبطة';
+
+  @override
+  String get linkedBlockMissing => 'الفقرة دي مبقتش في الملاحظة.';
+
+  @override
+  String get duplicateBannerTitle => 'الملاحظة دي ممكن تكون موجودة';
+
+  @override
+  String get duplicateBannerMessage =>
+      'لما اتعملت لقينا ملاحظة شبهها. اختار تحتفظ بيها ولا لأ.';
+
+  @override
+  String get duplicateReview => 'راجع';
+
+  @override
+  String backlinksTab({required int count}) {
+    return 'الروابط الراجعة $count';
+  }
+
+  @override
+  String linksTab({required int count}) {
+    return 'الروابط $count';
+  }
+
+  @override
+  String get historyEmpty => 'لسه مفيش نسخ.';
+
+  @override
+  String historyAll({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'كل الـ$count نسخة',
+      few: 'كل الـ$count نسخ',
+      two: 'نسختين',
+      one: 'نسخة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get authorUser => 'انت';
+
+  @override
+  String get authorAi => 'Strata AI';
+
+  @override
+  String get authorSystem => 'النظام';
+
+  @override
+  String historyWho({required String author, required String when}) {
+    return '$author · $when';
+  }
+
+  @override
+  String get revert => 'ارجع لها';
+
+  @override
+  String get viewChanges => 'التغييرات';
+
+  @override
+  String revertTitle({required String version}) {
+    return 'ترجع لـ$version؟';
+  }
+
+  @override
+  String get revertBody =>
+      'نص الملاحظة هيرجع للنسخة دي. النص الحالي هيفضل في السجل.';
+
+  @override
+  String diffTitle({required String version}) {
+    return '$version مقارنة بالحالي';
+  }
+
+  @override
+  String get close => 'اقفل';
+
+  @override
+  String get cancel => 'إلغاء';
+
+  @override
+  String noteFailed({required String code}) {
+    return 'حصلت مشكلة ($code).';
+  }
+
+  @override
+  String aiConfidenceTag({required String value}) {
+    return 'AI · $value';
+  }
 }

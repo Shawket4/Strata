@@ -115,8 +115,12 @@ pub async fn replace_custody(
 /// rows are replaced).
 pub async fn delete_note_dedupe_keys(tx: &mut ScopedTx, note: NoteId) -> Result<()> {
     sqlx::query(
-        "DELETE FROM dedupe_keys WHERE (kind <> 'task' AND item_id = $1) \
-           OR (kind = 'task' AND item_id IN (SELECT id FROM tasks WHERE note_id = $2))",
+        // The first condition only narrows the rows to the note's own IDs, so the delete is
+        // an index lookup (`dedupe_keys_item`) instead of a scan of every key.
+        "DELETE FROM dedupe_keys \
+         WHERE item_id = ANY(ARRAY(SELECT $1 UNION ALL SELECT id FROM tasks WHERE note_id = $2)) \
+           AND ((kind <> 'task' AND item_id = $1) \
+             OR (kind = 'task' AND item_id IN (SELECT id FROM tasks WHERE note_id = $2)))",
     )
     .bind(note.to_string())
     .bind(note)

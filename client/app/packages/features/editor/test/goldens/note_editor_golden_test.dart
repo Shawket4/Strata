@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 
 import 'package:alchemist/alchemist.dart';
+import 'package:flutter/widgets.dart' show BoxConstraints;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_editor/strata_editor.dart';
 import 'package:strata_state/strata_state.dart';
@@ -11,7 +12,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
 import '../support/editor_fixtures.dart';
-import '../support/harness.dart';
 
 /// The note editor screen (content, conflict) × size class × theme ×
 /// direction at text scale 1.0, and compact at 2.0.
@@ -31,14 +31,15 @@ void main() {
           goldenTest(
             'note editor ${fixture.name} $v',
             fileName: 'note_editor_${fixture.name}_${v.id}',
+            constraints: BoxConstraints.tight(v.size),
             builder: () => goldenFrame(
               v,
-              fakeWith(fixture),
               NoteEditorScreen(
                 noteId: EditorFixtures.noteId,
                 onOpenConflict: (_) {},
-                onOpenLink: (_) {},
+                onOpenLink: (_, _) {},
               ),
+              fake: fakeWith(fixture),
             ),
           ),
         );

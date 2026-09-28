@@ -16,28 +16,7 @@ class EditorLocalizationsAr extends EditorLocalizations {
   String get editorBodyLabel => 'نص الملاحظة';
 
   @override
-  String get statusSaved => 'محفوظة';
-
-  @override
   String get statusUnsaved => 'تعديلات غير محفوظة';
-
-  @override
-  String statusPending({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'محفوظة على الجهاز · $count تعديل للمزامنة',
-      many: 'محفوظة على الجهاز · $count تعديلًا للمزامنة',
-      few: 'محفوظة على الجهاز · $count تعديلات للمزامنة',
-      two: 'محفوظة على الجهاز · تعديلان للمزامنة',
-      one: 'محفوظة على الجهاز · تعديل واحد للمزامنة',
-      zero: 'محفوظة على الجهاز',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get statusConflict => 'تعارض';
 
   @override
   String get conflictBannerTitle => 'الملاحظة دي اتعدلت كمان على السيرفر';
@@ -121,31 +100,7 @@ class EditorLocalizationsAr extends EditorLocalizations {
   String get suggestionsLabel => 'اقتراحات';
 
   @override
-  String get suggestionsPeople => 'أشخاص';
-
-  @override
-  String get suggestionsCompanies => 'شركات';
-
-  @override
-  String get suggestionsNotes => 'ملاحظات';
-
-  @override
-  String get suggestionsLoading => 'بندوّر…';
-
-  @override
   String get suggestionsNone => 'مفيش نتائج';
-
-  @override
-  String get suggestionsTypeToSearch => 'اكتب عشان تدور';
-
-  @override
-  String get suggestionsTagsUnavailable => 'اقتراحات الوسوم مش متاحة لسه.';
-
-  @override
-  String get suggestionsBlocksUnavailable => 'مش ممكن نعرض مراجع الفقرات لسه.';
-
-  @override
-  String get suggestionsSearchUnavailable => 'البحث مش متاح دلوقتي.';
 
   @override
   String get suggestionsDismiss => 'إخفاء الاقتراحات';
@@ -158,4 +113,22 @@ class EditorLocalizationsAr extends EditorLocalizations {
 
   @override
   String get shortcutSave => 'حفظ';
+
+  @override
+  String get suggestionsKindWikiLink => 'ملاحظات';
+
+  @override
+  String get suggestionsKindMention => 'أشخاص وشركات';
+
+  @override
+  String get suggestionsKindTag => 'وسوم';
+
+  @override
+  String get suggestionsKindBlock => 'فقرات';
+
+  @override
+  String get showMarkdown => 'اعرض الماركداون';
+
+  @override
+  String get hideMarkdown => 'اخفي الماركداون';
 }

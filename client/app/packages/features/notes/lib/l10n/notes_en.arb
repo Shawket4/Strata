@@ -244,10 +244,6 @@
   "@noBacklinks": {
     "description": "No backlinks."
   },
-  "backlinkKindLink": "body links",
-  "@backlinkKindLink": {
-    "description": "Backlink group of plain body links."
-  },
   "localGraphTitle": "Local graph",
   "@localGraphTitle": {
     "description": "Title of the local graph section."
@@ -256,17 +252,9 @@
   "@openMap": {
     "description": "Opens the local mind map."
   },
-  "localGraphPlaceholder": "The mind map of this note opens in Map.",
-  "@localGraphPlaceholder": {
-    "description": "Placeholder of the mini graph slot."
-  },
   "historyTitle": "History",
   "@historyTitle": {
     "description": "Title of the history section."
-  },
-  "historyAvailable": "Versions of this note appear here.",
-  "@historyAvailable": {
-    "description": "History available, no entries streamed."
   },
   "historyOffline": "History needs a connection. It's back when you're online.",
   "@historyOffline": {
@@ -301,5 +289,183 @@
   "shortcutsSearch": "Search notes",
   "@shortcutsSearch": {
     "description": "Keyboard shortcut description."
+  },
+  "metaCreated": "Created {date}",
+  "@metaCreated": {
+    "description": "Note meta: creation date label from the core.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "metaEdited": "edited {date}",
+  "@metaEdited": {
+    "description": "Note meta: last edit label.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "metaEditedBy": "edited {date} by {name}",
+  "@metaEditedBy": {
+    "description": "Note meta: last edit label and author.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "wordCount": "{count, plural, =1{1 word} other{{count} words}}",
+  "@wordCount": {
+    "description": "Word count of the note.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pinNote": "Pin to sidebar",
+  "@pinNote": {
+    "description": "Pin toggle (not pinned)."
+  },
+  "unpinNote": "Unpin from sidebar",
+  "@unpinNote": {
+    "description": "Pin toggle (pinned)."
+  },
+  "linkedBlockTitle": "Linked block",
+  "@linkedBlockTitle": {
+    "description": "The block a link or citation points to."
+  },
+  "linkedBlockMissing": "That block isn't in this note anymore.",
+  "@linkedBlockMissing": {
+    "description": "The anchor did not resolve."
+  },
+  "duplicateBannerTitle": "This note may already exist",
+  "@duplicateBannerTitle": {
+    "description": "Duplicate sync state banner."
+  },
+  "duplicateBannerMessage": "Creating it found a similar note. Choose whether to keep it.",
+  "@duplicateBannerMessage": {
+    "description": "Duplicate banner body."
+  },
+  "duplicateReview": "Review",
+  "@duplicateReview": {
+    "description": "Duplicate banner action."
+  },
+  "backlinksTab": "Backlinks {count}",
+  "@backlinksTab": {
+    "description": "Backlinks tab with the core's count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "linksTab": "Links {count}",
+  "@linksTab": {
+    "description": "Compact Links tab with the core's count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "historyEmpty": "No versions yet.",
+  "@historyEmpty": {
+    "description": "History with no entries."
+  },
+  "historyAll": "{count, plural, =1{1 version} other{All {count} versions}}",
+  "@historyAll": {
+    "description": "History count.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "authorUser": "You",
+  "@authorUser": {
+    "description": "History author: user."
+  },
+  "authorAi": "Strata AI",
+  "@authorAi": {
+    "description": "History author: ai."
+  },
+  "authorSystem": "System",
+  "@authorSystem": {
+    "description": "History author: system."
+  },
+  "historyWho": "{author} · {when}",
+  "@historyWho": {
+    "description": "History entry author and time.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "revert": "Revert",
+  "@revert": {
+    "description": "History: revert to this version."
+  },
+  "viewChanges": "Changes",
+  "@viewChanges": {
+    "description": "History: view the diff of a version."
+  },
+  "revertTitle": "Revert to {version}?",
+  "@revertTitle": {
+    "description": "Revert confirmation title.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "revertBody": "The note's text goes back to this version. The current text stays in History.",
+  "@revertBody": {
+    "description": "Revert confirmation body."
+  },
+  "diffTitle": "{version} compared with now",
+  "@diffTitle": {
+    "description": "Diff dialog title.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "close": "Close",
+  "@close": {
+    "description": "Close."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel."
+  },
+  "noteFailed": "Something went wrong ({code}).",
+  "@noteFailed": {
+    "description": "An intent failed.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConfidenceTag": "AI · {value}",
+  "@aiConfidenceTag": {
+    "description": "AI confidence tag on a backlink.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
   }
 }

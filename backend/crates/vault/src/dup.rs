@@ -190,6 +190,8 @@ pub async fn find_with(
             }
         }
     }
+    drop(pt);
+    let pt = crate::prof::g("dup.check_cpu");
     let outcome = dedupe::check(item, &existing, &thresholds, &keep);
     drop(pt);
     let mut out = Vec::with_capacity(outcome.candidates.len());

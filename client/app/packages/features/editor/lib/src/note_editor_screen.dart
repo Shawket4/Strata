@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:strata_editor/src/editor/completions_panel.dart';
 import 'package:strata_editor/src/editor/editor_chrome.dart';
 import 'package:strata_editor/src/editor/note_editor_controller.dart';
 import 'package:strata_editor/src/editor/strata_note_editor.dart';
@@ -37,8 +36,8 @@ class NoteEditorScreen extends StatelessWidget {
   /// Leaves the screen (shows a back button when set).
   final VoidCallback? onBack;
 
-  /// Opens a wikilink (its source text, `[[Note|alias]]`).
-  final ValueChanged<String>? onOpenLink;
+  /// Opens a wikilink's target (note and anchor, resolved by the core).
+  final OpenNoteAt? onOpenLink;
 
   /// Opens the conflict screen for an op ID (sync feature).
   final ValueChanged<String>? onOpenConflict;
@@ -108,9 +107,9 @@ class NoteLoadError extends ConsumerWidget {
   }
 }
 
-/// The editor pane of a loaded note: header (title, path, status, Save),
-/// conflict banner, the editor, the autocomplete panel and, on compact, the
-/// formatting toolbar.
+/// The editor pane of a loaded note: header (title, path, status, version,
+/// Save, live preview), conflict banner, the editor (completions pop up at
+/// the caret) and, on compact, the formatting toolbar.
 class NoteEditorPane extends StatefulWidget {
   /// Creates the pane.
   const new({
@@ -131,8 +130,8 @@ class NoteEditorPane extends StatefulWidget {
   /// Leaves the screen.
   final VoidCallback? onBack;
 
-  /// Opens a wikilink.
-  final ValueChanged<String>? onOpenLink;
+  /// Opens a wikilink's target.
+  final OpenNoteAt? onOpenLink;
 
   /// Opens the conflict screen.
   final ValueChanged<String>? onOpenConflict;
@@ -168,6 +167,7 @@ class _NoteEditorPaneState extends State<NoteEditorPane> {
             controller: controller,
             onBack: widget.onBack,
             onSave: save,
+            trailing: [if (!compact) LivePreviewToggle(controller: controller)],
           ),
           Expanded(
             child: CustomScrollView(
@@ -201,7 +201,6 @@ class _NoteEditorPaneState extends State<NoteEditorPane> {
               ],
             ),
           ),
-          CompletionsPanel(controller: controller),
           if (compact)
             FormattingToolbar(
               controller: controller,
@@ -314,8 +313,13 @@ class NoteEditorHeader extends StatelessWidget {
                     ),
                     NoteStatusLabel(
                       status: controller.status,
-                      pendingOps: note.sync_.pendingOps,
+                      label: note.sync_.label,
                     ),
+                    if (note.versionLabel case final version?)
+                      Text(
+                        version,
+                        style: text.monoSmall.copyWith(color: colors.text2),
+                      ),
                   ],
                 ),
               ],

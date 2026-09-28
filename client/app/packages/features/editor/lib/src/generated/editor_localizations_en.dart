@@ -16,24 +16,7 @@ class EditorLocalizationsEn extends EditorLocalizations {
   String get editorBodyLabel => 'Note body';
 
   @override
-  String get statusSaved => 'Saved';
-
-  @override
   String get statusUnsaved => 'Unsaved changes';
-
-  @override
-  String statusPending({required int count}) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: 'Saved on this device · $count changes to sync',
-      one: 'Saved on this device · 1 change to sync',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get statusConflict => 'Conflict';
 
   @override
   String get conflictBannerTitle => 'This note was also changed on the server';
@@ -117,34 +100,7 @@ class EditorLocalizationsEn extends EditorLocalizations {
   String get suggestionsLabel => 'Suggestions';
 
   @override
-  String get suggestionsPeople => 'People';
-
-  @override
-  String get suggestionsCompanies => 'Companies';
-
-  @override
-  String get suggestionsNotes => 'Notes';
-
-  @override
-  String get suggestionsLoading => 'Searching…';
-
-  @override
   String get suggestionsNone => 'No matches';
-
-  @override
-  String get suggestionsTypeToSearch => 'Type to search';
-
-  @override
-  String get suggestionsTagsUnavailable =>
-      'Tag suggestions aren\'t available yet.';
-
-  @override
-  String get suggestionsBlocksUnavailable =>
-      'Block references can\'t be listed yet.';
-
-  @override
-  String get suggestionsSearchUnavailable =>
-      'Search isn\'t available right now.';
 
   @override
   String get suggestionsDismiss => 'Dismiss suggestions';
@@ -157,4 +113,22 @@ class EditorLocalizationsEn extends EditorLocalizations {
 
   @override
   String get shortcutSave => 'Save';
+
+  @override
+  String get suggestionsKindWikiLink => 'Notes';
+
+  @override
+  String get suggestionsKindMention => 'People and companies';
+
+  @override
+  String get suggestionsKindTag => 'Tags';
+
+  @override
+  String get suggestionsKindBlock => 'Blocks';
+
+  @override
+  String get showMarkdown => 'Show markdown';
+
+  @override
+  String get hideMarkdown => 'Hide markdown';
 }

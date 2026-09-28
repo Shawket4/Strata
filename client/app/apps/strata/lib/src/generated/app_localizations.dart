@@ -152,12 +152,6 @@ abstract class AppLocalizations {
   /// **'Task reminders from Strata'**
   String get channelDescription;
 
-  /// Sidebar folder tree heading.
-  ///
-  /// In en, this message translates to:
-  /// **'Folders'**
-  String get pinnedTitle;
-
   /// Accessibility label of a sidebar folder.
   ///
   /// In en, this message translates to:
@@ -169,6 +163,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account'**
   String get accountLabel;
+
+  /// Sidebar folder tree heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Folders'**
+  String get foldersTitle;
+
+  /// Sidebar pinned notes heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get pinnedNotesTitle;
+
+  /// Accessibility label of a pinned note in the sidebar.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned note: {title}'**
+  String pinnedSemantics({required String title});
 }
 
 class _AppLocalizationsDelegate

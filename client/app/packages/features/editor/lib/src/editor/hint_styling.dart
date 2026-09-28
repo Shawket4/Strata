@@ -34,35 +34,38 @@ const NamedAttribution taskClosedAttribution = NamedAttribution(
   'strata.task.closed',
 );
 
-/// The direction of a line by its first strong character (Unicode bidi rule
-/// P2, what `dir="auto"` does): markdown markers, digits and punctuation
-/// before the first letter do not count, so `- خصم` and `## الفرضيات` are
-/// right-to-left. `super_editor` only looks at the first non-space
-/// character. Lines without a strong character are left-to-right.
-///
-/// This is text layout, not note logic; the core does not stream line
-/// directions yet (docs/CORE_GAPS.md).
-TextDirection firstStrongDirection(String text) {
-  for (final rune in text.runes) {
-    if (_isRtl(rune)) return TextDirection.rtl;
-    if (_strongLtr.hasMatch(String.fromCharCode(rune))) {
-      return TextDirection.ltr;
-    }
-  }
-  return TextDirection.ltr;
+/// Hides a markdown marker (`**`, `#`, `[[`…) of a line the caret is not
+/// on, in live preview. The characters stay in the document (the source is
+/// never rewritten); they are laid out with no width and no colour.
+const NamedAttribution hiddenMarkerAttribution = NamedAttribution(
+  'strata.marker.hidden',
+);
+
+/// The marker ranges of [span] (line offsets), from the core's span bounds
+/// and the fixed marker width of its kind: `**`/`__`, `~~`, `==` (2), `*`/`_`
+/// (1), `[[`…`]]`, `![[`…`]]`, and a heading's `#`s and space (its level
+/// plus one). Nothing is parsed: a span too short for its markers has none.
+List<(int, int)> markerRanges(LineSpan span) {
+  final (open, close) = switch (span.kind) {
+    HintKind.bold || HintKind.strike || HintKind.mark => (2, 2),
+    HintKind.italic => (1, 1),
+    HintKind.wikiLink => (2, 2),
+    HintKind.embed => (3, 2),
+    HintKind.heading when span.level > 0 => (span.level + 1, 0),
+    _ => (0, 0),
+  };
+  if (open + close == 0 || span.end - span.start <= open + close) return [];
+  return [
+    (span.start, span.start + open),
+    if (close > 0) (span.end - close, span.end),
+  ];
 }
 
-bool _isRtl(int rune) =>
-    (rune >= 0x0590 && rune <= 0x08FF) ||
-    (rune >= 0xFB1D && rune <= 0xFDFF) ||
-    (rune >= 0xFE70 && rune <= 0xFEFF) ||
-    (rune >= 0x10800 && rune <= 0x10FFF) ||
-    (rune >= 0x1E800 && rune <= 0x1EFFF);
-
-final RegExp _strongLtr = RegExp(r'\p{L}', unicode: true);
-
 /// Adds the core's hints (and task states) of each line to the laid-out
-/// text. Re-runs whenever the controller's hints or the note's tasks change.
+/// text: the line's direction (`RtlLine` / `LtrLine`), the styled spans and,
+/// in live preview, the hidden markers of every line but the caret's.
+/// Re-runs whenever the controller's hints, the note's tasks, the caret's
+/// line or the preview mode change.
 final class HintStylePhase extends SingleColumnLayoutStylePhase {
   /// Creates the phase for [controller].
   new(this.controller) {
@@ -111,12 +114,15 @@ final class HintStylePhase extends SingleColumnLayoutStylePhase {
     final textModel = copy as TextComponentViewModel;
     final text = textModel.text.copy();
     final length = text.length;
-    final direction = firstStrongDirection(text.toPlainText());
+    final direction =
+        controller.lineHints.directionOf(component.nodeId) ?? TextDirection.ltr;
     textModel
       ..textDirection = direction
       ..textAlignment = direction == TextDirection.rtl
           ? TextAlign.right
           : TextAlign.left;
+    final hideMarkers =
+        controller.livePreview && controller.caretNodeId != component.nodeId;
     for (final span in spans) {
       final end = span.end.clamp(0, length);
       final start = span.start.clamp(0, end);
@@ -127,6 +133,15 @@ final class HintStylePhase extends SingleColumnLayoutStylePhase {
         SpanRange(start, end - 1),
         overwriteConflictingSpans: true,
       );
+      if (!hideMarkers) continue;
+      for (final (from, to) in markerRanges(span)) {
+        if (to > length || from >= to) continue;
+        text.addAttribution(
+          hiddenMarkerAttribution,
+          SpanRange(from, to - 1),
+          overwriteConflictingSpans: true,
+        );
+      }
     }
     final task = controller.taskOf(component.nodeId);
     if (task != null && task.state != TaskState.open && length > 0) {
@@ -173,6 +188,15 @@ TextStyle hintTextStyle(
   final colors = context.strataColors;
   final text = context.strataText;
   var style = existing;
+  if (attributions.contains(hiddenMarkerAttribution)) {
+    // Laid out with (almost) no width: the caret still moves through it.
+    return existing.copyWith(
+      fontSize: 0.01,
+      letterSpacing: 0,
+      color: const Color(0x00000000),
+      backgroundColor: const Color(0x00000000),
+    );
+  }
   for (final attribution in attributions) {
     if (attribution == taskClosedAttribution) {
       style = style.copyWith(

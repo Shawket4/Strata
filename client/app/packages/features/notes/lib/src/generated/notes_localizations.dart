@@ -380,12 +380,6 @@ abstract class NotesLocalizations {
   /// **'No notes link here yet.'**
   String get noBacklinks;
 
-  /// Backlink group of plain body links.
-  ///
-  /// In en, this message translates to:
-  /// **'body links'**
-  String get backlinkKindLink;
-
   /// Title of the local graph section.
   ///
   /// In en, this message translates to:
@@ -398,23 +392,11 @@ abstract class NotesLocalizations {
   /// **'Open map'**
   String get openMap;
 
-  /// Placeholder of the mini graph slot.
-  ///
-  /// In en, this message translates to:
-  /// **'The mind map of this note opens in Map.'**
-  String get localGraphPlaceholder;
-
   /// Title of the history section.
   ///
   /// In en, this message translates to:
   /// **'History'**
   String get historyTitle;
-
-  /// History available, no entries streamed.
-  ///
-  /// In en, this message translates to:
-  /// **'Versions of this note appear here.'**
-  String get historyAvailable;
 
   /// History unavailable offline.
   ///
@@ -457,6 +439,174 @@ abstract class NotesLocalizations {
   /// In en, this message translates to:
   /// **'Search notes'**
   String get shortcutsSearch;
+
+  /// Note meta: creation date label from the core.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String metaCreated({required String date});
+
+  /// Note meta: last edit label.
+  ///
+  /// In en, this message translates to:
+  /// **'edited {date}'**
+  String metaEdited({required String date});
+
+  /// Note meta: last edit label and author.
+  ///
+  /// In en, this message translates to:
+  /// **'edited {date} by {name}'**
+  String metaEditedBy({required String date, required String name});
+
+  /// Word count of the note.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 word} other{{count} words}}'**
+  String wordCount({required int count});
+
+  /// Pin toggle (not pinned).
+  ///
+  /// In en, this message translates to:
+  /// **'Pin to sidebar'**
+  String get pinNote;
+
+  /// Pin toggle (pinned).
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin from sidebar'**
+  String get unpinNote;
+
+  /// The block a link or citation points to.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked block'**
+  String get linkedBlockTitle;
+
+  /// The anchor did not resolve.
+  ///
+  /// In en, this message translates to:
+  /// **'That block isn\'t in this note anymore.'**
+  String get linkedBlockMissing;
+
+  /// Duplicate sync state banner.
+  ///
+  /// In en, this message translates to:
+  /// **'This note may already exist'**
+  String get duplicateBannerTitle;
+
+  /// Duplicate banner body.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating it found a similar note. Choose whether to keep it.'**
+  String get duplicateBannerMessage;
+
+  /// Duplicate banner action.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get duplicateReview;
+
+  /// Backlinks tab with the core's count.
+  ///
+  /// In en, this message translates to:
+  /// **'Backlinks {count}'**
+  String backlinksTab({required int count});
+
+  /// Compact Links tab with the core's count.
+  ///
+  /// In en, this message translates to:
+  /// **'Links {count}'**
+  String linksTab({required int count});
+
+  /// History with no entries.
+  ///
+  /// In en, this message translates to:
+  /// **'No versions yet.'**
+  String get historyEmpty;
+
+  /// History count.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 version} other{All {count} versions}}'**
+  String historyAll({required int count});
+
+  /// History author: user.
+  ///
+  /// In en, this message translates to:
+  /// **'You'**
+  String get authorUser;
+
+  /// History author: ai.
+  ///
+  /// In en, this message translates to:
+  /// **'Strata AI'**
+  String get authorAi;
+
+  /// History author: system.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get authorSystem;
+
+  /// History entry author and time.
+  ///
+  /// In en, this message translates to:
+  /// **'{author} · {when}'**
+  String historyWho({required String author, required String when});
+
+  /// History: revert to this version.
+  ///
+  /// In en, this message translates to:
+  /// **'Revert'**
+  String get revert;
+
+  /// History: view the diff of a version.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes'**
+  String get viewChanges;
+
+  /// Revert confirmation title.
+  ///
+  /// In en, this message translates to:
+  /// **'Revert to {version}?'**
+  String revertTitle({required String version});
+
+  /// Revert confirmation body.
+  ///
+  /// In en, this message translates to:
+  /// **'The note\'s text goes back to this version. The current text stays in History.'**
+  String get revertBody;
+
+  /// Diff dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'{version} compared with now'**
+  String diffTitle({required String version});
+
+  /// Close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// Cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// An intent failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong ({code}).'**
+  String noteFailed({required String code});
+
+  /// AI confidence tag on a backlink.
+  ///
+  /// In en, this message translates to:
+  /// **'AI · {value}'**
+  String aiConfidenceTag({required String value});
 }
 
 class _NotesLocalizationsDelegate

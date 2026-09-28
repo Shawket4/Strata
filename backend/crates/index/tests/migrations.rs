@@ -38,7 +38,8 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
             20_260_927_000_010,
             20_260_927_000_011,
             20_260_927_000_013,
-            20_260_927_000_014
+            20_260_927_000_014,
+            20_260_927_000_015
         ]
     );
     assert!(after_first.iter().all(|r| r.1));
@@ -112,6 +113,8 @@ async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
         // 013: column only (sync_epochs.vault_head).
         &[],
         // 014: columns only (ai_decisions.rel_type, mention, detail).
+        &[],
+        // 015: indexes only (dedupe_keys by item, dedupe_keep_both by either side).
         &[],
     ];
     let mut before = tables(&db).await;

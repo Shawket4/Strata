@@ -406,12 +406,17 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
     report.reindexed = batch.len();
     let mut watched = affected.clone();
     watched.extend(removed.iter().copied());
-    let before = crate::diff::Snapshot::take(&mut tx, &watched, !first_build).await?;
+    let keep_both = if first_build {
+        crate::diff::KeepBoth::Skip
+    } else {
+        crate::diff::KeepBoth::All
+    };
+    let before = crate::diff::Snapshot::take(&mut tx, &watched, keep_both).await?;
     indexer::write(&mut tx, &batch).await?;
     for id in &removed {
         indexer::purge(&mut tx, *id, None).await?;
     }
-    let after = crate::diff::Snapshot::take(&mut tx, &watched, !first_build).await?;
+    let after = crate::diff::Snapshot::take(&mut tx, &watched, keep_both).await?;
 
     // Warnings.
     let (oob_kind, oob_detail) = if repair {

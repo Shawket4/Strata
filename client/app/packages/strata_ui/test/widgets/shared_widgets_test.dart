@@ -210,6 +210,20 @@ void main() {
       verify(action.call).called(1);
     });
 
+    testWidgets('relation chip shows the core type label', (tester) async {
+      await _pumpSingle(
+        tester,
+        const RelationChip(
+          type: RelationType.related,
+          label: 'Acme Logistics',
+          typeLabel: 'works at',
+          mentionOf: NodeKind.company,
+        ),
+      );
+      expect(find.text('works at'), findsOneWidget);
+      expect(find.bySemanticsLabel('works at: Acme Logistics'), findsOneWidget);
+    });
+
     testWidgets('non-interactive chips expose no button semantics', (
       tester,
     ) async {
@@ -273,6 +287,29 @@ void main() {
       final handle = tester.ensureSemantics();
       expect(find.bySemanticsLabel('AS'), findsNothing);
       handle.dispose();
+    });
+
+    testWidgets('highlighted text marks the core ranges', (tester) async {
+      await _pumpSingle(
+        tester,
+        const StrataHighlightedText(
+          'Pricing experiments and pricing',
+          highlights: [
+            TextRange(start: 0, end: 7),
+            TextRange(start: 24, end: 99),
+          ],
+        ),
+      );
+      final rich = tester.widget<Text>(find.byType(Text)).textSpan! as TextSpan;
+      final parts = [
+        for (final span in rich.children!.cast<TextSpan>())
+          (span.text, span.style?.backgroundColor != null),
+      ];
+      expect(parts, [
+        ('Pricing', true),
+        (' experiments and ', false),
+        ('pricing', true),
+      ]);
     });
 
     test('AI tag text uses two decimals', () {

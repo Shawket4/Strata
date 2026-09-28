@@ -20,6 +20,7 @@ class RelationChip extends StatelessWidget {
     this.onPressed,
     this.onLongPress,
     this.textDirection,
+    this.typeLabel,
   });
 
   /// The relation type.
@@ -44,6 +45,11 @@ class RelationChip extends StatelessWidget {
   /// paragraph); defaults to the ambient direction.
   final TextDirection? textDirection;
 
+  /// The relation type's label as the core words it (`rel_label`, e.g.
+  /// "contradicts", "works at"): shown before [label] and used for the
+  /// semantics. `null`: the type's shared name, not shown.
+  final String? typeLabel;
+
   /// The visible AI tag text for [confidence], e.g. `AI · 0.82`.
   static String aiTagText(String aiLabel, double confidence) =>
       '$aiLabel · ${confidence.toStringAsFixed(2)}';
@@ -54,8 +60,10 @@ class RelationChip extends StatelessWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final confidence = aiConfidence;
-    final typeLabel = l10n.relationTypeLabel(type);
-    final semantic = StringBuffer('$typeLabel: $label');
+    final shownType = typeLabel;
+    final semantic = StringBuffer(
+      '${shownType ?? l10n.relationTypeLabel(type)}: $label',
+    );
     if (confidence != null) {
       final value = confidence.toStringAsFixed(2);
       semantic.write(', ${l10n.aiConfidenceSemantics(confidence: value)}');
@@ -76,6 +84,14 @@ class RelationChip extends StatelessWidget {
         children: [
           RelationLineSample(type: type, mentionOf: mentionOf),
           const SizedBox(width: StrataSpacing.s2),
+          if (shownType != null) ...[
+            Text(
+              shownType,
+              maxLines: 1,
+              style: text.caption.copyWith(color: colors.text2),
+            ),
+            const SizedBox(width: StrataSpacing.s1 + 2),
+          ],
           Flexible(
             child: Text(
               label,

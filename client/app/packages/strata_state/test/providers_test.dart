@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart' show TextDirection;
+import 'package:flutter/widgets.dart' show TextDirection, TextRange;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:flutter_test/flutter_test.dart';
@@ -72,6 +72,13 @@ void main() {
     expect(textDirectionOf(TextDir.ltr), TextDirection.ltr);
     expect(textDirectionOf(TextDir.rtl), TextDirection.rtl);
     expect(textDirectionOf(TextDir.neutral), isNull);
+    expect(
+      textRangesOf(const [
+        HighlightSpan(start: 0, end: 7),
+        HighlightSpan(start: 9, end: 12),
+      ]),
+      const [TextRange(start: 0, end: 7), TextRange(start: 9, end: 12)],
+    );
   });
 
   group('coreApiProvider', () {

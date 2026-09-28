@@ -183,22 +183,13 @@ class NotesLocalizationsEn extends NotesLocalizations {
   String get noBacklinks => 'No notes link here yet.';
 
   @override
-  String get backlinkKindLink => 'body links';
-
-  @override
   String get localGraphTitle => 'Local graph';
 
   @override
   String get openMap => 'Open map';
 
   @override
-  String get localGraphPlaceholder => 'The mind map of this note opens in Map.';
-
-  @override
   String get historyTitle => 'History';
-
-  @override
-  String get historyAvailable => 'Versions of this note appear here.';
 
   @override
   String get historyOffline =>
@@ -223,4 +214,126 @@ class NotesLocalizationsEn extends NotesLocalizations {
 
   @override
   String get shortcutsSearch => 'Search notes';
+
+  @override
+  String metaCreated({required String date}) {
+    return 'Created $date';
+  }
+
+  @override
+  String metaEdited({required String date}) {
+    return 'edited $date';
+  }
+
+  @override
+  String metaEditedBy({required String date, required String name}) {
+    return 'edited $date by $name';
+  }
+
+  @override
+  String wordCount({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count words',
+      one: '1 word',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pinNote => 'Pin to sidebar';
+
+  @override
+  String get unpinNote => 'Unpin from sidebar';
+
+  @override
+  String get linkedBlockTitle => 'Linked block';
+
+  @override
+  String get linkedBlockMissing => 'That block isn\'t in this note anymore.';
+
+  @override
+  String get duplicateBannerTitle => 'This note may already exist';
+
+  @override
+  String get duplicateBannerMessage =>
+      'Creating it found a similar note. Choose whether to keep it.';
+
+  @override
+  String get duplicateReview => 'Review';
+
+  @override
+  String backlinksTab({required int count}) {
+    return 'Backlinks $count';
+  }
+
+  @override
+  String linksTab({required int count}) {
+    return 'Links $count';
+  }
+
+  @override
+  String get historyEmpty => 'No versions yet.';
+
+  @override
+  String historyAll({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'All $count versions',
+      one: '1 version',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get authorUser => 'You';
+
+  @override
+  String get authorAi => 'Strata AI';
+
+  @override
+  String get authorSystem => 'System';
+
+  @override
+  String historyWho({required String author, required String when}) {
+    return '$author · $when';
+  }
+
+  @override
+  String get revert => 'Revert';
+
+  @override
+  String get viewChanges => 'Changes';
+
+  @override
+  String revertTitle({required String version}) {
+    return 'Revert to $version?';
+  }
+
+  @override
+  String get revertBody =>
+      'The note\'s text goes back to this version. The current text stays in History.';
+
+  @override
+  String diffTitle({required String version}) {
+    return '$version compared with now';
+  }
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String noteFailed({required String code}) {
+    return 'Something went wrong ($code).';
+  }
+
+  @override
+  String aiConfidenceTag({required String value}) {
+    return 'AI · $value';
+  }
 }
