@@ -4,6 +4,11 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Owner decisions: warm Claude, attachments, following up on a note
+- **Warm Claude: a pool of pre-started processes** (over routing interactive work to the API provider, or leaving it). One or two `claude` processes are started ahead of time and wait for their input; each serves exactly one call and a new one starts behind it, so no call pays the start-up and no history is shared between jobs or users. The embedding model is kept loaded (`idle_unload_secs = 0`, the new default).
+- **Attachments: store, sync and show, plus camera and share sheet;** AI reading them (OCR, text extraction) is deferred, wanted later; voice notes not now. Files are saved unchanged under `attachments/YYYY/MM/<id>.<ext>` (PLAN §18.1), embedded in the note, shown inline (images) or as a file chip, and downloaded to devices lazily. **At most 10 MB per file.**
+- **Following up on a note with AI: both** a saved AI thread per note (kept in the note's sidecar, synced, reopened with the note; the note's text is never edited by the AI) and "Ask about this note" starting from Ask.
+
 ### Owner decision: pull-to-refresh on every screen, also reconnecting the live channel
 Picked over "sync only" and "sync + screen data". Pulling down any screen (any vertical list, at any depth, short lists included), or ⌘R / Ctrl+R on desktop, runs `refresh`: the core drops and re-opens its `/events` connection at once (a connection that silently died comes back without waiting for its backoff), re-reads the profile, runs a sync cycle and re-reads the server-only data (AI status, devices, integrity warnings, AI activity). The spinner stays until the cycle ends; offline it ends after the failed cycle and the sync pill says why. Sync cycles and pulls now run one at a time per session (the background loop, "Sync now" and pull-to-refresh could overlap before).
 
