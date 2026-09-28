@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_accounts/strata_accounts.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
-import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// The server address baked in at build time (`STRATA_DEFAULT_SERVER`),
 /// as the core reports it on the signed-out session.

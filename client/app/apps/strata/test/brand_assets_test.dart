@@ -245,7 +245,7 @@ void main() {
 
     test('iOS and macOS bundle identifiers', () {
       List<String> ids(String pbxproj) =>
-          RegExp(r'PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);')
+          RegExp('PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);')
               .allMatches(File(pbxproj).readAsStringSync())
               .map((m) => m[1]!)
               .toList();
@@ -290,7 +290,7 @@ void main() {
 
     test('Windows version resource and notification app user model ID', () {
       final rc = File('windows/runner/Runner.rc').readAsStringSync();
-      expect(rc, contains('VALUE "CompanyName", "com.shawket" "\\0"'));
+      expect(rc, contains(r'VALUE "CompanyName", "com.shawket" "\0"'));
       expect(
         File('lib/src/reminders/local_notifications_platform.dart')
             .readAsStringSync(),

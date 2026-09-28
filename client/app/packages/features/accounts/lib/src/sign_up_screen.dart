@@ -34,8 +34,9 @@ class SignUpScreen extends HookConsumerWidget {
     );
     // The session may arrive after the first build: prefill once.
     useEffect(() {
-      if (server.text.isEmpty)
+      if (server.text.isEmpty) {
         server.text = serverUrl ?? session?.serverUrl ?? '';
+      }
       return null;
     }, [session?.serverUrl]);
     final name = useTextEditingController();
