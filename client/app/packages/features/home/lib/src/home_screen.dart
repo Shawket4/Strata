@@ -983,7 +983,7 @@ class _AiActivityCard extends ConsumerWidget {
     final core = ref.read(coreApiProvider);
     final chosen = await showDialog<String>(
       context: context,
-      builder: (_) => RepointPickerDialog(item: item),
+      builder: (_) => HomeL10nScope(child: RepointPickerDialog(item: item)),
     );
     if (chosen == null || !context.mounted) return;
     await _run(

@@ -107,7 +107,7 @@ void main() {
         final fake = await pumpVariant(
           tester,
           v,
-          RepointPickerDialog(item: item),
+          HomeL10nScope(child: RepointPickerDialog(item: item)),
           scaffold: true,
         );
         expect(fake.calls, [
@@ -134,8 +134,10 @@ void main() {
       await pumpVariant(
         tester,
         variants().first,
-        RepointPickerDialog(
-          item: StrataFixtures.homeView.aiActivityItems.first,
+        HomeL10nScope(
+          child: RepointPickerDialog(
+            item: StrataFixtures.homeView.aiActivityItems.first,
+          ),
         ),
         fake: fake,
         scaffold: true,

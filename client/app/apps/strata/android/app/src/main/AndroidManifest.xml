@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The Rust core talks to the Strata server (release builds too; the debug and profile
+         manifests only add it for the Flutter tooling). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Strata"
         android:name="${applicationName}"

@@ -1,0 +1,225 @@
+# Release builds (docs/RUNBOOK.md §13). Tests stay in ci.yml; this workflow builds and packages:
+#   stratad-linux-x86_64   the server binary tarball (+ draft GitHub Release on v* tags)
+#   app-android            release APKs (universal + one per ABI)
+#   app-macos              the universal (arm64 + x86_64) macOS app, ad-hoc signed, zip + dmg
+# Actions are pinned to commit SHAs (the tag is in the comment).
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  FLUTTER_VERSION: 3.47.5
+
+jobs:
+  stratad-linux-x86_64:
+    name: stratad (Linux x86_64, glibc 2.35)
+    # Ubuntu 22.04 links against glibc 2.35, so the binary runs on Debian 12+, Ubuntu 22.04+
+    # and other common VPS distributions. Not musl: ort loads ONNX Runtime with dlopen
+    # (load-dynamic), which needs a glibc build.
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write # the draft release on v* tags
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust toolchain (rust-toolchain.toml)
+        run: rustup show active-toolchain || rustup toolchain install
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: stratad-release
+      - name: Version
+        id: version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then v="$GITHUB_REF_NAME"; else v="sha-${GITHUB_SHA::7}"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "name=stratad-$v-linux-x86_64" >> "$GITHUB_OUTPUT"
+      - name: Build (release)
+        run: cargo build --release --locked -p stratad
+      - name: Check the binary
+        run: |
+          file target/release/stratad
+          ldd target/release/stratad
+          # Highest glibc symbol version the binary needs (must be <= 2.35).
+          objdump -T target/release/stratad | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1
+          target/release/stratad --version
+          cd deploy && ../target/release/stratad --env-file stratad.env.example check-config > /dev/null
+      - name: Package
+        env:
+          NAME: ${{ steps.version.outputs.name }}
+        run: |
+          mkdir -p "dist/$NAME"
+          cp target/release/stratad "dist/$NAME/stratad"
+          strip "dist/$NAME/stratad"
+          cp deploy/stratad.env.example deploy/stratad.service deploy/VPS_SETUP.md "dist/$NAME/"
+          cp deploy/README.release.md "dist/$NAME/README.md"
+          tar -C dist -czf "dist/$NAME.tar.gz" "$NAME"
+          (cd dist && sha256sum "$NAME.tar.gz" > "$NAME.tar.gz.sha256")
+          ls -l dist
+          cat "dist/$NAME.tar.gz.sha256"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: stratad-linux-x86_64
+          path: |
+            dist/${{ steps.version.outputs.name }}.tar.gz
+            dist/${{ steps.version.outputs.name }}.tar.gz.sha256
+          if-no-files-found: error
+      - name: Draft release (v* tags)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        with:
+          draft: true
+          files: |
+            dist/${{ steps.version.outputs.name }}.tar.gz
+            dist/${{ steps.version.outputs.name }}.tar.gz.sha256
+          fail_on_unmatched_files: true
+
+  app-android:
+    name: Android APK (release)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: client/app/apps/strata
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Android NDK (the version the Flutter Gradle plugin asks for)
+        run: |
+          ndk=$(grep -oE 'val ndkVersion: String = "[0-9.]+"' \
+            "$FLUTTER_ROOT/packages/flutter_tools/gradle/src/main/kotlin/FlutterExtension.kt" \
+            | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "NDK $ndk"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$ndk" > /dev/null
+      - name: Rust Android targets
+        # cargokit builds the client core with `rustup run stable`.
+        run: |
+          rustup toolchain install stable --profile minimal \
+            --target aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: android
+          cache-targets: false
+          # cargokit's target directory for the strata_bridge plugin.
+          cache-directories: client/app/apps/strata/build/strata_bridge/build
+      - name: Signing
+        id: signing
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$ANDROID_KEYSTORE_PASSWORD" ] \
+            && [ -n "$ANDROID_KEY_ALIAS" ] && [ -n "$ANDROID_KEY_PASSWORD" ]; then
+            keystore="$RUNNER_TEMP/strata-release.jks"
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+            echo "ANDROID_KEYSTORE_PATH=$keystore" >> "$GITHUB_ENV"
+            echo "kind=release-signed" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Android signing secrets are not set: the APKs are signed with a debug key (sideload only; each CI run has a different debug key)."
+            echo "kind=debug-signed" >> "$GITHUB_OUTPUT"
+          fi
+      - run: flutter pub get
+      - name: Build APKs
+        # One universal APK (sideload anywhere) and one per ABI (a third of the size each: the
+        # Rust core is the bulk of the APK). The second build reuses the cargo output.
+        run: |
+          flutter build apk --release --build-number "$GITHUB_RUN_NUMBER"
+          flutter build apk --release --split-per-abi --build-number "$GITHUB_RUN_NUMBER"
+      - name: Verify signatures
+        run: |
+          apksigner=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          for apk in build/app/outputs/flutter-apk/*-release.apk; do
+            echo "== $apk"
+            "$apksigner" verify --print-certs "$apk" | head -3
+          done
+      - name: Collect
+        id: collect
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then v="$GITHUB_REF_NAME"; else v="sha-${GITHUB_SHA::7}"; fi
+          mkdir -p dist
+          for apk in build/app/outputs/flutter-apk/*-release.apk; do
+            abi=$(basename "$apk" | sed -e 's/^app-//' -e 's/-release\.apk$//' -e 's/^release\.apk$/universal/')
+            [ "$(basename "$apk")" = app-release.apk ] && abi=universal
+            cp "$apk" "dist/strata-$v-android-$abi-${{ steps.signing.outputs.kind }}.apk"
+          done
+          (cd dist && sha256sum *.apk > SHA256SUMS)
+          ls -l dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strata-android-${{ steps.signing.outputs.kind }}
+          path: client/app/apps/strata/dist/
+          if-no-files-found: error
+
+  app-macos:
+    name: macOS app (universal, ad-hoc signed)
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: client/app/apps/strata
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Rust macOS targets
+        # cargokit builds every architecture in $ARCHS (arm64 x86_64 for a release build) with
+        # `rustup run stable` and joins them with lipo: the app is universal.
+        run: |
+          rustup toolchain install stable --profile minimal \
+            --target aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: macos
+          cache-targets: false
+      - run: flutter pub get
+      - run: flutter build macos --release --build-number "$GITHUB_RUN_NUMBER"
+      - name: Ad-hoc sign and verify
+        run: |
+          mkdir -p dist
+          ditto build/macos/Build/Products/Release/strata.app dist/Strata.app
+          codesign --force --deep --preserve-metadata=entitlements --sign - dist/Strata.app
+          codesign --verify --deep --strict --verbose=2 dist/Strata.app
+          codesign --display --entitlements - dist/Strata.app
+          archs=$(lipo -archs dist/Strata.app/Contents/MacOS/strata)
+          echo "architectures: $archs"
+          case "$archs" in *arm64*x86_64*|*x86_64*arm64*) ;; *) echo "not universal"; exit 1 ;; esac
+      - name: Package (zip and dmg)
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then v="$GITHUB_REF_NAME"; else v="sha-${GITHUB_SHA::7}"; fi
+          name="Strata-$v-macos-universal"
+          ditto -c -k --keepParent dist/Strata.app "dist/$name.zip"
+          mkdir -p dist/dmg && ditto dist/Strata.app dist/dmg/Strata.app
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname Strata -srcfolder dist/dmg -ov -format UDZO "dist/$name.dmg"
+          rm -rf dist/dmg dist/Strata.app
+          (cd dist && shasum -a 256 *.zip *.dmg > SHA256SUMS)
+          ls -l dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strata-macos-universal-adhoc
+          path: client/app/apps/strata/dist/
+          if-no-files-found: error
