@@ -7,7 +7,7 @@
   "pendingTitle": "في انتظار الموافقة",
   "pendingEmpty": "مفيش حسابات في انتظار الموافقة.",
   "allUsers": "كل المستخدمين",
-  "requested": "@{username} · طلب يوم {date}",
+  "requested": "@{username} · طلب {date}",
   "userSubtitle": "@{username} · {role}",
   "approve": "موافقة",
   "reject": "رفض",

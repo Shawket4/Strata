@@ -27,7 +27,6 @@ use vault_format::sidecar::NoteSidecar;
 use vault_format::tasks::{DateKind, extract_tasks};
 use vault_format::{Anchor, Document as VDocument, PathIndex, RelationKey, Resolution, WikiLink};
 
-use crate::paths::INBOX_DIR;
 use crate::state::{VaultState, name_key};
 
 /// Default time of a date-only reminder `(@YYYY-MM-DD)`.
@@ -159,7 +158,7 @@ pub fn kind_of(doc: &VDocument) -> DNoteKind {
 
 /// The dedupe kind of a note.
 pub fn dedupe_kind(path: &str, kind: DNoteKind) -> &'static str {
-    if kind == DNoteKind::Note && crate::paths::parent(path) == INBOX_DIR {
+    if kind == DNoteKind::Note && is_inbox(path) {
         "capture"
     } else {
         kind.as_str()
@@ -676,7 +675,7 @@ fn derive_custody(
     out
 }
 
-/// Is `path` inside the inbox?
+/// Is `path` inside the inbox? (The shared rule: a file directly in `inbox/`.)
 pub fn is_inbox(path: &str) -> bool {
-    crate::paths::parent(path) == INBOX_DIR
+    item_render::paths::is_inbox_path(path)
 }

@@ -1,0 +1,23 @@
+[package]
+name = "item-render"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+description = "Strata item rendering shared by the backend and the client core: the paths and markdown of new captures, entity/document/place/concept notes, conflict copies and task lines."
+
+[dependencies]
+domain = { workspace = true }
+vault-format = { workspace = true }
+sync-model = { workspace = true }
+thiserror = { workspace = true }
+ulid = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }
+pretty_assertions = { workspace = true }
+
+[lints]
+workspace = true

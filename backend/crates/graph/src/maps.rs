@@ -236,16 +236,23 @@ async fn validate(
     })
     .await
     .map_err(|e| GraphError::Vault(VaultError::Internal(format!("checking files: {e}"))))?;
+    // The messages never quote the reference: it is user content (PLAN §15).
     for f in missing {
-        let code = if paths::validate_path(&f).is_ok() && paths::is_content(&f) {
-            "unknown_file"
-        } else {
-            "invalid_file"
-        };
-        issues.push(MapIssue {
-            code,
-            message: format!("file node references `{f}`, which is not a file of this vault"),
-        });
+        issues.push(
+            if paths::validate_path(&f).is_ok() && paths::is_content(&f) {
+                MapIssue {
+                    code: "unknown_file",
+                    message: "a file node references a file that does not exist in this vault"
+                        .to_owned(),
+                }
+            } else {
+                MapIssue {
+                    code: "invalid_file",
+                    message: "a file node references a path that is not a visible vault file"
+                        .to_owned(),
+                }
+            },
+        );
     }
     if issues.is_empty() {
         Ok((canvas, notes))

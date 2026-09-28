@@ -368,6 +368,11 @@ fn task_create_line_is_canonical() {
         ..create("t-1", "plain")
     };
     assert_eq!(task_create_line(&op), Ok("- [ ] plain ^t-1".into()));
+    // The description is trimmed (the server and the device write the same line).
+    assert_eq!(
+        task_create_line(&create("t-1", " \tpadded  ")),
+        Ok("- [ ] padded ^t-1".into())
+    );
 }
 
 #[test]
@@ -380,7 +385,7 @@ fn task_create_refuses_what_would_not_read_back() {
         task_create_line(&create("t-A", "a")),
         Err(ApplyError::Task(TaskError::InvalidBlockId("t-A".into())))
     );
-    for text in ["two\nlines", "sneaky 📅 2026-01-01", "cr\r"] {
+    for text in ["two\nlines", "sneaky 📅 2026-01-01", "cr\r", "trailing\n"] {
         assert_eq!(
             task_create_line(&create("t-1", text)),
             Err(ApplyError::InvalidTask("t-1".into())),

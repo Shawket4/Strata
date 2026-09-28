@@ -6,6 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::NaiveDate;
 use domain::{CopyKind, NoteKind};
+use item_render::note::clean_list;
 use strata_common::NoteId;
 use strata_index::UserScope;
 use strata_index::repo::entities::{self as erepo, CustodyEvent, Document as DocRow, Entity};
@@ -95,10 +96,6 @@ pub struct NewCustodyEvent {
     pub source: Option<NoteId>,
 }
 
-fn kind_folder(kind: NoteKind) -> &'static str {
-    kind.default_folder()
-}
-
 fn validate_field(key: &str, value: &str) -> Result<()> {
     match key {
         "copy" if value.parse::<CopyKind>().is_err() => Err(VaultError::invalid(
@@ -124,21 +121,6 @@ fn reject_nul<'a>(texts: impl IntoIterator<Item = &'a str>) -> Result<()> {
     }
 }
 
-fn known(key: &str) -> Result<KnownKey> {
-    KnownKey::from_name(key).ok_or(VaultError::invalid("unknown field"))
-}
-
-fn clean_list(items: &[String]) -> Vec<String> {
-    let mut out: Vec<String> = Vec::new();
-    for i in items {
-        let t = i.trim().trim_start_matches('#').trim().to_owned();
-        if !t.is_empty() && !out.contains(&t) {
-            out.push(t);
-        }
-    }
-    out
-}
-
 /// The entity kind of a note kind.
 pub fn entity_kind(kind: NoteKind) -> Option<EntityKind> {
     crate::derive::entity_kind(kind)
@@ -155,21 +137,24 @@ impl Core {
     }
 
     fn link_to(&self, id: NoteId) -> Result<String> {
-        let state = self.state()?;
-        let (path, _) = state.note(id).ok_or(VaultError::NotFound)?;
-        Ok(format!("[[{}]]", state.path_index().link_text_for(path)))
+        Ok(format!("[[{}]]", self.link_text_to(id)?))
     }
 
-    /// Adds user relations from the note about to be created at `path` to `targets` (live
-    /// paths), with the link text `relation add` would write once the note exists.
-    fn link_new_note(
+    fn link_text_to(&self, id: NoteId) -> Result<String> {
+        let state = self.state()?;
+        let (path, _) = state.note(id).ok_or(VaultError::NotFound)?;
+        Ok(state.path_index().link_text_for(path))
+    }
+
+    /// The link texts of user relations from the note about to be created at `path` to
+    /// `targets` (live paths): the text `relation add` would write once the note exists.
+    fn new_note_links(
         &self,
-        doc: &mut Document,
         path: &str,
         targets: &[(vault_format::RelationKey, String)],
-    ) -> Result<()> {
+    ) -> Result<Vec<(vault_format::RelationKey, String)>> {
         if targets.is_empty() {
-            return Ok(());
+            return Ok(Vec::new());
         }
         let state = self.state()?;
         let index = vault_format::PathIndex::new(
@@ -180,10 +165,10 @@ impl Core {
                 .chain(state.attachments.iter().cloned())
                 .chain(std::iter::once(path.to_owned())),
         );
-        for (rel, dst_path) in targets {
-            crate::ops::relations::add_link(doc, *rel, dst_path, &index, path)?;
-        }
-        Ok(())
+        Ok(targets
+            .iter()
+            .map(|(rel, dst_path)| (*rel, index.link_text_for(dst_path)))
+            .collect())
     }
 
     fn kind_of_id(&self, id: NoteId) -> Option<NoteKind> {
@@ -262,50 +247,28 @@ impl Core {
         if !candidates.is_empty() && !req.force {
             return Err(VaultError::Duplicate(candidates));
         }
-        let folder = kind_folder(req.kind);
-        let stem = sanitize_file_name(name);
-        let state = self.state()?;
-        let taken: Vec<&str> = state
-            .notes
-            .keys()
-            .filter(|p| paths::parent(p) == folder)
-            .filter_map(|p| paths::file_name(p).strip_suffix(".md"))
-            .collect();
-        let path = format!("{folder}/{}.md", unique_name(&stem, taken));
-        let mut doc = Document::parse("## Notes\n");
-        {
-            let fm = doc.frontmatter_mut();
-            let err = |_| VaultError::invalid("the property could not be set");
-            fm.set_kind(req.kind).map_err(err)?;
-            if stem != name {
-                fm.set_text(KnownKey::Title, name).map_err(err)?;
-            }
-            if !aliases.is_empty() {
-                fm.set_list(KnownKey::Aliases, aliases.clone())
-                    .map_err(err)?;
-            }
-            let tags = clean_list(&req.tags);
-            if !tags.is_empty() {
-                fm.set_list(KnownKey::Tags, tags).map_err(err)?;
-            }
-            for (k, v) in &req.fields {
-                fm.set_text(known(k)?, v.clone()).map_err(err)?;
-            }
-        }
-        if let Some(p) = req.parent {
-            let link = self.link_to(p)?;
-            doc.frontmatter_mut()
-                .set_relation(
-                    vault_format::RelationKey::Note(domain::RelationType::PartOf),
-                    vec![link],
-                )
-                .map_err(|_| VaultError::invalid("the property could not be set"))?;
-        }
+        let path = {
+            let state = self.state()?;
+            item_render::paths::entity_path(req.kind, name, state.notes.keys().map(String::as_str))
+        };
+        let part_of = match req.parent {
+            Some(p) => Some(self.link_text_to(p)?),
+            None => None,
+        };
+        let spec = item_render::entity::EntitySpec {
+            aliases: aliases.clone(),
+            tags: req.tags.clone(),
+            fields: req.fields.clone(),
+            part_of,
+            relations: self.new_note_links(&path, &targets)?,
+            ..item_render::entity::EntitySpec::new(req.kind, name)
+        };
         let tz = self.tz(&mut tx).await?;
         let now = self.local_now(tz);
-        prepare::stamp(&mut doc, id, Some(&now), Some(&now))?;
-        self.link_new_note(&mut doc, &path, &targets)?;
-        let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
+        let content = spec
+            .render(id.as_ulid(), Some(&now), Some(&now))
+            .map_err(|e| prepare::render_error(&e))?;
+        let mut changes = vec![(path.clone(), Some(content.into_bytes()))];
         if !candidates.is_empty() {
             let mut sc = NoteSidecar::new(id.as_ulid());
             self.keep_both(&mut sc, &item, &candidates);

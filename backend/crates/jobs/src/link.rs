@@ -180,7 +180,7 @@ impl LinkHandler {
 
 /// Whether `path` is an inbox capture.
 pub fn in_inbox(path: &str) -> bool {
-    path.starts_with("inbox/")
+    item_render::paths::is_inbox_path(path)
 }
 
 #[async_trait::async_trait]
@@ -271,7 +271,7 @@ impl JobHandler for LinkHandler {
 /// The job a forced relink of the note at `path` runs: `file_inbox` for an inbox capture
 /// (its filing job links it), `link` otherwise.
 pub fn relink_kind(path: &str) -> &'static str {
-    if path.starts_with("inbox/") {
+    if in_inbox(path) {
         pipeline::FILE_INBOX
     } else {
         pipeline::LINK

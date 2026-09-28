@@ -711,7 +711,10 @@ impl Core {
         let mut affected: BTreeSet<NoteId> = touched.clone();
         affected.extend(state.linking_to(&names));
         drop(pt);
-        crate::prof::add("sync.affected_count(us=count)", std::time::Duration::from_micros(affected.len() as u64));
+        crate::prof::add(
+            "sync.affected_count(us=count)",
+            std::time::Duration::from_micros(affected.len() as u64),
+        );
         let watch_sidecars = paths.iter().any(|p| sidecar_id(p).is_some());
         let pt = crate::prof::g("sync.snapshot_before");
         let before = crate::diff::Snapshot::take(tx, &affected, watch_sidecars).await?;

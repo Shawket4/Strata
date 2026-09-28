@@ -45,6 +45,7 @@ strata-graph = { workspace = true }
 vault-format = { workspace = true }
 domain = { workspace = true }
 sync-model = { workspace = true }
+item-render = { workspace = true }
 dedupe = { workspace = true }
 uuid = { workspace = true }
 sqlx = { workspace = true }

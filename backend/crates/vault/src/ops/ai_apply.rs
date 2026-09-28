@@ -834,32 +834,16 @@ impl Core {
         for c in &set.concepts {
             let path = self.ov_free_path(&ov, "concepts", &c.name, None)?;
             let stem = paths::file_name(&path).trim_end_matches(".md").to_owned();
-            let body = match &c.summary {
-                Some(s) if !s.trim().is_empty() => {
-                    format!("## Summary\n{}\n", one_paragraph(s))
-                }
-                _ => "## Summary\n".to_owned(),
-            };
-            let mut doc = Document::parse(&body);
-            let fm = doc.frontmatter_mut();
-            fm.set_kind(NoteKind::Concept).map_err(frontmatter_err)?;
-            if stem != c.name.trim() {
-                fm.set_text(KnownKey::Title, c.name.trim())
-                    .map_err(frontmatter_err)?;
-            }
+            let body = item_render::entity::concept_body(c.summary.as_deref());
+            let doc =
+                item_render::entity::skeleton(NoteKind::Concept, &c.name, &stem, Vec::new(), &body)
+                    .map_err(|e| prepare::render_error(&e))?;
             Self::ov_create(&mut ov, c.id, &path, doc, &local_now)?;
         }
         for e in &set.entities {
             let folder = e.kind.default_folder();
             let path = self.ov_free_path(&ov, folder, &e.name, None)?;
             let stem = paths::file_name(&path).trim_end_matches(".md").to_owned();
-            let mut doc = Document::parse("## Notes\n");
-            let fm = doc.frontmatter_mut();
-            fm.set_kind(e.kind).map_err(frontmatter_err)?;
-            if stem != e.name.trim() {
-                fm.set_text(KnownKey::Title, e.name.trim())
-                    .map_err(frontmatter_err)?;
-            }
             let mut aliases: Vec<String> = Vec::new();
             for a in &e.aliases {
                 let a = a.trim();
@@ -867,10 +851,14 @@ impl Core {
                     aliases.push(a.to_owned());
                 }
             }
-            if !aliases.is_empty() {
-                fm.set_list(KnownKey::Aliases, aliases)
-                    .map_err(frontmatter_err)?;
-            }
+            let doc = item_render::entity::skeleton(
+                e.kind,
+                &e.name,
+                &stem,
+                aliases,
+                item_render::entity::ENTITY_BODY,
+            )
+            .map_err(|e| prepare::render_error(&e))?;
             Self::ov_create(&mut ov, e.id, &path, doc, &local_now)?;
         }
         for n in &set.ai_notes {
@@ -983,7 +971,10 @@ impl Core {
             let index = self.ov_index(&ov)?;
             let mut rendered: Vec<(AiSection, String)> = Vec::new();
             if let Some(summary) = &s.summary {
-                rendered.push((AiSection::Summary, format!("{}\n", one_paragraph(summary))));
+                rendered.push((
+                    AiSection::Summary,
+                    format!("{}\n", item_render::entity::one_paragraph(summary)),
+                ));
             }
             for (section, items) in &s.bullets {
                 rendered.push((*section, self.render_bullets(&ov, &index, items)?));
@@ -1239,15 +1230,6 @@ pub const SYSTEM_FOLDERS: &[&str] = &[
 ];
 
 /// Collapses `s` to one paragraph (the Summary section is prose, never headings).
-fn one_paragraph(s: &str) -> String {
-    s.split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .trim_start_matches('#')
-        .trim()
-        .to_owned()
-}
-
 /// Removes the custody line of `doc` with `date` and `kind` that cites `source_path`, and
 /// recomputes the derived frontmatter. Returns whether a line was removed.
 fn remove_custody_line(

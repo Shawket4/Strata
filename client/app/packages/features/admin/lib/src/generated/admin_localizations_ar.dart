@@ -33,7 +33,7 @@ class AdminLocalizationsAr extends AdminLocalizations {
 
   @override
   String requested({required String username, required String date}) {
-    return '@$username · طلب يوم $date';
+    return '@$username · طلب $date';
   }
 
   @override
@@ -168,16 +168,13 @@ class AdminLocalizationsAr extends AdminLocalizations {
       'إعادة التعيين بتديك كلمة مرور لمرة واحدة توصلها له.';
 
   @override
-  String get notAvailableYet => 'غير متاح بعد';
-
-  @override
   String scheduleTitle({required String username}) {
     return 'تحديد ميعاد مسح @$username؟';
   }
 
   @override
-  String scheduleBody({required String name, required String date}) {
-    return 'حساب $name هيتسجل خروجه من كل مكان وهيتمسح يوم $date. لحد وقتها $name يقدر يسجل دخول بس علشان ينزل تصدير ملاحظاته. أنت مش هتشوف التصدير.';
+  String scheduleBody({required String name}) {
+    return 'حساب $name هيتقفل من كل الأجهزة ويتمسح لما فترة السماح تخلص. لحد ساعتها $name يقدر يدخل بس عشان ينزّل نسخة من ملاحظاته. انت مش هتشوف النسخة دي.';
   }
 
   @override
@@ -240,5 +237,70 @@ class AdminLocalizationsAr extends AdminLocalizations {
   @override
   String atUsername({required String username}) {
     return '@$username';
+  }
+
+  @override
+  String get you => 'انت';
+
+  @override
+  String get yourAccount => 'حسابك';
+
+  @override
+  String get searchLabel => 'ابحث في المستخدمين';
+
+  @override
+  String noMatches({required String query}) {
+    return 'مفيش مستخدم مطابق لـ“$query”.';
+  }
+
+  @override
+  String roleSemantics({required String name}) {
+    return 'دور $name';
+  }
+
+  @override
+  String get makeAdmin => 'خليه مسؤول';
+
+  @override
+  String get makeMember => 'خليه عضو';
+
+  @override
+  String get passwordChangePending => 'لازم يختار كلمة سر جديدة';
+
+  @override
+  String get createTitle => 'إنشاء حساب';
+
+  @override
+  String get createBody =>
+      'الحساب بيبقى نشط على طول. ابعت كلمة السر بشكل خاص؛ هو هيختار واحدة جديدة بعد ما يدخل.';
+
+  @override
+  String get fieldUsername => 'اسم المستخدم';
+
+  @override
+  String get fieldDisplayName => 'الاسم الظاهر';
+
+  @override
+  String get fieldPassword => 'كلمة سر مؤقتة';
+
+  @override
+  String get fieldRole => 'الدور';
+
+  @override
+  String get create => 'إنشاء';
+
+  @override
+  String created({required String username}) {
+    return 'اتعمل حساب @$username';
+  }
+
+  @override
+  String approved({required String name}) {
+    return 'تمت الموافقة على $name';
+  }
+
+  @override
+  String rejected({required String name}) {
+    return 'اترفض $name';
   }
 }

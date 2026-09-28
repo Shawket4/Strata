@@ -661,20 +661,20 @@ impl Core {
             }
             KIND_TASK => {
                 let p: TaskPayload = decode(&s.payload)?;
-                let mut text = edits.text.clone().unwrap_or_else(|| p.title.clone());
-                if edits.text.is_none() {
-                    let state = self.state()?;
-                    let index = state.path_index();
-                    for e in &p.entities {
-                        if let Some((path, _)) = state.note(NoteId::from_ulid(*e)) {
-                            let link = format!("[[{}]]", index.link_text_for(path));
-                            if !text.contains(&link) {
-                                text.push(' ');
-                                text.push_str(&link);
-                            }
-                        }
+                let text = match &edits.text {
+                    Some(t) => t.clone(),
+                    None => {
+                        let state = self.state()?;
+                        let index = state.path_index();
+                        let links: Vec<String> = p
+                            .entities
+                            .iter()
+                            .filter_map(|e| state.note(NoteId::from_ulid(*e)))
+                            .map(|(path, _)| index.link_text_for(path))
+                            .collect();
+                        item_render::task::suggested_task_text(&p.title, &links)
                     }
-                }
+                };
                 let req = NewTask {
                     text,
                     due: edits.due.or(p.due),

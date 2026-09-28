@@ -4,7 +4,6 @@
 //! and the list views.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fmt::Write as _;
 
 use chrono::{NaiveDate, NaiveDateTime};
 use strata_common::NoteId;
@@ -13,12 +12,10 @@ use strata_index::repo::notes;
 use strata_index::repo::tasks as trepo;
 use strata_index::repo::vault::{self as vrepo, TaskView};
 use sync_model::Op;
-use sync_model::apply::{ApplyError, apply_task_op, task_line_version};
+use sync_model::apply::{ApplyError, apply_task_create, apply_task_op, task_line_version};
 use vault_format::Document;
 use vault_format::sidecar::NoteSidecar;
-use vault_format::tasks::{
-    DateKind, Priority, Reminder, TaskError, TaskLine, TaskSpec, parse_recurrence,
-};
+use vault_format::tasks::{DateKind, Priority, TaskError, TaskLine, parse_recurrence};
 
 use crate::dup;
 use crate::error::{Result, VaultError};
@@ -132,54 +129,6 @@ pub fn rrule_of(task: &TaskLine) -> Option<String> {
     }
 }
 
-/// Inserts `line` at the end of the `## <heading>` section of `body` (creating the heading at
-/// the end if missing).
-fn insert_under_heading(body: &str, heading: &str, line: &str) -> String {
-    let secs = vault_format::sections::sections(body);
-    if let Some(s) = secs
-        .iter()
-        .find(|s| s.level == 2 && s.title.trim() == heading)
-    {
-        let content = &body[s.content_span.clone()];
-        let trimmed = content.trim_end().len();
-        let at = if trimmed == 0 {
-            s.content_span.start
-        } else {
-            let last = s.content_span.start + trimmed;
-            body[last..].find('\n').map_or(body.len(), |i| last + i + 1)
-        };
-        let mut out = body[..at].to_owned();
-        if !out.ends_with('\n') && !out.is_empty() {
-            out.push('\n');
-        }
-        out.push_str(line);
-        out.push('\n');
-        out.push_str(&body[at..]);
-        out
-    } else {
-        let mut out = body.to_owned();
-        if !out.is_empty() && !out.ends_with('\n') {
-            out.push('\n');
-        }
-        if !out.is_empty() {
-            out.push('\n');
-        }
-        let _ = write!(out, "## {heading}\n\n{line}\n");
-        out
-    }
-}
-
-/// Appends `line` at the end of `body`.
-fn append_line(body: &str, line: &str) -> String {
-    let mut out = body.to_owned();
-    if !out.is_empty() && !out.ends_with('\n') {
-        out.push('\n');
-    }
-    out.push_str(line);
-    out.push('\n');
-    out
-}
-
 /// Finds the line of task `id` in `body`: (line span, parsed line).
 pub fn find_task(body: &str, id: &str) -> Option<(std::ops::Range<usize>, TaskLine)> {
     sync_model::apply::find_task(body, id)
@@ -211,25 +160,20 @@ impl Core {
         if trepo::get_task(&mut tx, &id).await?.is_some() {
             return Err(VaultError::invalid("a task with this id already exists"));
         }
-        let line = TaskSpec {
-            description: req.text.trim().to_owned(),
-            priority: req.priority,
-            recurrence: req.recurrence.clone(),
-            start: req.start,
-            scheduled: req.scheduled,
+        let op = sync_model::ops::TaskCreate {
+            id: id.clone(),
+            note_id: req.note.map(|n| n.as_ulid()),
+            text: req.text.clone(),
             due: req.due,
-            reminders: req
-                .reminders
-                .iter()
-                .map(|r| Reminder {
-                    date: r.date(),
-                    time: Some(r.time()),
-                })
-                .collect(),
-            block_id: Some(id.clone()),
-            ..TaskSpec::default()
-        }
-        .render();
+            scheduled: req.scheduled,
+            start: req.start,
+            recurrence: req.recurrence.clone(),
+            reminders: req.reminders.clone(),
+            priority: req.priority,
+            force: req.force,
+        };
+        let line = sync_model::apply::task_create_line(&op)
+            .map_err(|_| VaultError::invalid("the task line is invalid"))?;
         let parsed =
             TaskLine::parse(&line).ok_or(VaultError::invalid("the task line is invalid"))?;
         let item = dup::task_item(&id, &parsed);
@@ -262,16 +206,18 @@ impl Core {
                 None => (
                     NoteId::generate(self.ids()),
                     TASKS_NOTE.to_owned(),
-                    "# Tasks\n".to_owned(),
+                    String::new(),
                 ),
             },
         };
         let mut doc = Document::parse(&text);
-        let body = if req.note.is_none() {
-            insert_under_heading(doc.body(), &now.format("%Y-%m").to_string(), &line)
-        } else {
-            append_line(doc.body(), &line)
-        };
+        let body = apply_task_create(doc.body(), &op, now.date_naive(), doc.line_ending())
+            .map_err(|e| match e {
+                ApplyError::TaskExists(_) => {
+                    VaultError::invalid("a task with this id already exists")
+                }
+                _ => VaultError::invalid("the task line is invalid"),
+            })?;
         doc.set_body(body);
         // A new home note gets its id and timestamps; an existing one keeps `updated` (the
         // device's optimistic apply of `task.create` writes the same bytes).
@@ -568,31 +514,5 @@ impl VaultService {
             line,
             reminders,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn lines_go_under_their_month_heading() {
-        assert_eq!(
-            insert_under_heading("# Tasks\n", "2026-09", "- [ ] a"),
-            "# Tasks\n\n## 2026-09\n\n- [ ] a\n"
-        );
-        assert_eq!(
-            insert_under_heading(
-                "# Tasks\n\n## 2026-09\n\n- [ ] a\n\n## 2026-10\n\n- [ ] c\n",
-                "2026-09",
-                "- [ ] b"
-            ),
-            "# Tasks\n\n## 2026-09\n\n- [ ] a\n- [ ] b\n\n## 2026-10\n\n- [ ] c\n"
-        );
-        assert_eq!(
-            insert_under_heading("## 2026-09\n", "2026-09", "- [ ] a"),
-            "## 2026-09\n- [ ] a\n"
-        );
-        assert_eq!(append_line("x", "- [ ] a"), "x\n- [ ] a\n");
     }
 }

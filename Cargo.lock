@@ -2308,6 +2308,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6cb138bb79a146c1bd460005623e142ef0181e3d0219cb493e02f7d08a35695"
 
 [[package]]
+name = "item-render"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "domain",
+ "pretty_assertions",
+ "proptest",
+ "sync-model",
+ "thiserror",
+ "ulid",
+ "vault-format",
+]
+
+[[package]]
 name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4429,6 +4443,7 @@ dependencies = [
  "futures-util",
  "getrandom 0.3.4",
  "hex",
+ "item-render",
  "jsonschema",
  "jsonwebtoken",
  "mime",
@@ -4544,6 +4559,7 @@ dependencies = [
  "futures",
  "graph-algo",
  "hex",
+ "item-render",
  "pretty_assertions",
  "proptest",
  "rmp-serde",
@@ -4626,6 +4642,7 @@ dependencies = [
  "domain",
  "futures",
  "hex",
+ "item-render",
  "pgvector",
  "pretty_assertions",
  "rmp-serde",
@@ -4676,6 +4693,7 @@ dependencies = [
  "domain",
  "futures-util",
  "git2",
+ "item-render",
  "pretty_assertions",
  "rmp-serde",
  "serde",

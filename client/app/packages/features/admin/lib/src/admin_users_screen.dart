@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_admin/src/l10n.dart';
 import 'package:strata_state/strata_state.dart';
@@ -11,10 +14,11 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// export was downloaded. Online and admins only: the core's
 /// [Availability] decides what is shown.
 ///
-/// The per-account intents (approve, reject, disable, enable, reset
-/// password, schedule / cancel deletion, role) are not in the core API yet
-/// (docs/CORE_GAPS.md); their controls are shown disabled.
-class AdminUsersScreen extends ConsumerWidget {
+/// Every control forwards a core intent (approve, reject, role, disable /
+/// enable, reset password, schedule / cancel deletion, create account) and
+/// re-reads the list; the search field asks the core for the filtered list
+/// (`load_admin_users(query)`).
+class AdminUsersScreen extends HookConsumerWidget {
   /// Creates the screen. [embedded] drops the compact app bar (the screen
   /// is a pane of Settings on medium and expanded).
   const new({super.key, this.embedded = false});
@@ -28,11 +32,37 @@ class AdminUsersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.adminL10n;
-    final users = ref.watch(adminUsersProvider(''));
+    final query = useState('');
+    final users = ref.watch(adminUsersProvider(query.value));
+    // The last list stays on screen while the next query loads, so the
+    // search field keeps its focus.
+    final shown = useRef<AdminUsersView?>(null);
+    if (users.value case final view?) shown.value = view;
     final compact = SizeClass.of(context) == SizeClass.compact;
+    void retry() => ref.invalidate(adminUsersProvider(query.value));
+    final last = shown.value;
     final body = switch (users) {
-      AsyncData(:final value) => switch (value.availability) {
-        Availability.available => AdminUsersContent(view: value),
+      AsyncError(:final error) when last == null => StrataEmptyState(
+        icon: Icons.error_outline,
+        title: l10n.loadFailed,
+        message: l10n.failure(error),
+        action: StrataAction(
+          label: l10n.retry,
+          icon: Icons.refresh,
+          onPressed: retry,
+        ),
+      ),
+      _ when last == null => Center(
+        child: Semantics(
+          label: l10n.loading,
+          child: const CircularProgressIndicator(),
+        ),
+      ),
+      _ => switch (last.availability) {
+        Availability.available => AdminUsersContent(
+          view: last,
+          onQueryChanged: (value) => query.value = value,
+        ),
         Availability.offline => StrataEmptyState(
           icon: Icons.cloud_off_outlined,
           title: l10n.offlineTitle,
@@ -40,7 +70,7 @@ class AdminUsersScreen extends ConsumerWidget {
           action: StrataAction(
             label: l10n.retry,
             icon: Icons.refresh,
-            onPressed: () => ref.invalidate(adminUsersProvider('')),
+            onPressed: retry,
           ),
         ),
         Availability.notYetAvailable => StrataEmptyState(
@@ -54,35 +84,20 @@ class AdminUsersScreen extends ConsumerWidget {
           message: l10n.notAllowedBody,
         ),
       },
-      AsyncError(:final error) => StrataEmptyState(
-        icon: Icons.error_outline,
-        title: l10n.loadFailed,
-        message: l10n.failure(error),
-        action: StrataAction(
-          label: l10n.retry,
-          icon: Icons.refresh,
-          onPressed: () => ref.invalidate(adminUsersProvider('')),
-        ),
-      ),
-      _ => Center(
-        child: Semantics(
-          label: l10n.loading,
-          child: const CircularProgressIndicator(),
-        ),
-      ),
     };
     if (embedded || !compact) return Material(child: body);
+    final available = last?.availability == Availability.available;
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.usersTitle),
         actions: [
-          _Unavailable(
-            child: IconButton(
+          if (available)
+            IconButton(
               tooltip: l10n.createAccount,
-              onPressed: null,
+              onPressed: () =>
+                  unawaited(createAccount(context, ref, last?.query ?? '')),
               icon: const Icon(Icons.person_add_alt_outlined),
             ),
-          ),
         ],
       ),
       body: body,
@@ -90,27 +105,62 @@ class AdminUsersScreen extends ConsumerWidget {
   }
 }
 
-/// Wraps a control whose intent the core does not offer yet.
-class _Unavailable extends StatelessWidget {
-  const new({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) =>
-      Tooltip(message: context.adminL10n.notAvailableYet, child: child);
+/// Runs an admin [intent] on the core, re-reads the list for [query] and
+/// shows [done] (when given) or the failure in a snack bar.
+Future<void> runAdminIntent(
+  BuildContext context,
+  WidgetRef ref,
+  String query,
+  Future<Object?> Function(CoreApi core) intent, {
+  String? done,
+}) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final l10n = context.adminL10n;
+  try {
+    await intent(ref.read(coreApiProvider));
+    ref.invalidate(adminUsersProvider(query));
+    if (done != null) messenger?.showSnackBar(SnackBar(content: Text(done)));
+  } on Object catch (error) {
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+  }
 }
 
-/// The users content for one [AdminUsersView] (no providers).
-class AdminUsersContent extends StatelessWidget {
+/// "Create account": asks for the account in [CreateAccountDialog] and
+/// forwards it to `create_user`.
+Future<void> createAccount(
+  BuildContext context,
+  WidgetRef ref,
+  String query,
+) async {
+  final l10n = context.adminL10n;
+  final request = await showDialog<NewUserRequest>(
+    context: context,
+    builder: (_) => const CreateAccountDialog(),
+  );
+  if (request == null || !context.mounted) return;
+  await runAdminIntent(
+    context,
+    ref,
+    query,
+    (core) => core.createUser(request: request),
+    done: l10n.created(username: request.username),
+  );
+}
+
+/// The users content for one [AdminUsersView]: the pending queue, the
+/// search field and every account.
+class AdminUsersContent extends ConsumerWidget {
   /// Creates the content.
-  const new({required this.view, super.key});
+  const new({required this.view, super.key, this.onQueryChanged});
 
   /// The core's view.
   final AdminUsersView view;
 
+  /// The search text changed (the screen asks the core for that list).
+  final ValueChanged<String>? onQueryChanged;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.adminL10n;
     final colors = context.strataColors;
     final text = context.strataText;
@@ -133,12 +183,11 @@ class AdminUsersContent extends StatelessWidget {
                   child: Text(l10n.usersTitle, style: text.display),
                 ),
               ),
-              _Unavailable(
-                child: FilledButton.icon(
-                  onPressed: null,
-                  icon: const Icon(Icons.person_add_alt_outlined, size: 18),
-                  label: Text(l10n.createAccount),
-                ),
+              FilledButton.icon(
+                onPressed: () =>
+                    unawaited(createAccount(context, ref, view.query)),
+                icon: const Icon(Icons.person_add_alt_outlined, size: 18),
+                label: Text(l10n.createAccount),
               ),
             ],
           ),
@@ -170,7 +219,7 @@ class AdminUsersContent extends StatelessWidget {
           )
         else if (compact)
           for (final user in view.pending) ...[
-            PendingUserCard(user: user),
+            PendingUserCard(user: user, query: view.query),
             const SizedBox(height: StrataSpacing.s3),
           ]
         else
@@ -179,20 +228,49 @@ class AdminUsersContent extends StatelessWidget {
             runSpacing: StrataSpacing.s3,
             children: [
               for (final user in view.pending)
-                SizedBox(width: 420, child: PendingUserCard(user: user)),
+                SizedBox(
+                  width: 420,
+                  child: PendingUserCard(user: user, query: view.query),
+                ),
             ],
           ),
         const SizedBox(height: StrataSpacing.s6),
-        StrataSectionHeader(
-          title: l10n.allUsers,
-          count: view.users.length,
-          padding: EdgeInsets.zero,
+        Row(
+          children: [
+            Expanded(
+              child: StrataSectionHeader(
+                title: l10n.allUsers,
+                count: view.users.length,
+                padding: EdgeInsets.zero,
+              ),
+            ),
+            if (!compact)
+              SizedBox(
+                width: 280,
+                child: _SearchField(
+                  query: view.query,
+                  onChanged: onQueryChanged,
+                ),
+              ),
+          ],
         ),
+        if (compact) ...[
+          const SizedBox(height: StrataSpacing.s2),
+          _SearchField(query: view.query, onChanged: onQueryChanged),
+        ],
         const SizedBox(height: StrataSpacing.s2),
-        if (compact)
-          for (final user in view.users) UserTile(user: user)
+        if (view.users.isEmpty && view.query.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s3),
+            child: Text(
+              l10n.noMatches(query: view.query),
+              style: text.bodySmall.copyWith(color: colors.text2),
+            ),
+          )
+        else if (compact)
+          for (final user in view.users) UserTile(user: user, query: view.query)
         else
-          UsersTable(users: view.users),
+          UsersTable(users: view.users, query: view.query),
         const SizedBox(height: StrataSpacing.s4),
         Text(
           l10n.footnoteDisable,
@@ -207,22 +285,48 @@ class AdminUsersContent extends StatelessWidget {
   }
 }
 
-String _date(BuildContext context, DateTime at) =>
-    MaterialLocalizations.of(context).formatMediumDate(at.toLocal());
+class _SearchField extends HookWidget {
+  const new({required this.query, required this.onChanged});
 
-/// An account awaiting approval, with Reject / Approve.
-class PendingUserCard extends StatelessWidget {
-  /// Creates the card.
-  const new({required this.user, super.key});
-
-  /// The account.
-  final AdminUserItem user;
+  final String query;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.adminL10n;
+    final controller = useTextEditingController(text: query);
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        isDense: true,
+        prefixIcon: const Icon(Icons.search, size: 20),
+        hintText: l10n.searchLabel,
+        labelText: l10n.searchLabel,
+        floatingLabelBehavior: FloatingLabelBehavior.never,
+      ),
+    );
+  }
+}
+
+/// An account awaiting approval, with Reject / Approve.
+class PendingUserCard extends ConsumerWidget {
+  /// Creates the card.
+  const new({required this.user, super.key, this.query = ''});
+
+  /// The account.
+  final AdminUserItem user;
+
+  /// The list's query (re-read after an answer).
+  final String query;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.adminL10n;
     final colors = context.strataColors;
     final text = context.strataText;
+    final name = user.displayName;
     return Container(
       padding: const EdgeInsets.all(StrataSpacing.s4),
       decoration: BoxDecoration(
@@ -236,17 +340,17 @@ class PendingUserCard extends StatelessWidget {
           MergeSemantics(
             child: Row(
               children: [
-                const _Avatar(),
+                StrataAvatar(initials: user.initials),
                 const SizedBox(width: StrataSpacing.s3),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(user.displayName, style: text.bodyStrong),
+                      Text(name, style: text.bodyStrong),
                       Text(
                         l10n.requested(
                           username: user.username,
-                          date: _date(context, user.created),
+                          date: user.createdLabel,
                         ),
                         style: text.caption.copyWith(color: colors.text2),
                       ),
@@ -260,31 +364,41 @@ class PendingUserCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: _Unavailable(
-                  child: Semantics(
-                    label: l10n.rejectSemantics(name: user.displayName),
-                    excludeSemantics: true,
-                    button: true,
-                    enabled: false,
-                    child: OutlinedButton(
-                      onPressed: null,
-                      child: Text(l10n.reject),
+                child: Semantics(
+                  label: l10n.rejectSemantics(name: name),
+                  excludeSemantics: true,
+                  button: true,
+                  child: OutlinedButton(
+                    onPressed: () => unawaited(
+                      runAdminIntent(
+                        context,
+                        ref,
+                        query,
+                        (core) => core.rejectUser(id: user.id),
+                        done: l10n.rejected(name: name),
+                      ),
                     ),
+                    child: Text(l10n.reject),
                   ),
                 ),
               ),
               const SizedBox(width: StrataSpacing.s2),
               Expanded(
-                child: _Unavailable(
-                  child: Semantics(
-                    label: l10n.approveSemantics(name: user.displayName),
-                    excludeSemantics: true,
-                    button: true,
-                    enabled: false,
-                    child: FilledButton(
-                      onPressed: null,
-                      child: Text(l10n.approve),
+                child: Semantics(
+                  label: l10n.approveSemantics(name: name),
+                  excludeSemantics: true,
+                  button: true,
+                  child: FilledButton(
+                    onPressed: () => unawaited(
+                      runAdminIntent(
+                        context,
+                        ref,
+                        query,
+                        (core) => core.approveUser(id: user.id),
+                        done: l10n.approved(name: name),
+                      ),
                     ),
+                    child: Text(l10n.approve),
                   ),
                 ),
               ),
@@ -296,25 +410,29 @@ class PendingUserCard extends StatelessWidget {
   }
 }
 
-class _Avatar extends StatelessWidget {
-  const new();
+/// The name of an account with the "you" badge on the admin's own row.
+class _UserName extends StatelessWidget {
+  const new({required this.user});
+
+  final AdminUserItem user;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.strataColors;
-    return ExcludeSemantics(
-      child: CircleAvatar(
-        radius: 20,
-        backgroundColor: colors.accentTint,
-        foregroundColor: colors.accentText,
-        child: const Icon(Icons.person_outline, size: 22),
-      ),
+    final l10n = context.adminL10n;
+    final text = context.strataText;
+    return Wrap(
+      spacing: StrataSpacing.s2,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        Text(user.displayName, style: text.bodyStrong),
+        if (user.isSelf) StatusPill(label: l10n.you, tone: StatusTone.info),
+      ],
     );
   }
 }
 
-/// An account's status pill; a scheduled deletion shows its date and the
-/// export state below.
+/// An account's status pill; a scheduled deletion shows the export state
+/// below, a reset password that the user must replace says so.
 class UserStatus extends StatelessWidget {
   /// Creates the status for [user].
   const new({required this.user, super.key});
@@ -342,63 +460,190 @@ class UserStatus extends StatelessWidget {
             style: text.caption.copyWith(color: colors.text2),
           ),
         ],
+        if (user.passwordChangeRequired) ...[
+          const SizedBox(height: StrataSpacing.s1),
+          Text(
+            l10n.passwordChangePending,
+            style: text.caption.copyWith(color: colors.text2),
+          ),
+        ],
       ],
     );
   }
 }
 
-/// The actions of one account (all pending core intents).
-class UserActions extends StatelessWidget {
-  /// Creates the actions for [user].
-  const new({required this.user, super.key});
+/// The export download time has no core label yet (docs/CORE_GAPS.md, Still
+/// open): the instant is formatted by the platform's localisations.
+String _date(BuildContext context, DateTime at) =>
+    MaterialLocalizations.of(context).formatMediumDate(at.toLocal());
+
+/// The role of an account: a picker for other accounts, the role's name on
+/// the admin's own row.
+class UserRole extends ConsumerWidget {
+  /// Creates the role cell for [user].
+  const new({required this.user, super.key, this.query = ''});
 
   /// The account.
   final AdminUserItem user;
 
+  /// The list's query (re-read after a change).
+  final String query;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.adminL10n;
-    final name = user.displayName;
-    Widget icon(IconData data, String label) => _Unavailable(
-      child: IconButton(
-        onPressed: null,
-        icon: Icon(data, size: 20),
-        tooltip: label,
+    final text = context.strataText;
+    if (user.isSelf || user.status == 'pending') {
+      return Text(l10n.role(user.role), style: text.bodySmall);
+    }
+    return Semantics(
+      label: l10n.roleSemantics(name: user.displayName),
+      container: true,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: user.role,
+          isExpanded: true,
+          style: text.bodySmall.copyWith(color: context.strataColors.text),
+          items: [
+            for (final role in const ['admin', 'member'])
+              DropdownMenuItem(
+                value: role,
+                child: Text(
+                  l10n.role(role),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          onChanged: (role) {
+            if (role == null || role == user.role) return;
+            unawaited(
+              runAdminIntent(
+                context,
+                ref,
+                query,
+                (core) => core.setUserRole(id: user.id, role: role),
+              ),
+            );
+          },
+        ),
       ),
     );
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+  }
+}
+
+/// The actions of one account, by its status: disable / reset / delete for
+/// an active account, enable / delete for a disabled one, cancel for a
+/// scheduled deletion, nothing for the admin's own row.
+class UserActions extends ConsumerWidget {
+  /// Creates the actions for [user].
+  const new({required this.user, super.key, this.query = ''});
+
+  /// The account.
+  final AdminUserItem user;
+
+  /// The list's query (re-read after an action).
+  final String query;
+
+  Future<void> _reset(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final l10n = context.adminL10n;
+    try {
+      final password = await ref
+          .read(coreApiProvider)
+          .resetPassword(id: user.id);
+      ref.invalidate(adminUsersProvider(query));
+      if (!context.mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (_) => OneTimePasswordDialog(user: user, password: password),
+      );
+    } on Object catch (error) {
+      messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+    }
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => ScheduleDeletionDialog(user: user),
+    );
+    if (confirmed != true || !context.mounted) return;
+    await runAdminIntent(
+      context,
+      ref,
+      query,
+      (core) => core.scheduleDeletion(id: user.id),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.adminL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final name = user.displayName;
+    if (user.isSelf) {
+      return Text(
+        l10n.yourAccount,
+        style: text.caption.copyWith(color: colors.text2),
+      );
+    }
+    void run(Future<Object?> Function(CoreApi core) intent) =>
+        unawaited(runAdminIntent(context, ref, query, intent));
+    Widget icon(IconData data, String label, VoidCallback onPressed) =>
+        IconButton(
+          onPressed: onPressed,
+          icon: Icon(data, size: 20),
+          tooltip: label,
+        );
+    final delete = icon(
+      Icons.delete_outline,
+      l10n.deleteSemantics(name: name),
+      () => unawaited(_delete(context, ref)),
+    );
+    return Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: switch (user.status) {
         'deletion_pending' => [
-          _Unavailable(
-            child: Semantics(
-              label: l10n.cancelDeletionSemantics(name: name),
-              excludeSemantics: true,
-              button: true,
-              enabled: false,
-              child: OutlinedButton(
-                onPressed: null,
-                child: Text(l10n.cancelDeletion),
-              ),
+          Semantics(
+            label: l10n.cancelDeletionSemantics(name: name),
+            excludeSemantics: true,
+            button: true,
+            child: OutlinedButton(
+              onPressed: () => run((core) => core.cancelDeletion(id: user.id)),
+              child: Text(l10n.cancelDeletion),
             ),
           ),
         ],
         'disabled' => [
-          _Unavailable(
-            child: Semantics(
-              label: l10n.enableSemantics(name: name),
-              excludeSemantics: true,
-              button: true,
-              enabled: false,
-              child: OutlinedButton(onPressed: null, child: Text(l10n.enable)),
+          Semantics(
+            label: l10n.enableSemantics(name: name),
+            excludeSemantics: true,
+            button: true,
+            child: OutlinedButton(
+              onPressed: () => run(
+                (core) => core.setUserEnabled(id: user.id, enabled: true),
+              ),
+              child: Text(l10n.enable),
             ),
           ),
-          icon(Icons.delete_outline, l10n.deleteSemantics(name: name)),
+          delete,
         ],
+        'pending' || 'rejected' => const [],
         _ => [
-          icon(Icons.block, l10n.disableSemantics(name: name)),
-          icon(Icons.key_outlined, l10n.resetSemantics(name: name)),
-          icon(Icons.delete_outline, l10n.deleteSemantics(name: name)),
+          icon(
+            Icons.block,
+            l10n.disableSemantics(name: name),
+            () =>
+                run((core) => core.setUserEnabled(id: user.id, enabled: false)),
+          ),
+          icon(
+            Icons.key_outlined,
+            l10n.resetSemantics(name: name),
+            () => unawaited(_reset(context, ref)),
+          ),
+          delete,
         ],
       },
     );
@@ -406,26 +651,26 @@ class UserActions extends StatelessWidget {
 }
 
 /// A user row on compact; tapping opens the account's actions.
-class UserTile extends StatelessWidget {
+class UserTile extends ConsumerWidget {
   /// Creates the row.
-  const new({required this.user, super.key});
+  const new({required this.user, super.key, this.query = ''});
 
   /// The account.
   final AdminUserItem user;
 
-  @override
-  Widget build(BuildContext context) {
+  /// The list's query.
+  final String query;
+
+  void _open(BuildContext context, WidgetRef ref) {
     final l10n = context.adminL10n;
-    final colors = context.strataColors;
     final text = context.strataText;
-    final deletion = user.status == 'deletion_pending';
-    final downloaded = user.exportDownloadedAt;
-    return InkWell(
-      onTap: () => showModalBottomSheet<void>(
+    unawaited(
+      showModalBottomSheet<void>(
         context: context,
         showDragHandle: true,
+        isScrollControlled: true,
         builder: (sheet) => SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(
               StrataSpacing.s5,
               0,
@@ -445,29 +690,66 @@ class UserTile extends StatelessWidget {
                 ),
                 const SizedBox(height: StrataSpacing.s2),
                 UserStatus(user: user),
+                if (!user.isSelf && user.status == 'active') ...[
+                  const SizedBox(height: StrataSpacing.s3),
+                  Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(sheet).pop();
+                        unawaited(
+                          runAdminIntent(
+                            context,
+                            ref,
+                            query,
+                            (core) => core.setUserRole(
+                              id: user.id,
+                              role: user.role == 'admin' ? 'member' : 'admin',
+                            ),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        user.role == 'admin' ? l10n.makeMember : l10n.makeAdmin,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: StrataSpacing.s3),
                 Align(
                   alignment: AlignmentDirectional.centerStart,
-                  child: UserActions(user: user),
+                  child: UserActions(user: user, query: query),
                 ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.adminL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final deletion = user.status == 'deletion_pending';
+    final downloaded = user.exportDownloadedAt;
+    return InkWell(
+      onTap: () => _open(context, ref),
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: 64),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s2),
           child: Row(
             children: [
-              const _Avatar(),
+              StrataAvatar(initials: user.initials),
               const SizedBox(width: StrataSpacing.s3),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(user.displayName, style: text.bodyStrong),
+                    _UserName(user: user),
                     Text(
                       deletion
                           ? (downloaded == null
@@ -502,16 +784,16 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.adminL10n;
-    final deletionAt = user.deletionAt;
+    final deletion = user.deletionLabel;
     final label = switch (user.status) {
       'active' => l10n.statusActive,
       'disabled' => l10n.statusDisabled,
       'pending' => l10n.statusPending,
       'rejected' => l10n.statusRejected,
       'deletion_pending' =>
-        deletionAt == null
+        deletion == null
             ? l10n.statusDeletionNoDate
-            : l10n.statusDeletion(date: _date(context, deletionAt)),
+            : l10n.statusDeletion(date: deletion),
       final other => l10n.statusOther(status: other),
     };
     return StatusPill(
@@ -525,10 +807,13 @@ class _StatusPill extends StatelessWidget {
 /// The users table of medium and expanded layouts.
 class UsersTable extends StatelessWidget {
   /// Creates the table.
-  const new({required this.users, super.key});
+  const new({required this.users, super.key, this.query = ''});
 
   /// Every account but the pending ones.
   final List<AdminUserItem> users;
+
+  /// The list's query.
+  final String query;
 
   @override
   Widget build(BuildContext context) {
@@ -562,7 +847,7 @@ class UsersTable extends StatelessWidget {
           2: FlexColumnWidth(),
           3: FlexColumnWidth(1.5),
           4: FlexColumnWidth(),
-          5: IntrinsicColumnWidth(),
+          5: FlexColumnWidth(1.4),
         },
         border: TableBorder(horizontalInside: BorderSide(color: colors.border)),
         children: [
@@ -583,11 +868,9 @@ class UsersTable extends StatelessWidget {
                 cell(
                   Row(
                     children: [
-                      const _Avatar(),
+                      StrataAvatar(initials: user.initials, size: 32),
                       const SizedBox(width: StrataSpacing.s2),
-                      Flexible(
-                        child: Text(user.displayName, style: text.bodyStrong),
-                      ),
+                      Flexible(child: _UserName(user: user)),
                     ],
                   ),
                 ),
@@ -599,15 +882,15 @@ class UsersTable extends StatelessWidget {
                     style: text.monoSmall.copyWith(color: colors.text),
                   ),
                 ),
-                cell(Text(l10n.role(user.role), style: text.bodySmall)),
+                cell(UserRole(user: user, query: query)),
                 cell(UserStatus(user: user)),
                 cell(
                   Text(
-                    _date(context, user.created),
+                    user.createdLabel,
                     style: text.bodySmall.copyWith(color: colors.text2),
                   ),
                 ),
-                cell(UserActions(user: user)),
+                cell(UserActions(user: user, query: query)),
               ],
             ),
         ],
@@ -617,17 +900,14 @@ class UsersTable extends StatelessWidget {
 }
 
 /// "Schedule deletion of @nour?" (SCREEN_SPEC AdminUsersExpanded popover).
-/// Returns `true` when confirmed. [date] is the purge date as the core
-/// reports it.
+/// Returns `true` when confirmed. The purge date is known only once the
+/// deletion is scheduled (the row's status shows it then).
 class ScheduleDeletionDialog extends StatelessWidget {
   /// Creates the dialog.
-  const new({required this.user, required this.date, super.key});
+  const new({required this.user, super.key});
 
   /// The account.
   final AdminUserItem user;
-
-  /// The purge date.
-  final DateTime date;
 
   @override
   Widget build(BuildContext context) {
@@ -636,13 +916,7 @@ class ScheduleDeletionDialog extends StatelessWidget {
     return AlertDialog(
       icon: Icon(Icons.auto_delete_outlined, color: colors.dangerText),
       title: Text(l10n.scheduleTitle(username: user.username)),
-      content: Text(
-        l10n.scheduleBody(
-          name: user.displayName,
-          date: MaterialLocalizations.of(context)
-              .formatFullDate(date.toLocal()),
-        ),
-      ),
+      content: Text(l10n.scheduleBody(name: user.displayName)),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
@@ -655,6 +929,79 @@ class ScheduleDeletionDialog extends StatelessWidget {
           ),
           onPressed: () => Navigator.of(context).pop(true),
           child: Text(l10n.scheduleDeletion),
+        ),
+      ],
+    );
+  }
+}
+
+/// "Create account": username, display name, a temporary password and the
+/// role. Pops the [NewUserRequest] (the core validates it).
+class CreateAccountDialog extends HookWidget {
+  /// Creates the dialog.
+  const new({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.adminL10n;
+    final username = useTextEditingController();
+    final name = useTextEditingController();
+    final password = useTextEditingController();
+    final role = useState('member');
+    return AlertDialog(
+      title: Text(l10n.createTitle),
+      scrollable: true,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.createBody),
+          const SizedBox(height: StrataSpacing.s4),
+          TextField(
+            controller: username,
+            autofocus: true,
+            textDirection: TextDirection.ltr,
+            decoration: InputDecoration(labelText: l10n.fieldUsername),
+          ),
+          const SizedBox(height: StrataSpacing.s3),
+          TextField(
+            controller: name,
+            decoration: InputDecoration(labelText: l10n.fieldDisplayName),
+          ),
+          const SizedBox(height: StrataSpacing.s3),
+          TextField(
+            controller: password,
+            obscureText: true,
+            textDirection: TextDirection.ltr,
+            decoration: InputDecoration(labelText: l10n.fieldPassword),
+          ),
+          const SizedBox(height: StrataSpacing.s3),
+          DropdownButtonFormField<String>(
+            initialValue: role.value,
+            decoration: InputDecoration(labelText: l10n.fieldRole),
+            items: [
+              for (final r in const ['member', 'admin'])
+                DropdownMenuItem(value: r, child: Text(l10n.role(r))),
+            ],
+            onChanged: (value) => role.value = value ?? role.value,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(
+            NewUserRequest(
+              username: username.text,
+              displayName: name.text,
+              password: password.text,
+              role: role.value,
+            ),
+          ),
+          child: Text(l10n.create),
         ),
       ],
     );

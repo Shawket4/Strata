@@ -35,6 +35,7 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 ulid = { workspace = true }
 sync-model = { workspace = true }
+item-render = { workspace = true }
 
 [dev-dependencies]
 strata-testkit = { workspace = true }

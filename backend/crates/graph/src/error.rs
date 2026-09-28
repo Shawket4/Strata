@@ -9,7 +9,8 @@ pub struct MapIssue {
     /// Stable code (`invalid_canvas`, `duplicate_id`, `dangling_edge`, `bad_color`,
     /// `bad_subpath`, `bad_size`, `invalid_file`, `unknown_file`).
     pub code: &'static str,
-    /// Human-readable message (IDs and vault paths only, never note content).
+    /// Human-readable message (canvas node/edge IDs and colours only; never note content or
+    /// the file references of file nodes).
     pub message: String,
 }
 

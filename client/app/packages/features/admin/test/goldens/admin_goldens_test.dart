@@ -6,12 +6,11 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
 import '../helpers/fixtures.dart';
-import '../helpers/matrix.dart';
 
 void main() {
   setUpAll(loadStrataFonts);
 
-  goldens(
+  screenGoldens(
     'admin_users',
     (v) => goldenFrame(
       v,
@@ -19,7 +18,7 @@ void main() {
       fake: FakeCoreApi()..loadAdminUsersAnswer.returns(AdminFixtures.view),
     ),
   );
-  goldens(
+  screenGoldens(
     'admin_users_offline',
     (v) => goldenFrame(
       v,
@@ -30,7 +29,7 @@ void main() {
         ),
     ),
   );
-  goldens(
+  screenGoldens(
     'admin_dialogs',
     (v) => goldenFrame(
       v,

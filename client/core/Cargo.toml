@@ -17,6 +17,7 @@ vault-format = { workspace = true }
 text-normalize = { workspace = true }
 domain = { workspace = true }
 sync-model = { workspace = true }
+item-render = { workspace = true }
 dedupe = { workspace = true }
 graph-algo = { workspace = true }
 strata-client = { workspace = true }

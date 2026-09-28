@@ -1025,13 +1025,6 @@ fn captured_logs() -> Arc<Mutex<Vec<u8>>> {
     .clone()
 }
 
-/// Operations whose error messages still quote request content. Each entry is a finding
-/// reported to the module's owner, not an accepted design:
-/// - `put_map`: `strata_graph::maps` names the missing canvas file reference in its 422
-///   issue ("file node references `<path>`, which is not a file of this vault");
-///   `graph_api.rs` asserts that message.
-const KNOWN_ECHOES: [&str; 1] = ["put_map"];
-
 #[tokio::test]
 async fn content_never_reaches_logs_or_error_messages() {
     const S: &str = "Zebra7Sentinel";
@@ -1092,7 +1085,7 @@ async fn content_never_reaches_logs_or_error_messages() {
                     .iter()
                     .map(|e| format!("{} {:?} {}", e.code, e.pointer, e.message)),
             );
-            if texts.iter().any(|t| t.contains(S)) && !KNOWN_ECHOES.contains(&op) {
+            if texts.iter().any(|t| t.contains(S)) {
                 problems.push(format!("{op} {}: {texts:?}", resp.status));
             }
         }

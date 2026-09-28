@@ -371,7 +371,10 @@ impl Core {
         let pt = crate::prof::g("create.check_duplicates");
         let candidates = self.check_duplicates(&mut tx, &req.path, &doc, id).await?;
         drop(pt);
-        crate::prof::add("create.candidates(us=count)", std::time::Duration::from_micros(candidates.len() as u64));
+        crate::prof::add(
+            "create.candidates(us=count)",
+            std::time::Duration::from_micros(candidates.len() as u64),
+        );
         let mut changes = Vec::new();
         if !candidates.is_empty() {
             if !req.force {
@@ -750,17 +753,20 @@ impl Core {
         let mut tx = self.begin(&scope).await?;
         let tz = self.tz(&mut tx).await?;
         let now = created.unwrap_or_else(|| self.local_now(tz));
-        let stamp = now.format("%Y-%m-%d-%H%M%S").to_string();
-        let path = self.free_path(&format!("{}/{stamp}.md", paths::INBOX_DIR), false)?;
+        let path = {
+            let state = self.state()?;
+            item_render::paths::capture_path(
+                &now,
+                state
+                    .notes
+                    .keys()
+                    .chain(state.attachments.iter())
+                    .map(String::as_str),
+            )
+        };
         let id = id.unwrap_or_else(|| NoteId::generate(self.ids()));
-        let mut body = text;
-        if !body.ends_with('\n') {
-            body.push('\n');
-        }
-        let mut doc = Document::parse("");
-        doc.set_body(body);
-        prepare::stamp(&mut doc, id, Some(&now), None)?;
-        let content = doc.render();
+        let content = item_render::capture::capture_content(id.as_ulid(), &now, &text)
+            .map_err(|e| prepare::render_error(&e))?;
         // The duplicate check never refuses a capture: likely duplicates become a suggestion,
         // written in the same transaction as the capture's index update (one write, so a
         // replayed capture finds both or neither).

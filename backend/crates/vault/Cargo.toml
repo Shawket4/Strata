@@ -17,6 +17,7 @@ text-normalize = { workspace = true }
 domain = { workspace = true }
 dedupe = { workspace = true }
 sync-model = { workspace = true }
+item-render = { workspace = true }
 strata-common = { workspace = true, features = ["sqlx"] }
 strata-index = { workspace = true }
 sqlx = { workspace = true }

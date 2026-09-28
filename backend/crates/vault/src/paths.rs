@@ -13,10 +13,12 @@ pub const TRASH_DIR: &str = ".trash";
 pub const GIT_DIR: &str = ".git";
 /// Prefix of in-flight temporary files (never notes; removed by reconciliation).
 pub const TEMP_PREFIX: &str = ".strata-tmp-";
-/// Inbox folder for captures (§6.9).
-pub const INBOX_DIR: &str = "inbox";
 /// Default home of tasks without a note (§6.11).
-pub const TASKS_NOTE: &str = "tasks/Tasks.md";
+pub use item_render::paths::DEFAULT_TASK_NOTE as TASKS_NOTE;
+/// Inbox folder for captures (§6.9).
+pub use item_render::paths::INBOX_DIR;
+/// Path helpers shared with the client core.
+pub use item_render::paths::{file_name, join, parent};
 
 /// Folders created in every new vault (§6.1). `attachments/` gets its dated subfolders on
 /// demand.
@@ -96,25 +98,6 @@ pub fn trash_path(path: &str) -> String {
 /// The original path of a trashed file.
 pub fn untrash_path(trash: &str) -> Option<&str> {
     trash.strip_prefix(TRASH_DIR)?.strip_prefix('/')
-}
-
-/// The folder of a path (`""` at the root).
-pub fn parent(path: &str) -> &str {
-    path.rfind('/').map_or("", |i| &path[..i])
-}
-
-/// The file name of a path.
-pub fn file_name(path: &str) -> &str {
-    path.rsplit('/').next().unwrap_or(path)
-}
-
-/// Joins a folder and a name.
-pub fn join(folder: &str, name: &str) -> String {
-    if folder.is_empty() {
-        name.to_owned()
-    } else {
-        format!("{folder}/{name}")
-    }
 }
 
 #[cfg(test)]

@@ -319,15 +319,19 @@ fn update_line(task: &TaskLine, u: &TaskUpdate) -> TaskLine {
     t
 }
 
-/// The canonical line of a `task.create` (`TaskSpec::render`: description, reminders, Tasks
-/// fields in plugin order, `^<id>`). Fails when the ID is not a valid block ID or when the
-/// line would not read back as exactly the op's fields.
+/// The canonical line of a `task.create` (`TaskSpec::render`: the description trimmed,
+/// reminders, Tasks fields in plugin order, `^<id>`). Fails when the ID is not a valid block
+/// ID, when the text has a line break, or when the line would not read back as exactly the
+/// op's fields.
 pub fn task_create_line(op: &TaskCreate) -> Result<String, ApplyError> {
     if !op.id.starts_with("t-") || !is_valid_block_id(&op.id) {
         return Err(TaskError::InvalidBlockId(op.id.clone()).into());
     }
+    if op.text.contains(['\n', '\r']) {
+        return Err(ApplyError::InvalidTask(op.id.clone()));
+    }
     let spec = TaskSpec {
-        description: op.text.clone(),
+        description: op.text.trim().to_owned(),
         priority: op.priority.filter(|p| *p != Priority::Normal),
         recurrence: op.recurrence.clone(),
         start: op.start,

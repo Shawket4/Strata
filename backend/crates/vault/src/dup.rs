@@ -152,7 +152,10 @@ pub async fn find_with(
     )
     .await?;
     drop(pt);
-    crate::prof::add("dup.blobs(us=count)", std::time::Duration::from_micros(blobs.len() as u64));
+    crate::prof::add(
+        "dup.blobs(us=count)",
+        std::time::Duration::from_micros(blobs.len() as u64),
+    );
     let pt = crate::prof::g("dup.semantic");
     let mut existing: Vec<Existing> = blobs
         .iter()

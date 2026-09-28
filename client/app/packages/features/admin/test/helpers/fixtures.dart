@@ -10,6 +10,11 @@ abstract final class AdminFixtures {
     String status = 'active',
     DateTime? deletionAt,
     DateTime? exportDownloadedAt,
+    String initials = '',
+    String created = '12 Sep',
+    String? deletionLabel,
+    bool isSelf = false,
+    bool passwordChangeRequired = false,
   }) => AdminUserItem(
     id: id,
     username: username,
@@ -19,30 +24,67 @@ abstract final class AdminFixtures {
     created: DateTime.utc(2026, 9, 12, 9),
     deletionAt: deletionAt,
     exportDownloadedAt: exportDownloadedAt,
-    initials: '',
-    isSelf: false,
-    createdLabel: '',
-    passwordChangeRequired: false,
+    initials: initials,
+    isSelf: isSelf,
+    createdLabel: created,
+    deletionLabel: deletionLabel,
+    passwordChangeRequired: passwordChangeRequired,
   );
 
   /// Two pending approvals and five accounts.
   static final AdminUsersView view = AdminUsersView(
     availability: Availability.available,
     pending: [
-      _user('u-sara', 'sara.n', 'Sara Nabil', status: 'pending'),
-      _user('u-youssef', 'youssef.k', 'Youssef Kamal', status: 'pending'),
+      _user(
+        'u-sara',
+        'sara.n',
+        'Sara Nabil',
+        status: 'pending',
+        initials: 'SN',
+        created: '2h ago',
+      ),
+      _user(
+        'u-youssef',
+        'youssef.k',
+        'Youssef Kamal',
+        status: 'pending',
+        initials: 'YK',
+        created: '5h ago',
+      ),
     ],
     users: [
-      _user('u-shawket', 'shawket', 'Shawket', role: 'admin'),
-      _user('u-ahmed', 'ahmed.s', 'Ahmed Samir'),
+      _user(
+        'u-shawket',
+        'shawket',
+        'Shawket',
+        role: 'admin',
+        initials: 'S',
+        created: '4 Jan',
+        isSelf: true,
+      ),
+      _user(
+        'u-ahmed',
+        'ahmed.s',
+        'Ahmed Samir',
+        initials: 'AS',
+        passwordChangeRequired: true,
+      ),
       _user(
         'u-karim',
         'karim',
         'Karim Adel',
         status: 'deletion_pending',
         deletionAt: DateTime.utc(2026, 10, 11, 9),
+        deletionLabel: '11 Oct',
+        initials: 'KA',
       ),
-      _user('u-mona', 'mona.h', 'Mona Hassan', status: 'disabled'),
+      _user(
+        'u-mona',
+        'mona.h',
+        'Mona Hassan',
+        status: 'disabled',
+        initials: 'MH',
+      ),
       _user(
         'u-nour',
         'nour',
@@ -50,6 +92,8 @@ abstract final class AdminFixtures {
         status: 'deletion_pending',
         deletionAt: DateTime.utc(2026, 10, 11, 9),
         exportDownloadedAt: DateTime.utc(2026, 9, 26, 9),
+        deletionLabel: '11 Oct',
+        initials: 'NA',
       ),
     ],
     query: '',
@@ -61,6 +105,14 @@ abstract final class AdminFixtures {
     pending: const [],
     users: view.users,
     query: '',
+  );
+
+  /// The list for a search that matches nobody.
+  static final AdminUsersView noMatch = AdminUsersView(
+    availability: Availability.available,
+    pending: const [],
+    users: const [],
+    query: 'zed',
   );
 
   /// Availability only.

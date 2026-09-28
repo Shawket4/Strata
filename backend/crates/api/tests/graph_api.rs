@@ -439,12 +439,12 @@ async fn maps_are_saved_as_validated_json_canvas_and_follow_note_renames() {
                 field(
                     "invalid_file",
                     "/content",
-                    "file node references `.meta/notes/x.json`, which is not a file of this vault",
+                    "a file node references a path that is not a visible vault file",
                 ),
                 field(
                     "unknown_file",
                     "/content",
-                    "file node references `notes/Missing.md`, which is not a file of this vault",
+                    "a file node references a file that does not exist in this vault",
                 ),
             ],
             ..plain(

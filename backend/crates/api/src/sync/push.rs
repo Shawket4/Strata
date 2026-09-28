@@ -449,33 +449,11 @@ async fn apply(
             }
         }
         Op::DocumentCreate(p) => {
-            let mut fields = BTreeMap::new();
-            if let Some(t) = &p.doc_type {
-                fields.insert("doc-type".to_owned(), t.clone());
-            }
-            if let Some(c) = p.copy {
-                fields.insert("copy".to_owned(), c.as_str().to_owned());
-            }
-            if let Some(e) = p.expires {
-                fields.insert("expires".to_owned(), e.format("%Y-%m-%d").to_string());
-            }
-            let (Some(copy_of), Some(companies), Some(people)) = (
-                relation("copy-of"),
-                relation("companies"),
-                relation("people"),
-            ) else {
-                return Err(Problem::new(ProblemType::Internal));
-            };
-            let mut links: Vec<(RelationKey, NoteId)> = Vec::new();
-            if let Some(c) = p.copy_of {
-                links.push((copy_of, NoteId::from_ulid(c)));
-            }
-            links.extend(
-                p.companies
-                    .iter()
-                    .map(|c| (companies, NoteId::from_ulid(*c))),
-            );
-            links.extend(p.people.iter().map(|c| (people, NoteId::from_ulid(*c))));
+            let fields = item_render::entity::document_fields(p);
+            let links: Vec<(RelationKey, NoteId)> = item_render::entity::document_relations(p)
+                .into_iter()
+                .map(|(rel, id)| (rel, NoteId::from_ulid(id)))
+                .collect();
             let req = NewEntity {
                 kind: NoteKind::Document,
                 name: p.name.clone(),
@@ -507,10 +485,7 @@ async fn apply(
             }
         }
         Op::PlaceCreate(p) => {
-            let mut fields = BTreeMap::new();
-            if let Some(a) = &p.address {
-                fields.insert("address".to_owned(), a.clone());
-            }
+            let fields = item_render::entity::place_fields(p);
             let req = NewEntity {
                 kind: NoteKind::Place,
                 name: p.name.clone(),
@@ -560,10 +535,6 @@ async fn apply(
         }
         Op::DeviceSettings(p) => device_settings(ctx, rc, p).await?,
     })
-}
-
-fn relation(key: &str) -> Option<RelationKey> {
-    key.parse().ok()
 }
 
 async fn current_version(ctx: &PushContext<'_>, id: NoteId) -> Option<String> {
@@ -742,15 +713,9 @@ async fn note_update(
     ))
 }
 
-/// The path of a conflict copy of `path` made at `at`.
+/// The path of a conflict copy of `path` made at `at` (the shared rule, in UTC).
 pub fn conflict_path(path: &str, at: DateTime<Utc>, n: u32) -> String {
-    let stem = path.strip_suffix(".md").unwrap_or(path);
-    let stamp = at.format("%Y-%m-%d %H%M%S");
-    if n <= 1 {
-        format!("{stem} (conflict {stamp}).md")
-    } else {
-        format!("{stem} (conflict {stamp} {n}).md")
-    }
+    item_render::paths::conflict_copy_path(path, at.naive_utc(), n)
 }
 
 /// Saves the device's content as a conflict copy, then records the `conflict` suggestion:

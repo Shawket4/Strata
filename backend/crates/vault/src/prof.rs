@@ -22,11 +22,17 @@ pub fn g(k: &'static str) -> G {
     G(k, Instant::now())
 }
 pub fn reset() {
-    T.lock().unwrap_or_else(std::sync::PoisonError::into_inner).clear();
+    T.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .clear();
 }
 pub fn dump(label: &str) {
     let t = T.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     for (k, (d, n)) in t.iter() {
-        eprintln!("prof[{label}] {k:40} total {:>10.1} ms  n {n:>6}  avg {:>8.3} ms", d.as_secs_f64() * 1e3, d.as_secs_f64() * 1e3 / (*n as f64).max(1.0));
+        eprintln!(
+            "prof[{label}] {k:40} total {:>10.1} ms  n {n:>6}  avg {:>8.3} ms",
+            d.as_secs_f64() * 1e3,
+            d.as_secs_f64() * 1e3 / (*n as f64).max(1.0)
+        );
     }
 }

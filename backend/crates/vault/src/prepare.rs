@@ -5,7 +5,6 @@ use std::collections::BTreeSet;
 
 use chrono::{DateTime, FixedOffset};
 use strata_common::{IdGenerator, NoteId};
-use vault_format::frontmatter::format_timestamp;
 use vault_format::sidecar::NoteSidecar;
 use vault_format::tasks::extract_tasks;
 use vault_format::{Document, PathIndex, RelationKey, Resolution};
@@ -55,34 +54,30 @@ pub fn assign_task_ids(body: &str, ids: &dyn IdGenerator, taken: &BTreeSet<Strin
 }
 
 /// Frontmatter edits that make `doc` a valid note with `id`: sets `id` (if missing or
-/// different), `created` (if missing) and `updated` (if given).
+/// different), `created` (if missing) and `updated` (if given). The shared rule
+/// (`item_render::note::stamp`) with the vault's error messages.
 pub fn stamp(
     doc: &mut Document,
     id: NoteId,
     created: Option<&DateTime<FixedOffset>>,
     updated: Option<&DateTime<FixedOffset>>,
 ) -> Result<()> {
-    let fm = doc.frontmatter_mut();
-    if let Some(e) = fm.error() {
-        return Err(VaultError::Invalid(
+    item_render::note::stamp(doc, id.as_ulid(), created, updated).map_err(|e| render_error(&e))
+}
+
+/// A shared rendering error as a vault error (no user content in the message).
+pub fn render_error(e: &item_render::RenderError) -> VaultError {
+    match e {
+        item_render::RenderError::Unreadable(e) => VaultError::Invalid(
             format!("the frontmatter cannot be edited: {}", error_kind(e)).into(),
-        ));
+        ),
+        item_render::RenderError::Property { key, .. } => match key.as_str() {
+            "id" => VaultError::invalid("the id property could not be set"),
+            "created" => VaultError::invalid("the created property could not be set"),
+            "updated" => VaultError::invalid("the updated property could not be set"),
+            _ => VaultError::invalid("the property could not be set"),
+        },
     }
-    if fm.id().ok().flatten() != Some(id.as_ulid()) {
-        fm.set_id(id.as_ulid())
-            .map_err(|_| VaultError::invalid("the id property could not be set"))?;
-    }
-    if let Some(c) = created
-        && fm.created().ok().flatten().is_none()
-    {
-        fm.set_text(vault_format::KnownKey::Created, format_timestamp(c))
-            .map_err(|_| VaultError::invalid("the created property could not be set"))?;
-    }
-    if let Some(u) = updated {
-        fm.set_text(vault_format::KnownKey::Updated, format_timestamp(u))
-            .map_err(|_| VaultError::invalid("the updated property could not be set"))?;
-    }
-    Ok(())
 }
 
 fn error_kind(e: &vault_format::FrontmatterError) -> &'static str {

@@ -168,16 +168,13 @@ class AdminLocalizationsEn extends AdminLocalizations {
       'Reset password gives you a one-time password to pass on.';
 
   @override
-  String get notAvailableYet => 'Not available yet';
-
-  @override
   String scheduleTitle({required String username}) {
     return 'Schedule deletion of @$username?';
   }
 
   @override
-  String scheduleBody({required String name, required String date}) {
-    return '$name\'s account is signed out everywhere and deleted on $date. Until then $name can sign in only to download an export of their notes. You won\'t see the export.';
+  String scheduleBody({required String name}) {
+    return '$name\'s account is signed out everywhere and deleted when the grace period ends. Until then $name can sign in only to download an export of their notes. You won\'t see the export.';
   }
 
   @override
@@ -241,5 +238,70 @@ class AdminLocalizationsEn extends AdminLocalizations {
   @override
   String atUsername({required String username}) {
     return '@$username';
+  }
+
+  @override
+  String get you => 'you';
+
+  @override
+  String get yourAccount => 'Your account';
+
+  @override
+  String get searchLabel => 'Search users';
+
+  @override
+  String noMatches({required String query}) {
+    return 'No user matches “$query”.';
+  }
+
+  @override
+  String roleSemantics({required String name}) {
+    return 'Role of $name';
+  }
+
+  @override
+  String get makeAdmin => 'Make admin';
+
+  @override
+  String get makeMember => 'Make member';
+
+  @override
+  String get passwordChangePending => 'Must choose a new password';
+
+  @override
+  String get createTitle => 'Create account';
+
+  @override
+  String get createBody =>
+      'The account is active right away. Pass the password on privately; they choose a new one after signing in.';
+
+  @override
+  String get fieldUsername => 'Username';
+
+  @override
+  String get fieldDisplayName => 'Display name';
+
+  @override
+  String get fieldPassword => 'Temporary password';
+
+  @override
+  String get fieldRole => 'Role';
+
+  @override
+  String get create => 'Create';
+
+  @override
+  String created({required String username}) {
+    return 'Account @$username created';
+  }
+
+  @override
+  String approved({required String name}) {
+    return '$name approved';
+  }
+
+  @override
+  String rejected({required String name}) {
+    return '$name rejected';
   }
 }

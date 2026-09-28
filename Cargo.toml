@@ -7,6 +7,7 @@ members = [
     "crates/sync-model",
     "crates/graph-algo",
     "crates/dedupe",
+    "crates/item-render",
     "backend/crates/common",
     "backend/crates/api",
     "backend/crates/vault",
@@ -53,6 +54,7 @@ domain = { path = "crates/domain" }
 sync-model = { path = "crates/sync-model" }
 graph-algo = { path = "crates/graph-algo" }
 dedupe = { path = "crates/dedupe" }
+item-render = { path = "crates/item-render" }
 strata-common = { path = "backend/crates/common" }
 strata-api = { path = "backend/crates/api" }
 strata-vault = { path = "backend/crates/vault" }

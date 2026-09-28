@@ -356,23 +356,17 @@ abstract class AdminLocalizations {
   /// **'Reset password gives you a one-time password to pass on.'**
   String get footnoteReset;
 
-  /// Tooltip of an action the app cannot perform yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not available yet'**
-  String get notAvailableYet;
-
   /// Schedule deletion confirmation title.
   ///
   /// In en, this message translates to:
   /// **'Schedule deletion of @{username}?'**
   String scheduleTitle({required String username});
 
-  /// Schedule deletion confirmation body.
+  /// Schedule deletion confirmation body (the purge date is known only once scheduled).
   ///
   /// In en, this message translates to:
-  /// **'{name}\'s account is signed out everywhere and deleted on {date}. Until then {name} can sign in only to download an export of their notes. You won\'t see the export.'**
-  String scheduleBody({required String name, required String date});
+  /// **'{name}\'s account is signed out everywhere and deleted when the grace period ends. Until then {name} can sign in only to download an export of their notes. You won\'t see the export.'**
+  String scheduleBody({required String name});
 
   /// Cancels a dialog.
   ///
@@ -481,6 +475,114 @@ abstract class AdminLocalizations {
   /// In en, this message translates to:
   /// **'@{username}'**
   String atUsername({required String username});
+
+  /// Badge next to the signed-in admin's own row.
+  ///
+  /// In en, this message translates to:
+  /// **'you'**
+  String get you;
+
+  /// Actions cell of the admin's own row.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account'**
+  String get yourAccount;
+
+  /// Search field label.
+  ///
+  /// In en, this message translates to:
+  /// **'Search users'**
+  String get searchLabel;
+
+  /// Empty search result.
+  ///
+  /// In en, this message translates to:
+  /// **'No user matches “{query}”.'**
+  String noMatches({required String query});
+
+  /// Role picker label.
+  ///
+  /// In en, this message translates to:
+  /// **'Role of {name}'**
+  String roleSemantics({required String name});
+
+  /// Compact action: set role to admin.
+  ///
+  /// In en, this message translates to:
+  /// **'Make admin'**
+  String get makeAdmin;
+
+  /// Compact action: set role to member.
+  ///
+  /// In en, this message translates to:
+  /// **'Make member'**
+  String get makeMember;
+
+  /// Status note after a reset.
+  ///
+  /// In en, this message translates to:
+  /// **'Must choose a new password'**
+  String get passwordChangePending;
+
+  /// Create account dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get createTitle;
+
+  /// Create account dialog body.
+  ///
+  /// In en, this message translates to:
+  /// **'The account is active right away. Pass the password on privately; they choose a new one after signing in.'**
+  String get createBody;
+
+  /// Create account field.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get fieldUsername;
+
+  /// Create account field.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get fieldDisplayName;
+
+  /// Create account field.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary password'**
+  String get fieldPassword;
+
+  /// Create account field.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get fieldRole;
+
+  /// Create account confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get create;
+
+  /// Snack bar after creating an account.
+  ///
+  /// In en, this message translates to:
+  /// **'Account @{username} created'**
+  String created({required String username});
+
+  /// Snack bar after approving.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} approved'**
+  String approved({required String name});
+
+  /// Snack bar after rejecting.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} rejected'**
+  String rejected({required String name});
 }
 
 class _AdminLocalizationsDelegate
