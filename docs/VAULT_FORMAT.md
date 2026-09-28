@@ -591,14 +591,14 @@ Tasks created without a home note (PLAN §6.11) go to `tasks/Tasks.md`
       "confidence": 0.91,
       "reason": "Signs as Operations manager, Acme Logistics.",
       "model": "claude-code/opus",
-      "created": "2026-09-27T15:12:00+03:00"
+      "created": "2026-09-27T12:12:00Z"
     }
   ],
   "rejected": [
-    { "type": "related", "target_id": "01J8ZKB0000000000000000000", "at": "2026-09-27T16:00:00+03:00" }
+    { "type": "related", "target_id": "01J8ZKB0000000000000000000", "at": "2026-09-27T13:00:00Z" }
   ],
   "keep_both": [
-    { "other_id": "01J9…", "at": "2026-09-28T10:00:00+03:00" }
+    { "other_id": "01J9…", "at": "2026-09-28T07:00:00Z" }
   ],
   "content_hash": "sha256:…",
   "last_linked_hash": "sha256:…"
@@ -617,7 +617,7 @@ Tasks created without a home note (PLAN §6.11) go to `tasks/Tasks.md`
 ```json
 {
   "version": 1,
-  "generated": "2026-09-27T03:00:00+03:00",
+  "generated": "2026-09-27T00:00:00Z",
   "algorithm": "leiden",
   "clusters": [
     { "id": 1, "name": "Logistics", "named_by": "ai", "notes": [] },

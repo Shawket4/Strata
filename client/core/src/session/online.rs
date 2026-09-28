@@ -545,10 +545,12 @@ impl Session {
         name: &str,
         positions: &[crate::view::model::NodePosition],
     ) -> CoreResult<String> {
-        let name = vault_format::filename::sanitize_file_name(name.trim());
-        if name.is_empty() {
+        // Checked before sanitising: the sanitiser turns a blank name into `Untitled`, which
+        // would silently replace whatever map already has that name.
+        if name.trim().is_empty() {
             return Err(CoreError::invalid("name", "empty"));
         }
+        let name = vault_format::filename::sanitize_file_name(name.trim());
         let content =
             self.read(|c, ctx| crate::graph::layout_canvas(c, ctx, center_id, positions))?;
         let url = self.server_url()?;
