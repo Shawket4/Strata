@@ -30,7 +30,7 @@ async fn devices_are_listed_renamed_muted_and_revoked() {
 
     s1.refresh_settings().await.expect("refresh");
     let view = s1
-        .read(|c, ctx| build::settings(c, ctx))
+        .read(|c, ctx| build::settings_view(c, ctx))
         .expect("settings");
     println!("{view:#?}");
     w.finish().await;

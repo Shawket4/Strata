@@ -2,10 +2,10 @@
 //! (`strata_core::store::write::apply_to_note`) render new items through the same shared
 //! code (`item-render`, `sync-model`), so for the same op they write the same bytes. Each
 //! case runs the op on a real vault (per-test `PostgreSQL` database, fake clock) and on the
-//! device, then compares the files byte for byte. The only inputs the device cannot know are
-//! the server's clock (`created`/`updated` of new entity notes and plain notes) and the ID the
-//! server gives a new `tasks/Tasks.md`; for those the device's bytes stamped with the server's
-//! values must equal the server's file.
+//! device, then compares the files byte for byte. Every input comes from the op — IDs (a new
+//! `tasks/Tasks.md` included) and the device's creation time, which is not the server's
+//! clock — so the files are identical with no adjustment. The user's time zone is Cairo on
+//! both sides; every time is written in UTC.
 //!
 //! Needs `PostgreSQL` (`STRATA_TEST_DATABASE_URL` or the testkit default).
 
@@ -14,10 +14,11 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
+use chrono_tz::Tz;
 use domain::{CopyKind, CustodyEventType, NoteKind};
 use pretty_assertions::assert_eq;
-use strata_common::{Clock as _, NoteId, UserId};
+use strata_common::{NoteId, UserId};
 use strata_core::store::notes::NoteState;
 use strata_core::store::write::{Links, apply_to_note};
 use strata_core::sync::model::Op;
@@ -55,6 +56,17 @@ impl Server {
         let user = TestUser::new("alice").create(&db).await.expect("user").id;
         assert!(vault.provision(user).await.expect("provision"));
         let scope = db.scope(user);
+        // The account's time zone (month headings of `tasks/Tasks.md`).
+        let mut tx = db.begin(user).await.expect("tx");
+        strata_index::repo::settings::put_setting(
+            &mut tx,
+            "timezone",
+            &rmp_serde::to_vec("Africa/Cairo").expect("encode"),
+            DateTime::UNIX_EPOCH,
+        )
+        .await
+        .expect("timezone");
+        tx.commit().await.expect("commit");
         Self {
             db,
             _data: data,
@@ -77,11 +89,6 @@ impl Server {
         }
     }
 
-    /// The server's clock as the vault writes it (the user's time zone is UTC).
-    fn now(&self) -> DateTime<FixedOffset> {
-        self.db.clock.now().fixed_offset()
-    }
-
     async fn finish(self) {
         drop(self.vault);
         self.db.cleanup().await.expect("cleanup");
@@ -96,6 +103,18 @@ impl Links for DeviceLinks<'_> {
         let index = PathIndex::new(self.0.values().map(String::as_str));
         self.0.get(&id).map(|p| index.link_text_for(p))
     }
+
+    fn time_zone(&self) -> Tz {
+        chrono_tz::Africa::Cairo
+    }
+
+    fn taken_paths(&self, except: Ulid) -> Vec<String> {
+        self.0
+            .iter()
+            .filter(|(id, _)| **id != except)
+            .map(|(_, p)| p.clone())
+            .collect()
+    }
 }
 
 /// What the device writes for `op` on `state`.
@@ -105,12 +124,17 @@ fn device(server: &Server, state: Option<NoteState>, op: &Op) -> NoteState {
         .expect("a note")
 }
 
-/// `content` stamped with the server's `id`, `created` and `updated`.
-fn stamped(content: &str, id: Ulid, at: &DateTime<FixedOffset>) -> String {
-    let mut doc = Document::parse(content);
-    item_render::note::stamp(&mut doc, id, Some(at), Some(at)).expect("stamp");
-    doc.render()
+/// The device's creation time of every item: "Monday" 08:15:30 UTC (11:15:30 in Cairo), a
+/// day before the server's clock (2026-09-27T12:00:00Z), so a file carrying the server's
+/// clock would differ.
+fn monday() -> DateTime<Utc> {
+    DateTime::parse_from_rfc3339("2026-09-26T08:15:30.250Z")
+        .expect("ts")
+        .to_utc()
 }
+
+/// `created`/`updated` as both sides write them for [`monday`]: UTC, whole seconds.
+const STAMP: &str = "created: 2026-09-26T08:15:30Z\nupdated: 2026-09-26T08:15:30Z\n";
 
 fn ulid(n: u128) -> Ulid {
     // 2026-09-27T12:00:00Z, the fake clock's epoch (task block IDs carry their creation time).
@@ -128,10 +152,12 @@ fn date(s: &str) -> NaiveDate {
 #[tokio::test]
 async fn server_and_device_render_new_items_identically() {
     let mut s = Server::new().await;
-    let now = s.now();
 
-    // Capture: same path, same bytes (the capture time and ID come from the device).
-    let created = DateTime::parse_from_rfc3339("2026-09-27T14:32:05+03:00").expect("ts");
+    // Capture: same path, same bytes (the capture time and ID come from the device; the file
+    // is named in UTC: 14:32:05 in Cairo is 11:32:05Z).
+    let created = DateTime::parse_from_rfc3339("2026-09-27T14:32:05+03:00")
+        .expect("ts")
+        .to_utc();
     let capture = ops::Capture {
         id: ulid(0x100),
         text: "كلمت أحمد النهارده\r\nعن الفاتورة".into(),
@@ -148,7 +174,14 @@ async fn server_and_device_render_new_items_identically() {
         .await
         .expect("capture");
     let local = device(&s, None, &Op::Capture(capture.clone()));
-    assert_eq!(local.path, "inbox/2026-09-27-143205.md");
+    assert_eq!(local.path, "inbox/2026-09-27-113205.md");
+    assert_eq!(
+        local.content,
+        format!(
+            "---\nid: {}\ncreated: 2026-09-27T11:32:05Z\n---\nكلمت أحمد النهارده\r\nعن الفاتورة\n",
+            capture.id
+        )
+    );
     assert_eq!(
         (local.path.as_str(), local.content.as_str()),
         (
@@ -167,7 +200,7 @@ async fn server_and_device_render_new_items_identically() {
         )
         .await
         .expect("capture");
-    assert_eq!(again.note.path, "inbox/2026-09-27-143205 2.md");
+    assert_eq!(again.note.path, "inbox/2026-09-27-113205 2.md");
     assert_eq!(
         item_render::paths::capture_path(&created, [server.note.path.as_str()]),
         again.note.path
@@ -180,6 +213,7 @@ async fn server_and_device_render_new_items_identically() {
         name: " Shady: ops ".into(),
         aliases: vec![" شادي ".into(), "#Shady".into(), "شادي".into()],
         fields: BTreeMap::from([("role".to_owned(), "Operations".to_owned())]),
+        created: monday(),
         force: true,
     };
     let view = s
@@ -194,6 +228,7 @@ async fn server_and_device_render_new_items_identically() {
                 fields: person.fields.clone(),
                 parent: None,
                 id: Some(NoteId::from_ulid(person.id)),
+                created: person.created,
                 force: true,
             },
         )
@@ -204,11 +239,11 @@ async fn server_and_device_render_new_items_identically() {
     assert_eq!(
         local.content,
         format!(
-            "---\nid: {}\nkind: person\ntitle: \"Shady: ops\"\naliases: [شادي, Shady]\nrole: Operations\n---\n## Notes\n",
+            "---\nid: {}\nkind: person\ntitle: \"Shady: ops\"\naliases: [شادي, Shady]\n{STAMP}role: Operations\n---\n## Notes\n",
             person.id
         )
     );
-    assert_eq!(stamped(&local.content, person.id, &now), s.read(&view.path));
+    assert_eq!(local.content, s.read(&view.path));
     s.paths.insert(person.id, view.path);
 
     // Company, then places (one inside the other).
@@ -218,6 +253,7 @@ async fn server_and_device_render_new_items_identically() {
         name: "Watanya".into(),
         aliases: Vec::new(),
         fields: BTreeMap::new(),
+        created: monday(),
         force: true,
     };
     let view = s
@@ -232,6 +268,7 @@ async fn server_and_device_render_new_items_identically() {
                 fields: BTreeMap::new(),
                 parent: None,
                 id: Some(NoteId::from_ulid(company.id)),
+                created: company.created,
                 force: true,
             },
         )
@@ -239,13 +276,49 @@ async fn server_and_device_render_new_items_identically() {
         .expect("company");
     let local = device(&s, None, &Op::EntityCreate(company.clone()));
     assert_eq!(
-        (
-            local.path.as_str(),
-            stamped(&local.content, company.id, &now)
-        ),
-        (view.path.as_str(), s.read(&view.path))
+        (local.path.as_str(), local.content.as_str()),
+        (view.path.as_str(), s.read(&view.path).as_str())
     );
     s.paths.insert(company.id, view.path);
+
+    // The title rule on a taken name: a second "Watanya" is `Watanya 2.md` with
+    // `title: Watanya`, on the server and on the device alike.
+    let second = ops::EntityCreate {
+        id: ulid(0x202),
+        ..company.clone()
+    };
+    let view = s
+        .vault
+        .create_entity(
+            &s.scope,
+            NewEntity {
+                kind: NoteKind::Company,
+                name: "Watanya".into(),
+                aliases: Vec::new(),
+                tags: Vec::new(),
+                fields: BTreeMap::new(),
+                parent: None,
+                id: Some(NoteId::from_ulid(second.id)),
+                created: second.created,
+                force: true,
+            },
+        )
+        .await
+        .expect("second company");
+    let local = device(&s, None, &Op::EntityCreate(second.clone()));
+    assert_eq!(local.path, "companies/Watanya 2.md");
+    assert_eq!(
+        local.content,
+        format!(
+            "---\nid: {}\nkind: company\ntitle: Watanya\n{STAMP}---\n## Notes\n",
+            second.id
+        )
+    );
+    assert_eq!(
+        (local.path.as_str(), local.content.as_str()),
+        (view.path.as_str(), s.read(&view.path).as_str())
+    );
+    s.paths.insert(second.id, view.path);
 
     let mut places = Vec::new();
     for (n, name, parent, address) in [
@@ -258,6 +331,7 @@ async fn server_and_device_render_new_items_identically() {
             aliases: Vec::new(),
             parent_id: parent,
             address: address.map(str::to_owned),
+            created: monday(),
             force: true,
         };
         let view = s
@@ -272,6 +346,7 @@ async fn server_and_device_render_new_items_identically() {
                     fields: item_render::entity::place_fields(&op),
                     parent: op.parent_id.map(NoteId::from_ulid),
                     id: Some(NoteId::from_ulid(op.id)),
+                    created: op.created,
                     force: true,
                 },
             )
@@ -279,8 +354,8 @@ async fn server_and_device_render_new_items_identically() {
             .expect("place");
         let local = device(&s, None, &Op::PlaceCreate(op.clone()));
         assert_eq!(
-            (local.path.as_str(), stamped(&local.content, op.id, &now)),
-            (view.path.as_str(), s.read(&view.path))
+            (local.path.as_str(), local.content.as_str()),
+            (view.path.as_str(), s.read(&view.path).as_str())
         );
         s.paths.insert(op.id, view.path);
         places.push(local);
@@ -288,7 +363,7 @@ async fn server_and_device_render_new_items_identically() {
     assert_eq!(
         places[1].content,
         format!(
-            "---\nid: {}\nkind: place\npart-of: [\"[[Nasr City office]]\"]\n---\n## Notes\n",
+            "---\nid: {}\nkind: place\n{STAMP}part-of: [\"[[Nasr City office]]\"]\n---\n## Notes\n",
             ulid(0x301)
         )
     );
@@ -304,6 +379,7 @@ async fn server_and_device_render_new_items_identically() {
         companies: vec![company.id],
         people: vec![person.id, person.id],
         expires: Some(date("2027-03-31")),
+        created: monday(),
         force: true,
     };
     let copy = ops::DocumentCreate {
@@ -316,6 +392,7 @@ async fn server_and_device_render_new_items_identically() {
         companies: Vec::new(),
         people: Vec::new(),
         expires: None,
+        created: monday(),
         force: true,
     };
     for op in [&original, &copy] {
@@ -335,6 +412,7 @@ async fn server_and_device_render_new_items_identically() {
                     fields: item_render::entity::document_fields(op),
                     parent: None,
                     id: Some(NoteId::from_ulid(op.id)),
+                    created: op.created,
                     force: true,
                 },
                 links,
@@ -343,8 +421,8 @@ async fn server_and_device_render_new_items_identically() {
             .expect("document");
         let local = device(&s, None, &Op::DocumentCreate(op.clone()));
         assert_eq!(
-            (local.path.as_str(), stamped(&local.content, op.id, &now)),
-            (view.path.as_str(), s.read(&view.path))
+            (local.path.as_str(), local.content.as_str()),
+            (view.path.as_str(), s.read(&view.path).as_str())
         );
         s.paths.insert(op.id, view.path);
     }
@@ -352,10 +430,9 @@ async fn server_and_device_render_new_items_identically() {
         s.state(original.id).content,
         format!(
             "---\nid: {id}\nkind: document\naliases: [عقد وطنية]\n\
-             created: {t}\nupdated: {t}\ndoc-type: contract\ncopy: original\n\
+             {STAMP}doc-type: contract\ncopy: original\n\
              expires: 2027-03-31\npeople: [\"[[Shady - ops]]\"]\ncompanies: [\"[[Watanya]]\"]\n---\n## Notes\n",
             id = original.id,
-            t = "2026-09-27T12:00:00+00:00"
         )
     );
 
