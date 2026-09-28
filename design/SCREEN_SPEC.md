@@ -29,7 +29,7 @@ Light (default):
 Dark (used for a few artboards):
 - bg `#0F1B26`, surface `#15283A`, surface-2 `#1B3044`, border `#23384A`
 - text `#F1F5F7`, text-2 `#93A3AD`
-- accent fill `#2477B3`, accent text `#6CB4DD` (surf), accent tint `#1B3A55`
+- accent `#2477B3` (mark, icons, large graphics), accent fill for filled buttons `#6CB4DD` with abyss `#0F1B26` text, accent text `#6CB4DD` (surf), accent tint `#1B3A55`
 
 Radii: 8 (inputs, chips 999), 12 (cards), 16 (sheets). Spacing on a 4 px grid; common gaps 8/12/16/24. Elevation: prefer hairline borders; one soft shadow `0 8px 24px rgba(15,27,38,0.12)` only for sheets/popovers.
 
