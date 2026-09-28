@@ -31,6 +31,11 @@ reports, so nginx must **overwrite** the header rather than append to what the c
 `proxy_set_header X-Forwarded-For $remote_addr;` (not `$proxy_add_x_forwarded_for`) and no
 `Forwarded` header passed through.
 
+`max_future_skew_secs` (default 300) is how far ahead of the server's clock a device's creation
+time may be before a create is refused with `422 created_in_future`: a device whose clock is
+wrong sees its creates rejected until the clock is fixed; items created offline in the past are
+always accepted with their own time.
+
 Every key, with its default and a comment, is in `deploy/stratad.example.toml` (a test keeps it
 in step with `strata_common::Config::default`); start from it and change what differs.
 
