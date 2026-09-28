@@ -67,6 +67,9 @@ class SignInScreen extends HookConsumerWidget {
         } else {
           failure.value = l10n.failure(error);
         }
+      } on Object catch (error, stack) {
+        reportUntypedFailure(error, stack, action: 'signing in');
+        failure.value = l10n.errorUnreachable;
       } finally {
         if (context.mounted) busy.value = false;
       }
@@ -78,6 +81,9 @@ class SignInScreen extends HookConsumerWidget {
         await ref.read(coreApiProvider).switchAccount(userId: userId);
       } on CoreFailure catch (error) {
         failure.value = l10n.failure(error);
+      } on Object catch (error, stack) {
+        reportUntypedFailure(error, stack, action: 'switching account');
+        failure.value = l10n.errorUnreachable;
       }
     }
 

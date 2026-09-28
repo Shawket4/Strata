@@ -187,6 +187,14 @@ Future<void> _saveTo<T>(
     messenger
       ?..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+  } on Object catch (error, stack) {
+    // Some saves are local (unsynced changes): a generic message.
+    reportUntypedFailure(error, stack, action: 'saving a file');
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(l10n.errorGeneric(code: 'internal'))),
+      );
   }
 }
 
@@ -282,6 +290,9 @@ class AccountDisabledScreen extends HookConsumerWidget {
         await ref.read(coreApiProvider).acknowledgeAccountDisabled();
       } on CoreFailure catch (error) {
         messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+      } on Object catch (error, stack) {
+        reportUntypedFailure(error, stack, action: 'acknowledging');
+        messenger?.showSnackBar(SnackBar(content: Text(l10n.errorUnreachable)));
       } finally {
         if (context.mounted) busy.value = false;
       }
@@ -554,6 +565,9 @@ Future<void> _deleteNow(
     await core.deleteAccountNow(force: unsynced > 0);
   } on CoreFailure catch (error) {
     messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+  } on Object catch (error, stack) {
+    reportUntypedFailure(error, stack, action: 'deleting the account');
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.errorUnreachable)));
   }
 }
 
@@ -588,6 +602,9 @@ class PasswordChangeRequiredScreen extends HookConsumerWidget {
             .changePassword(current: current.text, new_: password.text);
       } on CoreFailure catch (error) {
         failure.value = l10n.failure(error);
+      } on Object catch (error, stack) {
+        reportUntypedFailure(error, stack, action: 'changing the password');
+        failure.value = l10n.errorUnreachable;
       } finally {
         if (context.mounted) busy.value = false;
       }

@@ -316,6 +316,10 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   String get errorNotAvailable => 'ده مش متاح لسه.';
 
   @override
+  String get errorUnreachable =>
+      'ماقدرناش نوصل للخادم. اتأكد من الاتصال وحاول تاني.';
+
+  @override
   String errorGeneric({required String code}) {
     return 'حصل خطأ ($code).';
   }

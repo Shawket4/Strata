@@ -31,6 +31,43 @@ void main() {
       expect(find.byType(AdaptiveScaffold), findsOneWidget);
     });
 
+    group('splash bands', () {
+      for (final v in variants()) {
+        testWidgets('phones drop the seam; the bands run under the inset $v', (
+          tester,
+        ) async {
+          tester.view.padding = const FakeViewPadding(bottom: 24);
+          addTearDown(tester.view.resetPadding);
+          await boot(
+            tester,
+            bootstrap: FakeBootstrap(gate: Completer<void>()),
+            size: v.size,
+            brightness: v.brightness,
+            locale: v.locale,
+            textScale: v.textScale,
+          );
+          final bands = find.byType(StrataBands);
+          final painter =
+              tester
+                      .widget<CustomPaint>(
+                        find.descendant(
+                          of: bands,
+                          matching: find.byType(CustomPaint),
+                        ),
+                      )
+                      .painter!
+                  as StrataBandsPainter;
+          expect(
+            (painter.showSeam, painter.bleed),
+            (v.sizeClass != SizeClass.compact, 24.0),
+          );
+          expect(tester.getRect(bands).height, 160 + 24);
+          expect(tester.getRect(bands).bottom, v.size.height);
+          expectNoErrors(tester);
+        });
+      }
+    });
+
     testWidgets('a failed start shows the code and retries', (tester) async {
       final bootstrap = FakeBootstrap(
         error: const CoreFailure(code: 'storage', messageKey: 'error.storage'),

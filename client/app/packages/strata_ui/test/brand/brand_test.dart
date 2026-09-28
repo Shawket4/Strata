@@ -120,6 +120,138 @@ void main() {
     });
   });
 
+  group('StrataBands seam and bleed', () {
+    // Depths 1:1:2 over 100 px: bands at 0–25, 25–50, 50–100; the seam
+    // (2 px, sand) is centred on the end of band 1.
+    const depths = [1.0, 1.0, 2.0];
+
+    Widget bands({bool? showSeam, double bleed = 0}) => Align(
+      alignment: Alignment.topLeft,
+      child: SizedBox(
+        width: 200,
+        height: 100,
+        child: showSeam == null
+            ? StrataBands(depths: depths, seamAfter: 1, bleed: bleed)
+            : StrataBands(
+                depths: depths,
+                seamAfter: 1,
+                showSeam: showSeam,
+                bleed: bleed,
+              ),
+      ),
+    );
+
+    RenderObject paintOf(WidgetTester tester) => tester.renderObject(
+      find.descendant(
+        of: find.byType(StrataBands),
+        matching: find.byType(CustomPaint),
+      ),
+    );
+
+    for (final v in variants()) {
+      testWidgets('the seam is drawn by default $v', (tester) async {
+        await pumpVariant(tester, v, bands());
+        final colors = v.theme.extension<StrataColors>()!;
+        final painter =
+            tester
+                    .widget<CustomPaint>(
+                      find.descendant(
+                        of: find.byType(StrataBands),
+                        matching: find.byType(CustomPaint),
+                      ),
+                    )
+                    .painter!
+                as StrataBandsPainter;
+        expect((painter.showSeam, painter.bleed), (true, 0.0));
+        expect(
+          paintOf(tester),
+          paints
+            ..rect(rect: const Rect.fromLTWH(0, 0, 200, 25))
+            ..rect(rect: const Rect.fromLTWH(0, 25, 200, 25))
+            ..rect(rect: const Rect.fromLTWH(0, 50, 200, 50))
+            ..rect(
+              rect: const Rect.fromLTWH(0, 49, 200, 2),
+              color: colors.sand,
+            ),
+        );
+        expect(paintOf(tester), paintsExactlyCountTimes(#drawRect, 4));
+        expectNoRenderErrors(tester);
+      });
+
+      testWidgets('showSeam: false keeps the bands without the seam $v', (
+        tester,
+      ) async {
+        await pumpVariant(tester, v, bands(showSeam: false));
+        final painter =
+            tester
+                    .widget<CustomPaint>(
+                      find.descendant(
+                        of: find.byType(StrataBands),
+                        matching: find.byType(CustomPaint),
+                      ),
+                    )
+                    .painter!
+                as StrataBandsPainter;
+        expect(painter.showSeam, isFalse);
+        expect(
+          paintOf(tester),
+          paints
+            ..rect(rect: const Rect.fromLTWH(0, 0, 200, 25))
+            ..rect(rect: const Rect.fromLTWH(0, 25, 200, 25))
+            ..rect(rect: const Rect.fromLTWH(0, 50, 200, 50)),
+        );
+        expect(paintOf(tester), paintsExactlyCountTimes(#drawRect, 3));
+        expectNoRenderErrors(tester);
+      });
+
+      testWidgets('bleed continues the last band below the bands $v', (
+        tester,
+      ) async {
+        await pumpVariant(tester, v, bands(showSeam: false, bleed: 20));
+        // The bands keep 1:1:2 over the top 80 px; the last band runs on
+        // through the 20 px bleed.
+        expect(
+          paintOf(tester),
+          paints
+            ..rect(rect: const Rect.fromLTWH(0, 0, 200, 20))
+            ..rect(rect: const Rect.fromLTWH(0, 20, 200, 20))
+            ..rect(rect: const Rect.fromLTWH(0, 40, 200, 60)),
+        );
+        expect(paintOf(tester), paintsExactlyCountTimes(#drawRect, 3));
+        expectNoRenderErrors(tester);
+      });
+    }
+
+    test('the seam flag and the bleed repaint', () {
+      const base = StrataBandsPainter(
+        depths: depths,
+        seamAfter: 1,
+        base: StrataPalette.mist,
+        tone: StrataPalette.tide,
+        seam: StrataPalette.sand,
+      );
+      const noSeam = StrataBandsPainter(
+        depths: depths,
+        seamAfter: 1,
+        base: StrataPalette.mist,
+        tone: StrataPalette.tide,
+        seam: StrataPalette.sand,
+        showSeam: false,
+      );
+      const bled = StrataBandsPainter(
+        depths: depths,
+        seamAfter: 1,
+        base: StrataPalette.mist,
+        tone: StrataPalette.tide,
+        seam: StrataPalette.sand,
+        bleed: 24,
+      );
+      expect(noSeam.shouldRepaint(base), isTrue);
+      expect(bled.shouldRepaint(base), isTrue);
+      expect(base.shouldRepaint(base), isFalse);
+    });
+  });
+
   group('brand widgets', () {
     for (final v in variants()) {
       testWidgets('$v', (tester) async {

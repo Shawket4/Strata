@@ -193,6 +193,14 @@ class RecordMoveForm extends HookConsumerWidget {
         messenger
           ?..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(content: Text(message)));
+      } on Object catch (error, stack) {
+        // Recording a move is local (outbox): a generic message.
+        reportUntypedFailure(error, stack, action: 'recording a move');
+        messenger
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(l10n.moveFailed(code: 'internal'))),
+          );
       } finally {
         if (context.mounted) busy.value = false;
       }

@@ -164,3 +164,4 @@ export 'src/core_api.dart';
 export 'src/file_picker.dart';
 export 'src/providers.dart';
 export 'src/text_dir.dart';
+export 'src/untyped_failure.dart';

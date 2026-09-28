@@ -33,7 +33,8 @@ extension AccountsLabels on AccountsLocalizations {
       status: '${status ?? ''}',
     ),
     CoreFailure(:final code) => errorGeneric(code: code),
-    _ => errorGeneric(code: 'internal'),
+    // Not typed by the core (an FRB-surfaced panic, a transport error).
+    _ => errorUnreachable,
   };
 
   /// The name of an account role (`admin` | `member`).

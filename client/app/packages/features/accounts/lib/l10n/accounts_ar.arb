@@ -79,6 +79,7 @@
   "errorInvalidInput": "راجع خانة {field}.",
   "errorServer": "الخادم رد بخطأ ({status}).",
   "errorNotAvailable": "ده مش متاح لسه.",
+  "errorUnreachable": "ماقدرناش نوصل للخادم. اتأكد من الاتصال وحاول تاني.",
   "errorGeneric": "حصل خطأ ({code}).",
   "unsyncedItem": "{kind} · {time}",
   "strengthWeak": "ضعيفة",

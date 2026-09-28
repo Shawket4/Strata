@@ -162,3 +162,11 @@ debug = false
 
 [profile.test]
 debug = "line-tables-only"
+
+# Release builds (stratad, and the client core that cargokit builds with `--release` inside
+# this workspace): whole-crate-graph thin LTO, one codegen unit, symbols stripped. opt-level
+# stays 3 and panic stays "unwind" (flutter_rust_bridge catches panics at the FFI boundary).
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

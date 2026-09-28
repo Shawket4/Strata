@@ -55,6 +55,9 @@ class SignUpScreen extends HookConsumerWidget {
         onRequested?.call();
       } on CoreFailure catch (error) {
         failure.value = l10n.failure(error);
+      } on Object catch (error, stack) {
+        reportUntypedFailure(error, stack, action: 'signing up');
+        failure.value = l10n.errorUnreachable;
       } finally {
         if (context.mounted) busy.value = false;
       }

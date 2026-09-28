@@ -308,6 +308,10 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   String get errorNotAvailable => 'This isn\'t available yet.';
 
   @override
+  String get errorUnreachable =>
+      'Couldn\'t reach the server. Check your connection and try again.';
+
+  @override
   String errorGeneric({required String code}) {
     return 'Something went wrong ($code).';
   }

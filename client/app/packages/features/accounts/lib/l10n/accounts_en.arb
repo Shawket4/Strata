@@ -377,6 +377,10 @@
   "@errorNotAvailable": {
     "description": "Core error not_available."
   },
+  "errorUnreachable": "Couldn't reach the server. Check your connection and try again.",
+  "@errorUnreachable": {
+    "description": "An error the core did not type (not a CoreFailure: an FRB-surfaced panic or an unmapped transport error) while talking to the server."
+  },
   "errorGeneric": "Something went wrong ({code}).",
   "@errorGeneric": {
     "description": "Any other core error.",

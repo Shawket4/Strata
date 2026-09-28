@@ -325,6 +325,9 @@ Future<void> signOutFlow(BuildContext context, WidgetRef ref) async {
     }
   } on CoreFailure catch (error) {
     messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+  } on Object catch (error, stack) {
+    reportUntypedFailure(error, stack, action: 'signing out');
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.errorUnreachable)));
   }
 }
 

@@ -575,6 +575,12 @@ abstract class AccountsLocalizations {
   /// **'This isn\'t available yet.'**
   String get errorNotAvailable;
 
+  /// An error the core did not type (not a CoreFailure: an FRB-surfaced panic or an unmapped transport error) while talking to the server.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t reach the server. Check your connection and try again.'**
+  String get errorUnreachable;
+
   /// Any other core error.
   ///
   /// In en, this message translates to:

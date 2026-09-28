@@ -51,6 +51,11 @@ class PendingApprovalScreen extends HookConsumerWidget {
             ?..hideCurrentSnackBar()
             ..showSnackBar(SnackBar(content: Text(message)));
         }
+      } on Object catch (error, stack) {
+        reportUntypedFailure(error, stack, action: 'checking approval');
+        messenger
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.errorUnreachable)));
       } finally {
         if (context.mounted) busy.value = false;
       }
@@ -63,6 +68,9 @@ class PendingApprovalScreen extends HookConsumerWidget {
         onUseAnotherAccount?.call();
       } on CoreFailure catch (error) {
         messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+      } on Object catch (error, stack) {
+        reportUntypedFailure(error, stack, action: 'dismissing the request');
+        messenger?.showSnackBar(SnackBar(content: Text(l10n.errorUnreachable)));
       }
     }
 
