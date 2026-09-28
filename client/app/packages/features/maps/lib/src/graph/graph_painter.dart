@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:strata_maps/src/graph/graph_camera.dart';
 import 'package:strata_maps/src/graph/graph_kinds.dart';
 import 'package:strata_maps/src/graph/graph_scene.dart';
+import 'package:strata_state/strata_state.dart' show textDirectionOf;
 import 'package:strata_ui/strata_ui.dart';
 
 /// What the viewer chose to see (ephemeral widget state, applied while
@@ -229,9 +230,6 @@ class GraphPainter extends CustomPainter {
   /// Most labels drawn in one frame.
   static const int labelBudget = 300;
 
-  /// Degree from which a node is a "hub" labelled at mid zoom.
-  static const int hubDegree = 6;
-
   @override
   void paint(Canvas canvas, Size size) {
     cache._prepare(scene, palette, textDirection);
@@ -275,37 +273,63 @@ class GraphPainter extends CustomPainter {
       }
     }
 
-    // Cluster regions: the union of soft discs around clustered nodes, filled
-    // once at the region colour (tide 7 %).
+    // Cluster regions: the core's padded hulls (or, without them, the union
+    // of soft discs around clustered nodes), filled once at the region
+    // colour (tide 7 %).
     if (clusterRegions) {
-      final halo = _pointBatch(-1);
-      for (var i = 0; i < n; i++) {
-        if (visible[i] == 0 || nodes[i].clusterId == null) continue;
-        if (focus != null && nodes[i].clusterId != focus) continue;
-        final x = sx[i];
-        final y = sy[i];
-        final r = clusterHalo * s;
-        if (x < -r || y < -r || x > size.width + r || y > size.height + r) {
-          continue;
+      final fill = palette.graph.clusterFill;
+      final layer = Paint()..color = Color.fromRGBO(0, 0, 0, fill.a);
+      final solid = fill.withValues(alpha: 1);
+      if (scene.clusters.isNotEmpty) {
+        final region = Path();
+        for (final cluster in scene.clusters) {
+          final hull = cluster.hull;
+          if (hull.length < 3) continue;
+          if (focus != null && cluster.id != focus) continue;
+          region.moveTo(hull.first.x * s + ox, hull.first.y * s + oy);
+          for (final point in hull.skip(1)) {
+            region.lineTo(point.x * s + ox, point.y * s + oy);
+          }
+          region.close();
         }
-        halo.add2(x, y);
-      }
-      if (!halo.isEmpty) {
-        final fill = palette.graph.clusterFill;
         canvas
-          ..saveLayer(
-            Offset.zero & size,
-            Paint()..color = Color.fromRGBO(0, 0, 0, fill.a),
-          )
-          ..drawRawPoints(
-            ui.PointMode.points,
-            halo.view,
+          ..saveLayer(Offset.zero & size, layer)
+          ..drawPath(region, Paint()..color = solid)
+          ..drawPath(
+            region,
             Paint()
-              ..color = fill.withValues(alpha: 1)
-              ..strokeWidth = clusterHalo * 2 * s
-              ..strokeCap = StrokeCap.round,
+              ..color = solid
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = clusterHalo * s
+              ..strokeJoin = StrokeJoin.round,
           )
           ..restore();
+      } else {
+        final halo = _pointBatch(-1);
+        for (var i = 0; i < n; i++) {
+          if (visible[i] == 0 || nodes[i].clusterId == null) continue;
+          if (focus != null && nodes[i].clusterId != focus) continue;
+          final x = sx[i];
+          final y = sy[i];
+          final r = clusterHalo * s;
+          if (x < -r || y < -r || x > size.width + r || y > size.height + r) {
+            continue;
+          }
+          halo.add2(x, y);
+        }
+        if (!halo.isEmpty) {
+          canvas
+            ..saveLayer(Offset.zero & size, layer)
+            ..drawRawPoints(
+              ui.PointMode.points,
+              halo.view,
+              Paint()
+                ..color = solid
+                ..strokeWidth = clusterHalo * 2 * s
+                ..strokeCap = StrokeCap.round,
+            )
+            ..restore();
+        }
       }
     }
 
@@ -491,6 +515,32 @@ class GraphPainter extends CustomPainter {
 
     // Labels by zoom band.
     if (!options.labels) return;
+    if (clusterRegions && band != ZoomBand.near) {
+      for (final cluster in scene.clusters) {
+        if (focus != null && cluster.id != focus) continue;
+        final name = TextPainter(
+          text: TextSpan(
+            text: cluster.name,
+            style: palette.labelStyle.copyWith(
+              color: palette.labelColor,
+              fontWeight: FontWeight.w700,
+              fontVariations: const [ui.FontVariation('wght', 700)],
+            ),
+          ),
+          textDirection: textDirection,
+          maxLines: 1,
+          ellipsis: '…',
+        )..layout(maxWidth: 200);
+        name.paint(
+          canvas,
+          Offset(
+            cluster.x * s + ox - name.width / 2,
+            cluster.y * s + oy - name.height / 2,
+          ),
+        );
+        name.dispose();
+      }
+    }
     var drawn = 0;
     void label(int i) {
       if (drawn >= labelBudget) return;
@@ -510,7 +560,8 @@ class GraphPainter extends CustomPainter {
         if (visible[i] == 0 || dim[i] == 1 || i == selected || i == hovered) {
           continue;
         }
-        if (band == ZoomBand.mid && nodes[i].degree < hubDegree) continue;
+        // Mid zoom labels the core's hubs only (`is_hub`, label rank 0).
+        if (band == ZoomBand.mid && !nodes[i].isHub) continue;
         label(i);
       }
     }
@@ -606,9 +657,11 @@ class GraphPainter extends CustomPainter {
             )
           : palette.labelStyle;
       final text = scene.nodes[i].title;
+      final direction =
+          textDirectionOf(scene.nodes[i].titleDir) ?? textDirection;
       TextPainter make(TextStyle style) => TextPainter(
         text: TextSpan(text: text, style: style),
-        textDirection: textDirection,
+        textDirection: direction,
         maxLines: 1,
         ellipsis: '…',
       )..layout(maxWidth: 180);

@@ -27,11 +27,16 @@ class GraphScene {
     required this.edgeClasses,
     required this.bounds,
     required this.grid,
+    required this.clusters,
   });
 
   /// Indexes [nodes] and [edges] (edges whose ends are not in [nodes] are not
-  /// drawn).
-  factory from(List<GraphNode> nodes, List<GraphEdge> edges) {
+  /// drawn); [clusters] are the core's regions (hull and label position).
+  factory from(
+    List<GraphNode> nodes,
+    List<GraphEdge> edges, {
+    List<ClusterLabel> clusters = const [],
+  }) {
     final n = nodes.length;
     final index = <String, int>{};
     final xs = Float32List(n);
@@ -83,6 +88,7 @@ class GraphScene {
       edgeClasses: classes,
       bounds: n == 0 ? Rect.zero : Rect.fromLTRB(minX, minY, maxX, maxY),
       grid: grid,
+      clusters: clusters,
     );
   }
 
@@ -102,6 +108,9 @@ class GraphScene {
       _cellKeyOf((x / cellSize).floor(), (y / cellSize).floor());
 
   static int _cellKeyOf(int cx, int cy) => cx * 73856093 ^ cy * 19349663;
+
+  /// The core's cluster regions (padded hulls) and label positions.
+  final List<ClusterLabel> clusters;
 
   /// The core's nodes, in view order.
   final List<GraphNode> nodes;
