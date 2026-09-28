@@ -23,6 +23,7 @@ use crate::view::model::{
     CreateOutcome, CustodyDraft, DocumentDraft, DuplicateChoice, LinkOrCreateChoice,
     LinkOrCreateKind, PlaceDraft, SuggestionEdits, SuggestionItem, SuggestionKind,
 };
+use domain::CustodyEventType as E;
 
 fn ulid_of(id: &str, field: &str) -> CoreResult<Ulid> {
     Ulid::from_string(id).map_err(|_| CoreError::invalid(field, "not_a_ulid"))
@@ -609,7 +610,6 @@ impl Session {
         let place_id = opt(&d.place_id, "place_id")?;
         let person_id = opt(&d.person_id, "person_id")?;
         let counterparty_id = opt(&d.counterparty_id, "counterparty_id")?;
-        use domain::CustodyEventType as E;
         let missing = match event {
             E::StoredAt | E::MovedTo => place_id.is_none().then_some("place_id"),
             E::HandedTo | E::ReturnedBy => person_id.is_none().then_some("person_id"),

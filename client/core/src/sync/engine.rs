@@ -23,7 +23,7 @@ use crate::net::{NetError, SyncApi};
 use crate::store::index::Reindex;
 use crate::store::{outbox, sync_state};
 use crate::sync::apply;
-use crate::sync::model::SyncCursor;
+use crate::sync::model::{OpResult, SyncCursor};
 use crate::view::Topics;
 use crate::view::model::{Connectivity, SyncActivity, SyncPhase};
 
@@ -180,12 +180,18 @@ impl SyncEngine {
             report.outcome = CycleOutcome::Paused;
             return Ok(report);
         }
-        let outcome = match self.push_all(host, &mut report).await? {
-            Flow::Stop(o) => o,
-            Flow::Go(()) => match self.pull_all(host, &mut report).await? {
-                Flow::Stop(o) => o,
-                Flow::Go(()) => CycleOutcome::Synced,
-            },
+        // Push, then pull. When the server merged an edit whose note has more queued ops,
+        // the pull comes first so those ops are rebased onto the merged version
+        // (`sync::rebase`), then pushing continues.
+        let outcome = loop {
+            match self.push_all(host, &mut report).await? {
+                Flow::Stop(o) => break o,
+                Flow::Go(repull) => match self.pull_all(host, &mut report).await? {
+                    Flow::Stop(o) => break o,
+                    Flow::Go(()) if repull => {}
+                    Flow::Go(()) => break CycleOutcome::Synced,
+                },
+            }
         };
         host.set_activity(SyncActivity::default());
         if outcome == CycleOutcome::Synced {
@@ -221,11 +227,29 @@ impl SyncEngine {
         Ok(report)
     }
 
+    /// Pulls only (no push): changes since the saved position, bootstrapping when needed.
+    /// Queued ops are rebased onto what arrives.
+    pub async fn pull<H: SyncHost>(&self, host: &H) -> CoreResult<CycleReport> {
+        let mut report = CycleReport {
+            pushed: 0,
+            pulled: 0,
+            bootstrapped: false,
+            outcome: CycleOutcome::Synced,
+        };
+        if let Flow::Stop(o) = self.pull_all(host, &mut report).await? {
+            report.outcome = o;
+        }
+        host.set_activity(SyncActivity::default());
+        Ok(report)
+    }
+
+    /// Pushes batches until the queue is empty. `Go(true)`: stopped early because the server
+    /// merged an edit whose note still has queued ops — pull (and rebase) before pushing on.
     async fn push_all<H: SyncHost>(
         &self,
         host: &H,
         report: &mut CycleReport,
-    ) -> CoreResult<Flow<()>> {
+    ) -> CoreResult<Flow<bool>> {
         let total = host.db(|c, _| {
             let n: u32 = c.query_row(
                 "SELECT COUNT(*) FROM outbox WHERE status = 'pending'",
@@ -243,7 +267,7 @@ impl SyncEngine {
                 Ok((ops, Topics::SYNC))
             })?;
             if batch.is_empty() {
-                return Ok(Flow::Go(()));
+                return Ok(Flow::Go(false));
             }
             if let Flow::Stop(o) = self.crash(Step::MarkedInflight, ()) {
                 return Ok(Flow::Stop(o));
@@ -294,6 +318,35 @@ impl SyncEngine {
             report.pushed += recorded;
             if let Flow::Stop(o) = self.crash(Step::Recorded, ()) {
                 return Ok(Flow::Stop(o));
+            }
+            let merged: Vec<&str> = results
+                .iter()
+                .filter(|r| matches!(r.result, OpResult::Applied { merged: true, .. }))
+                .filter_map(|r| {
+                    let id = r.op_id.to_string();
+                    batch
+                        .iter()
+                        .find(|o| o.op_id == id)
+                        .map(|o| o.local_entity.as_str())
+                })
+                .collect();
+            if !merged.is_empty() {
+                let waiting = host.db(|c, _| {
+                    let mut n = 0u32;
+                    for entity in &merged {
+                        n += u32::try_from(
+                            outbox::live_for(c, entity)?
+                                .iter()
+                                .filter(|o| o.status == outbox::OpStatus::Pending)
+                                .count(),
+                        )
+                        .unwrap_or(0);
+                    }
+                    Ok((n, Topics::NONE))
+                })?;
+                if waiting > 0 {
+                    return Ok(Flow::Go(true));
+                }
             }
         }
     }

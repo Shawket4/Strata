@@ -1189,6 +1189,7 @@ pub fn home(conn: &Connection, ctx: &ViewCtx) -> CoreResult<HomeView> {
         });
     }
     let open_item_list = open_items(conn, ctx)?;
+    let (ai_activity, ai_activity_items, ai_activity_headline) = ai_activity(conn, ctx)?;
     Ok(HomeView {
         recent_notes,
         inbox_count: u32_of(inbox_count),
@@ -1201,13 +1202,92 @@ pub fn home(conn: &Connection, ctx: &ViewCtx) -> CoreResult<HomeView> {
         needs_you_count,
         contradictions_count,
         inbox_summary: parts.join(" · "),
-        ai_activity: Availability::NotYetAvailable,
-        ai_activity_items: Vec::new(),
-        ai_activity_headline: String::new(),
+        ai_activity,
+        ai_activity_items,
+        ai_activity_headline,
         open_items: Availability::Available,
         open_item_list,
         pinned: pinned_notes(conn, ctx)?,
     })
+}
+
+/// The AI activity feed from the cached decisions (newest first, ≤ 20) and today's headline.
+fn ai_activity(
+    conn: &Connection,
+    ctx: &ViewCtx,
+) -> CoreResult<(Availability, Vec<AiActivityItem>, String)> {
+    let Some((decisions, _)) =
+        cache::get::<Vec<crate::net::AiDecisionInfo>>(conn, cache::AI_DECISIONS)?
+    else {
+        let a = if ctx.connectivity == Connectivity::Offline {
+            Availability::Offline
+        } else {
+            // Not fetched yet (`refresh_ai_activity`).
+            Availability::Available
+        };
+        return Ok((a, Vec::new(), String::new()));
+    };
+    let labels = ctx.labels();
+    let today = labels.today();
+    let (mut added, mut contradictions) = (0u32, 0u32);
+    let mut items = Vec::new();
+    for d in decisions.iter().take(20) {
+        let contradiction = d.rel_type.as_deref() == Some("contradicts");
+        let kind = match d.kind.as_str() {
+            "relation" if contradiction => "contradiction",
+            "relation" => "relation_added",
+            "custody_event" => "custody_applied",
+            other => other,
+        };
+        if labels.local(d.created).date() == today && d.reverted_at.is_none() {
+            match kind {
+                "contradiction" => contradictions += 1,
+                "relation_added" => added += 1,
+                _ => {}
+            }
+        }
+        let source = match &d.source_note_id {
+            Some(id) => entity_ref(conn, Some(id.clone()), d.source_title.clone())?,
+            None => None,
+        };
+        let target = if ulid::Ulid::from_string(&d.target_id).is_ok() {
+            entity_ref(conn, Some(d.target_id.clone()), d.target_name.clone())?
+        } else {
+            d.target_name.clone().map(|t| EntityRef {
+                id: None,
+                title: t,
+                kind: None,
+            })
+        };
+        items.push(AiActivityItem {
+            at_label: labels.moment_label(d.created),
+            kind: kind.to_owned(),
+            summary: d.summary.clone(),
+            source,
+            target,
+            rel_type: d.rel_type.clone(),
+            confidence: d.confidence,
+            undo_suggestion_id: d.suggestion_id.clone(),
+            decision_id: d.id.clone(),
+            reverted: d.reverted_at.is_some(),
+        });
+    }
+    let mut parts = Vec::new();
+    if added > 0 {
+        parts.push(match ctx.lang {
+            Lang::En => format!("{} added", labels::RELATIONS.of(i64::from(added), Lang::En)),
+            Lang::Ar => format!("أُضيفت {}", labels::RELATIONS.of(i64::from(added), Lang::Ar)),
+        });
+    }
+    if contradictions > 0 {
+        parts.push(match (ctx.lang, contradictions) {
+            (Lang::En, 1) => "1 contradiction found".to_owned(),
+            (Lang::En, n) => format!("{n} contradictions found"),
+            (Lang::Ar, n) => format!("وُجد {n} تناقض"),
+        });
+    }
+    let sep = if ctx.lang == Lang::Ar { "، " } else { ", " };
+    Ok((Availability::Available, items, parts.join(sep)))
 }
 
 /// Navigation counts and pinned notes.
@@ -1315,6 +1395,7 @@ fn server_candidate(
     )
 }
 
+#[allow(clippy::too_many_lines)] // one arm per suggestion kind
 fn suggestion_detail(
     conn: &Connection,
     p: SuggestionPayload,
@@ -1483,6 +1564,7 @@ struct ReplyRow {
 
 /// Suggestions (pending only, or all) with their details, labels and threads, newest first.
 /// Pending lists include AI changes applied automatically that the user has not confirmed.
+#[allow(clippy::too_many_lines)] // the row read with its thread
 pub fn suggestion_items(
     conn: &Connection,
     ctx: &ViewCtx,
@@ -1749,7 +1831,15 @@ fn relation_chips(
         .collect::<Result<_, _>>()?
     };
     let mut out = Vec::new();
+    let decisions = cache::get::<Vec<crate::net::AiDecisionInfo>>(conn, cache::AI_DECISIONS)?
+        .map(|(d, _)| d)
+        .unwrap_or_default();
     for (rel_type, other_id, raw, by, confidence, reason, created) in rows {
+        let target = entity_ref(conn, other_id, Some(raw))?.unwrap_or(EntityRef {
+            id: None,
+            title: String::new(),
+            kind: None,
+        });
         let mut citations = Vec::new();
         if let Some(r) = &reason {
             for l in wikilink::find_all(r) {
@@ -1758,16 +1848,21 @@ fn relation_chips(
         }
         out.push(RelationChip {
             rel_label: labels::relation_label(&rel_type, ctx.lang),
-            rel_type,
-            target: entity_ref(conn, other_id, Some(raw))?.unwrap_or(EntityRef {
-                id: None,
-                title: String::new(),
-                kind: None,
-            }),
             by: by.unwrap_or_else(|| "user".to_owned()),
             confidence,
             reason,
             created_label: created.map(|c| labels.moment_label(ts(&c))),
+            decision_id: decisions
+                .iter()
+                .find(|d| {
+                    d.reverted_at.is_none()
+                        && d.kind == "relation"
+                        && d.rel_type.as_deref() == Some(rel_type.as_str())
+                        && target.id.as_deref() == Some(d.target_id.as_str())
+                })
+                .map(|d| d.id.clone()),
+            rel_type,
+            target,
             citations,
         });
     }
@@ -1928,6 +2023,7 @@ fn history_entries(
 }
 
 /// The note screen.
+#[allow(clippy::too_many_lines)] // every field of the note view
 pub fn note_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<NoteScreen> {
     let Some(n) = crate::store::notes::get(conn, id)?.filter(|n| !n.deleted) else {
         return Ok(NoteScreen {
@@ -2020,8 +2116,7 @@ pub fn note_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Not
         .updated
         .as_deref()
         .and_then(|c| DateTime::parse_from_rfc3339(c).ok())
-        .map(|c| c.with_timezone(&Utc))
-        .unwrap_or_else(|| ts(&n.local_updated_at));
+        .map_or_else(|| ts(&n.local_updated_at), |c| c.with_timezone(&Utc));
     let edited_label = Some(match lang {
         Lang::En => format!(
             "Edited {}",
@@ -2447,6 +2542,7 @@ fn expiring(labels: &Labels, d: Option<NaiveDate>) -> bool {
     d.is_some_and(|d| labels.days_from_today(d) <= EXPIRING_DAYS)
 }
 
+#[allow(clippy::needless_pass_by_value)] // the row's owned columns move into the item
 fn directory_item(
     conn: &Connection,
     ctx: &ViewCtx,
@@ -2678,6 +2774,7 @@ fn facet_options(
 
 /// The directory tab: rows matching `query` (names and aliases, normalised, both scripts) and
 /// `filter`, in `sort` order, with filter chips, sections and the tab's entity suggestions.
+#[allow(clippy::too_many_lines)] // query, filter, sort and sections
 pub fn directory_filtered(
     conn: &Connection,
     ctx: &ViewCtx,
@@ -3154,6 +3251,7 @@ fn user_notes(parsed: &format::ParsedNote) -> String {
         .unwrap_or_default()
 }
 
+#[allow(clippy::too_many_lines)] // every section of the page
 fn entity_view(
     conn: &Connection,
     ctx: &ViewCtx,

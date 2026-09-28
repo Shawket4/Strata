@@ -221,7 +221,10 @@ idle_recheck_secs = 60
 # Retry delays: first retry after backoff_base_secs, doubling per attempt, at most backoff_max_secs.
 backoff_base_secs = 30
 backoff_max_secs = 3600
-# Local hour (0–23, default_timezone) of the nightly jobs (semantic duplicate sweep).
+# Local hour (0–23, default_timezone) of the nightly jobs (semantic duplicate sweep, entity
+# insights sweep, clustering) and of the weekly digest.
 nightly_hour = 3
+# Day of the weekly AI digest (_ai/digests/YYYY-Www.md): mon, tue, wed, thu, fri, sat or sun.
+digest_weekday = "mon"
 # Seconds a graceful shutdown waits for running jobs (unfinished ones are re-queued at start).
 shutdown_grace_secs = 30

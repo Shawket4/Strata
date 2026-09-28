@@ -93,6 +93,19 @@
       }
     },
     "schemas": {
+      "AcceptWithEditsRequest": {
+        "description": "`POST /suggestions/{id}/accept-with-edits`.",
+        "properties": {
+          "edits": {
+            "$ref": "#/components/schemas/SuggestionEditsDto",
+            "description": "The edits."
+          }
+        },
+        "required": [
+          "edits"
+        ],
+        "type": "object"
+      },
       "AccountClosure": {
         "description": "Why the account stream ended (`account.disabled`).",
         "enum": [
@@ -203,6 +216,143 @@
           "status",
           "created",
           "password_change_required"
+        ],
+        "type": "object"
+      },
+      "AiDecision": {
+        "description": "One AI decision (§9.8).",
+        "properties": {
+          "commit": {
+            "description": "The commit that applied it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "description": "Model confidence.",
+            "format": "float",
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "created": {
+            "description": "When.",
+            "format": "date-time",
+            "type": "string"
+          },
+          "id": {
+            "description": "Decision ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "kind": {
+            "description": "`relation`, `entity_mention`, `concept`, `custody_event`, `task_suggestion`,\n`filing`, `correction`.",
+            "type": "string"
+          },
+          "mention": {
+            "description": "The mention text.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reverted_at": {
+            "description": "When it was corrected (repointed, retyped or rejected).",
+            "format": "date-time",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_block_id": {
+            "description": "The block stating it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_note_id": {
+            "description": "The note it came from.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_title": {
+            "description": "That note's title.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suggestion_id": {
+            "description": "The suggestion it became (not applied automatically).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "suggestion_status": {
+            "description": "That suggestion's status.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "summary": {
+            "description": "One line for the activity feed.",
+            "type": "string"
+          },
+          "target_id": {
+            "description": "The target (a note ID for notes and entities).",
+            "type": "string"
+          },
+          "target_name": {
+            "description": "The target's title, when it is a note.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_type": {
+            "description": "`note`, `entity`, `concept`, `document`, `task`, `folder`, `decision`.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Relation key or custody event type.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "target_type",
+          "target_id",
+          "summary",
+          "created"
+        ],
+        "type": "object"
+      },
+      "AiDecisions": {
+        "description": "The activity feed.",
+        "properties": {
+          "items": {
+            "description": "Newest first.",
+            "items": {
+              "$ref": "#/components/schemas/AiDecision"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
         ],
         "type": "object"
       },
@@ -329,6 +479,19 @@
           "name",
           "model",
           "state"
+        ],
+        "type": "object"
+      },
+      "AiSettings": {
+        "description": "The user's AI settings.",
+        "properties": {
+          "auto_file": {
+            "description": "Apply filing proposals (title, tags, move) automatically (§9.3; default off).",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "auto_file"
         ],
         "type": "object"
       },
@@ -908,6 +1071,113 @@
         ],
         "type": "string"
       },
+      "CorrectionFixDto": {
+        "description": "One proposed fix of a correction.",
+        "properties": {
+          "action": {
+            "description": "`repoint`, `retype`, `reject`.",
+            "type": "string"
+          },
+          "confidence": {
+            "description": "Model confidence.",
+            "format": "double",
+            "type": "number"
+          },
+          "decision_id": {
+            "description": "The decision to fix.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "new_target": {
+            "description": "New target.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "new_type": {
+            "description": "New type.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "description": "One sentence.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "action",
+          "confidence",
+          "reason"
+        ],
+        "type": "object"
+      },
+      "CorrectionProposal": {
+        "description": "A correction in words that was not applied automatically (`correction`).",
+        "properties": {
+          "decision_id": {
+            "description": "The correction decision.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "fixes": {
+            "description": "Proposed fixes.",
+            "items": {
+              "$ref": "#/components/schemas/CorrectionFixDto"
+            },
+            "type": "array"
+          },
+          "hints": {
+            "description": "Hints to remember.",
+            "items": {
+              "$ref": "#/components/schemas/HintDto"
+            },
+            "type": "array"
+          },
+          "message": {
+            "description": "The user's words.",
+            "type": "string"
+          },
+          "question": {
+            "description": "The model's question when ambiguous.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "decision_id",
+          "message",
+          "fixes",
+          "hints"
+        ],
+        "type": "object"
+      },
+      "CorrectionResult": {
+        "description": "The corrected decision.",
+        "properties": {
+          "commit": {
+            "description": "The `user:` commit (absent when only database rows changed).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "decision": {
+            "$ref": "#/components/schemas/AiDecision",
+            "description": "The decision after the correction (`reverted_at` set)."
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "type": "object"
+      },
       "CreateDocumentRequest": {
         "description": "`POST /documents`.",
         "properties": {
@@ -1363,6 +1633,134 @@
         ],
         "type": "object"
       },
+      "CustodyProposal": {
+        "description": "A custody event proposal (`custody`).",
+        "properties": {
+          "block_id": {
+            "description": "The block stating it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "description": "Model confidence.",
+            "format": "double",
+            "type": "number"
+          },
+          "counterparty": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CustodyTargetDto",
+                "description": "Third party."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "date": {
+            "description": "Date.",
+            "format": "date",
+            "type": "string"
+          },
+          "decision_id": {
+            "description": "The decision.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "document": {
+            "$ref": "#/components/schemas/CustodyTargetDto",
+            "description": "Document."
+          },
+          "event": {
+            "description": "Event type (`stored-at`, …).",
+            "type": "string"
+          },
+          "person": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CustodyTargetDto",
+                "description": "Person."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "place": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CustodyTargetDto",
+                "description": "Place."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "place_part_of": {
+            "description": "Enclosing place mention.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quote": {
+            "description": "The span stating it.",
+            "type": "string"
+          },
+          "reason": {
+            "description": "`low_confidence`, `ambiguous`, `unknown`, `conflict`, `reply`.",
+            "type": "string"
+          },
+          "source_note": {
+            "description": "The note stating it.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "source_note",
+          "event",
+          "date",
+          "document",
+          "confidence",
+          "reason",
+          "quote"
+        ],
+        "type": "object"
+      },
+      "CustodyTargetDto": {
+        "description": "A custody participant.",
+        "properties": {
+          "candidates": {
+            "description": "Entities that fit.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "Resolved entity.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mention": {
+            "description": "Mention.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mention",
+          "candidates"
+        ],
+        "type": "object"
+      },
       "Device": {
         "description": "A signed-in device of the caller.",
         "properties": {
@@ -1763,6 +2161,75 @@
           "place"
         ],
         "type": "string"
+      },
+      "EntityLinkProposal": {
+        "description": "A link-or-create proposal (`entity_link`).",
+        "properties": {
+          "block_id": {
+            "description": "The block stating it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "candidates": {
+            "description": "Entities that fit.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "confidence": {
+            "description": "Model confidence.",
+            "format": "double",
+            "type": "number"
+          },
+          "decision_id": {
+            "description": "The decision.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "entity_kind": {
+            "description": "`person`, `company`, `document`, `place`.",
+            "type": "string"
+          },
+          "is_nickname": {
+            "description": "A nickname or kinship term.",
+            "type": "boolean"
+          },
+          "mention": {
+            "description": "The mention as written.",
+            "type": "string"
+          },
+          "proposed": {
+            "description": "The proposed entity (absent: create a new one).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "description": "`ambiguous`, `nickname`, `new`, `low_confidence`, `reply`.",
+            "type": "string"
+          },
+          "source_note": {
+            "description": "The note mentioning it.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "mention",
+          "entity_kind",
+          "source_note",
+          "candidates",
+          "is_nickname",
+          "confidence",
+          "reason"
+        ],
+        "type": "object"
       },
       "EntityList": {
         "description": "Entities.",
@@ -2603,6 +3070,38 @@
         ],
         "type": "string"
       },
+      "FilingProposal": {
+        "description": "A filing proposal (`filing`).",
+        "properties": {
+          "decision_id": {
+            "description": "The decision.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "folder": {
+            "description": "Destination folder.",
+            "type": "string"
+          },
+          "tags": {
+            "description": "Tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "title": {
+            "description": "Title.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "title",
+          "tags",
+          "folder"
+        ],
+        "type": "object"
+      },
       "Graph": {
         "description": "A graph (no positions).",
         "properties": {
@@ -2821,6 +3320,25 @@
         ],
         "type": "string"
       },
+      "HintDto": {
+        "description": "A hint of a correction.",
+        "properties": {
+          "entity": {
+            "description": "Entity.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "text": {
+            "description": "Text.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity",
+          "text"
+        ],
+        "type": "object"
+      },
       "History": {
         "description": "A note's history, newest first (follows moves and trash).",
         "properties": {
@@ -2963,6 +3481,20 @@
           "kind",
           "detail",
           "created"
+        ],
+        "type": "object"
+      },
+      "JobQueued": {
+        "description": "A queued job.",
+        "properties": {
+          "job_id": {
+            "description": "Job ID (`job.completed` / `job.failed` events carry it).",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id"
         ],
         "type": "object"
       },
@@ -4103,6 +4635,27 @@
         ],
         "type": "object"
       },
+      "RepointRequest": {
+        "description": "`POST /ai-decisions/{id}/repoint`.",
+        "properties": {
+          "hint": {
+            "description": "A disambiguation hint to remember (default: derived from the mention and its note,\ne.g. `\"Ahmed\" in \"Acme call\" = Ahmed Fathy`).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "target_id": {
+            "description": "The entity or note it should point at.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_id"
+        ],
+        "type": "object"
+      },
       "RetypeRelation": {
         "description": "`PATCH /relations`.",
         "properties": {
@@ -4130,6 +4683,19 @@
           "dst_id",
           "type",
           "new_type"
+        ],
+        "type": "object"
+      },
+      "RetypeRequest": {
+        "description": "`POST /ai-decisions/{id}/retype`.",
+        "properties": {
+          "type": {
+            "description": "The new relation type (`related`, `part-of`, `supports`, …).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
         ],
         "type": "object"
       },
@@ -4393,11 +4959,88 @@
         ],
         "type": "object"
       },
+      "SuggestionEditsDto": {
+        "description": "Edits applied when accepting an AI suggestion (every field optional; the ones that do not\napply to the suggestion's kind are ignored).",
+        "properties": {
+          "aliases": {
+            "description": "Entity link: spellings to add as aliases (both scripts, §6.7).",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "due": {
+            "description": "Task: due date.",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "folder": {
+            "description": "Filing: destination folder.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recurrence": {
+            "description": "Task: recurrence phrase.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reminders": {
+            "description": "Task: reminders (local times).",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "tags": {
+            "description": "Filing: tags.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "target_id": {
+            "description": "Entity link, custody, correction: the entity (or note) to use instead.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "text": {
+            "description": "Task: text.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "Filing: title; entity link: the new entity's name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
       "SuggestionPayload": {
         "description": "What a suggestion proposes.",
-        "discriminator": {
-          "propertyName": "type"
-        },
         "oneOf": [
           {
             "description": "The note resembles existing items; accepting keeps both.",
@@ -4453,6 +5096,121 @@
               "type"
             ],
             "type": "object"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FilingProposal",
+                "description": "A filing proposal for an inbox capture (`filing`, §9.3)."
+              },
+              {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "filing"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "A filing proposal for an inbox capture (`filing`, §9.3)."
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/EntityLinkProposal",
+                "description": "Link a mention to an entity or create it (`entity_link`, §6.7, D13 = b)."
+              },
+              {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "entity_link"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "Link a mention to an entity or create it (`entity_link`, §6.7, D13 = b)."
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CustodyProposal",
+                "description": "A custody event not applied automatically (`custody`, §6.12, D30)."
+              },
+              {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "custody"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "A custody event not applied automatically (`custody`, §6.12, D30)."
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TaskProposal",
+                "description": "A task proposed from a note (`task`, §6.11)."
+              },
+              {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "task"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "A task proposed from a note (`task`, §6.11)."
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CorrectionProposal",
+                "description": "A correction in words not applied automatically (`correction`, §9.8)."
+              },
+              {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "correction"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              }
+            ],
+            "description": "A correction in words not applied automatically (`correction`, §9.8)."
           },
           {
             "description": "A kind this version does not describe (MessagePack as stored).",
@@ -7059,6 +7817,75 @@
         ],
         "type": "string"
       },
+      "TaskProposal": {
+        "description": "A task proposal (`task`).",
+        "properties": {
+          "block_id": {
+            "description": "The block stating it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "description": "Model confidence.",
+            "format": "double",
+            "type": "number"
+          },
+          "decision_id": {
+            "description": "The decision.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "due": {
+            "description": "Due date.",
+            "format": "date",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "entities": {
+            "description": "Entities it concerns.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "recurrence": {
+            "description": "Recurrence phrase.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reminders": {
+            "description": "Reminders (local times).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "source_note": {
+            "description": "The note it came from.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "title": {
+            "description": "Title.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision_id",
+          "source_note",
+          "title",
+          "reminders",
+          "entities",
+          "confidence"
+        ],
+        "type": "object"
+      },
       "TaskStatus": {
         "description": "Task status.",
         "enum": [
@@ -7850,6 +8677,384 @@
         "summary": "Reject a pending sign-up.",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/ai-decisions": {
+      "get": {
+        "operationId": "list_ai_decisions",
+        "parameters": [
+          {
+            "description": "How many (1–500, default 50).",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecisions"
+                }
+              }
+            },
+            "description": "Decisions, newest first."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidParameter"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "The recent AI decisions, newest first (the activity feed, §9.8).",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/v1/ai-decisions/{id}/reject": {
+      "post": {
+        "operationId": "reject_ai_decision",
+        "parameters": [
+          {
+            "description": "Decision ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionResult"
+                }
+              }
+            },
+            "description": "Corrected."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such decision."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: already corrected."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Reject an AI decision: the link, mention or custody event is removed and never re-added;\na pending suggestion is rejected.",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/v1/ai-decisions/{id}/repoint": {
+      "post": {
+        "operationId": "repoint_ai_decision",
+        "parameters": [
+          {
+            "description": "Decision ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/RepointRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionResult"
+                }
+              }
+            },
+            "description": "Corrected."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such decision or target."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: already corrected, a target of another kind, or a decision that cannot be repointed."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Repoint an AI link, mention or pending entity-link suggestion (\"this Ahmed is Ahmed\nFathy\"): the old link is removed and recorded as rejected, the new one added, and a\ndisambiguation hint stored on the entity — one `user: repoint` commit.",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/v1/ai-decisions/{id}/retype": {
+      "post": {
+        "operationId": "retype_ai_decision",
+        "parameters": [
+          {
+            "description": "Decision ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/RetypeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/CorrectionResult"
+                }
+              }
+            },
+            "description": "Corrected."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such decision."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: unknown type, the same type, or not a relation."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Retype an AI relation (the old type is recorded as rejected).",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/v1/ai/settings": {
+      "get": {
+        "operationId": "get_ai_settings",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            },
+            "description": "Settings."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable`."
+          }
+        },
+        "summary": "The user's AI settings.",
+        "tags": [
+          "ai"
+        ]
+      },
+      "put": {
+        "operationId": "put_ai_settings",
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            },
+            "description": "Saved."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "$ref": "#/components/responses/InvalidBody"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable`."
+          }
+        },
+        "summary": "Change the user's AI settings.",
+        "tags": [
+          "ai"
         ]
       }
     },
@@ -9399,6 +10604,71 @@
         ]
       }
     },
+    "/api/v1/entities/{id}/refresh": {
+      "post": {
+        "operationId": "refresh_entity",
+        "parameters": [
+          {
+            "description": "Entity ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobQueued"
+                }
+              }
+            },
+            "description": "Queued; `job.completed` follows."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such entity."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable`."
+          }
+        },
+        "summary": "Refresh an entity's AI sections now (Summary, Insights, Open items, Timeline).",
+        "tags": [
+          "entities"
+        ]
+      }
+    },
     "/api/v1/events": {
       "get": {
         "operationId": "events",
@@ -10726,6 +11996,71 @@
         ]
       }
     },
+    "/api/v1/notes/{id}/relink": {
+      "post": {
+        "operationId": "relink_note",
+        "parameters": [
+          {
+            "description": "Note ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobQueued"
+                }
+              }
+            },
+            "description": "Queued; `job.completed` follows."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such note."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable`."
+          }
+        },
+        "summary": "Link a note again now, even if it was linked at this version.",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
     "/api/v1/notes/{id}/revert": {
       "post": {
         "operationId": "revert_note",
@@ -11392,6 +12727,87 @@
           }
         },
         "summary": "Accept a pending suggestion (a `duplicate` suggestion: keep both).",
+        "tags": [
+          "inbox"
+        ]
+      }
+    },
+    "/api/v1/suggestions/{id}/accept-with-edits": {
+      "post": {
+        "operationId": "accept_suggestion_with_edits",
+        "parameters": [
+          {
+            "description": "Suggestion ID (ULID).",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptWithEditsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description": "Accepted."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such suggestion or target."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: already decided, edits not supported for the kind, or an invalid edit."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          }
+        },
+        "summary": "Accept an AI suggestion with edits (filing: title/tags/folder; entity link: the entity\nor the new entity's name and aliases; custody: the participant; tasks: text, due,\nrecurrence, reminders) — one commit.",
         "tags": [
           "inbox"
         ]

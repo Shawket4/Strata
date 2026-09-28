@@ -3,7 +3,11 @@
 //! exact graph payloads, filters, the entity lens, local neighbourhoods, parameter problems,
 //! isolation, map CRUD with validation and optimistic concurrency, canvas rewrite on note
 //! rename, the rate-limited recluster trigger, and `cluster.updated` on the event bus.
-#![allow(clippy::expect_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::too_many_lines,
+    clippy::many_single_char_names
+)]
 
 mod graph_harness;
 

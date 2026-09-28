@@ -524,3 +524,70 @@ pub async fn save_answer_as_note(message_id: String) -> Result<String, CoreFailu
     })
     .await
 }
+
+/// Home: re-reads the AI activity feed (the server's AI decisions).
+pub async fn refresh_ai_activity() -> Result<(), CoreFailure> {
+    lift_async(async { core()?.session()?.refresh_ai_activity().await }).await
+}
+
+/// D13: undoes an AI decision (the server reverts it and never re-proposes it).
+pub async fn reject_ai_decision(decision_id: String) -> Result<(), CoreFailure> {
+    lift_async(async {
+        core()?.session()?.reject_ai_decision(&decision_id).await?;
+        runtime::trigger(Trigger::Manual);
+        Ok(())
+    })
+    .await
+}
+
+/// D13: points an AI decision at another entity; `hint` is the user's short explanation.
+pub async fn repoint_ai_decision(
+    decision_id: String,
+    target_id: String,
+    hint: Option<String>,
+) -> Result<(), CoreFailure> {
+    lift_async(async {
+        core()?
+            .session()?
+            .repoint_ai_decision(&decision_id, &target_id, hint)
+            .await?;
+        runtime::trigger(Trigger::Manual);
+        Ok(())
+    })
+    .await
+}
+
+/// D13: changes the type of an AI relation.
+pub async fn retype_ai_decision(decision_id: String, rel_type: String) -> Result<(), CoreFailure> {
+    lift_async(async {
+        core()?
+            .session()?
+            .retype_ai_decision(&decision_id, &rel_type)
+            .await?;
+        runtime::trigger(Trigger::Manual);
+        Ok(())
+    })
+    .await
+}
+
+/// Map: fetches the similarity edges shown by the similarity lens (online only).
+pub async fn refresh_similarity() -> Result<(), CoreFailure> {
+    lift_async(async { core()?.session()?.refresh_similarity().await }).await
+}
+
+/// Map: saves the arranged local map as `maps/<name>.canvas`; returns the map's path.
+pub async fn save_layout(
+    center_id: String,
+    name: String,
+    positions: Vec<crate::view::model::NodePosition>,
+) -> Result<String, CoreFailure> {
+    lift_async(async {
+        let path = core()?
+            .session()?
+            .save_layout(&center_id, &name, &positions)
+            .await?;
+        runtime::trigger(Trigger::Manual);
+        Ok(path)
+    })
+    .await
+}

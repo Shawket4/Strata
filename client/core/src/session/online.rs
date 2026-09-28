@@ -455,4 +455,108 @@ impl Session {
         )?;
         self.admin_item(u)
     }
+
+    /// Re-reads the AI activity feed (the last 50 AI decisions).
+    pub async fn refresh_ai_activity(&self) -> CoreResult<()> {
+        let url = self.server_url()?;
+        let d = self.online(
+            self.env
+                .account_api
+                .ai_decisions(url, self.tokens(), 50)
+                .await,
+        )?;
+        self.write(|c, now| {
+            cache::put(c, cache::AI_DECISIONS, &d, now)?;
+            Ok(((), Topics::REMOTE | Topics::NOTES | Topics::ENTITIES))
+        })
+    }
+
+    /// Undoes (rejects) an AI decision (D13): the change is reverted by the server and the
+    /// link never re-proposed; the result arrives by pull.
+    pub async fn reject_ai_decision(&self, id: &str) -> CoreResult<()> {
+        let url = self.server_url()?;
+        self.online(
+            self.env
+                .account_api
+                .reject_ai_decision(url, self.tokens(), id.to_owned())
+                .await,
+        )?;
+        self.refresh_ai_activity().await
+    }
+
+    /// Points an AI decision at another entity ("this Ahmed is Ahmed Fathy", D13).
+    pub async fn repoint_ai_decision(
+        &self,
+        id: &str,
+        target_id: &str,
+        hint: Option<String>,
+    ) -> CoreResult<()> {
+        let url = self.server_url()?;
+        self.online(
+            self.env
+                .account_api
+                .repoint_ai_decision(
+                    url,
+                    self.tokens(),
+                    id.to_owned(),
+                    target_id.to_owned(),
+                    hint,
+                )
+                .await,
+        )?;
+        self.refresh_ai_activity().await
+    }
+
+    /// Changes the type of an AI relation.
+    pub async fn retype_ai_decision(&self, id: &str, rel_type: &str) -> CoreResult<()> {
+        if rel_type.parse::<vault_format::RelationKey>().is_err() {
+            return Err(CoreError::invalid("rel_type", "unknown_relation"));
+        }
+        let url = self.server_url()?;
+        self.online(
+            self.env
+                .account_api
+                .retype_ai_decision(url, self.tokens(), id.to_owned(), rel_type.to_owned())
+                .await,
+        )?;
+        self.refresh_ai_activity().await
+    }
+
+    /// Fetches the similarity edges of the global map (computed on the server, never stored).
+    pub async fn refresh_similarity(&self) -> CoreResult<()> {
+        let url = self.server_url()?;
+        let edges = self.online(
+            self.env
+                .account_api
+                .similarity_edges(url, self.tokens())
+                .await,
+        )?;
+        self.write(|c, now| {
+            cache::put(c, cache::SIMILARITY, &edges, now)?;
+            Ok(((), Topics::REMOTE | Topics::NOTES))
+        })
+    }
+
+    /// Saves a mind-map layout as `maps/<name>.canvas` (JSON Canvas, PLAN §6.8): one file
+    /// node per placed note and the local graph's edges between them. Returns the map's path.
+    pub async fn save_layout(
+        &self,
+        center_id: &str,
+        name: &str,
+        positions: &[crate::view::model::NodePosition],
+    ) -> CoreResult<String> {
+        let name = vault_format::filename::sanitize_file_name(name.trim());
+        if name.is_empty() {
+            return Err(CoreError::invalid("name", "empty"));
+        }
+        let content =
+            self.read(|c, ctx| crate::graph::layout_canvas(c, ctx, center_id, positions))?;
+        let url = self.server_url()?;
+        self.online(
+            self.env
+                .account_api
+                .put_map(url, self.tokens(), name, content)
+                .await,
+        )
+    }
 }

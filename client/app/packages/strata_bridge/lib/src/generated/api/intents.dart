@@ -467,3 +467,48 @@ Future<String> saveAnswerAsNote({required String messageId}) => StrataCore
     .instance
     .api
     .crateApiIntentsSaveAnswerAsNote(messageId: messageId);
+
+/// Home: re-reads the AI activity feed (the server's AI decisions).
+Future<void> refreshAiActivity() =>
+    StrataCore.instance.api.crateApiIntentsRefreshAiActivity();
+
+/// D13: undoes an AI decision (the server reverts it and never re-proposes it).
+Future<void> rejectAiDecision({required String decisionId}) => StrataCore
+    .instance
+    .api
+    .crateApiIntentsRejectAiDecision(decisionId: decisionId);
+
+/// D13: points an AI decision at another entity; `hint` is the user's short explanation.
+Future<void> repointAiDecision({
+  required String decisionId,
+  required String targetId,
+  String? hint,
+}) => StrataCore.instance.api.crateApiIntentsRepointAiDecision(
+  decisionId: decisionId,
+  targetId: targetId,
+  hint: hint,
+);
+
+/// D13: changes the type of an AI relation.
+Future<void> retypeAiDecision({
+  required String decisionId,
+  required String relType,
+}) => StrataCore.instance.api.crateApiIntentsRetypeAiDecision(
+  decisionId: decisionId,
+  relType: relType,
+);
+
+/// Map: fetches the similarity edges shown by the similarity lens (online only).
+Future<void> refreshSimilarity() =>
+    StrataCore.instance.api.crateApiIntentsRefreshSimilarity();
+
+/// Map: saves the arranged local map as `maps/<name>.canvas`; returns the map's path.
+Future<String> saveLayout({
+  required String centerId,
+  required String name,
+  required List<NodePosition> positions,
+}) => StrataCore.instance.api.crateApiIntentsSaveLayout(
+  centerId: centerId,
+  name: name,
+  positions: positions,
+);

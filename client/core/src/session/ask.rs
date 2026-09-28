@@ -93,6 +93,7 @@ impl Session {
 
     /// Asks a question (online only) and streams the answer into the conversation. Returns
     /// the answer's ID once the answer ended (stopped, done or failed).
+    #[allow(clippy::too_many_lines)] // one arm per stream event
     pub async fn ask(
         &self,
         question: &str,

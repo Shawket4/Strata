@@ -861,14 +861,13 @@ impl Core {
                 fm.set_text(KnownKey::Title, e.name.trim())
                     .map_err(frontmatter_err)?;
             }
-            let aliases: Vec<String> = e
-                .aliases
-                .iter()
-                .map(|a| a.trim().to_owned())
-                .filter(|a| !a.is_empty() && a != e.name.trim())
-                .collect::<BTreeSet<_>>()
-                .into_iter()
-                .collect();
+            let mut aliases: Vec<String> = Vec::new();
+            for a in &e.aliases {
+                let a = a.trim();
+                if !a.is_empty() && a != e.name.trim() && !aliases.iter().any(|x| x == a) {
+                    aliases.push(a.to_owned());
+                }
+            }
             if !aliases.is_empty() {
                 fm.set_list(KnownKey::Aliases, aliases)
                     .map_err(frontmatter_err)?;

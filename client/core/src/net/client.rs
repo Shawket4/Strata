@@ -14,9 +14,10 @@ use strata_client::streaming::{StreamEvent, StreamOptions, Subscription};
 use strata_client::{Client, operations, streams, types};
 
 use crate::net::{
-    AccountApi, AdminUpdate, AdminUserInfo, AiStatusInfo, AskEvent, AskStream, DeviceInfo,
-    EventSignal, EventStream, EventsApi, IntegrityInfo, MeInfo, MeUpdate, NetError, RemoteHit,
-    RevisionContent, RevisionInfo, SessionTokens, SyncApi, Tokens, classify,
+    AccountApi, AdminUpdate, AdminUserInfo, AiDecisionInfo, AiStatusInfo, AskEvent, AskStream,
+    DeviceInfo, EventSignal, EventStream, EventsApi, IntegrityInfo, MeInfo, MeUpdate, NetError,
+    RemoteHit, RevisionContent, RevisionInfo, SessionTokens, SimilarityEdge, SyncApi, Tokens,
+    classify,
 };
 use crate::sync::model::{BootstrapPage, ChangesPage, OpOutcome, SyncOp};
 use crate::view::model::{NewUserRequest, Platform};
@@ -646,6 +647,118 @@ impl AccountApi for ClientAccountApi {
         Ok(Box::new(ClientAskStream { sub }))
     }
 
+    fn ai_decisions(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        limit: u32,
+    ) -> BoxFuture<'_, Result<Vec<AiDecisionInfo>, NetError>> {
+        Box::pin(Self::decisions(server_url, tokens, limit))
+    }
+
+    fn reject_ai_decision(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        id: String,
+    ) -> BoxFuture<'_, Result<(), NetError>> {
+        Box::pin(async move {
+            let c = client(&server_url, Some(tokens))?;
+            operations::reject_ai_decision(&c, ulid(&id, "decision")?)
+                .await
+                .map(|_| ())
+                .map_err(|e| classify(&e))
+        })
+    }
+
+    fn repoint_ai_decision(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        id: String,
+        target_id: String,
+        hint: Option<String>,
+    ) -> BoxFuture<'_, Result<(), NetError>> {
+        Box::pin(async move {
+            let c = client(&server_url, Some(tokens))?;
+            let body = types::RepointRequest {
+                hint,
+                target_id: ulid(&target_id, "target")?,
+            };
+            operations::repoint_ai_decision(&c, ulid(&id, "decision")?, &body)
+                .await
+                .map(|_| ())
+                .map_err(|e| classify(&e))
+        })
+    }
+
+    fn retype_ai_decision(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        id: String,
+        rel_type: String,
+    ) -> BoxFuture<'_, Result<(), NetError>> {
+        Box::pin(async move {
+            let c = client(&server_url, Some(tokens))?;
+            let body = types::RetypeRequest { type_: rel_type };
+            operations::retype_ai_decision(&c, ulid(&id, "decision")?, &body)
+                .await
+                .map(|_| ())
+                .map_err(|e| classify(&e))
+        })
+    }
+
+    fn similarity_edges(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+    ) -> BoxFuture<'_, Result<Vec<SimilarityEdge>, NetError>> {
+        Box::pin(async move {
+            let c = client(&server_url, Some(tokens))?;
+            let g = operations::get_graph(&c, Some("similarity"), None, Some(true), None)
+                .await
+                .map_err(|e| classify(&e))?;
+            Ok(g.edges
+                .into_iter()
+                .filter(|e| e.kind == "similarity")
+                .map(|e| SimilarityEdge {
+                    src: e.source.to_string(),
+                    dst: e.target.to_string(),
+                    score: e.weight.or(e.confidence),
+                })
+                .collect())
+        })
+    }
+
+    fn put_map(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        id: String,
+        content: String,
+    ) -> BoxFuture<'_, Result<String, NetError>> {
+        Box::pin(async move {
+            let c = client(&server_url, Some(tokens))?;
+            let current = match operations::get_map(&c, &id).await {
+                Ok(m) => Some(m.version),
+                Err(e) => match classify(&e) {
+                    NetError::Api { status: 404, .. } => None,
+                    other => return Err(other),
+                },
+            };
+            operations::put_map(
+                &c,
+                &id,
+                current.as_deref(),
+                &types::PutMapRequest { content },
+            )
+            .await
+            .map(|m| m.path)
+            .map_err(|e| classify(&e))
+        })
+    }
+
     fn save_ask(
         &self,
         server_url: String,
@@ -667,6 +780,38 @@ impl AccountApi for ClientAccountApi {
             .map(|n| n.id.to_string())
             .map_err(|e| classify(&e))
         })
+    }
+}
+
+fn decision(d: types::AiDecision) -> AiDecisionInfo {
+    AiDecisionInfo {
+        id: d.id.to_string(),
+        kind: d.kind,
+        rel_type: d.type_,
+        summary: d.summary,
+        source_note_id: d.source_note_id.map(|n| n.to_string()),
+        source_title: d.source_title,
+        target_id: d.target_id,
+        target_name: d.target_name,
+        confidence: d.confidence.map(f64::from),
+        created: d.created,
+        reverted_at: d.reverted_at,
+        suggestion_id: d.suggestion_id.map(|s| s.to_string()),
+    }
+}
+
+impl ClientAccountApi {
+    /// `GET /ai-decisions`.
+    async fn decisions(
+        url: String,
+        tokens: Tokens,
+        limit: u32,
+    ) -> Result<Vec<AiDecisionInfo>, NetError> {
+        let c = client(&url, Some(tokens))?;
+        let r = operations::list_ai_decisions(&c, Some(i64::from(limit)))
+            .await
+            .map_err(|e| classify(&e))?;
+        Ok(r.items.into_iter().map(decision).collect())
     }
 }
 

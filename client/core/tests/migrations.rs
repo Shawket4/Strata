@@ -1,7 +1,7 @@
 //! Store migrations (PLAN §7.4 "each migration tested from the previous schema with fixture
 //! data", §12.2): exact schema, data preserved across versions, forward-only.
 
-#![allow(clippy::expect_used, clippy::unwrap_used)]
+#![allow(clippy::expect_used, clippy::unwrap_used, clippy::too_many_lines)]
 
 use pretty_assertions::assert_eq;
 use rusqlite::Connection;

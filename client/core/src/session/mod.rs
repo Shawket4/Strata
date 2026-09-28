@@ -283,6 +283,15 @@ impl Session {
         self.sync_with(&self.engine, trigger).await
     }
 
+    /// Pulls without pushing (queued ops are rebased onto what arrives).
+    pub async fn pull(&self) -> CoreResult<CycleReport> {
+        let report = self.engine.pull(self).await?;
+        if let CycleOutcome::Failed(e) = &report.outcome {
+            self.account_failure(e)?;
+        }
+        Ok(report)
+    }
+
     /// Runs one sync cycle with a specific engine (tests: crash points).
     pub async fn sync_with(
         &self,

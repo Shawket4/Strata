@@ -202,7 +202,7 @@ const COMPANY: [&str; 12] = [
 ];
 const COMPANY_SUFFIX: [&str; 4] = ["Trading", "Logistics", "Holdings", "Systems"];
 
-/// SplitMix64: tiny, deterministic, platform independent.
+/// `SplitMix64`: tiny, deterministic, platform independent.
 #[derive(Debug, Clone)]
 struct Rng(u64);
 

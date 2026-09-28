@@ -31,7 +31,7 @@ use strata_api::auth::{AuthDeps, AuthState, SigningKeys};
 use strata_api::contract::Contract;
 use strata_api::events::{BusConfig, EventBus};
 use strata_api::graph::GraphApi;
-use strata_api::sync::{SyncConfig, SyncState};
+use strata_api::sync::SyncConfig;
 use strata_api::testing::TestServer;
 use strata_client::{
     Client, ObservedResponse, ResponseObserver, StaticToken, operations as api, types,
@@ -43,7 +43,7 @@ use strata_index::types::UserRole;
 use strata_jobs::ask::{AskConfig, AskEngine};
 use strata_jobs::retrieval::Retriever;
 use strata_jobs::{RecordedEvents, Runner, RunnerConfig};
-use strata_testkit::{FakeLlmProvider, TempDataRoot, TestDb};
+use strata_testkit::{TempDataRoot, TestDb};
 use strata_vault::{ImportLimits, VaultConfig, VaultService};
 
 use self::generate::Pools;
@@ -95,6 +95,59 @@ impl Conformance {
 impl ResponseObserver for Conformance {
     fn observe(&self, r: &ObservedResponse<'_>) {
         self.check(r.operation_id, r.status, r.content_type, r.body);
+    }
+}
+
+/// A provider that answers every streamed call with a fixed answer and refuses structured
+/// calls (the suites run no AI pipelines; the fixture-keyed `FakeLlmProvider` cannot answer
+/// generated questions).
+#[derive(Debug, Default)]
+pub struct CannedLlm {
+    /// Streamed calls so far (user content is never inspected).
+    pub streams: std::sync::atomic::AtomicUsize,
+}
+
+#[async_trait::async_trait]
+impl strata_ai::LlmProvider for CannedLlm {
+    fn name(&self) -> &'static str {
+        "claude_cli"
+    }
+
+    fn model(&self) -> &'static str {
+        "canned"
+    }
+
+    fn health(&self) -> strata_ai::ProviderHealth {
+        strata_ai::ProviderHealth::ready()
+    }
+
+    async fn complete_json(
+        &self,
+        _req: strata_ai::JsonRequest,
+    ) -> Result<strata_ai::JsonCompletion, strata_ai::ProviderError> {
+        Err(strata_ai::ProviderError::Unavailable(
+            "structured calls are not canned".into(),
+        ))
+    }
+
+    async fn stream(
+        &self,
+        _req: strata_ai::ChatRequest,
+    ) -> Result<strata_ai::TokenStream, strata_ai::ProviderError> {
+        self.streams
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let items = vec![
+            Ok(strata_ai::StreamEvent::Text("A canned answer.".to_owned())),
+            Ok(strata_ai::StreamEvent::Done {
+                usage: strata_ai::Usage {
+                    input_tokens: 10,
+                    output_tokens: 3,
+                    ..strata_ai::Usage::default()
+                },
+                model: "canned".to_owned(),
+            }),
+        ];
+        Ok(Box::pin(futures_util::stream::iter(items)))
     }
 }
 
@@ -154,7 +207,7 @@ pub struct H {
     pub vault: VaultService,
     pub state: web::Data<AuthState>,
     pub bus: web::Data<EventBus>,
-    pub llm: FakeLlmProvider,
+    pub llm: Arc<CannedLlm>,
     pub embedder: FakeEmbedder,
     pub ai: Arc<AiService>,
     pub config: Config,
@@ -209,9 +262,9 @@ impl H {
         );
         let (bus, sync) =
             strata_api::sync::install(&vault, BusConfig::default(), SyncConfig::default());
-        let llm = FakeLlmProvider::new().named("claude_cli");
+        let llm = Arc::new(CannedLlm::default());
         let router = ProviderRouter::new(AiProviderKind::ClaudeCli, BTreeMap::new())
-            .with_provider(AiProviderKind::ClaudeCli, Arc::new(llm.clone()));
+            .with_provider(AiProviderKind::ClaudeCli, llm.clone());
         let budget = BudgetGuard::new(
             BudgetLimits::default(),
             chrono_tz::UTC,
@@ -429,6 +482,7 @@ impl H {
 /// Everything one user owns: at least one object of every kind an operation can address.
 #[derive(Debug, Clone)]
 pub struct Fixtures {
+    pub user: UserId,
     pub note: types::Note,
     pub other: types::Note,
     pub trashed: types::Note,
@@ -450,6 +504,7 @@ impl Fixtures {
     /// The IDs as generator pools (kinds as in [`path_kind`]).
     pub fn pools(&self) -> Pools {
         let mut p = Pools::default();
+        p.add("user", self.user.to_string());
         p.add("note", self.note.id.to_string());
         p.add("note", self.other.id.to_string());
         p.add("trash", self.trashed.id.to_string());
@@ -693,6 +748,7 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
     .expect("ask")
     .id;
     Fixtures {
+        user: u.id,
         note,
         other,
         trashed,

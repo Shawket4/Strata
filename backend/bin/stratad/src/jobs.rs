@@ -1,10 +1,13 @@
 //! Background jobs and the API's AI features, wired at `stratad serve` (PLAN §5.2, §9):
 //!
 //! - the job runner over the standard handlers (`embed`, `embed_backfill`, `summarize`,
-//!   `dedupe`), fair across users, publishing `job.completed` / `job.failed` to the event bus;
-//! - the scheduler (nightly `dedupe` at `jobs.nightly_hour` in `default_timezone`, checked
-//!   hourly) and, with embeddings, one `embed_backfill` per user at start (first import and
-//!   model changes);
+//!   `dedupe`, and the AI pipelines `link`, `file_inbox`, `entity_insights`,
+//!   `entity_insights_sweep`, `correct`, `suggestion_reply`, `digest` with the thresholds of
+//!   `[thresholds]`), fair across users, publishing `job.completed` / `job.failed` to the event
+//!   bus;
+//! - the scheduler (nightly `dedupe` and `entity_insights_sweep` at `jobs.nightly_hour` in
+//!   `default_timezone`, the weekly `digest` on `jobs.digest_weekday`, checked hourly) and, with
+//!   embeddings, one `embed_backfill` per user at start (first import and model changes);
 //! - with embeddings, the semantic level of the duplicate check on create and the idle
 //!   unloading of the model;
 //! - [`strata_api::ai::AiApi`] for semantic/hybrid search, Ask and `GET /ai/status`.
@@ -98,9 +101,15 @@ pub fn handlers(deps: &Deps, bus: Arc<EventBus>) -> Vec<Arc<dyn strata_jobs::Job
     handlers
 }
 
-/// The standard periodic kinds plus the nightly `cluster` run (§9.2).
+/// The standard periodic kinds plus the nightly `cluster` run (§9.2), with the digest on
+/// Mondays (see [`periodic_for`]).
 pub fn periodic() -> Vec<strata_jobs::Periodic> {
-    let mut periodic = strata_jobs::standard_periodic();
+    periodic_for(chrono::Weekday::Mon)
+}
+
+/// The periodic kinds with the weekly digest on `digest_day` (`jobs.digest_weekday`).
+pub fn periodic_for(digest_day: chrono::Weekday) -> Vec<strata_jobs::Periodic> {
+    let mut periodic = strata_jobs::periodic(digest_day);
     periodic.push(strata_jobs::Periodic {
         kind: strata_graph::cluster::CLUSTER,
         cadence: strata_jobs::Cadence::Nightly,
@@ -177,7 +186,8 @@ pub async fn start(
     clock: Arc<dyn Clock>,
     ids: Arc<dyn IdGenerator>,
 ) -> Result<Background, StartupError> {
-    let thresholds = strata_vault::dup::thresholds(&std::collections::BTreeMap::new());
+    // Semantic duplicate thresholds per kind from `thresholds.dedupe` (§9.7).
+    let thresholds = strata_jobs::thresholds::dedupe_thresholds(&config.thresholds.dedupe);
     if let Some(e) = &parts.embedder {
         vault.set_semantic(Arc::new(strata_jobs::semantic_dup::SemanticDupSource::new(
             e.clone(),
@@ -192,6 +202,10 @@ pub async fn start(
         clock: clock.clone(),
         ids: ids.clone(),
         thresholds,
+        ai_thresholds: strata_jobs::thresholds::AiThresholds::from(&config.thresholds),
+        default_tz: config
+            .default_tz()
+            .map_err(|e| StartupError::Config(e.to_string()))?,
     };
     let runner = Runner::new(
         db.clone(),
@@ -218,7 +232,7 @@ pub async fn start(
         users,
         tz,
         config.jobs.nightly_hour,
-        periodic(),
+        periodic_for(config.jobs.digest_day()),
     ));
     if parts.embedder.is_some() {
         let n = scheduler

@@ -70,6 +70,8 @@ pub struct JobsConfig {
     pub backoff_max_secs: u32,
     /// Local hour (0–23, in `default_timezone`) at which nightly jobs (`dedupe`) run.
     pub nightly_hour: u32,
+    /// Day of the weekly AI digest (`mon` … `sun`), at `nightly_hour` (PLAN §9.2).
+    pub digest_weekday: String,
     /// Seconds a graceful shutdown waits for running jobs (unfinished ones are re-queued at
     /// the next start).
     pub shutdown_grace_secs: u32,
@@ -84,8 +86,16 @@ impl Default for JobsConfig {
             backoff_base_secs: 30,
             backoff_max_secs: 3600,
             nightly_hour: 3,
+            digest_weekday: "mon".to_owned(),
             shutdown_grace_secs: 30,
         }
+    }
+}
+
+impl JobsConfig {
+    /// The digest day (validated at load; Monday if unparsable).
+    pub fn digest_day(&self) -> chrono::Weekday {
+        self.digest_weekday.parse().unwrap_or(chrono::Weekday::Mon)
     }
 }
 
@@ -717,6 +727,12 @@ impl Config {
                 jobs.nightly_hour
             ));
         }
+        if jobs.digest_weekday.parse::<chrono::Weekday>().is_err() {
+            return invalid(format!(
+                "jobs.digest_weekday must be a weekday (mon … sun), got {:?}",
+                jobs.digest_weekday
+            ));
+        }
         Ok(())
     }
 
@@ -1176,6 +1192,7 @@ mod tests {
                 backoff_base_secs: 30,
                 backoff_max_secs: 3600,
                 nightly_hour: 3,
+                digest_weekday: "mon".to_owned(),
                 shutdown_grace_secs: 30,
             }
         );

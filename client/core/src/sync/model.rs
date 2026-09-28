@@ -21,6 +21,7 @@ pub use sync_model::{
 /// `kind`, never dropped.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
+#[allow(clippy::large_enum_variant)] // decoded once per view build
 pub enum SuggestionPayload {
     /// AI filing of an inbox capture (§9.3).
     Filing {

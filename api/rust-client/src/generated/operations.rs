@@ -144,6 +144,125 @@ pub async fn admin_reject_user(
     let request = request.authenticated();
     client.send(request).await
 }
+/// The recent AI decisions, newest first (the activity feed, §9.8).
+///
+/// `GET /api/v1/ai-decisions`
+pub async fn list_ai_decisions(
+    client: &crate::Client,
+    limit: ::std::option::Option<i64>,
+) -> ::std::result::Result<types::AiDecisions, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/ai-decisions"),
+        "list_ai_decisions",
+    );
+    let request = request.authenticated();
+    let request = match &limit {
+        ::std::option::Option::Some(value) => request.query("limit", value.to_string()),
+        ::std::option::Option::None => request,
+    };
+    client.send(request).await
+}
+/** Reject an AI decision: the link, mention or custody event is removed and never re-added;
+a pending suggestion is rejected.*/
+///
+/// `POST /api/v1/ai-decisions/{id}/reject`
+pub async fn reject_ai_decision(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::CorrectionResult, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/ai-decisions/{}/reject",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "reject_ai_decision",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/** Repoint an AI link, mention or pending entity-link suggestion ("this Ahmed is Ahmed
+Fathy"): the old link is removed and recorded as rejected, the new one added, and a
+disambiguation hint stored on the entity — one `user: repoint` commit.*/
+///
+/// `POST /api/v1/ai-decisions/{id}/repoint`
+pub async fn repoint_ai_decision(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::RepointRequest,
+) -> ::std::result::Result<types::CorrectionResult, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/ai-decisions/{}/repoint",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "repoint_ai_decision",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// Retype an AI relation (the old type is recorded as rejected).
+///
+/// `POST /api/v1/ai-decisions/{id}/retype`
+pub async fn retype_ai_decision(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::RetypeRequest,
+) -> ::std::result::Result<types::CorrectionResult, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/ai-decisions/{}/retype",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "retype_ai_decision",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
+/// The user's AI settings.
+///
+/// `GET /api/v1/ai/settings`
+pub async fn get_ai_settings(
+    client: &crate::Client,
+) -> ::std::result::Result<types::AiSettings, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::GET,
+        ::std::string::String::from("/api/v1/ai/settings"),
+        "get_ai_settings",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
+/// Change the user's AI settings.
+///
+/// `PUT /api/v1/ai/settings`
+pub async fn put_ai_settings(
+    client: &crate::Client,
+    body: &types::AiSettings,
+) -> ::std::result::Result<types::AiSettings, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::PUT,
+        ::std::string::String::from("/api/v1/ai/settings"),
+        "put_ai_settings",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
 /** AI status for the caller: provider health, pause, queue depth, usage vs budget,
 embedding model and progress.*/
 ///
@@ -642,6 +761,27 @@ pub async fn get_entity_notes(
     let request = request.authenticated();
     client.send(request).await
 }
+/// Refresh an entity's AI sections now (Summary, Insights, Open items, Timeline).
+///
+/// `POST /api/v1/entities/{id}/refresh`
+pub async fn refresh_entity(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::JobQueued, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/entities/{}/refresh",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "refresh_entity",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
 /// The vault as a zip (with `.meta/`, without `.git/`, plus `.obsidian/app.json`).
 ///
 /// `GET /api/v1/export`
@@ -1122,6 +1262,27 @@ pub async fn move_note(
     let request = request.body(body)?;
     client.send(request).await
 }
+/// Link a note again now, even if it was linked at this version.
+///
+/// `POST /api/v1/notes/{id}/relink`
+pub async fn relink_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+) -> ::std::result::Result<types::JobQueued, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/notes/{}/relink",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "relink_note",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
 /// Restore a note's content from a commit in its history (a new `user: revert` commit).
 ///
 /// `POST /api/v1/notes/{id}/revert`
@@ -1344,6 +1505,31 @@ pub async fn accept_suggestion(
         "accept_suggestion",
     );
     let request = request.authenticated();
+    client.send(request).await
+}
+/** Accept an AI suggestion with edits (filing: title/tags/folder; entity link: the entity
+or the new entity's name and aliases; custody: the participant; tasks: text, due,
+recurrence, reminders) — one commit.*/
+///
+/// `POST /api/v1/suggestions/{id}/accept-with-edits`
+pub async fn accept_suggestion_with_edits(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::AcceptWithEditsRequest,
+) -> ::std::result::Result<types::Suggestion, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/suggestions/{}/accept-with-edits",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "accept_suggestion_with_edits",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
     client.send(request).await
 }
 /// Reject a pending suggestion.

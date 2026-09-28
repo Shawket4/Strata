@@ -72,6 +72,7 @@ fn gb_err(e: &graph_algo::GraphError) -> CoreError {
 }
 
 /// Builds the typed graph of every live note.
+#[allow(clippy::too_many_lines)] // one query per source table
 fn load(conn: &Connection) -> CoreResult<Loaded> {
     let mut b = GraphBuilder::new();
     let mut titles = HashMap::new();
@@ -245,6 +246,7 @@ fn degree(g: &Graph, ix: u32) -> u32 {
     u32::try_from(g.degree(ix)).unwrap_or(u32::MAX)
 }
 
+#[allow(clippy::many_single_char_names)] // x and y are the layout's names
 fn node_view(
     loaded: &Loaded,
     ctx: &ViewCtx,
@@ -301,7 +303,7 @@ pub fn local_graph(
             ai_relation_count: 0,
             relation_label: String::new(),
             summary: None,
-            save_layout: Availability::NotYetAvailable,
+            save_layout: Availability::NotAllowed,
             propose_relation: Availability::NotYetAvailable,
         });
     };
@@ -361,9 +363,72 @@ pub fn local_graph(
         ai_relation_count,
         relation_label,
         summary: loaded.summaries.get(id).cloned(),
-        save_layout: Availability::NotYetAvailable,
+        save_layout: if ctx.connectivity == crate::view::model::Connectivity::Offline {
+            Availability::Offline
+        } else {
+            Availability::Available
+        },
+        // Proposing a relation type with AI needs an endpoint that does not exist yet.
         propose_relation: Availability::NotYetAvailable,
     })
+}
+
+/// A JSON Canvas (PLAN §6.8) of a mind-map layout: one file node per placed note (by its
+/// vault path, positions rounded), and the local graph's edges between placed notes, labelled
+/// with their relation type.
+pub fn layout_canvas(
+    conn: &Connection,
+    ctx: &ViewCtx,
+    center: &str,
+    positions: &[crate::view::model::NodePosition],
+) -> CoreResult<String> {
+    use vault_format::canvas::{Canvas, Edge, Node, NodeKind};
+    let view = local_graph(conn, ctx, center, 3)?;
+    if !view.found {
+        return Err(CoreError::not_found("note"));
+    }
+    let mut canvas = Canvas::default();
+    let mut placed = std::collections::HashSet::new();
+    for p in positions {
+        let Some(path) = crate::store::notes::current(conn, &p.id)?.map(|n| n.path) else {
+            continue;
+        };
+        #[allow(clippy::cast_possible_truncation)] // layout units are small
+        canvas.nodes.push(Node {
+            id: p.id.clone(),
+            kind: NodeKind::File {
+                file: path,
+                subpath: None,
+            },
+            x: p.x.round() as i64,
+            y: p.y.round() as i64,
+            width: 250,
+            height: 60,
+            color: None,
+            extra: Default::default(),
+        });
+        placed.insert(p.id.clone());
+    }
+    for (i, e) in view
+        .edges
+        .iter()
+        .filter(|e| placed.contains(&e.src) && placed.contains(&e.dst))
+        .enumerate()
+    {
+        canvas.edges.push(Edge {
+            id: format!("e{i}"),
+            from_node: e.src.clone(),
+            from_side: None,
+            from_end: None,
+            to_node: e.dst.clone(),
+            to_side: None,
+            to_end: None,
+            color: None,
+            label: e.rel_type.clone(),
+            extra: Default::default(),
+        });
+    }
+    Ok(canvas.to_json())
 }
 
 /// Convex hull (Andrew's monotone chain), counter-clockwise, without collinear points.
@@ -556,6 +621,30 @@ pub fn global_graph_filtered(
             });
         }
     }
+    let similarity = crate::store::cache::get::<Vec<crate::net::SimilarityEdge>>(
+        conn,
+        crate::store::cache::SIMILARITY,
+    )?
+    .map(|(e, _)| e);
+    if let Some(sim) = &similarity {
+        let present: std::collections::HashSet<&str> =
+            all_nodes.iter().map(|n| n.id.as_str()).collect();
+        for e in sim {
+            if present.contains(e.src.as_str()) && present.contains(e.dst.as_str()) {
+                all_edges.push(GraphEdge {
+                    id: format!("{}|similarity|{}", e.src, e.dst),
+                    label: labels::relation_label("similarity", lang),
+                    src: e.src.clone(),
+                    dst: e.dst.clone(),
+                    kind: "similarity".to_owned(),
+                    by: Some("ai".to_owned()),
+                    confidence: e.score,
+                    rel_type: None,
+                    reason: None,
+                });
+            }
+        }
+    }
     let node_counts = kind_counts(all_nodes.iter().map(|n| n.kind.as_str()), lang, true);
     let edge_counts = kind_counts(all_edges.iter().map(|e| edge_family(&e.kind)), lang, false);
     // Filters.
@@ -632,10 +721,13 @@ pub fn global_graph_filtered(
         edge_counts,
         node_counts,
         neighbours,
-        similarity: if ctx.connectivity == crate::view::model::Connectivity::Offline {
+        similarity: if similarity.is_some() {
+            Availability::Available
+        } else if ctx.connectivity == crate::view::model::Connectivity::Offline {
             Availability::Offline
         } else {
-            Availability::NotYetAvailable
+            // Fetched on demand (`refresh_similarity`).
+            Availability::Available
         },
     })
 }

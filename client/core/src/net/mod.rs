@@ -321,6 +321,47 @@ pub struct IntegrityInfo {
     pub created: DateTime<Utc>,
 }
 
+/// An AI decision (`GET /ai-decisions`, §9.8 D13 activity feed).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AiDecisionInfo {
+    /// ID.
+    pub id: String,
+    /// `relation`, `entity_mention`, `concept`, `custody_event`, `task_suggestion`,
+    /// `filing`, `correction`.
+    pub kind: String,
+    /// Relation type (relations).
+    pub rel_type: Option<String>,
+    /// One-line summary.
+    pub summary: String,
+    /// Source note.
+    pub source_note_id: Option<String>,
+    /// Source title.
+    pub source_title: Option<String>,
+    /// Target ID.
+    pub target_id: String,
+    /// Target name.
+    pub target_name: Option<String>,
+    /// Confidence.
+    pub confidence: Option<f64>,
+    /// When.
+    pub created: DateTime<Utc>,
+    /// Undone at.
+    pub reverted_at: Option<DateTime<Utc>>,
+    /// The suggestion it came from.
+    pub suggestion_id: Option<String>,
+}
+
+/// A similarity edge (`GET /graph?types=similarity`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SimilarityEdge {
+    /// Source note.
+    pub src: String,
+    /// Target note.
+    pub dst: String,
+    /// Cosine.
+    pub score: Option<f64>,
+}
+
 /// One event of an Ask answer stream.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AskEvent {
@@ -603,6 +644,63 @@ pub trait AccountApi: Send + Sync + fmt::Debug {
         Err(NetError::NotAvailable {
             endpoint: "ask_stream".to_owned(),
         })
+    }
+    /// `GET /ai-decisions?limit=`, newest first.
+    fn ai_decisions(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        limit: u32,
+    ) -> BoxFuture<'_, Result<Vec<AiDecisionInfo>, NetError>> {
+        not_available("list_ai_decisions")
+    }
+    /// `POST /ai-decisions/{id}/reject` (undo).
+    fn reject_ai_decision(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        id: String,
+    ) -> BoxFuture<'_, Result<(), NetError>> {
+        not_available("reject_ai_decision")
+    }
+    /// `POST /ai-decisions/{id}/repoint`.
+    fn repoint_ai_decision(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        id: String,
+        target_id: String,
+        hint: Option<String>,
+    ) -> BoxFuture<'_, Result<(), NetError>> {
+        not_available("repoint_ai_decision")
+    }
+    /// `POST /ai-decisions/{id}/retype`.
+    fn retype_ai_decision(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        id: String,
+        rel_type: String,
+    ) -> BoxFuture<'_, Result<(), NetError>> {
+        not_available("retype_ai_decision")
+    }
+    /// Similarity edges of the whole graph (`GET /graph?types=similarity`).
+    fn similarity_edges(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+    ) -> BoxFuture<'_, Result<Vec<SimilarityEdge>, NetError>> {
+        not_available("get_graph")
+    }
+    /// `PUT /maps/{id}` (JSON Canvas), creating or replacing: the map's vault path.
+    fn put_map(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+        id: String,
+        content: String,
+    ) -> BoxFuture<'_, Result<String, NetError>> {
+        not_available("put_map")
     }
     /// `POST /ask/{id}/save`: the new note's ID.
     fn save_ask(

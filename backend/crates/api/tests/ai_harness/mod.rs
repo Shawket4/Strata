@@ -262,6 +262,8 @@ impl H {
             clock: Arc::new(self.clock.clone()),
             ids: self.db.ids.clone(),
             thresholds: dedupe::Thresholds::new(),
+            ai_thresholds: strata_jobs::thresholds::AiThresholds::default(),
+            default_tz: chrono_tz::UTC,
         };
         Runner::new(
             self.db.app_db.clone(),

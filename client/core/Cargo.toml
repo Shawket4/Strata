@@ -39,6 +39,14 @@ rmpv = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+# The first end-to-end tests of the client core against the real server (in-process
+# `TestServer`, per-test PostgreSQL database): `tests/server_e2e.rs`.
+strata-api = { workspace = true, features = ["test-support"] }
+strata-testkit = { workspace = true }
+strata-vault = { workspace = true }
+strata-common = { workspace = true }
+strata-index = { workspace = true }
+actix-web = { workspace = true }
 pretty_assertions = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }

@@ -617,6 +617,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<KnownAccountItem> dco_decode_list_known_account_item(dynamic raw);
 
   @protected
+  List<NodePosition> dco_decode_list_node_position(dynamic raw);
+
+  @protected
   List<NoteListItem> dco_decode_list_note_list_item(dynamic raw);
 
   @protected
@@ -710,6 +713,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   NewUserRequest dco_decode_new_user_request(dynamic raw);
+
+  @protected
+  NodePosition dco_decode_node_position(dynamic raw);
 
   @protected
   NoteDiffView dco_decode_note_diff_view(dynamic raw);
@@ -1723,6 +1729,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  List<NodePosition> sse_decode_list_node_position(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<NoteListItem> sse_decode_list_note_list_item(
     SseDeserializer deserializer,
   );
@@ -1834,6 +1845,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   NewUserRequest sse_decode_new_user_request(SseDeserializer deserializer);
+
+  @protected
+  NodePosition sse_decode_node_position(SseDeserializer deserializer);
 
   @protected
   NoteDiffView sse_decode_note_diff_view(SseDeserializer deserializer);
@@ -3099,6 +3113,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_node_position(
+    List<NodePosition> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_note_list_item(
     List<NoteListItem> self,
     SseSerializer serializer,
@@ -3256,6 +3276,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
     NewUserRequest self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_node_position(NodePosition self, SseSerializer serializer);
 
   @protected
   void sse_encode_note_diff_view(NoteDiffView self, SseSerializer serializer);

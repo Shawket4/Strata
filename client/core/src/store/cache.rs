@@ -15,6 +15,10 @@ pub const AI_STATUS: &str = "ai_status";
 pub const INTEGRITY: &str = "integrity";
 /// Cache key of the last downloaded export's size and note count.
 pub const EXPORT: &str = "export";
+/// Cache key of the AI decisions (activity feed).
+pub const AI_DECISIONS: &str = "ai_decisions";
+/// Cache key of the similarity edges (global map).
+pub const SIMILARITY: &str = "similarity";
 /// Cache key of the pending-approval count (admins).
 pub const ADMIN_PENDING: &str = "admin_pending";
 /// Cache key of the pending sign-up / sign-in awaiting approval (in the registry database).

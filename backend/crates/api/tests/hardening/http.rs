@@ -27,6 +27,8 @@ pub struct Req {
     pub body: Option<(String, Vec<u8>)>,
     /// Ask for a WebSocket upgrade (streams).
     pub upgrade: bool,
+    /// Declare this `Content-Length` instead of the body's (limits tests).
+    pub declared_len: Option<usize>,
 }
 
 impl Req {
@@ -93,7 +95,7 @@ impl Req {
         if let Some((ct, body)) = &self.body {
             head.push_str(&format!(
                 "Content-Type: {ct}\r\nContent-Length: {}\r\n\r\n",
-                body.len()
+                self.declared_len.unwrap_or(body.len())
             ));
             out = head.into_bytes();
             out.extend_from_slice(body);
@@ -161,14 +163,15 @@ pub async fn send(addr: SocketAddr, req: &Req) -> Resp {
 
 async fn exchange(addr: SocketAddr, req: &Req) -> Resp {
     let mut stream = TcpStream::connect(addr).await.expect("connect");
-    stream.write_all(&req.to_bytes()).await.expect("write");
+    // The server may answer (413) and close before reading a declared-but-unsent body.
+    let _ = stream.write_all(&req.to_bytes()).await;
     let mut buf = Vec::new();
     let mut chunk = [0u8; 16 * 1024];
     let head_end = loop {
         if let Some(i) = find(&buf, b"\r\n\r\n") {
             break i;
         }
-        let n = stream.read(&mut chunk).await.expect("read");
+        let n = stream.read(&mut chunk).await.unwrap_or(0);
         assert!(n > 0, "connection closed before the response head");
         buf.extend_from_slice(&chunk[..n]);
     };

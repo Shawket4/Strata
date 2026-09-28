@@ -122,6 +122,7 @@ fn note_candidates(
 }
 
 /// Editor completions for the token before `cursor` (UTF-16) in `content` of note `note_id`.
+#[allow(clippy::too_many_lines)] // one arm per completion kind
 pub fn completions(
     conn: &Connection,
     ctx: &ViewCtx,
@@ -318,6 +319,33 @@ pub fn task_homes(conn: &Connection, ctx: &ViewCtx) -> CoreResult<TaskHomesView>
     Ok(TaskHomesView { homes })
 }
 
+/// Depth-first walk of the place tree for the picker.
+fn walk_places(
+    conn: &Connection,
+    rows: &[(String, Option<String>)],
+    parent: Option<&str>,
+    depth: u32,
+    current: Option<&str>,
+    seen: &mut std::collections::HashSet<String>,
+    out: &mut Vec<PlaceOption>,
+) -> CoreResult<()> {
+    for (id, _) in rows.iter().filter(|r| r.1.as_deref() == parent) {
+        if !seen.insert(id.clone()) {
+            continue;
+        }
+        let r = note_ref(conn, id)?;
+        out.push(PlaceOption {
+            id: id.clone(),
+            title: r.title,
+            breadcrumb: breadcrumb(conn, id, false)?,
+            depth,
+            is_current: current == Some(id.as_str()),
+        });
+        walk_places(conn, rows, Some(id), depth + 1, current, seen, out)?;
+    }
+    Ok(())
+}
+
 /// Places for the custody picker, depth-first with breadcrumbs; `document_id` marks where
 /// that document is now.
 pub fn place_options(conn: &Connection, document_id: Option<&str>) -> CoreResult<Vec<PlaceOption>> {
@@ -343,31 +371,6 @@ pub fn place_options(conn: &Connection, document_id: Option<&str>) -> CoreResult
     let ids: std::collections::HashSet<&String> = rows.iter().map(|r| &r.0).collect();
     let mut out = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    fn walk(
-        conn: &Connection,
-        rows: &[(String, Option<String>)],
-        parent: Option<&str>,
-        depth: u32,
-        current: Option<&str>,
-        seen: &mut std::collections::HashSet<String>,
-        out: &mut Vec<PlaceOption>,
-    ) -> CoreResult<()> {
-        for (id, _) in rows.iter().filter(|r| r.1.as_deref() == parent) {
-            if !seen.insert(id.clone()) {
-                continue;
-            }
-            let r = note_ref(conn, id)?;
-            out.push(PlaceOption {
-                id: id.clone(),
-                title: r.title,
-                breadcrumb: breadcrumb(conn, id, false)?,
-                depth,
-                is_current: current == Some(id.as_str()),
-            });
-            walk(conn, rows, Some(id), depth + 1, current, seen, out)?;
-        }
-        Ok(())
-    }
     // Roots: no parent, or a parent that is not a known place.
     let roots: Vec<(String, Option<String>)> = rows
         .iter()
@@ -386,7 +389,7 @@ pub fn place_options(conn: &Connection, document_id: Option<&str>) -> CoreResult
             depth: 0,
             is_current: current.as_deref() == Some(root.as_str()),
         });
-        walk(
+        walk_places(
             conn,
             &rows,
             Some(root),
@@ -505,6 +508,7 @@ pub fn citation_preview(
 
 /// The new-task sheet's "Understood as": the text parsed, `@mentions` resolved to people and
 /// companies (their links written into the description).
+#[allow(clippy::too_many_lines)] // one chip per understood piece
 pub fn task_draft_preview(
     conn: &Connection,
     ctx: &ViewCtx,

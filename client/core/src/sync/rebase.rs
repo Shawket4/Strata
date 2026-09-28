@@ -36,6 +36,7 @@ pub struct RebaseReport {
 }
 
 /// Rebases the pending ops of note `id` onto `new_base` (the server state just pulled).
+#[allow(clippy::single_match_else)] // two cases per op, as documented
 pub fn rebase_note(
     conn: &Connection,
     id: &str,

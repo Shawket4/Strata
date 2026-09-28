@@ -79,6 +79,8 @@ zip = { workspace = true }
 # logger, log capture, and the synthetic vault generator.
 stratad = { path = "../../bin/stratad" }
 tracing-subscriber = { workspace = true }
+url = { workspace = true }
+async-trait = { workspace = true }
 
 [[bin]]
 name = "emit-openapi"

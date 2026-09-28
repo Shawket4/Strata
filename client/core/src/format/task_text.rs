@@ -390,6 +390,7 @@ mod tests {
     const TODAY: &str = "2026-09-27";
 
     #[test]
+    #[allow(clippy::many_single_char_names)] // one binding per parsed example
     fn english_date_time_and_recurrence() {
         let p = parse("Call @Ahmed tomorrow at 9:30pm about invoices", d(TODAY));
         assert_eq!(p.description, "Call @Ahmed about invoices");

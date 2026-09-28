@@ -75,7 +75,7 @@ class StrataCore
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1372952940;
+  int get rustContentHash => -1659574484;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -298,9 +298,15 @@ abstract class StrataCoreApi extends BaseApi {
 
   Future<void> crateApiAppRefreshAccount();
 
+  Future<void> crateApiIntentsRefreshAiActivity();
+
   Future<void> crateApiIntentsRefreshHistory({required String noteId});
 
   Future<void> crateApiIntentsRefreshSettings();
+
+  Future<void> crateApiIntentsRefreshSimilarity();
+
+  Future<void> crateApiIntentsRejectAiDecision({required String decisionId});
 
   Future<List<String>> crateApiIntentsRejectCapture({required String noteId});
 
@@ -349,6 +355,12 @@ abstract class StrataCoreApi extends BaseApi {
     required String text,
   });
 
+  Future<void> crateApiIntentsRepointAiDecision({
+    required String decisionId,
+    required String targetId,
+    String? hint,
+  });
+
   Future<String> crateApiIntentsRepointRelation({
     required String srcId,
     required String dstId,
@@ -390,6 +402,11 @@ abstract class StrataCoreApi extends BaseApi {
     required LinkOrCreateChoice choice,
   });
 
+  Future<void> crateApiIntentsRetypeAiDecision({
+    required String decisionId,
+    required String relType,
+  });
+
   Future<String> crateApiIntentsRetypeRelation({
     required String srcId,
     required String dstId,
@@ -405,6 +422,12 @@ abstract class StrataCoreApi extends BaseApi {
   Future<void> crateApiIntentsRevokeDevice({required String id});
 
   Future<String> crateApiIntentsSaveAnswerAsNote({required String messageId});
+
+  Future<String> crateApiIntentsSaveLayout({
+    required String centerId,
+    required String name,
+    required List<NodePosition> positions,
+  });
 
   Future<AdminUserItem> crateApiIntentsScheduleDeletion({required String id});
 
@@ -2511,6 +2534,33 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "refresh_account", argNames: []);
 
   @override
+  Future<void> crateApiIntentsRefreshAiActivity() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 64,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRefreshAiActivityConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRefreshAiActivityConstMeta =>
+      const TaskConstMeta(debugName: "refresh_ai_activity", argNames: []);
+
+  @override
   Future<void> crateApiIntentsRefreshHistory({required String noteId}) {
     return handler.executeNormal(
       NormalTask(
@@ -2520,7 +2570,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 64,
+            funcId: 65,
             port: port_,
           );
         },
@@ -2547,7 +2597,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 65,
+            funcId: 66,
             port: port_,
           );
         },
@@ -2566,6 +2616,64 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "refresh_settings", argNames: []);
 
   @override
+  Future<void> crateApiIntentsRefreshSimilarity() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 67,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRefreshSimilarityConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRefreshSimilarityConstMeta =>
+      const TaskConstMeta(debugName: "refresh_similarity", argNames: []);
+
+  @override
+  Future<void> crateApiIntentsRejectAiDecision({required String decisionId}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(decisionId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 68,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRejectAiDecisionConstMeta,
+        argValues: [decisionId],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRejectAiDecisionConstMeta =>
+      const TaskConstMeta(
+        debugName: "reject_ai_decision",
+        argNames: ["decisionId"],
+      );
+
+  @override
   Future<List<String>> crateApiIntentsRejectCapture({required String noteId}) {
     return handler.executeNormal(
       NormalTask(
@@ -2575,7 +2683,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 66,
+            funcId: 69,
             port: port_,
           );
         },
@@ -2609,7 +2717,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 67,
+            funcId: 70,
             port: port_,
           );
         },
@@ -2640,7 +2748,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 68,
+            funcId: 71,
             port: port_,
           );
         },
@@ -2668,7 +2776,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 69,
+            funcId: 72,
             port: port_,
           );
         },
@@ -2695,7 +2803,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 70,
+            funcId: 73,
             port: port_,
           );
         },
@@ -2727,7 +2835,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 71,
+            funcId: 74,
             port: port_,
           );
         },
@@ -2759,7 +2867,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 72,
+            funcId: 75,
             port: port_,
           );
         },
@@ -2796,7 +2904,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 73,
+            funcId: 76,
             port: port_,
           );
         },
@@ -2831,7 +2939,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 74,
+            funcId: 77,
             port: port_,
           );
         },
@@ -2866,7 +2974,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 75,
+            funcId: 78,
             port: port_,
           );
         },
@@ -2894,7 +3002,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 76,
+            funcId: 79,
             port: port_,
           );
         },
@@ -2926,7 +3034,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 77,
+            funcId: 80,
             port: port_,
           );
         },
@@ -2948,6 +3056,43 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<void> crateApiIntentsRepointAiDecision({
+    required String decisionId,
+    required String targetId,
+    String? hint,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(decisionId, serializer);
+          sse_encode_String(targetId, serializer);
+          sse_encode_opt_String(hint, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 81,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRepointAiDecisionConstMeta,
+        argValues: [decisionId, targetId, hint],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRepointAiDecisionConstMeta =>
+      const TaskConstMeta(
+        debugName: "repoint_ai_decision",
+        argNames: ["decisionId", "targetId", "hint"],
+      );
+
+  @override
   Future<String> crateApiIntentsRepointRelation({
     required String srcId,
     required String dstId,
@@ -2965,7 +3110,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 78,
+            funcId: 82,
             port: port_,
           );
         },
@@ -3000,7 +3145,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 79,
+            funcId: 83,
             port: port_,
           );
         },
@@ -3031,7 +3176,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 80,
+            funcId: 84,
             port: port_,
           );
         },
@@ -3059,7 +3204,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 81,
+            funcId: 85,
             port: port_,
           );
         },
@@ -3091,7 +3236,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 82,
+            funcId: 86,
             port: port_,
           );
         },
@@ -3126,7 +3271,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 83,
+            funcId: 87,
             port: port_,
           );
         },
@@ -3161,7 +3306,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 84,
+            funcId: 88,
             port: port_,
           );
         },
@@ -3196,7 +3341,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 85,
+            funcId: 89,
             port: port_,
           );
         },
@@ -3231,7 +3376,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 86,
+            funcId: 90,
             port: port_,
           );
         },
@@ -3253,6 +3398,41 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<void> crateApiIntentsRetypeAiDecision({
+    required String decisionId,
+    required String relType,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(decisionId, serializer);
+          sse_encode_String(relType, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 91,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsRetypeAiDecisionConstMeta,
+        argValues: [decisionId, relType],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsRetypeAiDecisionConstMeta =>
+      const TaskConstMeta(
+        debugName: "retype_ai_decision",
+        argNames: ["decisionId", "relType"],
+      );
+
+  @override
   Future<String> crateApiIntentsRetypeRelation({
     required String srcId,
     required String dstId,
@@ -3270,7 +3450,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 87,
+            funcId: 92,
             port: port_,
           );
         },
@@ -3305,7 +3485,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 88,
+            funcId: 93,
             port: port_,
           );
         },
@@ -3335,7 +3515,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 89,
+            funcId: 94,
             port: port_,
           );
         },
@@ -3363,7 +3543,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 90,
+            funcId: 95,
             port: port_,
           );
         },
@@ -3385,6 +3565,42 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<String> crateApiIntentsSaveLayout({
+    required String centerId,
+    required String name,
+    required List<NodePosition> positions,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(centerId, serializer);
+          sse_encode_String(name, serializer);
+          sse_encode_list_node_position(positions, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 96,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSaveLayoutConstMeta,
+        argValues: [centerId, name, positions],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSaveLayoutConstMeta => const TaskConstMeta(
+    debugName: "save_layout",
+    argNames: ["centerId", "name", "positions"],
+  );
+
+  @override
   Future<AdminUserItem> crateApiIntentsScheduleDeletion({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -3394,7 +3610,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 91,
+            funcId: 97,
             port: port_,
           );
         },
@@ -3426,7 +3642,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 92,
+            funcId: 98,
             port: port_,
           );
         },
@@ -3460,7 +3676,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 93,
+            funcId: 99,
             port: port_,
           );
         },
@@ -3493,7 +3709,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 94,
+            funcId: 100,
             port: port_,
           );
         },
@@ -3521,7 +3737,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 95,
+            funcId: 101,
             port: port_,
           );
         },
@@ -3556,7 +3772,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 96,
+            funcId: 102,
             port: port_,
           );
         },
@@ -3587,7 +3803,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 97,
+            funcId: 103,
             port: port_,
           );
         },
@@ -3621,7 +3837,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 98,
+            funcId: 104,
             port: port_,
           );
         },
@@ -3657,7 +3873,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 99,
+            funcId: 105,
             port: port_,
           );
         },
@@ -3688,7 +3904,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 100,
+            funcId: 106,
             port: port_,
           );
         },
@@ -3719,7 +3935,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 101,
+            funcId: 107,
             port: port_,
           );
         },
@@ -3750,7 +3966,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 102,
+            funcId: 108,
             port: port_,
           );
         },
@@ -3778,7 +3994,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 103,
+            funcId: 109,
             port: port_,
           );
         },
@@ -3806,7 +4022,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 104,
+            funcId: 110,
             port: port_,
           );
         },
@@ -3838,7 +4054,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 105,
+            funcId: 111,
             port: port_,
           );
         },
@@ -3873,7 +4089,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 106,
+            funcId: 112,
             port: port_,
           );
         },
@@ -3901,7 +4117,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 107,
+            funcId: 113,
             port: port_,
           );
         },
@@ -3929,7 +4145,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 108,
+            funcId: 114,
             port: port_,
           );
         },
@@ -3957,7 +4173,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 109,
+            funcId: 115,
             port: port_,
           );
         },
@@ -3984,7 +4200,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 110,
+            funcId: 116,
             port: port_,
           );
         },
@@ -4014,7 +4230,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 111,
+            funcId: 117,
             port: port_,
           );
         },
@@ -4044,7 +4260,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 112,
+            funcId: 118,
             port: port_,
           );
         },
@@ -4072,7 +4288,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 113,
+            funcId: 119,
             port: port_,
           );
         },
@@ -4099,7 +4315,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 114,
+            funcId: 120,
             port: port_,
           );
         },
@@ -4126,7 +4342,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 115,
+            funcId: 121,
             port: port_,
           );
         },
@@ -4153,7 +4369,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 116,
+            funcId: 122,
             port: port_,
           );
         },
@@ -4181,7 +4397,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 117,
+            funcId: 123,
             port: port_,
           );
         },
@@ -4208,7 +4424,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 118,
+            funcId: 124,
             port: port_,
           );
         },
@@ -4235,7 +4451,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 119,
+            funcId: 125,
             port: port_,
           );
         },
@@ -4263,7 +4479,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 120,
+            funcId: 126,
             port: port_,
           );
         },
@@ -4297,7 +4513,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 121,
+            funcId: 127,
             port: port_,
           );
         },
@@ -4331,7 +4547,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 122,
+            funcId: 128,
             port: port_,
           );
         },
@@ -4365,7 +4581,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 123,
+            funcId: 129,
             port: port_,
           );
         },
@@ -4398,7 +4614,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 124,
+              funcId: 130,
               port: port_,
             );
           },
@@ -4431,7 +4647,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 125,
+              funcId: 131,
               port: port_,
             );
           },
@@ -4470,7 +4686,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 126,
+              funcId: 132,
               port: port_,
             );
           },
@@ -4514,7 +4730,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 127,
+              funcId: 133,
               port: port_,
             );
           },
@@ -4549,7 +4765,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 128,
+              funcId: 134,
               port: port_,
             );
           },
@@ -4585,7 +4801,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 129,
+              funcId: 135,
               port: port_,
             );
           },
@@ -4617,7 +4833,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 130,
+              funcId: 136,
               port: port_,
             );
           },
@@ -4649,7 +4865,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 131,
+              funcId: 137,
               port: port_,
             );
           },
@@ -4684,7 +4900,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 132,
+              funcId: 138,
               port: port_,
             );
           },
@@ -4724,7 +4940,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 133,
+              funcId: 139,
               port: port_,
             );
           },
@@ -4759,7 +4975,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 134,
+              funcId: 140,
               port: port_,
             );
           },
@@ -4792,7 +5008,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 135,
+              funcId: 141,
               port: port_,
             );
           },
@@ -4825,7 +5041,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 136,
+              funcId: 142,
               port: port_,
             );
           },
@@ -4860,7 +5076,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 137,
+              funcId: 143,
               port: port_,
             );
           },
@@ -4898,7 +5114,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 138,
+              funcId: 144,
               port: port_,
             );
           },
@@ -4932,7 +5148,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 139,
+              funcId: 145,
               port: port_,
             );
           },
@@ -4964,7 +5180,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 140,
+              funcId: 146,
               port: port_,
             );
           },
@@ -4996,7 +5212,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 141,
+              funcId: 147,
               port: port_,
             );
           },
@@ -5029,7 +5245,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 142,
+              funcId: 148,
               port: port_,
             );
           },
@@ -5061,7 +5277,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 143,
+              funcId: 149,
               port: port_,
             );
           },
@@ -5093,7 +5309,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 144,
+              funcId: 150,
               port: port_,
             );
           },
@@ -5344,8 +5560,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AiActivityItem dco_decode_ai_activity_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return AiActivityItem(
       atLabel: dco_decode_String(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -5355,6 +5571,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       relType: dco_decode_opt_String(arr[5]),
       confidence: dco_decode_opt_box_autoadd_f_64(arr[6]),
       undoSuggestionId: dco_decode_opt_String(arr[7]),
+      decisionId: dco_decode_String(arr[8]),
+      reverted: dco_decode_bool(arr[9]),
     );
   }
 
@@ -7006,6 +7224,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<NodePosition> dco_decode_list_node_position(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_node_position).toList();
+  }
+
+  @protected
   List<NoteListItem> dco_decode_list_note_list_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_note_list_item).toList();
@@ -7241,6 +7465,19 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       displayName: dco_decode_String(arr[1]),
       password: dco_decode_String(arr[2]),
       role: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  NodePosition dco_decode_node_position(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NodePosition(
+      id: dco_decode_String(arr[0]),
+      x: dco_decode_f_64(arr[1]),
+      y: dco_decode_f_64(arr[2]),
     );
   }
 
@@ -7817,8 +8054,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   RelationChip dco_decode_relation_chip(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return RelationChip(
       relType: dco_decode_String(arr[0]),
       target: dco_decode_entity_ref(arr[1]),
@@ -7828,6 +8065,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       relLabel: dco_decode_String(arr[5]),
       createdLabel: dco_decode_opt_String(arr[6]),
       citations: dco_decode_list_citation(arr[7]),
+      decisionId: dco_decode_opt_String(arr[8]),
     );
   }
 
@@ -8756,6 +8994,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_relType = sse_decode_opt_String(deserializer);
     var var_confidence = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_undoSuggestionId = sse_decode_opt_String(deserializer);
+    var var_decisionId = sse_decode_String(deserializer);
+    var var_reverted = sse_decode_bool(deserializer);
     return AiActivityItem(
       atLabel: var_atLabel,
       kind: var_kind,
@@ -8765,6 +9005,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       relType: var_relType,
       confidence: var_confidence,
       undoSuggestionId: var_undoSuggestionId,
+      decisionId: var_decisionId,
+      reverted: var_reverted,
     );
   }
 
@@ -10973,6 +11215,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<NodePosition> sse_decode_list_node_position(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NodePosition>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_node_position(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<NoteListItem> sse_decode_list_note_list_item(
     SseDeserializer deserializer,
   ) {
@@ -11379,6 +11635,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       password: var_password,
       role: var_role,
     );
+  }
+
+  @protected
+  NodePosition sse_decode_node_position(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_x = sse_decode_f_64(deserializer);
+    var var_y = sse_decode_f_64(deserializer);
+    return NodePosition(id: var_id, x: var_x, y: var_y);
   }
 
   @protected
@@ -12199,6 +12464,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_relLabel = sse_decode_String(deserializer);
     var var_createdLabel = sse_decode_opt_String(deserializer);
     var var_citations = sse_decode_list_citation(deserializer);
+    var var_decisionId = sse_decode_opt_String(deserializer);
     return RelationChip(
       relType: var_relType,
       target: var_target,
@@ -12208,6 +12474,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       relLabel: var_relLabel,
       createdLabel: var_createdLabel,
       citations: var_citations,
+      decisionId: var_decisionId,
     );
   }
 
@@ -13431,6 +13698,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.relType, serializer);
     sse_encode_opt_box_autoadd_f_64(self.confidence, serializer);
     sse_encode_opt_String(self.undoSuggestionId, serializer);
+    sse_encode_String(self.decisionId, serializer);
+    sse_encode_bool(self.reverted, serializer);
   }
 
   @protected
@@ -15170,6 +15439,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_node_position(
+    List<NodePosition> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_node_position(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_note_list_item(
     List<NoteListItem> self,
     SseSerializer serializer,
@@ -15526,6 +15807,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.displayName, serializer);
     sse_encode_String(self.password, serializer);
     sse_encode_String(self.role, serializer);
+  }
+
+  @protected
+  void sse_encode_node_position(NodePosition self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_f_64(self.x, serializer);
+    sse_encode_f_64(self.y, serializer);
   }
 
   @protected
@@ -16203,6 +16492,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.relLabel, serializer);
     sse_encode_opt_String(self.createdLabel, serializer);
     sse_encode_list_citation(self.citations, serializer);
+    sse_encode_opt_String(self.decisionId, serializer);
   }
 
   @protected

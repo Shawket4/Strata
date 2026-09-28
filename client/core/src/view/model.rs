@@ -663,8 +663,13 @@ pub struct AiActivityItem {
     pub rel_type: Option<String>,
     /// Confidence.
     pub confidence: Option<f64>,
-    /// Suggestion to undo it.
+    /// Suggestion it came from.
     pub undo_suggestion_id: Option<String>,
+    /// The AI decision (undo with `reject_ai_decision`, correct with
+    /// `repoint_ai_decision` / `retype_ai_decision`).
+    pub decision_id: String,
+    /// Already undone.
+    pub reverted: bool,
 }
 
 /// Which notes the "Recent" block lists.
@@ -1332,6 +1337,9 @@ pub struct RelationChip {
     pub created_label: Option<String>,
     /// Blocks the AI cited for it.
     pub citations: Vec<Citation>,
+    /// The AI decision behind an AI relation (repoint / retype / reject it, D13), once the
+    /// activity feed was fetched.
+    pub decision_id: Option<String>,
 }
 
 /// A note linking here.
