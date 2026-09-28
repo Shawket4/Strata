@@ -682,7 +682,7 @@ async fn admins_manage_accounts_from_the_users_screen() {
     let pending = alice_device.core.state().expect("state");
     assert_eq!(
         (pending.kind, pending.deletion_label.as_deref()),
-        (SessionKind::DeletionPending, Some("Deleted on 11 Oct 2026"))
+        (SessionKind::DeletionPending, Some("11 Oct 2026"))
     );
     let export = alice_device.dir.path().join("alice.zip");
     let summary = alice_device
@@ -768,6 +768,8 @@ async fn ai_activity_similarity_and_saved_layouts() {
         Err(CoreError::Internal("decision id: invalid length".into()))
     );
 
+    // Regression: a blank name used to be sanitised to `Untitled` and silently replace the
+    // map of that name.
     assert_eq!(
         s.save_layout(&a, "   ", &[]).await,
         Err(CoreError::InvalidInput {

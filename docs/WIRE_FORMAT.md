@@ -59,6 +59,18 @@ Encoding is `rmp-serde` on both sides (`to_vec_named`).
 | unit enum | the variant name as a string (`snake_case`) |
 | tagged enum | map with a `type` key naming the variant, then the variant's fields (see §3) |
 
+**Times are UTC.** The server sends every timestamp in UTC (`…Z`); a timestamp received with
+another offset is read as the same instant. Every create — the REST create bodies
+(`POST /notes`, `/capture`, `/entities`, `/documents`, `/places`, `/tasks`,
+`/ask/{id}/save`) and the sync ops that make a note (`note.create`, `capture`,
+`entity/document/place.create`, `task.create`, `suggestion.accept`) — carries a required
+`created`: the creation time on the device. The server writes it as the new note's
+`created`/`updated` and never substitutes the time it received the request, so an offline
+create keeps its time. A `created` more than `max_future_skew_secs` (default 300) ahead of the
+server's clock is refused with `422 created_in_future` (over sync: `rejected{problem}` with
+the same problem). `task.create` / `POST /tasks` also take an optional `home_id`: the ID a
+`tasks/Tasks.md` the create makes gets, so the device and the server write identical bytes.
+
 **Unknown map keys are ignored** on decode, so older clients accept newer payloads and new
 optional fields are additive changes within `/api/v1`. MessagePack extension types (including the
 MessagePack timestamp extension) are never used and are rejected.
@@ -145,7 +157,8 @@ declare theirs through `strata_common::DomainError` and reach the wire via
 `route_not_found`, `method_not_allowed`, `bad_request`, `unauthorized`, `invalid_credentials`,
 `forbidden`, `account_pending`, `account_rejected`, `account_disabled`,
 `account_deletion_pending`, `password_change_required`, `version_conflict`,
-`duplicate_candidates`, `username_taken`, `account_state_conflict`, `epoch_changed`,
+`duplicate_candidates`, `username_taken`, `account_state_conflict`, `created_in_future`
+(`422`; `detail` names the allowed skew), `epoch_changed`,
 `rate_limited` (sent with `Retry-After`) and `internal`. Clients must handle unknown slugs by `status`: the generated
 client maps them to `ApiError::Other`. `detail` and `message` never contain user content.
 Decode errors keep only the part of the message that comes from the target type (for example
