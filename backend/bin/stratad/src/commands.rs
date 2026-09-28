@@ -10,6 +10,7 @@ use strata_api::auth::SigningKeys;
 use strata_api::auth::password::PasswordHasher;
 use strata_api::auth::service::{NewAccount, create_active_account};
 use strata_api::auth::tokens::generate_key_pem;
+use strata_common::config::env;
 use strata_common::{Clock, Config, SystemClock, SystemIdGenerator, UserId};
 use strata_index::bootstrap::{self, RolePasswords};
 use strata_index::types::UserRole;
@@ -147,6 +148,21 @@ pub async fn create_user(config: &Config, input: &CreateUser<'_>) -> Result<User
 }
 
 /// `stratad openapi`: writes the contract (normally `api/openapi.json`).
+/// `check-config`: the effective configuration as env-file lines (every variable, in
+/// documentation order), after a line saying it is valid. Database URL passwords are masked.
+pub fn check_config(config: &Config) -> String {
+    let mut out = String::from("# configuration is valid\n");
+    for (name, value) in env::to_vars(config) {
+        let value = if name.starts_with("STRATA_DATABASE__") && name.ends_with("_URL") {
+            env::redact_url(&value)
+        } else {
+            value
+        };
+        out.push_str(&format!("{name}={}\n", env::quote(&value)));
+    }
+    out
+}
+
 pub fn openapi(path: &Path) -> Result<(), CommandError> {
     strata_api::openapi::write(path)?;
     Ok(())

@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use pretty_assertions::assert_eq;
 use strata_common::Config;
+use strata_common::config::env;
 use strata_testkit::{ROLE_PASSWORD_ENV, TestDb, admin_url};
 
 fn role_url(role: &str, database: &str) -> String {
@@ -29,8 +30,8 @@ fn superuser_url(database: &str) -> String {
     url.to_string()
 }
 
-/// A configuration file for `db` with its data root and key under `dir`; returns its path.
-fn write_config(db: &str, dir: &Path, bind: &str) -> PathBuf {
+/// The configuration for `db` with its data root and key under `dir`.
+fn test_config(db: &str, dir: &Path, bind: &str) -> Config {
     let mut config = Config {
         data_root: dir.join("data"),
         bind: bind.parse().expect("bind address"),
@@ -45,24 +46,28 @@ fn write_config(db: &str, dir: &Path, bind: &str) -> PathBuf {
     config.database.app_url = role_url("strata_app", db);
     config.database.accounts_url = role_url("strata_accounts", db);
     config.database.max_connections = 2;
-    let path = dir.join("stratad.toml");
-    std::fs::write(&path, toml::to_string(&config).expect("toml")).expect("write config");
+    config
+}
+
+/// An env file for `db` with its data root and key under `dir`; returns its path.
+fn write_config(db: &str, dir: &Path, bind: &str) -> PathBuf {
+    let path = dir.join("stratad.env");
+    std::fs::write(&path, env::to_env_file(&test_config(db, dir, bind))).expect("write config");
     path
 }
 
-/// `stratad` with a clean environment (no inherited config or superuser URL).
+/// `stratad` with a clean environment (no inherited settings, env file or superuser URL) in a
+/// working directory without a `.env`.
 fn stratad(config: Option<&Path>) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_stratad"));
-    cmd.env_remove("STRATA_CONFIG")
-        .env_remove("STRATA_SUPERUSER_URL")
-        .env("RUST_LOG", "info");
+    cmd.env("RUST_LOG", "info").current_dir(env!("CARGO_TARGET_TMPDIR"));
     for (name, _) in std::env::vars() {
-        if name.starts_with("STRATA__") {
+        if name.starts_with("STRATA_") {
             cmd.env_remove(name);
         }
     }
     if let Some(config) = config {
-        cmd.arg("--config").arg(config);
+        cmd.arg("--env-file").arg(config);
     }
     cmd
 }
@@ -118,38 +123,113 @@ fn log_messages(text: &str) -> Vec<String> {
 #[test]
 fn an_unreadable_or_invalid_config_exits_with_status_2() {
     let dir = tempfile::tempdir().expect("tempdir");
-    let missing = dir.path().join("absent.toml");
+    let missing = dir.path().join("absent.env");
     let out = run(stratad(Some(&missing)).arg("migrate"));
     assert_eq!(out.status.code(), Some(2));
     assert_eq!(
         stderr(&out),
         format!(
-            "stratad: cannot read config file {}: No such file or directory (os error 2)\n",
+            "stratad: cannot read env file {}: No such file or directory (os error 2)\n",
             missing.display()
         )
     );
 
-    let bad = dir.path().join("bad.toml");
-    std::fs::write(&bad, "data_root = 7\n").expect("write");
+    let bad = dir.path().join("bad.env");
+    std::fs::write(&bad, "STRATA_DATABASE__MAX_CONNECTIONS=many\n").expect("write");
     let out = run(stratad(Some(&bad)).arg("migrate"));
     assert_eq!(out.status.code(), Some(2));
-    assert!(
-        stderr(&out).starts_with("stratad: invalid config: "),
-        "{}",
-        stderr(&out)
+    assert_eq!(
+        stderr(&out),
+        "stratad: invalid STRATA_DATABASE__MAX_CONNECTIONS: expected a whole number from 0 to \
+         4294967295\n"
     );
 
-    // An environment override is applied after the file and validated the same way.
+    // A misspelt name in the file is refused with a correction.
+    std::fs::write(&bad, "STRATA_DATABASE__MAX_CONECTIONS=3\n").expect("write");
+    let out = run(stratad(Some(&bad)).arg("migrate"));
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(
+        stderr(&out),
+        format!(
+            "stratad: unknown variable STRATA_DATABASE__MAX_CONECTIONS in {}; did you mean \
+             STRATA_DATABASE__MAX_CONNECTIONS?\n",
+            bad.display()
+        )
+    );
+
+    // An environment variable is applied over the file and validated the same way.
     let out = run(stratad(None)
-        .env("STRATA__JOBS__MAX_CONCURRENCY", "many")
+        .env("STRATA_JOBS__MAX_CONCURRENCY", "0")
         .arg("migrate"));
     assert_eq!(out.status.code(), Some(2));
-    assert!(
-        stderr(&out)
-            .starts_with("stratad: invalid environment override STRATA__JOBS__MAX_CONCURRENCY: "),
-        "{}",
-        stderr(&out)
+    assert_eq!(
+        stderr(&out),
+        "stratad: invalid config: STRATA_JOBS__MAX_CONCURRENCY must be at least 1\n"
     );
+
+    // A syntax error names the line, never its content (it may hold a password).
+    std::fs::write(
+        &bad,
+        "STRATA_BIND=127.0.0.1:1\nSTRATA_DATABASE__APP_URL=postgres://a:hunter 2@db/s\n",
+    )
+    .expect("write");
+    let out = run(stratad(Some(&bad)).arg("migrate"));
+    assert_eq!(out.status.code(), Some(2));
+    assert_eq!(
+        stderr(&out),
+        format!(
+            "stratad: env file {}, line 2: expected NAME=value; quote a value that contains \
+             spaces, `#`, `$` or quotes in single quotes (NAME='value')\n",
+            bad.display()
+        )
+    );
+}
+
+/// `check-config` prints every effective setting with the database passwords masked; the file
+/// comes from `--env-file`, `STRATA_ENV_FILE` or `./.env`, and the environment wins over it.
+#[test]
+fn check_config_prints_the_effective_settings_from_every_source() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let mut config = test_config("strata", dir.path(), "127.0.0.1:9000");
+    config.database.app_url = "postgres://strata_app:hunter2@db/strata".into();
+    let path = dir.path().join("stratad.env");
+    std::fs::write(&path, env::to_env_file(&config)).expect("write");
+    let expected = |config: &Config| {
+        let mut shown = config.clone();
+        for url in [
+            &mut shown.database.owner_url,
+            &mut shown.database.app_url,
+            &mut shown.database.accounts_url,
+        ] {
+            *url = env::redact_url(url);
+        }
+        format!("# configuration is valid\n{}", env::to_env_file(&shown))
+    };
+
+    let out = run(stratad(Some(&path)).arg("check-config"));
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert_eq!(stdout(&out), expected(&config));
+    assert!(!stdout(&out).contains("hunter2"));
+
+    let out = run(stratad(None).env("STRATA_ENV_FILE", &path).arg("check-config"));
+    assert_eq!(stdout(&out), expected(&config));
+
+    let out = run(stratad(None)
+        .env("STRATA_ENV_FILE", &path)
+        .env("STRATA_JOBS__NIGHTLY_HOUR", "5")
+        .arg("check-config"));
+    let mut overridden = config.clone();
+    overridden.jobs.nightly_hour = 5;
+    assert_eq!(stdout(&out), expected(&overridden));
+
+    std::fs::copy(&path, dir.path().join(".env")).expect("copy");
+    let out = run(stratad(None).current_dir(dir.path()).arg("check-config"));
+    assert_eq!(out.status.code(), Some(0), "{}", stderr(&out));
+    assert_eq!(stdout(&out), expected(&config));
+
+    // Without any file: the defaults.
+    let out = run(stratad(None).arg("check-config"));
+    assert_eq!(stdout(&out), expected(&Config::default()));
 }
 
 #[test]

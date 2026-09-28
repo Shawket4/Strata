@@ -339,13 +339,25 @@ fn note_title(conn: &Connection, id: &str) -> CoreResult<Option<String>> {
         .optional()?)
 }
 
-fn task_description(conn: &Connection, id: &str) -> CoreResult<String> {
-    Ok(conn
+/// A task's description; for a task a queued op removed locally (deleted, or its note
+/// deleted), the description on the server base of `note_id`; the block ID as a last resort.
+fn task_description(conn: &Connection, id: &str, note_id: Option<&str>) -> CoreResult<String> {
+    if let Some(d) = conn
         .query_row("SELECT description FROM tasks WHERE id = ?1", [id], |r| {
             r.get::<_, String>(0)
         })
         .optional()?
-        .unwrap_or_else(|| id.to_owned()))
+    {
+        return Ok(d);
+    }
+    if let Some(note) = note_id
+        && let Some(base) = crate::store::notes::base(conn, note)?
+        && let Some((_, t)) =
+            sync_model::apply::find_task(vault_format::Document::parse(&base.content).body(), id)
+    {
+        return Ok(t.description().to_owned());
+    }
+    Ok(id.to_owned())
 }
 
 /// What an outbox op does, in one line.
@@ -353,6 +365,11 @@ fn op_detail(conn: &Connection, op: &outbox::OutboxOp, lang: Lang) -> CoreResult
     use crate::sync::model::Op;
     let title_of = |id: &ulid::Ulid| -> CoreResult<String> {
         Ok(note_title(conn, &id.to_string())?.unwrap_or_default())
+    };
+    let local = crate::store::write::LocalEntity::parse(&op.local_entity);
+    let task_note = match &local {
+        crate::store::write::LocalEntity::Note(id) => Some(id.as_str()),
+        _ => None,
     };
     Ok(match &op.op {
         Op::NoteUpdate(u) => match &op.base_content {
@@ -405,11 +422,11 @@ fn op_detail(conn: &Connection, op: &outbox::OutboxOp, lang: Lang) -> CoreResult
         Op::TaskCreate(p) => p.text.clone(),
         Op::TaskUpdate(p) => match &p.text {
             Some(t) => t.clone(),
-            None => task_description(conn, &p.id)?,
+            None => task_description(conn, &p.id, task_note)?,
         },
-        Op::TaskComplete(p) => format!("✓ {}", task_description(conn, &p.id)?),
-        Op::TaskCancel(p) => format!("✕ {}", task_description(conn, &p.id)?),
-        Op::TaskReopen(p) | Op::TaskDelete(p) => task_description(conn, &p.id)?,
+        Op::TaskComplete(p) => format!("✓ {}", task_description(conn, &p.id, task_note)?),
+        Op::TaskCancel(p) => format!("✕ {}", task_description(conn, &p.id, task_note)?),
+        Op::TaskReopen(p) | Op::TaskDelete(p) => task_description(conn, &p.id, task_note)?,
         Op::SuggestionReply(r) => r.text.clone(),
         Op::DocumentCustody(c) => c.event.as_str().to_owned(),
         Op::EntityMerge(m) => {
@@ -436,7 +453,11 @@ pub fn sync_status(conn: &Connection, ctx: &ViewCtx) -> CoreResult<SyncStatusVie
             _ => OutboxStatus::Pending,
         };
         let title = match crate::store::write::LocalEntity::parse(&op.local_entity) {
-            crate::store::write::LocalEntity::Note(id) => note_title(conn, &id)?,
+            crate::store::write::LocalEntity::Note(id) => match note_title(conn, &id)? {
+                Some(t) => Some(t),
+                // Deleted by a queued op: the name it still has on the server.
+                None => crate::store::notes::base(conn, &id)?.map(|b| format::title_of(&b.path)),
+            },
             _ => None,
         };
         let detail = op_detail(conn, &op, ctx.lang)?;

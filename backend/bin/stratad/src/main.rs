@@ -11,7 +11,7 @@ use stratad::commands::{self, CreateUser};
 fn main() -> ExitCode {
     let cli = Cli::parse();
     stratad::logging::init();
-    let config = match Config::load(cli.config.as_deref()) {
+    let config = match Config::load(cli.env_file.as_deref()) {
         Ok(config) => config,
         Err(err) => {
             eprintln!("stratad: {err}");
@@ -33,6 +33,10 @@ fn run(command: Command, config: Config) -> Result<(), String> {
         Command::Serve => actix_web::rt::System::new()
             .block_on(stratad::serve::run(config))
             .map_err(|e| e.to_string()),
+        Command::CheckConfig => {
+            print!("{}", commands::check_config(&config));
+            Ok(())
+        }
         Command::Keygen { out, force } => {
             let path = out.unwrap_or_else(|| config.auth.signing_key_file.clone());
             commands::keygen(&path, force).map_err(|e| e.to_string())?;

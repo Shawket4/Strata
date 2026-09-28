@@ -158,7 +158,7 @@ fn every_setting_has_exactly_one_variable_named_after_its_path() {
     let unique: BTreeSet<String> = names.iter().cloned().collect();
     assert_eq!(unique.len(), names.len(), "duplicate variable");
     assert_eq!(unique, from_struct);
-    assert_eq!(names.len(), 104);
+    assert_eq!(names.len(), 103);
     assert_eq!(
         names[..5],
         [
@@ -182,22 +182,12 @@ fn every_variable_round_trips_through_the_environment_and_a_file() {
     let parsed = file(&text);
     assert_eq!(parsed.vars, vars);
     assert_eq!(from_vars(&parsed, Vec::new()), Ok(config.clone()));
-    // Each variable on its own changes exactly its setting.
+    // Each variable on its own changes exactly its setting, except the changes that are only
+    // valid together with another one.
+    let mut invalid_alone = Vec::new();
     for (name, value) in &vars {
-        let single = from_env(&[(name.as_str(), value.as_str())]);
-        let Ok(single) = single else {
-            // Settings whose change is only valid together with another one.
-            assert!(
-                [
-                    "STRATA_AI__USER_PROVIDERS",
-                    "STRATA_AI__EMBEDDING__MAX_TOKENS",
-                    "STRATA_AI__EMBEDDING__MAX_BATCH_TOKENS",
-                    "STRATA_JOBS__BACKOFF_BASE_SECS",
-                    "STRATA_AUTH__ARGON2__MEMORY_KIB",
-                ]
-                .contains(&name.as_str()),
-                "{name}: {single:?}"
-            );
+        let Ok(single) = from_env(&[(name.as_str(), value.as_str())]) else {
+            invalid_alone.push(name.as_str());
             continue;
         };
         let changed: Vec<String> = to_vars(&single)
@@ -208,6 +198,14 @@ fn every_variable_round_trips_through_the_environment_and_a_file() {
             .collect();
         assert_eq!(changed, [name.clone()], "{name}");
     }
+    assert_eq!(
+        invalid_alone,
+        [
+            "STRATA_AI__USER_PROVIDERS",
+            "STRATA_AI__EMBEDDING__MAX_BATCH_TOKENS",
+            "STRATA_JOBS__BACKOFF_MAX_SECS",
+        ]
+    );
 }
 
 #[test]

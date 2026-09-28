@@ -8,9 +8,10 @@ use clap::{Parser, Subcommand};
 #[derive(Debug, Parser)]
 #[command(name = "stratad", version, about)]
 pub struct Cli {
-    /// Configuration file (`stratad.toml`); `STRATA__…` environment variables override it.
-    #[arg(long, short, global = true, env = "STRATA_CONFIG")]
-    pub config: Option<PathBuf>,
+    /// Env file with `STRATA_…` settings (default: `.env` in the working directory, if
+    /// present). Variables set in the environment override the file.
+    #[arg(long, global = true, env = "STRATA_ENV_FILE", value_name = "PATH")]
+    pub env_file: Option<PathBuf>,
     /// What to do.
     #[command(subcommand)]
     pub command: Command,
@@ -21,6 +22,9 @@ pub struct Cli {
 pub enum Command {
     /// Run the API server (after checking secrets, the key and the database locale).
     Serve,
+    /// Validate the configuration and print every effective setting (database passwords
+    /// masked), without connecting anywhere.
+    CheckConfig,
     /// Generate the Ed25519 access-token signing key (PKCS#8 PEM, mode 0600).
     Keygen {
         /// Where to write it (default: `auth.signing_key_file`).

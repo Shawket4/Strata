@@ -110,14 +110,14 @@ async fn every_queued_change_is_described_in_english() {
     assert_eq!(
         rows("en").await,
         [
-            row("note.update", pricing, "1 line changed, 1 line added"),
-            row("relation.add", pricing, "People · Mona Adel"),
+            row("note.update", pricing, "+1 line, 1 changed"),
+            row("relation.add", pricing, "people · Mona Adel"),
             row(
                 "relation.retype",
                 pricing,
-                "Changed from Related to Part of · Acme"
+                "Changed from related to part of · Acme"
             ),
-            row("relation.remove", pricing, "Removed Part of · Acme"),
+            row("relation.remove", pricing, "Removed part of · Acme"),
             row("task.update", pricing, "Send the revised offer"),
             row("task.update", pricing, "Order lunch"),
             row("task.complete", pricing, "✓ Call Mona"),
@@ -126,8 +126,13 @@ async fn every_queued_change_is_described_in_english() {
             row("entity.merge", Some("Mona A"), "Merged into Mona Adel"),
             row("document.custody", Some("Car license"), "handed-to"),
             row("note.move", Some("Old ideas"), "Moved to archive/Old ideas.md"),
-            row("note.delete", None, "Deleted"),
-            row("capture", None, "Call the landlord about the lease"),
+            row("note.delete", Some("Old ideas"), "Deleted"),
+            // A capture's note is named by its time until filed.
+            row(
+                "capture",
+                Some("2026-09-27-100000"),
+                "Call the landlord about the lease"
+            ),
         ]
     );
 }
@@ -138,9 +143,9 @@ async fn every_queued_change_is_described_in_arabic() {
     assert_eq!(
         details,
         [
-            "تغيّر سطر واحد، أُضيف سطر واحد",
-            "الأشخاص · Mona Adel",
-            "تغيّرت من مرتبطة إلى جزء من · Acme",
+            "+سطر واحد، 1 معدّل",
+            "أشخاص · Mona Adel",
+            "تغيّرت من مرتبط إلى جزء من · Acme",
             "أُزيلت جزء من · Acme",
             "Send the revised offer",
             "Order lunch",
