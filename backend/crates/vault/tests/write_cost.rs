@@ -2,10 +2,10 @@
 //! write cost). Timing-free regression tests for what made sync push slow at 10 000 files:
 //!
 //! - the index update of a write (re-deriving notes, their keep-both pairs, the before/after
-//!   snapshots, the change log, purge) reads the same number of rows and index entries
-//!   whether the rest of the vault holds 10 notes or 80: every statement is an index lookup
-//!   of the written notes' rows (with sequential scans disabled, so the planner's choice for
-//!   tiny tables does not hide a missing index);
+//!   snapshots, the change log, purge) reads only the written notes' rows, not the rest of a
+//!   vault of 450 other notes: every statement is an index lookup (planner statistics as in
+//!   a live database, sequential scans disabled so a missing index shows as a scan of the
+//!   user's rows);
 //! - the git commit of a write writes the same number of objects whatever the number of
 //!   files, and builds its tree from `HEAD`'s tree rather than from the index.
 #![allow(clippy::expect_used, clippy::too_many_lines)]
@@ -216,18 +216,10 @@ const BOUND: i64 = 150;
 #[tokio::test]
 async fn the_index_update_of_a_write_does_not_read_the_rest_of_the_vault() {
     let db = TestDb::new().await.expect("db");
-    let small = measured_write(&db, "small", 10).await;
-    let large = measured_write(&db, "large", LARGE).await;
-    assert!(small.contains_key("notes_pkey"), "{small:?}");
-    let over = |reads: &BTreeMap<String, i64>| -> BTreeMap<String, i64> {
-        reads
-            .iter()
-            .filter(|(_, n)| **n > BOUND)
-            .map(|(r, n)| (r.clone(), *n))
-            .collect()
-    };
-    assert_eq!(over(&small), BTreeMap::new(), "{small:?}");
-    assert_eq!(over(&large), BTreeMap::new(), "{large:?}");
+    let reads = measured_write(&db, "alice", LARGE).await;
+    assert!(reads.contains_key("notes_pkey"), "{reads:?}");
+    let over: BTreeMap<&String, &i64> = reads.iter().filter(|(_, n)| **n > BOUND).collect();
+    assert_eq!(over, BTreeMap::new(), "{reads:?}");
     db.cleanup().await.expect("cleanup");
 }
 

@@ -479,7 +479,7 @@ abstract final class NotesFixtures {
     contentVersion: '',
     versionLabel: 'v3',
     wordCount: 58,
-    backlinkCount: 0,
+    backlinkCount: 1,
     historyEntries: [],
     pinned: false,
   );

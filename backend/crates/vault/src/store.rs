@@ -911,18 +911,6 @@ impl Core {
         self.merge_hint = None;
     }
 
-    /// Re-derives the given notes (live or trashed) from their files and writes the rows.
-    /// Returns the derived rows by ID (for removed notes: nothing).
-    pub(crate) async fn reindex_ids(
-        &mut self,
-        tx: &mut ScopedTx,
-        ids: &BTreeSet<NoteId>,
-        tz: Tz,
-    ) -> Result<HashMap<NoteId, Derived>> {
-        let derived = self.derive_ids(ids, tz).await?;
-        self.write_derived(tx, derived).await
-    }
-
     /// Derives the rows of the given notes (live or trashed) from their files, without
     /// writing them.
     pub(crate) async fn derive_ids(
