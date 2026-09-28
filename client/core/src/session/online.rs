@@ -67,7 +67,7 @@ impl Session {
     /// Re-reads the devices, AI status, integrity warnings and (admins) the approval queue.
     /// Offline → `offline`; each part that answers is cached.
     pub async fn refresh_settings(&self) -> CoreResult<()> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         let api = self.env.account_api.clone();
         let devices = self.online(api.devices(url.clone(), self.tokens()).await)?;
         self.cache_put(cache::DEVICES, &devices)?;
@@ -78,7 +78,7 @@ impl Session {
             self.cache_put(cache::INTEGRITY, &w)?;
         }
         let is_admin =
-            self.read(|c, _| Ok(build::account_summary(c)?.is_some_and(|a| a.is_admin)))?;
+            self.read(|c, _| Ok(build::account_summary(c, "")?.is_some_and(|a| a.is_admin)))?;
         if is_admin && let Ok(users) = api.admin_users(url, self.tokens()).await {
             let pending = users.iter().filter(|u| u.status == "pending").count();
             self.cache_put(cache::ADMIN_PENDING, &u32::try_from(pending).unwrap_or(0))?;
@@ -92,7 +92,7 @@ impl Session {
         if name.is_empty() {
             return Err(CoreError::invalid("name", "empty"));
         }
-        let url = self.server_url()?;
+        let url = self.server_url();
         self.online(
             self.env
                 .account_api
@@ -111,7 +111,7 @@ impl Session {
         {
             return Err(CoreError::invalid("device", "this_device"));
         }
-        let url = self.server_url()?;
+        let url = self.server_url();
         self.online(
             self.env
                 .account_api
@@ -131,7 +131,7 @@ impl Session {
         {
             return self.set_reminders_enabled(enabled);
         }
-        let url = self.server_url()?;
+        let url = self.server_url();
         self.online(
             self.env
                 .account_api
@@ -143,7 +143,7 @@ impl Session {
 
     /// Fetches a note's history (shown in the note's history panel and "v7").
     pub async fn refresh_history(&self, note_id: &str) -> CoreResult<()> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         let revisions = self.online(
             self.env
                 .account_api
@@ -162,7 +162,7 @@ impl Session {
         note_id: &str,
         commit: &str,
     ) -> CoreResult<NoteDiffView> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         let rev = self.online(
             self.env
                 .account_api
@@ -185,7 +185,7 @@ impl Session {
     /// Reverts a note to a revision (online; the change arrives by the next pull, which
     /// rebases any queued local edits onto it).
     pub async fn revert_note(&self, note_id: &str, commit: &str) -> CoreResult<()> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         self.online(
             self.env
                 .account_api
@@ -219,7 +219,7 @@ impl Session {
         if query.trim().is_empty() {
             return Ok(empty(Availability::Available));
         }
-        let url = self.server_url()?;
+        let url = self.server_url();
         let hits = match self
             .env
             .account_api
@@ -249,7 +249,7 @@ impl Session {
 
     /// Downloads the vault export (`GET /export`) to `path`.
     pub async fn export_vault(&self, path: &str) -> CoreResult<ExportSummary> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         let bytes = self.online(self.env.account_api.export_vault(url, self.tokens()).await)?;
         write_file(path, &bytes)?;
         let labels = self.ctx().labels();
@@ -267,7 +267,7 @@ impl Session {
     pub async fn import_vault(&self, path: &str) -> CoreResult<ImportSummary> {
         let mut bytes = Vec::new();
         std::fs::File::open(path)?.read_to_end(&mut bytes)?;
-        let url = self.server_url()?;
+        let url = self.server_url();
         let (imported, skipped) = self.online(
             self.env
                 .account_api
@@ -279,7 +279,7 @@ impl Session {
 
     fn admin_ctx(&self) -> CoreResult<(ViewCtx, String)> {
         let (is_admin, me) = self.read(|c, _| {
-            let a = build::account_summary(c)?;
+            let a = build::account_summary(c, "")?;
             Ok((
                 a.as_ref().is_some_and(|a| a.is_admin),
                 a.map(|a| a.user_id).unwrap_or_default(),
@@ -307,7 +307,7 @@ impl Session {
                 deletion_preview_label: None,
             });
         };
-        let url = self.server_url()?;
+        let url = self.server_url();
         match self.env.account_api.admin_users(url, self.tokens()).await {
             Ok(users) => {
                 let pending = users.iter().filter(|u| u.status == "pending").count();
@@ -317,7 +317,7 @@ impl Session {
                 view.deletion_preview_label = self
                     .env
                     .account_api
-                    .admin_settings(self.server_url()?, self.tokens())
+                    .admin_settings(self.server_url(), self.tokens())
                     .await
                     .ok()
                     .map(|grace| build::deletion_preview_label(&ctx, grace));
@@ -343,7 +343,7 @@ impl Session {
         let u = self.online(
             self.env
                 .account_api
-                .admin_approve(self.server_url()?, self.tokens(), id.to_owned())
+                .admin_approve(self.server_url(), self.tokens(), id.to_owned())
                 .await,
         )?;
         self.admin_item(u)
@@ -355,7 +355,7 @@ impl Session {
         let u = self.online(
             self.env
                 .account_api
-                .admin_reject(self.server_url()?, self.tokens(), id.to_owned())
+                .admin_reject(self.server_url(), self.tokens(), id.to_owned())
                 .await,
         )?;
         self.admin_item(u)
@@ -373,7 +373,7 @@ impl Session {
         let (u, password) = self.online(
             self.env
                 .account_api
-                .admin_update(self.server_url()?, self.tokens(), id.to_owned(), update)
+                .admin_update(self.server_url(), self.tokens(), id.to_owned(), update)
                 .await,
         )?;
         Ok((self.admin_item(u)?, password))
@@ -431,7 +431,7 @@ impl Session {
         let u = self.online(
             self.env
                 .account_api
-                .admin_schedule_deletion(self.server_url()?, self.tokens(), id.to_owned())
+                .admin_schedule_deletion(self.server_url(), self.tokens(), id.to_owned())
                 .await,
         )?;
         self.admin_item(u)
@@ -443,7 +443,7 @@ impl Session {
         let u = self.online(
             self.env
                 .account_api
-                .admin_cancel_deletion(self.server_url()?, self.tokens(), id.to_owned())
+                .admin_cancel_deletion(self.server_url(), self.tokens(), id.to_owned())
                 .await,
         )?;
         self.admin_item(u)
@@ -461,7 +461,7 @@ impl Session {
         let u = self.online(
             self.env
                 .account_api
-                .admin_create(self.server_url()?, self.tokens(), r)
+                .admin_create(self.server_url(), self.tokens(), r)
                 .await,
         )?;
         self.admin_item(u)
@@ -469,7 +469,7 @@ impl Session {
 
     /// Re-reads the AI activity feed (the last 50 AI decisions).
     pub async fn refresh_ai_activity(&self) -> CoreResult<()> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         let d = self.online(
             self.env
                 .account_api
@@ -485,7 +485,7 @@ impl Session {
     /// Undoes (rejects) an AI decision (D13): the change is reverted by the server and the
     /// link never re-proposed; the result arrives by pull.
     pub async fn reject_ai_decision(&self, id: &str) -> CoreResult<()> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         self.online(
             self.env
                 .account_api
@@ -502,7 +502,7 @@ impl Session {
         target_id: &str,
         hint: Option<String>,
     ) -> CoreResult<()> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         self.online(
             self.env
                 .account_api
@@ -523,7 +523,7 @@ impl Session {
         if rel_type.parse::<vault_format::RelationKey>().is_err() {
             return Err(CoreError::invalid("rel_type", "unknown_relation"));
         }
-        let url = self.server_url()?;
+        let url = self.server_url();
         self.online(
             self.env
                 .account_api
@@ -535,7 +535,7 @@ impl Session {
 
     /// Fetches the similarity edges of the global map (computed on the server, never stored).
     pub async fn refresh_similarity(&self) -> CoreResult<()> {
-        let url = self.server_url()?;
+        let url = self.server_url();
         let edges = self.online(
             self.env
                 .account_api
@@ -564,7 +564,7 @@ impl Session {
         let name = vault_format::filename::sanitize_file_name(name.trim());
         let content =
             self.read(|c, ctx| crate::graph::layout_canvas(c, ctx, center_id, positions))?;
-        let url = self.server_url()?;
+        let url = self.server_url();
         self.online(
             self.env
                 .account_api

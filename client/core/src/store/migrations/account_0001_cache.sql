@@ -9,7 +9,6 @@ CREATE TABLE account (
     display_name TEXT NOT NULL,
     role TEXT NOT NULL,
     status TEXT NOT NULL,
-    server_url TEXT NOT NULL,
     timezone TEXT NOT NULL,
     ui_language TEXT NOT NULL,
     deletion_at TEXT,

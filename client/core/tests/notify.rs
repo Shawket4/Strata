@@ -203,7 +203,7 @@ async fn device_toggle_and_sign_out_cancel_everything() {
     expected.sort_by_key(|o| o.id);
     assert_eq!(rec.take(), expected);
     let settings = s
-        .read(build::settings_view)
+        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
         .expect("settings")
         .expect("signed in");
     assert!(!settings.reminders.enabled);
@@ -307,7 +307,7 @@ async fn platform_results_and_retries() {
     s.notification_result(op.id, NotificationResult::PermissionDenied)
         .expect("result");
     let settings = s
-        .read(build::settings_view)
+        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
         .expect("settings")
         .expect("signed in");
     assert_eq!(
@@ -320,7 +320,7 @@ async fn platform_results_and_retries() {
     s.notification_result(op.id, NotificationResult::Ok)
         .expect("result");
     let settings = s
-        .read(build::settings_view)
+        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
         .expect("settings")
         .expect("signed in");
     assert_eq!(

@@ -6392,13 +6392,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   CoreConfig dco_decode_core_config(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return CoreConfig(
       appDataDir: dco_decode_String(arr[0]),
       platform: dco_decode_platform(arr[1]),
       defaultDeviceName: dco_decode_String(arr[2]),
-      defaultServerUrl: dco_decode_opt_String(arr[3]),
+      serverUrl: dco_decode_String(arr[3]),
+      releaseBuild: dco_decode_bool(arr[4]),
     );
   }
 
@@ -7163,14 +7164,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   KnownAccountItem dco_decode_known_account_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return KnownAccountItem(
       userId: dco_decode_String(arr[0]),
       username: dco_decode_String(arr[1]),
       displayName: dco_decode_String(arr[2]),
-      serverUrl: dco_decode_String(arr[3]),
-      initials: dco_decode_String(arr[4]),
+      initials: dco_decode_String(arr[3]),
     );
   }
 
@@ -8125,16 +8125,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   PendingApproval dco_decode_pending_approval(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return PendingApproval(
       username: dco_decode_String(arr[0]),
-      serverUrl: dco_decode_String(arr[1]),
-      requestedAt: dco_decode_Chrono_Utc(arr[2]),
-      requestedLabel: dco_decode_String(arr[3]),
-      lastCheckedAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[4]),
-      lastCheckedLabel: dco_decode_opt_String(arr[5]),
-      canCheck: dco_decode_bool(arr[6]),
+      requestedAt: dco_decode_Chrono_Utc(arr[1]),
+      requestedLabel: dco_decode_String(arr[2]),
+      lastCheckedAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[3]),
+      lastCheckedLabel: dco_decode_opt_String(arr[4]),
+      canCheck: dco_decode_bool(arr[5]),
     );
   }
 
@@ -8441,25 +8440,24 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SessionState dco_decode_session_state(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 16)
-      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
+    if (arr.length != 15)
+      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
     return SessionState(
       kind: dco_decode_session_kind(arr[0]),
       account: dco_decode_opt_box_autoadd_account_summary(arr[1]),
       knownAccounts: dco_decode_list_known_account_item(arr[2]),
-      serverUrl: dco_decode_opt_String(arr[3]),
-      deviceName: dco_decode_String(arr[4]),
-      unsyncedOps: dco_decode_u_32(arr[5]),
-      deletionAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[6]),
-      daysRemaining: dco_decode_opt_box_autoadd_u_32(arr[7]),
-      deletionLabel: dco_decode_opt_String(arr[8]),
-      pending: dco_decode_opt_box_autoadd_pending_approval(arr[9]),
-      exportSizeBytes: dco_decode_opt_box_autoadd_u_64(arr[10]),
-      exportNoteCount: dco_decode_opt_box_autoadd_u_32(arr[11]),
-      exportLabel: dco_decode_opt_String(arr[12]),
-      thisDevice: dco_decode_opt_box_autoadd_device_item(arr[13]),
-      deviceCount: dco_decode_opt_box_autoadd_u_32(arr[14]),
-      pendingApprovals: dco_decode_opt_box_autoadd_u_32(arr[15]),
+      deviceName: dco_decode_String(arr[3]),
+      unsyncedOps: dco_decode_u_32(arr[4]),
+      deletionAt: dco_decode_opt_box_autoadd_Chrono_Utc(arr[5]),
+      daysRemaining: dco_decode_opt_box_autoadd_u_32(arr[6]),
+      deletionLabel: dco_decode_opt_String(arr[7]),
+      pending: dco_decode_opt_box_autoadd_pending_approval(arr[8]),
+      exportSizeBytes: dco_decode_opt_box_autoadd_u_64(arr[9]),
+      exportNoteCount: dco_decode_opt_box_autoadd_u_32(arr[10]),
+      exportLabel: dco_decode_opt_String(arr[11]),
+      thisDevice: dco_decode_opt_box_autoadd_device_item(arr[12]),
+      deviceCount: dco_decode_opt_box_autoadd_u_32(arr[13]),
+      pendingApprovals: dco_decode_opt_box_autoadd_u_32(arr[14]),
     );
   }
 
@@ -8488,13 +8486,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SignInRequest dco_decode_sign_in_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return SignInRequest(
-      serverUrl: dco_decode_String(arr[0]),
-      username: dco_decode_String(arr[1]),
-      password: dco_decode_String(arr[2]),
-      deviceName: dco_decode_String(arr[3]),
+      username: dco_decode_String(arr[0]),
+      password: dco_decode_String(arr[1]),
+      deviceName: dco_decode_String(arr[2]),
     );
   }
 
@@ -8523,13 +8520,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SignUpRequest dco_decode_sign_up_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return SignUpRequest(
-      serverUrl: dco_decode_String(arr[0]),
-      username: dco_decode_String(arr[1]),
-      password: dco_decode_String(arr[2]),
-      displayName: dco_decode_String(arr[3]),
+      username: dco_decode_String(arr[0]),
+      password: dco_decode_String(arr[1]),
+      displayName: dco_decode_String(arr[2]),
     );
   }
 
@@ -10019,12 +10015,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_appDataDir = sse_decode_String(deserializer);
     var var_platform = sse_decode_platform(deserializer);
     var var_defaultDeviceName = sse_decode_String(deserializer);
-    var var_defaultServerUrl = sse_decode_opt_String(deserializer);
+    var var_serverUrl = sse_decode_String(deserializer);
+    var var_releaseBuild = sse_decode_bool(deserializer);
     return CoreConfig(
       appDataDir: var_appDataDir,
       platform: var_platform,
       defaultDeviceName: var_defaultDeviceName,
-      defaultServerUrl: var_defaultServerUrl,
+      serverUrl: var_serverUrl,
+      releaseBuild: var_releaseBuild,
     );
   }
 
@@ -10961,13 +10959,11 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_userId = sse_decode_String(deserializer);
     var var_username = sse_decode_String(deserializer);
     var var_displayName = sse_decode_String(deserializer);
-    var var_serverUrl = sse_decode_String(deserializer);
     var var_initials = sse_decode_String(deserializer);
     return KnownAccountItem(
       userId: var_userId,
       username: var_username,
       displayName: var_displayName,
-      serverUrl: var_serverUrl,
       initials: var_initials,
     );
   }
@@ -12626,7 +12622,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   PendingApproval sse_decode_pending_approval(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_username = sse_decode_String(deserializer);
-    var var_serverUrl = sse_decode_String(deserializer);
     var var_requestedAt = sse_decode_Chrono_Utc(deserializer);
     var var_requestedLabel = sse_decode_String(deserializer);
     var var_lastCheckedAt = sse_decode_opt_box_autoadd_Chrono_Utc(deserializer);
@@ -12634,7 +12629,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_canCheck = sse_decode_bool(deserializer);
     return PendingApproval(
       username: var_username,
-      serverUrl: var_serverUrl,
       requestedAt: var_requestedAt,
       requestedLabel: var_requestedLabel,
       lastCheckedAt: var_lastCheckedAt,
@@ -12993,7 +12987,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_kind = sse_decode_session_kind(deserializer);
     var var_account = sse_decode_opt_box_autoadd_account_summary(deserializer);
     var var_knownAccounts = sse_decode_list_known_account_item(deserializer);
-    var var_serverUrl = sse_decode_opt_String(deserializer);
     var var_deviceName = sse_decode_String(deserializer);
     var var_unsyncedOps = sse_decode_u_32(deserializer);
     var var_deletionAt = sse_decode_opt_box_autoadd_Chrono_Utc(deserializer);
@@ -13010,7 +13003,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       kind: var_kind,
       account: var_account,
       knownAccounts: var_knownAccounts,
-      serverUrl: var_serverUrl,
       deviceName: var_deviceName,
       unsyncedOps: var_unsyncedOps,
       deletionAt: var_deletionAt,
@@ -13058,12 +13050,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   @protected
   SignInRequest sse_decode_sign_in_request(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_serverUrl = sse_decode_String(deserializer);
     var var_username = sse_decode_String(deserializer);
     var var_password = sse_decode_String(deserializer);
     var var_deviceName = sse_decode_String(deserializer);
     return SignInRequest(
-      serverUrl: var_serverUrl,
       username: var_username,
       password: var_password,
       deviceName: var_deviceName,
@@ -13091,12 +13081,10 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   @protected
   SignUpRequest sse_decode_sign_up_request(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_serverUrl = sse_decode_String(deserializer);
     var var_username = sse_decode_String(deserializer);
     var var_password = sse_decode_String(deserializer);
     var var_displayName = sse_decode_String(deserializer);
     return SignUpRequest(
-      serverUrl: var_serverUrl,
       username: var_username,
       password: var_password,
       displayName: var_displayName,
@@ -14771,7 +14759,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.appDataDir, serializer);
     sse_encode_platform(self.platform, serializer);
     sse_encode_String(self.defaultDeviceName, serializer);
-    sse_encode_opt_String(self.defaultServerUrl, serializer);
+    sse_encode_String(self.serverUrl, serializer);
+    sse_encode_bool(self.releaseBuild, serializer);
   }
 
   @protected
@@ -15386,7 +15375,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.userId, serializer);
     sse_encode_String(self.username, serializer);
     sse_encode_String(self.displayName, serializer);
-    sse_encode_String(self.serverUrl, serializer);
     sse_encode_String(self.initials, serializer);
   }
 
@@ -16848,7 +16836,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.username, serializer);
-    sse_encode_String(self.serverUrl, serializer);
     sse_encode_Chrono_Utc(self.requestedAt, serializer);
     sse_encode_String(self.requestedLabel, serializer);
     sse_encode_opt_box_autoadd_Chrono_Utc(self.lastCheckedAt, serializer);
@@ -17100,7 +17087,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_session_kind(self.kind, serializer);
     sse_encode_opt_box_autoadd_account_summary(self.account, serializer);
     sse_encode_list_known_account_item(self.knownAccounts, serializer);
-    sse_encode_opt_String(self.serverUrl, serializer);
     sse_encode_String(self.deviceName, serializer);
     sse_encode_u_32(self.unsyncedOps, serializer);
     sse_encode_opt_box_autoadd_Chrono_Utc(self.deletionAt, serializer);
@@ -17137,7 +17123,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.serverUrl, serializer);
     sse_encode_String(self.username, serializer);
     sse_encode_String(self.password, serializer);
     sse_encode_String(self.deviceName, serializer);
@@ -17168,7 +17153,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_String(self.serverUrl, serializer);
     sse_encode_String(self.username, serializer);
     sse_encode_String(self.password, serializer);
     sse_encode_String(self.displayName, serializer);

@@ -112,16 +112,40 @@ fn the_facade_drives_the_core_end_to_end() {
     let dir = tempfile::TempDir::new().expect("app data");
     let url = w.server.base_url();
 
-    // Outside a runtime: no background loop.
-    let state = futures::executor::block_on(app::init_core(CoreConfig {
+    let config = |server_url: &str, release_build: bool| CoreConfig {
         app_data_dir: dir.path().to_str().expect("utf-8").to_owned(),
         platform: Platform::Linux,
         default_device_name: "Facade laptop".to_owned(),
-        default_server_url: Some(url.clone()),
-    }))
-    .expect("init");
+        server_url: server_url.to_owned(),
+        release_build,
+    };
+    // A build without a usable server address does not start (the app shows why).
+    for (server_url, release_build, reason) in [
+        ("", false, "missing"),
+        ("http://strata-ai.duckdns.org", false, "insecure_http"),
+        (url.as_str(), true, "insecure_http"),
+    ] {
+        assert_eq!(
+            futures::executor::block_on(app::init_core(config(server_url, release_build))),
+            Err(CoreFailure {
+                code: "misconfigured_build".to_owned(),
+                message_key: "error.misconfigured_build".to_owned(),
+                field: Some("server_url".to_owned()),
+                reason: Some(reason.to_owned()),
+                count: None,
+                status: None,
+            }),
+            "{server_url}"
+        );
+    }
+    assert_eq!(
+        intents::capture("x".to_owned()),
+        Err(failure("not_initialised"))
+    );
+
+    // Outside a runtime: no background loop. A debug build may use the loopback server.
+    let state = futures::executor::block_on(app::init_core(config(&url, false))).expect("init");
     assert_eq!(state.kind, SessionKind::SignedOut);
-    assert_eq!(state.server_url.as_deref(), Some(url.as_str()));
     assert_eq!(state.device_name, "Facade laptop");
     assert_eq!(
         intents::capture("x".to_owned()),
@@ -131,7 +155,6 @@ fn the_facade_drives_the_core_end_to_end() {
     // Sign-up waits for approval; a wrong password is typed.
     let outcome = rt
         .block_on(app::sign_up(SignUpRequest {
-            server_url: url.clone(),
             username: "bob".to_owned(),
             password: "bob-password-1".to_owned(),
             display_name: "Bob".to_owned(),
@@ -139,7 +162,6 @@ fn the_facade_drives_the_core_end_to_end() {
         .expect("sign up");
     assert_eq!(outcome.username, "bob");
     let wrong = rt.block_on(app::sign_in(SignInRequest {
-        server_url: url.clone(),
         username: "alice".to_owned(),
         password: "nope-nope-nope".to_owned(),
         device_name: "Facade laptop".to_owned(),
@@ -147,7 +169,6 @@ fn the_facade_drives_the_core_end_to_end() {
     assert_eq!(wrong, Err(failure("invalid_credentials")));
     let active = rt
         .block_on(app::sign_in(SignInRequest {
-            server_url: url.clone(),
             username: "alice".to_owned(),
             password: world::password("alice"),
             device_name: "Facade laptop".to_owned(),
@@ -157,6 +178,10 @@ fn the_facade_drives_the_core_end_to_end() {
     assert_eq!(
         active.account.as_ref().map(|a| a.username.as_str()),
         Some("alice")
+    );
+    assert_eq!(
+        active.account.as_ref().map(|a| a.server_url.as_str()),
+        Some(url.as_str())
     );
     app::app_lifecycle(AppLifecycle::Resumed).expect("resume");
     app::sync_now().expect("sync now");

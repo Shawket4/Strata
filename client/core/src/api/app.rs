@@ -24,7 +24,7 @@ pub fn init_app() {
 /// database if one is signed in. Returns the session state to route on.
 pub async fn init_core(config: CoreConfig) -> Result<SessionState, CoreFailure> {
     lift_async(async {
-        let core = Core::open(CoreEnv::production(&config))?;
+        let core = Core::open(CoreEnv::production(&config)?)?;
         let core = runtime::install(core);
         core.state()
     })

@@ -10,7 +10,7 @@ mod common;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-use common::{Harness, SERVER};
+use common::Harness;
 use futures::future::BoxFuture;
 use pretty_assertions::assert_eq;
 use strata_core::net::{NetError, SyncApi, Tokens};
@@ -105,7 +105,6 @@ async fn scripted() -> (Harness, Scripted, Arc<Session>) {
     h.core = Core::open(env).expect("core");
     h.core
         .sign_in(SignInRequest {
-            server_url: SERVER.to_owned(),
             username: "shawket".to_owned(),
             password: "pw-a".to_owned(),
             device_name: "Shawket's laptop".to_owned(),

@@ -6383,12 +6383,14 @@ impl SseDecode for crate::view::model::CoreConfig {
         let mut var_appDataDir = <String>::sse_decode(deserializer);
         let mut var_platform = <crate::view::model::Platform>::sse_decode(deserializer);
         let mut var_defaultDeviceName = <String>::sse_decode(deserializer);
-        let mut var_defaultServerUrl = <Option<String>>::sse_decode(deserializer);
+        let mut var_serverUrl = <String>::sse_decode(deserializer);
+        let mut var_releaseBuild = <bool>::sse_decode(deserializer);
         return crate::view::model::CoreConfig {
             app_data_dir: var_appDataDir,
             platform: var_platform,
             default_device_name: var_defaultDeviceName,
-            default_server_url: var_defaultServerUrl,
+            server_url: var_serverUrl,
+            release_build: var_releaseBuild,
         };
     }
 }
@@ -7483,13 +7485,11 @@ impl SseDecode for crate::view::model::KnownAccountItem {
         let mut var_userId = <String>::sse_decode(deserializer);
         let mut var_username = <String>::sse_decode(deserializer);
         let mut var_displayName = <String>::sse_decode(deserializer);
-        let mut var_serverUrl = <String>::sse_decode(deserializer);
         let mut var_initials = <String>::sse_decode(deserializer);
         return crate::view::model::KnownAccountItem {
             user_id: var_userId,
             username: var_username,
             display_name: var_displayName,
-            server_url: var_serverUrl,
             initials: var_initials,
         };
     }
@@ -9199,7 +9199,6 @@ impl SseDecode for crate::view::model::PendingApproval {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_username = <String>::sse_decode(deserializer);
-        let mut var_serverUrl = <String>::sse_decode(deserializer);
         let mut var_requestedAt = <chrono::DateTime<chrono::Utc>>::sse_decode(deserializer);
         let mut var_requestedLabel = <String>::sse_decode(deserializer);
         let mut var_lastCheckedAt =
@@ -9208,7 +9207,6 @@ impl SseDecode for crate::view::model::PendingApproval {
         let mut var_canCheck = <bool>::sse_decode(deserializer);
         return crate::view::model::PendingApproval {
             username: var_username,
-            server_url: var_serverUrl,
             requested_at: var_requestedAt,
             requested_label: var_requestedLabel,
             last_checked_at: var_lastCheckedAt,
@@ -9641,7 +9639,6 @@ impl SseDecode for crate::view::model::SessionState {
             <Option<crate::view::model::AccountSummary>>::sse_decode(deserializer);
         let mut var_knownAccounts =
             <Vec<crate::view::model::KnownAccountItem>>::sse_decode(deserializer);
-        let mut var_serverUrl = <Option<String>>::sse_decode(deserializer);
         let mut var_deviceName = <String>::sse_decode(deserializer);
         let mut var_unsyncedOps = <u32>::sse_decode(deserializer);
         let mut var_deletionAt = <Option<chrono::DateTime<chrono::Utc>>>::sse_decode(deserializer);
@@ -9659,7 +9656,6 @@ impl SseDecode for crate::view::model::SessionState {
             kind: var_kind,
             account: var_account,
             known_accounts: var_knownAccounts,
-            server_url: var_serverUrl,
             device_name: var_deviceName,
             unsynced_ops: var_unsyncedOps,
             deletion_at: var_deletionAt,
@@ -9710,12 +9706,10 @@ impl SseDecode for crate::view::model::SettingsView {
 impl SseDecode for crate::view::model::SignInRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_serverUrl = <String>::sse_decode(deserializer);
         let mut var_username = <String>::sse_decode(deserializer);
         let mut var_password = <String>::sse_decode(deserializer);
         let mut var_deviceName = <String>::sse_decode(deserializer);
         return crate::view::model::SignInRequest {
-            server_url: var_serverUrl,
             username: var_username,
             password: var_password,
             device_name: var_deviceName,
@@ -9748,12 +9742,10 @@ impl SseDecode for crate::view::model::SignUpOutcome {
 impl SseDecode for crate::view::model::SignUpRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_serverUrl = <String>::sse_decode(deserializer);
         let mut var_username = <String>::sse_decode(deserializer);
         let mut var_password = <String>::sse_decode(deserializer);
         let mut var_displayName = <String>::sse_decode(deserializer);
         return crate::view::model::SignUpRequest {
-            server_url: var_serverUrl,
             username: var_username,
             password: var_password,
             display_name: var_displayName,
@@ -11501,7 +11493,8 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::CoreConfig {
             self.app_data_dir.into_into_dart().into_dart(),
             self.platform.into_into_dart().into_dart(),
             self.default_device_name.into_into_dart().into_dart(),
-            self.default_server_url.into_into_dart().into_dart(),
+            self.server_url.into_into_dart().into_dart(),
+            self.release_build.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -12754,7 +12747,6 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::KnownAccountItem {
             self.user_id.into_into_dart().into_dart(),
             self.username.into_into_dart().into_dart(),
             self.display_name.into_into_dart().into_dart(),
-            self.server_url.into_into_dart().into_dart(),
             self.initials.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -13489,7 +13481,6 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::PendingApproval {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.username.into_into_dart().into_dart(),
-            self.server_url.into_into_dart().into_dart(),
             self.requested_at.into_into_dart().into_dart(),
             self.requested_label.into_into_dart().into_dart(),
             self.last_checked_at.into_into_dart().into_dart(),
@@ -14063,7 +14054,6 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::SessionState {
             self.kind.into_into_dart().into_dart(),
             self.account.into_into_dart().into_dart(),
             self.known_accounts.into_into_dart().into_dart(),
-            self.server_url.into_into_dart().into_dart(),
             self.device_name.into_into_dart().into_dart(),
             self.unsynced_ops.into_into_dart().into_dart(),
             self.deletion_at.into_into_dart().into_dart(),
@@ -14125,7 +14115,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::SettingsView>
 impl flutter_rust_bridge::IntoDart for crate::view::model::SignInRequest {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
-            self.server_url.into_into_dart().into_dart(),
             self.username.into_into_dart().into_dart(),
             self.password.into_into_dart().into_dart(),
             self.device_name.into_into_dart().into_dart(),
@@ -14186,7 +14175,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::SignUpOutcome>
 impl flutter_rust_bridge::IntoDart for crate::view::model::SignUpRequest {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
-            self.server_url.into_into_dart().into_dart(),
             self.username.into_into_dart().into_dart(),
             self.password.into_into_dart().into_dart(),
             self.display_name.into_into_dart().into_dart(),
@@ -15589,7 +15577,8 @@ impl SseEncode for crate::view::model::CoreConfig {
         <String>::sse_encode(self.app_data_dir, serializer);
         <crate::view::model::Platform>::sse_encode(self.platform, serializer);
         <String>::sse_encode(self.default_device_name, serializer);
-        <Option<String>>::sse_encode(self.default_server_url, serializer);
+        <String>::sse_encode(self.server_url, serializer);
+        <bool>::sse_encode(self.release_build, serializer);
     }
 }
 
@@ -16339,7 +16328,6 @@ impl SseEncode for crate::view::model::KnownAccountItem {
         <String>::sse_encode(self.user_id, serializer);
         <String>::sse_encode(self.username, serializer);
         <String>::sse_encode(self.display_name, serializer);
-        <String>::sse_encode(self.server_url, serializer);
         <String>::sse_encode(self.initials, serializer);
     }
 }
@@ -17721,7 +17709,6 @@ impl SseEncode for crate::view::model::PendingApproval {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.username, serializer);
-        <String>::sse_encode(self.server_url, serializer);
         <chrono::DateTime<chrono::Utc>>::sse_encode(self.requested_at, serializer);
         <String>::sse_encode(self.requested_label, serializer);
         <Option<chrono::DateTime<chrono::Utc>>>::sse_encode(self.last_checked_at, serializer);
@@ -18043,7 +18030,6 @@ impl SseEncode for crate::view::model::SessionState {
         <crate::view::model::SessionKind>::sse_encode(self.kind, serializer);
         <Option<crate::view::model::AccountSummary>>::sse_encode(self.account, serializer);
         <Vec<crate::view::model::KnownAccountItem>>::sse_encode(self.known_accounts, serializer);
-        <Option<String>>::sse_encode(self.server_url, serializer);
         <String>::sse_encode(self.device_name, serializer);
         <u32>::sse_encode(self.unsynced_ops, serializer);
         <Option<chrono::DateTime<chrono::Utc>>>::sse_encode(self.deletion_at, serializer);
@@ -18079,7 +18065,6 @@ impl SseEncode for crate::view::model::SettingsView {
 impl SseEncode for crate::view::model::SignInRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.server_url, serializer);
         <String>::sse_encode(self.username, serializer);
         <String>::sse_encode(self.password, serializer);
         <String>::sse_encode(self.device_name, serializer);
@@ -18104,7 +18089,6 @@ impl SseEncode for crate::view::model::SignUpOutcome {
 impl SseEncode for crate::view::model::SignUpRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <String>::sse_encode(self.server_url, serializer);
         <String>::sse_encode(self.username, serializer);
         <String>::sse_encode(self.password, serializer);
         <String>::sse_encode(self.display_name, serializer);

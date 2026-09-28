@@ -137,7 +137,6 @@ async fn a_pending_account_waits_and_check_again_signs_in_once_approved() {
         .unwrap()
         .insert("shawket".into(), NetError::AccountPending);
     let req = SignInRequest {
-        server_url: common::SERVER.to_owned(),
         username: "shawket".into(),
         password: "pw-a".into(),
         device_name: "Shawket's laptop".into(),
@@ -337,7 +336,7 @@ async fn reminders_pins_and_notification_settings() {
     s.set_snooze_minutes(30).expect("snooze");
     s.set_quiet_hours(true, "23:00", "06:30").expect("quiet");
     let settings = s
-        .read(build::settings_view)
+        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
         .expect("settings")
         .expect("signed in");
     assert_eq!(settings.reminders.snooze_minutes, 30);

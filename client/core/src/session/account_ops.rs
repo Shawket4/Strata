@@ -19,7 +19,7 @@ impl Core {
         let me = match self
             .env()
             .account_api
-            .update_me(session.server_url()?, session.tokens(), update)
+            .update_me(session.server_url(), session.tokens(), update)
             .await
         {
             Ok(me) => me,
@@ -121,7 +121,7 @@ impl Core {
         let bytes = match self
             .env()
             .account_api
-            .export_me(session.server_url()?, session.tokens())
+            .export_me(session.server_url(), session.tokens())
             .await
         {
             Ok(b) => b,
@@ -160,7 +160,7 @@ impl Core {
         }
         self.env()
             .account_api
-            .confirm_deletion(session.server_url()?, session.tokens())
+            .confirm_deletion(session.server_url(), session.tokens())
             .await?;
         session.cancel_all_notifications()?;
         self.wipe(session)?;

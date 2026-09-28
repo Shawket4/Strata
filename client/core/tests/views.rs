@@ -672,7 +672,7 @@ async fn notes_list_groups_folders_and_sorts_notes() {
 async fn settings_ask_and_admin_views() {
     let (_h, s) = vault().await;
     let settings = s
-        .read(build::settings_view)
+        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
         .expect("settings")
         .expect("signed in");
     assert_eq!(settings.account.username, "shawket");

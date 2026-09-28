@@ -108,8 +108,9 @@ pub struct CoreEnv {
     pub notifications: NotifyHub,
     /// Default device name for the login form.
     pub default_device_name: String,
-    /// Default server URL for the login form.
-    pub default_server_url: Option<String>,
+    /// The server every account uses: the build's fixed address, already checked
+    /// ([`crate::net::server_url::fixed`]).
+    pub server_url: String,
     /// The device's IANA time zone (`None` when unknown): the time zone of an account that
     /// has not chosen one ([`Core::adopt_device_timezone`]).
     pub device_timezone: Option<String>,
@@ -125,10 +126,12 @@ impl std::fmt::Debug for CoreEnv {
 }
 
 impl CoreEnv {
-    /// The production environment for `config`.
-    pub fn production(config: &CoreConfig) -> Self {
+    /// The production environment for `config`, or [`CoreError::MisconfiguredBuild`] when the
+    /// build's server address is missing or not allowed ([`crate::net::server_url::fixed`]).
+    pub fn production(config: &CoreConfig) -> CoreResult<Self> {
+        let server_url = crate::net::server_url::fixed(&config.server_url, config.release_build)?;
         let clock: Arc<dyn Clock> = Arc::new(SystemClock {});
-        Self {
+        Ok(Self {
             paths: StorePaths::new(std::path::Path::new(&config.app_data_dir)),
             platform: config.platform,
             ids: Arc::new(UlidGenerator::new(clock.clone())),
@@ -143,11 +146,9 @@ impl CoreEnv {
                 }
             }),
             default_device_name: config.default_device_name.clone(),
-            default_server_url: crate::net::server_url::default_from_build(
-                config.default_server_url.as_deref(),
-            ),
+            server_url,
             device_timezone: device_timezone(),
-        }
+        })
     }
 }
 
@@ -233,9 +234,8 @@ impl Core {
     }
 
     fn pending_approval(&self, reg: &Registry) -> CoreResult<Option<(PendingApproval, bool)>> {
-        let (Some(username), Some(server_url), Some(requested)) = (
+        let (Some(username), Some(requested)) = (
             reg.device_value(registry::PENDING_USERNAME)?,
-            reg.device_value(registry::PENDING_SERVER)?,
             reg.device_value(registry::PENDING_REQUESTED_AT)?,
         ) else {
             return Ok(None);
@@ -261,7 +261,6 @@ impl Core {
                     .is_some_and(|r| r.username == username),
                 requested_at,
                 username,
-                server_url,
             },
             rejected,
         )))
@@ -285,12 +284,8 @@ impl Core {
                     user_id: a.user_id,
                     username: a.username,
                     display_name: a.display_name,
-                    server_url: a.server_url,
                 })
                 .collect(),
-            server_url: reg
-                .device_value(registry::LAST_SERVER_URL)?
-                .or_else(|| self.env.default_server_url.clone()),
             device_name: reg
                 .device_value(registry::DEVICE_NAME)?
                 .unwrap_or_else(|| self.env.default_device_name.clone()),
@@ -298,7 +293,7 @@ impl Core {
         })
     }
 
-    fn set_pending(&self, username: &str, server_url: &str, rejected: bool) -> CoreResult<()> {
+    fn set_pending(&self, username: &str, rejected: bool) -> CoreResult<()> {
         let reg = lock(&self.registry);
         let now = self.env.clock.now().to_rfc3339();
         let same = reg.device_value(registry::PENDING_USERNAME)?.as_deref() == Some(username);
@@ -307,7 +302,6 @@ impl Core {
             reg.set_device_value(registry::PENDING_REQUESTED_AT, &now)?;
             reg.remove_device_value(registry::PENDING_CHECKED_AT)?;
         }
-        reg.set_device_value(registry::PENDING_SERVER, server_url)?;
         reg.set_device_value(
             registry::PENDING_REJECTED,
             if rejected { "true" } else { "false" },
@@ -319,7 +313,6 @@ impl Core {
         let reg = lock(&self.registry);
         for key in [
             registry::PENDING_USERNAME,
-            registry::PENDING_SERVER,
             registry::PENDING_REQUESTED_AT,
             registry::PENDING_CHECKED_AT,
             registry::PENDING_REJECTED,
@@ -392,28 +385,24 @@ impl Core {
         Ok(state)
     }
 
-    /// Registers an account (D22): it waits for approval, no session. A plain-`http://`
-    /// server address other than this device is refused ([`crate::net::server_url`]).
+    /// Registers an account (D22) on the build's server: it waits for approval, no session.
     pub async fn sign_up(&self, req: SignUpRequest) -> CoreResult<SignUpOutcome> {
-        let server_url = crate::net::server_url::checked(&req.server_url)?;
         let username = self
             .env
             .account_api
             .signup(
-                server_url.clone(),
+                self.env.server_url.clone(),
                 req.username,
                 req.password.clone(),
                 req.display_name,
             )
             .await
             .map_err(login_error)?;
-        lock(&self.registry).set_device_value(registry::LAST_SERVER_URL, &server_url)?;
         let device_name = lock(&self.registry)
             .device_value(registry::DEVICE_NAME)?
             .unwrap_or_else(|| self.env.default_device_name.clone());
-        self.set_pending(&username, &server_url, false)?;
+        self.set_pending(&username, false)?;
         *lock(&self.pending_request) = Some(SignInRequest {
-            server_url,
             username: username.clone(),
             password: req.password.clone(),
             device_name,
@@ -422,15 +411,14 @@ impl Core {
         Ok(SignUpOutcome { username })
     }
 
-    /// Signs in as a device; opens (or reuses) the account's own database. A plain-`http://`
-    /// server address other than this device is refused ([`crate::net::server_url`]).
+    /// Signs in as a device on the build's server; opens (or reuses) the account's own
+    /// database.
     pub async fn sign_in(&self, req: SignInRequest) -> CoreResult<SessionState> {
-        let server_url = crate::net::server_url::checked(&req.server_url)?;
         let login = self
             .env
             .account_api
             .login(
-                server_url.clone(),
+                self.env.server_url.clone(),
                 req.username.clone(),
                 req.password.clone(),
                 req.device_name.clone(),
@@ -442,7 +430,7 @@ impl Core {
             Err(e @ (NetError::AccountPending | NetError::AccountRejected)) => {
                 // Waiting for (or refused) approval: a session state of its own (D22).
                 let rejected = e == NetError::AccountRejected;
-                self.set_pending(&req.username, &server_url, rejected)?;
+                self.set_pending(&req.username, rejected)?;
                 *lock(&self.pending_request) = (!rejected).then(|| req.clone());
                 self.publish_state()?;
                 return Err(login_error(e));
@@ -473,7 +461,6 @@ impl Core {
                     } else {
                         "active".to_owned()
                     },
-                    server_url: server_url.clone(),
                     // Until `/me` answers: the device's zone (the default of a new account).
                     timezone: existing.as_ref().map_or_else(
                         || {
@@ -494,22 +481,15 @@ impl Core {
             )?;
             Ok(((), Topics::ACCOUNT))
         })?;
-        // The session's token provider and transport were built before the account row
-        // existed; reopen so they carry the server URL.
-        session.close();
-        drop(session);
-        let session = Session::open(&self.env, user_id)?;
         {
             let mut reg = lock(&self.registry);
             reg.activate(&KnownAccount {
                 user_id: t.user_id.clone(),
                 username: req.username.clone(),
                 display_name: req.username.clone(),
-                server_url: server_url.clone(),
                 last_active_at: now.clone(),
                 active: true,
             })?;
-            reg.set_device_value(registry::LAST_SERVER_URL, &server_url)?;
             reg.set_device_value(registry::DEVICE_NAME, &req.device_name)?;
         }
         *lock(&self.active) = Some(session.clone());
@@ -522,7 +502,7 @@ impl Core {
     /// Fetches `GET /me` and updates the account row.
     pub async fn refresh_account(&self) -> CoreResult<()> {
         let session = self.session()?;
-        let url = session.server_url()?;
+        let url = session.server_url();
         let me = match self.env.account_api.me(url, session.tokens()).await {
             Ok(me) => me,
             Err(e) => {
@@ -548,7 +528,6 @@ impl Core {
             user_id: me.id.clone(),
             username: me.username.clone(),
             display_name: me.display_name.clone(),
-            server_url: session.server_url()?,
             last_active_at: self.env.clock.now().to_rfc3339(),
             active: true,
         })?;
@@ -598,7 +577,7 @@ impl Core {
             });
         }
         session.cancel_all_notifications()?;
-        let url = session.server_url()?;
+        let url = session.server_url();
         // Revoking the server session is best effort: offline sign-out still removes local data.
         let _ = self.env.account_api.logout(url, session.tokens()).await;
         self.wipe(session)?;

@@ -80,6 +80,13 @@ pub enum CoreError {
         /// Problem type slug.
         problem_type: String,
     },
+    /// The build's server address (`STRATA_SERVER_URL`) is missing or not allowed
+    /// ([`crate::net::server_url`]): the app cannot start.
+    #[error("misconfigured build: server address {reason}")]
+    MisconfiguredBuild {
+        /// Stable reason code (`missing`, `not_https`, `insecure_http`).
+        reason: String,
+    },
     /// The local database failed.
     #[error("storage error: {0}")]
     Storage(String),
@@ -154,6 +161,7 @@ impl CoreError {
             Self::TaskChange { .. } => "task_change",
             Self::StaleEdit => "stale_edit",
             Self::Server { .. } => "server",
+            Self::MisconfiguredBuild { .. } => "misconfigured_build",
             Self::Storage(_) => "storage",
             Self::Internal(_) => "internal",
         }
@@ -179,6 +187,10 @@ impl From<CoreError> for crate::view::model::CoreFailure {
             CoreError::NotFound { what } => f.field = Some(what),
             CoreError::PendingChanges { count } => f.count = Some(count),
             CoreError::TaskChange { reason } => f.reason = Some(reason),
+            CoreError::MisconfiguredBuild { reason } => {
+                f.field = Some(crate::net::server_url::FIELD.to_owned());
+                f.reason = Some(reason);
+            }
             CoreError::Server {
                 status,
                 problem_type,

@@ -4056,8 +4056,8 @@ pub fn ask(
     })
 }
 
-/// The account summary.
-pub fn account_summary(conn: &Connection) -> CoreResult<Option<AccountSummary>> {
+/// The account summary; `server_url` is the build's server.
+pub fn account_summary(conn: &Connection, server_url: &str) -> CoreResult<Option<AccountSummary>> {
     Ok(account::get(conn)?.map(|a| AccountSummary {
         is_admin: a.role == "admin",
         initials: labels::initials(&a.display_name),
@@ -4065,7 +4065,7 @@ pub fn account_summary(conn: &Connection) -> CoreResult<Option<AccountSummary>> 
         username: a.username,
         display_name: a.display_name,
         role: a.role,
-        server_url: a.server_url,
+        server_url: server_url.to_owned(),
         timezone: a.timezone,
         ui_language: a.ui_language,
     }))
@@ -4108,9 +4108,13 @@ pub fn export_label(labels: &Labels, bytes: u64, notes: u32) -> String {
     )
 }
 
-/// Settings.
-pub fn settings_view(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Option<SettingsView>> {
-    let Some(account) = account_summary(conn)? else {
+/// Settings; `server_url` is the build's server.
+pub fn settings_view(
+    conn: &Connection,
+    ctx: &ViewCtx,
+    server_url: &str,
+) -> CoreResult<Option<SettingsView>> {
+    let Some(account) = account_summary(conn, server_url)? else {
         return Ok(None);
     };
     let labels = ctx.labels();

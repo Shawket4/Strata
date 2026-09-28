@@ -1,158 +1,255 @@
-//! The server-address rule through the core (owner decision "App ID, server address, HTTPS
-//! first"): sign-in and sign-up refuse plain `http://` except to this device, before any
-//! request is made; the build's default address prefills the signed-out session.
+//! The fixed server address through the core (owner decisions "App ID, server address, HTTPS
+//! first" and "No server address in the UI"): the build's `STRATA_SERVER_URL` must be
+//! `https://` (plain `http://` only for this device, in debug builds), a blank or refused one
+//! stops the core from opening, and every account's sign-up, sign-in, profile and sync use it
+//! without any address coming from the UI.
 
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
 mod common;
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use common::{Harness, SERVER, USER_A};
+use common::USER_A;
 use pretty_assertions::assert_eq;
 use strata_core::CoreError;
 use strata_core::clock::FakeClock;
 use strata_core::ids::SeqIds;
-use strata_core::session::Core;
+use strata_core::net::{SyncApi, Tokens};
+use strata_core::session::{Core, CoreEnv};
+use strata_core::sync::Trigger;
 use strata_core::testing::{FakeAccountApi, FakeServer};
-use strata_core::view::model::{Platform, SessionKind, SignInRequest, SignUpRequest};
+use strata_core::view::model::{
+    CoreConfig, CoreFailure, Platform, SessionKind, SignInRequest, SignUpRequest,
+};
 use tempfile::TempDir;
 
-fn insecure() -> CoreError {
-    CoreError::InvalidInput {
-        field: "server_url".to_owned(),
-        reason: "insecure_http".to_owned(),
-    }
-}
+const DUCKDNS: &str = "https://strata-ai.duckdns.org";
 
-fn sign_in(url: &str) -> SignInRequest {
-    SignInRequest {
+fn config(dir: &TempDir, url: &str, release_build: bool) -> CoreConfig {
+    CoreConfig {
+        app_data_dir: dir.path().to_string_lossy().into_owned(),
+        platform: Platform::Linux,
+        default_device_name: "laptop".to_owned(),
         server_url: url.to_owned(),
-        username: "shawket".to_owned(),
-        password: "pw-a".to_owned(),
-        device_name: "Shawket's laptop".to_owned(),
+        release_build,
     }
 }
 
-fn sign_up(url: &str) -> SignUpRequest {
-    SignUpRequest {
-        server_url: url.to_owned(),
-        username: "nour".to_owned(),
-        password: "a long enough password".to_owned(),
-        display_name: "Nour".to_owned(),
+/// The production environment's server address for `url`, or its failure as Dart sees it.
+fn production(url: &str, release_build: bool) -> Result<String, CoreFailure> {
+    let dir = TempDir::new().expect("dir");
+    CoreEnv::production(&config(&dir, url, release_build))
+        .map(|env| env.server_url)
+        .map_err(CoreFailure::from)
+}
+
+fn misconfigured(reason: &str) -> Result<String, CoreFailure> {
+    Err(CoreFailure {
+        code: "misconfigured_build".to_owned(),
+        message_key: "error.misconfigured_build".to_owned(),
+        field: Some("server_url".to_owned()),
+        reason: Some(reason.to_owned()),
+        count: None,
+        status: None,
+    })
+}
+
+#[test]
+fn https_is_the_server_of_release_and_debug_builds() {
+    for release in [true, false] {
+        assert_eq!(production(DUCKDNS, release), Ok(DUCKDNS.to_owned()));
+        assert_eq!(
+            production(" https://strata-ai.duckdns.org/ ", release),
+            Ok(DUCKDNS.to_owned())
+        );
     }
 }
 
-fn calls(h: &Harness) -> Vec<String> {
-    h.accounts.calls.lock().unwrap().clone()
+#[test]
+fn a_blank_server_address_stops_every_build() {
+    for release in [true, false] {
+        for url in ["", "   ", "/"] {
+            assert_eq!(
+                production(url, release),
+                misconfigured("missing"),
+                "{url:?}"
+            );
+        }
+    }
 }
 
-/// A core whose build default is `default`.
-fn core_with_default(dir: &TempDir, default: Option<&str>) -> Core {
-    let accounts = Arc::new(FakeAccountApi::default());
+#[test]
+fn plain_http_to_another_host_stops_every_build() {
+    for release in [true, false] {
+        for url in [
+            "http://strata-ai.duckdns.org",
+            "http://187.124.33.153:8080",
+            "http://127.0.0.2:8080",
+        ] {
+            assert_eq!(
+                production(url, release),
+                misconfigured("insecure_http"),
+                "{url}"
+            );
+        }
+    }
+}
+
+#[test]
+fn loopback_http_is_for_debug_builds_only() {
+    for url in [
+        "http://127.0.0.1:8080",
+        "http://localhost:8080",
+        "http://[::1]:8080",
+    ] {
+        assert_eq!(production(url, false), Ok(url.to_owned()), "{url}");
+        assert_eq!(
+            production(&format!("{url}/"), false),
+            Ok(url.to_owned()),
+            "{url}"
+        );
+        assert_eq!(
+            production(url, true),
+            misconfigured("insecure_http"),
+            "{url}"
+        );
+    }
+}
+
+#[test]
+fn an_address_without_https_stops_every_build() {
+    for release in [true, false] {
+        for url in [
+            "strata-ai.duckdns.org",
+            "ftp://strata-ai.duckdns.org",
+            "https://",
+        ] {
+            assert_eq!(
+                production(url, release),
+                misconfigured("not_https"),
+                "{url}"
+            );
+        }
+    }
+}
+
+#[test]
+fn a_misconfigured_build_has_a_stable_error() {
+    let dir = TempDir::new().expect("dir");
+    let err = CoreEnv::production(&config(&dir, "", true)).expect_err("refused");
+    assert_eq!(
+        err,
+        CoreError::MisconfiguredBuild {
+            reason: "missing".to_owned(),
+        }
+    );
+    assert_eq!(err.message_key(), "error.misconfigured_build");
+    assert_eq!(
+        err.to_string(),
+        "misconfigured build: server address missing"
+    );
+}
+
+/// A core whose build server is [`DUCKDNS`]; the sync transport records the URL it was
+/// built for.
+fn core_on_duckdns(
+    dir: &TempDir,
+    accounts: &Arc<FakeAccountApi>,
+) -> (Core, Arc<Mutex<Vec<String>>>) {
+    let server = FakeServer::new();
     let mut env = common::env(
         dir.path(),
-        &FakeServer::new(),
-        &accounts,
+        &server,
+        accounts,
         &FakeClock::at(common::NOW),
         &Arc::new(SeqIds::new(common::ID_BASE_MS)),
         Platform::Android,
     );
-    env.default_server_url = default.map(str::to_owned);
-    Core::open(env).expect("core opens")
+    env.server_url = DUCKDNS.to_owned();
+    let sync_urls = Arc::new(Mutex::new(Vec::new()));
+    let seen = sync_urls.clone();
+    env.sync_api = Arc::new(move |url: &str, _tokens: Tokens| -> Arc<dyn SyncApi> {
+        seen.lock().unwrap().push(url.to_owned());
+        Arc::new(server.clone())
+    });
+    (Core::open(env).expect("core opens"), sync_urls)
 }
 
 #[tokio::test]
-async fn sign_in_refuses_plain_http_to_another_host_without_a_request() {
-    let h = Harness::new();
-    for url in ["http://strata.example", "http://187.124.33.153:8080/"] {
-        let err = h.core.sign_in(sign_in(url)).await.expect_err(url);
-        assert_eq!(err, insecure(), "{url}");
-    }
-    assert_eq!(calls(&h), Vec::<String>::new());
-    let state = h.core.state().expect("state");
-    assert_eq!(state.kind, SessionKind::SignedOut);
-    // The refused address is not remembered: the form keeps the default.
-    assert_eq!(state.server_url, Some(SERVER.to_owned()));
-}
+async fn sign_up_sign_in_profile_and_sync_use_the_build_server() {
+    let dir = TempDir::new().expect("dir");
+    let accounts = Arc::new(FakeAccountApi::default());
+    accounts.add_user("shawket", "pw-a", USER_A, "Africa/Cairo");
+    let (core, sync_urls) = core_on_duckdns(&dir, &accounts);
 
-#[tokio::test]
-async fn sign_up_refuses_plain_http_to_another_host_without_a_request() {
-    let h = Harness::new();
-    let err = h
-        .core
-        .sign_up(sign_up("HTTP://strata.example"))
-        .await
-        .expect_err("refused");
-    assert_eq!(err, insecure());
-    assert_eq!(calls(&h), Vec::<String>::new());
-    assert_eq!(h.core.state().expect("state").kind, SessionKind::SignedOut);
-}
-
-#[tokio::test]
-async fn sign_in_over_http_to_this_device_is_allowed() {
-    for url in [
-        "http://127.0.0.1:8080/",
-        "http://localhost:8080",
-        "http://[::1]:8080",
-    ] {
-        let h = Harness::new();
-        let state = h.core.sign_in(sign_in(url)).await.expect(url);
-        assert_eq!(state.kind, SessionKind::Active, "{url}");
-        let account = state.account.expect("account");
-        assert_eq!(account.user_id, USER_A);
-        assert_eq!(account.server_url, url.trim_end_matches('/'), "{url}");
-        assert_eq!(calls(&h)[0], "login:shawket");
-    }
-}
-
-#[tokio::test]
-async fn sign_up_stores_the_normalised_address() {
-    let h = Harness::new();
-    h.core
-        .sign_up(sign_up(" https://strata.example/ "))
-        .await
-        .expect("sign up");
-    let state = h.core.state().expect("state");
-    assert_eq!(state.kind, SessionKind::PendingApproval);
-    assert_eq!(state.server_url, Some(SERVER.to_owned()));
+    core.sign_up(SignUpRequest {
+        username: "nour".to_owned(),
+        password: "a long enough password".to_owned(),
+        display_name: "Nour".to_owned(),
+    })
+    .await
+    .expect("sign up");
     assert_eq!(
-        state.pending.expect("pending").server_url,
-        SERVER.to_owned()
+        core.state().expect("state").kind,
+        SessionKind::PendingApproval
     );
-}
+    core.dismiss_pending().expect("dismiss");
 
-#[test]
-fn the_build_default_prefills_the_signed_out_session() {
-    let dir = TempDir::new().expect("dir");
-    let core = core_with_default(&dir, Some("https://strata.example"));
+    let state = core
+        .sign_in(SignInRequest {
+            username: "shawket".to_owned(),
+            password: "pw-a".to_owned(),
+            device_name: "Shawket's phone".to_owned(),
+        })
+        .await
+        .expect("sign in");
+    assert_eq!(state.kind, SessionKind::Active);
+    assert_eq!(state.account.expect("account").server_url, DUCKDNS);
+
+    let session = core.session().expect("session");
+    assert_eq!(session.server_url(), DUCKDNS);
+    session
+        .capture("synced to the build server")
+        .expect("capture");
+    session.sync(Trigger::Manual).await.expect("sync");
+    assert_eq!(session.unsynced().expect("unsynced"), 0);
+
     assert_eq!(
-        core.state().expect("state").server_url,
-        Some("https://strata.example".to_owned())
+        accounts.calls.lock().unwrap().clone(),
+        ["signup:nour", "login:shawket", "me"]
     );
+    assert_eq!(accounts.servers.lock().unwrap().clone(), [DUCKDNS; 3]);
+    // One transport per opened session, each for the build's server.
+    let urls = sync_urls.lock().unwrap().clone();
+    assert!(!urls.is_empty());
+    assert_eq!(urls, vec![DUCKDNS.to_owned(); urls.len()]);
 }
 
-#[test]
-fn without_a_build_default_the_field_stays_empty() {
+#[tokio::test]
+async fn a_restarted_core_keeps_using_the_build_server() {
     let dir = TempDir::new().expect("dir");
-    let core = core_with_default(&dir, None);
-    assert_eq!(core.state().expect("state").server_url, None);
-}
-
-#[test]
-fn production_env_treats_a_blank_build_default_as_none() {
-    let dir = TempDir::new().expect("dir");
-    let config = |default: &str| strata_core::view::model::CoreConfig {
-        app_data_dir: dir.path().to_string_lossy().into_owned(),
-        platform: Platform::Linux,
-        default_device_name: "laptop".to_owned(),
-        default_server_url: Some(default.to_owned()),
-    };
-    let env = |default: &str| strata_core::session::CoreEnv::production(&config(default));
-    assert_eq!(env("").default_server_url, None);
-    assert_eq!(env("   ").default_server_url, None);
+    let accounts = Arc::new(FakeAccountApi::default());
+    accounts.add_user("shawket", "pw-a", USER_A, "Africa/Cairo");
+    {
+        let (core, _) = core_on_duckdns(&dir, &accounts);
+        core.sign_in(SignInRequest {
+            username: "shawket".to_owned(),
+            password: "pw-a".to_owned(),
+            device_name: "Shawket's phone".to_owned(),
+        })
+        .await
+        .expect("sign in");
+    }
+    let (core, sync_urls) = core_on_duckdns(&dir, &accounts);
+    let state = core.state().expect("state");
+    assert_eq!(state.kind, SessionKind::Active);
+    assert_eq!(state.account.expect("account").server_url, DUCKDNS);
+    assert_eq!(sync_urls.lock().unwrap().clone(), [DUCKDNS]);
+    core.sign_out(true).await.expect("sign out");
     assert_eq!(
-        env(" https://strata.example/ ").default_server_url,
-        Some("https://strata.example".to_owned())
+        accounts.servers.lock().unwrap().clone(),
+        [DUCKDNS; 3],
+        "login, me, logout"
     );
 }

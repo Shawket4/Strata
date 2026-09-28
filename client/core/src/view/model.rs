@@ -263,8 +263,11 @@ pub struct CoreConfig {
     pub platform: Platform,
     /// Default device name for login (e.g. the host name).
     pub default_device_name: String,
-    /// Server URL suggested on the login screen when none was used before.
-    pub default_server_url: Option<String>,
+    /// The server every account of this install uses, fixed at build time
+    /// (`STRATA_SERVER_URL`, [`crate::net::server_url`]).
+    pub server_url: String,
+    /// Whether this is a release build (only `https://` server addresses start).
+    pub release_build: bool,
 }
 
 /// The signed-in account.
@@ -280,7 +283,7 @@ pub struct AccountSummary {
     pub role: String,
     /// Shortcut for `role == admin`.
     pub is_admin: bool,
-    /// Server URL.
+    /// The build's server URL (read-only, Settings → Account).
     pub server_url: String,
     /// IANA timezone.
     pub timezone: String,
@@ -299,8 +302,6 @@ pub struct KnownAccountItem {
     pub username: String,
     /// Display name.
     pub display_name: String,
-    /// Server URL.
-    pub server_url: String,
     /// Avatar initials.
     pub initials: String,
 }
@@ -333,8 +334,6 @@ pub struct DeviceItem {
 pub struct PendingApproval {
     /// Username.
     pub username: String,
-    /// Server.
-    pub server_url: String,
     /// When the account was requested (sign-up) or first found pending on this device.
     pub requested_at: DateTime<Utc>,
     /// "sent 2 hours ago".
@@ -404,8 +403,6 @@ pub struct SessionState {
     pub account: Option<AccountSummary>,
     /// `SignedOut`: accounts that still have local data (switch without re-downloading).
     pub known_accounts: Vec<KnownAccountItem>,
-    /// `SignedOut`: prefill for the server URL field.
-    pub server_url: Option<String>,
     /// `SignedOut`: prefill for the device name field.
     pub device_name: String,
     /// `Disabled` / `DeletionPending`: ops that never synced (listed and exportable).
@@ -440,7 +437,6 @@ impl SessionState {
             kind,
             account: None,
             known_accounts: Vec::new(),
-            server_url: None,
             device_name: String::new(),
             unsynced_ops: 0,
             deletion_at: None,
@@ -460,8 +456,6 @@ impl SessionState {
 /// What `sign_in` needs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignInRequest {
-    /// Server base URL.
-    pub server_url: String,
     /// Username.
     pub username: String,
     /// Password.
@@ -473,8 +467,6 @@ pub struct SignInRequest {
 /// What `sign_up` needs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignUpRequest {
-    /// Server base URL.
-    pub server_url: String,
     /// Username.
     pub username: String,
     /// Password.

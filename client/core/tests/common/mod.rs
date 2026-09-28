@@ -60,7 +60,7 @@ pub fn env(
             Arc::new(server.clone())
         }),
         default_device_name: "Shawket's laptop".to_owned(),
-        default_server_url: Some(SERVER.to_owned()),
+        server_url: SERVER.to_owned(),
         device_timezone: None,
     }
 }
@@ -113,7 +113,6 @@ impl Harness {
     pub async fn sign_in(&self, username: &str, password: &str) -> Arc<Session> {
         self.core
             .sign_in(SignInRequest {
-                server_url: SERVER.to_owned(),
                 username: username.to_owned(),
                 password: password.to_owned(),
                 device_name: "Shawket's laptop".to_owned(),

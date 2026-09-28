@@ -42,7 +42,7 @@ async fn devices_are_listed_renamed_muted_and_revoked() {
 
     s1.refresh_settings().await.expect("refresh");
     let devices = |s: &strata_core::session::Session| {
-        s.read(build::settings_view)
+        s.read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
             .expect("settings")
             .expect("signed in")
             .device_list
@@ -153,7 +153,7 @@ async fn the_account_is_changed_exported_and_deleted_through_me() {
     d.core.set_ui_language("ar").await.expect("language");
     d.core.set_timezone("Africa/Cairo").await.expect("zone");
     let account = s
-        .read(build::settings_view)
+        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
         .expect("settings")
         .expect("signed in")
         .account;
@@ -517,7 +517,6 @@ async fn admins_manage_accounts_from_the_users_screen() {
     carol_device
         .core
         .sign_up(SignUpRequest {
-            server_url: carol_device.url.clone(),
             username: "carol".into(),
             password: "carol-password-1".into(),
             display_name: "Carol".into(),
@@ -528,7 +527,6 @@ async fn admins_manage_accounts_from_the_users_screen() {
     dave_device
         .core
         .sign_up(SignUpRequest {
-            server_url: dave_device.url.clone(),
             username: "dave".into(),
             password: "dave-password-1".into(),
             display_name: "Dave".into(),

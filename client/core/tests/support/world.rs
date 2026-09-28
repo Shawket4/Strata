@@ -175,7 +175,7 @@ impl World {
                 }
             }),
             default_device_name: format!("device {n}"),
-            default_server_url: None,
+            server_url: self.server.base_url(),
             device_timezone: None,
         };
         Device {
@@ -210,7 +210,6 @@ impl Device {
     pub async fn sign_in_with(&self, name: &str, password: &str) -> Arc<Session> {
         self.core
             .sign_in(SignInRequest {
-                server_url: self.url.clone(),
                 username: name.to_owned(),
                 password: password.to_owned(),
                 device_name: self.name.clone(),

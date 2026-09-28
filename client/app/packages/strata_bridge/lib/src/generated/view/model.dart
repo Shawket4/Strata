@@ -26,7 +26,7 @@ class AccountSummary {
   /// Shortcut for `role == admin`.
   final bool isAdmin;
 
-  /// Server URL.
+  /// The build's server URL (read-only, Settings → Account).
   final String serverUrl;
 
   /// IANA timezone.
@@ -1468,14 +1468,19 @@ class CoreConfig {
   /// Default device name for login (e.g. the host name).
   final String defaultDeviceName;
 
-  /// Server URL suggested on the login screen when none was used before.
-  final String? defaultServerUrl;
+  /// The server every account of this install uses, fixed at build time
+  /// (`STRATA_SERVER_URL`, [`crate::net::server_url`]).
+  final String serverUrl;
+
+  /// Whether this is a release build (only `https://` server addresses start).
+  final bool releaseBuild;
 
   const CoreConfig({
     required this.appDataDir,
     required this.platform,
     required this.defaultDeviceName,
-    this.defaultServerUrl,
+    required this.serverUrl,
+    required this.releaseBuild,
   });
 
   @override
@@ -1483,7 +1488,8 @@ class CoreConfig {
       appDataDir.hashCode ^
       platform.hashCode ^
       defaultDeviceName.hashCode ^
-      defaultServerUrl.hashCode;
+      serverUrl.hashCode ^
+      releaseBuild.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1493,7 +1499,8 @@ class CoreConfig {
           appDataDir == other.appDataDir &&
           platform == other.platform &&
           defaultDeviceName == other.defaultDeviceName &&
-          defaultServerUrl == other.defaultServerUrl;
+          serverUrl == other.serverUrl &&
+          releaseBuild == other.releaseBuild;
 }
 
 /// A failed call, as Dart receives it (thrown as an exception). `code` is typed; `message_key`
@@ -4036,9 +4043,6 @@ class KnownAccountItem {
   /// Display name.
   final String displayName;
 
-  /// Server URL.
-  final String serverUrl;
-
   /// Avatar initials.
   final String initials;
 
@@ -4046,7 +4050,6 @@ class KnownAccountItem {
     required this.userId,
     required this.username,
     required this.displayName,
-    required this.serverUrl,
     required this.initials,
   });
 
@@ -4055,7 +4058,6 @@ class KnownAccountItem {
       userId.hashCode ^
       username.hashCode ^
       displayName.hashCode ^
-      serverUrl.hashCode ^
       initials.hashCode;
 
   @override
@@ -4066,7 +4068,6 @@ class KnownAccountItem {
           userId == other.userId &&
           username == other.username &&
           displayName == other.displayName &&
-          serverUrl == other.serverUrl &&
           initials == other.initials;
 }
 
@@ -5185,9 +5186,6 @@ class PendingApproval {
   /// Username.
   final String username;
 
-  /// Server.
-  final String serverUrl;
-
   /// When the account was requested (sign-up) or first found pending on this device.
   final DateTime requestedAt;
 
@@ -5206,7 +5204,6 @@ class PendingApproval {
 
   const PendingApproval({
     required this.username,
-    required this.serverUrl,
     required this.requestedAt,
     required this.requestedLabel,
     this.lastCheckedAt,
@@ -5217,7 +5214,6 @@ class PendingApproval {
   @override
   int get hashCode =>
       username.hashCode ^
-      serverUrl.hashCode ^
       requestedAt.hashCode ^
       requestedLabel.hashCode ^
       lastCheckedAt.hashCode ^
@@ -5230,7 +5226,6 @@ class PendingApproval {
       other is PendingApproval &&
           runtimeType == other.runtimeType &&
           username == other.username &&
-          serverUrl == other.serverUrl &&
           requestedAt == other.requestedAt &&
           requestedLabel == other.requestedLabel &&
           lastCheckedAt == other.lastCheckedAt &&
@@ -6147,9 +6142,6 @@ class SessionState {
   /// `SignedOut`: accounts that still have local data (switch without re-downloading).
   final List<KnownAccountItem> knownAccounts;
 
-  /// `SignedOut`: prefill for the server URL field.
-  final String? serverUrl;
-
   /// `SignedOut`: prefill for the device name field.
   final String deviceName;
 
@@ -6191,7 +6183,6 @@ class SessionState {
     required this.kind,
     this.account,
     required this.knownAccounts,
-    this.serverUrl,
     required this.deviceName,
     required this.unsyncedOps,
     this.deletionAt,
@@ -6215,7 +6206,6 @@ class SessionState {
       kind.hashCode ^
       account.hashCode ^
       knownAccounts.hashCode ^
-      serverUrl.hashCode ^
       deviceName.hashCode ^
       unsyncedOps.hashCode ^
       deletionAt.hashCode ^
@@ -6237,7 +6227,6 @@ class SessionState {
           kind == other.kind &&
           account == other.account &&
           knownAccounts == other.knownAccounts &&
-          serverUrl == other.serverUrl &&
           deviceName == other.deviceName &&
           unsyncedOps == other.unsyncedOps &&
           deletionAt == other.deletionAt &&
@@ -6335,9 +6324,6 @@ class SettingsView {
 
 /// What `sign_in` needs.
 class SignInRequest {
-  /// Server base URL.
-  final String serverUrl;
-
   /// Username.
   final String username;
 
@@ -6348,7 +6334,6 @@ class SignInRequest {
   final String deviceName;
 
   const SignInRequest({
-    required this.serverUrl,
     required this.username,
     required this.password,
     required this.deviceName,
@@ -6356,17 +6341,13 @@ class SignInRequest {
 
   @override
   int get hashCode =>
-      serverUrl.hashCode ^
-      username.hashCode ^
-      password.hashCode ^
-      deviceName.hashCode;
+      username.hashCode ^ password.hashCode ^ deviceName.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is SignInRequest &&
           runtimeType == other.runtimeType &&
-          serverUrl == other.serverUrl &&
           username == other.username &&
           password == other.password &&
           deviceName == other.deviceName;
@@ -6415,9 +6396,6 @@ class SignUpOutcome {
 
 /// What `sign_up` needs.
 class SignUpRequest {
-  /// Server base URL.
-  final String serverUrl;
-
   /// Username.
   final String username;
 
@@ -6428,7 +6406,6 @@ class SignUpRequest {
   final String displayName;
 
   const SignUpRequest({
-    required this.serverUrl,
     required this.username,
     required this.password,
     required this.displayName,
@@ -6436,17 +6413,13 @@ class SignUpRequest {
 
   @override
   int get hashCode =>
-      serverUrl.hashCode ^
-      username.hashCode ^
-      password.hashCode ^
-      displayName.hashCode;
+      username.hashCode ^ password.hashCode ^ displayName.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is SignUpRequest &&
           runtimeType == other.runtimeType &&
-          serverUrl == other.serverUrl &&
           username == other.username &&
           password == other.password &&
           displayName == other.displayName;

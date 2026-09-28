@@ -65,14 +65,14 @@ async fn the_background_loop_pushes_pulls_and_follows_events() {
         app_data_dir: dir.path().to_str().expect("utf-8").to_owned(),
         platform: Platform::Linux,
         default_device_name: "Live laptop".to_owned(),
-        default_server_url: Some(url.clone()),
+        server_url: url.clone(),
+        release_build: false,
     })
     .await
     .expect("init");
     assert_eq!(state.kind, SessionKind::SignedOut);
     app::sync_now().expect("sync now without a session is a no-op");
     app::sign_in(SignInRequest {
-        server_url: url.clone(),
         username: "alice".to_owned(),
         password: world::password("alice"),
         device_name: "Live laptop".to_owned(),

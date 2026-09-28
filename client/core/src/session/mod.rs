@@ -111,9 +111,7 @@ impl Session {
     pub fn open(env: &Arc<CoreEnv>, user_id: Ulid) -> CoreResult<Arc<Self>> {
         let db = AccountDb::open(&env.paths, user_id)?;
         crate::sync::engine::recover(db.conn())?;
-        let server_url = account::get(db.conn())?
-            .map(|a| a.server_url)
-            .unwrap_or_default();
+        let server_url = env.server_url.clone();
         Ok(Arc::new_cyclic(|weak: &std::sync::Weak<Session>| {
             let store: Arc<dyn TokenStore> = Arc::new(DbTokenStore {
                 session: weak.clone(),
@@ -336,7 +334,7 @@ impl Session {
         Ok(self
             .env
             .events_api
-            .subscribe(&self.server_url()?, self.tokens(), resume)?)
+            .subscribe(&self.server_url(), self.tokens(), resume)?)
     }
 
     /// Applies one `/events` signal: the resume point is saved; a change or a reset asks for a
@@ -383,7 +381,7 @@ impl Session {
         let conn = g.db.conn();
         let ctx = self.ctx_of(&g);
         let labels = ctx.labels();
-        let Some(summary) = build::account_summary(conn)? else {
+        let Some(summary) = build::account_summary(conn, &self.env.server_url)? else {
             return Err(CoreError::Internal("session without account row".into()));
         };
         let a = account::get(conn)?.ok_or(CoreError::NotSignedIn)?;
@@ -510,11 +508,9 @@ impl Session {
         crate::store::delete_db_files(&path)
     }
 
-    /// The server URL of this account.
-    pub fn server_url(&self) -> CoreResult<String> {
-        Ok(account::get(self.lock().db.conn())?
-            .map(|a| a.server_url)
-            .unwrap_or_default())
+    /// The server URL of this account: the build's server, the same for every account.
+    pub fn server_url(&self) -> String {
+        self.env.server_url.clone()
     }
 
     /// Whether a live note exists.

@@ -185,7 +185,7 @@ async fn server_only_records_arrive_and_their_tombstones_remove_them() {
         Ok(Some("weekly".to_owned()))
     );
     let reminders = || {
-        s.read(build::settings_view)
+        s.read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
             .expect("settings")
             .expect("signed in")
             .reminders

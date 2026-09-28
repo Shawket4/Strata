@@ -281,6 +281,19 @@ fn every_core_error_has_a_stable_code_and_carries_only_ids_and_codes() {
             "the note changed since it was opened",
         ),
         (
+            CoreError::MisconfiguredBuild {
+                reason: "missing".to_owned(),
+            },
+            failure(
+                "misconfigured_build",
+                Some("server_url"),
+                Some("missing"),
+                None,
+                None,
+            ),
+            "misconfigured build: server address missing",
+        ),
+        (
             CoreError::Storage("disk full".to_owned()),
             failure("storage", None, None, None, None),
             "storage error: disk full",

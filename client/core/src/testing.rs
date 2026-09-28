@@ -461,6 +461,8 @@ pub struct FakeAccountApi {
     pub me_error: Mutex<Option<NetError>>,
     /// Calls made, in order (`login:<user>`, `refresh:<token>`, `logout`, `me`, …).
     pub calls: Mutex<Vec<String>>,
+    /// The server URL of each `signup`, `login`, `refresh`, `logout` and `me` call, in order.
+    pub servers: Mutex<Vec<String>>,
     counter: Mutex<u32>,
     by_token: Mutex<HashMap<String, MeInfo>>,
 }
@@ -520,28 +522,34 @@ impl FakeAccountApi {
     fn call(&self, c: String) {
         lock(&self.calls).push(c);
     }
+
+    fn server(&self, url: String) {
+        lock(&self.servers).push(url);
+    }
 }
 
 impl AccountApi for FakeAccountApi {
     fn signup(
         &self,
-        _server_url: String,
+        server_url: String,
         username: String,
         _password: String,
         _display_name: String,
     ) -> BoxFuture<'_, Result<String, NetError>> {
+        self.server(server_url);
         self.call(format!("signup:{username}"));
         Box::pin(async move { Ok(username) })
     }
 
     fn login(
         &self,
-        _server_url: String,
+        server_url: String,
         username: String,
         password: String,
         _device_name: String,
         _platform: Platform,
     ) -> BoxFuture<'_, Result<SessionTokens, NetError>> {
+        self.server(server_url);
         self.call(format!("login:{username}"));
         let r = if let Some(e) = lock(&self.login_errors).get(&username) {
             Err(e.clone())
@@ -556,9 +564,10 @@ impl AccountApi for FakeAccountApi {
 
     fn refresh(
         &self,
-        _server_url: String,
+        server_url: String,
         refresh_token: String,
     ) -> BoxFuture<'_, Result<SessionTokens, NetError>> {
+        self.server(server_url);
         self.call(format!("refresh:{refresh_token}"));
         let r = if let Some(e) = lock(&self.refresh_error).take() {
             Err(e)
@@ -572,12 +581,14 @@ impl AccountApi for FakeAccountApi {
         Box::pin(async move { r })
     }
 
-    fn logout(&self, _server_url: String, _tokens: Tokens) -> BoxFuture<'_, Result<(), NetError>> {
+    fn logout(&self, server_url: String, _tokens: Tokens) -> BoxFuture<'_, Result<(), NetError>> {
+        self.server(server_url);
         self.call("logout".to_owned());
         Box::pin(async { Ok(()) })
     }
 
-    fn me(&self, _server_url: String, tokens: Tokens) -> BoxFuture<'_, Result<MeInfo, NetError>> {
+    fn me(&self, server_url: String, tokens: Tokens) -> BoxFuture<'_, Result<MeInfo, NetError>> {
+        self.server(server_url);
         self.call("me".to_owned());
         Box::pin(async move {
             if let Some(e) = lock(&self.me_error).clone() {

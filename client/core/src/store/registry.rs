@@ -17,22 +17,16 @@ pub struct KnownAccount {
     pub username: String,
     /// Display name.
     pub display_name: String,
-    /// Server URL.
-    pub server_url: String,
     /// Last time it was active.
     pub last_active_at: String,
     /// Currently active.
     pub active: bool,
 }
 
-/// Device-wide default: the last server URL used.
-pub const LAST_SERVER_URL: &str = "last_server_url";
 /// Device-wide default: the device name used at login.
 pub const DEVICE_NAME: &str = "device_name";
 /// A sign-up/sign-in awaiting approval: username.
 pub const PENDING_USERNAME: &str = "pending_username";
-/// … its server.
-pub const PENDING_SERVER: &str = "pending_server";
 /// … when it was requested (RFC 3339).
 pub const PENDING_REQUESTED_AT: &str = "pending_requested_at";
 /// … last "Check again" (RFC 3339).
@@ -62,7 +56,7 @@ impl Registry {
     /// Every known account, most recently active first.
     pub fn accounts(&self) -> CoreResult<Vec<KnownAccount>> {
         let mut st = self.conn.prepare(
-            "SELECT user_id, username, display_name, server_url, last_active_at, active
+            "SELECT user_id, username, display_name, last_active_at, active
              FROM accounts ORDER BY last_active_at DESC, user_id",
         )?;
         Ok(st
@@ -71,9 +65,8 @@ impl Registry {
                     user_id: r.get(0)?,
                     username: r.get(1)?,
                     display_name: r.get(2)?,
-                    server_url: r.get(3)?,
-                    last_active_at: r.get(4)?,
-                    active: r.get(5)?,
+                    last_active_at: r.get(3)?,
+                    active: r.get(4)?,
                 })
             })?
             .collect::<Result<_, _>>()?)
@@ -89,12 +82,12 @@ impl Registry {
         let tx = self.conn.transaction()?;
         tx.execute("UPDATE accounts SET active = 0", [])?;
         tx.execute(
-            "INSERT INTO accounts (user_id, username, display_name, server_url, last_active_at, active)
-             VALUES (?1, ?2, ?3, ?4, ?5, 1)
+            "INSERT INTO accounts (user_id, username, display_name, last_active_at, active)
+             VALUES (?1, ?2, ?3, ?4, 1)
              ON CONFLICT (user_id) DO UPDATE SET username = excluded.username,
-                display_name = excluded.display_name, server_url = excluded.server_url,
+                display_name = excluded.display_name,
                 last_active_at = excluded.last_active_at, active = 1",
-            params![a.user_id, a.username, a.display_name, a.server_url, a.last_active_at],
+            params![a.user_id, a.username, a.display_name, a.last_active_at],
         )?;
         tx.commit()?;
         Ok(())

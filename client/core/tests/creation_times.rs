@@ -144,7 +144,7 @@ impl World {
                 }
             }),
             default_device_name: "phone".to_owned(),
-            default_server_url: None,
+            server_url: self.server.base_url(),
             device_timezone: zone.map(str::to_owned),
         };
         Device {
@@ -173,7 +173,6 @@ impl Device {
     async fn sign_in(&self) -> Arc<Session> {
         self.core
             .sign_in(SignInRequest {
-                server_url: self.url.clone(),
                 username: "alice".to_owned(),
                 password: "alice-password-1".to_owned(),
                 device_name: "phone".to_owned(),

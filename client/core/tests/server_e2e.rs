@@ -137,15 +137,15 @@ impl World {
             events_api: Arc::new(ClientEventsApi {}),
             notifications: NotifyHub::default(),
             sync_api: Arc::new(|url: &str, tokens: Tokens| -> Arc<dyn SyncApi> {
-                // As in production: a session opened before its URL is known gets a transport
-                // that fails every call.
+                // As in production: an address the client cannot use gets a transport that
+                // fails every call.
                 match ClientSyncApi::new(url, tokens) {
                     Ok(api) => Arc::new(api),
                     Err(e) => Arc::new(BrokenSyncApi(e)),
                 }
             }),
             default_device_name: format!("device {n}"),
-            default_server_url: None,
+            server_url: self.server.base_url(),
             device_timezone: None,
         };
         Device {
@@ -178,7 +178,6 @@ impl Device {
     async fn sign_in_with(&self, name: &str, password: &str) -> Arc<Session> {
         self.core
             .sign_in(SignInRequest {
-                server_url: self.url.clone(),
                 username: name.to_owned(),
                 password: password.to_owned(),
                 device_name: self.name.clone(),
@@ -499,7 +498,7 @@ async fn admin_and_account_intents_against_the_real_server() {
     );
     sa.refresh_settings().await.expect("settings");
     let settings = sa
-        .read(build::settings_view)
+        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
         .expect("settings")
         .expect("signed in");
     let this: Vec<(&str, bool)> = settings
@@ -513,7 +512,7 @@ async fn admin_and_account_intents_against_the_real_server() {
         .await
         .expect("rename");
     let settings = sa
-        .read(build::settings_view)
+        .read(|c, ctx| build::settings_view(c, ctx, common::SERVER))
         .expect("settings")
         .expect("signed in");
     assert_eq!(settings.device_list[0].name, "Alice's laptop");

@@ -46,7 +46,6 @@ fn known(user_id: &str, username: &str) -> KnownAccountItem {
         user_id: user_id.to_owned(),
         username: username.to_owned(),
         display_name: username.to_owned(),
-        server_url: SERVER.to_owned(),
         initials: username
             .chars()
             .next()
@@ -169,7 +168,6 @@ async fn sign_out_checks_the_outbox_then_deletes_the_database_and_tokens() {
     assert_eq!(
         h.core.state().expect("state"),
         SessionState {
-            server_url: Some(SERVER.to_owned()),
             device_name: "Shawket's laptop".to_owned(),
             ..SessionState::of(SessionKind::SignedOut)
         }
@@ -202,7 +200,6 @@ async fn sign_out_after_a_sync_needs_no_confirmation_and_keeps_other_accounts() 
         h.core.state().expect("state"),
         SessionState {
             known_accounts: vec![known(USER_B, "mona")],
-            server_url: Some(SERVER.to_owned()),
             device_name: "Shawket's laptop".to_owned(),
             ..SessionState::of(SessionKind::SignedOut)
         }
@@ -248,7 +245,6 @@ async fn a_disabled_account_warns_then_wipes_on_acknowledgement() {
     drop(a);
 
     let signed_out = SessionState {
-        server_url: Some(SERVER.to_owned()),
         device_name: "Shawket's laptop".to_owned(),
         ..SessionState::of(SessionKind::SignedOut)
     };
@@ -330,7 +326,6 @@ async fn login_errors_map_to_typed_errors_and_leave_no_session() {
         .unwrap()
         .insert("refused".into(), NetError::AccountRejected);
     let req = |username: &str, password: &str| SignInRequest {
-        server_url: format!("{SERVER}/"),
         username: username.to_owned(),
         password: password.to_owned(),
         device_name: "Phone".to_owned(),
@@ -354,7 +349,7 @@ async fn login_errors_map_to_typed_errors_and_leave_no_session() {
         "error.account_pending"
     );
 
-    // The trailing slash is dropped; the device name is remembered for the next login.
+    // Every account uses the build's server.
     let state = h.core.sign_in(req("shawket", "pw-a")).await.expect("ok");
     assert_eq!(state.account.expect("account").server_url, SERVER);
 }
@@ -374,7 +369,6 @@ async fn a_refused_refresh_ends_the_session_but_keeps_the_data() {
         h.core.state().expect("state"),
         SessionState {
             known_accounts: vec![known(USER_A, "shawket")],
-            server_url: Some(SERVER.to_owned()),
             device_name: "Shawket's laptop".to_owned(),
             ..SessionState::of(SessionKind::SignedOut)
         }

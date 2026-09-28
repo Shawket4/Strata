@@ -156,7 +156,7 @@ impl Session {
                 m.error_key = Some(key.clone());
             });
         };
-        let url = self.server_url()?;
+        let url = self.server_url();
         let api = self.env.account_api.clone();
         let ask_id = match api
             .ask(url.clone(), self.tokens(), question.to_owned(), scope)
@@ -258,7 +258,7 @@ impl Session {
             .env
             .account_api
             .save_ask(
-                self.server_url()?,
+                self.server_url(),
                 self.tokens(),
                 message_id.to_owned(),
                 None,

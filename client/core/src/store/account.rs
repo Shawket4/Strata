@@ -17,8 +17,6 @@ pub struct AccountRow {
     pub role: String,
     /// Account status (`active`, `disabled`, `deletion_pending`, …).
     pub status: String,
-    /// Server base URL.
-    pub server_url: String,
     /// IANA timezone.
     pub timezone: String,
     /// UI language.
@@ -35,8 +33,8 @@ pub struct AccountRow {
 pub fn get(conn: &Connection) -> CoreResult<Option<AccountRow>> {
     Ok(conn
         .query_row(
-            "SELECT user_id, username, display_name, role, status, server_url, timezone,
-                    ui_language, deletion_at, password_change_required, disabled_warned_at
+            "SELECT user_id, username, display_name, role, status, timezone, ui_language,
+                    deletion_at, password_change_required, disabled_warned_at
              FROM account WHERE singleton = 1",
             [],
             |r| {
@@ -46,12 +44,11 @@ pub fn get(conn: &Connection) -> CoreResult<Option<AccountRow>> {
                     display_name: r.get(2)?,
                     role: r.get(3)?,
                     status: r.get(4)?,
-                    server_url: r.get(5)?,
-                    timezone: r.get(6)?,
-                    ui_language: r.get(7)?,
-                    deletion_at: r.get(8)?,
-                    password_change_required: r.get(9)?,
-                    disabled_warned_at: r.get(10)?,
+                    timezone: r.get(5)?,
+                    ui_language: r.get(6)?,
+                    deletion_at: r.get(7)?,
+                    password_change_required: r.get(8)?,
+                    disabled_warned_at: r.get(9)?,
                 })
             },
         )
@@ -62,16 +59,14 @@ pub fn get(conn: &Connection) -> CoreResult<Option<AccountRow>> {
 pub fn put(conn: &Connection, a: &AccountRow) -> CoreResult<()> {
     conn.execute(
         "INSERT OR REPLACE INTO account (singleton, user_id, username, display_name, role, status,
-             server_url, timezone, ui_language, deletion_at, password_change_required,
-             disabled_warned_at)
-         VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+             timezone, ui_language, deletion_at, password_change_required, disabled_warned_at)
+         VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             a.user_id,
             a.username,
             a.display_name,
             a.role,
             a.status,
-            a.server_url,
             a.timezone,
             a.ui_language,
             a.deletion_at,

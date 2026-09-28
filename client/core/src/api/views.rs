@@ -216,9 +216,10 @@ pub fn watch_duplicate_prompts(sink: StreamSink<DuplicatePromptsView>) -> Result
 /// Settings.
 pub fn watch_settings(sink: StreamSink<SettingsView>) -> Result<(), CoreFailure> {
     lift(|| {
+        let server_url = core()?.env().server_url.clone();
         watch(
             Topics::SETTINGS | Topics::ACCOUNT | Topics::SYNC | Topics::REMOTE,
-            |c, ctx| build::settings_view(c, ctx)?.ok_or(CoreError::NotSignedIn),
+            move |c, ctx| build::settings_view(c, ctx, &server_url)?.ok_or(CoreError::NotSignedIn),
             DartSink(sink),
         )
     })
