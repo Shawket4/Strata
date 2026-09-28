@@ -24,6 +24,13 @@ Gaps filled while implementing the owner decision below; the owner may revisit a
 - **Device time zone:** read from the operating system in the Rust core (`iana-time-zone`), not passed through the bridge; after the first bootstrap an account with no synced `timezone` setting gets the device's zone via `PATCH /me`.
 - **Title rule scope:** entity, document, place and concept notes (user and AI). ~~A `note.create` whose path was taken meanwhile is still written at `<stem> 2.md` without a `title`.~~ Extended to `note.create` the same day (see "UI follow-ups" above).
 
+### Implementation decisions (app ID, default server)
+Gaps filled while implementing the owner decision below; the owner may revisit any of them.
+- **Loopback means exactly** `localhost`, `127.0.0.1` and `::1` (any port, any case); other `127.x` addresses and hosts that merely start with them are refused. The check runs in the core before any request (sign-in and sign-up) as `invalid_input` / field `server_url` / reason `insecure_http`, with its own en/ar message. Addresses without a scheme are left to the network layer as before.
+- **The build default is plain plumbing:** Dart passes `String.fromEnvironment('STRATA_DEFAULT_SERVER')` as `CoreConfig.default_server_url`; the core treats blank as none and trims it. The session's `server_url` stays "last address used on this device, else the build default".
+- **CI fails** the Android and macOS builds when `STRATA_DEFAULT_SERVER` is set but not `https://…`, warns when it is unset, and checks the APK package name and the macOS bundle identifier.
+- **Other IDs:** the Windows notification app user model ID is `com.shawket.strata`, the Windows version resource's company is `com.shawket`, the FFI plugin's Android namespace is `com.shawket.strata.bridge`; the Android notification channel stays `reminders` (not derived from the app ID).
+
 ### App ID, server address, HTTPS first (owner)
 - **App ID:** `com.shawket.strata` on every platform.
 - **Server:** the VPS is `187.124.33.153`; a domain will point at it. HTTPS through the nginx reverse proxy is set up for the domain **before** CI builds the apps that people install. CI bakes the HTTPS address in as the default server (`STRATA_DEFAULT_SERVER` repository variable); the field stays editable. The app refuses plain `http://` except loopback (SSH-tunnel testing).

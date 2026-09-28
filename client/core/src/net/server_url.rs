@@ -112,7 +112,10 @@ mod tests {
             ("http://[::1]:8080", "http://[::1]:8080"),
             ("http://[::1]", "http://[::1]"),
             ("http://[0:0:0:0:0:0:0:1]:9", "http://[0:0:0:0:0:0:0:1]:9"),
-            ("http://user@127.0.0.1:8080/x?y#z", "http://user@127.0.0.1:8080/x?y#z"),
+            (
+                "http://user@127.0.0.1:8080/x?y#z",
+                "http://user@127.0.0.1:8080/x?y#z",
+            ),
         ] {
             assert_eq!(checked(url), Ok(stored.to_owned()), "{url}");
         }
