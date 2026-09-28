@@ -279,7 +279,7 @@ jobs:
           SERVER: ${{ env.STRATA_SERVER_URL }}
         run: |
           notes="Built from ${SHA::7} on ${REF_NAME}. Apps connect to ${SERVER}.
-          Server: stratad-*-linux-x86_64.tar.gz (install with VPS_SETUP.md inside it; upgrades: RUNBOOK §10).
+          Server: stratad-*-linux-x86_64.tar.gz (install and upgrade with VPS_SETUP.md inside it).
           Android: strata-*-android-universal-*.apk, or the arm64-v8a one for most phones.
           macOS: Strata-*-macos-universal.dmg or .zip (ad-hoc signed: right-click → Open the first time)."
           if [ "$REF_TYPE" = tag ]; then

@@ -806,7 +806,7 @@ One engine checks every kind of item: notes, captures, tasks, people, companies,
 - Light/dark themes; system text scaling respected up to 200% without clipped or overlapping UI.
 
 **Screens:**
-1. **Login & sign-up** — server URL, username, password, device name; sign-up form; "waiting for approval" and "not approved" states.
+1. **Login & sign-up** — username, password, device name (the server address is fixed per build and never shown or edited; owner decision 2026-09-28); sign-up form; "waiting for approval" and "not approved" states.
 2. **Home / Capture** — prominent capture box (works well with Wispr Flow dictation), recent notes, inbox count.
 3. **Inbox** — captures with AI filing suggestions: accept / edit / reject per item and bulk; entity link-or-create suggestions (nicknames, ambiguous mentions).
 4. **Note view/editor** — editor, frontmatter properties panel (relations shown as typed chips), backlinks panel grouped by relation type, history panel with diff and revert, local mini-graph.
