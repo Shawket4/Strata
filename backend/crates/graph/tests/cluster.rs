@@ -739,11 +739,11 @@ async fn a_user_rename_is_one_user_commit_and_the_job_never_replaces_it() {
         Err(strata_graph::GraphError::NotFound)
     ));
     assert!(!w.dir(bob).join(CLUSTERS_PATH).exists());
-    let long = "x".repeat(cluster::MAX_NAME_CHARS + 1);
+    let too_long = "x".repeat(cluster::MAX_NAME_CHARS + 1);
     for (name, want) in [
         (" \t ", "invalid /name: the cluster name is empty"),
         (
-            long.as_str(),
+            too_long.as_str(),
             "invalid /name: the cluster name is longer than 100 characters",
         ),
     ] {

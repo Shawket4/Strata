@@ -723,8 +723,8 @@ impl AccountApi for ClientAccountApi {
                 .into_iter()
                 .filter(|e| e.kind == "similarity")
                 .map(|e| SimilarityEdge {
-                    src: e.source.to_string(),
-                    dst: e.target.to_string(),
+                    src: e.source.clone(),
+                    dst: e.target.clone(),
                     score: e.weight.or(e.confidence),
                 })
                 .collect())

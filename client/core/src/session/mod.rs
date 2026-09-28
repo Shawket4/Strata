@@ -325,9 +325,14 @@ impl Session {
         Ok(())
     }
 
-    /// Subscribes to `/events`, resuming after the last seq this device received.
+    /// Subscribes to `/events`, resuming after the last seq this device received. A device
+    /// that never received one resumes from 0: the server replays what it still buffers or
+    /// answers `reset`, so a change made between the last pull and the (lazy) connection is
+    /// never missed (subscribing "from now" would drop it).
     pub fn subscribe_events(&self) -> CoreResult<Box<dyn crate::net::EventStream>> {
-        let resume = self.read(|c, _| Ok(crate::store::sync_state::get(c)?.events_seq))?;
+        let resume = self
+            .read(|c, _| Ok(crate::store::sync_state::get(c)?.events_seq))?
+            .or(Some(0));
         Ok(self
             .env
             .events_api

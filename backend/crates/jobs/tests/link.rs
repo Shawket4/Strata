@@ -563,3 +563,77 @@ async fn users_are_isolated_in_linking() {
     assert_eq!(w.vault.ai_decisions(&sb, 50).await.expect("list"), vec![]);
     w.finish().await;
 }
+
+#[tokio::test]
+async fn accepting_an_entity_duplicates_pair_merges_the_entities() {
+    let w = World::new().await;
+    let (a, sa) = w.user("alice").await;
+    let entity = |name: &'static str, aliases: Vec<String>| {
+        let w = &w;
+        let sa = &sa;
+        async move {
+            w.vault
+                .create_entity(
+                    sa,
+                    strata_vault::ops::entities::NewEntity {
+                        kind: domain::NoteKind::Person,
+                        name: name.into(),
+                        aliases,
+                        tags: vec![],
+                        fields: std::collections::BTreeMap::new(),
+                        parent: None,
+                        id: None,
+                        force: true,
+                    },
+                )
+                .await
+                .expect("entity")
+                .id
+        }
+    };
+    let shady = entity("Shady", vec![]).await;
+    advance(&w, 60);
+    let other = entity("Shadi", vec!["شادي".into()]).await;
+    let item =
+        |id: strata_common::NoteId, title: &str| strata_vault::ops::notes::DuplicatePayloadItem {
+            id: id.to_string(),
+            item: id.to_string(),
+            snippet: None,
+            kind: "person".into(),
+            title: title.into(),
+            match_level: "semantic".into(),
+            score: 0.97,
+        };
+    let payload = strata_vault::ops::ai::DuplicatesPayload {
+        a: item(other, "Shadi"),
+        b: item(shady, "Shady"),
+        reason: None,
+    };
+    let sid = strata_common::SuggestionId::generate(w.db.ids.as_ref());
+    w.vault
+        .create_suggestion(
+            &sa,
+            sid,
+            Some(other),
+            "duplicates",
+            &rmp_serde::to_vec_named(&payload).expect("payload"),
+        )
+        .await
+        .expect("suggestion");
+    w.vault
+        .decide_suggestion(&sa, sid, true)
+        .await
+        .expect("accept");
+    // The entity created first survives with the other's name and aliases; one merge commit.
+    assert_eq!(
+        w.log(a)[0],
+        "user: merge people/Shadi.md -> people/Shady.md"
+    );
+    assert!(
+        w.read(a, "people/Shady.md")
+            .contains("aliases: [Shadi, شادي]")
+    );
+    assert!(!w.dir(a).join("people/Shadi.md").exists());
+    assert_eq!(suggestions(&w, a).await[0].1, "accepted");
+    w.finish().await;
+}

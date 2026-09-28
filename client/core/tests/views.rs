@@ -780,7 +780,11 @@ async fn directory_filters_facets_sections_and_sort_run_in_the_core() {
         ..no_filter()
     });
     assert_eq!(
-        in_home.items.iter().map(|i| i.title.as_str()).collect::<Vec<_>>(),
+        in_home
+            .items
+            .iter()
+            .map(|i| i.title.as_str())
+            .collect::<Vec<_>>(),
         ["Car license"]
     );
     let opt = |facet: &str, value: &str, label: &str, selected: bool| FilterOption {
@@ -825,7 +829,11 @@ async fn directory_filters_facets_sections_and_sort_run_in_the_core() {
         .expect("places");
     // Same activity: ties fall back to the title.
     assert_eq!(
-        places.items.iter().map(|i| i.title.as_str()).collect::<Vec<_>>(),
+        places
+            .items
+            .iter()
+            .map(|i| i.title.as_str())
+            .collect::<Vec<_>>(),
         ["Desk drawer", "Home", "Safe"]
     );
 }
@@ -883,7 +891,11 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
         ..all.clone()
     });
     assert_eq!(
-        places.nodes.iter().map(|n| n.title.as_str()).collect::<Vec<_>>(),
+        places
+            .nodes
+            .iter()
+            .map(|n| n.title.as_str())
+            .collect::<Vec<_>>(),
         ["Home", "Safe", "Desk drawer"]
     );
     assert!(
@@ -918,7 +930,11 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
         ..all
     });
     assert_eq!(
-        people.nodes.iter().map(|n| n.title.as_str()).collect::<Vec<_>>(),
+        people
+            .nodes
+            .iter()
+            .map(|n| n.title.as_str())
+            .collect::<Vec<_>>(),
         ["Shady"]
     );
 }

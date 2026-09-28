@@ -87,15 +87,21 @@ async fn events_resume_from_the_saved_seq_and_close_the_account() {
     h.server.push_event(Ok(EventSignal::Changed { seq: 7 }));
     let mut stream = s.subscribe_events().expect("subscribe");
     let signal = stream.next().await.expect("signal").expect("ok");
-    assert!(s.handle_event(&signal).expect("handled"), "a change asks for a pull");
+    assert!(
+        s.handle_event(&signal).expect("handled"),
+        "a change asks for a pull"
+    );
     drop(stream);
 
     // Reconnecting resumes after the last seq seen.
     h.server.push_event(Ok(EventSignal::Reset { seq: 12 }));
     let mut stream = s.subscribe_events().expect("resubscribe");
     let signal = stream.next().await.expect("signal").expect("ok");
-    assert!(s.handle_event(&signal).expect("handled"), "a reset re-pulls");
-    assert_eq!(h.server.subscriptions(), [None, Some(7)]);
+    assert!(
+        s.handle_event(&signal).expect("handled"),
+        "a reset re-pulls"
+    );
+    assert_eq!(h.server.subscriptions(), [Some(0), Some(7)]);
     let log = s.read(build::sync_status).expect("status").log;
     assert_eq!(log.first().map(|l| l.kind.as_str()), Some("reset"));
 
@@ -109,7 +115,7 @@ async fn events_resume_from_the_saved_seq_and_close_the_account() {
     assert_eq!(h.core.state().expect("state").kind, SessionKind::Disabled);
     drop(stream);
     let _ = s.subscribe_events();
-    assert_eq!(h.server.subscriptions(), [None, Some(7), Some(13)]);
+    assert_eq!(h.server.subscriptions(), [Some(0), Some(7), Some(13)]);
 }
 
 #[tokio::test]
@@ -147,7 +153,11 @@ async fn a_pending_account_waits_and_check_again_signs_in_once_approved() {
     );
     assert_eq!(state.kind, SessionKind::PendingApproval);
     assert_eq!(
-        state.pending.expect("pending").last_checked_label.as_deref(),
+        state
+            .pending
+            .expect("pending")
+            .last_checked_label
+            .as_deref(),
         Some("Last checked just now")
     );
 
@@ -239,7 +249,9 @@ async fn inbox_filters_and_capture_intents() {
 
     // A capture needing a choice cannot be accepted as is.
     assert_eq!(
-        s.accept_capture(CAP2).expect_err("needs choice").message_key(),
+        s.accept_capture(CAP2)
+            .expect_err("needs choice")
+            .message_key(),
         "error.invalid_input"
     );
     // "Accept all ready" accepts the ready capture only: one op.

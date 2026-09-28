@@ -1,12 +1,12 @@
 //! The client core against the real server (PLAN §16.4): the production app (auth, vault,
-//! sync, event bus; fake clock, per-test PostgreSQL database) served in-process by
+//! sync, event bus; fake clock, per-test `PostgreSQL` database) served in-process by
 //! `TestServer`, and real client cores — each with its own app-data directory — talking to it
 //! through the generated client exactly as the app does. Covers bootstrap, incremental
 //! changes, push (applied, merged, conflict, duplicate), the `/events` stream (resume and
 //! `account.disabled` mid-stream), rebasing queued ops after a pull, and the admin and
 //! account intents.
 //!
-//! Needs PostgreSQL (`STRATA_TEST_DATABASE_URL` or the testkit default).
+//! Needs `PostgreSQL` (`STRATA_TEST_DATABASE_URL` or the testkit default).
 
 #![allow(clippy::expect_used, clippy::unwrap_used, clippy::too_many_lines)]
 
@@ -26,7 +26,7 @@ use strata_common::clock::Clock as _;
 use strata_common::config::Argon2Config;
 use strata_core::clock::FakeClock;
 use strata_core::ids::SeqIds;
-use strata_core::net::client::{ClientAccountApi, ClientEventsApi, ClientSyncApi};
+use strata_core::net::client::{BrokenSyncApi, ClientAccountApi, ClientEventsApi, ClientSyncApi};
 use strata_core::net::{EventSignal, EventStream, SyncApi, Tokens};
 use strata_core::session::{Core, CoreEnv, NotifyHub, Session};
 use strata_core::store::{StorePaths, notes, outbox};
@@ -137,7 +137,12 @@ impl World {
             events_api: Arc::new(ClientEventsApi {}),
             notifications: NotifyHub::default(),
             sync_api: Arc::new(|url: &str, tokens: Tokens| -> Arc<dyn SyncApi> {
-                Arc::new(ClientSyncApi::new(url, tokens).expect("sync api"))
+                // As in production: a session opened before its URL is known gets a transport
+                // that fails every call.
+                match ClientSyncApi::new(url, tokens) {
+                    Ok(api) => Arc::new(api),
+                    Err(e) => Arc::new(BrokenSyncApi(e)),
+                }
             }),
             default_device_name: format!("device {n}"),
             default_server_url: None,
@@ -196,10 +201,6 @@ fn content(s: &Session, id: &str) -> String {
         .content
 }
 
-fn header(id: &str) -> String {
-    format!("---\nid: {id}\n---\n")
-}
-
 async fn next_signal(stream: &mut Box<dyn EventStream>) -> EventSignal {
     tokio::time::timeout(Duration::from_secs(10), stream.next())
         .await
@@ -225,7 +226,7 @@ async fn two_devices_sync_through_the_real_server() {
     let report = sa.sync(Trigger::AfterWrite).await.expect("push");
     assert_eq!(report.pushed, 1);
     let base = content(&sa, &id);
-    assert!(base.starts_with(&header(&id)), "{base}");
+    assert!(base.starts_with(&format!("---\nid: {id}\n")), "{base}");
     assert!(base.ends_with("First.\nSecond.\nThird.\n"), "{base}");
     assert_eq!(sa.read(|c, _| outbox::all(c)).expect("outbox"), []);
 
@@ -280,8 +281,12 @@ async fn two_devices_sync_through_the_real_server() {
 
     // Duplicate: B creates a note matching one it has not pulled yet; the server answers with
     // candidates, and "create anyway" retries with force.
-    sa.create_note("notes/ETA invoice for Watanya.md", "Monthly invoice\n", true)
-        .expect("create a");
+    sa.create_note(
+        "notes/ETA invoice for Watanya.md",
+        "Monthly invoice\n",
+        true,
+    )
+    .expect("create a");
     sa.sync(Trigger::AfterWrite).await.expect("sync a");
     let dup = sb
         .create_note("notes/Watanya ETA invoice.md", "Monthly invoice\n", false)
@@ -303,7 +308,10 @@ async fn two_devices_sync_through_the_real_server() {
         .expect("create anyway");
     sb.sync(Trigger::Manual).await.expect("sync b");
     assert!(sb.note_exists(&dup).expect("exists"));
-    assert_eq!(sb.read(build::duplicate_prompts).expect("prompts").prompts, []);
+    assert_eq!(
+        sb.read(build::duplicate_prompts).expect("prompts").prompts,
+        []
+    );
     w.finish().await;
 }
 
@@ -398,7 +406,7 @@ async fn events_resume_from_the_saved_seq_and_account_disabled_ends_the_session(
     let resumed = next_signal(&mut stream).await;
     match &resumed {
         EventSignal::Changed { seq: s } | EventSignal::Reset { seq: s } => assert!(*s > seq),
-        other => panic!("expected a change, got {other:?}"),
+        other @ EventSignal::AccountClosed { .. } => panic!("expected a change, got {other:?}"),
     }
     assert!(sa.handle_event(&resumed).expect("handled"));
     sa.pull().await.expect("pull");
@@ -451,9 +459,15 @@ async fn admin_and_account_intents_against_the_real_server() {
     );
 
     // Role change, then a password reset: a one-time password that forces a change.
-    let item = sadmin.set_user_role(&alice_id, "admin").await.expect("role");
+    let item = sadmin
+        .set_user_role(&alice_id, "admin")
+        .await
+        .expect("role");
     assert_eq!(item.role, "admin");
-    let item = sadmin.set_user_role(&alice_id, "member").await.expect("role");
+    let item = sadmin
+        .set_user_role(&alice_id, "member")
+        .await
+        .expect("role");
     assert_eq!(item.role, "member");
     let one_time = sadmin.reset_password(&alice_id).await.expect("reset");
     assert!(one_time.len() >= 10, "{one_time}");
