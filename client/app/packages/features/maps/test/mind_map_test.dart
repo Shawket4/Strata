@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_maps/src/generated/maps_localizations.dart';
-import 'package:strata_maps/src/graph/graph_kinds.dart';
-import 'package:strata_maps/src/mind_map/mind_map_canvas.dart';
 import 'package:strata_maps/strata_maps.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
@@ -40,7 +38,11 @@ void main() {
         expect(
           fake.calls,
           contains(
-            CoreCall('watchLocalGraph', {'id': _id, 'depth': _initialDepth(v)}),
+            CoreCall('watchLocalGraphFiltered', {
+              'id': _id,
+              'depth': _initialDepth(v),
+              'edgeKinds': const <String>[],
+            }),
           ),
         );
         expect(find.byType(InteractiveViewer), findsOneWidget);
@@ -89,7 +91,7 @@ void main() {
 
       testWidgets('not found $v', (tester) async {
         final fake = FakeCoreApi();
-        fake.localGraph[('n-gone', _initialDepth(v))].add(
+        fake.localGraphFiltered[('n-gone', _initialDepth(v), '')].add(
           MapFixtures.missingLocal,
         );
         await pumpVariant(tester, v, const MindMapScreen('n-gone'), fake);
@@ -103,7 +105,7 @@ void main() {
       testWidgets('error $v', (tester) async {
         final fake = FakeCoreApi();
         await pumpVariant(tester, v, const MindMapScreen(_id), fake);
-        fake.localGraph[(_id, _initialDepth(v))].addError(
+        fake.localGraphFiltered[(_id, _initialDepth(v), '')].addError(
           const CoreFailure(code: 'store', messageKey: 'error.store'),
         );
         await tester.pump();
@@ -135,7 +137,11 @@ void main() {
       await tester.pump();
       expect(
         fake.calls.last,
-        const CoreCall('watchLocalGraph', {'id': _id, 'depth': 3}),
+        const CoreCall('watchLocalGraphFiltered', {
+          'id': _id,
+          'depth': 3,
+          'edgeKinds': <String>[],
+        }),
       );
     });
 
@@ -149,9 +155,10 @@ void main() {
       await tester.pump();
       expect(
         fake.calls.last,
-        const CoreCall('watchLocalGraph', {
+        const CoreCall('watchLocalGraphFiltered', {
           'id': 'n-discount-policy',
           'depth': 1,
+          'edgeKinds': <String>[],
         }),
       );
     });
@@ -239,7 +246,11 @@ void main() {
       await tester.pump();
       expect(
         fake.calls.last,
-        const CoreCall('watchLocalGraph', {'id': 'n-churn-notes', 'depth': 2}),
+        const CoreCall('watchLocalGraphFiltered', {
+          'id': 'n-churn-notes',
+          'depth': 2,
+          'edgeKinds': <String>[],
+        }),
       );
     });
 
@@ -274,6 +285,8 @@ void main() {
         findsOneWidget,
       );
       await tester.tap(find.widgetWithText(FilterChip, 'contradicts'));
+      // Rebuild with the new selection, then the core's answer arrives.
+      await tester.pump();
       await tester.pump();
       expect(
         find.bySemanticsLabel(
@@ -281,14 +294,10 @@ void main() {
         ),
         findsNothing,
       );
-      expect(
-        fake.calls.last,
-        CoreCall('watchLocalGraphFiltered', {
-          'id': _id,
-          'depth': 2,
-          'edgeKinds': kinds,
-        }),
-      );
+      final call = fake.calls.last;
+      expect(call.method, 'watchLocalGraphFiltered');
+      expect((call.args['id'], call.args['depth']), (_id, 2));
+      expect(call.args['edgeKinds'], kinds);
       expect(kinds, isNot(contains('relation:contradicts')));
       expect(kinds, containsAll(['link', 'relation:supports']));
     });

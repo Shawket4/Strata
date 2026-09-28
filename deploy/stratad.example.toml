@@ -108,38 +108,40 @@ relation = 0.7
 # Custody events at or above this confidence are applied automatically (§6.12).
 custody = 0.85
 
-# Duplicate detection per item kind (§9.7): trigram `near` and embedding `semantic` similarity.
+# Duplicate detection per item kind (§9.7): trigram `near` similarity, and the embedding
+# `semantic` similarity at or above which an item is a candidate (borderline scores are
+# confirmed by one LLM call). The defaults are the calibrated values of `domain`; aliases
+# have no semantic level.
 [thresholds.dedupe.alias]
-near = 0.8
-semantic = 0.9
+near = 0.6
 
 [thresholds.dedupe.capture]
 near = 0.6
 semantic = 0.9
 
 [thresholds.dedupe.company]
-near = 0.7
+near = 0.5
 semantic = 0.9
 
 [thresholds.dedupe.concept]
-near = 0.7
+near = 0.5
 semantic = 0.88
 
 [thresholds.dedupe.document]
-near = 0.7
-semantic = 0.9
+near = 0.8
+semantic = 0.92
 
 [thresholds.dedupe.note]
 near = 0.6
 semantic = 0.9
 
 [thresholds.dedupe.person]
-near = 0.7
+near = 0.5
 semantic = 0.9
 
 [thresholds.dedupe.place]
-near = 0.7
-semantic = 0.9
+near = 0.8
+semantic = 0.92
 
 [thresholds.dedupe.task]
 near = 0.6

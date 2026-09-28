@@ -333,7 +333,7 @@ final class FakeCoreApi implements CoreApi {
 
   /// `acknowledgeAccountDisabled`.
   final FakeAnswer<SessionState> acknowledgeAccountDisabledAnswer = FakeAnswer(
-    StrataFixtures.sessionActive,
+    StrataFixtures.sessionSignedOut,
   );
 
   /// `refreshAccount`.

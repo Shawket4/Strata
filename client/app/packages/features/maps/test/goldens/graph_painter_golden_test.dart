@@ -4,6 +4,7 @@ import 'package:alchemist/alchemist.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_maps/strata_maps.dart';
+import 'package:strata_state/strata_state.dart' show GraphNodeKind;
 import 'package:strata_ui/strata_ui.dart';
 import 'package:strata_ui/testing.dart';
 

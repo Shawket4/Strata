@@ -66,11 +66,12 @@ class _GlobalMap extends HookConsumerWidget {
       child: switch (graph) {
         AsyncError(:final error) => MapsError(error: error),
         _ when view == null => const MapsLoading(),
-        _ when view.nodeCounts.isEmpty => StrataEmptyState(
-          icon: GlobalMapScreen.icon,
-          title: l10n.mapEmptyTitle,
-          message: l10n.mapEmptyMessage,
-        ),
+        _ when view.nodes.isEmpty && view.nodeCounts.isEmpty =>
+          StrataEmptyState(
+            icon: GlobalMapScreen.icon,
+            title: l10n.mapEmptyTitle,
+            message: l10n.mapEmptyMessage,
+          ),
         _ => _MapBody(
           view: view,
           filters: filters.value,

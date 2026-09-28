@@ -562,14 +562,22 @@ async fn regression_import_over_an_existing_note_keeps_its_id() {
     };
     let other_id = generate::FALLBACK_ULID;
     let cases = [
-        ("notes/Plan.md", "Replaced without an id.\n".to_owned(), fx.note.id),
+        (
+            "notes/Plan.md",
+            "Replaced without an id.\n".to_owned(),
+            fx.note.id,
+        ),
         ("notes/Plan.md", "Replaced again.\n".to_owned(), fx.note.id),
         (
             "notes/Follow up.md",
             format!("---\nid: {other_id}\n---\nCarries another id.\n"),
             fx.other.id,
         ),
-        ("notes/Old.md", "Over the trashed path is a new note.\n".to_owned(), ulid::Ulid::nil()),
+        (
+            "notes/Old.md",
+            "Over the trashed path is a new note.\n".to_owned(),
+            ulid::Ulid::nil(),
+        ),
     ];
     for (path, body, keeps) in cases {
         let resp = h
@@ -580,7 +588,12 @@ async fn regression_import_over_an_existing_note_keeps_its_id() {
                     .body(strata_api::wire::ZIP, zip(path, &body)),
             )
             .await;
-        assert_eq!(resp.status, 200, "{path}: {}", String::from_utf8_lossy(&resp.body));
+        assert_eq!(
+            resp.status,
+            200,
+            "{path}: {}",
+            String::from_utf8_lossy(&resp.body)
+        );
         let note = strata_client::operations::get_note_by_path(&u.client, path)
             .await
             .expect("note");
@@ -594,5 +607,127 @@ async fn regression_import_over_an_existing_note_keeps_its_id() {
             "{path}"
         );
     }
+    h.finish().await;
+}
+
+/// Decision (fuzzer report "`admin_list_users` leaked bystander data"): a false positive.
+/// Admins list accounts (PLAN §7.5 Account & admin): an account's ID, username, display name
+/// and status are account data, not vault data, so the leak rule
+/// (`Fixtures::private_strings`) covers vault IDs and text only. The listing names the
+/// bystander's account and carries none of its vault data.
+#[tokio::test]
+async fn admin_user_listing_shows_accounts_and_no_vault_data() {
+    let h = H::with(Options::default()).await;
+    let bystander = h.user("bystander").await;
+    let admin = h.admin("root").await;
+    let fx = populate(&h, &bystander, "bystander-secret-5e7d").await;
+    let listed = strata_client::operations::admin_list_users(&h.client(&admin.token), None)
+        .await
+        .expect("list");
+    let mut accounts: Vec<(String, ulid::Ulid)> =
+        listed.iter().map(|u| (u.username.clone(), u.id)).collect();
+    accounts.sort();
+    let mut expected = vec![
+        ("bystander".to_owned(), bystander.id.as_ulid()),
+        ("root".to_owned(), admin.id.as_ulid()),
+    ];
+    expected.sort();
+    assert_eq!(accounts, expected);
+    let resp = h
+        .send(
+            Some("admin_list_users"),
+            &Req::new("GET", "/api/v1/admin/users").token(&admin.token),
+        )
+        .await;
+    assert_eq!(resp.status, 200);
+    let private = fx.private_strings();
+    assert!(!private.contains(&bystander.id.to_string()));
+    let leaked: Vec<String> = hardening::strings_in(&resp.body)
+        .into_iter()
+        .filter(|t| private.iter().any(|p| t.contains(p.as_str())))
+        .collect();
+    assert_eq!(leaked, Vec::<String>::new());
+    assert_eq!(h.conformance.violations(), Vec::<String>::new());
+    h.finish().await;
+}
+
+/// Decision (fuzzer report "`get_map`/`put_map` answered an undocumented 400"): the requests
+/// carried raw generated text in the path (spaces, `#`, controls), which is not a valid HTTP
+/// request target; the HTTP codec answers such a request line `400` with no body before any
+/// operation is chosen, so no operation can document it. The fuzzer percent-encodes every
+/// generated path segment, query value and header value. Every *valid* map ID — reserved
+/// characters, controls, invalid UTF-8, traversal, reserved device names, oversized —
+/// gets a documented answer: `404 not_found` when it names no map or is not a valid file
+/// name, `201` when it is one (a new map).
+#[tokio::test]
+async fn every_encoded_map_id_gets_a_documented_answer() {
+    let h = H::with(Options::default()).await;
+    let u = h.user("alice").await;
+    let body = {
+        let mut o = Vec::new();
+        rmpv::encode::write_value(
+            &mut o,
+            &M::Map(vec![(
+                M::from("content"),
+                M::from("{\"nodes\":[],\"edges\":[]}"),
+            )]),
+        )
+        .expect("encode");
+        o
+    };
+    let long = "a".repeat(5000);
+    let cases: [(&str, u16); 16] = [
+        ("..", 404),
+        ("%2E%2E", 404),
+        ("a%2Fb", 404),
+        ("a%5Cb", 404),
+        ("%00", 404),
+        ("%0A", 404),
+        ("x%3Fy", 404),
+        ("%23", 404),
+        ("a%20b", 201),
+        ("%20", 404),
+        ("CON", 404),
+        ("%E2%80%AE", 201),
+        ("%F0%9F%98%80", 201),
+        ("%25", 201),
+        ("%FF", 201),
+        (long.as_str(), 404),
+    ];
+    let mut answers = Vec::new();
+    for (id, _) in &cases {
+        let get = h
+            .send(
+                Some("get_map"),
+                &Req::new("GET", format!("/api/v1/maps/{id}")).token(&u.token),
+            )
+            .await;
+        let put = h
+            .send(
+                Some("put_map"),
+                &Req::new("PUT", format!("/api/v1/maps/{id}"))
+                    .token(&u.token)
+                    .msgpack(body.clone()),
+            )
+            .await;
+        answers.push((
+            get.status,
+            get.problem_type(),
+            put.status,
+            put.problem_type(),
+        ));
+    }
+    let not_found = Some("not_found".to_owned());
+    assert_eq!(
+        answers,
+        cases
+            .iter()
+            .map(|(_, put)| {
+                let put_problem = (*put == 404).then(|| not_found.clone()).flatten();
+                (404, not_found.clone(), *put, put_problem)
+            })
+            .collect::<Vec<_>>()
+    );
+    assert_eq!(h.conformance.violations(), Vec::<String>::new());
     h.finish().await;
 }

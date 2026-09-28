@@ -37,9 +37,15 @@ void main() {
         if (v.sizeClass == SizeClass.compact) {
           expect(find.text(l10n.mapCompactTitle), findsOneWidget);
           expect(find.byType(GraphViewport), findsNothing);
-          expect(fake.calls, isNot(contains(const CoreCall('globalGraph'))));
+          expect(
+            fake.calls.map((c) => c.method),
+            isNot(contains('globalGraphFiltered')),
+          );
         } else {
-          expect(fake.calls, contains(const CoreCall('globalGraph')));
+          expect(
+            fake.calls.map((c) => c.method),
+            contains('globalGraphFiltered'),
+          );
           expect(
             find.bySemanticsLabel(l10n.mapSemantics(nodes: 15, edges: 15)),
             findsOneWidget,

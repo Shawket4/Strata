@@ -41,7 +41,7 @@ void main() {
         'reminders.dart',
         'views.dart',
       ]);
-      expect(facade, hasLength(53));
+      expect(facade, hasLength(140));
       expect(
         facade['watchDirectory']!.signature,
         'Stream<DirectoryView> watchDirectory({required DirectoryTab tab, '
@@ -81,7 +81,7 @@ void main() {
       final fixtureTypes = RegExp(
         r'static (?:const|final) (?:List<)?(\w+)>? \w+ =',
       ).allMatches(fixturesSource).map((m) => m.group(1)!).toSet();
-      expect(classes, hasLength(74));
+      expect(classes, hasLength(128));
       expect(classes.difference(fixtureTypes), isEmpty);
     });
   });
@@ -102,13 +102,13 @@ void main() {
       final grown = {
         ...facade,
         ...parseFacadeFile('''
-/// Pins a note.
-Future<String> pinNote({required String id}) =>
-    StrataCore.instance.api.crateApiIntentsPinNote(id: id);
+/// Archives a note.
+Future<String> archiveNote({required String id}) =>
+    StrataCore.instance.api.crateApiIntentsArchiveNote(id: id);
 '''),
       };
       expect(diffSurfaces(grown, parseInterface(interfaceSource)), [
-        'missing in CoreApi: Future<String> pinNote({required String id})',
+        'missing in CoreApi: Future<String> archiveNote({required String id})',
       ]);
     });
 

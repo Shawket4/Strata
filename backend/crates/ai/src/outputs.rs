@@ -578,33 +578,17 @@ mod tests {
         assert_eq!(g.title, "Weekly digest 2026-W39");
     }
 
-    /// Superseded versions stay registered while fixtures reference them; their samples
-    /// still match their own schemas.
+    /// A linking reply without concept summaries (as v1 of the prompt produced) still reads
+    /// as the current type.
     #[test]
-    fn superseded_prompt_samples_match_their_schemas() {
-        for (id, sample) in [
-            (
-                ids::INBOX_FILING,
-                include_str!("../tests/fixtures/outputs/inbox_filing.v1.json"),
-            ),
-            (
-                ids::LINKING,
-                include_str!("../tests/fixtures/outputs/linking.v1.json"),
-            ),
-            (
-                ids::ENTITY_INSIGHTS,
-                include_str!("../tests/fixtures/outputs/entity_insights.v1.json"),
-            ),
-        ] {
-            let p = prompts::get(id, 1).expect("v1 registered");
-            let v = crate::schema::compile(&p.schema_value().expect("schema")).expect("compiles");
-            let value: serde_json::Value = serde_json::from_str(sample).expect("JSON");
-            crate::schema::validate(&v, &value).expect("v1 sample matches v1");
+    fn a_linking_reply_without_concept_summaries_still_reads() {
+        let mut value: serde_json::Value =
+            serde_json::from_str(include_str!("../tests/fixtures/outputs/linking.v2.json"))
+                .expect("JSON");
+        for c in value["concepts"].as_array_mut().expect("concepts") {
+            c.as_object_mut().expect("concept").remove("summary");
         }
-        // A v1 linking reply still reads as the current type (concepts without summaries).
-        let l: Linking =
-            serde_json::from_str(include_str!("../tests/fixtures/outputs/linking.v1.json"))
-                .expect("v1 fits");
+        let l: Linking = serde_json::from_value(value).expect("fits");
         assert_eq!(l.concepts[0].summary, None);
     }
 

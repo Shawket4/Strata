@@ -450,7 +450,9 @@ void main() {
         container.read(adminUsersProvider('').future),
         throwsA(same(failure)),
       );
-      expect(fake.calls, const [CoreCall('loadAdminUsers')]);
+      expect(fake.calls, const [
+        CoreCall('loadAdminUsers', {'query': ''}),
+      ]);
     });
   });
 

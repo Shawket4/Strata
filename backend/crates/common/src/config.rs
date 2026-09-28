@@ -242,14 +242,18 @@ pub struct EmbeddingSettings {
 /// Effort levels accepted by the Messages API.
 pub const ANTHROPIC_EFFORTS: &[&str] = &["low", "medium", "high", "xhigh", "max"];
 
-/// Per-kind duplicate-detection thresholds (§9.7).
+/// Per-kind duplicate-detection thresholds (§9.7). The defaults are the tuned
+/// `domain::DedupeThresholds::default_for` values ([`DEFAULT_DEDUPE_THRESHOLDS`]).
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DedupeThreshold {
     /// Trigram similarity (0..1) at or above which an item is a near duplicate.
     pub near: f64,
-    /// Embedding cosine similarity (0..1) at or above which an item is a semantic duplicate.
-    pub semantic: f64,
+    /// Embedding cosine similarity (0..1) at or above which an item is a semantic duplicate
+    /// candidate (borderline scores are confirmed by one LLM call). Absent for kinds without
+    /// a semantic level (aliases: single names, where embeddings add nothing).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantic: Option<f64>,
 }
 
 /// Confidence thresholds.
@@ -390,17 +394,20 @@ pub struct PushConfig {
 /// tokens, the default `input_micros_per_mtok` / `output_micros_per_mtok`).
 pub const DEFAULT_ANTHROPIC_MODEL: &str = "claude-opus-5-5";
 
-/// Item kinds with duplicate thresholds by default, and their defaults `(near, semantic)`.
-pub const DEFAULT_DEDUPE_THRESHOLDS: &[(&str, f64, f64)] = &[
-    ("alias", 0.8, 0.9),
-    ("capture", 0.6, 0.9),
-    ("company", 0.7, 0.9),
-    ("concept", 0.7, 0.88),
-    ("document", 0.7, 0.9),
-    ("note", 0.6, 0.9),
-    ("person", 0.7, 0.9),
-    ("place", 0.7, 0.9),
-    ("task", 0.6, 0.88),
+/// Item kinds with duplicate thresholds by default, and their defaults `(near, semantic)`:
+/// the calibrated `domain::DedupeThresholds::default_for` values (near; semantic = the
+/// candidate level), so an unchanged configuration behaves exactly as tested (a unit test
+/// keeps the two equal).
+pub const DEFAULT_DEDUPE_THRESHOLDS: &[(&str, f64, Option<f64>)] = &[
+    ("alias", 0.6, None),
+    ("capture", 0.6, Some(0.9)),
+    ("company", 0.5, Some(0.9)),
+    ("concept", 0.5, Some(0.88)),
+    ("document", 0.8, Some(0.92)),
+    ("note", 0.6, Some(0.9)),
+    ("person", 0.5, Some(0.9)),
+    ("place", 0.8, Some(0.92)),
+    ("task", 0.6, Some(0.88)),
 ];
 
 impl Default for AiConfig {
@@ -585,7 +592,9 @@ impl Config {
         unit("thresholds.custody".into(), self.thresholds.custody)?;
         for (kind, t) in &self.thresholds.dedupe {
             unit(format!("thresholds.dedupe.{kind}.near"), t.near)?;
-            unit(format!("thresholds.dedupe.{kind}.semantic"), t.semantic)?;
+            if let Some(semantic) = t.semantic {
+                unit(format!("thresholds.dedupe.{kind}.semantic"), semantic)?;
+            }
         }
         if self.database.max_connections == 0 {
             return Err(ConfigError::Invalid(
@@ -936,9 +945,42 @@ mod tests {
             config.dedupe_threshold("task"),
             Some(DedupeThreshold {
                 near: 0.6,
-                semantic: 0.88
+                semantic: Some(0.88)
             })
         );
+        assert_eq!(
+            config.dedupe_threshold("alias"),
+            Some(DedupeThreshold {
+                near: 0.6,
+                semantic: None
+            })
+        );
+    }
+
+    /// The default thresholds are the calibrated `domain` defaults, for every kind (near, and
+    /// semantic = the candidate level; none where the kind has no semantic level).
+    #[test]
+    #[allow(clippy::cast_possible_truncation)] // the domain thresholds are f32
+    fn default_dedupe_thresholds_equal_the_calibrated_domain_defaults() {
+        let config = Config::default();
+        let kinds: Vec<&str> = domain::DedupeKind::ALL
+            .iter()
+            .map(|k| k.as_str())
+            .collect();
+        let mut configured: Vec<&str> = config.thresholds.dedupe.keys().map(String::as_str).collect();
+        configured.sort_unstable();
+        let mut sorted = kinds.clone();
+        sorted.sort_unstable();
+        assert_eq!(configured, sorted);
+        for kind in domain::DedupeKind::ALL {
+            let d = domain::DedupeThresholds::default_for(*kind);
+            let c = config.thresholds.dedupe[kind.as_str()];
+            assert_eq!(
+                (c.near as f32, c.semantic.map(|s| s as f32)),
+                (d.near, d.semantic.map(|s| s.candidate)),
+                "{kind}"
+            );
+        }
     }
 
     #[test]
@@ -971,7 +1013,7 @@ mod tests {
             "task".into(),
             DedupeThreshold {
                 near: 0.5,
-                semantic: 0.8,
+                semantic: Some(0.8),
             },
         );
         expected.push.apns_key_id = Some("ABC123".into());
@@ -1007,7 +1049,7 @@ mod tests {
             "0.0.0.0:9000".parse::<SocketAddr>().expect("addr")
         );
         assert_eq!(config.thresholds.dedupe["note"].near, 0.65);
-        assert_eq!(config.thresholds.dedupe["note"].semantic, 0.9);
+        assert_eq!(config.thresholds.dedupe["note"].semantic, Some(0.9));
     }
 
     #[test]

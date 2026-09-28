@@ -138,33 +138,31 @@ mod tests {
         ids::SUMMARY,
     ];
 
-    /// Prompts bumped to version 2 (the AI pipelines: concept summaries, filing with custody,
-    /// tasks and correction detection, one-line captures in entity insights).
+    /// Prompts at version 2 (the AI pipelines: concept summaries, filing with custody, tasks
+    /// and correction detection, one-line captures in entity insights). Their superseded v1
+    /// files are gone: no fixture or stored reply references them.
     const V2: [&str; 3] = [ids::ENTITY_INSIGHTS, ids::INBOX_FILING, ids::LINKING];
 
     #[test]
     fn every_prompt_is_registered_sorted_and_latest_is_the_highest_version() {
+        let version = |id: &str| if V2.contains(&id) { 2 } else { 1 };
         let listed: Vec<(&str, u32)> = PROMPTS.iter().map(|p| (p.id, p.version)).collect();
-        let expected: Vec<(&str, u32)> = ALL
-            .iter()
-            .flat_map(|id| {
-                let top = if V2.contains(id) { 2 } else { 1 };
-                (1..=top).map(move |v| (*id, v))
-            })
-            .collect();
+        let expected: Vec<(&str, u32)> = ALL.iter().map(|id| (*id, version(id))).collect();
         assert_eq!(listed, expected);
         for id in ALL {
-            let top = if V2.contains(&id) { 2 } else { 1 };
-            assert_eq!(latest(id).map(|p| p.version), Some(top), "{id}");
-            assert_eq!(get(id, 1).map(|p| p.id), Some(id));
+            assert_eq!(latest(id).map(|p| p.version), Some(version(id)), "{id}");
+            assert_eq!(get(id, version(id)).map(|p| p.id), Some(id));
+        }
+        for id in V2 {
+            assert_eq!(get(id, 1), None, "{id} v1 is retired");
         }
         assert_eq!(get(ids::LINKING, 3), None);
         assert_eq!(latest("nope"), None);
     }
 
     /// Pinned hashes: changing a prompt's text without bumping its version fails here. When a
-    /// prompt changes, add `<id>.v<N+1>.md` (keep the old file while fixtures reference it) and
-    /// pin the new hash.
+    /// prompt changes, add `<id>.v<N+1>.md` (keep the old file while fixtures reference it,
+    /// then remove it and its pin) and pin the new hash.
     #[test]
     fn prompt_hashes_are_pinned() {
         let hashes: Vec<(&str, u32, &str)> = PROMPTS
@@ -207,28 +205,13 @@ mod tests {
         ),
         (
             "entity_insights",
-            1,
-            "ca5eb04464f4485661d185789fb64053d00872660bde52836f1662022b5ac356",
-        ),
-        (
-            "entity_insights",
             2,
             "34b992d05fcc6ccb691fcf5da03ad43ac55ffbf422ecdf066e391f7425f72748",
         ),
         (
             "inbox_filing",
-            1,
-            "7e0bece88d09c5d7e16ee88eabd978b9b70b483775e0b1d5a5ddac82c3e16622",
-        ),
-        (
-            "inbox_filing",
             2,
             "77e343c8ef88bfdabedadc0a6c3b4eb65fc436f27a95524af0b675c67398f456",
-        ),
-        (
-            "linking",
-            1,
-            "6efb5ab1bf13e9557cb866826d949c1e331e2a366f765d185a2f9557c0ca4dcc",
         ),
         (
             "linking",
