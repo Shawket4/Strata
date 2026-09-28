@@ -12,6 +12,7 @@
 //! are computed from the local cache with `graph-algo` meanwhile.
 
 pub mod client;
+pub mod server_url;
 
 use std::collections::BTreeMap;
 use std::fmt;

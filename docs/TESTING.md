@@ -356,36 +356,49 @@ cargo llvm-cov report --html --ignore-filename-regex '…same…'   # target/llv
 cargo llvm-cov clean --profraw-only               # drop the raw profiles afterwards
 ```
 
+**Stale binaries.** `target/llvm-cov-target` keeps test binaries of earlier builds (other
+hashes, older sources); `cargo llvm-cov report` reads every binary it finds, so stale ones merge
+old line mappings into the report (files counted twice, impossible lines). Delete the
+instrumented executables (`find target/llvm-cov-target/debug/deps -maxdepth 1 -type f -perm
+-u+x ! -name '*.so' ! -name '*.rlib' ! -name '*.a' ! -name '*.d' -delete`) or run
+`cargo llvm-cov clean --workspace` before a measurement.
+
 **Measured 2026-09-28** (dev container, working tree of that day including other in-flight
-work; every non-ignored test of every workspace crate, merged per source file across test
-binaries). The disk did not allow one instrumented build of the whole workspace at once, so the
-tests ran in groups (`cargo llvm-cov --no-report -p …` per group, `cargo llvm-cov report --lcov`,
-then the group's binaries and raw profiles deleted) and the lcov files were merged line by line
-(a line counts as covered if any test binary executed it):
-
-| Scope | Lines covered |
-|---|---|
-| Workspace, everything | **70.4 %** (52 346 / 74 396) |
-| Workspace without generated code (`client/core/src/frb_generated.rs`, `api/rust-client/src/generated/`) | 86.3 % (51 044 / 59 181) |
-| Backend and shared crates | 92.9 % (39 912 / 42 968) |
-
-Lowest-covered crates (lines, generated code included):
+work; every non-ignored test of every workspace crate: 1 205 tests). The disk did not allow one
+instrumented build of the whole workspace at once, so the tests ran in nine groups
+(`cargo llvm-cov nextest --no-report -p … [--test …]`); after each group its raw profiles were
+merged (`llvm-profdata merge -sparse`) and only the coverage sections of each test binary kept
+(`llvm-objcopy --only-section=__llvm_covfun --only-section=__llvm_covmap
+--only-section=__llvm_prf_names`, a few MB per binary), then the binaries deleted. One
+`llvm-cov export -summary-only` over all kept objects and the merged profile then gives the
+same line summary as the CI command (checked against `cargo llvm-cov report` for one group),
+with the same exclusions:
 
 | Crate | Lines |
 |---|---|
-| `client/core` | 35.8 % (66.8 % without `frb_generated.rs`, 13 043 lines never executed by Rust tests) |
-| `api/rust-client` | 65.7 % (88.6 % without `generated/`) |
-| `backend/bin/stratad` | 66.8 % (`serve::run` and the background loops are only exercised by a live server) |
-| `backend/crates/testkit` | 89.0 % |
-| `backend/crates/vault` | 89.2 % |
-| `backend/crates/jobs` | 92.2 % |
-| `backend/crates/api` | 92.4 % |
-| `crates/domain` | 92.8 % |
+| Workspace (gate) | **93.0 %** (62 285 / 66 959) |
+| `client/core` | 90.8 % (15 517 / 17 088) |
+| `api/rust-client` | 95.9 % (543 / 566) |
+| `backend/bin/stratad` | 92.7 % (1 059 / 1 143) |
+| `backend/crates/testkit` | 94.4 % (620 / 657) |
+| `backend/crates/vault` | 90.1 % (8 844 / 9 811) |
+| `api/codegen` | 90.8 % |
+| `backend/crates/jobs` | 91.8 % |
+| `backend/crates/ai` | 91.8 % |
+| `backend/crates/api` | 92.3 % |
+| `crates/domain` | 92.2 % |
 
-Every other crate is above 94 %. The CI gate as configured (`--fail-under-lines 90` over the
-whole workspace, generated code included) would therefore fail today; excluding generated code
-(`--ignore-filename-regex 'frb_generated|/generated/'`) is a decision for the owner, and the
-client core's hand-written code (66.8 %) is below the gate either way.
+Every other crate is above 96 %. What stays unexecuted by Rust tests and why:
+
+- `client/core/src/api/views.rs` (`watch_*`), `api/sink.rs`, `api/reminders.rs`: the facade's
+  streams take a flutter_rust_bridge `StreamSink`, which needs a Dart port; the Flutter
+  integration tests drive them. The builders and `Session::watch` behind them are tested.
+- `client/core/src/api/runtime.rs`: the background sync and `/events` loops run on wall-clock
+  timers (`tokio::select!` with sleeps); `tests/facade_live.rs` covers the main path.
+- `strata-testkit`'s template build and stale-database sweep run only when the template does
+  not exist yet (a fresh cluster, as in CI), not on a developer machine that already has it.
+- The real ONNX model and the real Claude CLI (`#[ignore]`d tests; the model download is not
+  available in the dev container).
 
 ## 6. CI jobs (`.github/workflows/ci.yml`)
 

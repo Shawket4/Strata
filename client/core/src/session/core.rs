@@ -143,7 +143,9 @@ impl CoreEnv {
                 }
             }),
             default_device_name: config.default_device_name.clone(),
-            default_server_url: config.default_server_url.clone(),
+            default_server_url: crate::net::server_url::default_from_build(
+                config.default_server_url.as_deref(),
+            ),
             device_timezone: device_timezone(),
         }
     }
@@ -390,26 +392,28 @@ impl Core {
         Ok(state)
     }
 
-    /// Registers an account (D22): it waits for approval, no session.
+    /// Registers an account (D22): it waits for approval, no session. A plain-`http://`
+    /// server address other than this device is refused ([`crate::net::server_url`]).
     pub async fn sign_up(&self, req: SignUpRequest) -> CoreResult<SignUpOutcome> {
+        let server_url = crate::net::server_url::checked(&req.server_url)?;
         let username = self
             .env
             .account_api
             .signup(
-                req.server_url.clone(),
+                server_url.clone(),
                 req.username,
                 req.password.clone(),
                 req.display_name,
             )
             .await
             .map_err(login_error)?;
-        lock(&self.registry).set_device_value(registry::LAST_SERVER_URL, &req.server_url)?;
+        lock(&self.registry).set_device_value(registry::LAST_SERVER_URL, &server_url)?;
         let device_name = lock(&self.registry)
             .device_value(registry::DEVICE_NAME)?
             .unwrap_or_else(|| self.env.default_device_name.clone());
-        self.set_pending(&username, &req.server_url, false)?;
+        self.set_pending(&username, &server_url, false)?;
         *lock(&self.pending_request) = Some(SignInRequest {
-            server_url: req.server_url.clone(),
+            server_url,
             username: username.clone(),
             password: req.password.clone(),
             device_name,
@@ -418,9 +422,10 @@ impl Core {
         Ok(SignUpOutcome { username })
     }
 
-    /// Signs in as a device; opens (or reuses) the account's own database.
+    /// Signs in as a device; opens (or reuses) the account's own database. A plain-`http://`
+    /// server address other than this device is refused ([`crate::net::server_url`]).
     pub async fn sign_in(&self, req: SignInRequest) -> CoreResult<SessionState> {
-        let server_url = req.server_url.trim_end_matches('/').to_owned();
+        let server_url = crate::net::server_url::checked(&req.server_url)?;
         let login = self
             .env
             .account_api

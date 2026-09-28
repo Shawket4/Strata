@@ -1,4 +1,4 @@
-package app.strata.strata
+package com.shawket.strata
 
 import io.flutter.embedding.android.FlutterActivity
 
