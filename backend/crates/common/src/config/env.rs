@@ -348,6 +348,7 @@ fn variables_table() -> Vec<Var> {
         var!(ai.daily_job_limit),
         var!(ai.claude_cli.command),
         var!(ai.claude_cli.scratch_dir),
+        var!(ai.claude_cli.launch_dir),
         var!(ai.claude_cli.model),
         var!(ai.claude_cli.max_concurrency),
         var!(ai.claude_cli.timeout_secs),

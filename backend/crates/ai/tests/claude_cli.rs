@@ -458,3 +458,30 @@ async fn a_launcher_prefix_runs_in_front_of_the_claude_arguments() {
     assert!(!h.argv().iter().any(|a| a == "--model"));
     assert!(h.env().contains(&"LAUNCHED_BY=launcher".to_owned()));
 }
+
+#[tokio::test]
+async fn a_launcher_starts_in_the_launch_dir_even_when_the_scratch_dir_is_closed() {
+    // Production: the scratch directory is strata-ai's (0700) and the wrapper changes into it
+    // itself, so stratad must not start the launcher there (it gets EACCES).
+    use std::os::unix::fs::PermissionsExt;
+    let h = Harness::new();
+    let closed = h.work.path().join("strata-ai-only");
+    std::fs::create_dir(&closed).expect("closed dir");
+    std::fs::set_permissions(&closed, std::fs::Permissions::from_mode(0o000)).expect("chmod");
+    let launch = TempDir::new().expect("launch dir");
+    let mut cfg = h.config("json_success");
+    cfg.working_dir = closed.clone();
+    cfg.launch_dir = Some(launch.path().to_path_buf());
+    let result = h.provider(cfg).complete_json(json_request("x")).await;
+    std::fs::set_permissions(&closed, std::fs::Permissions::from_mode(0o700)).expect("chmod back");
+    result.expect("success");
+    assert_eq!(
+        h.read("cwd").trim(),
+        launch
+            .path()
+            .canonicalize()
+            .expect("canonical")
+            .display()
+            .to_string()
+    );
+}

@@ -301,8 +301,16 @@ Configure the launcher in the env file:
 ```sh
 STRATA_AI__CLAUDE_CLI__COMMAND='sudo -n -u strata-ai /usr/local/lib/strata/claude-ai'
 STRATA_AI__CLAUDE_CLI__SCRATCH_DIR=/var/lib/strata-ai/scratch
+STRATA_AI__CLAUDE_CLI__LAUNCH_DIR=/
 # defaults: STRATA_AI__CLAUDE_CLI__MAX_CONCURRENCY=1, STRATA_AI__CLAUDE_CLI__TIMEOUT_SECS=300
 ```
+
+`stratad` starts the launcher in `LAUNCH_DIR`, not in the scratch directory: that one is
+`strata-ai`'s (`0700`), so `strata` cannot enter it and every call would fail with `failed to
+start claude: PermissionDenied`; the wrapper changes into it as `strata-ai`. Without a launcher
+(`COMMAND` is `claude` itself, development) leave `LAUNCH_DIR` unset: the process then starts in
+`SCRATCH_DIR`. At startup `stratad` warns when the directory it starts `claude` in is missing or
+cannot be entered.
 
 On timeout `stratad` sends SIGTERM to the process group (sudo relays it to `claude`), then
 SIGKILL after `STRATA_AI__CLAUDE_CLI__KILL_GRACE_SECS`. Because `claude` runs through `sudo`,

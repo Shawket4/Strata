@@ -178,7 +178,8 @@ job / handler ──► AiService::complete::<T>(caller, prompt, input) ──�
   writes — never a raw user ID — and the username for routing).
 - **`ClaudeCliProvider`** (default, D20 = a): one `claude -p` process per call through a
   configurable launcher (production: `sudo -u strata-ai` + a root-owned wrapper, RUNBOOK §9),
-  cleared environment (API keys and bare mode refused), empty scratch directory, all tools, MCP
+  cleared environment (API keys and bare mode refused), empty scratch directory (the wrapper
+  changes into it; `stratad` starts the launcher in `claude_cli.launch_dir`), all tools, MCP
   servers, settings files and slash commands off, Strata's prompt as the system prompt, content on
   stdin. Both call kinds use `--output-format stream-json --verbose` because only that format
   reports `rate_limit_event`s (reset times); `complete_json` adds `--json-schema` (the

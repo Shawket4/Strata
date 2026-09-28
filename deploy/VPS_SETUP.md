@@ -142,6 +142,7 @@ STRATA_AUTH__SIGNING_KEY_FILE=/etc/strata/token-signing-key.pem
 STRATA_AUTH__TRUST_FORWARDED_FOR=true
 STRATA_AI__CLAUDE_CLI__COMMAND='sudo -n -u strata-ai /usr/local/lib/strata/claude-ai'
 STRATA_AI__CLAUDE_CLI__SCRATCH_DIR=/var/lib/strata-ai/scratch
+STRATA_AI__CLAUDE_CLI__LAUNCH_DIR=/   # the wrapper changes into the scratch dir as strata-ai
 STRATA_AI__EMBEDDING__MODEL_DIR=/opt/models/granite-embedding-97m-multilingual-r2
 STRATA_AI__EMBEDDING__ONNXRUNTIME_LIB=/opt/onnxruntime/lib/libonnxruntime.so.1.30.0
 ```

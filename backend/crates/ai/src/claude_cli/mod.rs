@@ -4,8 +4,9 @@
 //! Every call spawns one `claude` process:
 //! - through a configurable launcher (`command`, e.g. `sudo -n -u strata-ai <wrapper>`) so it
 //!   runs as a dedicated OS user with no access to vaults or data (docs/RUNBOOK.md §9);
-//! - in an empty scratch working directory, with the environment cleared and replaced by an
-//!   explicit allow-list that may never contain `ANTHROPIC_API_KEY` (billing stays on the
+//! - in an empty scratch working directory (or, behind a launcher that changes into it as
+//!   another user, in [`ClaudeCliConfig::launch_dir`]), with the environment cleared and
+//!   replaced by an explicit allow-list that may never contain `ANTHROPIC_API_KEY` (billing stays on the
 //!   subscription login) and never enables bare mode;
 //! - with every tool disabled (`--tools ""`), no MCP servers (`--strict-mcp-config` without a
 //!   config), no settings files (`--setting-sources ""`), no skills/slash commands, no session
@@ -21,7 +22,7 @@
 mod parse;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
@@ -62,6 +63,10 @@ pub struct ClaudeCliConfig {
     pub command: Vec<String>,
     /// Empty scratch directory the process runs in.
     pub working_dir: PathBuf,
+    /// Directory `command` is started in when it is not `working_dir`: a launcher that runs
+    /// the CLI as another user whose wrapper changes into the scratch directory itself, which
+    /// the service user may not enter (RUNBOOK §9). `None`: `working_dir`.
+    pub launch_dir: Option<PathBuf>,
     /// The child's complete environment (the parent's is cleared).
     pub env: BTreeMap<String, String>,
     /// `--model` (alias or full name); `None` lets the CLI choose.
@@ -84,6 +89,7 @@ impl ClaudeCliConfig {
         Self {
             command,
             working_dir,
+            launch_dir: None,
             env: Self::default_env(),
             model: None,
             timeout: Duration::from_secs(300),
@@ -105,6 +111,38 @@ impl ClaudeCliConfig {
         .into_iter()
         .map(|(k, v)| (k.to_owned(), v.to_owned()))
         .collect()
+    }
+
+    /// The directory `command` is started in.
+    pub fn start_dir(&self) -> &Path {
+        self.launch_dir.as_deref().unwrap_or(&self.working_dir)
+    }
+
+    /// Why this process cannot start `command` in [`Self::start_dir`], if it cannot: the
+    /// directory is missing or not enterable, so every call would fail with `failed to start
+    /// claude`.
+    pub fn start_dir_problem(&self) -> Option<String> {
+        let dir = self.start_dir();
+        let setting = if self.launch_dir.is_some() {
+            "STRATA_AI__CLAUDE_CLI__LAUNCH_DIR"
+        } else {
+            "STRATA_AI__CLAUDE_CLI__SCRATCH_DIR"
+        };
+        let problem = if dir.is_dir() {
+            rustix::fs::access(dir, rustix::fs::Access::EXEC_OK)
+                .err()
+                .map(|_| "cannot be entered by this user")
+        } else {
+            Some("is not a directory this user can see")
+        };
+        problem.map(|p| {
+            format!(
+                "{setting} {} {p}: every claude call will fail (behind a launcher that changes \
+                 into the scratch directory itself, set STRATA_AI__CLAUDE_CLI__LAUNCH_DIR=/; see \
+                 docs/RUNBOOK.md §9)",
+                dir.display()
+            )
+        })
     }
 
     /// Checks the rules above.
@@ -230,7 +268,7 @@ impl ClaudeCliProvider {
             .args(self.args(system, schema))
             .env_clear()
             .envs(&self.cfg.env)
-            .current_dir(&self.cfg.working_dir)
+            .current_dir(self.cfg.start_dir())
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -608,6 +646,39 @@ mod tests {
         assert_eq!(
             empty.validate(),
             Err(AiError::Config("claude_cli.command is empty".into()))
+        );
+    }
+
+    #[test]
+    fn the_start_dir_is_the_launch_dir_when_set_and_must_exist() {
+        let scratch = tempfile::tempdir().expect("scratch");
+        let mut cfg = ClaudeCliConfig::new(vec!["claude".into()], scratch.path().into());
+        assert_eq!(cfg.start_dir(), scratch.path());
+        assert_eq!(cfg.start_dir_problem(), None);
+        cfg.working_dir = "/nonexistent/scratch".into();
+        assert_eq!(
+            cfg.start_dir_problem(),
+            Some(
+                "STRATA_AI__CLAUDE_CLI__SCRATCH_DIR /nonexistent/scratch is not a directory this \
+                 user can see: every claude call will fail (behind a launcher that changes into \
+                 the scratch directory itself, set STRATA_AI__CLAUDE_CLI__LAUNCH_DIR=/; see \
+                 docs/RUNBOOK.md §9)"
+                    .into()
+            )
+        );
+        cfg.launch_dir = Some("/".into());
+        assert_eq!(cfg.start_dir(), Path::new("/"));
+        assert_eq!(cfg.start_dir_problem(), None);
+        cfg.launch_dir = Some("/nonexistent/launch".into());
+        assert_eq!(
+            cfg.start_dir_problem(),
+            Some(
+                "STRATA_AI__CLAUDE_CLI__LAUNCH_DIR /nonexistent/launch is not a directory this \
+                 user can see: every claude call will fail (behind a launcher that changes into \
+                 the scratch directory itself, set STRATA_AI__CLAUDE_CLI__LAUNCH_DIR=/; see \
+                 docs/RUNBOOK.md §9)"
+                    .into()
+            )
         );
     }
 

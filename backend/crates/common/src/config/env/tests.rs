@@ -50,6 +50,7 @@ fn every_value_changed() -> Config {
     .map(str::to_owned)
     .to_vec();
     cli.scratch_dir = "/tmp/scratch".into();
+    cli.launch_dir = Some("/".into());
     cli.model = Some("opus".into());
     cli.max_concurrency = 2;
     cli.timeout_secs = 120;
@@ -164,7 +165,7 @@ fn every_setting_has_exactly_one_variable_named_after_its_path() {
     let unique: BTreeSet<String> = names.iter().cloned().collect();
     assert_eq!(unique.len(), names.len(), "duplicate variable");
     assert_eq!(unique, from_struct);
-    assert_eq!(names.len(), 103);
+    assert_eq!(names.len(), 104);
     assert_eq!(
         names[..5],
         [

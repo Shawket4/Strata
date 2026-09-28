@@ -12,7 +12,6 @@
 //!   [`LazyEmbedder`] loads it on first use and unloads it after `ai.embedding.idle_unload_secs`
 //!   without calls (§9.1b); a load failure fails only the calls that needed it.
 
-use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -81,6 +80,7 @@ fn ai_error(e: impl std::fmt::Display) -> StartupError {
 pub fn claude_cli_config(config: &Config) -> ClaudeCliConfig {
     let s = &config.ai.claude_cli;
     let mut cfg = ClaudeCliConfig::new(s.command.clone(), s.scratch_dir.clone());
+    cfg.launch_dir.clone_from(&s.launch_dir);
     cfg.model.clone_from(&s.model);
     cfg.timeout = secs(s.timeout_secs);
     cfg.max_concurrency = usize::try_from(s.max_concurrency).unwrap_or(usize::MAX);
@@ -195,11 +195,11 @@ pub fn build(config: &Config, db: AppDb, clock: Arc<dyn Clock>) -> Result<AiPart
     let mut router = ProviderRouter::from_config(&config.ai);
     let claude_cli: Option<Arc<dyn LlmProvider>> =
         if config.ai_provider_in_use(AiProviderKind::ClaudeCli) {
-            let p = ClaudeCliProvider::new(claude_cli_config(config), clock.clone(), gate.clone())
-                .map_err(ai_error)?;
-            if let Some(hint) = scratch_dir_hint(&config.ai.claude_cli.scratch_dir) {
-                tracing::info!("{hint}");
+            let cfg = claude_cli_config(config);
+            if let Some(problem) = cfg.start_dir_problem() {
+                tracing::warn!("{problem}");
             }
+            let p = ClaudeCliProvider::new(cfg, clock.clone(), gate.clone()).map_err(ai_error)?;
             Some(Arc::new(p))
         } else {
             None
@@ -265,18 +265,6 @@ pub fn build(config: &Config, db: AppDb, clock: Arc<dyn Clock>) -> Result<AiPart
     })
 }
 
-/// Whether `path` names an existing directory (the CLI scratch directory is checked by the
-/// operator's setup, not required here: it belongs to the `strata-ai` user).
-pub fn scratch_dir_hint(path: &Path) -> Option<String> {
-    (!path.is_dir()).then(|| {
-        format!(
-            "STRATA_AI__CLAUDE_CLI__SCRATCH_DIR {} is not visible to stratad (fine when it belongs to \
-             the strata-ai user; see docs/RUNBOOK.md §9)",
-            path.display()
-        )
-    })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -286,6 +274,7 @@ mod tests {
     fn provider_configs_follow_the_settings() {
         let mut config = Config::default();
         config.ai.claude_cli.command = vec!["sudo".into(), "-n".into()];
+        config.ai.claude_cli.launch_dir = Some("/".into());
         config.ai.claude_cli.model = Some("opus".into());
         config.ai.claude_cli.max_concurrency = 2;
         config.ai.claude_cli.timeout_secs = 90;
@@ -296,6 +285,7 @@ mod tests {
             (
                 cli.command,
                 cli.working_dir,
+                cli.launch_dir,
                 cli.model,
                 cli.max_concurrency,
                 cli.timeout,
@@ -306,6 +296,7 @@ mod tests {
             (
                 vec!["sudo".to_owned(), "-n".to_owned()],
                 "/var/lib/strata-ai/scratch".into(),
+                Some("/".into()),
                 Some("opus".to_owned()),
                 2,
                 Duration::from_secs(90),
@@ -385,19 +376,5 @@ mod tests {
         expected.pooling = Pooling::Mean;
         expected.max_tokens = 512;
         assert_eq!(cfg, expected);
-    }
-
-    #[test]
-    fn scratch_dir_hint_names_invisible_directories() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        assert_eq!(scratch_dir_hint(dir.path()), None);
-        assert_eq!(
-            scratch_dir_hint(Path::new("/nonexistent/scratch")),
-            Some(
-                "STRATA_AI__CLAUDE_CLI__SCRATCH_DIR /nonexistent/scratch is not visible to stratad (fine \
-                 when it belongs to the strata-ai user; see docs/RUNBOOK.md §9)"
-                    .into()
-            )
-        );
     }
 }

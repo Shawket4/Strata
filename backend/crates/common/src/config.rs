@@ -156,6 +156,11 @@ pub struct ClaudeCliSettings {
     pub command: Vec<String>,
     /// Empty scratch working directory of the process.
     pub scratch_dir: PathBuf,
+    /// Directory `command` is started in instead of `scratch_dir`: set it (production: `/`)
+    /// when `command` is a launcher whose wrapper changes into the scratch directory as
+    /// `strata-ai`, which `stratad` itself cannot enter (RUNBOOK §9).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub launch_dir: Option<PathBuf>,
     /// `--model` (alias or full name); unset lets the CLI choose.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
@@ -420,6 +425,7 @@ impl Default for AiConfig {
             claude_cli: ClaudeCliSettings {
                 command: vec!["/usr/local/bin/claude".to_owned()],
                 scratch_dir: PathBuf::from("/var/lib/strata-ai/scratch"),
+                launch_dir: None,
                 model: None,
                 max_concurrency: 1,
                 timeout_secs: 300,
@@ -601,7 +607,7 @@ impl Config {
         Ok(())
     }
 
-    fn validate_ai(&self) -> Result<(), ConfigError> {
+    fn validate_claude_cli(&self) -> Result<(), ConfigError> {
         let invalid = |m: String| Err(ConfigError::Invalid(m));
         let positive = |name: &str, v: u64| {
             if v == 0 {
@@ -610,13 +616,15 @@ impl Config {
                 Ok(())
             }
         };
-        let ai = &self.ai;
-        let cli = &ai.claude_cli;
+        let cli = &self.ai.claude_cli;
         if cli.command.first().is_none_or(|c| c.trim().is_empty()) {
             return invalid("STRATA_AI__CLAUDE_CLI__COMMAND must name a program".into());
         }
         if !cli.scratch_dir.is_absolute() {
             return invalid("STRATA_AI__CLAUDE_CLI__SCRATCH_DIR must be an absolute path".into());
+        }
+        if cli.launch_dir.as_ref().is_some_and(|d| !d.is_absolute()) {
+            return invalid("STRATA_AI__CLAUDE_CLI__LAUNCH_DIR must be an absolute path".into());
         }
         positive(
             "STRATA_AI__CLAUDE_CLI__MAX_CONCURRENCY",
@@ -630,6 +638,20 @@ impl Config {
             "STRATA_AI__CLAUDE_CLI__USAGE_LIMIT_PAUSE_SECS",
             u64::from(cli.usage_limit_pause_secs),
         )?;
+        Ok(())
+    }
+
+    fn validate_ai(&self) -> Result<(), ConfigError> {
+        let invalid = |m: String| Err(ConfigError::Invalid(m));
+        let positive = |name: &str, v: u64| {
+            if v == 0 {
+                invalid(format!("{name} must be at least 1"))
+            } else {
+                Ok(())
+            }
+        };
+        let ai = &self.ai;
+        self.validate_claude_cli()?;
         let api = &ai.anthropic_api;
         if api.model.trim().is_empty() {
             return invalid("STRATA_AI__ANTHROPIC_API__MODEL must not be empty".into());
@@ -972,6 +994,7 @@ mod tests {
             ClaudeCliSettings {
                 command: vec!["/usr/local/bin/claude".into()],
                 scratch_dir: PathBuf::from("/var/lib/strata-ai/scratch"),
+                launch_dir: None,
                 model: None,
                 max_concurrency: 1,
                 timeout_secs: 300,
