@@ -1,0 +1,19 @@
+// Compile every Android library subproject against API 36.
+//
+// super_keyboard 0.4.1 (via super_editor; the latest release) sets compileSdk 34, but
+// flutter_plugin_android_lifecycle requires its dependents to compile against 36 or later
+// (checkReleaseAarMetadata fails otherwise). compileSdk only selects the API level used to
+// compile; it changes neither minSdk nor targetSdk, so runtime behaviour is unchanged.
+// Remove this once super_keyboard ships compileSdk >= 36.
+subprojects { p ->
+    def raiseCompileSdk = {
+        if (p.plugins.hasPlugin('com.android.library') && p.hasProperty('android')) {
+            p.android.compileSdk = 36
+        }
+    }
+    if (p.state.executed) {
+        raiseCompileSdk()
+    } else {
+        p.afterEvaluate { raiseCompileSdk() }
+    }
+}

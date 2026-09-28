@@ -15,6 +15,9 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
+// Must be registered before evaluationDependsOn(":app") evaluates the plugin subprojects.
+apply(from = "compile_sdk_override.gradle")
+
 subprojects {
     project.evaluationDependsOn(":app")
 }
