@@ -388,9 +388,14 @@ Compare `/etc/strata/stratad.env` with the new `stratad.env.example` for added s
 - Vault files are not in your PostgreSQL backups: backing up `/srv/strata` is still open
   (deferred by the owner).
 
+## 12. Automated deploys
+
+CI deploys every green build of the default branch: see
+[`ci-deploy/README.md`](ci-deploy/README.md) (a `strata-deploy` user whose key can only run
+the deploy script, and the `production` environment secrets).
+
 ## Later
 
 - Backups of `/srv/strata` (open, deferred by the owner).
-- Automated deploys from CI.
 - A Docker image with only the backend: host PostgreSQL and the host model / ONNX Runtime
   directories mounted read-only; embeddings stay in-process.

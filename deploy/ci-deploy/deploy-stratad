@@ -1,0 +1,126 @@
+#!/bin/bash
+# Installs a stratad release tarball read from stdin (README.md here; VPS_SETUP.md §10 done by
+# CI): verify → unpack → check-config → migrate → swap the binary → restart → health check,
+# and put the previous binary back when the new one does not come up healthy.
+# Runs as root through sudo from the strata-deploy forced command (deploy-entry).
+# Installed as /usr/local/lib/strata/deploy-stratad (root:root, 0755); CI never updates it.
+# Output goes to the (public) CI log: it names versions and steps only, never settings or logs.
+set -euo pipefail
+umask 022
+
+SHA=${1:-}
+NAME=${2:-}
+[[ $SHA =~ ^[0-9a-f]{64}$ ]] || { echo "refused: the sha256 must be 64 lower-case hex digits" >&2; exit 64; }
+[[ $NAME =~ ^stratad-[A-Za-z0-9._-]{1,64}-linux-x86_64$ ]] || { echo "refused: bad package name" >&2; exit 64; }
+
+ENV_FILE=/etc/strata/stratad.env
+BIN=/usr/local/bin/stratad
+UNIT=/etc/systemd/system/stratad.service
+STATE=/var/lib/strata-deploy
+REL=$STATE/releases
+LOG=/var/log/strata-deploy.log
+MAX_BYTES=$((200 * 1024 * 1024))
+KEEP_RELEASES=3
+
+log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" | tee -a "$LOG"; }
+
+exec 9> /run/strata-deploy.lock
+flock -n 9 || { echo "refused: another deploy is running" >&2; exit 75; }
+
+install -d -o root -g root -m 0711 "$REL"
+WORK=$(mktemp -d "$REL/.incoming.XXXXXX")
+trap 'rm -rf "$WORK"' EXIT
+chmod 0711 "$WORK"
+
+# 1. Receive and verify.
+head -c $((MAX_BYTES + 1)) > "$WORK/pkg.tar.gz"
+size=$(stat -c %s "$WORK/pkg.tar.gz")
+if ((size == 0 || size > MAX_BYTES)); then log "refused $NAME: size $size bytes"; exit 65; fi
+if ! echo "$SHA  $WORK/pkg.tar.gz" | sha256sum -c --quiet - > /dev/null 2>&1; then
+  log "refused $NAME: checksum mismatch"; exit 65
+fi
+# Only regular files and directories, and only "$NAME/" and "$NAME/<file>" (no nesting,
+# no links, no absolute or .. paths). Listed to files first: with pipefail, an early-exiting
+# `grep -q` would make tar fail on SIGPIPE and hide the match.
+tar -tvzf "$WORK/pkg.tar.gz" > "$WORK/list-long"
+tar -tzf "$WORK/pkg.tar.gz" > "$WORK/list"
+if cut -c1 "$WORK/list-long" | grep -qv '[-d]'; then
+  log "refused $NAME: the tarball holds links or special files"; exit 65
+fi
+if grep -qvxE "${NAME//./\\.}/([A-Za-z0-9._-]+)?" "$WORK/list"; then
+  log "refused $NAME: unexpected paths in the tarball"; exit 65
+fi
+tar -xzf "$WORK/pkg.tar.gz" -C "$WORK" --no-same-owner --no-same-permissions
+PKG=$WORK/$NAME
+NEW=$PKG/stratad
+[[ -f $NEW && ! -L $NEW ]] || { log "refused $NAME: no stratad binary"; exit 65; }
+chmod 0755 "$PKG" "$NEW"
+
+cd /
+as_strata() { runuser -u strata -- "$@"; }
+ver=$(as_strata "$NEW" --version)
+if ! as_strata "$NEW" --env-file "$ENV_FILE" check-config > /dev/null 2>&1; then
+  log "refused $NAME ($ver): check-config fails with the new binary (a setting it does not accept?)"
+  exit 65
+fi
+if [[ -f $PKG/stratad.service ]] && ! cmp -s "$PKG/stratad.service" "$UNIT"; then
+  log "note: the packaged stratad.service differs from $UNIT (left unchanged; update it by hand)"
+fi
+
+bind=$(grep -E '^STRATA_BIND=' "$ENV_FILE" | tail -1 | cut -d= -f2- | tr -d "'\"" || true)
+HEALTH="http://${bind:-127.0.0.1:8080}/api/v1/health"
+healthy() {
+  local i
+  for i in $(seq 1 30); do
+    sleep 1
+    if systemctl is-active --quiet stratad \
+      && [[ $(curl -s -o /dev/null -w '%{http_code}' --max-time 3 -H 'Accept: application/vnd.msgpack' "$HEALTH") == 200 ]]; then
+      # Still up a few seconds later (not a crash loop between restarts)?
+      sleep 5
+      systemctl is-active --quiet stratad \
+        && [[ $(curl -s -o /dev/null -w '%{http_code}' --max-time 3 -H 'Accept: application/vnd.msgpack' "$HEALTH") == 200 ]]
+      return
+    fi
+  done
+  return 1
+}
+
+if cmp -s "$NEW" "$BIN"; then
+  log "$NAME ($ver) is already installed"
+  if healthy; then exit 0; fi
+  log "stratad is not healthy (see journalctl -u stratad on the server)"; exit 1
+fi
+
+# 2. Keep the release, migrate (the running version keeps serving), swap, restart.
+DEST=$REL/$NAME
+rm -rf "$DEST"
+mv "$PKG" "$DEST"
+NEW=$DEST/stratad
+log "deploying $NAME ($ver)"
+if ! as_strata "$NEW" --env-file "$ENV_FILE" migrate > /dev/null 2>&1; then
+  log "FAILED $NAME: migrate failed; the running version is unchanged (see $LOG and run migrate by hand)"
+  exit 1
+fi
+cp -p "$BIN" "$BIN.prev"
+install -m 0755 "$NEW" "$BIN.new" && mv -f "$BIN.new" "$BIN"
+systemctl restart stratad
+
+if healthy; then
+  log "deployed $NAME ($ver)"
+  printf '%s %s %s\n' "$NAME" "$SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$STATE/current"
+  # Keep the newest releases for a manual rollback.
+  find "$REL" -mindepth 1 -maxdepth 1 -type d -name 'stratad-*' -printf '%T@ %p\n' \
+    | sort -rn | tail -n +$((KEEP_RELEASES + 1)) | cut -d' ' -f2- | xargs -r rm -rf
+  exit 0
+fi
+
+# 3. Roll the binary back (migrations are forward-only and stay applied).
+log "FAILED $NAME: not healthy after the restart; rolling back to the previous binary"
+install -m 0755 "$BIN.prev" "$BIN.new" && mv -f "$BIN.new" "$BIN"
+systemctl restart stratad
+if healthy; then
+  log "rolled back; the previous binary is serving (see journalctl -u stratad on the server)"
+else
+  log "rollback is NOT healthy either: needs a person (journalctl -u stratad)"
+fi
+exit 1

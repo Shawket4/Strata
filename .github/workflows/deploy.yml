@@ -1,0 +1,132 @@
+# Deploys stratad to the production VPS (deploy/ci-deploy/README.md).
+#   Automatic: when Build and CI are both green for a push to the default branch. It runs when
+#   either finishes and deploys once both are green, so whichever finishes last deploys.
+#   Manual: Actions → Deploy → Run workflow, optionally with a Build run ID (a rollback is a
+#   deploy of an older green run).
+# The key in the `production` environment can only stream a tarball to the server's deploy
+# script (forced command), which verifies, migrates, swaps, restarts, health-checks and rolls
+# the binary back when the new one is not healthy. No third-party actions: shell and gh only.
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [Build, CI]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Build run whose stratad to deploy (empty = the latest green Build of the default branch)
+        required: false
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  deploy:
+    name: stratad → production
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == github.event.repository.default_branch &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ vars.STRATA_SERVER_URL || 'https://strata-ai.duckdns.org' }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SERVER_URL: ${{ vars.STRATA_SERVER_URL || 'https://strata-ai.duckdns.org' }}
+    steps:
+      - name: Pick the build
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_RUN: ${{ inputs.build_run_id }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = workflow_dispatch ]; then
+            if [ -n "$INPUT_RUN" ]; then
+              case "$INPUT_RUN" in *[!0-9]*) echo "::error::build_run_id must be a number"; exit 1 ;; esac
+              read -r wf concl < <(gh run view "$INPUT_RUN" --json workflowName,conclusion --jq '"\(.workflowName) \(.conclusion)"')
+              [ "$wf" = Build ] || { echo "::error::run $INPUT_RUN is a '$wf' run, not Build"; exit 1; }
+              run="$INPUT_RUN"
+            else
+              run=$(gh run list --workflow build.yml --branch "$BRANCH" --event push --status success -L 1 --json databaseId --jq '.[0].databaseId // empty')
+              [ -n "$run" ] || { echo "::error::no green Build run on $BRANCH"; exit 1; }
+              concl=success
+            fi
+            # Only the stratad job has to be green (an app job may have failed).
+            job=$(gh run view "$run" --json jobs --jq '.jobs[] | select(.name | startswith("stratad")) | .conclusion')
+            [ "$job" = success ] || { echo "::error::the stratad job of run $run is '$job'"; exit 1; }
+          else
+            # Both workflows green for this commit? Otherwise the other one's completion decides.
+            state() {
+              gh run list --workflow "$1" --commit "$SHA" --event push -L 1 --json databaseId,status,conclusion \
+                --jq '.[0] | "\(.databaseId) \(.status) \(.conclusion)"'
+            }
+            read -r run b_status b_concl < <(state build.yml)
+            read -r _ c_status c_concl < <(state ci.yml)
+            echo "Build: $b_status/$b_concl  CI: $c_status/$c_concl  (${SHA::7})"
+            if [ "$b_concl" != success ] || [ "$c_concl" != success ]; then
+              echo "Not deploying ${SHA::7} yet: Build and CI must both be green."
+              echo "run=" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "Deploying the stratad of Build run $run"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+      - name: Download and verify stratad
+        if: steps.pick.outputs.run != ''
+        id: pkg
+        env:
+          RUN: ${{ steps.pick.outputs.run }}
+        run: |
+          set -euo pipefail
+          gh run download "$RUN" -n stratad-linux-x86_64 -D pkg
+          cd pkg
+          sums=(*.tar.gz.sha256)
+          [ "${#sums[@]}" -eq 1 ] || { echo "::error::expected one tarball"; ls -l; exit 1; }
+          sha256sum -c "${sums[0]}"
+          name=$(basename "${sums[0]}" .tar.gz.sha256)
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "sha=$(cut -d' ' -f1 "${sums[0]}")" >> "$GITHUB_OUTPUT"
+          echo "package: $name"
+
+      - name: Deploy to the VPS
+        if: steps.pick.outputs.run != ''
+        env:
+          SSH_KEY: ${{ secrets.STRATA_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STRATA_DEPLOY_KNOWN_HOSTS }}
+          HOST: ${{ secrets.STRATA_DEPLOY_HOST }}
+          NAME: ${{ steps.pkg.outputs.name }}
+          SHA256: ${{ steps.pkg.outputs.sha }}
+        run: |
+          set -euo pipefail
+          [ -n "$SSH_KEY" ] && [ -n "$KNOWN_HOSTS" ] && [ -n "$HOST" ] \
+            || { echo "::error::the production environment's STRATA_DEPLOY_* secrets are not set"; exit 1; }
+          install -d -m 0700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/strata_deploy && chmod 0600 ~/.ssh/strata_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/strata_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes \
+            -o ConnectTimeout=20 -o ServerAliveInterval=15 \
+            "strata-deploy@$HOST" "deploy $SHA256 $NAME" < "pkg/$NAME.tar.gz"
+          rm -f ~/.ssh/strata_deploy
+
+      - name: Check the public endpoint
+        if: steps.pick.outputs.run != ''
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+            -H 'Accept: application/vnd.msgpack' "$SERVER_URL/api/v1/health")
+          echo "$SERVER_URL/api/v1/health → $code"
+          [ "$code" = 200 ]

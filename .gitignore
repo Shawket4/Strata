@@ -8,3 +8,6 @@ build/
 .DS_Store
 coverage/
 /e2e/.tmp/
+
+# Release signing keys (never committed; docs/RUNBOOK.md §13)
+/signing-keys/

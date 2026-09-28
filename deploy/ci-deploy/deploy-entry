@@ -1,0 +1,15 @@
+#!/bin/sh
+# Forced command of the CI deploy key (~strata-deploy/.ssh/authorized_keys, README.md here).
+# The key can run exactly one thing:
+#   deploy <sha256 of the tarball> <stratad-…-linux-x86_64>     (the tarball on stdin)
+# which is handed to the root-owned deploy script; that script validates the arguments.
+# Installed as /usr/local/lib/strata/deploy-entry (root:root, 0755).
+set -eu
+set -f
+# shellcheck disable=SC2086 # split the client's command into words, without globbing
+set -- ${SSH_ORIGINAL_COMMAND:-}
+if [ "$#" -ne 3 ] || [ "$1" != deploy ]; then
+  echo "usage: deploy <sha256> <stratad-<version>-linux-x86_64>  (tarball on stdin)" >&2
+  exit 64
+fi
+exec sudo -n /usr/local/lib/strata/deploy-stratad "$2" "$3"
