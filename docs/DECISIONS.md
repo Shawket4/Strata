@@ -4,6 +4,9 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Graph API
+- `GET /graph` and `/graph/local` take `types` (edge kinds) and an additional `kinds` (node kinds) filter, because "concept" is both a node and an edge kind. Global similarity edges are computed exactly over the 2,000 most recently updated notes (response marked `truncated` beyond that). Clusters smaller than 3 notes stay unclustered; resolution is the user preference `graph.cluster_resolution` (default 1.0); user-given cluster names are never replaced.
+
 ### Accessibility: button fill token
 - Filled buttons and the FAB use `accentFill` `#1D5C8C` + white (light, 7.1:1) and surf `#6CB4DD` + abyss (dark, 7.6:1); tide `#2477B3` remains the lead colour for the mark, icons and large graphics. White on tide fell to 4.16:1 under the hover overlay. Dark danger buttons use abyss text on `#E07A66`.
 

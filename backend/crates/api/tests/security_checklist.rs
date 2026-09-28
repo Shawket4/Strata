@@ -190,6 +190,20 @@ async fn no_operation_returns_a_filesystem_path() {
         if SESSION_ENDING.contains(&op.id.as_str()) {
             req.token = Some(h.login(&alice.name, &alice.password).await);
         }
+        if op.id == "login" {
+            req.body = Some((strata_api::wire::MSGPACK.to_owned(), login_body(&alice.name, &alice.password)));
+        }
+        if op.id == "refresh" {
+            let session = api::login(&h.anon(), &types::LoginRequest {
+                username: alice.name.clone(),
+                password: alice.password.clone(),
+                device_name: "refresh-device".into(),
+                platform: types::DevicePlatform::Android,
+            })
+            .await
+            .expect("login");
+            req.body = Some((strata_api::wire::MSGPACK.to_owned(), msgpack(&map(&[("refresh_token", M::from(session.refresh_token))]))));
+        }
         if op.is_admin() {
             let path = op.fill(|_| victim.id.to_string());
             req.target = match req.target.split_once('?') {

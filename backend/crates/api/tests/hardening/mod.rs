@@ -718,13 +718,15 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
         .revisions[0]
         .commit
         .clone();
+    // A second device (not the one this client uses), so removing it leaves the session.
+    h.login(&u.name, &u.password).await;
     let device = api::list_devices(c)
         .await
         .expect("devices")
         .iter()
-        .find(|d| d.current)
+        .find(|d| !d.current)
         .map(|d| d.id)
-        .expect("current device");
+        .expect("second device");
     let map = "Overview".to_owned();
     api::put_map(
         c,
