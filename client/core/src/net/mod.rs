@@ -29,9 +29,20 @@ use crate::view::model::{NewUserRequest, Platform};
 /// Why a network call failed, classified for the sync engine and the UI.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum NetError {
-    /// The server could not be reached (DNS, TCP, TLS, timeout).
+    /// The server could not be reached (a fake, or a stream that gave up).
     #[error("offline: {0}")]
     Offline(String),
+    /// The request never got a response: TLS, DNS, connect, timeout or another I/O failure.
+    /// Treated like [`NetError::Offline`] everywhere ([`NetError::is_offline`]); the reason
+    /// reaches the UI as the `offline` failure's `reason`.
+    #[error("unreachable ({reason}): {detail}")]
+    Unreachable {
+        /// Stable code of [`strata_client::TransportKind`] (`tls`, `dns`, `connect`,
+        /// `timeout`, `network`).
+        reason: String,
+        /// The transport error, for logs.
+        detail: String,
+    },
     /// `401` after the refresh attempt: the session is gone.
     #[error("unauthorized")]
     Unauthorized,
@@ -79,10 +90,15 @@ impl NetError {
     /// Whether retrying later may succeed (transport problems, 5xx, rate limits).
     pub fn is_transient(&self) -> bool {
         match self {
-            Self::Offline(_) | Self::RateLimited => true,
+            Self::Offline(_) | Self::Unreachable { .. } | Self::RateLimited => true,
             Self::Api { status, .. } => *status >= 500,
             _ => false,
         }
+    }
+
+    /// Whether the server could not be reached (offline, or a transport failure).
+    pub fn is_offline(&self) -> bool {
+        matches!(self, Self::Offline(_) | Self::Unreachable { .. })
     }
 }
 
@@ -90,6 +106,7 @@ impl From<NetError> for CoreError {
     fn from(e: NetError) -> Self {
         match e {
             NetError::Offline(_) => Self::Offline,
+            NetError::Unreachable { reason, .. } => Self::Unreachable { reason },
             NetError::Unauthorized => Self::SessionExpired,
             NetError::InvalidCredentials => Self::InvalidCredentials,
             NetError::AccountPending => Self::AccountPending,
@@ -783,8 +800,16 @@ pub trait EventsApi: Send + Sync + fmt::Debug {
 pub fn classify(e: &strata_client::Error) -> NetError {
     use strata_client::{ApiError, Error};
     match e {
+        Error::Transport(_) | Error::WebSocket(_) if e.transport_kind().is_some() => {
+            NetError::Unreachable {
+                reason: e
+                    .transport_kind()
+                    .map_or("network", strata_client::TransportKind::code)
+                    .to_owned(),
+                detail: e.to_string(),
+            }
+        }
         Error::Transport(t) => NetError::Offline(t.to_string()),
-        Error::WebSocket(w) => NetError::Offline(w.to_string()),
         Error::StreamClosed { operation, .. } => NetError::Offline((*operation).to_owned()),
         Error::Api(api) => {
             let p = api.problem();

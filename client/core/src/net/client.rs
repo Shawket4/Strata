@@ -1018,16 +1018,20 @@ mod tests {
                 Platform::Linux,
             )
             .await;
-        assert!(matches!(r, Err(NetError::Offline(_))), "{r:?}");
+        assert!(
+            matches!(&r, Err(NetError::Unreachable { reason, .. }) if reason == "connect"),
+            "{r:?}"
+        );
         let sync = ClientSyncApi::new(
             "http://127.0.0.1:9",
             std::sync::Arc::new(strata_client::StaticToken("t".into())),
         )
         .expect("client");
-        assert!(matches!(
-            sync.changes(1, 1, 10).await,
-            Err(NetError::Offline(_))
-        ));
+        let r = sync.changes(1, 1, 10).await;
+        assert!(
+            matches!(&r, Err(NetError::Unreachable { reason, .. }) if reason == "connect"),
+            "{r:?}"
+        );
     }
 
     #[test]

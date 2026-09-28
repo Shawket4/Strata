@@ -284,7 +284,7 @@ pub struct DeviceFacts {
     pub manufacturer: String,
     /// The model: Android `Build.MODEL` ("SM-S921B"), iOS `UIDevice.model` ("iPhone").
     pub model: String,
-    /// The commercial model name (iOS "iPhone 16 Pro", macOS "MacBook Pro (16-inch, 2021)").
+    /// The commercial model name (iOS `iPhone 16 Pro`, macOS `MacBook Pro (16-inch, 2021)`).
     pub model_name: String,
     /// The network host name.
     pub host_name: String,

@@ -92,7 +92,7 @@ async fn server(script: Vec<Conn>) -> (u16, Offered) {
                     }
                     let request = String::from_utf8(head).expect("utf-8");
                     assert!(
-                        request.starts_with("GET /health HTTP/1.1\r\n"),
+                        request.starts_with("GET /api/v1/health HTTP/1.1\r\n"),
                         "{request}"
                     );
                     let body = rmp_serde::to_vec_named(&Health {
@@ -164,12 +164,17 @@ async fn https_and_wss_work_with_the_production_config_plus_a_test_root() {
         .build()
         .expect("client");
 
-    let health = operations::health(&client).await.expect("health over https");
+    let health = operations::health(&client)
+        .await
+        .expect("health over https");
     assert_eq!(health.status, HealthStatus::Ok);
 
     let mut sub =
         Subscription::<rmpv::Value>::new(&client, "/api/v1/events".into(), "events", false, once());
-    assert!(sub.next().await.is_none(), "the end frame closes the stream");
+    assert!(
+        sub.next().await.is_none(),
+        "the end frame closes the stream"
+    );
     assert_eq!(sub.connections(), 1);
 
     // HTTPS offers h2 and http/1.1 (this server has no ALPN, so HTTP/1.1 is used); WSS offers
@@ -182,7 +187,9 @@ async fn an_unknown_issuer_is_refused_over_https_and_wss() {
     let (port, offered) = server(vec![Conn::Http, Conn::Ws]).await;
     let client = Client::new(&format!("https://localhost:{port}")).expect("client");
 
-    let err = operations::health(&client).await.expect_err("unknown issuer");
+    let err = operations::health(&client)
+        .await
+        .expect_err("unknown issuer");
     assert!(matches!(err, Error::Transport(_)), "{err:?}");
     assert_eq!(err.transport_kind(), Some(TransportKind::Tls));
     assert!(
@@ -192,7 +199,11 @@ async fn an_unknown_issuer_is_refused_over_https_and_wss() {
 
     let mut sub =
         Subscription::<rmpv::Value>::new(&client, "/api/v1/events".into(), "events", false, once());
-    let err = sub.next().await.expect("an error").expect_err("unknown issuer");
+    let err = sub
+        .next()
+        .await
+        .expect("an error")
+        .expect_err("unknown issuer");
     assert!(matches!(err, Error::WebSocket(_)), "{err:?}");
     assert_eq!(err.transport_kind(), Some(TransportKind::Tls));
     assert!(format!("{err:?}").contains("UnknownIssuer"), "{err:?}");
@@ -205,17 +216,22 @@ async fn unreachable_servers_are_classified() {
     // Port 9 (discard) on localhost is closed in the test environment: connection refused.
     let client = Client::new("https://127.0.0.1:9").expect("client");
     let err = operations::health(&client).await.expect_err("refused");
-    assert_eq!(err.transport_kind(), Some(TransportKind::Connect), "{err:?}");
+    assert_eq!(
+        err.transport_kind(),
+        Some(TransportKind::Connect),
+        "{err:?}"
+    );
     let mut sub =
         Subscription::<rmpv::Value>::new(&client, "/api/v1/events".into(), "events", false, once());
     let err = sub.next().await.expect("an error").expect_err("refused");
-    assert_eq!(err.transport_kind(), Some(TransportKind::Connect), "{err:?}");
+    assert_eq!(
+        err.transport_kind(),
+        Some(TransportKind::Connect),
+        "{err:?}"
+    );
 
-    // `.invalid` never resolves (RFC 6761); resolution fails without any network.
-    let client = Client::new("https://strata.invalid").expect("client");
-    let err = operations::health(&client).await.expect_err("no such host");
-    assert_eq!(err.transport_kind(), Some(TransportKind::Dns), "{err:?}");
-
+    // (DNS failures are not tested: reqwest honours `HTTPS_PROXY`, so where one is set the
+    // proxy, not this process, resolves the host.)
     // Not a transport failure.
     assert_eq!(Error::Url("x".into()).transport_kind(), None);
 }

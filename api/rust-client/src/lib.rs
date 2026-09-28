@@ -31,9 +31,9 @@ pub mod generated;
 pub use auth::{StaticToken, TokenProvider};
 pub use client::{Client, ClientBuilder, ObservedResponse, ResponseObserver};
 pub use error::{ApiError, Error, TransportKind};
-pub use tls::ensure_crypto_provider;
 pub use generated::{operations, streams, types};
 pub use request::{Method, Request, encode_path_segment, param_string};
+pub use tls::ensure_crypto_provider;
 
 /// Media type of request and response bodies.
 pub const MSGPACK: &str = "application/vnd.msgpack";

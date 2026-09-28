@@ -103,7 +103,7 @@ async fn client_errors_are_classified_for_sync_and_sign_in() {
         assert_eq!(classify(&error), expected, "{error:?}");
     }
 
-    // A refused connection is "offline", which sync retries.
+    // A refused connection is "unreachable" (offline, reason `connect`), which sync retries.
     let port = std::net::TcpListener::bind("127.0.0.1:0")
         .expect("bind")
         .local_addr()
@@ -114,14 +114,25 @@ async fn client_errors_are_classified_for_sync_and_sign_in() {
         .await
         .expect_err("refused");
     let net = classify(&refused);
-    assert!(matches!(&net, NetError::Offline(_)), "{net:?}");
+    assert_eq!(
+        net,
+        NetError::Unreachable {
+            reason: "connect".to_owned(),
+            detail: refused.to_string(),
+        }
+    );
     assert!(net.is_transient());
+    assert!(net.is_offline());
 }
 
 #[test]
 fn only_transport_failures_rate_limits_and_server_errors_are_transient() {
     let transient = [
         NetError::Offline("dns".to_owned()),
+        NetError::Unreachable {
+            reason: "tls".to_owned(),
+            detail: "invalid peer certificate: UnknownIssuer".to_owned(),
+        },
         NetError::RateLimited,
         NetError::Api {
             status: 503,
@@ -172,6 +183,13 @@ fn net_errors_reach_dart_as_localisable_failures() {
         (
             NetError::Offline("tcp".to_owned()),
             failure("offline", None, None, None, None),
+        ),
+        (
+            NetError::Unreachable {
+                reason: "tls".to_owned(),
+                detail: "invalid peer certificate: UnknownIssuer".to_owned(),
+            },
+            failure("offline", None, Some("tls"), None, None),
         ),
         (
             NetError::Unauthorized,

@@ -71,7 +71,10 @@ mod tests {
     #[test]
     fn configs_carry_the_bundled_roots_and_alpn() {
         let c = configs(&[]).expect("configs");
-        assert_eq!(c.http.alpn_protocols, vec![b"h2".to_vec(), b"http/1.1".to_vec()]);
+        assert_eq!(
+            c.http.alpn_protocols,
+            vec![b"h2".to_vec(), b"http/1.1".to_vec()]
+        );
         assert_eq!(c.ws.alpn_protocols, vec![b"http/1.1".to_vec()]);
     }
 

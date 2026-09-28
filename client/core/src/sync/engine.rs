@@ -147,7 +147,7 @@ impl SyncEngine {
     }
 
     fn failed<H: SyncHost>(host: &H, e: NetError) -> CoreResult<CycleOutcome> {
-        let offline = matches!(e, NetError::Offline(_));
+        let offline = e.is_offline();
         host.set_connectivity(if offline {
             Connectivity::Offline
         } else {

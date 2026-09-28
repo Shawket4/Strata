@@ -53,9 +53,10 @@ fn generic_name(platform: Platform) -> &'static str {
     }
 }
 
-/// "Samsung SM-S921B": the manufacturer, capitalised when the platform reports it in lower
-/// case, before the model, unless the model already starts with it ("Pixel 8" by Google
-/// stays "Google Pixel 8", "OnePlus 12" by OnePlus stays "OnePlus 12"). `None` without a model.
+/// `Samsung SM-S921B`: the manufacturer, capitalised when the platform reports it in lower
+/// case, before the model, unless the model already starts with it (`Pixel 8` by `Google`
+/// becomes `Google Pixel 8`, `OnePlus 12` by `oneplus` stays `OnePlus 12`). `None` without a
+/// model.
 fn manufacturer_and_model(manufacturer: &str, model: &str) -> Option<String> {
     let model = clean(model)?;
     let Some(maker) = clean(manufacturer).filter(|m| !m.eq_ignore_ascii_case("unknown")) else {
@@ -67,8 +68,8 @@ fn manufacturer_and_model(manufacturer: &str, model: &str) -> Option<String> {
     clean(&format!("{} {model}", capitalised(&maker)))
 }
 
-/// `word` in upper case first when it is all lower case ("samsung" → "Samsung"); mixed-case
-/// names ("OnePlus", "HMD Global") are kept as the maker writes them.
+/// `word` in upper case first when it is all lower case (`samsung` → `Samsung`); mixed-case
+/// names (`OnePlus`, `HMD Global`) are kept as the maker writes them.
 fn capitalised(word: &str) -> String {
     if word.chars().any(char::is_uppercase) {
         return word.to_owned();

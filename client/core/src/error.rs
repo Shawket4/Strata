@@ -15,6 +15,13 @@ pub enum CoreError {
     /// The call needs the server and the device is offline.
     #[error("offline")]
     Offline,
+    /// The server could not be reached; shown as `offline` with `reason` (`tls`, `dns`,
+    /// `connect`, `timeout`, `network`).
+    #[error("offline ({reason})")]
+    Unreachable {
+        /// Stable reason code.
+        reason: String,
+    },
     /// The server has no endpoint for this yet (or the feature is not built yet).
     #[error("{feature} is not available yet")]
     NotAvailable {
@@ -146,7 +153,7 @@ impl CoreError {
         match self {
             Self::NotInitialised => "not_initialised",
             Self::NotSignedIn => "not_signed_in",
-            Self::Offline => "offline",
+            Self::Offline | Self::Unreachable { .. } => "offline",
             Self::NotAvailable { .. } => "not_available",
             Self::InvalidInput { .. } => "invalid_input",
             Self::NotFound { .. } => "not_found",
@@ -186,7 +193,9 @@ impl From<CoreError> for crate::view::model::CoreFailure {
             }
             CoreError::NotFound { what } => f.field = Some(what),
             CoreError::PendingChanges { count } => f.count = Some(count),
-            CoreError::TaskChange { reason } => f.reason = Some(reason),
+            CoreError::TaskChange { reason } | CoreError::Unreachable { reason } => {
+                f.reason = Some(reason);
+            }
             CoreError::MisconfiguredBuild { reason } => {
                 f.field = Some(crate::net::server_url::FIELD.to_owned());
                 f.reason = Some(reason);

@@ -57,6 +57,9 @@ actix-web = { workspace = true }
 pretty_assertions = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+# The refusing TLS server of tests/facade_unreachable.rs.
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
 
 [lints]
 workspace = true

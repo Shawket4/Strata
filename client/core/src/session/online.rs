@@ -233,7 +233,7 @@ impl Session {
             .await
         {
             Ok(h) => h,
-            Err(NetError::Offline(_)) => return Ok(empty(Availability::Offline)),
+            Err(e) if e.is_offline() => return Ok(empty(Availability::Offline)),
             Err(NetError::Api { status: 503, .. } | NetError::NotAvailable { .. }) => {
                 return Ok(empty(Availability::NotYetAvailable));
             }
@@ -323,7 +323,7 @@ impl Session {
                     .map(|grace| build::deletion_preview_label(&ctx, grace));
                 Ok(view)
             }
-            Err(NetError::Offline(_)) => Ok(AdminUsersView {
+            Err(e) if e.is_offline() => Ok(AdminUsersView {
                 availability: Availability::Offline,
                 pending: Vec::new(),
                 users: Vec::new(),

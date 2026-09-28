@@ -90,7 +90,10 @@ impl ClientBuilder {
     /// Also trusts `root` (DER), in addition to the bundled Mozilla roots. For tests against a
     /// local TLS server; the apps never call it.
     #[must_use]
-    pub fn add_root_certificate(mut self, root: rustls::pki_types::CertificateDer<'static>) -> Self {
+    pub fn add_root_certificate(
+        mut self,
+        root: rustls::pki_types::CertificateDer<'static>,
+    ) -> Self {
         self.extra_roots.push(root);
         self
     }
