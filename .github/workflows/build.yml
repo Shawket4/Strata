@@ -2,6 +2,8 @@
 #   stratad-linux-x86_64   the server binary tarball (+ draft GitHub Release on v* tags)
 #   app-android            release APKs (universal + one per ABI)
 #   app-macos              the universal (arm64 + x86_64) macOS app, ad-hoc signed, zip + dmg
+#   strata-*-debug-symbols the Dart split debug info of the obfuscated app builds (90 days; for
+#                          `flutter symbolize`, not part of the release)
 # The apps' server is fixed at build time: STRATA_SERVER_URL below (the owner's server, or the
 # repository variable of the same name when set), baked in with --dart-define. The apps have no
 # server field; a value that is not an https:// address fails the build.
@@ -148,15 +150,19 @@ jobs:
       - name: Build APKs
         # One universal APK (sideload on any device) and one per ABI (about a third of the size
         # each: the Rust core is most of the APK). The second build reuses the cargo output.
+        # Dart is obfuscated; its symbols (one file per ABI) go to build/debug-info/android for
+        # `flutter symbolize` (docs/RUNBOOK.md §13). Both builds compile the same Dart code.
         run: |
           if [ "$GITHUB_REF_TYPE" = tag ]; then v="$GITHUB_REF_NAME"; else v="sha-${GITHUB_SHA::7}"; fi
           kind="${{ steps.signing.outputs.kind }}"
           out=build/app/outputs/flutter-apk
           mkdir -p dist
           define="--dart-define=STRATA_SERVER_URL=$STRATA_SERVER_URL"
-          flutter build apk --release --build-number "$GITHUB_RUN_NUMBER" "$define"
+          symbols=(--obfuscate --split-debug-info=build/debug-info/android)
+          flutter build apk --release --build-number "$GITHUB_RUN_NUMBER" "${symbols[@]}" "$define"
           cp "$out/app-release.apk" "dist/strata-$v-android-universal-$kind.apk"
-          flutter build apk --release --split-per-abi --build-number "$GITHUB_RUN_NUMBER" "$define"
+          flutter build apk --release --split-per-abi --build-number "$GITHUB_RUN_NUMBER" \
+            "${symbols[@]}" "$define"
           for abi in arm64-v8a armeabi-v7a x86_64; do
             cp "$out/app-$abi-release.apk" "dist/strata-$v-android-$abi-$kind.apk"
           done
@@ -174,6 +180,12 @@ jobs:
         with:
           name: strata-android-${{ steps.signing.outputs.kind }}
           path: client/app/apps/strata/dist/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strata-android-debug-symbols
+          path: client/app/apps/strata/build/debug-info/android/
+          retention-days: 90
           if-no-files-found: error
 
   app-macos:
@@ -208,8 +220,11 @@ jobs:
             *) echo "::error::STRATA_SERVER_URL must be an https:// address, got '$STRATA_SERVER_URL'."; exit 1 ;;
           esac
       - run: flutter pub get
-      - run: |
+      - name: Build
+        # Dart is obfuscated; its symbols go to build/debug-info/macos for `flutter symbolize`.
+        run: |
           flutter build macos --release --build-number "$GITHUB_RUN_NUMBER" \
+            --obfuscate --split-debug-info=build/debug-info/macos \
             "--dart-define=STRATA_SERVER_URL=$STRATA_SERVER_URL"
       - name: Ad-hoc sign and verify
         run: |
@@ -240,6 +255,12 @@ jobs:
           name: strata-macos-universal-adhoc
           path: client/app/apps/strata/dist/
           if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: strata-macos-debug-symbols
+          path: client/app/apps/strata/build/debug-info/macos/
+          retention-days: 90
+          if-no-files-found: error
 
   # Publishes every green build as a GitHub release, so the files have stable download links
   # (run artifacts expire and sit behind the run page):
@@ -264,6 +285,8 @@ jobs:
           mkdir -p out
           for d in dl/*/; do
             a=$(basename "$d")
+            # The Dart debug symbols stay run artifacts (flutter symbolize), not release files.
+            case "$a" in *-debug-symbols) echo "skip $a"; continue ;; esac
             for f in "$d"*; do
               n=$(basename "$f")
               # Each app artifact carries its own SHA256SUMS; keep them apart.

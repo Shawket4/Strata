@@ -493,10 +493,24 @@ files over).
 | `stratad-linux-x86_64` | `stratad-<version>-linux-x86_64.tar.gz` (the stripped `stratad`, `stratad.env.example`, `stratad.service`, `README.md`, `VPS_SETUP.md`) and its `.sha256`. |
 | `strata-android-release-signed` or `strata-android-debug-signed` | `strata-<version>-android-universal-<kind>.apk`, one APK per ABI (`arm64-v8a`, `armeabi-v7a`, `x86_64`) and `SHA256SUMS`. |
 | `strata-macos-universal-adhoc` | `Strata-<version>-macos-universal.zip` and `.dmg` (arm64 + x86_64, ad-hoc signed) and `SHA256SUMS`. |
+| `strata-android-debug-symbols`, `strata-macos-debug-symbols` | The Dart split debug info of the obfuscated builds (`app.android-<arch>.symbols`, `app.darwin-<arch>.symbols`), kept 90 days. Not published with the release. |
 
 `<version>` is the tag (`v0.1.0`) or `sha-<7 hex>` for other builds; Android and macOS builds
 use the workflow run number as the build number (Android `versionCode`), so a newer CI build
 installs over an older one.
+
+**Release build settings.** The root `Cargo.toml` `[profile.release]` sets `lto = "thin"`,
+`codegen-units = 1` and `strip = true` (`opt-level` stays 3; `panic` stays `unwind`, which
+flutter_rust_bridge relies on). It applies to `stratad` and to the Rust core, which cargokit
+builds with `cargo build --release` inside the workspace (no per-target overrides;
+`.cargo/config.toml` only sets `incremental = false`). The Android and macOS Dart code is built
+with `--obfuscate --split-debug-info=build/debug-info/<platform>`; the symbol files are
+uploaded as `strata-<platform>-debug-symbols` (the `release` job skips `*-debug-symbols`
+artifacts). Keep a copy of the symbols of any build you ship past 90 days. To read an
+obfuscated Dart stack trace, download that run's symbols artifact and run
+`flutter symbolize -i <stack.txt> -d <debug-info dir>/app.android-arm64.symbols` (the file
+for the device's architecture, e.g. `app.darwin-arm64.symbols` on Apple silicon). The
+symbols only match the exact build that produced them.
 
 **App ID.** `com.shawket.strata` on every platform: Android `applicationId`/`namespace`
 (`MainActivity` in `com/shawket/strata`), the iOS and macOS bundle identifier (test targets
