@@ -46,6 +46,7 @@ pub mod rewrite;
 pub mod sections;
 pub mod sidecar;
 pub mod tasks;
+pub mod thread;
 pub mod wikilink;
 
 pub use body::{BodyAnalysis, analyze};

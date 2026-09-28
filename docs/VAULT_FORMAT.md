@@ -618,6 +618,30 @@ Tasks created without a home note (PLAN §6.11) go to `tasks/Tasks.md`
 - `is_blocked(type, target)`: the AI may not add a rejected (type, target) pair, and may not
   add `related` to a target for which any type was rejected.
 
+### 10.1a `.meta/threads/<note-id>.json` (`thread::NoteThread`)
+
+A note's AI follow-up thread (owner decision 2026-09-28): the questions asked about the note
+and the AI's answers, oldest first. Kept apart from the sidecar because it grows with every
+exchange while the sidecar is rewritten by every linking run; the AI never edits the note.
+
+```json
+{
+  "note_id": "01J8ZK3M4X7Q9W2E5R6T8Y0V1H",
+  "messages": [
+    { "id": "01K5…01", "role": "user", "text": "What did Ahmed promise?", "created": "2026-09-28T19:00:00+03:00" },
+    {
+      "id": "01K5…02", "role": "assistant", "text": "Delivery by Friday [[Pricing#^a1]].",
+      "citations": [{ "note_id": "01J8…1H", "target": "Pricing#^a1", "block_id": "a1" }],
+      "model": "claude_cli/sonnet", "created": "2026-09-28T16:00:05Z"
+    }
+  ]
+}
+```
+
+- Same JSON conventions as §10.1; `citations` and `model` are omitted when empty/absent;
+  unknown fields are preserved. Appending an exchange whose message IDs are already present
+  adds nothing (a retried write).
+
 ### 10.2 `.meta/clusters.json` (`clusters::Clusters`)
 
 ```json
