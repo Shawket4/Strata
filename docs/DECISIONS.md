@@ -43,7 +43,7 @@ Gaps filled while implementing the owner decision below; the owner may revisit a
 
 ### Default device name and untyped errors (implementation)
 - **Default device name:** the app shell reads raw device facts with `device_info_plus` (allowed in the shell only) and passes them in `CoreConfig.device`; the core picks and cleans the name: Android the device-name setting (usually the marketing name), else manufacturer + model ("Samsung SM-S921B"); iOS the device name unless generic, else the commercial model ("iPhone 16 Pro"); macOS the computer name; Windows and Linux the host name. `localhost` and `.local`-style suffixes never count; the platform's generic name is the last fallback. The field stays editable.
-- **Untyped errors:** an error that is not a `CoreFailure` (an FRB-surfaced panic, an unmapped transport error) in the account screens is reported through `FlutterError.reportError` (no user data) and shown as "Couldn't reach the server. Check your connection and try again."; busy states reset.
+- **Untyped errors:** an error that is not a `CoreFailure` (an FRB-surfaced panic, an unmapped transport error) in the account screens is reported through `FlutterError.reportError` (no user data) and shown as "Couldn't reach the server. Check your connection and try again.", the same message as the `offline` failure (any `reason`: tls, dns, connect, timeout, network); busy states reset.
 
 ### TLS crypto provider: ring (owner)
 - rustls uses the `ring` crypto provider everywhere (apps and stratad) instead of aws-lc-rs: smaller binaries (several MB per app architecture) and simpler cross-compilation. aws-lc-rs is no longer in the dependency graph; `strata_client::ensure_crypto_provider()` installs ring where clients are built.
