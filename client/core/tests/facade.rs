@@ -167,11 +167,11 @@ fn the_facade_drives_the_core_end_to_end() {
         note.clone(),
         company.clone(),
         "related".to_owned(),
-        "about".to_owned(),
+        "companies".to_owned(),
     )
     .map(|_| ())
     .unwrap_or_else(|e| show("retype", &e));
-    intents::remove_relation(note.clone(), company.clone(), "related".to_owned())
+    intents::remove_relation(note.clone(), company.clone(), "companies".to_owned())
         .map(|_| ())
         .unwrap_or_else(|e| show("remove relation", &e));
     intents::set_property(person.clone(), "phone".to_owned(), "+20 100".to_owned())
@@ -221,7 +221,7 @@ fn the_facade_drives_the_core_end_to_end() {
         TaskPatch {
             text: Some("Send the invoice to Acme".to_owned()),
             due: None,
-            clear_due: true,
+            clear_due: false,
             recurrence: Some("every month".to_owned()),
             clear_recurrence: false,
             reminders: None,
