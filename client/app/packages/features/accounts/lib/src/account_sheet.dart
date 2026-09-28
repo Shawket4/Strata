@@ -218,11 +218,10 @@ class _NavRow extends StatelessWidget {
                         builder: (context, constraints) => _LabelAndDetail(
                           label: Text(label, style: labelStyle),
                           detail: Text(extra, style: detailStyle),
-                          stacked: !_fitsOnOneLine(
-                            context,
-                            [(label, labelStyle), (extra, detailStyle)],
-                            constraints.maxWidth - StrataSpacing.s2,
-                          ),
+                          stacked: !_fitsOnOneLine(context, [
+                            (label, labelStyle),
+                            (extra, detailStyle),
+                          ], constraints.maxWidth - StrataSpacing.s2),
                         ),
                       ),
               ),
@@ -263,11 +262,7 @@ class _NavRow extends StatelessWidget {
 /// line, otherwise the detail goes below the label so neither is squeezed
 /// into breaking mid-word (large text scale, long translations).
 class _LabelAndDetail extends StatelessWidget {
-  const new({
-    required this.label,
-    required this.detail,
-    required this.stacked,
-  });
+  const new({required this.label, required this.detail, required this.stacked});
 
   final Widget label;
   final Widget detail;
