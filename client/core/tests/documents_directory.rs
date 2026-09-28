@@ -13,7 +13,8 @@ use strata_core::session::Session;
 use strata_core::sync::engine::Trigger;
 use strata_core::view::build;
 use strata_core::view::model::{
-    DirectoryFilter, DirectorySort, DirectoryTab, DirectoryView, FilterOption,
+    DirectoryFilter, DirectorySort, DirectoryTab, DirectoryView, DocumentBrief, EntityRef,
+    FilterOption, TextDir,
 };
 
 const MONA: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0VP1";
@@ -213,5 +214,102 @@ async fn recently_moved_orders_by_the_newest_custody_event() {
             .map(|s| (s.label.as_str(), s.items.len()))
             .collect::<Vec<_>>(),
         [("Results", 3)]
+    );
+}
+
+const COPY: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0VD4";
+const ERRANDS: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0VN1";
+
+fn place(id: &str, title: &str) -> EntityRef {
+    EntityRef {
+        id: Some(id.into()),
+        title: title.into(),
+        kind: Some("place".into()),
+    }
+}
+
+#[tokio::test]
+async fn a_document_page_lists_its_copies_and_the_renewal_task() {
+    let (h, s) = world().await;
+    h.server.remote_upsert(
+        COPY,
+        "documents/Car license copy.md",
+        &format!(
+            "---\nid: {COPY}\nkind: document\ndoc-type: license\ncopy: copy\n\
+             copy-of: [\"[[Car license]]\"]\nstatus: stored\nlocation: \"[[Safe]]\"\n---\n"
+        ),
+    );
+    h.server.remote_upsert(
+        ERRANDS,
+        "notes/Errands.md",
+        &format!(
+            "---\nid: {ERRANDS}\n---\n- [ ] Renew the [[Car license]] 📅 2026-10-05 ^r1\n"
+        ),
+    );
+    s.pull().await.expect("pull");
+
+    let page = |id: &str| {
+        s.read(|c, ctx| build::entity_screen(c, ctx, id))
+            .expect("screen")
+            .document
+            .expect("document")
+    };
+    let license = page(LICENSE);
+    assert_eq!(
+        license.copies,
+        [EntityRef {
+            id: Some(COPY.into()),
+            title: "Car license copy".into(),
+            kind: Some("document".into()),
+        }]
+    );
+    assert_eq!(
+        license.copy_briefs,
+        [DocumentBrief {
+            id: COPY.into(),
+            title: "Car license copy".into(),
+            status: Some("stored".into()),
+            location: Some(place(SAFE, "Safe")),
+            holder: None,
+            doc_type: Some("license".into()),
+            last_holder: None,
+            location_path: vec![place(SAFE, "Safe")],
+            expiring_soon: false,
+            title_dir: TextDir::Ltr,
+        }]
+    );
+    let renewal = license.renewal_task.expect("renewal task");
+    assert_eq!(
+        (
+            renewal.id.as_str(),
+            renewal.description.as_str(),
+            renewal.origin_label.as_deref()
+        ),
+        ("r1", "Renew the [[Car license]]", Some("From document expiry"))
+    );
+    assert_eq!(
+        (
+            license.holder_label.as_deref(),
+            license.expires_label.as_deref(),
+            license.expiring_soon
+        ),
+        (
+            Some("Last with Mona Adel · 20 Sep"),
+            Some("Expires 10 Oct 2026"),
+            true
+        )
+    );
+    // The copy points back at its original.
+    let copy = page(COPY);
+    assert_eq!(
+        (
+            copy.copy.as_deref(),
+            copy.copies
+                .iter()
+                .map(|c| c.id.as_deref())
+                .collect::<Vec<_>>(),
+            copy.renewal_task
+        ),
+        (Some("copy"), vec![Some(LICENSE)], None)
     );
 }

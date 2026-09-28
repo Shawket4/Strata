@@ -116,16 +116,12 @@ fn line_number(text: &str, fragment: &str) -> usize {
 /// Loads the configuration from `env_file` (else `./.env` if present) and the process
 /// environment.
 pub fn load(env_file: Option<&Path>) -> Result<Config, ConfigError> {
-    let file = match env_file {
-        Some(path) => EnvFile::read(path)?,
-        None => {
-            let path = Path::new(DEFAULT_ENV_FILE);
-            if path.is_file() {
-                EnvFile::read(path)?
-            } else {
-                EnvFile::none()
-            }
-        }
+    let file = if let Some(path) = env_file {
+        EnvFile::read(path)?
+    } else if Path::new(DEFAULT_ENV_FILE).is_file() {
+        EnvFile::read(Path::new(DEFAULT_ENV_FILE))?
+    } else {
+        EnvFile::none()
     };
     let mut environment = Vec::new();
     for (name, value) in std::env::vars_os() {
@@ -255,10 +251,14 @@ pub fn to_vars(config: &Config) -> Vec<(String, String)> {
 
 /// `config` as env-file text (one `NAME=value` line per variable, quoted where needed).
 pub fn to_env_file(config: &Config) -> String {
-    to_vars(config)
-        .into_iter()
-        .map(|(name, value)| format!("{name}={}\n", quote(&value)))
-        .collect()
+    let mut out = String::new();
+    for (name, value) in to_vars(config) {
+        out.push_str(&name);
+        out.push('=');
+        out.push_str(&quote(&value));
+        out.push('\n');
+    }
+    out
 }
 
 /// `value` written so `dotenvy` reads it back unchanged.

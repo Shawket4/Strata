@@ -72,6 +72,13 @@ const Set<String> allowedDev = {
   'very_good_analysis',
 };
 
+/// Dev dependencies allowed only in the named package: the app shell's icon
+/// and native splash generators (run by hand; they write platform assets and
+/// ship no Dart code).
+const Map<String, Set<String>> scopedDev = {
+  'strata': {'flutter_launcher_icons', 'flutter_native_splash'},
+};
+
 /// Dev dependencies of the workspace root (tooling only, no app code).
 const Set<String> allowedWorkspaceTooling = {
   'melos',
@@ -258,7 +265,11 @@ List<Violation> checkDependencies(
       'dependencies',
       (d) => allowedRuntime.containsKey(d) || scoped.contains(d),
     );
-    checkSection('dev_dependencies', allowedDev.contains);
+    final scopedDevDeps = scopedDev[package.name] ?? const <String>{};
+    checkSection(
+      'dev_dependencies',
+      (d) => allowedDev.contains(d) || scopedDevDeps.contains(d),
+    );
   }
   final overrides = package.pubspec['dependency_overrides'];
   if (overrides is YamlMap && overrides.isNotEmpty) {

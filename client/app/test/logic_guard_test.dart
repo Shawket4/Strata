@@ -206,6 +206,40 @@ void main() {
       ]);
     });
 
+    test('the icon and splash generators are dev dependencies of the app '
+        'shell only', () {
+      final root = _workspace(
+        members: {
+          'apps/strata': _pubspec(
+            'strata',
+            devDeps:
+                '  flutter_launcher_icons: ^0.14.4\n'
+                '  flutter_native_splash: ^2.4.8\n',
+          ),
+          'packages/strata_ui': _pubspec(
+            'strata_ui',
+            devDeps: '  flutter_native_splash: ^2.4.8\n',
+          ),
+          'packages/features/home': _pubspec(
+            'strata_home',
+            deps: '  flutter_launcher_icons: ^0.14.4\n',
+          ),
+        },
+      );
+      expect(runGuard(root), [
+        const Violation(
+          'strata_home',
+          'dependencies "flutter_launcher_icons" is not allowed: '
+              'not in the §11.1 allow-list',
+        ),
+        const Violation(
+          'strata_ui',
+          'dev_dependencies "flutter_native_splash" is not allowed: '
+              'not in the §11.1 allow-list',
+        ),
+      ]);
+    });
+
     test('timezone is not an allowed dev dependency', () {
       final root = _workspace(
         members: {

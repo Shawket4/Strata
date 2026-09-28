@@ -158,7 +158,10 @@ pub fn check_config(config: &Config) -> String {
         } else {
             value
         };
-        out.push_str(&format!("{name}={}\n", env::quote(&value)));
+        out.push_str(&name);
+        out.push('=');
+        out.push_str(&env::quote(&value));
+        out.push('\n');
     }
     out
 }

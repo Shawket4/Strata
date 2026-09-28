@@ -77,6 +77,15 @@ impl Links for ServerLinks<'_> {
         let index = PathIndex::new(self.0.values().map(|n| n.path.as_str()));
         self.0.get(&id).map(|n| index.link_text_for(&n.path))
     }
+
+    /// A new entity takes the first free name, as on the real server.
+    fn taken_paths(&self, except: Ulid) -> Vec<String> {
+        self.0
+            .iter()
+            .filter(|(id, _)| **id != except)
+            .map(|(_, n)| n.path.clone())
+            .collect()
+    }
 }
 
 fn problem(problem_type: &str, status: u16) -> OpResult {
@@ -254,7 +263,8 @@ impl FakeServer {
                     .iter()
                     .find(|(_, n)| n.path == crate::store::write::TASK_HOME)
                     .map(|(id, _)| *id);
-                home.unwrap_or_else(|| {
+                // A new task home takes the device's ID for it, as on the real server.
+                home.or(p.home_id).unwrap_or_else(|| {
                     s.next_id += 1;
                     Ulid::from_parts(0x0000_5E2F_E000, s.next_id)
                 })

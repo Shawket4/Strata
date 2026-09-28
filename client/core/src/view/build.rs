@@ -4508,7 +4508,7 @@ mod arrow_free_labels {
                     dst_id: u(3),
                     relation: key,
                 };
-                arrow_free(&op(Op::RelationAdd(r.clone())));
+                arrow_free(&op(Op::RelationAdd(r)));
                 arrow_free(&op(Op::RelationRemove(r)));
                 arrow_free(&op(Op::RelationRetype(sm::RelationRetype {
                     src_id: u(1),

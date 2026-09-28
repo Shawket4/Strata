@@ -205,7 +205,7 @@ fn every_variable_round_trips_through_the_environment_and_a_file() {
             .filter(|(a, b)| a != b)
             .map(|(a, _)| a.0)
             .collect();
-        assert_eq!(changed, [name.clone()], "{name}");
+        assert_eq!(changed, std::slice::from_ref(name), "{name}");
     }
     assert_eq!(
         invalid_alone,

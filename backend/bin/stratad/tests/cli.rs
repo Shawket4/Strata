@@ -307,7 +307,7 @@ async fn bootstrap_roles_and_migrate_prepare_an_empty_database() {
     let script: String = stdout(&out)
         .lines()
         .filter(|l| !l.starts_with("{\"timestamp\""))
-        .map(|l| format!("{l}\n"))
+        .flat_map(|l| [l, "\n"])
         .collect();
     assert_eq!(script.trim_end(), expected.trim_end());
 
