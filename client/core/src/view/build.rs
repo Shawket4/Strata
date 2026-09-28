@@ -1447,6 +1447,7 @@ fn custody_preview(
         person: wikilink(person),
         counterparty: wikilink(counterparty),
         citations: Vec::new(),
+        note: None,
     };
     let rendered = event.to_line();
     let line = rendered.strip_prefix("- ").unwrap_or(&rendered).to_owned();

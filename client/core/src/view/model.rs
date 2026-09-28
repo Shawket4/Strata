@@ -1961,8 +1961,10 @@ pub struct CustodyDraft {
     pub person_id: Option<String>,
     /// Third party.
     pub counterparty_id: Option<String>,
-    /// Date.
-    pub date: NaiveDate,
+    /// The event's date; `None` is today in the account's time zone (computed by the core).
+    pub date: Option<NaiveDate>,
+    /// The user's note on the event (one line on the custody line; blank is no note).
+    pub note: Option<String>,
 }
 
 /// A place in the custody place picker.

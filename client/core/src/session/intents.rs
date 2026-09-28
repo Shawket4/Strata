@@ -82,7 +82,7 @@ impl Session {
         self.env.ids.ulid()
     }
 
-    fn today(&self) -> NaiveDate {
+    pub(crate) fn today(&self) -> NaiveDate {
         let ctx = self.ctx();
         ctx.now.with_timezone(&ctx.tz).date_naive()
     }

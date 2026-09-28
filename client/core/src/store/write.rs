@@ -258,11 +258,18 @@ pub fn apply_to_note(
     match op {
         Op::NoteCreate(p) => {
             validate_note_path(&p.path)?;
-            Ok(Some(NoteState {
-                path: p.path.clone(),
-                content: item_render::note::new_note(&p.content, p.id, &p.created)
-                    .map_err(|e| edit::render_error(&e))?,
-            }))
+            // A path taken locally lands at the first free `<stem> N.md` with the title rule,
+            // exactly as the server writes it (`item_render::note::new_note_at`).
+            let taken = links.taken_paths(p.id);
+            let (path, content) = item_render::note::new_note_at(
+                &p.content,
+                p.id,
+                &p.created,
+                &p.path,
+                taken.iter().map(String::as_str),
+            )
+            .map_err(|e| edit::render_error(&e))?;
+            Ok(Some(NoteState { path, content }))
         }
         Op::Capture(p) => Ok(Some(NoteState {
             path: item_render::paths::capture_path(&p.created, std::iter::empty()),

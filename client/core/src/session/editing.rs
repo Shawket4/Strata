@@ -567,6 +567,7 @@ impl Session {
             unset: Vec::new(),
             add_aliases: Vec::new(),
             remove_aliases: Vec::new(),
+            set_lists: BTreeMap::new(),
         })
     }
 
@@ -578,6 +579,20 @@ impl Session {
         }
         let mut p = Self::empty_patch(id)?;
         p.set.insert(key.to_owned(), value.to_owned());
+        self.patch_op(id, p)
+    }
+
+    /// Sets a property to a list of values (several phone numbers, `aliases`, `tags`): the list
+    /// replaces the whole value (items trimmed, blanks and repeats dropped, tags lose a leading
+    /// `#`: the shared `sync_model::apply::clean_list_value`); an empty list removes the key.
+    /// Relation lists change through relation intents (`add_relation`, …) and are refused here.
+    pub fn set_property_values(&self, id: &str, key: &str, values: &[String]) -> CoreResult<String> {
+        let key = key.trim();
+        if key.is_empty() {
+            return Err(CoreError::invalid("key", "empty"));
+        }
+        let mut p = Self::empty_patch(id)?;
+        p.set_lists.insert(key.to_owned(), values.to_vec());
         self.patch_op(id, p)
     }
 
@@ -641,10 +656,14 @@ impl Session {
             Op::DocumentCustody(sm::DocumentCustody {
                 document_id: ulid_of(document_id, "document_id")?,
                 event,
-                at: d.date,
+                at: d.date.unwrap_or_else(|| self.today()),
                 place_id,
                 person_id,
                 counterparty_id,
+                note: d
+                    .note
+                    .as_deref()
+                    .and_then(vault_format::custody::clean_note),
             }),
         )
     }
