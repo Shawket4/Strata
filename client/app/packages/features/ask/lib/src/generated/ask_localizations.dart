@@ -116,12 +116,6 @@ abstract class AskLocalizations {
   /// **'New conversation'**
   String get newConversation;
 
-  /// Tooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Starting a new conversation isn\'t available yet'**
-  String get newConversationUnavailable;
-
   /// Offline banner.
   ///
   /// In en, this message translates to:
@@ -188,12 +182,6 @@ abstract class AskLocalizations {
   /// **'Save as note'**
   String get saveAsNote;
 
-  /// Tooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Saving answers isn\'t available yet'**
-  String get saveAsNoteUnavailable;
-
   /// Copy.
   ///
   /// In en, this message translates to:
@@ -224,23 +212,11 @@ abstract class AskLocalizations {
   /// **'Send'**
   String get send;
 
-  /// Tooltip / helper.
-  ///
-  /// In en, this message translates to:
-  /// **'Sending questions from the app isn\'t available yet'**
-  String get sendUnavailable;
-
   /// Scope selector label.
   ///
   /// In en, this message translates to:
   /// **'Scope'**
   String get scope;
-
-  /// Scope.
-  ///
-  /// In en, this message translates to:
-  /// **'All notes'**
-  String get scopeAll;
 
   /// Preview panel title.
   ///
@@ -391,6 +367,60 @@ abstract class AskLocalizations {
   /// In en, this message translates to:
   /// **'The app\'s local data returned an error ({code}).'**
   String errorMessage({required String code});
+
+  /// Stops the streaming answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get stop;
+
+  /// Live region while an answer streams.
+  ///
+  /// In en, this message translates to:
+  /// **'Answering…'**
+  String get answering;
+
+  /// Answer stopped by the user.
+  ///
+  /// In en, this message translates to:
+  /// **'You stopped this answer.'**
+  String get answerStopped;
+
+  /// Answer stopped because AI is paused.
+  ///
+  /// In en, this message translates to:
+  /// **'AI is paused — this answer stopped early.'**
+  String get answerPaused;
+
+  /// Answer stopped because AI is unavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'AI isn\'t reachable — this answer stopped early.'**
+  String get answerUnavailable;
+
+  /// Answer stopped for another reason.
+  ///
+  /// In en, this message translates to:
+  /// **'This answer stopped early.'**
+  String get answerFailed;
+
+  /// Snack bar after saving an answer.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved as a note'**
+  String get savedAsNote;
+
+  /// Button of an answer already saved as a note.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved · Open note'**
+  String get openSavedNote;
+
+  /// Semantics label of an inline citation marker.
+  ///
+  /// In en, this message translates to:
+  /// **'Citation {index}'**
+  String citationMarker({required int index});
 }
 
 class _AskLocalizationsDelegate

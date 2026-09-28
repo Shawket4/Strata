@@ -3,8 +3,6 @@ import 'package:strata_ask/src/l10n.dart';
 import 'package:strata_state/strata_state.dart' hide RelationChip;
 import 'package:strata_ui/strata_ui.dart';
 
-
-
 /// The loading state.
 class AskLoading extends StatelessWidget {
   /// Creates the loading state.

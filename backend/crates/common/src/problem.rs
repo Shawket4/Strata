@@ -97,6 +97,9 @@ problem_types! {
     TaskStateConflict = ("task_state_conflict", 409, "Task state does not allow this");
     /// An import archive was rejected (symlink, absolute path, `..`, not a zip, ...).
     InvalidArchive = ("invalid_archive", 422, "Invalid archive");
+    /// A create's `created` (the device's creation time) is further in the future than the
+    /// server allows (`max_future_skew_secs`); `detail` names the limit. Fix the device clock.
+    CreatedInFuture = ("created_in_future", 422, "Creation time is in the future");
     /// The sync epoch changed; the client must re-bootstrap (PLAN §7.5 sync).
     EpochChanged = ("epoch_changed", 410, "Sync epoch changed");
     /// Too many requests (login, signup, capture, ask); see `Retry-After`.
@@ -184,6 +187,7 @@ mod tests {
                 ("revert_conflict", 409),
                 ("task_state_conflict", 409),
                 ("invalid_archive", 422),
+                ("created_in_future", 422),
                 ("epoch_changed", 410),
                 ("rate_limited", 429),
                 ("ai_unavailable", 503),

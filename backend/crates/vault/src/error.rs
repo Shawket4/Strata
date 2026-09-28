@@ -73,6 +73,13 @@ pub enum VaultError {
     /// An import archive (or one entry) is too large.
     #[error("archive too large: {0}")]
     ArchiveTooLarge(Cow<'static, str>),
+    /// A create's device creation time is more than `max_skew_secs` ahead of the server's
+    /// clock.
+    #[error("created is more than {max_skew_secs} s in the future")]
+    CreatedInFuture {
+        /// The allowed skew (`VaultConfig::max_future_skew_secs`).
+        max_skew_secs: u32,
+    },
     /// Semantic and hybrid search need the AI subsystem (Phase 4).
     #[error("AI features are not available")]
     AiUnavailable,
@@ -120,6 +127,7 @@ impl DomainError for VaultError {
             Self::InvalidArchive(_) => ProblemType::InvalidArchive,
             Self::ArchiveTooLarge(_) => ProblemType::PayloadTooLarge,
             Self::AiUnavailable => ProblemType::AiUnavailable,
+            Self::CreatedInFuture { .. } => ProblemType::CreatedInFuture,
             Self::WriterGone | Self::Io(_) | Self::Git(_) | Self::Index(_) | Self::Internal(_) => {
                 ProblemType::Internal
             }
@@ -140,6 +148,9 @@ impl DomainError for VaultError {
                 "the files changed after that commit in ways that conflict with reverting it",
             )),
             Self::PathTaken => Some(Cow::Borrowed("a note already exists at this path")),
+            Self::CreatedInFuture { max_skew_secs } => Some(Cow::Owned(format!(
+                "`created` is more than {max_skew_secs} seconds ahead of the server's clock; check the device's clock"
+            ))),
             _ => None,
         }
     }

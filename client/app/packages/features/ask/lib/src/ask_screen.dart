@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -7,11 +9,13 @@ import 'package:strata_ask/src/l10n.dart';
 import 'package:strata_state/strata_state.dart' hide RelationChip;
 import 'package:strata_ui/strata_ui.dart';
 
-/// Ask (PLAN §11 screen 10): the conversation over the vault from the core's
-/// view, answers with tappable citations and their sources, "save as note",
-/// scope, and the online-only states (offline, not available yet). Compact
-/// and medium: one conversation column; expanded: conversation + source
-/// preview panel.
+/// Ask (PLAN §11 screen 10): the conversation over the vault streamed from
+/// the core (`watch_ask`): answers with inline citation markers and their
+/// sources, Stop while streaming, "Save as note", the scope, the AI status,
+/// and the online-only states (offline, not available yet). Compact and
+/// medium: one conversation column (a citation opens the note at its
+/// block); expanded: conversation + source preview panel
+/// (`resolve_citation`).
 class AskScreen extends StatelessWidget {
   /// Creates Ask.
   const new({super.key, this.onOpenNote});
@@ -19,13 +23,16 @@ class AskScreen extends StatelessWidget {
   /// The icon that represents this feature.
   static const IconData icon = Icons.forum_outlined;
 
-  /// Opens a note at a block (citations).
+  /// Opens a note at a block (citations, saved answers).
   final OpenNoteAt? onOpenNote;
 
   @override
   Widget build(BuildContext context) =>
       AskLocalizationScope(child: _Ask(onOpenNote: onOpenNote));
 }
+
+/// A cited block: the note and the block anchor.
+typedef _Cited = ({String noteId, String? anchor});
 
 class _Ask extends HookConsumerWidget {
   const new({required this.onOpenNote});
@@ -36,17 +43,20 @@ class _Ask extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.strataColors;
     final expanded = SizeClass.of(context) == SizeClass.expanded;
-    final preview = useState<Citation?>(null);
-    final body = switch (ref.watch(askViewProvider)) {
+    final preview = useState<_Cited?>(null);
+    void cite(_Cited cited) {
+      if (expanded) {
+        preview.value = cited;
+      } else {
+        onOpenNote?.call(cited.noteId, cited.anchor);
+      }
+    }
+
+    final body = switch (ref.watch(askConversationProvider)) {
       AsyncData(:final value) => _Conversation(
         view: value,
-        onCitation: (citation) {
-          if (expanded) {
-            preview.value = citation;
-          } else if (citation.noteId != null) {
-            onOpenNote?.call(citation.noteId!, citation.anchor);
-          }
-        },
+        onCitation: cite,
+        onOpenNote: onOpenNote,
       ),
       AsyncError(:final error) => AskError(error: error),
       _ => const AskLoading(),
@@ -61,28 +71,59 @@ class _Ask extends HookConsumerWidget {
         VerticalDivider(width: 1, color: colors.border),
         SizedBox(
           width: StrataLayout.contextPanelWidth,
-          child: _SourcePreview(
-            citation: preview.value,
-            onOpenNote: onOpenNote,
-          ),
+          child: _SourcePreview(cited: preview.value, onOpenNote: onOpenNote),
         ),
       ],
     );
   }
 }
 
-class _Conversation extends HookWidget {
-  const new({required this.view, required this.onCitation});
+/// Runs an Ask intent and reports a failure in a snack bar.
+Future<bool> _run(
+  BuildContext context,
+  Future<Object?> Function() intent,
+) async {
+  final l10n = context.askL10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  try {
+    await intent();
+    return true;
+  } on Object catch (error) {
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.errorMessage(
+              code: error is CoreFailure ? error.code : 'internal',
+            ),
+          ),
+        ),
+      );
+    return false;
+  }
+}
+
+class _Conversation extends HookConsumerWidget {
+  const new({
+    required this.view,
+    required this.onCitation,
+    required this.onOpenNote,
+  });
 
   final AskView view;
-  final ValueChanged<Citation> onCitation;
+  final ValueChanged<_Cited> onCitation;
+  final OpenNoteAt? onOpenNote;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.askL10n;
     final colors = context.strataColors;
     final text = context.strataText;
+    final core = ref.read(coreApiProvider);
     final question = useTextEditingController();
+    final scope = useState(0);
+    final status = view.aiStatus;
     final banner = switch (view.availability) {
       Availability.available => null as (IconData, String, String?)?,
       Availability.offline => (
@@ -98,21 +139,20 @@ class _Conversation extends HookWidget {
       Availability.notAllowed => (Icons.block, l10n.notAllowedTitle, null),
     };
     final shown = banner;
+    final bannerTone = view.availability == Availability.offline
+        ? StatusTone.warning
+        : StatusTone.info;
+    final bannerColors = bannerTone.colorsIn(colors);
     final bannerWidget = shown == null
         ? null
         : Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: StrataSpacing.s4,
-              vertical: StrataSpacing.s2,
-            ),
+            padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s2),
             child: Semantics(
               liveRegion: true,
               container: true,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: view.availability == Availability.offline
-                      ? colors.warningTint
-                      : colors.infoTint,
+                  color: bannerColors.background,
                   borderRadius: StrataRadii.cardRadius,
                 ),
                 child: Padding(
@@ -120,13 +160,7 @@ class _Conversation extends HookWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        shown.$1,
-                        size: 20,
-                        color: view.availability == Availability.offline
-                            ? colors.warningText
-                            : colors.infoText,
-                      ),
+                      Icon(shown.$1, size: 20, color: bannerColors.foreground),
                       const SizedBox(width: StrataSpacing.s2),
                       Expanded(
                         child: Column(
@@ -136,22 +170,13 @@ class _Conversation extends HookWidget {
                               shown.$2,
                               style: text.bodySmall
                                   .withWeight(FontWeight.w700)
-                                  .copyWith(
-                                    color:
-                                        view.availability ==
-                                            Availability.offline
-                                        ? colors.warningText
-                                        : colors.infoText,
-                                  ),
+                                  .copyWith(color: bannerColors.foreground),
                             ),
-                            if (shown.$3 != null)
+                            if (shown.$3 case final message?)
                               Text(
-                                shown.$3!,
+                                message,
                                 style: text.caption.copyWith(
-                                  color:
-                                      view.availability == Availability.offline
-                                      ? colors.warningText
-                                      : colors.infoText,
+                                  color: bannerColors.foreground,
                                 ),
                               ),
                           ],
@@ -163,6 +188,18 @@ class _Conversation extends HookWidget {
               ),
             ),
           );
+
+    Future<void> send() async {
+      final value = question.text.trim();
+      if (value.isEmpty || view.scopes.isEmpty) return;
+      final chosen = view.scopes[scope.value.clamp(0, view.scopes.length - 1)];
+      final sent = await _run(
+        context,
+        () => core.ask(question: value, scope: chosen),
+      );
+      if (sent) question.clear();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -175,15 +212,31 @@ class _Conversation extends HookWidget {
           ),
           child: Row(
             children: [
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(l10n.askTitle, style: text.titleSmall),
-                ),
+              Semantics(
+                header: true,
+                child: Text(l10n.askTitle, style: text.titleSmall),
               ),
+              const SizedBox(width: StrataSpacing.s3),
+              if (status != null)
+                Flexible(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: StatusPill(
+                      icon: Icons.auto_awesome_outlined,
+                      tone: status.pausedLabel == null
+                          ? StatusTone.info
+                          : StatusTone.warning,
+                      label: status.pausedLabel ?? status.budgetLabel,
+                    ),
+                  ),
+                )
+              else
+                const Spacer(),
               IconButton(
-                tooltip: l10n.newConversationUnavailable,
-                onPressed: null,
+                tooltip: l10n.newConversation,
+                onPressed: view.messages.isEmpty || view.streaming
+                    ? null
+                    : () => unawaited(_run(context, core.newConversation)),
                 icon: const Icon(Icons.add_comment_outlined),
               ),
             ],
@@ -210,14 +263,27 @@ class _Conversation extends HookWidget {
                       constraints: const BoxConstraints(maxWidth: 760),
                       child: message.role == 'user'
                           ? _UserMessage(message: message)
-                          : _Answer(message: message, onCitation: onCitation),
+                          : _Answer(
+                              message: message,
+                              onCitation: onCitation,
+                              onOpenNote: onOpenNote,
+                            ),
                     ),
                   ),
               ],
             ),
           ),
         ),
-        _Composer(controller: question),
+        _Composer(
+          controller: question,
+          scopes: view.scopes,
+          scope: scope.value,
+          onScope: (value) => scope.value = value,
+          enabled: view.availability == Availability.available,
+          streaming: view.streaming,
+          onSend: () => unawaited(send()),
+          onStop: () => unawaited(_run(context, core.stopAsk)),
+        ),
       ],
     );
   }
@@ -255,6 +321,7 @@ class _UserMessage extends StatelessWidget {
           ),
           child: Text(
             message.text,
+            textDirection: textDirectionOf(message.dir),
             textAlign: TextAlign.start,
             style: context.strataText.body,
           ),
@@ -264,18 +331,107 @@ class _UserMessage extends StatelessWidget {
   }
 }
 
-class _Answer extends StatelessWidget {
-  const new({required this.message, required this.onCitation});
+/// Why an answer stopped early (`error_key`).
+String _stopReason(AskLocalizations l10n, String key) => switch (key) {
+  'stopped' => l10n.answerStopped,
+  'error.ai_paused' => l10n.answerPaused,
+  'error.ai_unavailable' => l10n.answerUnavailable,
+  _ => l10n.answerFailed,
+};
+
+class _Answer extends ConsumerWidget {
+  const new({
+    required this.message,
+    required this.onCitation,
+    required this.onOpenNote,
+  });
 
   final AskMessage message;
-  final ValueChanged<Citation> onCitation;
+  final ValueChanged<_Cited> onCitation;
+  final OpenNoteAt? onOpenNote;
+
+  /// The block of 1-based citation [index] of this answer.
+  _Cited? _cited(int index) {
+    if (index < 1 || index > message.citations.length) return null;
+    final citation = message.citations[index - 1];
+    final noteId = citation.noteId;
+    return noteId == null ? null : (noteId: noteId, anchor: citation.anchor);
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.askL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final citations = message.citations;
+    final core = ref.read(coreApiProvider);
+    final sources = message.sources;
+    final saved = message.savedNoteId;
+    final error = message.errorKey;
+    final open = onOpenNote;
+
+    Future<void> save() async {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      try {
+        final id = await core.saveAnswerAsNote(messageId: message.id);
+        messenger
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(l10n.savedAsNote),
+              action: open == null
+                  ? null
+                  : SnackBarAction(
+                      label: l10n.openNote,
+                      onPressed: () => open(id, null),
+                    ),
+            ),
+          );
+      } on Object catch (error) {
+        messenger
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                l10n.errorMessage(
+                  code: error is CoreFailure ? error.code : 'internal',
+                ),
+              ),
+            ),
+          );
+      }
+    }
+
+    final body = message.spans.isEmpty
+        ? Text(
+            message.text,
+            textDirection: textDirectionOf(message.dir),
+            textAlign: TextAlign.start,
+            style: text.body,
+          )
+        : Text.rich(
+            TextSpan(
+              children: [
+                for (final span in message.spans)
+                  if (span.citation case final index?)
+                    WidgetSpan(
+                      alignment: PlaceholderAlignment.middle,
+                      child: _CitationMarker(
+                        index: index,
+                        onPressed: switch (_cited(index)) {
+                          final cited? => () => onCitation(cited),
+                          null => null,
+                        },
+                      ),
+                    )
+                  else
+                    TextSpan(text: span.text),
+              ],
+            ),
+            textDirection: textDirectionOf(message.dir),
+            textAlign: TextAlign.start,
+            style: text.body,
+          );
+
     return Semantics(
       label: l10n.answer,
       container: true,
@@ -285,29 +441,49 @@ class _Answer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(message.text, textAlign: TextAlign.start, style: text.body),
-            if (citations.isNotEmpty) ...[
-              const SizedBox(height: StrataSpacing.s2),
-              Wrap(
-                spacing: StrataSpacing.s1,
-                runSpacing: StrataSpacing.s1,
-                children: [
-                  for (var i = 0; i < citations.length; i++)
-                    CitationChip(
-                      index: i + 1,
-                      label: citations[i].target,
-                      blockRef: citations[i].anchor,
-                      onPressed: () => onCitation(citations[i]),
-                    ),
-                ],
+            Wrap(
+              spacing: StrataSpacing.s2,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                if (message.scopeLabel.isNotEmpty)
+                  Text(
+                    message.scopeLabel,
+                    style: text.caption.copyWith(color: colors.text2),
+                  ),
+                if (message.createdLabel.isNotEmpty)
+                  Text(
+                    message.createdLabel,
+                    style: text.caption.copyWith(color: colors.text2),
+                  ),
+              ],
+            ),
+            const SizedBox(height: StrataSpacing.s1),
+            body,
+            if (message.streaming)
+              Padding(
+                padding: const EdgeInsets.only(top: StrataSpacing.s2),
+                child: Semantics(
+                  label: l10n.answering,
+                  liveRegion: true,
+                  child: const LinearProgressIndicator(minHeight: 2),
+                ),
               ),
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: StrataSpacing.s2),
+                child: Text(
+                  _stopReason(l10n, error),
+                  style: text.caption.copyWith(color: colors.warningText),
+                ),
+              ),
+            if (sources.isNotEmpty) ...[
               const SizedBox(height: StrataSpacing.s3),
               Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: Semantics(
                   header: true,
                   child: Text(
-                    l10n.sources(count: citations.length),
+                    l10n.sources(count: message.sourceCount),
                     style: text.caption
                         .withWeight(FontWeight.w700)
                         .copyWith(color: colors.text2),
@@ -315,59 +491,77 @@ class _Answer extends StatelessWidget {
                 ),
               ),
               Card(
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
-                    for (var i = 0; i < citations.length; i++)
+                    for (final source in sources)
                       ListTile(
                         dense: true,
-                        leading: Text(
-                          '${i + 1}',
-                          style: text.monoSmall.copyWith(color: colors.text2),
-                        ),
-                        title: Text(citations[i].target),
-                        trailing: citations[i].anchor == null
-                            ? null
-                            : Text(
-                                citations[i].anchor!,
-                                textDirection: TextDirection.ltr,
+                        leading: Wrap(
+                          spacing: StrataSpacing.s1,
+                          children: [
+                            for (final index in source.indexes)
+                              Text(
+                                '$index',
                                 style: text.monoSmall.copyWith(
                                   color: colors.text2,
                                 ),
                               ),
-                        onTap: () => onCitation(citations[i]),
+                          ],
+                        ),
+                        title: Text(source.title),
+                        subtitle: Text(
+                          source.path,
+                          textDirection: TextDirection.ltr,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: text.monoSmall.copyWith(color: colors.text2),
+                        ),
+                        onTap: () => onCitation((
+                          noteId: source.noteId,
+                          anchor: source.anchors.isEmpty
+                              ? null
+                              : source.anchors.first,
+                        )),
                       ),
                   ],
                 ),
               ),
             ],
-            const SizedBox(height: StrataSpacing.s2),
-            Wrap(
-              spacing: StrataSpacing.s2,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Tooltip(
-                  message: l10n.saveAsNoteUnavailable,
-                  child: OutlinedButton.icon(
-                    onPressed: null,
-                    icon: const Icon(Icons.note_add_outlined, size: 18),
-                    label: Text(l10n.saveAsNote),
-                    style: OutlinedButton.styleFrom(
-                      disabledForegroundColor: colors.text2,
+            if (!message.streaming) ...[
+              const SizedBox(height: StrataSpacing.s2),
+              Wrap(
+                spacing: StrataSpacing.s2,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  if (saved == null)
+                    OutlinedButton.icon(
+                      onPressed: () => unawaited(save()),
+                      icon: const Icon(Icons.note_add_outlined, size: 18),
+                      label: Text(l10n.saveAsNote),
+                    )
+                  else
+                    TextButton.icon(
+                      onPressed: open == null ? null : () => open(saved, null),
+                      icon: const Icon(Icons.check, size: 18),
+                      label: Text(l10n.openSavedNote),
                     ),
+                  IconButton(
+                    tooltip: l10n.copyAnswer,
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: message.text),
+                      );
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.maybeOf(context)
+                        ?..hideCurrentSnackBar()
+                        ..showSnackBar(SnackBar(content: Text(l10n.copied)));
+                    },
+                    icon: const Icon(Icons.copy_outlined, size: 18),
                   ),
-                ),
-                IconButton(
-                  tooltip: l10n.copyAnswer,
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: message.text));
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.maybeOf(context)
-                        ?.showSnackBar(SnackBar(content: Text(l10n.copied)));
-                  },
-                  icon: const Icon(Icons.copy_outlined, size: 18),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -375,10 +569,71 @@ class _Answer extends StatelessWidget {
   }
 }
 
+/// An inline citation marker ("1") that opens its source.
+class _CitationMarker extends StatelessWidget {
+  const new({required this.index, required this.onPressed});
+
+  final int index;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.strataColors;
+    return Semantics(
+      button: true,
+      label: context.askL10n.citationMarker(index: index),
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const StadiumBorder(),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: StrataLayout.minTouchTarget,
+            minHeight: StrataLayout.minTouchTarget,
+          ),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: colors.accentTint,
+                borderRadius: StrataRadii.pillRadius,
+              ),
+              child: Text(
+                '$index',
+                style: context.strataText.caption
+                    .withWeight(FontWeight.w700)
+                    .copyWith(color: colors.accentText),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _Composer extends StatelessWidget {
-  const new({required this.controller});
+  const new({
+    required this.controller,
+    required this.scopes,
+    required this.scope,
+    required this.onScope,
+    required this.enabled,
+    required this.streaming,
+    required this.onSend,
+    required this.onStop,
+  });
 
   final TextEditingController controller;
+  final List<AskScope> scopes;
+  final int scope;
+  final ValueChanged<int> onScope;
+  final bool enabled;
+  final bool streaming;
+  final VoidCallback onSend;
+  final VoidCallback onStop;
 
   @override
   Widget build(BuildContext context) {
@@ -401,26 +656,34 @@ class _Composer extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(
-                  spacing: StrataSpacing.s2,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      l10n.scope,
-                      style: text.caption.copyWith(color: colors.text2),
-                    ),
-                    Semantics(
+                if (scopes.isNotEmpty)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Semantics(
                       label: l10n.scope,
                       container: true,
                       explicitChildNodes: true,
-                      child: ChoiceChip(
-                        label: Text(l10n.scopeAll),
-                        selected: true,
-                        onSelected: (_) {},
+                      child: Row(
+                        children: [
+                          Text(
+                            l10n.scope,
+                            style: text.caption.copyWith(color: colors.text2),
+                          ),
+                          for (var i = 0; i < scopes.length; i++)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(
+                                start: StrataSpacing.s2,
+                              ),
+                              child: ChoiceChip(
+                                label: Text(scopes[i].label),
+                                selected: i == scope,
+                                onSelected: (_) => onScope(i),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
                 const SizedBox(height: StrataSpacing.s2),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -428,27 +691,32 @@ class _Composer extends StatelessWidget {
                     Expanded(
                       child: TextField(
                         controller: controller,
+                        enabled: enabled,
                         minLines: 1,
                         maxLines: 4,
-                        decoration: InputDecoration(
-                          hintText: l10n.askHint,
-                          helperText: l10n.sendUnavailable,
-                          helperMaxLines: 2,
-                          helperStyle: text.caption.copyWith(
-                            color: colors.text2,
-                          ),
-                        ),
+                        textInputAction: TextInputAction.send,
+                        onSubmitted: (_) => onSend(),
+                        decoration: InputDecoration(hintText: l10n.askHint),
                       ),
                     ),
                     const SizedBox(width: StrataSpacing.s2),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 22),
-                      child: IconButton.filled(
-                        tooltip: l10n.send,
-                        onPressed: null,
-                        icon: const Icon(Icons.arrow_upward),
+                    if (streaming)
+                      IconButton.filledTonal(
+                        tooltip: l10n.stop,
+                        onPressed: onStop,
+                        icon: const Icon(Icons.stop),
+                      )
+                    else
+                      ValueListenableBuilder(
+                        valueListenable: controller,
+                        builder: (context, value, _) => IconButton.filled(
+                          tooltip: l10n.send,
+                          onPressed: enabled && value.text.trim().isNotEmpty
+                              ? onSend
+                              : null,
+                          icon: const Icon(Icons.arrow_upward),
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
@@ -460,10 +728,13 @@ class _Composer extends StatelessWidget {
   }
 }
 
+/// The expanded source preview: the cited block as the core resolves it
+/// (`resolve_citation`): note title, path, heading, date, the block's text
+/// in its direction, tags, and "Open at block".
 class _SourcePreview extends ConsumerWidget {
-  const new({required this.citation, required this.onOpenNote});
+  const new({required this.cited, required this.onOpenNote});
 
-  final Citation? citation;
+  final _Cited? cited;
   final OpenNoteAt? onOpenNote;
 
   @override
@@ -471,11 +742,11 @@ class _SourcePreview extends ConsumerWidget {
     final l10n = context.askL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final shown = citation;
-    final noteId = shown?.noteId;
-    final note = noteId == null
+    final shown = cited;
+    final preview = shown == null
         ? null
-        : ref.watch(noteProvider(noteId)).value?.note;
+        : ref.watch(resolveCitationProvider(shown.noteId, shown.anchor));
+    final value = preview?.value;
     final open = onOpenNote;
     return Semantics(
       container: true,
@@ -498,41 +769,74 @@ class _SourcePreview extends ConsumerWidget {
                 l10n.sourcePreviewHint,
                 style: text.bodySmall.copyWith(color: colors.text2),
               )
-            else ...[
-              Text(note?.title ?? shown.target, style: text.titleSmall),
-              if (note != null)
-                Text(
-                  note.path,
-                  textDirection: TextDirection.ltr,
-                  style: text.monoSmall.copyWith(color: colors.text2),
+            else if (preview case AsyncError(:final error))
+              Text(
+                l10n.errorMessage(
+                  code: error is CoreFailure ? error.code : 'internal',
                 ),
-              if (noteId == null)
+                style: text.bodySmall.copyWith(color: colors.text2),
+              )
+            else if (value == null)
+              const AskLoading()
+            else ...[
+              Text(value.title, style: text.titleSmall),
+              Text(
+                value.path,
+                textDirection: TextDirection.ltr,
+                style: text.monoSmall.copyWith(color: colors.text2),
+              ),
+              if (value.noteId == null)
                 Text(
                   l10n.noteMissing,
                   style: text.bodySmall.copyWith(color: colors.text2),
                 ),
-              if (note != null && note.tags.isNotEmpty) ...[
+              if (value.heading != null || value.dateLabel != null) ...[
+                const SizedBox(height: StrataSpacing.s2),
+                Wrap(
+                  spacing: StrataSpacing.s2,
+                  children: [
+                    if (value.heading case final heading?)
+                      Text(heading, style: text.bodySmall),
+                    if (value.dateLabel case final date?)
+                      Text(
+                        date,
+                        style: text.caption.copyWith(color: colors.text2),
+                      ),
+                  ],
+                ),
+              ],
+              if (value.blockText case final block?) ...[
+                const SizedBox(height: StrataSpacing.s2),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.accentTint,
+                    borderRadius: StrataRadii.cardRadius,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(StrataSpacing.s3),
+                    child: Text(
+                      block,
+                      textDirection: textDirectionOf(value.blockDir),
+                      textAlign: TextAlign.start,
+                      style: text.body,
+                    ),
+                  ),
+                ),
+              ],
+              if (value.tags.isNotEmpty) ...[
                 const SizedBox(height: StrataSpacing.s2),
                 Wrap(
                   spacing: StrataSpacing.s1,
                   runSpacing: StrataSpacing.s1,
                   children: [
-                    for (final tag in note.tags) Chip(label: Text(tag)),
+                    for (final tag in value.tags) Chip(label: Text(tag)),
                   ],
                 ),
               ],
-              if (shown.anchor != null) ...[
-                const SizedBox(height: StrataSpacing.s2),
-                Text(
-                  shown.anchor!,
-                  textDirection: TextDirection.ltr,
-                  style: text.monoSmall.copyWith(color: colors.text2),
-                ),
-              ],
               const SizedBox(height: StrataSpacing.s3),
-              if (open != null && noteId != null)
+              if (open != null && value.noteId != null)
                 FilledButton.icon(
-                  onPressed: () => open(noteId, shown.anchor),
+                  onPressed: () => open(shown.noteId, shown.anchor),
                   icon: const Icon(Icons.open_in_new, size: 18),
                   label: Text(l10n.openAtBlock),
                 ),

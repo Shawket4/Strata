@@ -12,10 +12,6 @@
   "@newConversation": {
     "description": "New conversation."
   },
-  "newConversationUnavailable": "Starting a new conversation isn't available yet",
-  "@newConversationUnavailable": {
-    "description": "Tooltip."
-  },
   "offlineTitle": "Ask needs a connection",
   "@offlineTitle": {
     "description": "Offline banner."
@@ -65,10 +61,6 @@
   "@saveAsNote": {
     "description": "Save the answer."
   },
-  "saveAsNoteUnavailable": "Saving answers isn't available yet",
-  "@saveAsNoteUnavailable": {
-    "description": "Tooltip."
-  },
   "copyAnswer": "Copy answer",
   "@copyAnswer": {
     "description": "Copy."
@@ -89,17 +81,9 @@
   "@send": {
     "description": "Send."
   },
-  "sendUnavailable": "Sending questions from the app isn't available yet",
-  "@sendUnavailable": {
-    "description": "Tooltip / helper."
-  },
   "scope": "Scope",
   "@scope": {
     "description": "Scope selector label."
-  },
-  "scopeAll": "All notes",
-  "@scopeAll": {
-    "description": "Scope."
   },
   "sourcePreview": "Source preview",
   "@sourcePreview": {
@@ -228,6 +212,47 @@
     "placeholders": {
       "code": {
         "type": "String"
+      }
+    }
+  },
+  "stop": "Stop",
+  "@stop": {
+    "description": "Stops the streaming answer."
+  },
+  "answering": "Answering…",
+  "@answering": {
+    "description": "Live region while an answer streams."
+  },
+  "answerStopped": "You stopped this answer.",
+  "@answerStopped": {
+    "description": "Answer stopped by the user."
+  },
+  "answerPaused": "AI is paused — this answer stopped early.",
+  "@answerPaused": {
+    "description": "Answer stopped because AI is paused."
+  },
+  "answerUnavailable": "AI isn't reachable — this answer stopped early.",
+  "@answerUnavailable": {
+    "description": "Answer stopped because AI is unavailable."
+  },
+  "answerFailed": "This answer stopped early.",
+  "@answerFailed": {
+    "description": "Answer stopped for another reason."
+  },
+  "savedAsNote": "Saved as a note",
+  "@savedAsNote": {
+    "description": "Snack bar after saving an answer."
+  },
+  "openSavedNote": "Saved · Open note",
+  "@openSavedNote": {
+    "description": "Button of an answer already saved as a note."
+  },
+  "citationMarker": "Citation {index}",
+  "@citationMarker": {
+    "description": "Semantics label of an inline citation marker.",
+    "placeholders": {
+      "index": {
+        "type": "int"
       }
     }
   }

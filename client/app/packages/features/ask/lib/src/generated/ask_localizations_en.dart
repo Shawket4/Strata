@@ -19,10 +19,6 @@ class AskLocalizationsEn extends AskLocalizations {
   String get newConversation => 'New conversation';
 
   @override
-  String get newConversationUnavailable =>
-      'Starting a new conversation isn\'t available yet';
-
-  @override
   String get offlineTitle => 'Ask needs a connection';
 
   @override
@@ -68,9 +64,6 @@ class AskLocalizationsEn extends AskLocalizations {
   String get saveAsNote => 'Save as note';
 
   @override
-  String get saveAsNoteUnavailable => 'Saving answers isn\'t available yet';
-
-  @override
   String get copyAnswer => 'Copy answer';
 
   @override
@@ -86,14 +79,7 @@ class AskLocalizationsEn extends AskLocalizations {
   String get send => 'Send';
 
   @override
-  String get sendUnavailable =>
-      'Sending questions from the app isn\'t available yet';
-
-  @override
   String get scope => 'Scope';
-
-  @override
-  String get scopeAll => 'All notes';
 
   @override
   String get sourcePreview => 'Source preview';
@@ -187,5 +173,35 @@ class AskLocalizationsEn extends AskLocalizations {
   @override
   String errorMessage({required String code}) {
     return 'The app\'s local data returned an error ($code).';
+  }
+
+  @override
+  String get stop => 'Stop';
+
+  @override
+  String get answering => 'Answering…';
+
+  @override
+  String get answerStopped => 'You stopped this answer.';
+
+  @override
+  String get answerPaused => 'AI is paused — this answer stopped early.';
+
+  @override
+  String get answerUnavailable =>
+      'AI isn\'t reachable — this answer stopped early.';
+
+  @override
+  String get answerFailed => 'This answer stopped early.';
+
+  @override
+  String get savedAsNote => 'Saved as a note';
+
+  @override
+  String get openSavedNote => 'Saved · Open note';
+
+  @override
+  String citationMarker({required int index}) {
+    return 'Citation $index';
   }
 }

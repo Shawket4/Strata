@@ -19,9 +19,6 @@ class AskLocalizationsAr extends AskLocalizations {
   String get newConversation => 'محادثة جديدة';
 
   @override
-  String get newConversationUnavailable => 'بدء محادثة جديدة مش متاح لسه';
-
-  @override
   String get offlineTitle => 'خاصية اسأل محتاجة اتصال';
 
   @override
@@ -67,9 +64,6 @@ class AskLocalizationsAr extends AskLocalizations {
   String get saveAsNote => 'احفظ كملاحظة';
 
   @override
-  String get saveAsNoteUnavailable => 'حفظ الإجابات مش متاح لسه';
-
-  @override
   String get copyAnswer => 'انسخ الإجابة';
 
   @override
@@ -85,13 +79,7 @@ class AskLocalizationsAr extends AskLocalizations {
   String get send => 'إرسال';
 
   @override
-  String get sendUnavailable => 'إرسال الأسئلة من التطبيق مش متاح لسه';
-
-  @override
   String get scope => 'النطاق';
-
-  @override
-  String get scopeAll => 'كل الملاحظات';
 
   @override
   String get sourcePreview => 'معاينة المصدر';
@@ -185,5 +173,36 @@ class AskLocalizationsAr extends AskLocalizations {
   @override
   String errorMessage({required String code}) {
     return 'البيانات المحلية للتطبيق رجّعت خطأ ($code).';
+  }
+
+  @override
+  String get stop => 'إيقاف';
+
+  @override
+  String get answering => 'جارٍ الإجابة…';
+
+  @override
+  String get answerStopped => 'أوقفت هذه الإجابة.';
+
+  @override
+  String get answerPaused =>
+      'الذكاء الاصطناعي متوقف مؤقتًا — توقفت الإجابة مبكرًا.';
+
+  @override
+  String get answerUnavailable =>
+      'لا يمكن الوصول للذكاء الاصطناعي — توقفت الإجابة مبكرًا.';
+
+  @override
+  String get answerFailed => 'توقفت هذه الإجابة مبكرًا.';
+
+  @override
+  String get savedAsNote => 'تم الحفظ كملاحظة';
+
+  @override
+  String get openSavedNote => 'محفوظة · افتح الملاحظة';
+
+  @override
+  String citationMarker({required int index}) {
+    return 'الاستشهاد $index';
   }
 }

@@ -70,7 +70,13 @@ pub struct VaultConfig {
     pub import: ImportLimits,
     /// Per-kind near-duplicate thresholds (setting overrides of the `domain` defaults).
     pub near_thresholds: BTreeMap<String, f32>,
+    /// How far (seconds) a create's device creation time may be ahead of the server's clock
+    /// before the create is refused (`created_in_future`).
+    pub max_future_skew_secs: u32,
 }
+
+/// Default of [`VaultConfig::max_future_skew_secs`]: 5 minutes.
+pub const DEFAULT_MAX_FUTURE_SKEW_SECS: u32 = 300;
 
 impl VaultConfig {
     /// A configuration with defaults for `data_root`.
@@ -80,6 +86,7 @@ impl VaultConfig {
             default_timezone: "UTC".to_owned(),
             import: ImportLimits::default(),
             near_thresholds: BTreeMap::new(),
+            max_future_skew_secs: DEFAULT_MAX_FUTURE_SKEW_SECS,
         }
     }
 }
@@ -476,11 +483,21 @@ impl Core {
             .unwrap_or(Tz::UTC))
     }
 
-    /// Now in the user's time zone as a fixed offset (for frontmatter timestamps).
-    pub(crate) fn local_now(&self, tz: Tz) -> DateTime<FixedOffset> {
-        let now = self.now();
-        let local = tz.from_utc_datetime(&now.naive_utc());
-        local.with_timezone(&local.offset().fix())
+    /// Today in the user's time zone (dates: custody, completions, merge headings). Times
+    /// are written in UTC ([`Self::now`]).
+    pub(crate) fn today(&self, tz: Tz) -> chrono::NaiveDate {
+        self.now().with_timezone(&tz).date_naive()
+    }
+
+    /// Checks a create's device creation time: refused when it is more than
+    /// `max_future_skew_secs` ahead of the server's clock. Any past time is accepted (an
+    /// offline create keeps its day).
+    pub(crate) fn check_created(&self, created: &DateTime<Utc>) -> Result<()> {
+        let max_skew_secs = self.inner.config.max_future_skew_secs;
+        if *created > self.now() + chrono::Duration::seconds(i64::from(max_skew_secs)) {
+            return Err(VaultError::CreatedInFuture { max_skew_secs });
+        }
+        Ok(())
     }
 
     /// Reads a vault file.
