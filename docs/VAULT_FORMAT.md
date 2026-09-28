@@ -16,6 +16,15 @@ are relative to the body (add `Document::body_offset()` for file offsets).
 - Notes are `.md` files. Paths are vault-relative with `/` separators: `notes/Sub/Name.md`.
 - **Title = file name without `.md`** (`title_from_path`). The optional `title:` property is a
   display title only.
+- **Title rule for new items** (`item-render`, user and AI creates alike): `title` is written
+  whenever the file stem differs from the item's trimmed name — the name had characters a
+  file name cannot hold (`Q3: plan / review` → `Q3 - plan - review.md`, `title: "Q3: plan /
+  review"`), or the name was taken and the note got a number (`people/Ahmed 2.md`,
+  `title: Ahmed`).
+- **Captures** are `inbox/YYYY-MM-DD-HHmmss.md` (PLAN §6.9), named by the capture time in
+  **UTC** (` 2`, ` 3`, … when taken); conflict copies `<stem> (conflict YYYY-MM-DD HHmmss).md`
+  are named in UTC too. File names are vault content shared by every device and Obsidian, so
+  they never depend on a device's time zone.
 - Unicode is allowed, including Arabic: `people/أحمد سمير.md`.
 
 ### Forbidden characters and names (`filename::validate_file_name`)
@@ -99,8 +108,8 @@ The canonical order is the table order. Unknown keys follow, in their original o
 | 3 | `title` | text | display title |
 | 4 | `aliases` | list | every spelling/script |
 | 5 | `tags` | list | without `#` (a leading `#` is tolerated on read) |
-| 6 | `created` | text | RFC 3339, e.g. `2026-09-27T14:32:00+03:00` |
-| 7 | `updated` | text | RFC 3339 |
+| 6 | `created` | text | RFC 3339; Strata writes UTC, e.g. `2026-09-27T11:32:00Z` (see below) |
+| 7 | `updated` | text | RFC 3339, UTC when Strata writes it |
 | 8 | `source` | link | `"[[attachments/2026/09/x.m4a]]"` |
 | 9 | `lang` | text | `ar` \| `en` \| `mixed` |
 | 10 | `role` | text | person, user-editable |
@@ -121,6 +130,15 @@ The canonical order is the table order. Unknown keys follow, in their original o
 | 37–41 | `client-of`, `supplier-of`, `partner-of`, `competitor-of`, `subsidiary-of` | link list | company relations |
 | 42 | `copy-of` | link list | document copies |
 
+**Times are UTC.** Strata writes every `created`/`updated` in UTC with `Z`, in whole seconds
+(`format_timestamp` writes `Z` for a zero offset; `item_render::note::stamp` takes UTC
+instants only). A new note's `created` is the creation time on the device that made it,
+carried by the create op, and `updated` starts equal to it — never the time the server
+received the op, so a note created offline on Monday keeps Monday. Values with another
+offset (written by the user or by Obsidian) are read as the same instant and kept as
+written; every surface shows times in the viewer's time zone. Date-only values (`expires`,
+custody and task dates) are calendar dates in the user's time zone.
+
 Keys are case-sensitive (`Title` is an unknown key). Link-list keys are `RelationKey`s; the
 same kebab-case names are the sidecar `type` values.
 
@@ -139,7 +157,7 @@ are also the `domain` enums.
 ```yaml
 id: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H
 aliases: [أحمد سمير, Ahmed S., A. Samir]
-created: 2026-09-27T14:32:00+03:00
+created: 2026-09-27T11:32:00Z
 phone: ""
 location: "[[Safe — Nasr City office]]"
 related: ["[[Churn notes]]", "[[Discount policy|policy]]"]
@@ -534,8 +552,12 @@ Tasks created without a home note (PLAN §6.11) go to `tasks/Tasks.md`
 - **Heading format:** `## <Month> <YYYY>` — the English month name (`January` … `December`),
   one space, the four-digit year (`tasks::month_heading`). Only level-2 headings with exactly
   this title are month headings (`### September 2026`, `## september 2026` or headings
-  inside code blocks are ordinary text). The month is the creation date in the user's time
-  zone, supplied by the caller.
+  inside code blocks are ordinary text). The month is the task's creation date in the user's
+  time zone (`item_render::task::heading_date` of the device's creation time carried by
+  `task.create`), supplied by the caller.
+- **A new `tasks/Tasks.md`** gets the ID the create op carries (`home_id`, the device's ID for
+  it) and `created`/`updated` = the op's creation time; an existing one keeps its `updated`
+  and only gains `created` when it has none (`item_render::task::stamp_home`).
 - **Order:** month headings are chronological, oldest first.
 - **Month heading exists** (the first one, if repeated): the line goes after the last
   non-blank line the heading directly owns (before any sub-heading under it), or directly
@@ -665,6 +687,11 @@ them (see `docs/DECISIONS.md`).
     order (oldest first), new tasks at the end of their month.
 12. **Nested frontmatter values** (§3.4 rule 6) are written as block YAML with two-space
     indentation; PLAN only requires unknown keys to be preserved.
+13. **Times are written in UTC** (owner decision 2026-09-28): PLAN §6.4's example shows a
+    local offset (`+03:00`); Strata writes `created`/`updated`, capture file names and
+    conflict-copy names in UTC, and a new item's `created` is the device's creation time.
+14. **`title` for a taken name** (owner decision 2026-09-28): `title` is written whenever the
+    file stem differs from the item's name, including `Ahmed 2.md` for a second "Ahmed".
 
 ## Robustness notes
 
