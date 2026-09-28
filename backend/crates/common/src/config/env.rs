@@ -354,6 +354,8 @@ fn variables_table() -> Vec<Var> {
         var!(ai.claude_cli.timeout_secs),
         var!(ai.claude_cli.kill_grace_secs),
         var!(ai.claude_cli.usage_limit_pause_secs),
+        var!(ai.claude_cli.warm_pool),
+        var!(ai.claude_cli.warm_max_idle_secs),
         var!(ai.anthropic_api.api_key_file),
         var!(ai.anthropic_api.model),
         var!(ai.anthropic_api.base_url),

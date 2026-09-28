@@ -172,6 +172,11 @@ pub struct ClaudeCliSettings {
     pub kill_grace_secs: u32,
     /// Pause after a usage limit whose reset time is unknown, in seconds.
     pub usage_limit_pause_secs: u32,
+    /// `claude` processes started ahead of time, waiting for the next call of their prompt
+    /// (0: every call starts its own; owner decision 2026-09-28).
+    pub warm_pool: u32,
+    /// Seconds a waiting process may wait before it is replaced.
+    pub warm_max_idle_secs: u32,
 }
 
 /// The Anthropic Messages API provider (docs/RUNBOOK.md §11).
@@ -433,6 +438,8 @@ impl Default for AiConfig {
                 timeout_secs: 300,
                 kill_grace_secs: 5,
                 usage_limit_pause_secs: 1800,
+                warm_pool: 2,
+                warm_max_idle_secs: 600,
             },
             anthropic_api: AnthropicApiSettings {
                 api_key_file: None,
@@ -998,6 +1005,8 @@ mod tests {
                 timeout_secs: 300,
                 kill_grace_secs: 5,
                 usage_limit_pause_secs: 1800,
+                warm_pool: 2,
+                warm_max_idle_secs: 600,
             }
         );
         assert_eq!(

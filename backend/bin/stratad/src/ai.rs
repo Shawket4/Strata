@@ -87,6 +87,8 @@ pub fn claude_cli_config(config: &Config) -> ClaudeCliConfig {
     cfg.max_concurrency = usize::try_from(s.max_concurrency).unwrap_or(usize::MAX);
     cfg.kill_grace = secs(s.kill_grace_secs);
     cfg.default_pause = secs(s.usage_limit_pause_secs);
+    cfg.warm_pool = usize::try_from(s.warm_pool).unwrap_or(usize::MAX);
+    cfg.warm_max_idle = secs(s.warm_max_idle_secs);
     cfg
 }
 
@@ -293,6 +295,8 @@ mod tests {
                 cli.timeout,
                 cli.kill_grace,
                 cli.default_pause,
+                cli.warm_pool,
+                cli.warm_max_idle,
                 cli.env,
             ),
             (
@@ -304,6 +308,8 @@ mod tests {
                 Duration::from_secs(90),
                 Duration::from_secs(5),
                 Duration::from_secs(1800),
+                2,
+                Duration::from_secs(600),
                 ClaudeCliConfig::default_env(),
             )
         );

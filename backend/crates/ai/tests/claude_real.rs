@@ -39,6 +39,8 @@ async fn real_claude_cli_answers_a_structured_prompt_and_streams() {
         }
     }
     cfg.timeout = Duration::from_secs(180);
+    // The second structured call runs on a process started ahead of time (warm pool).
+    cfg.warm_pool = 1;
     let clock = Arc::new(SystemClock);
     let provider = ClaudeCliProvider::new(cfg, clock.clone(), CpuGate::new()).expect("provider");
     let router = ProviderRouter::new(AiProviderKind::ClaudeCli, BTreeMap::new())
@@ -71,6 +73,24 @@ async fn real_claude_cli_answers_a_structured_prompt_and_streams() {
     );
     assert!(!out.value.summary.is_empty());
     assert_eq!(store.rows().len(), 1);
+
+    // The same prompt again: served by the process started after the first call.
+    let started = std::time::Instant::now();
+    let again = service
+        .complete::<Summary>(
+            common::caller("owner", 1),
+            prompts::latest(ids::SUMMARY).expect("prompt"),
+            &input,
+            1024,
+        )
+        .await
+        .expect("structured reply from a pre-started process");
+    eprintln!(
+        "pre-started call: {:?} in {:?}",
+        again.value,
+        started.elapsed()
+    );
+    assert!(!again.value.summary.is_empty());
 
     let ask = prompts::latest(ids::ASK).expect("ask").chat_request(
         common::caller("owner", 1),

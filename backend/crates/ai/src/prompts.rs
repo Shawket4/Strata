@@ -47,6 +47,9 @@ pub mod ids {
     pub const CLUSTER_NAMING: &str = "cluster_naming";
     /// §9.2 weekly digest.
     pub const DIGEST: &str = "digest";
+    /// Follow-up questions about one note (streamed text with citations; owner decision
+    /// 2026-09-28).
+    pub const NOTE_THREAD: &str = "note_thread";
 }
 
 /// The highest version of prompt `id`.
@@ -125,7 +128,7 @@ mod tests {
 
     use super::*;
 
-    const ALL: [&str; 10] = [
+    const ALL: [&str; 11] = [
         ids::ASK,
         ids::CLUSTER_NAMING,
         ids::CORRECTION,
@@ -135,6 +138,7 @@ mod tests {
         ids::ENTITY_INSIGHTS,
         ids::INBOX_FILING,
         ids::LINKING,
+        ids::NOTE_THREAD,
         ids::SUMMARY,
     ];
 
@@ -219,6 +223,11 @@ mod tests {
             "44a0ac9b183c7f37095f964dbb10674a97f8b14415e9e73c90cb7f08146e01e1",
         ),
         (
+            "note_thread",
+            1,
+            "d4104fdc4a6efd701e77d53e5c37036a04366475eb66a68c3fa354631135c043",
+        ),
+        (
             "summary",
             1,
             "2bb737594d4a58e51b21daab25de1c1aaf76e5b27e88a7cb2a1b8b9616713b64",
@@ -261,7 +270,7 @@ mod tests {
     #[test]
     fn every_json_prompt_has_a_valid_api_compatible_schema_and_ask_streams_text() {
         for p in PROMPTS {
-            if p.id == ids::ASK {
+            if p.id == ids::ASK || p.id == ids::NOTE_THREAD {
                 assert_eq!(p.schema, None);
                 assert!(p.text.contains("[[ref]]"));
                 continue;

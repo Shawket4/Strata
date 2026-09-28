@@ -2,7 +2,9 @@
 # Fake `claude` executable for strata-ai tests. It records how it was started (argv, initial
 # environment, working directory, stdin, pid, call count) under $FAKE_CLAUDE_LOG and replays the
 # recorded output of scenario $FAKE_CLAUDE_SCENARIO: <scenario>.jsonl on stdout,
-# <scenario>.stderr on stderr, exit status from <scenario>.exit (default 0).
+# <scenario>.stderr on stderr, exit status from <scenario>.exit (default 0). It also appends its
+# pid to $FAKE_CLAUDE_LOG/started when it starts and to .../served once its stdin closed, so
+# tests can tell which process served a call.
 set -u
 log="${FAKE_CLAUDE_LOG:?}"
 dir="$(dirname "$0")"
@@ -12,7 +14,9 @@ printf '%s\0' "$@" > "$log/argv"
 cat "/proc/$$/environ" > "$log/env"
 pwd -P > "$log/cwd"
 echo "$$" > "$log/pid"
+echo "$$" >> "$log/started"
 cat > "$log/stdin"
+echo "$$" >> "$log/served"
 scenario="${FAKE_CLAUDE_SCENARIO:?}"
 case "$scenario" in
   hang) exec sleep 30 ;;

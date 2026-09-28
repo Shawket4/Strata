@@ -85,6 +85,14 @@ impl Harness {
     }
 }
 
+/// The stdin line of a call whose user message is `user`.
+fn message(user: &str) -> String {
+    format!(
+        "{}\n",
+        json!({"type": "user", "message": {"role": "user", "content": user}})
+    )
+}
+
 fn split_nul(bytes: &[u8]) -> Vec<String> {
     bytes
         .split(|b| *b == 0)
@@ -177,6 +185,8 @@ async fn json_call_runs_isolated_without_tools_or_api_key_and_parses_structured_
             "",
             "--disable-slash-commands",
             "--no-session-persistence",
+            "--input-format",
+            "stream-json",
             "--system-prompt",
             SYSTEM,
             "--model",
@@ -200,8 +210,9 @@ async fn json_call_runs_isolated_without_tools_or_api_key_and_parses_structured_
         ]
     );
     assert!(h.env().iter().all(|v| !v.starts_with("ANTHROPIC_")));
-    // Content goes over stdin, never argv; the process runs in the scratch directory.
-    assert_eq!(h.read("stdin"), user);
+    // Content goes over stdin as one stream-json user message, never argv; the process runs
+    // in the scratch directory.
+    assert_eq!(h.read("stdin"), message(user));
     assert!(!h.argv().iter().any(|a| a.contains("وطنية")));
     assert_eq!(
         h.read("cwd").trim(),
@@ -273,7 +284,7 @@ async fn stream_yields_main_conversation_text_then_done_with_usage() {
         Some("--include-partial-messages")
     );
     assert!(!argv.iter().any(|a| a == "--json-schema"));
-    assert_eq!(h.read("stdin"), "where is the contract?");
+    assert_eq!(h.read("stdin"), message("where is the contract?"));
 }
 
 #[tokio::test]
@@ -484,4 +495,135 @@ async fn a_launcher_starts_in_the_launch_dir_even_when_the_scratch_dir_is_closed
             .display()
             .to_string()
     );
+}
+
+impl Harness {
+    fn pids(&self, name: &str) -> Vec<String> {
+        std::fs::read_to_string(self.log.path().join(name))
+            .unwrap_or_default()
+            .lines()
+            .map(str::to_owned)
+            .collect()
+    }
+}
+
+/// Running (not exited: a killed child stays a zombie until it is reaped).
+fn alive(pid: &str) -> bool {
+    std::fs::read_to_string(format!("/proc/{pid}/stat"))
+        .ok()
+        .and_then(|s| {
+            s.rsplit_once(')')
+                .and_then(|(_, rest)| rest.split_whitespace().next().map(str::to_owned))
+        })
+        .is_some_and(|state| state != "Z" && state != "X")
+}
+
+/// Waits (at most 10 s) until `done`.
+async fn eventually(what: &str, mut done: impl FnMut() -> bool) {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while !done() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("timed out waiting: {what}"));
+}
+
+/// The started processes that have not served a call (waiting ones).
+fn waiting(h: &Harness) -> Vec<String> {
+    let served = h.pids("served");
+    h.pids("started")
+        .into_iter()
+        .filter(|p| !served.contains(p))
+        .collect()
+}
+
+#[tokio::test]
+async fn a_pre_started_process_serves_the_next_call_of_the_same_prompt() {
+    let h = Harness::new();
+    let mut cfg = h.config("json_success");
+    cfg.warm_pool = 1;
+    let p = h.provider(cfg);
+
+    p.complete_json(json_request("first")).await.expect("first");
+    // The first call started its own process and one more that now waits for the next call.
+    eventually("two started", || h.pids("started").len() == 2).await;
+    assert_eq!(h.pids("served").len(), 1);
+    let first_waiting = waiting(&h);
+    assert_eq!(first_waiting.len(), 1);
+    assert_eq!(p.warm_count(), 1);
+    assert!(alive(&first_waiting[0]), "the waiting process is running");
+
+    p.complete_json(json_request("second"))
+        .await
+        .expect("second");
+    eventually("three started", || h.pids("started").len() == 3).await;
+    assert_eq!(
+        h.pids("served").last(),
+        Some(&first_waiting[0]),
+        "the pre-started process served the second call"
+    );
+    let second_waiting = waiting(&h);
+
+    // Another prompt does not take a process started for this one.
+    p.stream(chat_request("other"))
+        .await
+        .expect("stream")
+        .collect::<Vec<_>>()
+        .await;
+    eventually("five started", || h.pids("started").len() == 5).await;
+    assert!(!h.pids("served").contains(&second_waiting[0]));
+    assert_eq!(p.warm_count(), 1, "the pool keeps the most recent one");
+    eventually("the replaced waiting process is killed", || {
+        !alive(&second_waiting[0])
+    })
+    .await;
+
+    // Dropping the provider kills the one still waiting.
+    let last = waiting(&h)
+        .into_iter()
+        .find(|p| alive(p))
+        .expect("one waiting");
+    drop(p);
+    eventually("the waiting process is killed", || !alive(&last)).await;
+}
+
+#[tokio::test]
+async fn a_dead_or_stale_waiting_process_is_not_used() {
+    let h = Harness::new();
+    let mut cfg = h.config("json_success");
+    cfg.warm_pool = 1;
+    let p = h.provider(cfg);
+    p.complete_json(json_request("first")).await.expect("first");
+    eventually("two started", || h.pids("started").len() == 2).await;
+    let dead = waiting(&h).remove(0);
+    rustix::process::kill_process(
+        rustix::process::Pid::from_raw(dead.parse().expect("pid")).expect("pid"),
+        rustix::process::Signal::KILL,
+    )
+    .expect("kill");
+    eventually("the waiting process died", || !alive(&dead)).await;
+    p.complete_json(json_request("second"))
+        .await
+        .expect("second");
+    assert_eq!(h.pids("served").len(), 2);
+    assert!(
+        !h.pids("served").contains(&dead),
+        "a fresh process served it"
+    );
+
+    // Waiting longer than warm_max_idle: replaced too.
+    let h = Harness::new();
+    let mut cfg = h.config("json_success");
+    cfg.warm_pool = 1;
+    cfg.warm_max_idle = Duration::ZERO;
+    let p = h.provider(cfg);
+    p.complete_json(json_request("first")).await.expect("first");
+    eventually("two started", || h.pids("started").len() == 2).await;
+    let stale = waiting(&h).remove(0);
+    p.complete_json(json_request("second"))
+        .await
+        .expect("second");
+    assert_eq!(h.pids("served").len(), 2);
+    assert!(!h.pids("served").contains(&stale));
 }

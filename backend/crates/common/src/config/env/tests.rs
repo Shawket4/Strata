@@ -56,6 +56,8 @@ fn every_value_changed() -> Config {
     cli.timeout_secs = 120;
     cli.kill_grace_secs = 9;
     cli.usage_limit_pause_secs = 600;
+    cli.warm_pool = 3;
+    cli.warm_max_idle_secs = 120;
     let api = &mut c.ai.anthropic_api;
     api.api_key_file = Some("/etc/strata/anthropic.key".into());
     api.model = "claude-opus-5".into();
@@ -165,7 +167,7 @@ fn every_setting_has_exactly_one_variable_named_after_its_path() {
     let unique: BTreeSet<String> = names.iter().cloned().collect();
     assert_eq!(unique.len(), names.len(), "duplicate variable");
     assert_eq!(unique, from_struct);
-    assert_eq!(names.len(), 104);
+    assert_eq!(names.len(), 106);
     assert_eq!(
         names[..5],
         [

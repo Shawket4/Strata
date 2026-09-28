@@ -11,7 +11,14 @@
 //! - with every tool disabled (`--tools ""`), no MCP servers (`--strict-mcp-config` without a
 //!   config), no settings files (`--setting-sources ""`), no skills/slash commands, no session
 //!   persistence, and Strata's prompt replacing Claude Code's system prompt;
-//! - with the user content on stdin (never in argv, which other local users can read);
+//! - with the user content on stdin as one `--input-format stream-json` user message (never
+//!   in argv, which other local users can read);
+//! - started ahead of time when a warm pool is configured ([`ClaudeCliConfig::warm_pool`],
+//!   owner decision 2026-09-28): after each call a process with the same arguments (the same
+//!   prompt) is started and waits for its message, so the next call of that prompt does not
+//!   pay the CLI's start-up. Each process still serves exactly one call; nothing is shared
+//!   between calls. Plain stdin cannot be used for this: the CLI gives up on stdin after 3 s
+//!   ("no stdin data received in 3s"), while a stream-json process waits for its message;
 //! - under a concurrency limit (default 1) and the shared [`CpuGate`] (§9.1b);
 //! - with a timeout that terminates the whole process group.
 //!
@@ -21,10 +28,10 @@
 
 mod parse;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use futures::stream;
@@ -81,6 +88,12 @@ pub struct ClaudeCliConfig {
     pub kill_grace: Duration,
     /// Bytes of stderr kept for failure classification.
     pub stderr_limit: usize,
+    /// Processes started ahead of time and kept waiting for their call (0: none, each call
+    /// starts its own).
+    pub warm_pool: usize,
+    /// A waiting process older than this is replaced (it would otherwise hold a stale login
+    /// or configuration).
+    pub warm_max_idle: Duration,
 }
 
 impl ClaudeCliConfig {
@@ -97,6 +110,8 @@ impl ClaudeCliConfig {
             default_pause: Duration::from_secs(30 * 60),
             kill_grace: Duration::from_secs(5),
             stderr_limit: 16 * 1024,
+            warm_pool: 0,
+            warm_max_idle: Duration::from_secs(10 * 60),
         }
     }
 
@@ -173,6 +188,17 @@ impl ClaudeCliConfig {
     }
 }
 
+/// The one `--input-format stream-json` line carrying `user` as the user's message.
+fn user_message(user: &str) -> String {
+    let mut line = serde_json::json!({
+        "type": "user",
+        "message": { "role": "user", "content": user },
+    })
+    .to_string();
+    line.push('\n');
+    line
+}
+
 /// The `claude -p` provider.
 #[derive(Debug)]
 pub struct ClaudeCliProvider {
@@ -182,6 +208,32 @@ pub struct ClaudeCliProvider {
     gate: CpuGate,
     permits: Arc<Semaphore>,
     health: Arc<HealthTracker>,
+    warm: Mutex<VecDeque<Warm>>,
+}
+
+/// A process started ahead of time for `args`, waiting for its message on stdin.
+#[derive(Debug)]
+struct Warm {
+    args: Vec<String>,
+    /// `None` once handed to a call.
+    child: Option<Child>,
+    started: std::time::Instant,
+}
+
+impl Drop for Warm {
+    /// A waiting process that is never used is killed with its whole process group (the
+    /// launcher and the CLI under it).
+    fn drop(&mut self) {
+        if let Some(pgid) = self
+            .child
+            .as_ref()
+            .and_then(Child::id)
+            .and_then(|id| i32::try_from(id).ok())
+            .and_then(rustix::process::Pid::from_raw)
+        {
+            let _ = rustix::process::kill_process_group(pgid, rustix::process::Signal::KILL);
+        }
+    }
 }
 
 impl ClaudeCliProvider {
@@ -199,7 +251,81 @@ impl ClaudeCliProvider {
             clock,
             gate,
             health: Arc::new(HealthTracker::default()),
+            warm: Mutex::new(VecDeque::new()),
         })
+    }
+
+    /// Processes waiting for a call now.
+    pub fn warm_count(&self) -> usize {
+        self.warm
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .len()
+    }
+
+    /// Starts `claude` with `args`; it waits for its message on stdin.
+    fn spawn(&self, args: &[String]) -> Result<Child, ProviderError> {
+        let (program, launcher_args) = self
+            .cfg
+            .command
+            .split_first()
+            .ok_or_else(|| ProviderError::Unavailable("claude command is empty".into()))?;
+        let child = Command::new(program)
+            .args(launcher_args)
+            .args(args)
+            .env_clear()
+            .envs(&self.cfg.env)
+            .current_dir(self.cfg.start_dir())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .process_group(0)
+            .kill_on_drop(true)
+            .spawn()
+            .map_err(|e| {
+                ProviderError::Unavailable(format!("failed to start claude: {:?}", e.kind()))
+            })?;
+        tracing::debug!(provider = "claude_cli", pid = child.id(), "claude started");
+        Ok(child)
+    }
+
+    /// A live waiting process started for `args`, if the pool has one; dead or stale ones
+    /// found on the way are dropped.
+    fn take_warm(&self, args: &[String]) -> Option<Child> {
+        let mut pool = self.warm.lock().unwrap_or_else(PoisonError::into_inner);
+        while let Some(i) = pool.iter().position(|w| w.args == args) {
+            let mut w = pool.remove(i)?;
+            let alive = w
+                .child
+                .as_mut()
+                .is_some_and(|c| matches!(c.try_wait(), Ok(None)));
+            if alive && w.started.elapsed() < self.cfg.warm_max_idle {
+                return w.child.take();
+            }
+        }
+        None
+    }
+
+    /// Starts a process for `args` to wait for the next call of that prompt, replacing the
+    /// oldest waiting one when the pool is full.
+    fn replenish(&self, args: Vec<String>) {
+        if self.cfg.warm_pool == 0 {
+            return;
+        }
+        match self.spawn(&args) {
+            Ok(child) => {
+                let mut pool = self.warm.lock().unwrap_or_else(PoisonError::into_inner);
+                pool.push_back(Warm {
+                    args,
+                    child: Some(child),
+                    started: std::time::Instant::now(),
+                });
+                while pool.len() > self.cfg.warm_pool {
+                    pool.pop_front();
+                }
+            }
+            Err(e) => tracing::debug!(error = %e, "starting a waiting claude process failed"),
+        }
     }
 
     /// The CLI arguments for one call (after `command`).
@@ -216,6 +342,8 @@ impl ClaudeCliProvider {
             "",
             "--disable-slash-commands",
             "--no-session-persistence",
+            "--input-format",
+            "stream-json",
             "--system-prompt",
         ]
         .into_iter()
@@ -258,35 +386,22 @@ impl ClaudeCliProvider {
         // A pause may have started while this call waited for a permit.
         self.check_pause()?;
         let deadline = Instant::now() + self.cfg.timeout;
-        let (program, launcher_args) = self
-            .cfg
-            .command
-            .split_first()
-            .ok_or_else(|| ProviderError::Unavailable("claude command is empty".into()))?;
-        let mut child = Command::new(program)
-            .args(launcher_args)
-            .args(self.args(system, schema))
-            .env_clear()
-            .envs(&self.cfg.env)
-            .current_dir(self.cfg.start_dir())
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .process_group(0)
-            .kill_on_drop(true)
-            .spawn()
-            .map_err(|e| {
-                ProviderError::Unavailable(format!("failed to start claude: {:?}", e.kind()))
-            })?;
-        tracing::debug!(provider = "claude_cli", pid = child.id(), "claude started");
+        let args = self.args(system, schema);
+        let mut child = match self.take_warm(&args) {
+            Some(child) => child,
+            None => self.spawn(&args)?,
+        };
+        // The next call of this prompt finds a process already started.
+        self.replenish(args);
 
         let mut stdin = child
             .stdin
             .take()
             .ok_or_else(|| ProviderError::Protocol("claude stdin missing".into()))?;
         // Written from a task so a child that answers before reading all input cannot deadlock.
+        let message = user_message(&user);
         tokio::spawn(async move {
-            let _ = stdin.write_all(user.as_bytes()).await;
+            let _ = stdin.write_all(message.as_bytes()).await;
             let _ = stdin.shutdown().await;
         });
         let stdout = child

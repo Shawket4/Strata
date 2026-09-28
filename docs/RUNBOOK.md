@@ -324,6 +324,15 @@ echo 'Say OK' | sudo -u strata sudo -n -u strata-ai /usr/local/lib/strata/claude
   -p --output-format json --tools "" --setting-sources "" --no-session-persistence
 ```
 
+**Warm pool.** Starting `claude` takes a second or two before any work. After each call
+`stratad` starts one more process with the same prompt and leaves it waiting for its message
+(`STRATA_AI__CLAUDE_CLI__WARM_POOL`, default 2 kept across prompts, most recent first), so the
+next call of that prompt skips the start-up. A waiting process uses about 190 MB (measured on
+Claude Code 2.1.284), serves exactly one call, and is replaced after
+`STRATA_AI__CLAUDE_CLI__WARM_MAX_IDLE_SECS` (default 600) or killed with the service. Calls
+send their prompt as one `--input-format stream-json` message: with plain stdin the CLI gives
+up after 3 s without input. Set the pool to 0 on a machine short of memory.
+
 **Usage limits.** The subscription is shared with the owner's interactive Claude Code use. When
 the CLI reports a usage limit (`rate_limit_event` with `status: "rejected"`, an API 429, or a
 "usage limit / hit your limit" message), the provider pauses until the reported reset time (or
