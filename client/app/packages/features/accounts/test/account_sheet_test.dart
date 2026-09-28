@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_accounts/strata_accounts.dart';
 import 'package:strata_state/strata_state.dart';
@@ -35,6 +36,33 @@ Future<void> _signOut(WidgetTester tester, [String label = 'Sign out']) async {
   await tapVisible(tester, find.text(label));
 }
 
+/// Fails when [value]'s paragraph breaks a line anywhere but at a space.
+void _expectWordWrapped(WidgetTester tester, String value) {
+  final paragraph = tester.renderObject<RenderParagraph>(find.text(value));
+  final painter = TextPainter(
+    text: paragraph.text,
+    textAlign: paragraph.textAlign,
+    textDirection: paragraph.textDirection,
+    textScaler: paragraph.textScaler,
+  )..layout(maxWidth: paragraph.size.width);
+  addTearDown(painter.dispose);
+  var offset = 0;
+  while (offset < value.length) {
+    final line = painter.getLineBoundary(TextPosition(offset: offset));
+    final end = line.end;
+    if (end >= value.length) return;
+    expect(
+      value[end - 1] == ' ' || value[end] == ' ',
+      isTrue,
+      reason: '"$value" breaks mid-word after "${value.substring(0, end)}"',
+    );
+    offset = end;
+    while (offset < value.length && value[offset] == ' ') {
+      offset++;
+    }
+  }
+}
+
 void main() {
   group('account sheet matrix', () {
     for (final v in variants()) {
@@ -67,6 +95,22 @@ void main() {
         expect(find.text(l10n.adminUsers), findsOneWidget);
         expect(find.text(l10n.pendingCount(count: 2)), findsOneWidget);
         expect(find.text(l10n.signOut), findsOneWidget);
+        for (final value in [
+          l10n.devices,
+          '3',
+          l10n.adminUsers,
+          l10n.pendingCount(count: 2),
+          l10n.signOut,
+        ]) {
+          _expectWordWrapped(tester, value);
+        }
+        // At 2.0 on a phone the pending count no longer fits beside
+        // "Manage users" and moves below it; otherwise they share a line.
+        final label = tester.getRect(find.text(l10n.adminUsers));
+        final count = tester.getRect(find.text(l10n.pendingCount(count: 2)));
+        final stacked = v.sizeClass == SizeClass.compact && v.textScale == 2;
+        expect(count.top >= label.bottom, stacked);
+        expect(count.center.dy < label.bottom, !stacked);
         expectNoErrors(tester);
         await expectAccessible(tester, contrast: v.textScale == 1);
       });

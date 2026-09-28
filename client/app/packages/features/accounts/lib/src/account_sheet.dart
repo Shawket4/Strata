@@ -198,6 +198,8 @@ class _NavRow extends StatelessWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final color = danger ? colors.dangerText : colors.text;
+    final labelStyle = text.body.copyWith(color: color);
+    final detailStyle = text.bodySmall.copyWith(color: colors.text2);
     final extra = detail;
     return Semantics(
       button: true,
@@ -210,21 +212,20 @@ class _NavRow extends StatelessWidget {
               Icon(icon, color: color),
               const SizedBox(width: StrataSpacing.s4),
               Expanded(
-                child: Text(label, style: text.body.copyWith(color: color)),
+                child: extra == null
+                    ? Text(label, style: labelStyle)
+                    : LayoutBuilder(
+                        builder: (context, constraints) => _LabelAndDetail(
+                          label: Text(label, style: labelStyle),
+                          detail: Text(extra, style: detailStyle),
+                          stacked: !_fitsOnOneLine(
+                            context,
+                            [(label, labelStyle), (extra, detailStyle)],
+                            constraints.maxWidth - StrataSpacing.s2,
+                          ),
+                        ),
+                      ),
               ),
-              if (extra != null) ...[
-                const SizedBox(width: StrataSpacing.s2),
-                Flexible(
-                  child: Align(
-                    alignment: AlignmentDirectional.centerEnd,
-                    child: Text(
-                      extra,
-                      textAlign: TextAlign.end,
-                      style: text.bodySmall.copyWith(color: colors.text2),
-                    ),
-                  ),
-                ),
-              ],
               if (!danger) ...[
                 const SizedBox(width: StrataSpacing.s1),
                 Icon(Icons.chevron_right, color: colors.text2),
@@ -233,6 +234,62 @@ class _NavRow extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// Whether [runs] fit side by side, unwrapped, in [maxWidth] at the
+  /// ambient text scale and direction.
+  static bool _fitsOnOneLine(
+    BuildContext context,
+    List<(String, TextStyle)> runs,
+    double maxWidth,
+  ) {
+    var total = 0.0;
+    for (final (value, style) in runs) {
+      final painter = TextPainter(
+        text: TextSpan(text: value, style: style),
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        maxLines: 1,
+      )..layout();
+      total += painter.width;
+      painter.dispose();
+    }
+    return total <= maxWidth;
+  }
+}
+
+/// A row label with its trailing detail: side by side when both fit on one
+/// line, otherwise the detail goes below the label so neither is squeezed
+/// into breaking mid-word (large text scale, long translations).
+class _LabelAndDetail extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.detail,
+    required this.stacked,
+  });
+
+  final Widget label;
+  final Widget detail;
+  final bool stacked;
+
+  @override
+  Widget build(BuildContext context) {
+    if (stacked) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [label, detail],
+        ),
+      );
+    }
+    return Row(
+      children: [
+        Expanded(child: label),
+        const SizedBox(width: StrataSpacing.s2),
+        detail,
+      ],
     );
   }
 }
