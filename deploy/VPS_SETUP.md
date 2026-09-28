@@ -1,8 +1,9 @@
 # VPS setup (first install, manual deploy)
 
-Everything to do on the VPS to run `stratad` v0.1. Assumes Debian/Ubuntu, root access, and an
-existing PostgreSQL cluster (the one with your WAL/full backups). Paths match
-`docs/RUNBOOK.md`; every setting is in `deploy/stratad.env.example`.
+Everything to do on the VPS to run `stratad` v0.1 at `https://strata-ai.duckdns.org`. Assumes
+Debian/Ubuntu, root access, and an existing PostgreSQL cluster (the one with your WAL/full
+backups); the box may be shared with other services, so inspect before changing anything.
+Paths match `docs/RUNBOOK.md`; every setting is in `deploy/stratad.env.example`.
 
 Layout when done:
 
@@ -16,13 +17,26 @@ Layout when done:
 | ONNX Runtime | `/opt/onnxruntime/lib/libonnxruntime.so.1.30.0` | root, read-only |
 | claude -p user | `strata-ai`, home `/var/lib/strata-ai` | strata-ai, 0700 |
 
-## 0. Base packages and time
+## 0. Base packages, time, firewall, port
 
 ```sh
-apt update && apt install -y nginx sudo curl ca-certificates chrony ufw
-timedatectl set-ntp true        # device creation times are checked against this clock
-ufw allow OpenSSH && ufw allow 80,443/tcp && ufw enable   # 8080 stays private
+apt update && apt install -y nginx sudo curl ca-certificates ufw
+timedatectl                     # "System clock synchronized: yes", "NTP service: active"
 ```
+
+Device creation times are checked against this clock. Install `chrony` only if no NTP client
+is active (on Debian, `apt install chrony` removes `systemd-timesyncd`); with timesyncd
+installed, `timedatectl set-ntp true` is enough.
+
+Firewall: inspect the existing rules first (`ufw status verbose`, `iptables -S`). If ufw is
+active, only add what is missing (`ufw allow 80,443/tcp`); if no firewall is active, enable ufw
+only after allowing SSH: `ufw allow OpenSSH && ufw allow 80,443/tcp && ufw enable`.
+
+Port: `stratad` must bind a loopback port that is not open publicly. The default is
+`127.0.0.1:8080`; check `ss -ltnp` and the ufw rules, and if 8080 is taken or open to the
+public on this box, pick another free port (the production install uses `127.0.0.1:8096`,
+because ufw opens 8080 there). Use the same port in `STRATA_BIND` (step 4), the nginx
+`proxy_pass` (step 9) and the local health check (step 8).
 
 No system `git` is needed (libgit2 is built into the binary).
 
@@ -36,10 +50,12 @@ install -d -o root -g strata -m 0750 /etc/strata
 
 ## 2. PostgreSQL: extensions, database, roles
 
-Needs PostgreSQL 16 (tested) with **pgvector ≥ 0.6** and **pg_trgm** available:
+Needs PostgreSQL 16 or 17 with **pgvector ≥ 0.6** and **pg_trgm** available (production runs
+17 with pgvector 0.8.2). Install pgvector only if it is missing:
 
 ```sh
-apt install -y postgresql-16-pgvector        # match your major version; pg_trgm ships with postgresql-contrib
+sudo -u postgres psql -c "SELECT name, default_version FROM pg_available_extensions WHERE name IN ('vector','pg_trgm');"
+apt install -y postgresql-17-pgvector        # only if 'vector' is missing; <major> of your cluster
 ```
 
 Create the database with a UTF-8, non-`C` character locale (required; `serve` refuses otherwise):
@@ -49,11 +65,15 @@ sudo -u postgres psql -c "CREATE DATABASE strata ENCODING 'UTF8' LC_COLLATE 'C.U
 ```
 
 Pick three strong passwords (letters and digits only avoids URL-encoding) and put them in the
-env file first (step 4). Then create the roles, extensions and grants. Either review the SQL:
+env file first (step 4). Then create the roles, extensions and grants. Either review the SQL,
+which holds the passwords in plain text: keep the file at mode 0600, and the first line turns
+statement logging off so a slow statement never writes a password to the PostgreSQL log:
 
 ```sh
-stratad --env-file /etc/strata/stratad.env bootstrap-roles --print > /tmp/bootstrap.sql
-sudo -u postgres psql -d strata -f /tmp/bootstrap.sql && rm /tmp/bootstrap.sql
+(umask 077 && { echo 'SET log_min_duration_statement = -1;'
+  stratad --env-file /etc/strata/stratad.env bootstrap-roles --print; } > /root/strata-bootstrap.sql)
+less /root/strata-bootstrap.sql
+sudo -u postgres psql -d strata < /root/strata-bootstrap.sql && rm /root/strata-bootstrap.sql
 ```
 
 or apply it directly with a superuser URL:
@@ -67,14 +87,17 @@ Roles created: `strata_owner` (migrations), `strata_app` (requests and jobs, `NO
 `strata_accounts` (accounts only). Your existing WAL/full backups cover this database like any
 other.
 
-If `pg_hba.conf` requires passwords for local TCP, the three roles need a `host strata ...
-127.0.0.1/32 scram-sha-256` line (reload PostgreSQL after editing).
+If `pg_hba.conf` already has `host all all 127.0.0.1/32 scram-sha-256`, nothing to do.
+Otherwise the three roles need a `host strata strata_owner,strata_app,strata_accounts
+127.0.0.1/32 scram-sha-256` line (then **reload** PostgreSQL, never restart).
 
 ## 3. The binary
 
 From CI: download the `stratad-linux-x86_64` artifact of a green `build` workflow run (a zip
-holding `stratad-<version>-linux-x86_64.tar.gz` and its `.sha256`), or the two files from the
-draft GitHub Release of a `v*` tag. Copy them to the VPS, check and install:
+holding the tarball and its `.sha256`), or the two files from the draft GitHub Release of a
+`v*` tag. A branch build is named `stratad-sha-<short sha>-linux-x86_64.tar.gz` (e.g.
+`stratad-sha-4ff0b09-linux-x86_64.tar.gz`), a tag build `stratad-<version>-linux-x86_64.tar.gz`
+(e.g. `stratad-v0.1.0-linux-x86_64.tar.gz`). Copy both files to the VPS, check and install:
 
 ```sh
 sha256sum -c stratad-*-linux-x86_64.tar.gz.sha256
@@ -102,7 +125,7 @@ Set at least:
 
 ```sh
 STRATA_DATA_ROOT=/srv/strata
-STRATA_BIND=127.0.0.1:8080
+STRATA_BIND=127.0.0.1:8080          # the loopback port chosen in step 0
 STRATA_DEFAULT_TIMEZONE=Africa/Cairo
 STRATA_DATABASE__OWNER_URL='postgres://strata_owner:PASSWORD1@127.0.0.1/strata'
 STRATA_DATABASE__APP_URL='postgres://strata_app:PASSWORD2@127.0.0.1/strata'
@@ -165,9 +188,21 @@ install -d -o strata-ai -g strata-ai -m 0700 /var/lib/strata-ai/scratch
 sudo -u strata-ai ls /srv/strata      # must fail: "Permission denied"
 ```
 
-Install Claude Code system-wide so it is `/usr/local/bin/claude` (for example
-`npm install -g @anthropic-ai/claude-code` with Node 18+, or the native installer followed by
-a copy/symlink into `/usr/local/bin`), then log in once as `strata-ai` with your subscription:
+Install Claude Code system-wide as `/usr/local/bin/claude`. Without Node: download the
+native binary of the current stable release and check it against that release's manifest
+(needs `jq`):
+
+```sh
+B=https://downloads.claude.ai/claude-code-releases
+V=$(curl -fsSL "$B/stable")
+curl -fL -o /tmp/claude "$B/$V/linux-x64/claude"
+SUM=$(curl -fsSL "$B/$V/manifest.json" | jq -r '.platforms["linux-x64"].checksum')
+echo "$SUM  /tmp/claude" | sha256sum -c - && install -m 0755 /tmp/claude /usr/local/bin/claude
+rm /tmp/claude && claude --version
+```
+
+(Alternative with Node 18+: `npm install -g @anthropic-ai/claude-code`.) Then log in once as
+`strata-ai` with your subscription:
 
 ```sh
 sudo -u strata-ai -H claude           # /login, then /exit
@@ -230,34 +265,61 @@ WantedBy=multi-user.target
 ```sh
 systemctl daemon-reload && systemctl enable --now stratad
 journalctl -u stratad -f          # JSON logs; startup checks are listed in RUNBOOK §6
-curl -s -o /dev/null -w '%{http_code}\n' -H 'Accept: application/vnd.msgpack' http://127.0.0.1:8080/api/v1/health   # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/api/v1/health   # 200 (your port from step 0)
 ```
 
 Run exactly one `stratad` (rate limits and revocations are in memory).
 
 ## 9. nginx and TLS
 
-Do this **before** building the apps people install: CI bakes the HTTPS address in as the
-default server.
+The apps talk only to `https://strata-ai.duckdns.org`: their server is fixed in the Build
+workflow (`STRATA_SERVER_URL` in `.github/workflows/build.yml`, RUNBOOK §13) and cannot be
+changed in the app. Set up HTTPS before installing the apps.
 
-1. At your DNS provider, add an `A` record for the domain (e.g. `strata.example.com`) → `187.124.33.153`
-   (and an `AAAA` record if the VPS has IPv6). Check: `dig +short strata.example.com` prints the IP.
-2. `apt install -y certbot python3-certbot-nginx`, then create `/etc/nginx/sites-available/strata`
-   with your domain in place of `strata.example.com`:
+1. DNS: `strata-ai.duckdns.org` is a DuckDNS name, so its record is set on
+   [duckdns.org](https://www.duckdns.org) (signed in: the `strata-ai` domain's IP →
+   `187.124.33.153`, plus the IPv6 address if the VPS has one). Check:
+   `dig +short strata-ai.duckdns.org` prints `187.124.33.153`.
+2. `apt install -y certbot python3-certbot-nginx`.
+3. First a port-80-only site, so certbot can answer the challenge. Create
+   `/etc/nginx/sites-available/strata`:
 
 ```nginx
-map $http_upgrade $connection_upgrade { default upgrade; '' close; }
+server {
+    listen 80;
+    listen [::]:80;
+    server_name strata-ai.duckdns.org;
+    location / { return 404; }
+}
+```
+
+```sh
+ln -s /etc/nginx/sites-available/strata /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+certbot certonly --nginx -d strata-ai.duckdns.org --deploy-hook "systemctl reload nginx"
+```
+
+4. Then replace the file with the full site (the `ssl_certificate` files exist now; a single
+   HTTPS block before the certificate exists fails `nginx -t`). `http2 on;` needs nginx ≥ 1.25;
+   drop the `[::]` lines if the VPS has no IPv6; use your port from step 0 in `proxy_pass`:
+
+```nginx
+map $http_upgrade $strata_connection_upgrade { default upgrade; '' close; }
 
 server {
     listen 80;
-    server_name strata.example.com;
+    listen [::]:80;
+    server_name strata-ai.duckdns.org;
     location / { return 301 https://$host$request_uri; }
 }
 
 server {
-    listen 443 ssl http2;
-    server_name strata.example.com;
-    # ssl_certificate lines are added by certbot
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name strata-ai.duckdns.org;
+    ssl_certificate /etc/letsencrypt/live/strata-ai.duckdns.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/strata-ai.duckdns.org/privkey.pem;
 
     add_header Strict-Transport-Security "max-age=31536000" always;
     client_max_body_size 512m;          # vault import zips
@@ -269,7 +331,7 @@ server {
         proxy_set_header X-Forwarded-For $remote_addr;   # overwrite, never append
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header Upgrade $http_upgrade;          # /events and Ask streams (WebSocket)
-        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header Connection $strata_connection_upgrade;
         proxy_buffering off;
         proxy_read_timeout 1h;
         proxy_send_timeout 1h;
@@ -278,25 +340,18 @@ server {
 ```
 
 ```sh
-ln -s /etc/nginx/sites-available/strata /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
-certbot --nginx -d strata.example.com     # issues the certificate and sets up renewal
+curl -s -o /dev/null -w '%{http_code}\n' https://strata-ai.duckdns.org/api/v1/health   # 200
+certbot renew --dry-run
 ```
 
-In the app, sign in with server `https://strata.example.com`.
+Then run the Build workflow (or re-run it) so the apps people install are built for this
+server.
 
-Then check from your machine: `curl -sI https://strata.example.com/api/v1/health` returns
-`200`, and set the GitHub repository variable `STRATA_DEFAULT_SERVER` to
-`https://strata.example.com` (Settings → Secrets and variables → Actions → **Variables**, a
-variable, not a secret), then re-run the Build workflow. CI passes it to the apps with
-`--dart-define=STRATA_DEFAULT_SERVER=…`: sign-in and sign-up start with it filled in (still
-editable). Unset, the server field starts empty; a value that is not `https://…` fails the
-build (RUNBOOK §13).
-
-**Before the domain exists:** the app refuses plain `http://` addresses except this device
-(`localhost`, `127.0.0.1`, `[::1]`), so `http://187.124.33.153` does not work. Test from the
-macOS app through an SSH tunnel (`ssh -N -L 8080:127.0.0.1:8080 you@vps`, server
-`http://127.0.0.1:8080`). Android blocks plain HTTP as well, so it needs the domain and HTTPS.
+**Testing without the domain:** release builds refuse any address but `https://`. A debug
+build may use this device over plain HTTP through an SSH tunnel:
+`ssh -N -L 8080:127.0.0.1:8080 you@vps` (your port on the VPS side), then
+`flutter run --dart-define=STRATA_SERVER_URL=http://127.0.0.1:8080`.
 
 ## 10. Upgrades
 
@@ -312,10 +367,12 @@ systemctl restart stratad
 - Sign in as `owner` in the app; create a note; the vault has a commit:
   `sudo -u strata git -C /srv/strata/users/<id>/vault log --oneline | head` (needs `apt install git`, optional).
 - AI status in Settings → AI shows the provider ready and embeddings loaded after the first note.
-- Vault files are not in your PostgreSQL backups: back up `/srv/strata` separately (your script).
+- Vault files are not in your PostgreSQL backups: backing up `/srv/strata` is still open
+  (deferred by the owner).
 
 ## Later
 
+- Backups of `/srv/strata` (open, deferred by the owner).
 - Automated deploys from CI.
 - A Docker image with only the backend: host PostgreSQL and the host model / ONNX Runtime
   directories mounted read-only; embeddings stay in-process.

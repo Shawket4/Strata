@@ -2,9 +2,9 @@
 #   stratad-linux-x86_64   the server binary tarball (+ draft GitHub Release on v* tags)
 #   app-android            release APKs (universal + one per ABI)
 #   app-macos              the universal (arm64 + x86_64) macOS app, ad-hoc signed, zip + dmg
-# The apps get the default server address from the STRATA_DEFAULT_SERVER repository variable
-# (Settings > Secrets and variables > Actions > Variables), baked in with --dart-define; unset,
-# the server field of sign-in starts empty. It must be an https:// address.
+# The apps' server is fixed at build time: STRATA_SERVER_URL below (the owner's server, or the
+# repository variable of the same name when set), baked in with --dart-define. The apps have no
+# server field; a value that is not an https:// address fails the build.
 # Actions are pinned to commit SHAs (the tag is in the comment).
 name: Build
 
@@ -25,6 +25,8 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   FLUTTER_VERSION: 3.47.5
+  # The server every account of the Android and macOS apps uses (never shown or editable).
+  STRATA_SERVER_URL: ${{ vars.STRATA_SERVER_URL || 'https://strata-ai.duckdns.org' }}
 
 jobs:
   stratad-linux-x86_64:
@@ -99,7 +101,6 @@ jobs:
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      STRATA_DEFAULT_SERVER: ${{ vars.STRATA_DEFAULT_SERVER }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -144,12 +145,13 @@ jobs:
             echo "::warning::Android signing secrets are not set: the APKs are signed with a debug key (sideload only; each CI run has a different debug key)."
             echo "kind=debug-signed" >> "$GITHUB_OUTPUT"
           fi
-      - name: Default server address
+      - name: Server address
+        # The app refuses to start without an https:// address; fail here instead.
         run: |
-          case "$STRATA_DEFAULT_SERVER" in
-            "") echo "::warning::STRATA_DEFAULT_SERVER is not set: the app's server field starts empty." ;;
-            https://*) echo "default server: $STRATA_DEFAULT_SERVER" ;;
-            *) echo "::error::STRATA_DEFAULT_SERVER must be an https:// address (the app refuses plain http)."; exit 1 ;;
+          case "$STRATA_SERVER_URL" in
+            *[[:space:]]*) echo "::error::STRATA_SERVER_URL contains spaces."; exit 1 ;;
+            https://?*) echo "server: $STRATA_SERVER_URL" ;;
+            *) echo "::error::STRATA_SERVER_URL must be an https:// address, got '$STRATA_SERVER_URL'."; exit 1 ;;
           esac
       - run: flutter pub get
       - name: Build APKs
@@ -160,7 +162,7 @@ jobs:
           kind="${{ steps.signing.outputs.kind }}"
           out=build/app/outputs/flutter-apk
           mkdir -p dist
-          define="--dart-define=STRATA_DEFAULT_SERVER=$STRATA_DEFAULT_SERVER"
+          define="--dart-define=STRATA_SERVER_URL=$STRATA_SERVER_URL"
           flutter build apk --release --build-number "$GITHUB_RUN_NUMBER" "$define"
           cp "$out/app-release.apk" "dist/strata-$v-android-universal-$kind.apk"
           flutter build apk --release --split-per-abi --build-number "$GITHUB_RUN_NUMBER" "$define"
@@ -189,8 +191,6 @@ jobs:
     defaults:
       run:
         working-directory: client/app/apps/strata
-    env:
-      STRATA_DEFAULT_SERVER: ${{ vars.STRATA_DEFAULT_SERVER }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
@@ -208,17 +208,18 @@ jobs:
         with:
           key: macos
           cache-targets: false
-      - name: Default server address
+      - name: Server address
+        # The app refuses to start without an https:// address; fail here instead.
         run: |
-          case "$STRATA_DEFAULT_SERVER" in
-            "") echo "::warning::STRATA_DEFAULT_SERVER is not set: the app's server field starts empty." ;;
-            https://*) echo "default server: $STRATA_DEFAULT_SERVER" ;;
-            *) echo "::error::STRATA_DEFAULT_SERVER must be an https:// address (the app refuses plain http)."; exit 1 ;;
+          case "$STRATA_SERVER_URL" in
+            *[[:space:]]*) echo "::error::STRATA_SERVER_URL contains spaces."; exit 1 ;;
+            https://?*) echo "server: $STRATA_SERVER_URL" ;;
+            *) echo "::error::STRATA_SERVER_URL must be an https:// address, got '$STRATA_SERVER_URL'."; exit 1 ;;
           esac
       - run: flutter pub get
       - run: |
           flutter build macos --release --build-number "$GITHUB_RUN_NUMBER" \
-            "--dart-define=STRATA_DEFAULT_SERVER=$STRATA_DEFAULT_SERVER"
+            "--dart-define=STRATA_SERVER_URL=$STRATA_SERVER_URL"
       - name: Ad-hoc sign and verify
         run: |
           mkdir -p dist

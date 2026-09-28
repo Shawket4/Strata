@@ -30,7 +30,7 @@ void main() {
         await pumpVariant(tester, v, const SignInScreen(), fake: fake);
         expect(find.text(l10n.signInTitle), findsWidgets);
         expect(find.text('S'), findsOneWidget);
-        expect(find.text(StrataFixtures.serverUrl), findsWidgets);
+        expect(find.textContaining('://'), findsNothing);
         expect(find.text('shawket-laptop'), findsWidgets);
         expect(find.text(l10n.continueAs(name: 'Shawket')), findsOneWidget);
         expect(find.text(l10n.createAccount), findsOneWidget);
@@ -134,24 +134,23 @@ void main() {
       await tapVisible(tester, find.text('Continue as Shawket'));
       expect(
         find.text(
-          "Can't reach the server. Check the address and your connection.",
+          "Can't reach the server. Check your connection.",
         ),
         findsOneWidget,
       );
     });
 
-    testWidgets('Create an account passes the typed server', (tester) async {
-      final servers = <String>[];
+    testWidgets('Create an account opens sign-up', (tester) async {
+      var opened = 0;
       final fake = FakeCoreApi()..session.add(StrataFixtures.sessionSignedOut);
       await pumpVariant(
         tester,
         v,
-        SignInScreen(onCreateAccount: servers.add),
+        SignInScreen(onCreateAccount: () => opened++),
         fake: fake,
       );
-      await tester.enterText(_field('Server'), 'https://strata.home.lan');
       await tapVisible(tester, find.text('Create an account'));
-      expect(servers, ['https://strata.home.lan']);
+      expect(opened, 1);
     });
 
     testWidgets('shows and hides the password', (tester) async {

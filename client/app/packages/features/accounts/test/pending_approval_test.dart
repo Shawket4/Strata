@@ -34,7 +34,7 @@ void main() {
           findsOneWidget,
         );
         expect(find.text('Last checked 14:32'), findsOneWidget);
-        expect(find.text(StrataFixtures.serverUrl), findsOneWidget);
+        expect(find.textContaining('://'), findsNothing);
         expect(
           tester
               .widget<FilledButton>(

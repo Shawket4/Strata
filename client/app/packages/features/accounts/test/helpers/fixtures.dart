@@ -38,7 +38,6 @@ abstract final class AccountFixtures {
       initials: 'S',
     ),
     knownAccounts: const [],
-    serverUrl: StrataFixtures.serverUrl,
     deviceName: "Shawket's Pixel 9",
     unsyncedOps: 0,
     thisDevice: DeviceItem(
@@ -64,18 +63,15 @@ abstract final class AccountFixtures {
         userId: 'u-shawket',
         username: 'shawket',
         displayName: 'Shawket',
-        serverUrl: StrataFixtures.serverUrl,
         initials: 'S',
       ),
     ],
-    serverUrl: StrataFixtures.serverUrl,
     deviceName: 'shawket-laptop',
     unsyncedOps: 0,
   );
 
   static final PendingApproval _request = PendingApproval(
     username: 'sara.n',
-    serverUrl: StrataFixtures.serverUrl,
     requestedAt: DateTime.utc(2026, 9, 27, 9, 30),
     requestedLabel: '2 hours ago',
     lastCheckedAt: DateTime.utc(2026, 9, 27, 11, 32),
@@ -87,7 +83,6 @@ abstract final class AccountFixtures {
   static final SessionState waiting = SessionState(
     kind: SessionKind.pendingApproval,
     knownAccounts: const [],
-    serverUrl: StrataFixtures.serverUrl,
     deviceName: "Sara's iPad",
     unsyncedOps: 0,
     pending: _request,
@@ -98,12 +93,10 @@ abstract final class AccountFixtures {
   static final SessionState waitingNoRetry = SessionState(
     kind: SessionKind.pendingApproval,
     knownAccounts: const [],
-    serverUrl: StrataFixtures.serverUrl,
     deviceName: "Sara's iPad",
     unsyncedOps: 0,
     pending: PendingApproval(
       username: 'sara.n',
-      serverUrl: StrataFixtures.serverUrl,
       requestedAt: DateTime.utc(2026, 9, 27, 9, 30),
       requestedLabel: '2 hours ago',
       canCheck: false,
@@ -114,7 +107,6 @@ abstract final class AccountFixtures {
   static final SessionState notApproved = SessionState(
     kind: SessionKind.rejected,
     knownAccounts: const [],
-    serverUrl: StrataFixtures.serverUrl,
     deviceName: "Sara's iPad",
     unsyncedOps: 0,
     pending: _request,
@@ -135,7 +127,6 @@ abstract final class AccountFixtures {
       initials: 'KA',
     ),
     knownAccounts: const [],
-    serverUrl: StrataFixtures.serverUrl,
     deviceName: 'karim-phone',
     unsyncedOps: 2,
     deletionAt: DateTime.utc(2026, 10, 11, 9),
@@ -151,7 +142,6 @@ abstract final class AccountFixtures {
     kind: SessionKind.deletionPending,
     account: deletionPending.account,
     knownAccounts: const [],
-    serverUrl: StrataFixtures.serverUrl,
     deviceName: 'karim-phone',
     unsyncedOps: 0,
     daysRemaining: 14,

@@ -35,14 +35,11 @@ void main() {
         await pumpVariant(
           tester,
           v,
-          SignUpScreen(serverUrl: StrataFixtures.serverUrl, onBack: () {}),
+          SignUpScreen(onBack: () {}),
           fake: FakeCoreApi()..session.add(StrataFixtures.sessionSignedOut),
         );
         expect(find.text(l10n.createAccount), findsOneWidget);
-        expect(
-          find.text(l10n.signUpOn(server: StrataFixtures.serverUrl)),
-          findsOneWidget,
-        );
+        expect(find.textContaining('://'), findsNothing);
         expect(find.text(l10n.approvalNotice), findsOneWidget);
         expect(find.byTooltip(l10n.backToSignIn), findsOneWidget);
         expect(
@@ -106,10 +103,7 @@ void main() {
       await pumpVariant(
         tester,
         v,
-        SignUpScreen(
-          serverUrl: StrataFixtures.serverUrl,
-          onRequested: () => requested++,
-        ),
+        SignUpScreen(onRequested: () => requested++),
         fake: fake,
       );
       await _fill(tester);
@@ -159,12 +153,7 @@ void main() {
             reason: 'taken',
           ),
         );
-      await pumpVariant(
-        tester,
-        v,
-        const SignUpScreen(serverUrl: StrataFixtures.serverUrl),
-        fake: fake,
-      );
+      await pumpVariant(tester, v, const SignUpScreen(), fake: fake);
       await _fill(tester);
       await _request(tester);
       expect(find.text('Check the username field.'), findsOneWidget);

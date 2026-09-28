@@ -166,7 +166,7 @@ fn core_on_duckdns(
         &Arc::new(SeqIds::new(common::ID_BASE_MS)),
         Platform::Android,
     );
-    env.server_url = DUCKDNS.to_owned();
+    DUCKDNS.clone_into(&mut env.server_url);
     let sync_urls = Arc::new(Mutex::new(Vec::new()));
     let seen = sync_urls.clone();
     env.sync_api = Arc::new(move |url: &str, _tokens: Tokens| -> Arc<dyn SyncApi> {

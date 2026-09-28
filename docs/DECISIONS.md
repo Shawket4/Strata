@@ -4,6 +4,13 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Implementation decisions (fixed server address)
+Gaps filled while implementing the owner decision "No server address in the UI"; the owner may revisit any of them.
+- **Name and value:** `STRATA_SERVER_URL` (`--dart-define`) → `CoreConfig.server_url`, plus `CoreConfig.release_build` (Flutter's `kReleaseMode`). The Build workflow sets `STRATA_SERVER_URL: ${{ vars.STRATA_SERVER_URL || 'https://strata-ai.duckdns.org' }}` at the workflow level and fails the Android and macOS jobs unless it is `https://<host>` without spaces.
+- **Rule (core, `net::server_url::fixed`):** trimmed, trailing `/` dropped; `https://<host>` is accepted in every build; plain `http://` only to this device (`localhost`, `127.0.0.1`, `::1`) and only in debug builds; blank, no scheme, another scheme or no host is refused. The check runs once, when the core opens (`init_core`); a refusal is the new error `misconfigured_build` (field `server_url`, reason `missing` / `not_https` / `insecure_http`) and the app shows a fatal "This build can't start" screen without Retry instead of the boot-failure screen.
+- **Nothing is stored per account:** the `server_url` columns of the account and registry databases, the registry's last-used and pending-request server values, `SessionState.server_url`, `KnownAccountItem.server_url`, `PendingApproval.server_url` and the `server_url` of `SignInRequest` / `SignUpRequest` are gone (the v1 migrations were edited: no installs exist yet). `AccountSummary.server_url` stays and is the build's address.
+- **Where the address still shows:** only as the existing read-only "Server" row of Settings → Account. It was removed from sign-in (and its known-account rows), sign-up (field and "on <server>" subtitle), the approval screen, the disabled / deletion / password-change screens' header caption and the sync panel's details. The sign-in `insecure_http` message is gone; "Can't reach the server" no longer says "check the address".
+
 ### Implementation decisions (UI follow-ups)
 Gaps filled while closing the "Still open" core items of the UI adoption pass; the owner may revisit any of them.
 - **Title rule for plain notes (changes the scope entry below):** a `note.create` whose path was taken lands at `<stem> 2.md` (3, …) with `title: <stem>` unless its content has a title of its own. Shared in `item_render::note::{titled_for_path, new_note_at}`; the server applies it on push, the device when it already knows the path is taken, so both write the same bytes.
@@ -25,7 +32,7 @@ Gaps filled while implementing the owner decision below; the owner may revisit a
 - **Title rule scope:** entity, document, place and concept notes (user and AI). ~~A `note.create` whose path was taken meanwhile is still written at `<stem> 2.md` without a `title`.~~ Extended to `note.create` the same day (see "UI follow-ups" above).
 
 ### Implementation decisions (app ID, default server)
-Gaps filled while implementing the owner decision below; the owner may revisit any of them.
+Gaps filled while implementing the owner decision below; the owner may revisit any of them. The server-address items are superseded by "fixed server address" above.
 - **Loopback means exactly** `localhost`, `127.0.0.1` and `::1` (any port, any case); other `127.x` addresses and hosts that merely start with them are refused. The check runs in the core before any request (sign-in and sign-up) as `invalid_input` / field `server_url` / reason `insecure_http`, with its own en/ar message. Addresses without a scheme are left to the network layer as before.
 - **The build default is plain plumbing:** Dart passes `String.fromEnvironment('STRATA_DEFAULT_SERVER')` as `CoreConfig.default_server_url`; the core treats blank as none and trims it. The session's `server_url` stays "last address used on this device, else the build default".
 - **CI fails** the Android and macOS builds when `STRATA_DEFAULT_SERVER` is set but not `https://…`, warns when it is unset, and checks the APK package name and the macOS bundle identifier.

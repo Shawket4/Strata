@@ -24,7 +24,6 @@ class RestrictedLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.strataColors;
-    final text = context.strataText;
     const header = Align(
       alignment: AlignmentDirectional.centerStart,
       child: StrataWordmark(fontSize: 18),
@@ -569,7 +568,6 @@ class PasswordChangeRequiredScreen extends HookConsumerWidget {
     final l10n = context.accountsL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final account = ref.watch(sessionProvider).value?.account;
     final current = useTextEditingController();
     final password = useTextEditingController();
     final confirm = useTextEditingController();

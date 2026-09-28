@@ -49,6 +49,47 @@ void main() {
       expect(find.byType(AdaptiveScaffold), findsOneWidget);
     });
 
+    group('a build without a usable server address', () {
+      for (final v in variants()) {
+        testWidgets('shows the misconfigured-build screen $v', (tester) async {
+          final l10n = appL10nFor(v.locale);
+          final fake = FakeCoreApi()
+            ..initCoreAnswer.throws(
+              const CoreFailure(
+                code: 'misconfigured_build',
+                messageKey: 'error.misconfigured_build',
+                field: 'server_url',
+                reason: 'insecure_http',
+              ),
+            );
+          final app = await boot(
+            tester,
+            fake: fake,
+            stubInit: false,
+            size: v.size,
+            brightness: v.brightness,
+            locale: v.locale,
+            textScale: v.textScale,
+          );
+          expect(find.byType(MisconfiguredBuildScreen), findsOneWidget);
+          expect(find.byType(BootFailedScreen), findsNothing);
+          expect(find.text(l10n.misconfiguredBuildTitle), findsOneWidget);
+          expect(
+            find.text(l10n.misconfiguredBuildBody(reason: 'insecure_http')),
+            findsOneWidget,
+          );
+          // Fatal: only another build helps, so there is nothing to retry.
+          expect(find.text(l10n.retry), findsNothing);
+          expect(find.byType(SignInScreen), findsNothing);
+          expect(app.fake.calls, [
+            const CoreCall('initCore', {'config': StrataFixtures.coreConfig}),
+          ]);
+          expectNoErrors(tester);
+          await expectAccessible(tester, contrast: v.textScale == 1);
+        });
+      }
+    });
+
     testWidgets('an initCore failure is shown too', (tester) async {
       final fake = FakeCoreApi()..initCoreAnswer.throws(StateError('boom'));
       await boot(tester, fake: fake, stubInit: false);
@@ -136,11 +177,7 @@ void main() {
       final app = await boot(tester, session: StrataFixtures.sessionSignedOut);
       await tapVisible(tester, find.text('Create an account'));
       expect(find.byType(SignUpScreen), findsOneWidget);
-      expect(app.router.state.uri.path, '/sign-up');
-      expect(
-        app.router.state.uri.queryParameters['server'],
-        StrataFixtures.serverUrl,
-      );
+      expect(app.router.state.uri.toString(), '/sign-up');
       await tester.tap(find.byTooltip('Back to sign in'));
       await settle(tester);
       expect(find.byType(SignInScreen), findsOneWidget);

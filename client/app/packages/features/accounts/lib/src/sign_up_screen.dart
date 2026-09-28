@@ -8,8 +8,9 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// Sign up (SCREEN_SPEC SignupCompact): display name, username, password
 /// with the core's strength meter and confirmation, and the approval notice
-/// (D22), on the build's server (no server field). A registered account waits for approval: the session becomes
-/// `pendingApproval` (the app routes on it) and [onRequested] is called.
+/// (D22), on the build's server (no server field). A registered account
+/// waits for approval: the session becomes `pendingApproval` (the app routes
+/// on it) and [onRequested] is called.
 class SignUpScreen extends HookConsumerWidget {
   /// Creates the sign-up screen.
   const new({super.key, this.onBack, this.onRequested});

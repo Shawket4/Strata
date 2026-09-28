@@ -23,4 +23,8 @@ void main() {
       ),
     ),
   );
+  screenGoldens(
+    'misconfigured_build',
+    (v) => goldenFrame(v, const MisconfiguredBuildScreen(reason: 'missing')),
+  );
 }

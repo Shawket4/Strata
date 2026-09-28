@@ -22,7 +22,7 @@ void main() {
     'sign_up',
     (v) => goldenFrame(
       v,
-      SignUpScreen(serverUrl: StrataFixtures.serverUrl, onBack: () {}),
+      SignUpScreen(onBack: () {}),
       fake: FakeCoreApi()..session.add(StrataFixtures.sessionSignedOut),
     ),
   );

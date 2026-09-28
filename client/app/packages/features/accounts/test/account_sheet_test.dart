@@ -186,7 +186,7 @@ void main() {
       await _signOut(tester);
       expect(
         find.text(
-          "Can't reach the server. Check the address and your connection.",
+          "Can't reach the server. Check your connection.",
         ),
         findsOneWidget,
       );

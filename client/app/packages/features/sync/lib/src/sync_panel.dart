@@ -345,11 +345,10 @@ class _Details extends StatelessWidget {
 }
 
 class _DetailRow extends StatelessWidget {
-  const new({required this.label, required this.value, this.mono = false});
+  const new({required this.label, required this.value});
 
   final String label;
   final String value;
-  final bool mono;
 
   @override
   Widget build(BuildContext context) {
@@ -373,10 +372,7 @@ class _DetailRow extends StatelessWidget {
               child: Text(
                 value,
                 textAlign: TextAlign.end,
-                textDirection: mono ? TextDirection.ltr : null,
-                style: (mono ? text.monoSmall : text.bodySmall).copyWith(
-                  color: colors.text,
-                ),
+                style: text.bodySmall.copyWith(color: colors.text),
               ),
             ),
           ),

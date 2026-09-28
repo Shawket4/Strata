@@ -76,6 +76,9 @@ install -d -o strata -g strata -m 0700 /srv/strata
 
 ## 2. Create the database (UTF-8, non-C locale)
 
+Production runs PostgreSQL 17 with pgvector 0.8.2 (Debian 13); development and CI use
+PostgreSQL 16. Either works (pgvector ≥ 0.6, `pg_trgm`).
+
 The `strata` database **must** be UTF-8 with a character locale other than `C`/`POSIX`;
 otherwise `pg_trgm` treats Arabic letters as non-word characters and server and offline
 duplicate scores diverge. `stratad serve` checks this at startup and refuses to run on a
@@ -111,11 +114,14 @@ stratad --env-file /etc/strata/stratad.env bootstrap-roles \
   --superuser-url 'postgres://postgres@/postgres?host=/var/run/postgresql'
 ```
 
-or review and run the SQL yourself (connect to the `strata` database):
+or review and run the SQL yourself (connect to the `strata` database). The printed SQL holds
+the passwords in plain text: keep the file private (mode 0600) and turn statement logging off
+for the session so a slow statement never writes a password to the server log:
 
 ```sh
-stratad --env-file /etc/strata/stratad.env bootstrap-roles --print > bootstrap.sql
-sudo -u postgres psql -d strata -f bootstrap.sql && rm bootstrap.sql
+(umask 077 && { echo 'SET log_min_duration_statement = -1;'
+  stratad --env-file /etc/strata/stratad.env bootstrap-roles --print; } > bootstrap.sql)
+sudo -u postgres psql -d strata < bootstrap.sql && rm bootstrap.sql
 ```
 
 Then apply the migrations as `strata_owner` (safe to re-run; run after every upgrade):
@@ -186,7 +192,8 @@ gracefully (in-flight requests get 30 s).
 Run exactly **one** `stratad` process: revocations and rate limits are held in memory
 (`docs/ARCHITECTURE.md` "Auth").
 
-Liveness: `curl -H 'Accept: application/vnd.msgpack' http://127.0.0.1:8080/api/v1/health`.
+Liveness (GET): `curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8080/api/v1/health`
+prints `200` (use the port of `STRATA_BIND`).
 
 **Manual deploy / upgrade** (until deploys are automated): copy the release tarball (§13) to the
 VPS, verify it (`sha256sum -c stratad-*-linux-x86_64.tar.gz.sha256`), unpack it, then
@@ -494,19 +501,21 @@ workflow checks the APK package name and the macOS bundle identifier;
 `brand_assets_test.dart` checks the platform files. APNs pushes use it as the topic
 (`STRATA_PUSH__APNS_TOPIC=com.shawket.strata`).
 
-**Default server address.** The Android and macOS builds bake a default server into the app
-with `--dart-define=STRATA_DEFAULT_SERVER=<url>`, read from the repository **variable**
-`STRATA_DEFAULT_SERVER` (Settings → Secrets and variables → Actions → **Variables** → New
-repository variable; not a secret). Set it to the HTTPS address of the server once the domain
-and TLS work (§6, `deploy/VPS_SETUP.md`), e.g. `https://strata.example.com`, then re-run the
-Build workflow. The value goes to the Rust core at startup (`CoreConfig.default_server_url`);
-sign-in and sign-up prefill the server field with it until an address has been used on the
-device, and the field stays editable. Unset, the field starts empty (the workflow warns); a
-value that is not `https://…` fails the build. The core refuses plain `http://` server
-addresses except this device (`localhost`, `127.0.0.1`, `[::1]`), which stays allowed for
-testing through an SSH tunnel (`ssh -L 8080:127.0.0.1:8080 <vps>`, then
-`http://127.0.0.1:8080`). For a local build use the same flag, e.g.
-`flutter build linux --release --dart-define=STRATA_DEFAULT_SERVER=https://strata.example.com`.
+**Server address.** The apps have no server field: every account uses one server, fixed at
+build time with `--dart-define=STRATA_SERVER_URL=<url>` and never shown or editable (except
+read-only under Settings → Account). The Build workflow sets
+`STRATA_SERVER_URL: ${{ vars.STRATA_SERVER_URL || 'https://strata-ai.duckdns.org' }}` at the
+workflow level, so the owner's server is the default and a repository **variable** of the same
+name (Settings → Secrets and variables → Actions → **Variables**) overrides it; a value that is
+not `https://…` fails the Android and macOS jobs. The value goes to the Rust core at startup
+(`CoreConfig.server_url`, with `release_build`), which uses it for sign-up, sign-in, sync and
+every other request. A blank address, one without `https://`, or plain `http://` stops the
+core from opening (`misconfigured_build`) and the app shows a "This build can't start" screen
+instead; plain `http://` to this device (`localhost`, `127.0.0.1`, `[::1]`) is accepted in debug
+builds only, for testing through an SSH tunnel (`ssh -N -L 8080:127.0.0.1:8080 <vps>`, then
+`flutter run --dart-define=STRATA_SERVER_URL=http://127.0.0.1:8080`). For a local release
+build use the same flag, e.g.
+`flutter build linux --release --dart-define=STRATA_SERVER_URL=https://strata-ai.duckdns.org`.
 
 **stratad.** Built on Ubuntu 22.04 (glibc 2.35) so it runs on Debian 12+, Ubuntu 22.04+ and
 other glibc ≥ 2.35 systems. It is deliberately not a static musl build: `ort` loads ONNX

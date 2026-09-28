@@ -14,7 +14,7 @@ View-model fields and intents the Flutter screens need from the Rust core (PLAN 
 - **Pinned notes.** ✅ resolved: `NavView.pinned` / `HomeView.pinned` and `pin_note(id, pinned)`.
 
 ### Accounts
-- **Pending approval as a session state.** ✅ resolved: `SessionKind::PendingApproval` / `Rejected` with `SessionState.pending: PendingApproval { username, server_url, requested_at, requested_label, last_checked_at, last_checked_label, can_check }`, `check_approval()` (re-signs in with the request kept in memory only) and `dismiss_pending()`. The router routes both kinds to the approval screen.
+- **Pending approval as a session state.** ✅ resolved: `SessionKind::PendingApproval` / `Rejected` with `SessionState.pending: PendingApproval { username, requested_at, requested_label, last_checked_at, last_checked_label, can_check }`, `check_approval()` (re-signs in with the request kept in memory only) and `dismiss_pending()`. The router routes both kinds to the approval screen.
 - **Change password.** ✅ resolved: `change_password(current, new) -> SessionState` (also leaves `PasswordChangeRequired`).
 - **UI language and time zone.** ✅ resolved: `set_ui_language(code)`, `set_timezone(iana)`, `set_display_name(name)` (`PATCH /me`); every label is rebuilt in the new zone/language.
 - **Account disabled.** ✅ resolved: `export_unsynced(path) -> count` (the unsynced ops as a Markdown file).

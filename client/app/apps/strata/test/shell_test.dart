@@ -353,7 +353,7 @@ void main() {
       expect(const AdminUsersRoute().location, '/settings/admin/users');
       expect(const SyncRoute().location, '/sync');
       expect(const SignInRoute().location, '/sign-in');
-      expect(const SignUpRoute(server: 'x').location, '/sign-up?server=x');
+      expect(const SignUpRoute().location, '/sign-up');
       expect(const ApprovalRoute().location, '/approval');
       expect(const AccountDisabledRoute().location, '/account-disabled');
       expect(const DeletionPendingRoute().location, '/deletion-pending');
