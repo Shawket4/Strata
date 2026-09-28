@@ -241,7 +241,9 @@ pub struct EmbeddingSettings {
     /// Nice value of the embedding thread (0–19).
     pub nice: i32,
     /// Seconds without an embedding call after which the model is unloaded to free its memory
-    /// (≈ 390 MB for the fp32 export); it is loaded again on the next call (§9.1b).
+    /// (≈ 390 MB for the fp32 export); it is loaded again on the next call (§9.1b). `0`
+    /// (the default) keeps it loaded from start-up on, so no search or embedding waits for
+    /// it to load.
     pub idle_unload_secs: u32,
 }
 
@@ -454,7 +456,7 @@ impl Default for AiConfig {
                 max_batch_tokens: 8192,
                 pad_batches: true,
                 nice: 19,
-                idle_unload_secs: 300,
+                idle_unload_secs: 0,
             },
         }
     }
@@ -718,10 +720,6 @@ impl Config {
                 emb.nice
             ));
         }
-        positive(
-            "STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS",
-            u64::from(emb.idle_unload_secs),
-        )?;
         self.budget_tz()?;
         self.validate_jobs()
     }
@@ -1030,7 +1028,7 @@ mod tests {
                 max_batch_tokens: 8192,
                 pad_batches: true,
                 nice: 19,
-                idle_unload_secs: 300,
+                idle_unload_secs: 0,
             }
         );
         assert_eq!(
@@ -1222,10 +1220,6 @@ mod tests {
         invalid(
             &[("STRATA_AI__EMBEDDING__NICE", "-1")],
             "STRATA_AI__EMBEDDING__NICE must be within 0..=19, got -1",
-        );
-        invalid(
-            &[("STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS", "0")],
-            "STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS must be at least 1",
         );
         invalid(
             &[("STRATA_JOBS__MAX_CONCURRENCY", "0")],

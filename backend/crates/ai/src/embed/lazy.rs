@@ -8,6 +8,10 @@
 //! root calls it periodically through [`LazyEmbedder::spawn_reaper`]). Dropping the last
 //! handle of the inner embedder stops its worker thread and frees the model.
 //!
+//! An idle period of zero keeps the model resident: it is never unloaded, and the
+//! composition root loads it at start ([`LazyEmbedder::preload`]) so the first search or
+//! embedding does not wait for it (owner decision 2026-09-28: AI answers without warm-up).
+//!
 //! Time comes from the injected [`Clock`], so the idle rule is tested with a fake clock.
 
 use std::fmt;
@@ -70,7 +74,8 @@ impl Drop for InFlight<'_> {
 
 impl LazyEmbedder {
     /// An embedder for `model_id` (`dims` dimensions) built by `loader` when first needed and
-    /// dropped after `idle` without calls. With a `gate`, loading holds its exclusive side.
+    /// dropped after `idle` without calls (never, when `idle` is zero). With a `gate`,
+    /// loading holds its exclusive side.
     pub fn new(
         model_id: impl Into<String>,
         dims: usize,
@@ -133,9 +138,30 @@ impl LazyEmbedder {
         Ok(embedder)
     }
 
+    /// Whether the model stays loaded once loaded (an idle period of zero).
+    pub fn keeps_loaded(&self) -> bool {
+        self.idle.is_zero()
+    }
+
+    /// Loads the model now if it is not loaded (start-up, when it is kept loaded).
+    pub async fn preload(&self) -> Result<(), EmbedError> {
+        let _loading = self.load_lock.lock().await;
+        if self.is_loaded() {
+            return Ok(());
+        }
+        let e = self.load().await?;
+        let mut slot = self.lock();
+        slot.embedder = Some(e);
+        slot.last_used = Some(self.clock.now());
+        Ok(())
+    }
+
     /// Unloads the model when it is loaded, no call is running, and the last call ended at
-    /// least `idle` ago. Returns whether it unloaded.
+    /// least `idle` ago (never when [`Self::keeps_loaded`]). Returns whether it unloaded.
     pub fn unload_if_idle(&self) -> bool {
+        if self.keeps_loaded() {
+            return false;
+        }
         let now = self.clock.now();
         let dropped = {
             let mut slot = self.lock();
@@ -273,6 +299,15 @@ mod tests {
         live: &Arc<AtomicUsize>,
         gate: Option<(Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>)>,
     ) -> LazyEmbedder {
+        lazy_idle(clock, live, gate, Duration::from_secs(300))
+    }
+
+    fn lazy_idle(
+        clock: &FakeClock,
+        live: &Arc<AtomicUsize>,
+        gate: Option<(Arc<tokio::sync::Notify>, Arc<tokio::sync::Notify>)>,
+        idle: Duration,
+    ) -> LazyEmbedder {
         let live2 = live.clone();
         let loader: EmbedderLoader = Arc::new(move || {
             live2.fetch_add(1, Ordering::SeqCst);
@@ -281,14 +316,32 @@ mod tests {
                 gate: gate.clone(),
             }) as Arc<dyn Embedder>)
         });
-        LazyEmbedder::new(
-            "m@1",
-            2,
-            loader,
-            Arc::new(clock.clone()),
-            Duration::from_secs(300),
-            None,
-        )
+        LazyEmbedder::new("m@1", 2, loader, Arc::new(clock.clone()), idle, None)
+    }
+
+    #[tokio::test]
+    async fn a_zero_idle_period_preloads_and_never_unloads() {
+        let clock = FakeClock::at_default_epoch();
+        let live = Arc::new(AtomicUsize::new(0));
+        let e = lazy_idle(&clock, &live, None, Duration::ZERO);
+        assert!(e.keeps_loaded());
+        e.preload().await.expect("preload");
+        e.preload().await.expect("already loaded");
+        assert_eq!((e.is_loaded(), e.loads()), (true, 1));
+        clock.advance(chrono::Duration::days(3));
+        assert!(!e.unload_if_idle());
+        e.embed(&["a".into()]).await.expect("embed");
+        assert_eq!(
+            (
+                e.is_loaded(),
+                e.loads(),
+                e.unloads(),
+                live.load(Ordering::SeqCst)
+            ),
+            (true, 1, 0, 1),
+            "one load for the whole run"
+        );
+        assert!(!lazy(&clock, &live, None).keeps_loaded());
     }
 
     #[tokio::test]

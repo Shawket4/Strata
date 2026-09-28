@@ -446,8 +446,10 @@ resumable re-embed of every note (below). To stay on the int8 file, set
 `STRATA_AI__EMBEDDING__MODEL_ID=ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2`
 and `STRATA_AI__EMBEDDING__PAD_BATCHES=false`.
 
-The model is not loaded at startup: the first embedding loads it (a second or two) and it is
-unloaded after `STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS` (default 300) without calls. Real-model checks
+By default (`STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS=0`) the model is loaded at startup and
+stays loaded (≈ 390 MB), so searches and embeddings never wait for it. A positive value unloads
+it after that many seconds without calls, and the next embedding loads it again (a second or
+two). Real-model checks
 (fp32 padding invariance and agreement with the quint8 reference; load → idle unload → reload):
 
 ```sh

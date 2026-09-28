@@ -8,8 +8,9 @@
 //!   launcher check).
 //! - Embeddings are optional: while `ai.embedding.model_dir` or `ai.embedding.onnxruntime_lib`
 //!   is unset or a file is missing, they are off and one log line says why; everything else
-//!   keeps working (principle 6). When configured, the model is not loaded at startup: a
-//!   [`LazyEmbedder`] loads it on first use and unloads it after `ai.embedding.idle_unload_secs`
+//!   keeps working (principle 6). When configured, a
+//!   [`LazyEmbedder`] keeps it loaded from start-up (`ai.embedding.idle_unload_secs = 0`, the
+//!   default) or loads it on first use and unloads it after `ai.embedding.idle_unload_secs`
 //!   without calls (§9.1b); a load failure fails only the calls that needed it.
 
 use std::sync::Arc;
@@ -164,7 +165,8 @@ fn load_embedder(
             tracing::info!(
                 model = %model_id,
                 idle_unload_secs = s.idle_unload_secs,
-                "embeddings enabled (the model loads on first use)"
+                "embeddings enabled (idle_unload_secs = 0: loaded at start and kept loaded; \
+                 otherwise loaded on first use)"
             );
             let lazy = LazyEmbedder::new(
                 model_id.clone(),

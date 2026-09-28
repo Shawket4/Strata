@@ -278,10 +278,20 @@ pub async fn start(
         tracing::info!(users = n, "embedding backfill queued");
     }
     let scheduler_task = scheduler.spawn(Duration::from_secs(3600));
-    let reaper = parts
-        .lazy_embedder
-        .as_ref()
-        .map(|e| e.spawn_reaper(Duration::from_secs(30)));
+    // Kept loaded: load now, so the first search or embedding does not wait for it.
+    // Otherwise the reaper unloads it after its idle period.
+    let reaper = parts.lazy_embedder.as_ref().map(|e| {
+        if e.keeps_loaded() {
+            let e = e.clone();
+            tokio::spawn(async move {
+                if let Err(err) = e.preload().await {
+                    tracing::warn!(error = %err, "loading the embedding model at start failed; it loads on first use");
+                }
+            })
+        } else {
+            e.spawn_reaper(Duration::from_secs(30))
+        }
+    });
     tracing::info!(kinds = ?runner.kinds(), "job runner started");
     Ok(Background {
         runner: runner.start_loop(),
