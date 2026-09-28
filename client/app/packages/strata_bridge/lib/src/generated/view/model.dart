@@ -3617,7 +3617,8 @@ class HunkChoice {
   /// The choice.
   final HunkChoiceKind choice;
 
-  /// Replacement text for [`HunkChoiceKind::Text`] (ends with a line terminator).
+  /// Replacement text for [`HunkChoiceKind::Text`] (the core adds a missing final line
+  /// terminator).
   final String? text;
 
   const HunkChoice({required this.hunk, required this.choice, this.text});

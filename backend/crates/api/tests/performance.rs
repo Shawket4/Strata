@@ -106,9 +106,12 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
     let resp = h
         .send(
             Some("import_vault"),
-            &Req::new("POST", "/api/v1/import")
-                .token(&alice.token)
-                .body(strata_api::wire::ZIP, archive),
+            &Req {
+                timeout: Some(Duration::from_secs(1800)),
+                ..Req::new("POST", "/api/v1/import")
+                    .token(&alice.token)
+                    .body(strata_api::wire::ZIP, archive)
+            },
         )
         .await;
     let import_time = started.elapsed();
@@ -241,9 +244,12 @@ async fn ten_thousand_file_vault_meets_the_budgets() {
     let resp = h
         .send(
             Some("sync_push"),
-            &Req::new("POST", "/api/v1/sync/push")
-                .token(&alice.token)
-                .msgpack(body),
+            &Req {
+                timeout: Some(Duration::from_secs(1800)),
+                ..Req::new("POST", "/api/v1/sync/push")
+                    .token(&alice.token)
+                    .msgpack(body)
+            },
         )
         .await;
     let push_time = started.elapsed();

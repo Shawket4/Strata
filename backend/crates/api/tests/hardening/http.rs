@@ -30,6 +30,8 @@ pub struct Req {
     pub upgrade: bool,
     /// Declare this `Content-Length` instead of the body's (limits tests).
     pub declared_len: Option<usize>,
+    /// Response deadline (default 30 s; a hang is a failure).
+    pub timeout: Option<Duration>,
 }
 
 impl Req {
@@ -156,9 +158,11 @@ fn find(haystack: &[u8], needle: &[u8]) -> Option<usize> {
     haystack.windows(needle.len()).position(|w| w == needle)
 }
 
-/// Sends `req` to `addr` and reads the response (30 s timeout; a hang is a failure).
+/// Sends `req` to `addr` and reads the response (`req.timeout`, default 30 s; a hang is a
+/// failure).
 pub async fn send(addr: SocketAddr, req: &Req) -> Resp {
-    tokio::time::timeout(Duration::from_secs(30), exchange(addr, req))
+    let deadline = req.timeout.unwrap_or(Duration::from_secs(30));
+    tokio::time::timeout(deadline, exchange(addr, req))
         .await
         .unwrap_or_else(|_| panic!("{} {} timed out", req.method, req.target))
 }
