@@ -41,11 +41,12 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
             20_260_927_000_014,
             20_260_927_000_015,
             20_260_927_000_016,
-            20_260_927_000_017
+            20_260_927_000_017,
+            20_260_927_000_018
         ]
     );
     assert!(after_first.iter().all(|r| r.1));
-    assert_eq!(tables(&db).await.len(), 44);
+    assert_eq!(tables(&db).await.len(), 45);
 
     migrate(&db.owner).await.expect("second run");
     let after_second: Vec<(i64, bool, chrono::DateTime<chrono::Utc>)> = sqlx::query_as(
@@ -63,7 +64,7 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
 #[tokio::test]
 async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
     let db = TestDb::new_unmigrated().await.expect("db");
-    let expected_new_tables: [&[&str]; 15] = [
+    let expected_new_tables: [&[&str]; 16] = [
         &[
             "_sqlx_migrations",
             "audit_log",
@@ -122,6 +123,7 @@ async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
         &[],
         // 017: column and index only (jobs.provider_failure, jobs_failed).
         &[],
+        &["note_threads"],
     ];
     let mut before = tables(&db).await;
     let mut user = None;

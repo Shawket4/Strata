@@ -71,9 +71,16 @@ pub struct FileWritten {
     pub version: Option<String>,
 }
 
+/// Whether `path` is a note's thread file (`.meta/threads/<ulid>.json`).
+fn is_thread_path(path: &str) -> bool {
+    path.strip_prefix(".meta/threads/")
+        .and_then(|p| p.strip_suffix(".json"))
+        .is_some_and(|id| id.parse::<ulid::Ulid>().is_ok())
+}
+
 /// Whether `path` may be written by [`VaultService::write_file`].
 fn writable(path: &str) -> Result<()> {
-    if path == CLUSTERS_PATH {
+    if path == CLUSTERS_PATH || is_thread_path(path) {
         return Ok(());
     }
     paths::validate_path(path)?;

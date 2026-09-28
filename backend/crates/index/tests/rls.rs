@@ -56,6 +56,7 @@ async fn seed_covers_every_user_owned_table_for_both_users() {
             "jobs",
             "links",
             "mentions",
+            "note_threads",
             "note_vectors",
             "notes",
             "notification_log",

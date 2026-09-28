@@ -443,7 +443,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
     let incremental = w.snapshot(u).await;
     // Every derived table is populated.
     for (table, rows) in &incremental {
-        if !matches!(table.as_str(), "chunks" | "clusters") {
+        if !matches!(table.as_str(), "chunks" | "clusters" | "note_threads") {
             assert!(!rows.is_empty(), "{table} has no rows");
         }
     }

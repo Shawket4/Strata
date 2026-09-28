@@ -12,4 +12,5 @@ pub mod settings;
 pub mod suggestions;
 pub mod sync;
 pub mod tasks;
+pub mod threads;
 pub mod vault;

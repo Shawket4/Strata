@@ -29,6 +29,7 @@ use strata_index::repo::vault::{self as vrepo, IntegrityWarning};
 use strata_index::{ScopedTx, UserScope};
 use vault_format::Document;
 use vault_format::sidecar::NoteSidecar;
+use vault_format::thread::NoteThread;
 
 use crate::derive::{self, Context, Derived};
 use crate::error::Result;
@@ -668,9 +669,10 @@ fn derive_all(
 }
 
 /// Deletes every derived row of the user and derives the whole vault again (`stratad
-/// reindex`), reloading the cluster rows from `.meta/clusters.json` (change-log rows only for
-/// what differs from before) and the disambiguation hints from the entity sidecars (see
-/// [`rebuild_hints`]). The vault is reconciled first.
+/// reindex`), reloading the cluster rows from `.meta/clusters.json` and the note threads from
+/// `.meta/threads/` (change-log rows only for what differs from before) and the
+/// disambiguation hints from the entity sidecars (see [`rebuild_hints`]). The vault is
+/// reconciled first.
 pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
     let dir = core.dir.clone();
     let inner = core.inner.clone();
@@ -690,6 +692,21 @@ pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
             sidecars.insert(id, sc);
         }
     }
+    // Note threads come back from their files (unreadable ones and ones of unknown notes:
+    // none).
+    let mut thread_files = Vec::new();
+    for f in scanned
+        .files
+        .iter()
+        .filter(|f| f.starts_with(".meta/threads/"))
+    {
+        if let Some(text) = core.read_text(f).await?
+            && let Ok(t) = vault_format::thread::NoteThread::from_json(&text)
+            && NoteThread::path_for(t.note_id) == *f
+        {
+            thread_files.push((NoteId::from_ulid(t.note_id), text));
+        }
+    }
     // The cluster rows come back from `.meta/clusters.json` (missing or unreadable: none).
     let cluster_file = core
         .read_text(vault_format::clusters::CLUSTERS_PATH)
@@ -701,6 +718,7 @@ pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
     let clusters_before = crate::clusters::snapshot(&mut tx).await?;
     // Deleting the entity rows cascades to their hints; they come back from the sidecars.
     let hints_before = erepo::all_hints(&mut tx).await?;
+    let threads_before = strata_index::repo::threads::versions(&mut tx).await?;
     vrepo::clear_derived(&mut tx).await?;
     let mut batch: Vec<(NoteId, Derived)> = derived.into_iter().collect();
     batch.sort_by_key(|(id, _)| *id);
@@ -712,6 +730,7 @@ pub async fn reindex(core: &mut Core, scope: UserScope) -> Result<usize> {
         .map(crate::clusters::ClusterRows::of_file)
         .unwrap_or_default();
     crate::clusters::replace(&mut tx, &clusters_before, &clusters_now, at).await?;
+    crate::ops::threads::reload(&mut tx, &state, &thread_files, &threads_before, at).await?;
     tx.commit().await?;
     core.state = Some(state);
     Ok(batch.len())

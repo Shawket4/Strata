@@ -13,3 +13,4 @@ pub mod relations;
 pub mod service;
 pub mod suggestions;
 pub mod tasks;
+pub mod threads;

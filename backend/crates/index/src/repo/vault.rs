@@ -249,6 +249,7 @@ pub const DERIVED_TABLES: &[&str] = &[
     "tags",
     "aliases",
     "clusters",
+    "note_threads",
     "notes",
     "rejected",
     "dedupe_keys",
