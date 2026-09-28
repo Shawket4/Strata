@@ -30,7 +30,7 @@ use strata_vault::ops::tasks::NewTask;
 use strata_vault::{VaultConfig, VaultService};
 use sync_model::ops;
 use ulid::Ulid;
-use vault_format::{Document, PathIndex};
+use vault_format::PathIndex;
 
 /// The server side of one test: a provisioned vault of one user.
 struct Server {
@@ -469,7 +469,9 @@ async fn server_and_device_render_new_items_identically() {
         assert_eq!(local, s.state(original.id));
     }
 
-    // Tasks: into a named note, and into `tasks/Tasks.md` (new, then existing).
+    // Tasks: into a named note, and into `tasks/Tasks.md` (new, with the device's ID for it,
+    // then existing).
+    let home_id = ulid(0x5FF);
     let task = |n: u128, note_id: Option<Ulid>, text: &str| ops::TaskCreate {
         id: task_id(n),
         note_id,
@@ -482,6 +484,8 @@ async fn server_and_device_render_new_items_identically() {
             NaiveDateTime::parse_from_str("2026-10-01 09:00", "%Y-%m-%d %H:%M").expect("dt"),
         ],
         priority: None,
+        created: monday(),
+        home_id: note_id.is_none().then_some(home_id),
         force: true,
     };
     let server_task = |op: &ops::TaskCreate| NewTask {
@@ -494,6 +498,8 @@ async fn server_and_device_render_new_items_identically() {
         priority: op.priority,
         note: op.note_id.map(NoteId::from_ulid),
         id: Some(op.id.clone()),
+        created: op.created,
+        home_id: op.home_id.map(NoteId::from_ulid),
         force: true,
     };
     let in_note = task(0x500, Some(company.id), "  Renew [[Watanya]] contract ");
@@ -510,37 +516,50 @@ async fn server_and_device_render_new_items_identically() {
         .create_task(&s.scope, server_task(&first))
         .await
         .expect("task");
-    let home = s.read("tasks/Tasks.md");
-    let home_id = Document::parse(&home)
-        .frontmatter()
-        .and_then(|f| f.id().ok().flatten())
-        .expect("home id");
     let local = device(&s, None, &Op::TaskCreate(first.clone()));
     assert_eq!(local.path, "tasks/Tasks.md");
     assert_eq!(
         local.content,
         format!(
-            "## September 2026\n- [ ] Make Watanya's ETA invoice (@2026-10-01 09:00) 🔁 every month on the 1st 📅 2026-10-01 ^{}\n",
+            "---\nid: {home_id}\n{STAMP}---\n## September 2026\n- [ ] Make Watanya's ETA invoice (@2026-10-01 09:00) 🔁 every month on the 1st 📅 2026-10-01 ^{}\n",
             first.id
         )
     );
-    assert_eq!(stamped(&local.content, home_id, &now), home);
+    assert_eq!(local.content, s.read("tasks/Tasks.md"));
     s.paths.insert(home_id, "tasks/Tasks.md".into());
 
-    let second = task(0x502, None, "Petrol Arrows invoice");
+    // The month heading is the creation date in the user's time zone: 22:30Z on 30 September
+    // is 1 October in Cairo (the server's clock moves past it first; the op's time is used).
+    s.db.clock
+        .set(DateTime::parse_from_rfc3339("2026-10-02T09:00:00Z").expect("ts").to_utc());
+    let second = ops::TaskCreate {
+        created: DateTime::parse_from_rfc3339("2026-09-30T22:30:00Z")
+            .expect("ts")
+            .to_utc(),
+        ..task(0x502, None, "Petrol Arrows invoice")
+    };
     let before = s.state(home_id);
     s.vault
         .create_task(&s.scope, server_task(&second))
         .await
         .expect("task");
-    let local = device(&s, Some(before), &Op::TaskCreate(second));
+    let local = device(&s, Some(before), &Op::TaskCreate(second.clone()));
     assert_eq!(local, s.state(home_id));
+    assert!(
+        local.content.ends_with(&format!(
+            "\n## October 2026\n- [ ] Petrol Arrows invoice (@2026-10-01 09:00) 🔁 every month on the 1st 📅 2026-10-01 ^{}\n",
+            second.id
+        )),
+        "{}",
+        local.content
+    );
 
-    // A plain note: the device's `id` stamp, plus the server's clock, is the server's file.
+    // A plain note: `id`, and the device's creation time as `created`/`updated`.
     let note = ops::NoteCreate {
         id: ulid(0x600),
         path: "notes/Pricing experiments.md".into(),
         content: "---\ntags: [pricing]\n---\n# Pricing\n".into(),
+        created: monday(),
         force: true,
     };
     let view = s
@@ -550,6 +569,7 @@ async fn server_and_device_render_new_items_identically() {
             CreateNote {
                 path: note.path.clone(),
                 content: note.content.clone(),
+                created: note.created,
                 id: Some(NoteId::from_ulid(note.id)),
                 force: true,
             },
@@ -558,8 +578,15 @@ async fn server_and_device_render_new_items_identically() {
         .expect("note");
     let local = device(&s, None, &Op::NoteCreate(note.clone()));
     assert_eq!(
-        (local.path.as_str(), stamped(&local.content, note.id, &now)),
-        (view.path.as_str(), s.read(&view.path))
+        local.content,
+        format!(
+            "---\nid: {}\ntags: [pricing]\n{STAMP}---\n# Pricing\n",
+            note.id
+        )
+    );
+    assert_eq!(
+        (local.path.as_str(), local.content.as_str()),
+        (view.path.as_str(), s.read(&view.path).as_str())
     );
 
     s.finish().await;

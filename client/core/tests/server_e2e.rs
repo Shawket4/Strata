@@ -146,6 +146,7 @@ impl World {
             }),
             default_device_name: format!("device {n}"),
             default_server_url: None,
+            device_timezone: None,
         };
         Device {
             core: Core::open(env).expect("core"),
