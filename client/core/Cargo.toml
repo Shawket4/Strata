@@ -50,6 +50,9 @@ strata-testkit = { workspace = true }
 strata-vault = { workspace = true }
 strata-common = { workspace = true }
 strata-index = { workspace = true }
+strata-ai = { workspace = true }
+strata-jobs = { workspace = true }
+strata-graph = { workspace = true }
 actix-web = { workspace = true }
 pretty_assertions = { workspace = true }
 tempfile = { workspace = true }

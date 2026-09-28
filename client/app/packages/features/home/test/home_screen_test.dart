@@ -322,10 +322,12 @@ void main() {
       await _reveal(tester, find.text('Send the weekly invoicing proposal'));
       final check = tester.widget<Checkbox>(
         find.descendant(
-          of: find.ancestor(
-            of: find.text('Send the weekly invoicing proposal'),
-            matching: find.byType(Row),
-          ),
+          of: find
+              .ancestor(
+                of: find.text('Send the weekly invoicing proposal'),
+                matching: find.byType(Row),
+              )
+              .first,
           matching: find.byType(Checkbox),
         ),
       );
