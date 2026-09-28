@@ -1,5 +1,5 @@
 //! `AiStatus` with the parts only the job side knows (PLAN §7.5 `GET /ai/status`): the
-//! user's queue depth and how many of their notes are embedded with the current model
+//! user's queue depth, failed jobs a retry would run again, and how many of their notes are embedded with the current model
 //! (backfill progress, §9.1b).
 
 use strata_ai::{AiCaller, AiError, AiService, AiStatus, EmbeddingProgress};
@@ -17,6 +17,11 @@ pub async fn ai_status(ai: &AiService, db: &AppDb, caller: &AiCaller) -> Result<
             .await
             .map_err(|e| AiError::Store(e.to_string()))?,
     );
+    status.failed_jobs = Some(
+        strata_index::repo::jobs::retryable_failed(&mut tx, false)
+            .await
+            .map_err(|e| AiError::Store(e.to_string()))?,
+    );
     if let Some(e) = ai.embedder() {
         let (embedded, total) = vectors::coverage(&mut tx, e.model_id())
             .await
@@ -25,4 +30,19 @@ pub async fn ai_status(ai: &AiService, db: &AppDb, caller: &AiCaller) -> Result<
     }
     tx.commit().await?;
     Ok(status)
+}
+
+/// Queues the caller's failed jobs again (the app's "Retry failed jobs", owner decision
+/// 2026-09-28); returns how many.
+pub async fn retry_failed(
+    db: &AppDb,
+    caller: &AiCaller,
+    now: chrono::DateTime<chrono::Utc>,
+) -> Result<u64, AiError> {
+    let mut tx = db.begin(&caller.scope).await?;
+    let n = strata_index::repo::jobs::requeue_failed(&mut tx, false, None, now)
+        .await
+        .map_err(|e| AiError::Store(e.to_string()))?;
+    tx.commit().await?;
+    Ok(n)
 }

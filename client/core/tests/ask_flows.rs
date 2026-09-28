@@ -60,6 +60,8 @@ struct AskApi {
     asks: Mutex<VecDeque<Result<String, NetError>>>,
     streams: Mutex<VecDeque<Result<Vec<Step>, NetError>>>,
     status: Mutex<Option<AiStatusInfo>>,
+    /// `POST /ai/jobs/retry` answers; each also moves the failed jobs into the queue.
+    retries: Mutex<VecDeque<Result<u64, NetError>>>,
     session: Arc<OnceLock<Arc<Session>>>,
 }
 
@@ -143,6 +145,23 @@ impl AccountApi for AskApi {
             });
         Box::pin(async move { s })
     }
+    fn retry_failed_jobs(
+        &self,
+        _server_url: String,
+        _tokens: Tokens,
+    ) -> BoxFuture<'_, Result<u64, NetError>> {
+        let r = self
+            .retries
+            .lock()
+            .unwrap()
+            .pop_front()
+            .expect("scripted retry");
+        if let (Ok(n), Some(status)) = (&r, self.status.lock().unwrap().as_mut()) {
+            status.failed_jobs -= n;
+            status.queue_depth += n;
+        }
+        Box::pin(async move { r })
+    }
     fn ask(
         &self,
         _server_url: String,
@@ -179,6 +198,7 @@ async fn world() -> (Harness, Arc<AskApi>, Arc<Session>) {
         asks: Mutex::default(),
         streams: Mutex::default(),
         status: Mutex::default(),
+        retries: Mutex::default(),
         session: Arc::default(),
     });
     let mut env = common::env(
@@ -458,6 +478,7 @@ async fn the_ai_status_panel_reads_the_cached_status() {
         paused_until: Some(paused_until),
         paused_reason: Some("budget".into()),
         queue_depth: 4,
+        failed_jobs: 2,
         tokens_used: 150_000,
         tokens_limit: 120_000,
         embedded: Some((3, 12)),
@@ -470,6 +491,7 @@ async fn the_ai_status_panel_reads_the_cached_status() {
             provider: Some("claude".into()),
             paused_label: Some("Paused until 16:00".into()),
             queue_depth: 4,
+            failed_jobs: 2,
             budget_used_percent: 100,
             budget_label: "100% used".into(),
             embedding_percent: Some(25),
@@ -482,6 +504,7 @@ async fn the_ai_status_panel_reads_the_cached_status() {
         paused_until: None,
         paused_reason: None,
         queue_depth: 0,
+        failed_jobs: 0,
         tokens_used: 10,
         tokens_limit: 0,
         embedded: Some((0, 0)),
@@ -539,4 +562,45 @@ async fn the_ask_stream_starts_and_follows_an_answer_without_locking_the_core() 
             msg("ask-1", "assistant", "Mona leads it.", None),
         ]
     );
+}
+
+#[tokio::test]
+async fn retrying_failed_jobs_requeues_them_and_refreshes_the_status() {
+    let (h, api, s) = world().await;
+    *api.status.lock().unwrap() = Some(AiStatusInfo {
+        enabled: true,
+        provider: Some("claude_cli".into()),
+        paused_until: None,
+        paused_reason: None,
+        queue_depth: 1,
+        failed_jobs: 2,
+        tokens_used: 0,
+        tokens_limit: 0,
+        embedded: None,
+    });
+    s.refresh_settings().await.expect("refresh");
+    let counts = |s: &Session| view(s).ai_status.map(|a| (a.queue_depth, a.failed_jobs));
+    assert_eq!(counts(&s), Some((1, 2)));
+
+    api.retries.lock().unwrap().push_back(Ok(2));
+    assert_eq!(s.retry_failed_jobs().await, Ok(2));
+    assert_eq!(counts(&s), Some((3, 0)));
+
+    // A server without the endpoint; offline refuses without calling it.
+    api.retries
+        .lock()
+        .unwrap()
+        .push_back(Err(NetError::NotAvailable {
+            endpoint: "retry_failed_jobs".into(),
+        }));
+    assert_eq!(
+        s.retry_failed_jobs().await,
+        Err(CoreError::NotAvailable {
+            feature: "retry_failed_jobs".into()
+        })
+    );
+    h.server.set_offline(true);
+    s.sync(Trigger::Manual).await.expect("cycle");
+    assert_eq!(s.retry_failed_jobs().await, Err(CoreError::Offline));
+    assert_eq!(api.retries.lock().unwrap().len(), 0);
 }

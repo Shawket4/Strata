@@ -1717,6 +1717,7 @@ abstract final class StrataFixtures {
   static const AiStatusView aiStatusView = AiStatusView(
     enabled: false,
     queueDepth: 0,
+    failedJobs: 0,
     budgetUsedPercent: 0,
     budgetLabel: '',
   );

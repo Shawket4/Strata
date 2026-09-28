@@ -248,6 +248,22 @@ pub async fn retype_ai_decision(
     let request = request.body(body)?;
     client.send(request).await
 }
+/** Queues the caller's failed background jobs again with fresh attempts (a provider outage
+or any other failure). Jobs that failed because the provider was down are also requeued
+automatically once it works again.*/
+///
+/// `POST /api/v1/ai/jobs/retry`
+pub async fn retry_failed_jobs(
+    client: &crate::Client,
+) -> ::std::result::Result<types::AiRetryResult, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::string::String::from("/api/v1/ai/jobs/retry"),
+        "retry_failed_jobs",
+    );
+    let request = request.authenticated();
+    client.send(request).await
+}
 /// The user's AI settings.
 ///
 /// `GET /api/v1/ai/settings`

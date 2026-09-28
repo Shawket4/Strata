@@ -224,16 +224,19 @@ pub async fn start(
     let tz = config
         .default_tz()
         .map_err(|e| StartupError::Config(e.to_string()))?;
-    let scheduler = Arc::new(Scheduler::new(
-        db.clone(),
-        issuer.clone(),
-        clock,
-        ids,
-        users,
-        tz,
-        config.jobs.nightly_hour,
-        periodic_for(config.jobs.digest_day()),
-    ));
+    let scheduler = Arc::new(
+        Scheduler::new(
+            db.clone(),
+            issuer.clone(),
+            clock,
+            ids,
+            users,
+            tz,
+            config.jobs.nightly_hour,
+            periodic_for(config.jobs.digest_day()),
+        )
+        .with_recovery(runner.recovery()),
+    );
     if parts.embedder.is_some() {
         let n = scheduler
             .enqueue_for_all(strata_jobs::embed::EMBED_BACKFILL, "backfill")

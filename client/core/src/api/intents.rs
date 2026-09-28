@@ -407,6 +407,12 @@ pub async fn refresh_settings() -> Result<(), CoreFailure> {
     lift_async(async { core()?.session()?.refresh_settings().await }).await
 }
 
+/// Queues the account's failed AI jobs again and re-reads the AI status; returns how many
+/// were queued.
+pub async fn retry_failed_jobs() -> Result<u32, CoreFailure> {
+    lift_async(async { core()?.session()?.retry_failed_jobs().await }).await
+}
+
 /// Renames a device.
 pub async fn rename_device(id: String, name: String) -> Result<(), CoreFailure> {
     lift_async(async { core()?.session()?.rename_device(&id, &name).await }).await

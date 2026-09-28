@@ -40,6 +40,7 @@ use tokio::task::JoinSet;
 
 use crate::events::{JobEvents, JobNotice, JobOutcome};
 use crate::handler::{JobClass, JobContext, JobError, JobHandler};
+use crate::recovery::LlmRecovery;
 use crate::repo;
 
 /// Runner settings (from `[jobs]` and `ai.daily_job_limit`).
@@ -139,6 +140,7 @@ struct Inner {
     state: Mutex<State>,
     tasks: tokio::sync::Mutex<JoinSet<()>>,
     finished: Notify,
+    recovery: Arc<LlmRecovery>,
 }
 
 /// The job runner (cheap to clone).
@@ -190,6 +192,7 @@ impl Runner {
                 state: Mutex::new(State::default()),
                 tasks: tokio::sync::Mutex::new(JoinSet::new()),
                 finished: Notify::new(),
+                recovery: Arc::default(),
             }),
         }
     }
@@ -458,6 +461,15 @@ impl Runner {
             let outcome = match &result {
                 Ok(()) => {
                     jobs::complete(&mut tx, job.id, now).await?;
+                    if class == JobClass::Llm {
+                        // The provider works again: this user's jobs that failed while it was
+                        // down run again now; other users' at the scheduler's next pass.
+                        self.inner.recovery.note_success(now);
+                        let n = jobs::requeue_failed(&mut tx, true, Some(now), now).await?;
+                        if n > 0 {
+                            tracing::info!(user = %user, jobs = n, "requeued jobs that failed while the AI provider was down");
+                        }
+                    }
                     Some(JobOutcome::Completed)
                 }
                 Err(JobError::Paused { reason, until }) => {
@@ -481,16 +493,18 @@ impl Runner {
                     tracing::info!(job = %job.id, kind = %job.kind, ?reason, %until, "job paused");
                     None
                 }
-                Err(JobError::Retry(msg)) => {
+                Err(e @ (JobError::Retry(msg) | JobError::Provider(msg))) => {
                     let retry_at = now + self.inner.config.backoff(job.attempts);
-                    let row = jobs::fail(&mut tx, job.id, msg, Some(retry_at), now).await?;
+                    let provider = matches!(e, JobError::Provider(_));
+                    let row =
+                        jobs::fail(&mut tx, job.id, msg, Some(retry_at), provider, now).await?;
                     tracing::warn!(job = %job.id, kind = %job.kind, attempt = job.attempts, error = %msg, "job failed");
                     row.filter(|r| r.status == strata_index::types::JobStatus::Failed)
                         .map(|_| JobOutcome::Failed)
                 }
                 Err(JobError::Fatal(msg)) => {
                     tracing::warn!(job = %job.id, kind = %job.kind, error = %msg, "job failed permanently");
-                    jobs::fail(&mut tx, job.id, msg, None, now).await?;
+                    jobs::fail(&mut tx, job.id, msg, None, false, now).await?;
                     Some(JobOutcome::Failed)
                 }
             };
@@ -513,6 +527,12 @@ impl Runner {
                 tracing::error!(job = %job.id, error = %e, "recording a job outcome failed");
             }
         }
+    }
+
+    /// When an LLM job last succeeded (the scheduler requeues other users' provider failures
+    /// from it, see [`crate::recovery`]).
+    pub fn recovery(&self) -> Arc<LlmRecovery> {
+        Arc::clone(&self.inner.recovery)
     }
 
     /// Waits until every started job finished.

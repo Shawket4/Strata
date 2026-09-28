@@ -376,6 +376,36 @@ class SettingsLocalizationsAr extends SettingsLocalizations {
   }
 
   @override
+  String aiFailedJobs({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مهمة ذكاء اصطناعي فشلت',
+      few: '$count مهام ذكاء اصطناعي فشلت',
+      two: 'مهمتين ذكاء اصطناعي فشلوا',
+      one: 'مهمة ذكاء اصطناعي واحدة فشلت',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiRetryFailed => 'حاول تاني';
+
+  @override
+  String aiRetried({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مهمة رجعت للطابور',
+      few: '$count مهام رجعوا للطابور',
+      two: 'مهمتين رجعوا للطابور',
+      one: 'مهمة واحدة رجعت للطابور',
+      zero: 'مفيش حاجة تتعاد',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get aiBudget => 'الميزانية اليومية';
 
   @override

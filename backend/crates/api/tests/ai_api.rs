@@ -506,6 +506,7 @@ async fn ask_answers_unavailable_or_paused_problems() {
                 name: "claude_cli".into(),
                 state: "ready".into(),
             }),
+            failed_jobs: 0,
             queue_depth: 0,
             usage: types::AiUsageDto {
                 calls: 1,
@@ -651,5 +652,117 @@ async fn creates_report_semantic_duplicates_with_their_level() {
         )
     );
     assert!((cand.score - 0.98).abs() < 1e-6);
+    h.finish().await;
+}
+
+/// Enqueues a `summarize` job for `user`, claims it and fails it permanently.
+async fn failed_job(h: &H, user: &User, provider: bool) -> strata_common::JobId {
+    use strata_common::Clock;
+    use strata_index::repo::jobs;
+    let now = h.clock.now();
+    let mut tx = h.db.begin(user.id).await.expect("tx");
+    let job = jobs::enqueue(
+        &mut tx,
+        &jobs::NewJob {
+            id: strata_common::JobId::generate(h.db.ids.as_ref()),
+            kind: "summarize".into(),
+            note_id: None,
+            payload: Vec::new(),
+            run_after: now,
+            max_attempts: 1,
+            dedupe_key: None,
+        },
+        now,
+    )
+    .await
+    .expect("enqueue");
+    jobs::claim_next(&mut tx, now)
+        .await
+        .expect("claim")
+        .expect("job");
+    jobs::fail(
+        &mut tx,
+        job.id,
+        "provider unavailable: exit 1",
+        None,
+        provider,
+        now,
+    )
+    .await
+    .expect("fail")
+    .expect("running");
+    tx.commit().await.expect("commit");
+    job.id
+}
+
+#[tokio::test]
+async fn failed_jobs_show_in_the_status_and_retry_queues_only_the_callers() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let bob = h.user("bob").await;
+    let a1 = failed_job(&h, &alice, true).await;
+    failed_job(&h, &alice, false).await;
+    let b1 = failed_job(&h, &bob, true).await;
+    let status = ops::ai_status(&alice.client).await.expect("status");
+    assert_eq!((status.failed_jobs, status.queue_depth), (2, 0));
+
+    assert_eq!(
+        ops::retry_failed_jobs(&alice.client).await.expect("retry"),
+        types::AiRetryResult { requeued: 2 }
+    );
+    let status = ops::ai_status(&alice.client).await.expect("status");
+    assert_eq!((status.failed_jobs, status.queue_depth), (0, 2));
+    let mut tx = h.db.begin(alice.id).await.expect("tx");
+    let job = strata_index::repo::jobs::get_job(&mut tx, a1)
+        .await
+        .expect("get")
+        .expect("job");
+    tx.commit().await.expect("commit");
+    assert_eq!(
+        (job.status, job.attempts, job.run_after),
+        (
+            strata_index::types::JobStatus::Queued,
+            0,
+            strata_common::Clock::now(&h.clock)
+        )
+    );
+    assert_eq!(
+        ops::retry_failed_jobs(&alice.client).await.expect("retry"),
+        types::AiRetryResult { requeued: 0 }
+    );
+    // Bob's failed job is his alone.
+    let status = ops::ai_status(&bob.client).await.expect("status");
+    assert_eq!((status.failed_jobs, status.queue_depth), (1, 0));
+    let mut tx = h.db.begin(bob.id).await.expect("tx");
+    assert_eq!(
+        strata_index::repo::jobs::get_job(&mut tx, b1)
+            .await
+            .expect("get")
+            .expect("job")
+            .status,
+        strata_index::types::JobStatus::Failed
+    );
+    tx.commit().await.expect("commit");
+    h.finish().await;
+
+    let h = H::with(Options {
+        ai: false,
+        ..Options::default()
+    })
+    .await;
+    let alice = h.user("alice").await;
+    assert_eq!(
+        problem(
+            &ops::retry_failed_jobs(&alice.client)
+                .await
+                .expect_err("no AI")
+        ),
+        plain(
+            "ai_unavailable",
+            "AI unavailable",
+            503,
+            Some("the AI subsystem is not configured on this server")
+        )
+    );
     h.finish().await;
 }

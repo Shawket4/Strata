@@ -32,6 +32,7 @@ pub mod handler;
 pub mod insights;
 pub mod link;
 pub mod pipeline;
+pub mod recovery;
 pub mod repo;
 pub mod retrieval;
 pub mod runner;
@@ -53,6 +54,7 @@ use strata_vault::VaultService;
 
 pub use events::{JobEvents, JobNotice, JobOutcome, NoEvents, RecordedEvents};
 pub use handler::{JobClass, JobContext, JobError, JobHandler};
+pub use recovery::LlmRecovery;
 pub use runner::{Runner, RunnerConfig, RunnerHandle};
 pub use schedule::{Cadence, Periodic, Scheduler, StaticUsers, UserDirectory};
 

@@ -464,6 +464,7 @@ async fn status_reports_provider_usage_budget_and_pause() {
                 until: Some("2026-09-28T00:00:00Z".parse().expect("rfc3339")),
             }),
             queue_depth: None,
+            failed_jobs: None,
             usage: UsageStatus {
                 day,
                 user: UsageTotals {

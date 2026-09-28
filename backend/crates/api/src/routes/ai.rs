@@ -203,6 +203,8 @@ pub struct AiStatusDto {
     pub paused: Option<AiPauseDto>,
     /// The caller's queued and running background jobs.
     pub queue_depth: u64,
+    /// The caller's failed background jobs that `POST /ai/jobs/retry` would run again.
+    pub failed_jobs: u64,
     /// Budget day.
     #[schema(value_type = String, format = "date")]
     pub day: NaiveDate,
@@ -460,6 +462,7 @@ pub async fn ai_status(
             until: p.until,
         }),
         queue_depth: s.queue_depth.unwrap_or(0),
+        failed_jobs: s.failed_jobs.unwrap_or(0),
         day: s.usage.day,
         usage: usage(s.usage.user),
         global_usage: usage(s.usage.global),
@@ -487,18 +490,52 @@ pub async fn ai_status(
     }))
 }
 
+/// `POST /ai/jobs/retry`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct AiRetryResult {
+    /// Failed jobs queued again (for each note and kind only the latest failure, none whose
+    /// work was redone or is queued since).
+    pub requeued: u64,
+}
+
+/// Queues the caller's failed background jobs again with fresh attempts (a provider outage
+/// or any other failure). Jobs that failed because the provider was down are also requeued
+/// automatically once it works again.
+#[utoipa::path(
+    post, path = "/ai/jobs/retry", tag = "ai", operation_id = "retry_failed_jobs",
+    responses(
+        (status = 200, description = "How many jobs were queued again (0 when none failed).", body = AiRetryResult),
+        (status = 503, description = "`ai_unavailable`: the AI subsystem is not configured on this server.", body = Problem),
+    ),
+)]
+pub async fn retry_failed_jobs(
+    auth: Authenticated,
+    api: Option<web::Data<AiApi>>,
+) -> Result<MsgPack<AiRetryResult>, Problem> {
+    let api = ai_api(api.as_ref())?;
+    let caller = AiCaller {
+        scope: *auth.scope(),
+        username: String::new(),
+    };
+    let requeued = strata_jobs::status::retry_failed(&api.db, &caller, api.clock.now())
+        .await
+        .map_err(|e| ai_problem(&e))?;
+    Ok(MsgPack(AiRetryResult { requeued }))
+}
+
 /// Mounts the AI routes.
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/ask", web::post().to(ask));
     cfg.route("/ask/{id}", web::get().to(ask_stream));
     cfg.route("/ask/{id}/save", web::post().to(save_ask));
     cfg.route("/ai/status", web::get().to(ai_status));
+    cfg.route("/ai/jobs/retry", web::post().to(retry_failed_jobs));
 }
 
 /// The AI part of the contract (merged into the production document).
 #[derive(Debug, utoipa::OpenApi)]
 #[openapi(
-    paths(ask, save_ask, ai_status),
+    paths(ask, save_ask, ai_status, retry_failed_jobs),
     components(schemas(AskFrame)),
     tags((name = "ai", description = "Ask (RAG with citations) and AI status (PLAN §7.5 AI, §9.5)."))
 )]

@@ -597,10 +597,25 @@ impl AccountApi for ClientAccountApi {
                 paused_until: s.paused.as_ref().and_then(|p| p.until),
                 paused_reason: s.paused.map(|p| p.reason),
                 queue_depth: s.queue_depth,
+                failed_jobs: s.failed_jobs,
                 tokens_used: s.usage.input_tokens + s.usage.output_tokens,
                 tokens_limit: s.limits.per_user_daily_tokens,
                 embedded: s.embeddings.map(|e| (e.embedded, e.total)),
             })
+        })
+    }
+
+    fn retry_failed_jobs(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+    ) -> BoxFuture<'_, Result<u64, NetError>> {
+        Box::pin(async move {
+            let c = client(&server_url, Some(tokens))?;
+            let r = operations::retry_failed_jobs(&c)
+                .await
+                .map_err(|e| classify(&e))?;
+            Ok(r.requeued)
         })
     }
 

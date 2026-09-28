@@ -101,6 +101,7 @@ export 'package:strata_bridge/strata_bridge.dart'
         resolveConflict,
         resolveDuplicate,
         resolveLinkOrCreate,
+        retryFailedJobs,
         retypeAiDecision,
         retypeRelation,
         revertNote,

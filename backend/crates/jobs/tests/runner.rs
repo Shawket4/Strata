@@ -21,6 +21,7 @@ use strata_ai::PauseReason;
 use strata_common::{Clock, JobId, UserId};
 use strata_index::UserScope;
 use strata_index::repo::jobs::{self, NewJob};
+use strata_index::types::JobStatus;
 use strata_jobs::{
     JobClass, JobContext, JobError, JobHandler, JobNotice, JobOutcome, Runner, RunnerConfig,
     Scheduler, StaticUsers,
@@ -86,6 +87,7 @@ impl JobHandler for Script {
             "pause-user" | "pause-provider" if !paused => Ok(()),
             "retry" => Err(JobError::Retry("flaky".into())),
             "fatal" => Err(JobError::Fatal("broken".into())),
+            "down" => Err(JobError::Provider("provider unavailable: exit 1".into())),
             "pause-user" => Err(JobError::Paused {
                 reason: PauseReason::UserBudget,
                 until: self.until,
@@ -576,5 +578,78 @@ async fn runner_is_a_no_op_without_due_work() {
     assert_eq!(runner.kinds(), vec!["work"]);
     assert_eq!(runner.run_until_idle().await, vec![]);
     assert_eq!(runner.running(), 0);
+    w.finish().await;
+}
+
+#[tokio::test]
+async fn jobs_that_failed_while_the_provider_was_down_run_again_once_it_works() {
+    let w = World::new().await;
+    let (a, sa) = w.user("alice").await;
+    let (b, sb) = w.user("bob").await;
+    let a_down = enqueue(&w, &sa, "summarize", &["down", "down"], None, 2).await;
+    let b_down = enqueue(&w, &sb, "summarize", &["down", "down"], None, 2).await;
+    let other = enqueue(&w, &sb, "summarize", &["fatal"], None, 2).await;
+    let script = Arc::new(Script::new("summarize", JobClass::Llm));
+    let runner = w.runner(RunnerConfig::default(), vec![script.clone()]);
+    runner.run_until_idle().await;
+    w.db.clock.advance(chrono::Duration::seconds(30));
+    runner.run_until_idle().await;
+    for (scope, id) in [(&sa, a_down), (&sb, b_down), (&sb, other)] {
+        assert_eq!(job(&w, scope, id).await.status, JobStatus::Failed);
+    }
+    let failed = |scope: UserScope, provider_only: bool| {
+        let db = w.db.app_db.clone();
+        async move {
+            let mut tx = db.begin(&scope).await.expect("tx");
+            let n = jobs::retryable_failed(&mut tx, provider_only)
+                .await
+                .expect("count");
+            tx.commit().await.expect("commit");
+            n
+        }
+    };
+    assert_eq!(
+        failed(sb, true).await,
+        1,
+        "the fatal failure is not a provider failure"
+    );
+    assert_eq!(failed(sb, false).await, 2);
+
+    // The provider works again: Alice's next AI job succeeds and her failed job is queued
+    // again with fresh attempts; Bob's waits for the scheduler's pass.
+    w.db.clock.advance(chrono::Duration::minutes(5));
+    let ok = enqueue(&w, &sa, "summarize", &[], None, 2).await;
+    assert_eq!(runner.tick().await.len(), 1);
+    runner.drain().await;
+    let now = w.db.clock.now();
+    assert_eq!(job(&w, &sa, ok).await.status, JobStatus::Done);
+    let requeued = job(&w, &sa, a_down).await;
+    assert_eq!(
+        (requeued.status, requeued.attempts, requeued.run_after),
+        (JobStatus::Queued, 0, now)
+    );
+    assert_eq!(runner.recovery().last_success(), Some(now));
+    assert_eq!(job(&w, &sb, b_down).await.status, JobStatus::Failed);
+
+    let scheduler = Scheduler::new(
+        w.db.app_db.clone(),
+        w.db.issuer.clone(),
+        Arc::new(w.db.clock.clone()),
+        w.db.ids.clone(),
+        Arc::new(StaticUsers(vec![a, b])),
+        "Africa/Cairo".parse().expect("tz"),
+        3,
+        vec![],
+    );
+    assert_eq!(
+        scheduler.requeue_recovered().await,
+        0,
+        "no recovery signal wired"
+    );
+    let scheduler = scheduler.with_recovery(runner.recovery());
+    assert_eq!(scheduler.requeue_recovered().await, 1);
+    assert_eq!(job(&w, &sb, b_down).await.status, JobStatus::Queued);
+    assert_eq!(job(&w, &sb, other).await.status, JobStatus::Failed);
+    assert_eq!(scheduler.requeue_recovered().await, 0);
     w.finish().await;
 }

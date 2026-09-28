@@ -230,6 +230,7 @@ impl AiService {
             provider: provider_status,
             paused: budget.paused.or(provider_pause),
             queue_depth: None,
+            failed_jobs: None,
             usage: UsageStatus {
                 day: budget.day,
                 user: budget.user,

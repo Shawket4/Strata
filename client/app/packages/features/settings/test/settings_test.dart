@@ -142,6 +142,8 @@ void main() {
                   findsOneWidget,
                 );
                 expect(find.text(l10n.aiQueue(count: 3)), findsOneWidget);
+                expect(find.text(l10n.aiFailedJobs(count: 2)), findsOneWidget);
+                expect(find.text(l10n.aiRetryFailed), findsOneWidget);
                 expect(find.text(r'$2.00 of $2.00 today'), findsOneWidget);
               },
             ),
@@ -355,6 +357,36 @@ void main() {
         find.text('Something went wrong (wrong_password).'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('AI: Retry queues the failed jobs and says how many', (
+      tester,
+    ) async {
+      final fake = _fake()..retryFailedJobsAnswer.returns(2);
+      await _pump(tester, expanded, fake: fake, section: SettingsSection.ai);
+      await tapVisible(tester, find.text('Retry'));
+      expect(_intents(fake), [const CoreCall('retryFailedJobs')]);
+      expect(find.text('2 jobs queued again'), findsOneWidget);
+
+      fake.retryFailedJobsAnswer.throws(
+        const CoreFailure(code: 'offline', messageKey: 'e'),
+      );
+      await tapVisible(tester, find.text('Retry'));
+      expect(
+        find.text(lookupSettingsLocalizations(const Locale('en')).errorOffline),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('AI: no failed jobs, no Retry', (tester) async {
+      await _pump(
+        tester,
+        expanded,
+        fake: _fake(SettingsFixtures.withFailedJobs(0)),
+        section: SettingsSection.ai,
+      );
+      expect(find.text('Retry'), findsNothing);
+      expect(find.text('2 AI jobs failed'), findsNothing);
     });
 
     testWidgets('devices: rename, sign out, reminders, refresh', (

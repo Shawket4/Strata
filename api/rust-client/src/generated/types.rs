@@ -274,6 +274,13 @@ pub struct AiProviderDto {
     ///`ready`, `paused` or `degraded`.
     pub state: ::std::string::String,
 }
+///`POST /ai/jobs/retry`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AiRetryResult {
+    /**Failed jobs queued again (for each note and kind only the latest failure, none whose
+    work was redone or is queued since).*/
+    pub requeued: u64,
+}
 ///The user's AI settings.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct AiSettings {
@@ -289,6 +296,8 @@ pub struct AiStatusDto {
     pub embeddings: ::std::option::Option<AiEmbeddingsDto>,
     ///AI is enabled for the caller.
     pub enabled: bool,
+    ///The caller's failed background jobs that `POST /ai/jobs/retry` would run again.
+    pub failed_jobs: u64,
     ///Everyone's usage today.
     pub global_usage: AiUsageDto,
     ///Daily caps.

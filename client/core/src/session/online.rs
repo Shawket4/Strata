@@ -86,6 +86,21 @@ impl Session {
         Ok(())
     }
 
+    /// Queues the account's failed AI jobs again (Settings → AI), then re-reads the AI
+    /// status. Returns how many were queued. Offline → `offline`.
+    pub async fn retry_failed_jobs(&self) -> CoreResult<u32> {
+        if self.ctx().connectivity == crate::view::model::Connectivity::Offline {
+            return Err(CoreError::Offline);
+        }
+        let url = self.server_url();
+        let api = self.env.account_api.clone();
+        let n = self.online(api.retry_failed_jobs(url.clone(), self.tokens()).await)?;
+        if let Ok(s) = api.ai_status(url, self.tokens()).await {
+            self.cache_put(cache::AI_STATUS, &s)?;
+        }
+        Ok(u32::try_from(n).unwrap_or(u32::MAX))
+    }
+
     /// Renames a device.
     pub async fn rename_device(&self, device_id: &str, name: &str) -> CoreResult<()> {
         let name = name.trim();

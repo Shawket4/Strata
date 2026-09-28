@@ -135,21 +135,69 @@ pub async fn fail(
     id: JobId,
     error: &str,
     retry_at: Option<DateTime<Utc>>,
+    provider_failure: bool,
     now: DateTime<Utc>,
 ) -> Result<Option<Job>> {
     Ok(sqlx::query_as(sqlx::AssertSqlSafe(format!(
         "UPDATE jobs SET locked_at = NULL, last_error = $2, updated = $4, \
            status = CASE WHEN $3::timestamptz IS NOT NULL AND attempts < max_attempts \
                          THEN 'queued' ELSE 'failed' END, \
-           run_after = COALESCE($3, run_after) \
+           run_after = COALESCE($3, run_after), provider_failure = $5 \
          WHERE id = $1 AND status = 'running' RETURNING {COLS}"
     )))
     .bind(id)
     .bind(error)
     .bind(retry_at)
     .bind(now)
+    .bind(provider_failure)
     .fetch_optional(tx.conn())
     .await?)
+}
+
+/// Failed jobs of the scoped user worth running again, alias `f`: for each kind and debounce
+/// key only the latest failure, and none whose work is queued, running or done since (a
+/// periodic job the scheduler replaced, a note linked again later). `$1`: failed before
+/// (NULL: any time); `$2`: only jobs that failed because the provider was down.
+const RETRYABLE: &str = "SELECT f.id FROM jobs f \
+     WHERE f.status = 'failed' AND ($1::timestamptz IS NULL OR f.updated < $1) \
+       AND (NOT $2 OR f.provider_failure) \
+       AND NOT EXISTS (SELECT 1 FROM jobs q WHERE q.dedupe_key = f.dedupe_key \
+             AND q.kind = f.kind AND q.id <> f.id \
+             AND (q.status IN ('queued', 'running') \
+                  OR (q.status IN ('done', 'failed') AND (q.updated, q.id) > (f.updated, f.id))))";
+
+/// Failed jobs of the scoped user that [`requeue_failed`] would run again.
+pub async fn retryable_failed(tx: &mut ScopedTx, provider_only: bool) -> Result<u64> {
+    let n: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "SELECT count(*) FROM ({RETRYABLE}) r"
+    )))
+    .bind(None::<DateTime<Utc>>)
+    .bind(provider_only)
+    .fetch_one(tx.conn())
+    .await?;
+    Ok(u64::try_from(n).unwrap_or(0))
+}
+
+/// Queues the scoped user's retryable failed jobs (see [`RETRYABLE`]) that failed before
+/// `failed_before` (`None`: any time) again with fresh attempts, runnable at `now`. Returns
+/// how many.
+pub async fn requeue_failed(
+    tx: &mut ScopedTx,
+    provider_only: bool,
+    failed_before: Option<DateTime<Utc>>,
+    now: DateTime<Utc>,
+) -> Result<u64> {
+    Ok(sqlx::query(sqlx::AssertSqlSafe(format!(
+        "UPDATE jobs SET status = 'queued', attempts = 0, run_after = $3, updated = $3, \
+           locked_at = NULL, provider_failure = false \
+         WHERE id IN ({RETRYABLE})"
+    )))
+    .bind(failed_before)
+    .bind(provider_only)
+    .bind(now)
+    .execute(tx.conn())
+    .await?
+    .rows_affected())
 }
 
 /// Re-queues jobs whose claim is older than `claimed_before` (worker crashed); returns how many.

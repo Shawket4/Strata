@@ -4,6 +4,13 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Owner decision: failed AI jobs get another chance, automatically and by hand
+A provider outage (every `claude -p` call failing to start) used up every job's attempts, and failed jobs could not be retried, so notes lost their filing and summaries. The owner picked **both** (automatic requeue after an outage, and a manual retry), over either alone.
+- **Automatic:** a job that runs out of attempts because the provider was down (unavailable, timed out, login broken: `JobError::Provider`) is marked (`jobs.provider_failure`). When an AI job then succeeds, that user's marked jobs are queued again at once with fresh attempts; the hourly scheduler pass does the same for every other user's jobs marked before that success. The success time is kept in memory, so after a restart the first successful AI job sets it again.
+- **By hand:** `POST /ai/jobs/retry` queues all of the caller's failed jobs again, whatever the cause; `GET /ai/status` reports `failed_jobs`. Settings → AI shows "N AI jobs failed" with Retry when there are any.
+- **Which failed jobs count (implementation gap filled):** for each kind and debounce key only the latest failure, and none whose work is queued, running, or done since (a periodic job the scheduler replaced, a note linked again later), so a retry never redoes newer work.
+- **Auth failures are now retried** with backoff like other provider outages instead of failing at once (a broken login is usually fixed by the operator).
+
 ### Implementation decisions (fixed server address)
 Gaps filled while implementing the owner decision "No server address in the UI"; the owner may revisit any of them.
 - **Name and value:** `STRATA_SERVER_URL` (`--dart-define`) → `CoreConfig.server_url`, plus `CoreConfig.release_build` (Flutter's `kReleaseMode`). The Build workflow sets `STRATA_SERVER_URL: ${{ vars.STRATA_SERVER_URL || 'https://strata-ai.duckdns.org' }}` at the workflow level and fails the Android and macOS jobs unless it is `https://<host>` without spaces.

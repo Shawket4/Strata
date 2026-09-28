@@ -125,6 +125,22 @@ Future<void> _run(
   }
 }
 
+/// Queues the failed AI jobs again and says how many, or the failure.
+Future<void> _retryFailedJobs(BuildContext context, WidgetRef ref) async {
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final l10n = context.settingsL10n;
+  String message;
+  try {
+    final count = await ref.read(coreApiProvider).retryFailedJobs();
+    message = l10n.aiRetried(count: count);
+  } on Object catch (error) {
+    message = l10n.failure(error);
+  }
+  messenger
+    ?..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+}
+
 /// Asks for one text value ([initial] prefilled); `null` when cancelled.
 Future<String?> _askText(
   BuildContext context, {
@@ -946,8 +962,8 @@ class RemindersSection extends HookConsumerWidget {
 }
 
 /// Settings → AI: the server's AI status (provider, pause, queue, budget
-/// meter, search index progress), read-only.
-class AiSection extends StatelessWidget {
+/// meter, search index progress) and, when AI jobs failed, Retry.
+class AiSection extends ConsumerWidget {
   /// Creates the section.
   const new({required this.view, super.key});
 
@@ -955,7 +971,7 @@ class AiSection extends StatelessWidget {
   final SettingsView view;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.settingsL10n;
     final colors = context.strataColors;
     final text = context.strataText;
@@ -1021,6 +1037,18 @@ class AiSection extends StatelessWidget {
               ),
               subtitle: Text(l10n.aiQueue(count: status.queueDepth)),
             ),
+            if (status.failedJobs > 0)
+              ListTile(
+                leading: Icon(Icons.error_outline, color: colors.warningText),
+                title: Text(
+                  l10n.aiFailedJobs(count: status.failedJobs),
+                  style: text.body,
+                ),
+                trailing: TextButton(
+                  onPressed: () => _retryFailedJobs(context, ref),
+                  child: Text(l10n.aiRetryFailed),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.all(StrataSpacing.s4),
               child: MergeSemantics(

@@ -25,6 +25,7 @@ abstract final class AskFixtures {
     enabled: true,
     provider: 'OpenAI',
     queueDepth: 0,
+    failedJobs: 0,
     budgetUsedPercent: 62,
     budgetLabel: '62% used',
   );
@@ -182,6 +183,7 @@ abstract final class AskFixtures {
       enabled: true,
       pausedLabel: 'Paused until 14:00',
       queueDepth: 3,
+      failedJobs: 0,
       budgetUsedPercent: 100,
       budgetLabel: '100% used',
     ),

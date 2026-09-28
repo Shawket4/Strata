@@ -3964,6 +3964,7 @@ fn ai_status_view(ctx: &ViewCtx, s: &crate::net::AiStatusInfo) -> AiStatusView {
             Lang::Ar => format!("متوقف حتى {}", labels.moment_label(u)),
         }),
         queue_depth: u32::try_from(s.queue_depth).unwrap_or(u32::MAX),
+        failed_jobs: u32::try_from(s.failed_jobs).unwrap_or(u32::MAX),
         budget_used_percent: percent,
         budget_label: match ctx.lang {
             Lang::En => format!("{percent}% used"),

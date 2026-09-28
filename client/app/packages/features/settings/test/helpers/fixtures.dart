@@ -4,9 +4,12 @@ import 'package:strata_state/testing.dart';
 /// Settings fixtures (SCREEN_SPEC AccountSheetCompact settings list,
 /// ReminderNotifications settings column).
 abstract final class SettingsFixtures {
-  /// Shawket (admin) on the laptop: three devices, AI paused at the budget,
-  /// two integrity warnings, quiet hours on.
-  static final SettingsView full = SettingsView(
+  /// Shawket (admin) on the laptop: three devices, AI paused at the budget
+  /// with two failed jobs, two integrity warnings, quiet hours on.
+  static final SettingsView full = withFailedJobs(2);
+
+  /// [full] with [failedJobs] failed AI jobs.
+  static SettingsView withFailedJobs(int failedJobs) => SettingsView(
     account: const AccountSummary(
       userId: 'u-shawket',
       username: 'shawket',
@@ -60,11 +63,12 @@ abstract final class SettingsFixtures {
         signedIn: '2 Feb',
       ),
     ],
-    aiStatus: const AiStatusView(
+    aiStatus: AiStatusView(
       enabled: true,
       provider: 'Anthropic',
       pausedLabel: 'AI paused — daily budget reached',
       queueDepth: 3,
+      failedJobs: failedJobs,
       budgetUsedPercent: 100,
       budgetLabel: r'$2.00 of $2.00 today',
       embeddingPercent: 84,

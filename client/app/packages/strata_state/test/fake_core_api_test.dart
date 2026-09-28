@@ -565,6 +565,11 @@ void main() {
       answer: null,
     ),
     (
+      invoke: (api) => api.retryFailedJobs(),
+      call: const CoreCall('retryFailedJobs'),
+      answer: 0,
+    ),
+    (
       invoke: (api) => api.renameDevice(id: 'id', name: 'name'),
       call: const CoreCall('renameDevice', {'id': 'id', 'name': 'name'}),
       answer: null,
@@ -891,8 +896,8 @@ void main() {
 
   test('covers every Future-returning CoreApi method once', () {
     // 143 facade functions - 22 streams.
-    expect(cases, hasLength(121));
-    expect(cases.map((c) => c.call.method).toSet(), hasLength(121));
+    expect(cases, hasLength(122));
+    expect(cases.map((c) => c.call.method).toSet(), hasLength(122));
   });
 
   for (final c in cases) {

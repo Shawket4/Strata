@@ -496,6 +496,21 @@
         ],
         "type": "object"
       },
+      "AiRetryResult": {
+        "description": "`POST /ai/jobs/retry`.",
+        "properties": {
+          "requeued": {
+            "description": "Failed jobs queued again (for each note and kind only the latest failure, none whose\nwork was redone or is queued since).",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requeued"
+        ],
+        "type": "object"
+      },
       "AiSettings": {
         "description": "The user's AI settings.",
         "properties": {
@@ -531,6 +546,12 @@
           "enabled": {
             "description": "AI is enabled for the caller.",
             "type": "boolean"
+          },
+          "failed_jobs": {
+            "description": "The caller's failed background jobs that `POST /ai/jobs/retry` would run again.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
           },
           "global_usage": {
             "$ref": "#/components/schemas/AiUsageDto",
@@ -576,6 +597,7 @@
         "required": [
           "enabled",
           "queue_depth",
+          "failed_jobs",
           "day",
           "usage",
           "global_usage",
@@ -9081,6 +9103,49 @@
           }
         },
         "summary": "Retype an AI relation (the old type is recorded as rejected).",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/v1/ai/jobs/retry": {
+      "post": {
+        "operationId": "retry_failed_jobs",
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiRetryResult"
+                }
+              }
+            },
+            "description": "How many jobs were queued again (0 when none failed)."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable`: the AI subsystem is not configured on this server."
+          }
+        },
+        "summary": "Queues the caller's failed background jobs again with fresh attempts (a provider outage\nor any other failure). Jobs that failed because the provider was down are also requeued\nautomatically once it works again.",
         "tags": [
           "ai"
         ]

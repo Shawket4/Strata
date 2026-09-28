@@ -2391,6 +2391,8 @@ pub struct AiStatusView {
     pub paused_label: Option<String>,
     /// Queued jobs.
     pub queue_depth: u32,
+    /// Failed jobs "Retry failed jobs" would queue again (0: no retry offered).
+    pub failed_jobs: u32,
     /// Share of today's budget used (0–100).
     pub budget_used_percent: u32,
     /// "62% used".

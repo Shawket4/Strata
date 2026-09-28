@@ -351,6 +351,10 @@ abstract interface class CoreApi {
   /// (online).
   Future<void> refreshSettings();
 
+  /// Queues the account's failed AI jobs again and re-reads the AI status;
+  /// returns how many were queued.
+  Future<int> retryFailedJobs();
+
   /// Renames a device.
   Future<void> renameDevice({required String id, required String name});
 

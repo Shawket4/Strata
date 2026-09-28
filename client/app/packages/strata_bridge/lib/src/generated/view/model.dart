@@ -322,6 +322,9 @@ class AiStatusView {
   /// Queued jobs.
   final int queueDepth;
 
+  /// Failed jobs "Retry failed jobs" would queue again (0: no retry offered).
+  final int failedJobs;
+
   /// Share of today's budget used (0–100).
   final int budgetUsedPercent;
 
@@ -336,6 +339,7 @@ class AiStatusView {
     this.provider,
     this.pausedLabel,
     required this.queueDepth,
+    required this.failedJobs,
     required this.budgetUsedPercent,
     required this.budgetLabel,
     this.embeddingPercent,
@@ -347,6 +351,7 @@ class AiStatusView {
       provider.hashCode ^
       pausedLabel.hashCode ^
       queueDepth.hashCode ^
+      failedJobs.hashCode ^
       budgetUsedPercent.hashCode ^
       budgetLabel.hashCode ^
       embeddingPercent.hashCode;
@@ -360,6 +365,7 @@ class AiStatusView {
           provider == other.provider &&
           pausedLabel == other.pausedLabel &&
           queueDepth == other.queueDepth &&
+          failedJobs == other.failedJobs &&
           budgetUsedPercent == other.budgetUsedPercent &&
           budgetLabel == other.budgetLabel &&
           embeddingPercent == other.embeddingPercent;

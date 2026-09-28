@@ -713,6 +713,24 @@ abstract class SettingsLocalizations {
   /// **'{count, plural, =0{Nothing waiting for AI} =1{1 job waiting} other{{count} jobs waiting}}'**
   String aiQueue({required int count});
 
+  /// Failed AI jobs that Retry would queue again (shown only when there are some).
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 AI job failed} other{{count} AI jobs failed}}'**
+  String aiFailedJobs({required int count});
+
+  /// Button that queues the failed AI jobs again.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get aiRetryFailed;
+
+  /// Snack bar after Retry: how many failed AI jobs were queued again.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Nothing to retry} =1{1 job queued again} other{{count} jobs queued again}}'**
+  String aiRetried({required int count});
+
   /// AI budget meter title.
   ///
   /// In en, this message translates to:

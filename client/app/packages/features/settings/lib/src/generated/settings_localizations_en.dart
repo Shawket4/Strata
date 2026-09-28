@@ -373,6 +373,32 @@ class SettingsLocalizationsEn extends SettingsLocalizations {
   }
 
   @override
+  String aiFailedJobs({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count AI jobs failed',
+      one: '1 AI job failed',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get aiRetryFailed => 'Retry';
+
+  @override
+  String aiRetried({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jobs queued again',
+      one: '1 job queued again',
+      zero: 'Nothing to retry',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get aiBudget => 'Daily budget';
 
   @override

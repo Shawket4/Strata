@@ -318,6 +318,9 @@ pub struct AiStatusInfo {
     pub paused_reason: Option<String>,
     /// Queue depth.
     pub queue_depth: u64,
+    /// Failed jobs a retry would run again (absent in statuses cached before it existed).
+    #[serde(default)]
+    pub failed_jobs: u64,
     /// Today's tokens used by the account.
     pub tokens_used: u64,
     /// The account's daily token limit (0 = none).
@@ -641,6 +644,14 @@ pub trait AccountApi: Send + Sync + fmt::Debug {
         tokens: Tokens,
     ) -> BoxFuture<'_, Result<AiStatusInfo, NetError>> {
         not_available("ai_status")
+    }
+    /// `POST /ai/jobs/retry`: how many failed jobs were queued again.
+    fn retry_failed_jobs(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+    ) -> BoxFuture<'_, Result<u64, NetError>> {
+        not_available("retry_failed_jobs")
     }
     /// `GET /integrity`.
     fn integrity(

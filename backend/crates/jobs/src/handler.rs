@@ -45,19 +45,28 @@ pub enum JobError {
     /// A transient failure: retried with exponential backoff until attempts run out.
     #[error("retryable failure: {0}")]
     Retry(String),
+    /// The AI provider is down (unreachable, timing out, login broken): retried like
+    /// [`Self::Retry`]; a job that runs out of attempts this way is requeued automatically
+    /// once the provider works again.
+    #[error("provider down: {0}")]
+    Provider(String),
     /// A permanent failure: the job fails now.
     #[error("permanent failure: {0}")]
     Fatal(String),
 }
 
 impl From<AiError> for JobError {
-    /// Pauses wait; invalid output and provider trouble are retried; a refusal, an auth
-    /// problem or a broken prompt fails at once. Messages are content-free (PLAN §15).
+    /// Pauses wait; a provider that is down (unavailable, timed out, login broken) and
+    /// invalid output are retried; a rejected request, a refusal or a broken prompt fails at
+    /// once. Messages are content-free (PLAN §15).
     fn from(e: AiError) -> Self {
         use strata_ai::ProviderError as P;
         match e {
             AiError::Paused { reason, until } => Self::Paused { reason, until },
-            AiError::Provider(P::Auth | P::Rejected(_) | P::Refused)
+            AiError::Provider(P::Auth | P::Unavailable(_) | P::Timeout(_)) => {
+                Self::Provider(e.to_string())
+            }
+            AiError::Provider(P::Rejected(_) | P::Refused)
             | AiError::UnknownPrompt(_)
             | AiError::InvalidSchema(_)
             | AiError::Config(_) => Self::Fatal(e.to_string()),
@@ -123,11 +132,15 @@ mod tests {
         );
         assert_eq!(
             JobError::from(AiError::Provider(ProviderError::Auth)),
-            JobError::Fatal("provider authentication failed".into())
+            JobError::Provider("provider authentication failed".into())
         );
         assert_eq!(
             JobError::from(AiError::Provider(ProviderError::Unavailable("x".into()))),
-            JobError::Retry("provider unavailable: x".into())
+            JobError::Provider("provider unavailable: x".into())
+        );
+        assert_eq!(
+            JobError::from(AiError::Provider(ProviderError::Refused)),
+            JobError::Fatal("model refused the request".into())
         );
         assert!(matches!(
             JobError::from(AiError::InvalidOutput {

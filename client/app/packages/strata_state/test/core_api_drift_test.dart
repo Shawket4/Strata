@@ -41,7 +41,7 @@ void main() {
         'reminders.dart',
         'views.dart',
       ]);
-      expect(facade, hasLength(143));
+      expect(facade, hasLength(144));
       expect(
         facade['watchDirectory']!.signature,
         'Stream<DirectoryView> watchDirectory({required DirectoryTab tab, '

@@ -644,6 +644,9 @@ final class FakeCoreApi implements CoreApi {
   /// `refreshSettings`.
   final FakeAnswer<void> refreshSettingsAnswer = FakeAnswer(null);
 
+  /// `retryFailedJobs`.
+  final FakeAnswer<int> retryFailedJobsAnswer = FakeAnswer(0);
+
   /// `renameDevice`.
   final FakeAnswer<void> renameDeviceAnswer = FakeAnswer(null);
 
@@ -1360,6 +1363,10 @@ final class FakeCoreApi implements CoreApi {
   @override
   Future<void> refreshSettings() =>
       _call(refreshSettingsAnswer, 'refreshSettings');
+
+  @override
+  Future<int> retryFailedJobs() =>
+      _call(retryFailedJobsAnswer, 'retryFailedJobs');
 
   @override
   Future<void> renameDevice({required String id, required String name}) =>

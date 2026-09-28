@@ -185,10 +185,17 @@ async fn fail_requeues_with_backoff_until_attempts_run_out() {
         .expect("claim")
         .expect("job");
     let retry_at = t0 + Duration::seconds(60);
-    let failed = jobs::fail(&mut tx, job.id, "provider timeout", Some(retry_at), t0)
-        .await
-        .expect("fail")
-        .expect("running");
+    let failed = jobs::fail(
+        &mut tx,
+        job.id,
+        "provider timeout",
+        Some(retry_at),
+        true,
+        t0,
+    )
+    .await
+    .expect("fail")
+    .expect("running");
     assert_eq!(
         (
             failed.status,
@@ -220,6 +227,7 @@ async fn fail_requeues_with_backoff_until_attempts_run_out() {
         job.id,
         "still down",
         Some(retry_at + Duration::seconds(60)),
+        true,
         retry_at,
     )
     .await
@@ -230,7 +238,7 @@ async fn fail_requeues_with_backoff_until_attempts_run_out() {
         (JobStatus::Failed, 2, Some("still down"))
     );
     assert_eq!(
-        jobs::fail(&mut tx, job.id, "x", None, retry_at)
+        jobs::fail(&mut tx, job.id, "x", None, false, retry_at)
             .await
             .expect("fail"),
         None,
@@ -435,4 +443,133 @@ async fn the_wakeup_trigger_works_from_a_session_without_the_strata_search_path(
         .expect("requeue as postgres");
     drop(conn);
     assert_eq!(wakeups(&db).await, vec![(u, now + Duration::seconds(1))]);
+}
+
+/// Claims `job` and fails it permanently (`provider`: because the provider was down).
+async fn fail_now(
+    tx: &mut strata_index::ScopedTx,
+    job: &Job,
+    provider: bool,
+    at: chrono::DateTime<chrono::Utc>,
+) {
+    let claimed = jobs::claim_next(tx, at).await.expect("claim").expect("job");
+    assert_eq!(claimed.id, job.id);
+    jobs::fail(tx, job.id, "down", None, provider, at)
+        .await
+        .expect("fail")
+        .expect("running");
+}
+
+#[tokio::test]
+async fn failed_jobs_are_requeued_once_per_debounce_key_and_never_over_newer_work() {
+    let db = TestDb::new().await.expect("db");
+    let u = TestUser::new("alice").create(&db).await.expect("u").id;
+    let t0 = db.clock.now();
+    let t1 = t0 + Duration::minutes(1);
+    let t2 = t0 + Duration::minutes(2);
+    let mut tx = db.begin(u).await.expect("tx");
+    let keyed = |key: &str| {
+        let mut j = new_job(&db, "link", t0);
+        j.dedupe_key = Some(key.to_owned());
+        j
+    };
+    // note-a failed twice (an older and a newer job), note-b failed once but was linked
+    // again since, note-c failed and is queued again, summarize failed for another reason.
+    let a_old = jobs::enqueue(&mut tx, &keyed("note-a"), t0)
+        .await
+        .expect("a old");
+    fail_now(&mut tx, &a_old, true, t0).await;
+    let a_new = jobs::enqueue(&mut tx, &keyed("note-a"), t0)
+        .await
+        .expect("a new");
+    fail_now(&mut tx, &a_new, true, t1).await;
+    let b = jobs::enqueue(&mut tx, &keyed("note-b"), t0)
+        .await
+        .expect("b");
+    fail_now(&mut tx, &b, true, t0).await;
+    let b_again = jobs::enqueue(&mut tx, &keyed("note-b"), t0)
+        .await
+        .expect("b again");
+    jobs::claim_next(&mut tx, t1)
+        .await
+        .expect("claim")
+        .expect("b again");
+    jobs::complete(&mut tx, b_again.id, t1)
+        .await
+        .expect("complete");
+    let c = jobs::enqueue(&mut tx, &keyed("note-c"), t0)
+        .await
+        .expect("c");
+    fail_now(&mut tx, &c, true, t0).await;
+    let mut c_again = keyed("note-c");
+    c_again.run_after = t2;
+    jobs::enqueue(&mut tx, &c_again, t0)
+        .await
+        .expect("c queued");
+    let s = jobs::enqueue(&mut tx, &new_job(&db, "summarize", t0), t0)
+        .await
+        .expect("s");
+    fail_now(&mut tx, &s, false, t0).await;
+
+    assert_eq!(
+        jobs::retryable_failed(&mut tx, true).await.expect("count"),
+        1
+    );
+    assert_eq!(
+        jobs::retryable_failed(&mut tx, false).await.expect("count"),
+        2
+    );
+    // Only jobs that failed before the provider recovered.
+    assert_eq!(
+        jobs::requeue_failed(&mut tx, true, Some(t1), t2)
+            .await
+            .expect("requeue"),
+        0
+    );
+    assert_eq!(
+        jobs::requeue_failed(&mut tx, true, Some(t2), t2)
+            .await
+            .expect("requeue"),
+        1
+    );
+    let row = jobs::get_job(&mut tx, a_new.id)
+        .await
+        .expect("get")
+        .expect("a new");
+    assert_eq!(
+        (row.status, row.attempts, row.run_after, row.locked_at),
+        (JobStatus::Queued, 0, t2, None)
+    );
+    assert_eq!(
+        jobs::get_job(&mut tx, a_old.id)
+            .await
+            .expect("get")
+            .expect("a old")
+            .status,
+        JobStatus::Failed
+    );
+    assert_eq!(
+        jobs::retryable_failed(&mut tx, true).await.expect("count"),
+        0
+    );
+    // The manual retry takes the rest (not provider failures too).
+    assert_eq!(
+        jobs::requeue_failed(&mut tx, false, None, t2)
+            .await
+            .expect("requeue"),
+        1
+    );
+    assert_eq!(
+        jobs::get_job(&mut tx, s.id)
+            .await
+            .expect("get")
+            .expect("s")
+            .status,
+        JobStatus::Queued
+    );
+    assert_eq!(
+        jobs::retryable_failed(&mut tx, false).await.expect("count"),
+        0
+    );
+    tx.commit().await.expect("commit");
 }

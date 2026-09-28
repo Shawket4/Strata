@@ -71,6 +71,9 @@ pub struct AiStatus {
     pub paused: Option<PauseInfo>,
     /// Queued AI jobs for this user; filled in by the job runner (`None` until it exists).
     pub queue_depth: Option<u64>,
+    /// Failed jobs a retry would run again; filled in by the job runner (`None` until it
+    /// exists).
+    pub failed_jobs: Option<u64>,
     /// Today's usage.
     pub usage: UsageStatus,
     /// Budget caps (0 = unlimited).

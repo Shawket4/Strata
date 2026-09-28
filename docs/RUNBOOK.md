@@ -330,6 +330,15 @@ the CLI reports a usage limit (`rate_limit_event` with `status: "rejected"`, an 
 30 minutes when none is given); jobs wait and resume, and `GET /ai/status` shows
 `paused: provider_usage_limit` with the time. No process is started while paused.
 
+**Outages.** When `claude` cannot start, times out or its login is broken, jobs retry with
+backoff (30 s doubling, up to `max_attempts`) and then fail, marked as provider failures. Once an
+AI job succeeds again, that user's marked jobs are queued again at once and every other user's at
+the next hourly scheduler pass. Any failed job can also be retried by its owner (Settings → AI →
+Retry, `POST /ai/jobs/retry`); `GET /ai/status` counts them in `failed_jobs`. To requeue by hand
+in `psql`, `UPDATE strata.jobs SET status = 'queued', attempts = 0, run_after = now(),
+provider_failure = false WHERE status = 'failed' AND …;` works from any session (the wakeup
+trigger pins its own `search_path`).
+
 ## 10. AI: local embeddings (L19, D9 = a, PLAN §9.1b)
 
 Model: `ibm-granite/granite-embedding-97m-multilingual-r2` (Apache-2.0, ModernBERT, 384

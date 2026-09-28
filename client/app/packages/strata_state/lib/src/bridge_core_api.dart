@@ -462,6 +462,9 @@ final class BridgeCoreApi implements CoreApi {
   Future<void> refreshSettings() => bridge.refreshSettings();
 
   @override
+  Future<int> retryFailedJobs() => bridge.retryFailedJobs();
+
+  @override
   Future<void> renameDevice({required String id, required String name}) =>
       bridge.renameDevice(id: id, name: name);
 

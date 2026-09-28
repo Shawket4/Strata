@@ -104,6 +104,7 @@ pub struct Scheduler {
     tz: Tz,
     hour: u32,
     periodic: Vec<Periodic>,
+    recovery: Option<Arc<crate::LlmRecovery>>,
 }
 
 impl std::fmt::Debug for Scheduler {
@@ -138,7 +139,50 @@ impl Scheduler {
             tz,
             hour,
             periodic,
+            recovery: None,
         }
+    }
+
+    /// Also requeues, on every pass, each user's jobs that failed while the AI provider was
+    /// down before `recovery`'s last successful LLM job (see [`crate::recovery`]).
+    #[must_use]
+    pub fn with_recovery(mut self, recovery: Arc<crate::LlmRecovery>) -> Self {
+        self.recovery = Some(recovery);
+        self
+    }
+
+    /// Requeues provider failures older than the last successful LLM job for every user;
+    /// returns how many jobs were requeued.
+    pub async fn requeue_recovered(&self) -> u64 {
+        let Some(since) = self.recovery.as_ref().and_then(|r| r.last_success()) else {
+            return 0;
+        };
+        let now = self.clock.now();
+        let mut total = 0;
+        for user in self.users().await {
+            let scope = self.issuer.issue(user);
+            let result = async {
+                let mut tx = self.db.begin(&scope).await?;
+                let n = strata_index::repo::jobs::requeue_failed(&mut tx, true, Some(since), now)
+                    .await?;
+                tx.commit().await?;
+                Ok::<_, strata_index::IndexError>(n)
+            }
+            .await;
+            match result {
+                Ok(n) => total += n,
+                Err(e) => {
+                    tracing::error!(user = %user, error = %e, "requeueing failed jobs failed");
+                }
+            }
+        }
+        if total > 0 {
+            tracing::info!(
+                jobs = total,
+                "requeued jobs that failed while the AI provider was down"
+            );
+        }
+        total
     }
 
     /// The users the directory lists.
@@ -243,6 +287,7 @@ impl Scheduler {
             loop {
                 tick.tick().await;
                 self.ensure().await;
+                self.requeue_recovered().await;
             }
         })
     }
