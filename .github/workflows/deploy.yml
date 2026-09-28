@@ -120,9 +120,19 @@ jobs:
           trap 'rm -f ~/.ssh/strata_deploy' EXIT
           (umask 077 && printf '%s\n' "$SSH_KEY" > ~/.ssh/strata_deploy)
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -i ~/.ssh/strata_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes \
-            -o ConnectTimeout=20 -o ServerAliveInterval=15 \
-            "strata-deploy@$HOST" "deploy $SHA256 $NAME" < "pkg/$NAME.tar.gz"
+          # ssh exits 255 on a connection failure (the first run hit a one-off connect timeout);
+          # the deploy script's own failures are 1 or 64–75 and are not retried. A retry after
+          # a drop mid-deploy is safe: the script is locked and idempotent.
+          for attempt in 1 2 3; do
+            rc=0
+            ssh -i ~/.ssh/strata_deploy -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o BatchMode=yes \
+              -o ConnectTimeout=30 -o ServerAliveInterval=15 \
+              "strata-deploy@$HOST" "deploy $SHA256 $NAME" < "pkg/$NAME.tar.gz" || rc=$?
+            [ "$rc" -eq 255 ] && [ "$attempt" -lt 3 ] || break
+            echo "::warning::ssh connection failed (attempt $attempt); retrying in $((attempt * 20)) s"
+            sleep $((attempt * 20))
+          done
+          exit "$rc"
 
       - name: Check the public endpoint
         if: steps.pick.outputs.run != ''
