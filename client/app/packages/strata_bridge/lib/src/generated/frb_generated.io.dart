@@ -670,6 +670,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<ReminderItem> dco_decode_list_reminder_item(dynamic raw);
 
   @protected
+  List<RepointChoice> dco_decode_list_repoint_choice(dynamic raw);
+
+  @protected
   List<SearchHit> dco_decode_list_search_hit(dynamic raw);
 
   @protected
@@ -697,7 +700,13 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<TaskItem> dco_decode_list_task_item(dynamic raw);
 
   @protected
+  List<TextRange> dco_decode_list_text_range(dynamic raw);
+
+  @protected
   List<ThreadMessage> dco_decode_list_thread_message(dynamic raw);
+
+  @protected
+  List<TimeZoneItem> dco_decode_list_time_zone_item(dynamic raw);
 
   @protected
   List<WeekdayKind> dco_decode_list_weekday_kind(dynamic raw);
@@ -910,6 +919,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   RemindersSetting dco_decode_reminders_setting(dynamic raw);
 
   @protected
+  RepointChoice dco_decode_repoint_choice(dynamic raw);
+
+  @protected
   ResolutionKind dco_decode_resolution_kind(dynamic raw);
 
   @protected
@@ -1018,7 +1030,13 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   TextDir dco_decode_text_dir(dynamic raw);
 
   @protected
+  TextRange dco_decode_text_range(dynamic raw);
+
+  @protected
   ThreadMessage dco_decode_thread_message(dynamic raw);
+
+  @protected
+  TimeZoneItem dco_decode_time_zone_item(dynamic raw);
 
   @protected
   TimelineChip dco_decode_timeline_chip(dynamic raw);
@@ -1801,6 +1819,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  List<RepointChoice> sse_decode_list_repoint_choice(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<SearchHit> sse_decode_list_search_hit(SseDeserializer deserializer);
 
   @protected
@@ -1832,7 +1855,15 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<TaskItem> sse_decode_list_task_item(SseDeserializer deserializer);
 
   @protected
+  List<TextRange> sse_decode_list_text_range(SseDeserializer deserializer);
+
+  @protected
   List<ThreadMessage> sse_decode_list_thread_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<TimeZoneItem> sse_decode_list_time_zone_item(
     SseDeserializer deserializer,
   );
 
@@ -2089,6 +2120,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   RemindersSetting sse_decode_reminders_setting(SseDeserializer deserializer);
 
   @protected
+  RepointChoice sse_decode_repoint_choice(SseDeserializer deserializer);
+
+  @protected
   ResolutionKind sse_decode_resolution_kind(SseDeserializer deserializer);
 
   @protected
@@ -2197,7 +2231,13 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   TextDir sse_decode_text_dir(SseDeserializer deserializer);
 
   @protected
+  TextRange sse_decode_text_range(SseDeserializer deserializer);
+
+  @protected
   ThreadMessage sse_decode_thread_message(SseDeserializer deserializer);
+
+  @protected
+  TimeZoneItem sse_decode_time_zone_item(SseDeserializer deserializer);
 
   @protected
   TimelineChip sse_decode_timeline_chip(SseDeserializer deserializer);
@@ -3214,6 +3254,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_repoint_choice(
+    List<RepointChoice> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_search_hit(
     List<SearchHit> self,
     SseSerializer serializer,
@@ -3259,8 +3305,20 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_list_task_item(List<TaskItem> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_text_range(
+    List<TextRange> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_thread_message(
     List<ThreadMessage> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_time_zone_item(
+    List<TimeZoneItem> self,
     SseSerializer serializer,
   );
 
@@ -3586,6 +3644,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_repoint_choice(RepointChoice self, SseSerializer serializer);
+
+  @protected
   void sse_encode_resolution_kind(
     ResolutionKind self,
     SseSerializer serializer,
@@ -3718,7 +3779,13 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_text_dir(TextDir self, SseSerializer serializer);
 
   @protected
+  void sse_encode_text_range(TextRange self, SseSerializer serializer);
+
+  @protected
   void sse_encode_thread_message(ThreadMessage self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_time_zone_item(TimeZoneItem self, SseSerializer serializer);
 
   @protected
   void sse_encode_timeline_chip(TimelineChip self, SseSerializer serializer);

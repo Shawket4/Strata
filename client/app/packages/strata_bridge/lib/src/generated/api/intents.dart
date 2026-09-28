@@ -332,6 +332,19 @@ Future<String> setProperty({
   value: value,
 );
 
+/// Sets a property to a list of values (several phone numbers, `aliases`, `tags`); the list
+/// replaces the whole value and an empty list removes the key. Relation lists are refused
+/// (use the relation intents).
+Future<String> setPropertyValues({
+  required String id,
+  required String key,
+  required List<String> values,
+}) => StrataCore.instance.api.crateApiIntentsSetPropertyValues(
+  id: id,
+  key: key,
+  values: values,
+);
+
 /// Removes a property.
 Future<String> removeProperty({required String id, required String key}) =>
     StrataCore.instance.api.crateApiIntentsRemoveProperty(id: id, key: key);
@@ -344,7 +357,8 @@ Future<String> addAlias({required String id, required String alias}) =>
 Future<String> removeAlias({required String id, required String alias}) =>
     StrataCore.instance.api.crateApiIntentsRemoveAlias(id: id, alias: alias);
 
-/// Records a custody event of a document ("Record a move").
+/// Records a custody event of a document ("Record a move"); a draft without a date is
+/// recorded today in the account's time zone.
 Future<String> recordCustody({
   required String documentId,
   required CustodyDraft draft,

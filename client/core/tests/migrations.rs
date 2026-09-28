@@ -34,8 +34,8 @@ fn columns(conn: &Connection, table: &str) -> Vec<String> {
 #[test]
 fn fresh_account_database_has_the_full_schema() {
     let conn = Connection::open_in_memory().expect("db");
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("migrates"), 3);
-    assert_eq!(migrations::version(&conn).expect("version"), 3);
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("migrates"), 4);
+    assert_eq!(migrations::version(&conn).expect("version"), 4);
     assert_eq!(
         tables(&conn),
         [
@@ -232,7 +232,7 @@ fn v2_to_v3_keeps_every_row_and_adds_server_columns() {
          UPDATE sync_state SET epoch = 3, cursor_seq = 42, bootstrap_complete = 1;",
     )
     .expect("fixture");
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("v3"), 3);
+    assert_eq!(migrations::migrate_to(&conn, ACCOUNT, 3).expect("v3"), 3);
     let note: (String, Option<String>) = conn
         .query_row(
             "SELECT content, summary FROM notes WHERE id = 'n1'",
@@ -274,15 +274,39 @@ fn migrating_twice_is_a_no_op_and_newer_databases_are_refused() {
     let conn = Connection::open_in_memory().expect("db");
     migrations::migrate(&conn, ACCOUNT).expect("first");
     let before = tables(&conn);
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("second"), 3);
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("second"), 4);
     assert_eq!(tables(&conn), before);
 
     conn.pragma_update(None, "user_version", 9).expect("bump");
     assert_eq!(
         migrations::migrate(&conn, ACCOUNT),
         Err(CoreError::Storage(
-            "database schema v9 is newer than this app (v3)".into()
+            "database schema v9 is newer than this app (v4)".into()
         ))
+    );
+}
+
+#[test]
+fn v3_to_v4_keeps_custody_rows_and_adds_the_note() {
+    let conn = Connection::open_in_memory().expect("db");
+    assert_eq!(migrations::migrate_to(&conn, ACCOUNT, 3).expect("v3"), 3);
+    conn.execute_batch(
+        "INSERT INTO custody_events (document_id, ord, type, at, citations)
+           VALUES ('d1', 0, 'handed-to', '2026-09-21', x'90');",
+    )
+    .expect("fixture");
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("v4"), 4);
+    let row: (String, String, Option<String>) = conn
+        .query_row(
+            "SELECT type, at, note FROM custody_events WHERE document_id = 'd1'",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        )
+        .expect("row kept");
+    assert_eq!(row, ("handed-to".to_owned(), "2026-09-21".to_owned(), None));
+    assert_eq!(
+        columns(&conn, "custody_events").last().map(String::as_str),
+        Some("note")
     );
 }
 

@@ -235,8 +235,8 @@ fn index_parsed(
             conn.execute(
                 "INSERT INTO custody_events (document_id, ord, type, at, place_id, place_raw,
                                              person_id, person_raw, counterparty_id,
-                                             counterparty_raw, citations)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                                             counterparty_raw, citations, note)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 params![
                     id,
                     i64::try_from(i).unwrap_or(i64::MAX),
@@ -248,7 +248,8 @@ fn index_parsed(
                     person,
                     party.as_deref().and_then(|x| r.resolve(x, path)),
                     party,
-                    to_msgpack(&e.citations)?
+                    to_msgpack(&e.citations)?,
+                    e.note
                 ],
             )?;
         }

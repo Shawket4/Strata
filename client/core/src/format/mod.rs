@@ -11,6 +11,7 @@ pub mod hints;
 pub mod labels;
 pub mod recurrence;
 pub mod task_text;
+pub mod timezones;
 
 use chrono::NaiveDate;
 use vault_format::custody::{self, CustodyEvent};

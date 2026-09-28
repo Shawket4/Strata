@@ -75,7 +75,7 @@ class StrataCore
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 85507987;
+  int get rustContentHash => 1421183086;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -363,6 +363,11 @@ abstract class StrataCoreApi extends BaseApi {
     String? hint,
   });
 
+  Future<List<RepointChoice>> crateApiViewsRepointChoices({
+    required String decisionId,
+    required String query,
+  });
+
   Future<String> crateApiIntentsRepointRelation({
     required String srcId,
     required String dstId,
@@ -463,6 +468,12 @@ abstract class StrataCoreApi extends BaseApi {
     required String value,
   });
 
+  Future<String> crateApiIntentsSetPropertyValues({
+    required String id,
+    required String key,
+    required List<String> values,
+  });
+
   Future<void> crateApiIntentsSetQuietHours({
     required bool enabled,
     required String from,
@@ -516,6 +527,8 @@ abstract class StrataCoreApi extends BaseApi {
   Future<TaskPatch> crateViewModelTaskPatchDefault();
 
   Future<TaskSections> crateViewModelTaskSectionsDefault();
+
+  Future<List<TimeZoneItem>> crateApiViewsTimezones({required String query});
 
   Future<String> crateApiIntentsUndoSuggestion({required String id});
 
@@ -3132,6 +3145,41 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       );
 
   @override
+  Future<List<RepointChoice>> crateApiViewsRepointChoices({
+    required String decisionId,
+    required String query,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(decisionId, serializer);
+          sse_encode_String(query, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 83,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_repoint_choice,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsRepointChoicesConstMeta,
+        argValues: [decisionId, query],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsRepointChoicesConstMeta =>
+      const TaskConstMeta(
+        debugName: "repoint_choices",
+        argNames: ["decisionId", "query"],
+      );
+
+  @override
   Future<String> crateApiIntentsRepointRelation({
     required String srcId,
     required String dstId,
@@ -3149,7 +3197,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 83,
+            funcId: 84,
             port: port_,
           );
         },
@@ -3184,7 +3232,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 84,
+            funcId: 85,
             port: port_,
           );
         },
@@ -3215,7 +3263,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 85,
+            funcId: 86,
             port: port_,
           );
         },
@@ -3243,7 +3291,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 86,
+            funcId: 87,
             port: port_,
           );
         },
@@ -3275,7 +3323,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 87,
+            funcId: 88,
             port: port_,
           );
         },
@@ -3310,7 +3358,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 88,
+            funcId: 89,
             port: port_,
           );
         },
@@ -3345,7 +3393,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 89,
+            funcId: 90,
             port: port_,
           );
         },
@@ -3380,7 +3428,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 90,
+            funcId: 91,
             port: port_,
           );
         },
@@ -3415,7 +3463,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 91,
+            funcId: 92,
             port: port_,
           );
         },
@@ -3450,7 +3498,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 92,
+            funcId: 93,
             port: port_,
           );
         },
@@ -3489,7 +3537,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 93,
+            funcId: 94,
             port: port_,
           );
         },
@@ -3524,7 +3572,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 94,
+            funcId: 95,
             port: port_,
           );
         },
@@ -3554,7 +3602,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 95,
+            funcId: 96,
             port: port_,
           );
         },
@@ -3582,7 +3630,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 96,
+            funcId: 97,
             port: port_,
           );
         },
@@ -3619,7 +3667,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 97,
+            funcId: 98,
             port: port_,
           );
         },
@@ -3649,7 +3697,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 98,
+            funcId: 99,
             port: port_,
           );
         },
@@ -3681,7 +3729,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 99,
+            funcId: 100,
             port: port_,
           );
         },
@@ -3715,7 +3763,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 100,
+            funcId: 101,
             port: port_,
           );
         },
@@ -3748,7 +3796,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 101,
+            funcId: 102,
             port: port_,
           );
         },
@@ -3776,7 +3824,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 102,
+            funcId: 103,
             port: port_,
           );
         },
@@ -3811,7 +3859,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 103,
+            funcId: 104,
             port: port_,
           );
         },
@@ -3842,7 +3890,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 104,
+            funcId: 105,
             port: port_,
           );
         },
@@ -3876,7 +3924,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 105,
+            funcId: 106,
             port: port_,
           );
         },
@@ -3897,6 +3945,43 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   );
 
   @override
+  Future<String> crateApiIntentsSetPropertyValues({
+    required String id,
+    required String key,
+    required List<String> values,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(id, serializer);
+          sse_encode_String(key, serializer);
+          sse_encode_list_String(values, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 107,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiIntentsSetPropertyValuesConstMeta,
+        argValues: [id, key, values],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiIntentsSetPropertyValuesConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_property_values",
+        argNames: ["id", "key", "values"],
+      );
+
+  @override
   Future<void> crateApiIntentsSetQuietHours({
     required bool enabled,
     required String from,
@@ -3912,7 +3997,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 106,
+            funcId: 108,
             port: port_,
           );
         },
@@ -3943,7 +4028,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 107,
+            funcId: 109,
             port: port_,
           );
         },
@@ -3974,7 +4059,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 108,
+            funcId: 110,
             port: port_,
           );
         },
@@ -4005,7 +4090,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 109,
+            funcId: 111,
             port: port_,
           );
         },
@@ -4033,7 +4118,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 110,
+            funcId: 112,
             port: port_,
           );
         },
@@ -4061,7 +4146,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 111,
+            funcId: 113,
             port: port_,
           );
         },
@@ -4093,7 +4178,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 112,
+            funcId: 114,
             port: port_,
           );
         },
@@ -4128,7 +4213,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 113,
+            funcId: 115,
             port: port_,
           );
         },
@@ -4156,7 +4241,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 114,
+            funcId: 116,
             port: port_,
           );
         },
@@ -4184,7 +4269,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 115,
+            funcId: 117,
             port: port_,
           );
         },
@@ -4212,7 +4297,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 116,
+            funcId: 118,
             port: port_,
           );
         },
@@ -4239,7 +4324,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 117,
+            funcId: 119,
             port: port_,
           );
         },
@@ -4269,7 +4354,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 118,
+            funcId: 120,
             port: port_,
           );
         },
@@ -4299,7 +4384,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 119,
+            funcId: 121,
             port: port_,
           );
         },
@@ -4327,7 +4412,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 120,
+            funcId: 122,
             port: port_,
           );
         },
@@ -4354,7 +4439,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 121,
+            funcId: 123,
             port: port_,
           );
         },
@@ -4381,7 +4466,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 122,
+            funcId: 124,
             port: port_,
           );
         },
@@ -4408,7 +4493,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 123,
+            funcId: 125,
             port: port_,
           );
         },
@@ -4436,7 +4521,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 124,
+            funcId: 126,
             port: port_,
           );
         },
@@ -4463,7 +4548,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 125,
+            funcId: 127,
             port: port_,
           );
         },
@@ -4490,7 +4575,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 126,
+            funcId: 128,
             port: port_,
           );
         },
@@ -4509,6 +4594,34 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       const TaskConstMeta(debugName: "task_sections_default", argNames: []);
 
   @override
+  Future<List<TimeZoneItem>> crateApiViewsTimezones({required String query}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(query, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 129,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_time_zone_item,
+          decodeErrorData: sse_decode_core_failure,
+        ),
+        constMeta: kCrateApiViewsTimezonesConstMeta,
+        argValues: [query],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiViewsTimezonesConstMeta =>
+      const TaskConstMeta(debugName: "timezones", argNames: ["query"]);
+
+  @override
   Future<String> crateApiIntentsUndoSuggestion({required String id}) {
     return handler.executeNormal(
       NormalTask(
@@ -4518,7 +4631,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 127,
+            funcId: 130,
             port: port_,
           );
         },
@@ -4552,7 +4665,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 128,
+            funcId: 131,
             port: port_,
           );
         },
@@ -4586,7 +4699,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 129,
+            funcId: 132,
             port: port_,
           );
         },
@@ -4620,7 +4733,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 130,
+            funcId: 133,
             port: port_,
           );
         },
@@ -4653,7 +4766,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 131,
+              funcId: 134,
               port: port_,
             );
           },
@@ -4686,7 +4799,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 132,
+              funcId: 135,
               port: port_,
             );
           },
@@ -4725,7 +4838,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 133,
+              funcId: 136,
               port: port_,
             );
           },
@@ -4769,7 +4882,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 134,
+              funcId: 137,
               port: port_,
             );
           },
@@ -4804,7 +4917,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 135,
+              funcId: 138,
               port: port_,
             );
           },
@@ -4840,7 +4953,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 136,
+              funcId: 139,
               port: port_,
             );
           },
@@ -4872,7 +4985,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 137,
+              funcId: 140,
               port: port_,
             );
           },
@@ -4904,7 +5017,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 138,
+              funcId: 141,
               port: port_,
             );
           },
@@ -4939,7 +5052,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 139,
+              funcId: 142,
               port: port_,
             );
           },
@@ -4979,7 +5092,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 140,
+              funcId: 143,
               port: port_,
             );
           },
@@ -5021,7 +5134,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 141,
+              funcId: 144,
               port: port_,
             );
           },
@@ -5056,7 +5169,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 142,
+              funcId: 145,
               port: port_,
             );
           },
@@ -5089,7 +5202,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 143,
+              funcId: 146,
               port: port_,
             );
           },
@@ -5122,7 +5235,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 144,
+              funcId: 147,
               port: port_,
             );
           },
@@ -5157,7 +5270,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 145,
+              funcId: 148,
               port: port_,
             );
           },
@@ -5195,7 +5308,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 146,
+              funcId: 149,
               port: port_,
             );
           },
@@ -5229,7 +5342,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 147,
+              funcId: 150,
               port: port_,
             );
           },
@@ -5261,7 +5374,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 148,
+              funcId: 151,
               port: port_,
             );
           },
@@ -5293,7 +5406,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 149,
+              funcId: 152,
               port: port_,
             );
           },
@@ -5326,7 +5439,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 150,
+              funcId: 153,
               port: port_,
             );
           },
@@ -5358,7 +5471,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 151,
+              funcId: 154,
               port: port_,
             );
           },
@@ -5390,7 +5503,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 152,
+              funcId: 155,
               port: port_,
             );
           },
@@ -5604,8 +5717,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AdminUserItem dco_decode_admin_user_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return AdminUserItem(
       id: dco_decode_String(arr[0]),
       username: dco_decode_String(arr[1]),
@@ -5620,6 +5733,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       createdLabel: dco_decode_String(arr[10]),
       deletionLabel: dco_decode_opt_String(arr[11]),
       passwordChangeRequired: dco_decode_bool(arr[12]),
+      exportDownloadedLabel: dco_decode_opt_String(arr[13]),
     );
   }
 
@@ -5627,13 +5741,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AdminUsersView dco_decode_admin_users_view(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return AdminUsersView(
       availability: dco_decode_availability(arr[0]),
       pending: dco_decode_list_admin_user_item(arr[1]),
       users: dco_decode_list_admin_user_item(arr[2]),
       query: dco_decode_String(arr[3]),
+      deletionPreviewLabel: dco_decode_opt_String(arr[4]),
     );
   }
 
@@ -5641,8 +5756,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   AiActivityItem dco_decode_ai_activity_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return AiActivityItem(
       atLabel: dco_decode_String(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -5654,6 +5769,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       undoSuggestionId: dco_decode_opt_String(arr[7]),
       decisionId: dco_decode_String(arr[8]),
       reverted: dco_decode_bool(arr[9]),
+      canRepoint: dco_decode_bool(arr[10]),
     );
   }
 
@@ -6097,8 +6213,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   CitationPreview dco_decode_citation_preview(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return CitationPreview(
       noteId: dco_decode_opt_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -6108,6 +6224,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       heading: dco_decode_opt_String(arr[5]),
       dateLabel: dco_decode_opt_String(arr[6]),
       tags: dco_decode_list_String(arr[7]),
+      anchor: dco_decode_opt_String(arr[8]),
+      line: dco_decode_opt_box_autoadd_u_32(arr[9]),
+      offset: dco_decode_opt_box_autoadd_u_32(arr[10]),
     );
   }
 
@@ -6315,14 +6434,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   CustodyDraft dco_decode_custody_draft(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return CustodyDraft(
       kind: dco_decode_String(arr[0]),
       placeId: dco_decode_opt_String(arr[1]),
       personId: dco_decode_opt_String(arr[2]),
       counterpartyId: dco_decode_opt_String(arr[3]),
-      date: dco_decode_Chrono_NaiveDate(arr[4]),
+      date: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[4]),
+      note: dco_decode_opt_String(arr[5]),
     );
   }
 
@@ -6330,8 +6450,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   CustodyItem dco_decode_custody_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 16)
-      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
+    if (arr.length != 17)
+      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
     return CustodyItem(
       date: dco_decode_Chrono_NaiveDate(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -6349,6 +6469,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       sentence: dco_decode_String(arr[13]),
       dateLabel: dco_decode_String(arr[14]),
       here: dco_decode_bool(arr[15]),
+      note: dco_decode_opt_String(arr[16]),
     );
   }
 
@@ -6613,8 +6734,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   EditorHint dco_decode_editor_hint(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return EditorHint(
       kind: dco_decode_hint_kind(arr[0]),
       start: dco_decode_u_32(arr[1]),
@@ -6623,6 +6744,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       targetAnchor: dco_decode_opt_String(arr[4]),
       taskId: dco_decode_opt_String(arr[5]),
       level: dco_decode_u_8(arr[6]),
+      markers: dco_decode_list_text_range(arr[7]),
     );
   }
 
@@ -7419,6 +7541,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<RepointChoice> dco_decode_list_repoint_choice(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_repoint_choice).toList();
+  }
+
+  @protected
   List<SearchHit> dco_decode_list_search_hit(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_search_hit).toList();
@@ -7473,9 +7601,21 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<TextRange> dco_decode_list_text_range(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_text_range).toList();
+  }
+
+  @protected
   List<ThreadMessage> dco_decode_list_thread_message(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_thread_message).toList();
+  }
+
+  @protected
+  List<TimeZoneItem> dco_decode_list_time_zone_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_time_zone_item).toList();
   }
 
   @protected
@@ -8217,6 +8357,21 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  RepointChoice dco_decode_repoint_choice(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return RepointChoice(
+      id: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      titleDir: dco_decode_text_dir(arr[2]),
+      kind: dco_decode_String(arr[3]),
+      folder: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
   ResolutionKind dco_decode_resolution_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return ResolutionKind.values[raw as int];
@@ -8369,8 +8524,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SuggestionDetail dco_decode_suggestion_detail(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 29)
-      throw Exception('unexpected arr length: expect 29 but see ${arr.length}');
+    if (arr.length != 31)
+      throw Exception('unexpected arr length: expect 31 but see ${arr.length}');
     return SuggestionDetail(
       kind: dco_decode_suggestion_kind(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -8401,6 +8556,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       recurrence: dco_decode_opt_String(arr[26]),
       entities: dco_decode_list_entity_ref(arr[27]),
       question: dco_decode_opt_String(arr[28]),
+      survivorId: dco_decode_opt_String(arr[29]),
+      mergeLabel: dco_decode_opt_String(arr[30]),
     );
   }
 
@@ -8757,6 +8914,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  TextRange dco_decode_text_range(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return TextRange(
+      start: dco_decode_u_32(arr[0]),
+      end: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
   ThreadMessage dco_decode_thread_message(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -8769,6 +8938,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       textDir: dco_decode_text_dir(arr[3]),
       createdLabel: dco_decode_String(arr[4]),
       pendingSync: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  TimeZoneItem dco_decode_time_zone_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return TimeZoneItem(
+      id: dco_decode_String(arr[0]),
+      name: dco_decode_String(arr[1]),
+      region: dco_decode_String(arr[2]),
+      offsetMinutes: dco_decode_i_32(arr[3]),
+      offsetLabel: dco_decode_String(arr[4]),
+      isCurrent: dco_decode_bool(arr[5]),
+      nameDir: dco_decode_text_dir(arr[6]),
     );
   }
 
@@ -9052,6 +9238,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_createdLabel = sse_decode_String(deserializer);
     var var_deletionLabel = sse_decode_opt_String(deserializer);
     var var_passwordChangeRequired = sse_decode_bool(deserializer);
+    var var_exportDownloadedLabel = sse_decode_opt_String(deserializer);
     return AdminUserItem(
       id: var_id,
       username: var_username,
@@ -9066,6 +9253,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       createdLabel: var_createdLabel,
       deletionLabel: var_deletionLabel,
       passwordChangeRequired: var_passwordChangeRequired,
+      exportDownloadedLabel: var_exportDownloadedLabel,
     );
   }
 
@@ -9076,11 +9264,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_pending = sse_decode_list_admin_user_item(deserializer);
     var var_users = sse_decode_list_admin_user_item(deserializer);
     var var_query = sse_decode_String(deserializer);
+    var var_deletionPreviewLabel = sse_decode_opt_String(deserializer);
     return AdminUsersView(
       availability: var_availability,
       pending: var_pending,
       users: var_users,
       query: var_query,
+      deletionPreviewLabel: var_deletionPreviewLabel,
     );
   }
 
@@ -9097,6 +9287,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_undoSuggestionId = sse_decode_opt_String(deserializer);
     var var_decisionId = sse_decode_String(deserializer);
     var var_reverted = sse_decode_bool(deserializer);
+    var var_canRepoint = sse_decode_bool(deserializer);
     return AiActivityItem(
       atLabel: var_atLabel,
       kind: var_kind,
@@ -9108,6 +9299,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       undoSuggestionId: var_undoSuggestionId,
       decisionId: var_decisionId,
       reverted: var_reverted,
+      canRepoint: var_canRepoint,
     );
   }
 
@@ -9614,6 +9806,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_heading = sse_decode_opt_String(deserializer);
     var var_dateLabel = sse_decode_opt_String(deserializer);
     var var_tags = sse_decode_list_String(deserializer);
+    var var_anchor = sse_decode_opt_String(deserializer);
+    var var_line = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_offset = sse_decode_opt_box_autoadd_u_32(deserializer);
     return CitationPreview(
       noteId: var_noteId,
       title: var_title,
@@ -9623,6 +9818,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       heading: var_heading,
       dateLabel: var_dateLabel,
       tags: var_tags,
+      anchor: var_anchor,
+      line: var_line,
+      offset: var_offset,
     );
   }
 
@@ -9863,13 +10061,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_placeId = sse_decode_opt_String(deserializer);
     var var_personId = sse_decode_opt_String(deserializer);
     var var_counterpartyId = sse_decode_opt_String(deserializer);
-    var var_date = sse_decode_Chrono_NaiveDate(deserializer);
+    var var_date = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
+    var var_note = sse_decode_opt_String(deserializer);
     return CustodyDraft(
       kind: var_kind,
       placeId: var_placeId,
       personId: var_personId,
       counterpartyId: var_counterpartyId,
       date: var_date,
+      note: var_note,
     );
   }
 
@@ -9892,6 +10092,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_sentence = sse_decode_String(deserializer);
     var var_dateLabel = sse_decode_String(deserializer);
     var var_here = sse_decode_bool(deserializer);
+    var var_note = sse_decode_opt_String(deserializer);
     return CustodyItem(
       date: var_date,
       kind: var_kind,
@@ -9909,6 +10110,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       sentence: var_sentence,
       dateLabel: var_dateLabel,
       here: var_here,
+      note: var_note,
     );
   }
 
@@ -10257,6 +10459,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_targetAnchor = sse_decode_opt_String(deserializer);
     var var_taskId = sse_decode_opt_String(deserializer);
     var var_level = sse_decode_u_8(deserializer);
+    var var_markers = sse_decode_list_text_range(deserializer);
     return EditorHint(
       kind: var_kind,
       start: var_start,
@@ -10265,6 +10468,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       targetAnchor: var_targetAnchor,
       taskId: var_taskId,
       level: var_level,
+      markers: var_markers,
     );
   }
 
@@ -11523,6 +11727,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<RepointChoice> sse_decode_list_repoint_choice(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <RepointChoice>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_repoint_choice(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<SearchHit> sse_decode_list_search_hit(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -11637,6 +11855,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<TextRange> sse_decode_list_text_range(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TextRange>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_text_range(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ThreadMessage> sse_decode_list_thread_message(
     SseDeserializer deserializer,
   ) {
@@ -11646,6 +11876,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var ans_ = <ThreadMessage>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_thread_message(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<TimeZoneItem> sse_decode_list_time_zone_item(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <TimeZoneItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_time_zone_item(deserializer));
     }
     return ans_;
   }
@@ -12651,6 +12895,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  RepointChoice sse_decode_repoint_choice(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_titleDir = sse_decode_text_dir(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_folder = sse_decode_String(deserializer);
+    return RepointChoice(
+      id: var_id,
+      title: var_title,
+      titleDir: var_titleDir,
+      kind: var_kind,
+      folder: var_folder,
+    );
+  }
+
+  @protected
   ResolutionKind sse_decode_resolution_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -12863,6 +13124,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_recurrence = sse_decode_opt_String(deserializer);
     var var_entities = sse_decode_list_entity_ref(deserializer);
     var var_question = sse_decode_opt_String(deserializer);
+    var var_survivorId = sse_decode_opt_String(deserializer);
+    var var_mergeLabel = sse_decode_opt_String(deserializer);
     return SuggestionDetail(
       kind: var_kind,
       title: var_title,
@@ -12893,6 +13156,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       recurrence: var_recurrence,
       entities: var_entities,
       question: var_question,
+      survivorId: var_survivorId,
+      mergeLabel: var_mergeLabel,
     );
   }
 
@@ -13337,6 +13602,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  TextRange sse_decode_text_range(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    return TextRange(start: var_start, end: var_end);
+  }
+
+  @protected
   ThreadMessage sse_decode_thread_message(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -13352,6 +13625,27 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       textDir: var_textDir,
       createdLabel: var_createdLabel,
       pendingSync: var_pendingSync,
+    );
+  }
+
+  @protected
+  TimeZoneItem sse_decode_time_zone_item(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_name = sse_decode_String(deserializer);
+    var var_region = sse_decode_String(deserializer);
+    var var_offsetMinutes = sse_decode_i_32(deserializer);
+    var var_offsetLabel = sse_decode_String(deserializer);
+    var var_isCurrent = sse_decode_bool(deserializer);
+    var var_nameDir = sse_decode_text_dir(deserializer);
+    return TimeZoneItem(
+      id: var_id,
+      name: var_name,
+      region: var_region,
+      offsetMinutes: var_offsetMinutes,
+      offsetLabel: var_offsetLabel,
+      isCurrent: var_isCurrent,
+      nameDir: var_nameDir,
     );
   }
 
@@ -13808,6 +14102,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.createdLabel, serializer);
     sse_encode_opt_String(self.deletionLabel, serializer);
     sse_encode_bool(self.passwordChangeRequired, serializer);
+    sse_encode_opt_String(self.exportDownloadedLabel, serializer);
   }
 
   @protected
@@ -13820,6 +14115,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_admin_user_item(self.pending, serializer);
     sse_encode_list_admin_user_item(self.users, serializer);
     sse_encode_String(self.query, serializer);
+    sse_encode_opt_String(self.deletionPreviewLabel, serializer);
   }
 
   @protected
@@ -13838,6 +14134,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.undoSuggestionId, serializer);
     sse_encode_String(self.decisionId, serializer);
     sse_encode_bool(self.reverted, serializer);
+    sse_encode_bool(self.canRepoint, serializer);
   }
 
   @protected
@@ -14329,6 +14626,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.heading, serializer);
     sse_encode_opt_String(self.dateLabel, serializer);
     sse_encode_list_String(self.tags, serializer);
+    sse_encode_opt_String(self.anchor, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.line, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.offset, serializer);
   }
 
   @protected
@@ -14496,7 +14796,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.placeId, serializer);
     sse_encode_opt_String(self.personId, serializer);
     sse_encode_opt_String(self.counterpartyId, serializer);
-    sse_encode_Chrono_NaiveDate(self.date, serializer);
+    sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.date, serializer);
+    sse_encode_opt_String(self.note, serializer);
   }
 
   @protected
@@ -14518,6 +14819,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.sentence, serializer);
     sse_encode_String(self.dateLabel, serializer);
     sse_encode_bool(self.here, serializer);
+    sse_encode_opt_String(self.note, serializer);
   }
 
   @protected
@@ -14745,6 +15047,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.targetAnchor, serializer);
     sse_encode_opt_String(self.taskId, serializer);
     sse_encode_u_8(self.level, serializer);
+    sse_encode_list_text_range(self.markers, serializer);
   }
 
   @protected
@@ -15771,6 +16074,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_repoint_choice(
+    List<RepointChoice> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_repoint_choice(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_search_hit(
     List<SearchHit> self,
     SseSerializer serializer,
@@ -15876,6 +16191,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_text_range(
+    List<TextRange> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_text_range(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_thread_message(
     List<ThreadMessage> self,
     SseSerializer serializer,
@@ -15884,6 +16211,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_thread_message(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_time_zone_item(
+    List<TimeZoneItem> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_time_zone_item(item, serializer);
     }
   }
 
@@ -16689,6 +17028,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_repoint_choice(RepointChoice self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_text_dir(self.titleDir, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.folder, serializer);
+  }
+
+  @protected
   void sse_encode_resolution_kind(
     ResolutionKind self,
     SseSerializer serializer,
@@ -16849,6 +17198,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.recurrence, serializer);
     sse_encode_list_entity_ref(self.entities, serializer);
     sse_encode_opt_String(self.question, serializer);
+    sse_encode_opt_String(self.survivorId, serializer);
+    sse_encode_opt_String(self.mergeLabel, serializer);
   }
 
   @protected
@@ -17134,6 +17485,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_text_range(TextRange self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+  }
+
+  @protected
   void sse_encode_thread_message(ThreadMessage self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.id, serializer);
@@ -17142,6 +17500,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_text_dir(self.textDir, serializer);
     sse_encode_String(self.createdLabel, serializer);
     sse_encode_bool(self.pendingSync, serializer);
+  }
+
+  @protected
+  void sse_encode_time_zone_item(TimeZoneItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.region, serializer);
+    sse_encode_i_32(self.offsetMinutes, serializer);
+    sse_encode_String(self.offsetLabel, serializer);
+    sse_encode_bool(self.isCurrent, serializer);
+    sse_encode_text_dir(self.nameDir, serializer);
   }
 
   @protected

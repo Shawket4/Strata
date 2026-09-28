@@ -219,6 +219,22 @@ Future<NoteDiffView> noteRevisionDiff({
   commit: commit,
 );
 
+/// The time zones of the Settings picker matching `query` (IANA ID, name or region in either
+/// language, offset label), with names in the UI language and current offsets, sorted by
+/// offset; `set_timezone(item.id)` applies one.
+Future<List<TimeZoneItem>> timezones({required String query}) =>
+    StrataCore.instance.api.crateApiViewsTimezones(query: query);
+
+/// New targets for an AI decision of Home's activity feed (Repoint), matching `query`;
+/// `repoint_ai_decision(decision_id, choice.id, None)` applies one.
+Future<List<RepointChoice>> repointChoices({
+  required String decisionId,
+  required String query,
+}) => StrataCore.instance.api.crateApiViewsRepointChoices(
+  decisionId: decisionId,
+  query: query,
+);
+
 /// Admin → Users (online, admins only), filtered by `query`.
 Future<AdminUsersView> loadAdminUsers({required String query}) =>
     StrataCore.instance.api.crateApiViewsLoadAdminUsers(query: query);

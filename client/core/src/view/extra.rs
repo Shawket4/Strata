@@ -456,14 +456,27 @@ pub fn citation_preview(
             heading: None,
             date_label: None,
             tags: Vec::new(),
+            anchor: None,
+            line: None,
+            offset: None,
         });
     };
     let parsed = format::parse_note(&n.path, &n.content);
     let doc = Document::parse(&n.content);
     let body = doc.body();
+    let off = doc.body_offset();
     let a = doc.analyze_body();
     let anchor = anchor.map(|a| a.trim_start_matches('^'));
-    let (block_text, heading) = match anchor {
+    // Where the block starts in the whole content: its line and UTF-16 offset.
+    let at = |body_start: usize| {
+        let start = off + body_start;
+        let line = n.content[..start].matches('\n').count();
+        (
+            Some(u32::try_from(line).unwrap_or(u32::MAX)),
+            Some(Utf16Map::new(&n.content).at(start)),
+        )
+    };
+    let (block_text, heading, found, (line, offset)) = match anchor {
         Some(id) => match a
             .blocks
             .iter()
@@ -477,14 +490,29 @@ pub fn citation_preview(
                     .replace(&format!("^{id}"), "")
                     .trim()
                     .to_owned();
-                (Some(text), b.heading_path.last().cloned())
+                (
+                    Some(text),
+                    b.heading_path.last().cloned(),
+                    Some(id.to_owned()),
+                    at(b.span.start),
+                )
             }
             None => match a.headings.iter().find(|h| h.text == id) {
-                Some(h) => (Some(h.text.clone()), Some(h.text.clone())),
-                None => (None, None),
+                Some(h) => (
+                    Some(h.text.clone()),
+                    Some(h.text.clone()),
+                    Some(h.text.clone()),
+                    at(h.span.start),
+                ),
+                None => (None, None, None, (None, None)),
             },
         },
-        None => (Some(crate::view::build::snippet(&n.content, 280)), None),
+        None => (
+            Some(crate::view::build::snippet(&n.content, 280)),
+            None,
+            None,
+            (None, None),
+        ),
     };
     let labels = ctx.labels();
     let date_label = parsed
@@ -503,7 +531,74 @@ pub fn citation_preview(
         heading,
         date_label,
         tags: parsed.tags,
+        anchor: found,
+        line,
+        offset,
     })
+}
+
+/// Most repoint choices listed.
+pub const REPOINT_LIMIT: usize = 50;
+
+/// New targets for the AI decision `decision_id` of the cached activity feed (Home →
+/// Repoint): live notes of the current target's kind whose title matches `query`
+/// (normalised: case, Arabic letter variants, diacritics), never the current target or the
+/// source, by title. Empty when the decision is unknown or cannot be repointed.
+pub fn repoint_choices(
+    conn: &Connection,
+    decision_id: &str,
+    query: &str,
+) -> CoreResult<Vec<crate::view::model::RepointChoice>> {
+    let Some((decisions, _)) = crate::store::cache::get::<Vec<crate::net::AiDecisionInfo>>(
+        conn,
+        crate::store::cache::AI_DECISIONS,
+    )?
+    else {
+        return Ok(Vec::new());
+    };
+    let Some(d) = decisions.iter().find(|d| d.id == decision_id) else {
+        return Ok(Vec::new());
+    };
+    let kind: Option<String> = conn
+        .query_row(
+            "SELECT kind FROM notes WHERE id = ?1 AND deleted = 0",
+            [&d.target_id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    let Some(kind) = kind else {
+        return Ok(Vec::new());
+    };
+    let source = d.source_note_id.clone().unwrap_or_default();
+    let q = text_normalize::normalize_for_search(query.trim());
+    let mut st = conn.prepare(
+        "SELECT id, title, path FROM notes
+         WHERE deleted = 0 AND kind = ?1 AND id != ?2 AND id != ?3",
+    )?;
+    let rows: Vec<(String, String, String)> = st
+        .query_map(params![kind, d.target_id, source], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?))
+        })?
+        .collect::<Result<_, _>>()?;
+    let mut out: Vec<crate::view::model::RepointChoice> = rows
+        .into_iter()
+        .filter(|(_, title, _)| {
+            q.is_empty() || text_normalize::normalize_for_search(title).contains(&q)
+        })
+        .map(|(id, title, path)| crate::view::model::RepointChoice {
+            title_dir: dir_of(&title),
+            folder: path
+                .rsplit_once('/')
+                .map(|(f, _)| f.to_owned())
+                .unwrap_or_default(),
+            kind: kind.clone(),
+            id,
+            title,
+        })
+        .collect();
+    out.sort_by(|a, b| (a.title.to_lowercase(), &a.id).cmp(&(b.title.to_lowercase(), &b.id)));
+    out.truncate(REPOINT_LIMIT);
+    Ok(out)
 }
 
 /// The new-task sheet's "Understood as": the text parsed, `@mentions` resolved to people and

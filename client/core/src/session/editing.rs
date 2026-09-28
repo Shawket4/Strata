@@ -586,7 +586,12 @@ impl Session {
     /// replaces the whole value (items trimmed, blanks and repeats dropped, tags lose a leading
     /// `#`: the shared `sync_model::apply::clean_list_value`); an empty list removes the key.
     /// Relation lists change through relation intents (`add_relation`, …) and are refused here.
-    pub fn set_property_values(&self, id: &str, key: &str, values: &[String]) -> CoreResult<String> {
+    pub fn set_property_values(
+        &self,
+        id: &str,
+        key: &str,
+        values: &[String],
+    ) -> CoreResult<String> {
         let key = key.trim();
         if key.is_empty() {
             return Err(CoreError::invalid("key", "empty"));

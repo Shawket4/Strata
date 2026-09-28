@@ -1277,7 +1277,14 @@ fn ai_activity(
                 kind: None,
             })
         };
+        // The server repoints links, mentions and concepts of a note (to a note of the same
+        // kind); custody events and filing are corrected otherwise.
+        let can_repoint = d.reverted_at.is_none()
+            && matches!(d.kind.as_str(), "relation" | "entity_mention" | "concept")
+            && d.source_note_id.is_some()
+            && target.as_ref().is_some_and(|t| t.id.is_some());
         items.push(AiActivityItem {
+            can_repoint,
             at_label: labels.moment_label(d.created),
             kind: kind.to_owned(),
             summary: d.summary.clone(),
@@ -1633,9 +1640,52 @@ fn suggestion_detail(
             }
         }
         P::Duplicates(d) => {
+            // Accepting merges the pair (the shared rule picks the survivor, as the server).
+            let created = |id: ulid::Ulid| -> CoreResult<Option<DateTime<Utc>>> {
+                let c: Option<Option<String>> = conn
+                    .query_row(
+                        "SELECT created FROM notes WHERE id = ?1",
+                        [id.to_string()],
+                        |r| r.get(0),
+                    )
+                    .optional()?;
+                Ok(c.flatten()
+                    .and_then(|c| DateTime::parse_from_rfc3339(&c).ok())
+                    .map(|c| c.with_timezone(&Utc)))
+            };
+            let tasks = d.is_task_pair();
+            let a_keeps = if tasks {
+                d.survivor(None, None)
+            } else {
+                d.survivor(created(d.a.id)?, created(d.b.id)?)
+            } == sync_model::suggestions::DuplicatesSurvivor::A;
+            let (keep, fold) = if a_keeps { (&d.a, &d.b) } else { (&d.b, &d.a) };
+            let survivor_id = Some(if tasks {
+                keep.item.clone()
+            } else {
+                keep.id.to_string()
+            });
+            let merge_label = Some(match (lang, tasks) {
+                (Lang::En, false) => format!(
+                    "Accepting keeps “{}” and merges “{}” into it",
+                    keep.title, fold.title
+                ),
+                (Lang::En, true) => format!(
+                    "Accepting keeps “{}” and cancels “{}”",
+                    keep.title, fold.title
+                ),
+                (Lang::Ar, false) => {
+                    format!("القبول يُبقي «{}» ويدمج «{}» فيه", keep.title, fold.title)
+                }
+                (Lang::Ar, true) => {
+                    format!("القبول يُبقي «{}» ويلغي «{}»", keep.title, fold.title)
+                }
+            });
             let a = duplicate_item(conn, d.a, lang)?;
             let b = duplicate_item(conn, d.b, lang)?;
             SuggestionDetail {
+                survivor_id,
+                merge_label,
                 title: a.title.clone(),
                 other: Some(EntityRef {
                     id: Some(b.id.clone()),
@@ -2335,6 +2385,11 @@ fn hint_of(h: hints::Span) -> EditorHint {
         target_anchor: h.anchor,
         task_id: h.task_id,
         level: h.level,
+        markers: h
+            .markers
+            .into_iter()
+            .map(|(start, end)| TextRange { start, end })
+            .collect(),
     }
 }
 
@@ -3276,12 +3331,13 @@ fn custody_items(
         Option<String>,
         Option<String>,
         Vec<u8>,
+        Option<String>,
     );
     let labels = ctx.labels();
     let rows: Vec<Row> = {
         let mut st = conn.prepare(&format!(
             "SELECT c.document_id, c.type, c.at, c.place_id, c.place_raw, c.person_id, c.person_raw,
-                    c.counterparty_id, c.counterparty_raw, c.citations
+                    c.counterparty_id, c.counterparty_raw, c.citations, c.note
              FROM custody_events c JOIN notes n ON n.id = c.document_id
              WHERE n.deleted = 0 AND {where_sql}
              ORDER BY c.at DESC, c.document_id, c.ord"
@@ -3298,12 +3354,13 @@ fn custody_items(
                 r.get(7)?,
                 r.get(8)?,
                 r.get(9)?,
+                r.get(10)?,
             ))
         })?
         .collect::<Result<_, _>>()?
     };
     let mut out = Vec::new();
-    for (doc, kind, at, pid, praw, perid, perraw, cid, craw, cites) in rows {
+    for (doc, kind, at, pid, praw, perid, perraw, cid, craw, cites, note) in rows {
         let cites: Vec<String> = from_msgpack(&cites)?;
         let mut citations = Vec::new();
         for c in cites {
@@ -3333,6 +3390,7 @@ fn custody_items(
             destination,
             sentence,
             here: here.is_some_and(|h| pid.as_deref() == Some(h)),
+            note,
             kind,
             document: entity_ref(conn, Some(doc), None)?,
             place,
@@ -4149,5 +4207,328 @@ mod tests {
         let now = ts("2026-09-27T10:00:00Z");
         assert_eq!(days_until(now, ts("2026-10-11T09:00:00Z")), 13);
         assert_eq!(days_until(now, ts("2026-09-26T09:00:00Z")), 0);
+    }
+}
+
+/// Duplicates (what accepting keeps) and the admin purge-date preview.
+#[cfg(test)]
+mod followup_tests {
+    use super::*;
+    use sync_model::suggestions::{DuplicateItem, DuplicatesPayload};
+
+    fn ctx(lang: Lang) -> ViewCtx {
+        ViewCtx {
+            now: ts("2026-09-28T21:30:00Z"),
+            tz: chrono_tz::Africa::Cairo,
+            connectivity: Connectivity::Online,
+            activity: SyncActivity::default(),
+            notification_mode: NotificationMode::OsScheduled,
+            lang,
+        }
+    }
+
+    fn item(n: u128, item: &str, kind: &str, title: &str) -> DuplicateItem {
+        DuplicateItem {
+            id: ulid::Ulid::from(n),
+            item: item.to_owned(),
+            snippet: None,
+            kind: kind.to_owned(),
+            title: title.to_owned(),
+            match_level: dedupe::MatchLevel::Near,
+            score: 0.9,
+        }
+    }
+
+    fn duplicates(a: DuplicateItem, b: DuplicateItem, lang: Lang, conn: &Connection) -> (Option<String>, Option<String>) {
+        let d = suggestion_detail(
+            conn,
+            &ctx(lang),
+            DecodedPayload::Known(sync_model::SuggestionPayload::Duplicates(
+                DuplicatesPayload { a, b, reason: None },
+            )),
+        )
+        .expect("detail");
+        (d.survivor_id, d.merge_label)
+    }
+
+    #[test]
+    fn accepting_duplicates_says_which_item_survives() {
+        let conn = Connection::open_in_memory().expect("db");
+        crate::store::migrations::migrate(&conn, crate::store::migrations::ACCOUNT)
+            .expect("schema");
+        let (a, b) = (ulid::Ulid::from(1), ulid::Ulid::from(2));
+        for (id, title, created) in [
+            (a, "Plan", "2026-09-20T08:00:00Z"),
+            (b, "Plan 2", "2026-09-10T08:00:00Z"),
+        ] {
+            conn.execute(
+                "INSERT INTO notes (id, path, title, kind, content, frontmatter, created,
+                                    local_updated_at)
+                 VALUES (?1, ?2, ?3, 'note', '', x'80', ?4, '2026-09-27T10:00:00Z')",
+                params![id.to_string(), format!("notes/{title}.md"), title, created],
+            )
+            .expect("note");
+        }
+        // The note created first survives, whichever side it is on.
+        let pair = || {
+            (
+                item(1, &a.to_string(), "note", "Plan"),
+                item(2, &b.to_string(), "note", "Plan 2"),
+            )
+        };
+        let (x, y) = pair();
+        assert_eq!(
+            duplicates(x, y, Lang::En, &conn),
+            (
+                Some(b.to_string()),
+                Some("Accepting keeps “Plan 2” and merges “Plan” into it".to_owned())
+            )
+        );
+        let (x, y) = pair();
+        assert_eq!(
+            duplicates(y, x, Lang::Ar, &conn),
+            (
+                Some(b.to_string()),
+                Some("القبول يُبقي «Plan 2» ويدمج «Plan» فيه".to_owned())
+            )
+        );
+        // Task pairs keep the line whose ID sorts first and cancel the other.
+        assert_eq!(
+            duplicates(
+                item(1, "t-b2", "task", "Pay rent"),
+                item(1, "t-a1", "task", "Pay the rent"),
+                Lang::En,
+                &conn
+            ),
+            (
+                Some("t-a1".to_owned()),
+                Some("Accepting keeps “Pay the rent” and cancels “Pay rent”".to_owned())
+            )
+        );
+    }
+
+    #[test]
+    fn the_purge_date_is_shown_before_scheduling() {
+        // 21:30 UTC is already the 29th in Cairo; 14 days later is 13 Oct there.
+        let grace = 14 * 24 * 3600;
+        assert_eq!(
+            deletion_preview_label(&ctx(Lang::En), grace),
+            "Deleted on 13 Oct 2026"
+        );
+        assert_eq!(
+            deletion_preview_label(&ctx(Lang::Ar), grace),
+            format!(
+                "يُحذف في {}",
+                ctx(Lang::Ar)
+                    .labels()
+                    .date_long(NaiveDate::from_ymd_opt(2026, 10, 13).expect("date"))
+            )
+        );
+    }
+}
+
+/// Owner decision 2026-09-28: no arrow glyphs in labels the core builds (Cairo has none, and
+/// a fixed arrow points the wrong way in RTL); words or `·` instead.
+#[cfg(test)]
+mod arrow_free_labels {
+    use super::*;
+    use crate::sync::model::Op;
+    use sync_model::ops as sm;
+
+    const ARROWS: [char; 4] = ['→', '←', '⇒', '➜'];
+
+    fn arrow_free(label: &str) {
+        assert!(
+            !label.contains(ARROWS),
+            "a core label contains an arrow: {label}"
+        );
+    }
+
+    fn u(n: u128) -> ulid::Ulid {
+        ulid::Ulid::from(n)
+    }
+
+    fn db() -> Connection {
+        let conn = Connection::open_in_memory().expect("db");
+        crate::store::migrations::migrate(&conn, crate::store::migrations::ACCOUNT)
+            .expect("schema");
+        for (n, title) in [(1, "Plan"), (2, "Office"), (3, "Acme")] {
+            conn.execute(
+                "INSERT INTO notes (id, path, title, kind, content, frontmatter, local_updated_at)
+                 VALUES (?1, ?2, ?3, 'note', '', x'80', '2026-09-27T10:00:00Z')",
+                params![u(n).to_string(), format!("notes/{title}.md"), title],
+            )
+            .expect("note");
+        }
+        conn
+    }
+
+    fn outbox_op(op: Op) -> outbox::OutboxOp {
+        outbox::OutboxOp {
+            op_id: "op".into(),
+            ord: 1,
+            entity_id: u(1).to_string(),
+            local_entity: format!("note:{}", u(1)),
+            base_version: None,
+            op,
+            status: outbox::OpStatus::Pending,
+            attempts: 0,
+            created: "2026-09-27T10:00:00Z".into(),
+            base_content: None,
+        }
+    }
+
+    #[test]
+    fn outbox_details_use_words() {
+        let conn = db();
+        let rel = |s: &str| s.parse::<vault_format::RelationKey>().expect("relation");
+        let ops = [
+            Op::NoteMove(sm::NoteMove {
+                id: u(1),
+                new_path: "archive/Plan.md".into(),
+            }),
+            Op::RelationAdd(sm::RelationRef {
+                src_id: u(1),
+                dst_id: u(3),
+                relation: rel("supports"),
+            }),
+            Op::RelationRemove(sm::RelationRef {
+                src_id: u(1),
+                dst_id: u(3),
+                relation: rel("supports"),
+            }),
+            Op::RelationRetype(sm::RelationRetype {
+                src_id: u(1),
+                dst_id: u(3),
+                relation: rel("supports"),
+                new_type: rel("contradicts"),
+            }),
+            Op::EntityMerge(sm::EntityMerge {
+                id: u(2),
+                into_id: u(3),
+            }),
+        ];
+        let details = |lang| -> Vec<String> {
+            ops.iter()
+                .map(|op| op_detail(&conn, &outbox_op(op.clone()), lang).expect("detail"))
+                .collect()
+        };
+        assert_eq!(
+            details(Lang::En),
+            [
+                "Moved to archive/Plan.md",
+                "supports · Acme",
+                "Removed supports · Acme",
+                "Changed from supports to contradicts · Acme",
+                "Merged into Acme",
+            ]
+        );
+        assert_eq!(
+            details(Lang::Ar),
+            [
+                "نُقلت إلى archive/Plan.md",
+                "يدعم · Acme",
+                "أُزيلت يدعم · Acme",
+                "تغيّرت من يدعم إلى يتعارض مع · Acme",
+                "دُمج في Acme",
+            ]
+        );
+    }
+
+    #[test]
+    fn no_core_label_contains_an_arrow() {
+        let conn = db();
+        let place = EntityRef {
+            id: None,
+            title: "Safe".into(),
+            kind: None,
+        };
+        let person = EntityRef {
+            title: "Shady".into(),
+            ..place.clone()
+        };
+        let kinds = [
+            SuggestionKind::Filing,
+            SuggestionKind::EntityLink,
+            SuggestionKind::Custody,
+            SuggestionKind::Task,
+            SuggestionKind::Duplicate,
+            SuggestionKind::Correction,
+            SuggestionKind::Conflict,
+            SuggestionKind::Duplicates,
+            SuggestionKind::Unsupported,
+        ];
+        for lang in [Lang::En, Lang::Ar] {
+            // Every outbox op kind the core describes.
+            let op = |op: Op| op_detail(&conn, &outbox_op(op), lang).expect("detail");
+            arrow_free(&op(Op::NoteMove(sm::NoteMove {
+                id: u(1),
+                new_path: "a/b.md".into(),
+            })));
+            arrow_free(&op(Op::EntityMerge(sm::EntityMerge {
+                id: u(2),
+                into_id: u(3),
+            })));
+            for key in vault_format::RelationKey::all() {
+                let r = sm::RelationRef {
+                    src_id: u(1),
+                    dst_id: u(3),
+                    relation: key,
+                };
+                arrow_free(&op(Op::RelationAdd(r.clone())));
+                arrow_free(&op(Op::RelationRemove(r)));
+                arrow_free(&op(Op::RelationRetype(sm::RelationRetype {
+                    src_id: u(1),
+                    dst_id: u(3),
+                    relation: key,
+                    new_type: key,
+                })));
+            }
+            // Every suggestion summary.
+            for kind in kinds {
+                let d = SuggestionDetail {
+                    title: "Plan".into(),
+                    mention: "Ahmed".into(),
+                    other: Some(person.clone()),
+                    ..SuggestionDetail::of(kind)
+                };
+                arrow_free(&suggestion_summary(&d, lang));
+            }
+            // Every custody sentence.
+            for kind in domain::CustodyEventType::ALL {
+                let (_, _, _, sentence) = custody_sentence(
+                    kind.as_str(),
+                    Some(&place),
+                    Some(&person),
+                    Some(&person),
+                    lang,
+                );
+                arrow_free(&sentence);
+            }
+            // Relation labels.
+            for key in vault_format::RelationKey::all() {
+                arrow_free(&labels::relation_label(key.as_str(), lang));
+            }
+        }
+        assert_eq!(
+            suggestion_summary(
+                &SuggestionDetail {
+                    title: "Invoices".into(),
+                    ..SuggestionDetail::of(SuggestionKind::Filing)
+                },
+                Lang::En
+            ),
+            "File as Invoices"
+        );
+        assert_eq!(
+            suggestion_summary(
+                &SuggestionDetail {
+                    title: "الفواتير".into(),
+                    ..SuggestionDetail::of(SuggestionKind::Filing)
+                },
+                Lang::Ar
+            ),
+            "يُحفظ باسم الفواتير"
+        );
     }
 }

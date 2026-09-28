@@ -16,8 +16,8 @@ use crate::view::model::{
     EntityScreen, GlobalGraphView, GraphFilter, HomeView, InboxFilter, InboxView, LocalGraphView,
     MergePreview, NavView, NoteDiffView, NoteScreen, NotesListView, PlaceOption, RecentFilter,
     RecentNotesView, RecurrenceCompose, RecurrenceForm, RecurrencePreviewItem, RelationTypeItem,
-    SearchMode, SearchView, SettingsView, SyncStatusView, TagItem, TaskDraftPreview, TaskHomesView,
-    TaskScreen, TasksView,
+    RepointChoice, SearchMode, SearchView, SettingsView, SyncStatusView, TagItem, TaskDraftPreview,
+    TaskHomesView, TaskScreen, TasksView, TimeZoneItem,
 };
 use crate::view::{Topics, ViewSink};
 
@@ -474,6 +474,31 @@ pub async fn note_revision_diff(
             .await
     })
     .await
+}
+
+/// The time zones of the Settings picker matching `query` (IANA ID, name or region in either
+/// language, offset label), with names in the UI language and current offsets, sorted by
+/// offset; `set_timezone(item.id)` applies one.
+pub fn timezones(query: String) -> Result<Vec<TimeZoneItem>, CoreFailure> {
+    lift(|| {
+        let ctx = core()?.session()?.ctx();
+        Ok(crate::format::timezones::timezones(
+            ctx.now, ctx.tz, ctx.lang, &query,
+        ))
+    })
+}
+
+/// New targets for an AI decision of Home's activity feed (Repoint), matching `query`;
+/// `repoint_ai_decision(decision_id, choice.id, None)` applies one.
+pub fn repoint_choices(
+    decision_id: String,
+    query: String,
+) -> Result<Vec<RepointChoice>, CoreFailure> {
+    lift(|| {
+        core()?
+            .session()?
+            .read(|c, _| crate::view::extra::repoint_choices(c, &decision_id, &query))
+    })
 }
 
 /// Admin → Users (online, admins only), filtered by `query`.

@@ -89,7 +89,11 @@ async fn the_task_screen_of_a_recurring_task() {
     show("missing", &missing);
     let homes = s.read(extra::task_homes).expect("homes");
     show("homes", &homes);
-    for f in [RecentFilter::Edited, RecentFilter::Created, RecentFilter::FiledByAi] {
+    for f in [
+        RecentFilter::Edited,
+        RecentFilter::Created,
+        RecentFilter::FiledByAi,
+    ] {
         let recent = s.read(|c, ctx| build::recent(c, ctx, f)).expect("recent");
         show("recent", &recent);
     }

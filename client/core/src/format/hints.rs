@@ -5,10 +5,13 @@
 //! Besides the markdown structure the spans carry what the editor needs to act without logic:
 //! the link path and anchor of wikilinks (resolved to note IDs by the view builder), the block
 //! ID of task lines, heading levels, emphasis runs and the direction of every line by its
-//! first strong character (PLAN §11 "per-line direction in the editor").
+//! first strong character (PLAN §11 "per-line direction in the editor"). Every styled span
+//! carries its exact marker ranges from `vault-format`'s parser, so the editor never guesses
+//! marker widths.
 
 use std::ops::Range;
 
+use vault_format::body::InlineStyle;
 use vault_format::{Anchor, Document};
 
 use crate::format::direction::dir_of;
@@ -64,6 +67,10 @@ pub struct Span {
     pub task_id: Option<String>,
     /// Headings: level.
     pub level: u8,
+    /// The markdown markers of the span (UTF-16 ranges, sorted), exactly as `vault-format`'s
+    /// parser matched them: emphasis delimiters, a heading's `#`s and spaces, a link's
+    /// brackets (and `path|` of an aliased link).
+    pub markers: Vec<(u32, u32)>,
 }
 
 impl Span {
@@ -76,6 +83,7 @@ impl Span {
             anchor: None,
             task_id: None,
             level: 0,
+            markers: Vec::new(),
         }
     }
 }
@@ -119,63 +127,6 @@ impl<'a> Utf16Map<'a> {
     }
 }
 
-fn overlaps(r: &Range<usize>, blocked: &[Range<usize>]) -> bool {
-    blocked.iter().any(|b| r.start < b.end && b.start < r.end)
-}
-
-/// Emphasis runs of one line (`line` starts at byte `base` of the text). Delimiters must be
-/// on one line, the content non-empty and not starting or ending with whitespace; `_` runs
-/// must not be inside a word. Runs overlapping `blocked` (code, links, tags) are skipped.
-fn emphasis(line: &str, base: usize, blocked: &[Range<usize>]) -> Vec<(SpanKind, Range<usize>)> {
-    let mut out: Vec<(SpanKind, Range<usize>)> = Vec::new();
-    let mut taken: Vec<Range<usize>> = Vec::new();
-    for (delim, kind) in [
-        ("**", SpanKind::Bold),
-        ("__", SpanKind::Bold),
-        ("~~", SpanKind::Strike),
-        ("==", SpanKind::Mark),
-        ("*", SpanKind::Italic),
-        ("_", SpanKind::Italic),
-    ] {
-        let mut from = 0;
-        while let Some(open) = line[from..].find(delim).map(|i| from + i) {
-            let content_start = open + delim.len();
-            let Some(close) = line[content_start..].find(delim).map(|i| content_start + i) else {
-                break;
-            };
-            let content = &line[content_start..close];
-            let range = base + open..base + close + delim.len();
-            let word_ok = delim != "_"
-                || (!line[..open]
-                    .chars()
-                    .next_back()
-                    .is_some_and(char::is_alphanumeric)
-                    && !line[close + 1..]
-                        .chars()
-                        .next()
-                        .is_some_and(char::is_alphanumeric));
-            // `*` inside `**` was consumed by the bold pass.
-            let single_star_ok = delim != "*"
-                || (!line[..open].ends_with('*') && !line[content_start..].starts_with('*'));
-            if !content.is_empty()
-                && !content.starts_with(char::is_whitespace)
-                && !content.ends_with(char::is_whitespace)
-                && word_ok
-                && single_star_ok
-                && !overlaps(&range, blocked)
-                && !overlaps(&range, &taken)
-            {
-                taken.push(range.clone());
-                out.push((kind, range));
-                from = close + delim.len();
-            } else {
-                from = open + delim.len();
-            }
-        }
-    }
-    out
-}
-
 /// Highlight spans of a whole note, sorted by start, then end, then kind.
 pub fn editor_hints(content: &str) -> Vec<Span> {
     let doc = Document::parse(content);
@@ -188,9 +139,11 @@ pub fn editor_hints(content: &str) -> Vec<Span> {
         push(Span::plain(SpanKind::Frontmatter, 0, u(off)));
     }
     let a = doc.analyze_body();
+    let range = |r: &Range<usize>| (u(off + r.start), u(off + r.end));
     for h in &a.headings {
         push(Span {
             level: h.level,
+            markers: h.markers.iter().map(range).collect(),
             ..Span::plain(
                 SpanKind::Heading,
                 u(off + h.span.start),
@@ -198,38 +151,50 @@ pub fn editor_hints(content: &str) -> Vec<Span> {
             )
         });
     }
-    let mut blocked: Vec<Range<usize>> = a
-        .code_spans
-        .iter()
-        .map(|c| off + c.start..off + c.end)
-        .collect();
     for l in &a.links {
         let kind = if l.embed {
             SpanKind::Embed
         } else {
             SpanKind::WikiLink
         };
-        blocked.push(off + l.span.start..off + l.span.end);
+        // `[[` (or `![[`, with `path|` when an alias is shown instead) and `]]`.
+        let open_end = l.alias_span.as_ref().map_or(l.path_span.start, |a| a.start);
         push(Span {
             link_path: Some(l.path.clone()),
             anchor: l.anchor.as_ref().map(|a| match a {
                 Anchor::Heading(h) => h.clone(),
                 Anchor::Block(b) => b.clone(),
             }),
+            markers: vec![
+                range(&(l.span.start..open_end)),
+                range(&(l.span.end.saturating_sub(2)..l.span.end)),
+            ],
             ..Span::plain(kind, u(off + l.span.start), u(off + l.span.end))
         });
     }
     for t in &a.tags {
-        blocked.push(off + t.span.start..off + t.span.end);
         push(Span::plain(
             SpanKind::Tag,
             u(off + t.span.start),
             u(off + t.span.end),
         ));
     }
+    // Styled runs with the delimiters the shared parser matched (`***x***` is an emphasis
+    // around a strong run; code and link paths are never styled).
+    for i in &a.inline {
+        let kind = match i.style {
+            InlineStyle::Strong => SpanKind::Bold,
+            InlineStyle::Emphasis => SpanKind::Italic,
+            InlineStyle::Strikethrough => SpanKind::Strike,
+            InlineStyle::Mark => SpanKind::Mark,
+        };
+        push(Span {
+            markers: vec![range(&i.open), range(&i.close)],
+            ..Span::plain(kind, u(off + i.span.start), u(off + i.span.end))
+        });
+    }
     for b in &a.blocks {
         if let Some(id) = &b.id {
-            blocked.push(off + id.span.start..off + id.span.end);
             push(Span::plain(
                 SpanKind::BlockId,
                 u(off + id.span.start),
@@ -254,15 +219,12 @@ pub fn editor_hints(content: &str) -> Vec<Span> {
             )
         });
     }
-    // Emphasis and line directions over the body, line by line.
+    // Line directions over the body, line by line.
     let body = doc.body();
     let mut pos = 0usize;
     for line in body.split_inclusive('\n') {
         let text = line.trim_end_matches(['\n', '\r']);
         let base = off + pos;
-        for (kind, r) in emphasis(text, base, &blocked) {
-            push(Span::plain(kind, u(r.start), u(r.end)));
-        }
         let kind = match dir_of(text) {
             TextDir::Rtl => Some(SpanKind::RtlLine),
             TextDir::Ltr => Some(SpanKind::LtrLine),
@@ -298,6 +260,7 @@ mod tests {
                 Span::plain(SpanKind::RtlLine, 0, 17),
                 Span {
                     link_path: Some("Note".into()),
+                    markers: vec![(4, 6), (10, 12)],
                     ..Span::plain(SpanKind::WikiLink, 4, 12)
                 },
                 Span::plain(SpanKind::Tag, 13, 17),
@@ -372,6 +335,82 @@ mod tests {
             .expect("link");
         assert_eq!(link.link_path.as_deref(), Some("Call 2026-09-12"));
         assert_eq!(link.anchor.as_deref(), Some("a1b2"));
+    }
+
+    /// Every styled span with its markers, as the text they cover.
+    fn marked(text: &str) -> Vec<(SpanKind, String, Vec<String>)> {
+        let units: Vec<u16> = text.encode_utf16().collect();
+        let s = |a: u32, b: u32| String::from_utf16_lossy(&units[a as usize..b as usize]);
+        editor_hints(text)
+            .into_iter()
+            .filter(|h| !h.markers.is_empty())
+            .map(|h| {
+                (
+                    h.kind,
+                    s(h.start, h.end),
+                    h.markers.iter().map(|&(a, b)| s(a, b)).collect(),
+                )
+            })
+            .collect()
+    }
+
+    fn m(kind: SpanKind, span: &str, markers: &[&str]) -> (SpanKind, String, Vec<String>) {
+        (
+            kind,
+            span.to_owned(),
+            markers.iter().map(|x| (*x).to_owned()).collect(),
+        )
+    }
+
+    #[test]
+    fn markers_are_exact_for_every_variant() {
+        use SpanKind::{Bold, Embed, Heading, Italic, Mark, Strike, WikiLink};
+        // Nested emphasis: `***` is an emphasis around a strong run, each with its own
+        // markers; `__`/`_` and `~`/`~~` keep their widths.
+        assert_eq!(
+            marked("***both*** __u__ _e_ ~one~ ~~two~~ ==hi==\n"),
+            vec![
+                m(Italic, "***both***", &["*", "*"]),
+                m(Bold, "**both**", &["**", "**"]),
+                m(Bold, "__u__", &["__", "__"]),
+                m(Italic, "_e_", &["_", "_"]),
+                m(Strike, "~one~", &["~", "~"]),
+                m(Strike, "~~two~~", &["~~", "~~"]),
+                m(Mark, "==hi==", &["==", "=="]),
+            ]
+        );
+        assert_eq!(
+            marked("**bold *it* more**\n"),
+            vec![
+                m(Bold, "**bold *it* more**", &["**", "**"]),
+                m(Italic, "*it*", &["*", "*"]),
+            ]
+        );
+        // Headings: several spaces, closing hashes, setext; Arabic after frontmatter.
+        assert_eq!(
+            marked("---\nid: X\n---\n###   Three ##\nSetext\n===\n## عنوان\n"),
+            vec![
+                m(Heading, "###   Three ##", &["###   ", " ##"]),
+                m(Heading, "Setext\n===", &["==="]),
+                m(Heading, "## عنوان", &["## "]),
+            ]
+        );
+        // Links: brackets, an aliased link hides its path, embeds.
+        assert_eq!(
+            marked("[[Plan]] [[Plan#^a1|the plan]] ![[img.png]] 😀[[x]]\n"),
+            vec![
+                m(WikiLink, "[[Plan]]", &["[[", "]]"]),
+                m(WikiLink, "[[Plan#^a1|the plan]]", &["[[Plan#^a1|", "]]"]),
+                m(Embed, "![[img.png]]", &["![[", "]]"]),
+                m(WikiLink, "[[x]]", &["[[", "]]"]),
+            ]
+        );
+        // Code and delimiters inside a link path are never styled.
+        assert_eq!(marked("`**no**` a_b_c\n"), vec![]);
+        assert_eq!(
+            marked("[[*draft*]]\n"),
+            vec![m(WikiLink, "[[*draft*]]", &["[[", "]]"])]
+        );
     }
 
     #[test]

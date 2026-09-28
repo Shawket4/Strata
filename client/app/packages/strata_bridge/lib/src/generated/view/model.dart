@@ -7,7 +7,7 @@ import '../frb_generated.dart';
 
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `assert_receiver_is_total_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `hash`
 
 /// The signed-in account.
 class AccountSummary {
@@ -119,6 +119,10 @@ class AdminUserItem {
   /// Must change the password (after a reset).
   final bool passwordChangeRequired;
 
+  /// "Export downloaded 12 Sep 14:31" (account time zone) when the user downloaded their
+  /// export.
+  final String? exportDownloadedLabel;
+
   const AdminUserItem({
     required this.id,
     required this.username,
@@ -133,6 +137,7 @@ class AdminUserItem {
     required this.createdLabel,
     this.deletionLabel,
     required this.passwordChangeRequired,
+    this.exportDownloadedLabel,
   });
 
   @override
@@ -149,7 +154,8 @@ class AdminUserItem {
       isSelf.hashCode ^
       createdLabel.hashCode ^
       deletionLabel.hashCode ^
-      passwordChangeRequired.hashCode;
+      passwordChangeRequired.hashCode ^
+      exportDownloadedLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -168,7 +174,8 @@ class AdminUserItem {
           isSelf == other.isSelf &&
           createdLabel == other.createdLabel &&
           deletionLabel == other.deletionLabel &&
-          passwordChangeRequired == other.passwordChangeRequired;
+          passwordChangeRequired == other.passwordChangeRequired &&
+          exportDownloadedLabel == other.exportDownloadedLabel;
 }
 
 /// Admin → Users (online only, admins only).
@@ -185,11 +192,17 @@ class AdminUsersView {
   /// Search text applied (username / display name, both scripts).
   final String query;
 
+  /// The purge date a deletion scheduled now would get ("Deleted on 12 Oct 2026": now plus
+  /// the server's grace period), shown before `schedule_deletion`; `None` when the server
+  /// does not say.
+  final String? deletionPreviewLabel;
+
   const AdminUsersView({
     required this.availability,
     required this.pending,
     required this.users,
     required this.query,
+    this.deletionPreviewLabel,
   });
 
   @override
@@ -197,7 +210,8 @@ class AdminUsersView {
       availability.hashCode ^
       pending.hashCode ^
       users.hashCode ^
-      query.hashCode;
+      query.hashCode ^
+      deletionPreviewLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -207,7 +221,8 @@ class AdminUsersView {
           availability == other.availability &&
           pending == other.pending &&
           users == other.users &&
-          query == other.query;
+          query == other.query &&
+          deletionPreviewLabel == other.deletionPreviewLabel;
 }
 
 /// One entry of the AI activity feed.
@@ -243,6 +258,10 @@ class AiActivityItem {
   /// Already undone.
   final bool reverted;
 
+  /// Whether the target can be changed ("Repoint": a link, mention or concept of a note;
+  /// pick the new target from `repoint_choices`, then `repoint_ai_decision`).
+  final bool canRepoint;
+
   const AiActivityItem({
     required this.atLabel,
     required this.kind,
@@ -254,6 +273,7 @@ class AiActivityItem {
     this.undoSuggestionId,
     required this.decisionId,
     required this.reverted,
+    required this.canRepoint,
   });
 
   @override
@@ -267,7 +287,8 @@ class AiActivityItem {
       confidence.hashCode ^
       undoSuggestionId.hashCode ^
       decisionId.hashCode ^
-      reverted.hashCode;
+      reverted.hashCode ^
+      canRepoint.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -283,7 +304,8 @@ class AiActivityItem {
           confidence == other.confidence &&
           undoSuggestionId == other.undoSuggestionId &&
           decisionId == other.decisionId &&
-          reverted == other.reverted;
+          reverted == other.reverted &&
+          canRepoint == other.canRepoint;
 }
 
 /// AI provider state and today's budget (Ask header, Settings → AI).
@@ -885,6 +907,17 @@ class CitationPreview {
   /// Tags.
   final List<String> tags;
 
+  /// The anchor resolved (block ID without `^`, or the heading), `None` when absent or not
+  /// found; the route's `anchor` for the editor.
+  final String? anchor;
+
+  /// 0-based line of the block (or heading) in the note's content, frontmatter included.
+  final int? line;
+
+  /// Offset of the block's start in the note's content (UTF-16 units): where the editor
+  /// puts the caret when the citation is opened.
+  final int? offset;
+
   const CitationPreview({
     this.noteId,
     required this.title,
@@ -894,6 +927,9 @@ class CitationPreview {
     this.heading,
     this.dateLabel,
     required this.tags,
+    this.anchor,
+    this.line,
+    this.offset,
   });
 
   @override
@@ -905,7 +941,10 @@ class CitationPreview {
       blockDir.hashCode ^
       heading.hashCode ^
       dateLabel.hashCode ^
-      tags.hashCode;
+      tags.hashCode ^
+      anchor.hashCode ^
+      line.hashCode ^
+      offset.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -919,7 +958,10 @@ class CitationPreview {
           blockDir == other.blockDir &&
           heading == other.heading &&
           dateLabel == other.dateLabel &&
-          tags == other.tags;
+          tags == other.tags &&
+          anchor == other.anchor &&
+          line == other.line &&
+          offset == other.offset;
 }
 
 /// A bullet of an AI section with its citations.
@@ -1545,15 +1587,19 @@ class CustodyDraft {
   /// Third party.
   final String? counterpartyId;
 
-  /// Date.
-  final DateTime date;
+  /// The event's date; `None` is today in the account's time zone (computed by the core).
+  final DateTime? date;
+
+  /// The user's note on the event (one line on the custody line; blank is no note).
+  final String? note;
 
   const CustodyDraft({
     required this.kind,
     this.placeId,
     this.personId,
     this.counterpartyId,
-    required this.date,
+    this.date,
+    this.note,
   });
 
   @override
@@ -1562,7 +1608,8 @@ class CustodyDraft {
       placeId.hashCode ^
       personId.hashCode ^
       counterpartyId.hashCode ^
-      date.hashCode;
+      date.hashCode ^
+      note.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1573,7 +1620,8 @@ class CustodyDraft {
           placeId == other.placeId &&
           personId == other.personId &&
           counterpartyId == other.counterpartyId &&
-          date == other.date;
+          date == other.date &&
+          note == other.note;
 }
 
 /// One custody event.
@@ -1627,6 +1675,9 @@ class CustodyItem {
   /// Place pages: the event happened at this place itself (not a nested one).
   final bool here;
 
+  /// The user's note on the event, as written on the custody line.
+  final String? note;
+
   const CustodyItem({
     required this.date,
     required this.kind,
@@ -1644,6 +1695,7 @@ class CustodyItem {
     required this.sentence,
     required this.dateLabel,
     required this.here,
+    this.note,
   });
 
   @override
@@ -1663,7 +1715,8 @@ class CustodyItem {
       destination.hashCode ^
       sentence.hashCode ^
       dateLabel.hashCode ^
-      here.hashCode;
+      here.hashCode ^
+      note.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1685,7 +1738,8 @@ class CustodyItem {
           destination == other.destination &&
           sentence == other.sentence &&
           dateLabel == other.dateLabel &&
-          here == other.here;
+          here == other.here &&
+          note == other.note;
 }
 
 /// A device signed in to the account (Settings → Devices, account sheet).
@@ -2613,6 +2667,13 @@ class EditorHint {
   /// `Heading`: level 1–6 (0 otherwise).
   final int level;
 
+  /// The span's markdown markers as the shared parser matched them (UTF-16 offsets into
+  /// the content, sorted): `**`/`*`/`~~`/`==` of a styled run (`***x***` is an emphasis
+  /// around a strong run, each with its own markers), a heading's `#`s with the spaces
+  /// around them (and closing `#`s), a link's `[[`/`![[` (with `path|` when aliased) and
+  /// `]]`. Live preview hides exactly these.
+  final List<TextRange> markers;
+
   const EditorHint({
     required this.kind,
     required this.start,
@@ -2621,6 +2682,7 @@ class EditorHint {
     this.targetAnchor,
     this.taskId,
     required this.level,
+    required this.markers,
   });
 
   @override
@@ -2631,7 +2693,8 @@ class EditorHint {
       targetId.hashCode ^
       targetAnchor.hashCode ^
       taskId.hashCode ^
-      level.hashCode;
+      level.hashCode ^
+      markers.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -2644,7 +2707,8 @@ class EditorHint {
           targetId == other.targetId &&
           targetAnchor == other.targetAnchor &&
           taskId == other.taskId &&
-          level == other.level;
+          level == other.level &&
+          markers == other.markers;
 }
 
 /// Which page an ID leads to.
@@ -5817,6 +5881,52 @@ class RemindersSetting {
           quietUntil == other.quietUntil;
 }
 
+/// A possible new target of an AI decision (Home → AI activity → Repoint): notes of the
+/// current target's kind, never the current target or the source.
+class RepointChoice {
+  /// Note ID.
+  final String id;
+
+  /// Title.
+  final String title;
+
+  /// Direction of `title`.
+  final TextDir titleDir;
+
+  /// Kind (`note`, `person`, `company`, `concept`, …).
+  final String kind;
+
+  /// Folder path ("people"), to tell equal titles apart.
+  final String folder;
+
+  const RepointChoice({
+    required this.id,
+    required this.title,
+    required this.titleDir,
+    required this.kind,
+    required this.folder,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      title.hashCode ^
+      titleDir.hashCode ^
+      kind.hashCode ^
+      folder.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RepointChoice &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          title == other.title &&
+          titleDir == other.titleDir &&
+          kind == other.kind &&
+          folder == other.folder;
+}
+
 /// How to resolve a conflict.
 enum ResolutionKind {
   /// Push the local content over the server's.
@@ -6405,6 +6515,14 @@ class SuggestionDetail {
   /// Correction: the model's question when the reference is ambiguous.
   final String? question;
 
+  /// Duplicates: the item accepting keeps (the note created first; for tasks the line the
+  /// shared rule keeps).
+  final String? survivorId;
+
+  /// Duplicates: what accepting does, in words ("Accepting keeps “Plan” and merges
+  /// “Plan 2” into it").
+  final String? mergeLabel;
+
   const SuggestionDetail({
     required this.kind,
     required this.title,
@@ -6435,6 +6553,8 @@ class SuggestionDetail {
     this.recurrence,
     required this.entities,
     this.question,
+    this.survivorId,
+    this.mergeLabel,
   });
 
   /// An empty detail of `kind`.
@@ -6471,7 +6591,9 @@ class SuggestionDetail {
       dateLabel.hashCode ^
       recurrence.hashCode ^
       entities.hashCode ^
-      question.hashCode;
+      question.hashCode ^
+      survivorId.hashCode ^
+      mergeLabel.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -6506,7 +6628,9 @@ class SuggestionDetail {
           dateLabel == other.dateLabel &&
           recurrence == other.recurrence &&
           entities == other.entities &&
-          question == other.question;
+          question == other.question &&
+          survivorId == other.survivorId &&
+          mergeLabel == other.mergeLabel;
 }
 
 /// Edits to a proposal before accepting it (`InboxExpanded`).
@@ -7723,6 +7847,28 @@ enum TextDir {
   neutral,
 }
 
+/// A range of text (UTF-16 units; end exclusive).
+class TextRange {
+  /// Start (inclusive).
+  final int start;
+
+  /// End (exclusive).
+  final int end;
+
+  const TextRange({required this.start, required this.end});
+
+  @override
+  int get hashCode => start.hashCode ^ end.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TextRange &&
+          runtimeType == other.runtimeType &&
+          start == other.start &&
+          end == other.end;
+}
+
 /// A message of a suggestion's thread (§9.8 "threaded suggestions").
 class ThreadMessage {
   /// Reply ID.
@@ -7772,6 +7918,63 @@ class ThreadMessage {
           textDir == other.textDir &&
           createdLabel == other.createdLabel &&
           pendingSync == other.pendingSync;
+}
+
+/// A time zone of the Settings picker (`timezones`, then `set_timezone(id)`).
+class TimeZoneItem {
+  /// IANA ID (`Africa/Cairo`): what `set_timezone` takes.
+  final String id;
+
+  /// City or zone name in the UI language ("Cairo" / "القاهرة").
+  final String name;
+
+  /// Region in the UI language ("Africa" / "أفريقيا"; empty for UTC).
+  final String region;
+
+  /// Current offset from UTC in minutes (DST applied).
+  final int offsetMinutes;
+
+  /// "UTC+3", "UTC+5:30", "UTC".
+  final String offsetLabel;
+
+  /// The account's zone.
+  final bool isCurrent;
+
+  /// Direction of `name`.
+  final TextDir nameDir;
+
+  const TimeZoneItem({
+    required this.id,
+    required this.name,
+    required this.region,
+    required this.offsetMinutes,
+    required this.offsetLabel,
+    required this.isCurrent,
+    required this.nameDir,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      name.hashCode ^
+      region.hashCode ^
+      offsetMinutes.hashCode ^
+      offsetLabel.hashCode ^
+      isCurrent.hashCode ^
+      nameDir.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TimeZoneItem &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          region == other.region &&
+          offsetMinutes == other.offsetMinutes &&
+          offsetLabel == other.offsetLabel &&
+          isCurrent == other.isCurrent &&
+          nameDir == other.nameDir;
 }
 
 /// "Timeline · Mon 28 Sep (from “بكرة”)".

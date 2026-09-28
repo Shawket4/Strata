@@ -23,13 +23,13 @@ use chrono::NaiveDate;
 use pretty_assertions::assert_eq;
 use strata_core::api::{app, intents, views};
 use strata_core::view::model::{
-    AdminUserItem, AppLifecycle, AskScope, Availability, ImportSummary, MentionEdit,
-    RecurrenceCompose, RecurrencePreviewItem, AskScopeKind, ConflictResolution, CoreConfig, CoreFailure,
-    CustodyDraft, DocumentDraft, DuplicateChoice, EditorHint, GraphFilter, GraphLens, HintKind,
-    LinkOrCreateChoice, LinkOrCreateKind, NewUserRequest, NodePosition, NotificationAction,
-    NotificationActionKind, NotificationResult, PasswordLevel, PlaceDraft, Platform,
-    RecurrenceFrequency, ResolutionKind, SearchMode, SessionKind, SignInRequest, SignUpRequest,
-    SuggestionEdits, TagItem, TaskDraft, TaskPatch,
+    AdminUserItem, AppLifecycle, AskScope, AskScopeKind, Availability, ConflictResolution,
+    CoreConfig, CoreFailure, CustodyDraft, DocumentDraft, DuplicateChoice, EditorHint, GraphFilter,
+    GraphLens, HintKind, ImportSummary, LinkOrCreateChoice, LinkOrCreateKind, MentionEdit,
+    NewUserRequest, NodePosition, NotificationAction, NotificationActionKind, NotificationResult,
+    PasswordLevel, PlaceDraft, Platform, RecurrenceCompose, RecurrenceFrequency,
+    RecurrencePreviewItem, ResolutionKind, SearchMode, SessionKind, SignInRequest, SignUpRequest,
+    SuggestionEdits, TagItem, TaskDraft, TaskPatch, TextRange,
 };
 use strata_index::types::UserRole;
 use world::World;
@@ -79,12 +79,19 @@ fn the_facade_drives_the_core_end_to_end() {
         target_anchor: None,
         task_id: None,
         level: 0,
+        markers: Vec::new(),
     };
     assert_eq!(
         views::editor_hints("See [[Acme]] #client".to_owned()),
         [
             hint(HintKind::LtrLine, 0, 20),
-            hint(HintKind::WikiLink, 4, 12),
+            EditorHint {
+                markers: vec![
+                    TextRange { start: 4, end: 6 },
+                    TextRange { start: 10, end: 12 },
+                ],
+                ..hint(HintKind::WikiLink, 4, 12)
+            },
             hint(HintKind::Tag, 13, 20),
         ]
     );
@@ -450,7 +457,8 @@ fn the_facade_drives_the_core_end_to_end() {
             place_id: Some(place.clone()),
             person_id: None,
             counterparty_id: None,
-            date: NaiveDate::from_ymd_opt(2026, 9, 20).expect("date"),
+            date: NaiveDate::from_ymd_opt(2026, 9, 20),
+            note: None,
         },
     )
     .expect("custody");
@@ -627,14 +635,18 @@ fn the_facade_drives_the_core_end_to_end() {
     );
     let zip = dir.path().join("vault.zip");
     let exported = rt
-        .block_on(intents::export_vault(zip.to_str().expect("utf-8").to_owned()))
+        .block_on(intents::export_vault(
+            zip.to_str().expect("utf-8").to_owned(),
+        ))
         .expect("export");
     assert_eq!(
         (exported.note_count, exported.label.as_str()),
         (0, "1.4 KB · 0 notes")
     );
     assert_eq!(
-        rt.block_on(intents::import_vault(zip.to_str().expect("utf-8").to_owned())),
+        rt.block_on(intents::import_vault(
+            zip.to_str().expect("utf-8").to_owned()
+        )),
         Ok(ImportSummary {
             imported: 0,
             skipped: 1
@@ -736,7 +748,8 @@ fn the_facade_drives_the_core_end_to_end() {
         rt.block_on(intents::save_answer_as_note(unknown.clone())),
         Err(not_found("answer"))
     );
-    rt.block_on(intents::refresh_ai_activity()).expect("activity");
+    rt.block_on(intents::refresh_ai_activity())
+        .expect("activity");
     assert_eq!(
         rt.block_on(intents::reject_ai_decision(unknown.clone())),
         Err(server(404, "not_found"))
@@ -756,20 +769,30 @@ fn the_facade_drives_the_core_end_to_end() {
         )),
         Err(server(404, "not_found"))
     );
-    rt.block_on(intents::refresh_similarity()).expect("similarity");
+    rt.block_on(intents::refresh_similarity())
+        .expect("similarity");
 
     // Account settings through the facade.
-    rt.block_on(app::set_display_name("Alice".to_owned())).expect("name");
-    rt.block_on(app::set_ui_language("en".to_owned())).expect("language");
-    rt.block_on(app::set_timezone("Africa/Cairo".to_owned())).expect("zone");
+    rt.block_on(app::set_display_name("Alice".to_owned()))
+        .expect("name");
+    rt.block_on(app::set_ui_language("en".to_owned()))
+        .expect("language");
+    rt.block_on(app::set_timezone("Africa/Cairo".to_owned()))
+        .expect("zone");
     let export = dir.path().join("me.zip");
     assert_eq!(
-        rt.block_on(app::download_export(export.to_str().expect("utf-8").to_owned()))
-            .map(|e| e.note_count),
+        rt.block_on(app::download_export(
+            export.to_str().expect("utf-8").to_owned()
+        ))
+        .map(|e| e.note_count),
         Ok(0)
     );
     let pending_ops = match rt.block_on(app::delete_account_now(false)) {
-        Err(CoreFailure { code, count: Some(n), .. }) if code == "pending_changes" => n,
+        Err(CoreFailure {
+            code,
+            count: Some(n),
+            ..
+        }) if code == "pending_changes" => n,
         other => panic!("{other:?}"),
     };
     // "Check again" is only for a sign-up kept in memory; this account signed in normally.
@@ -777,7 +800,10 @@ fn the_facade_drives_the_core_end_to_end() {
         rt.block_on(app::check_approval()),
         Err(invalid("password", "required"))
     );
-    assert_eq!(app::dismiss_pending().map(|s| s.kind), Ok(SessionKind::Active));
+    assert_eq!(
+        app::dismiss_pending().map(|s| s.kind),
+        Ok(SessionKind::Active)
+    );
     assert_eq!(
         app::switch_account(unknown.clone()).map(|s| s.kind),
         Err(not_found("account"))
@@ -799,7 +825,10 @@ fn the_facade_drives_the_core_end_to_end() {
     // Signing out with unsynced changes asks first; the unsynced ops can be exported.
     let asked = rt.block_on(app::sign_out(false)).expect("sign out");
     // The four reminder settings add one settings op.
-    assert_eq!((asked.signed_out, asked.unsynced_ops), (false, pending_ops + 1));
+    assert_eq!(
+        (asked.signed_out, asked.unsynced_ops),
+        (false, pending_ops + 1)
+    );
     let unsynced = dir.path().join("unsynced.md");
     assert_eq!(
         app::export_unsynced(unsynced.to_str().expect("utf-8").to_owned()),

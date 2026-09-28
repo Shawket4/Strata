@@ -95,10 +95,7 @@ async fn the_background_loop_pushes_pulls_and_follows_events() {
     .id
     .expect("created");
     let signal = next_signal(&mut events).await;
-    assert!(
-        matches!(signal, EventSignal::Changed { .. }),
-        "{signal:?}"
-    );
+    assert!(matches!(signal, EventSignal::Changed { .. }), "{signal:?}");
     other.sync(Trigger::EventsFrame).await.expect("pull");
     let pulled = other
         .read(|c, _| notes::current(c, &id))

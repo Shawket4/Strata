@@ -355,6 +355,17 @@ pub fn set_property(id: String, key: String, value: String) -> Result<String, Co
     lift(|| with(|s| s.set_property(&id, &key, &value)))
 }
 
+/// Sets a property to a list of values (several phone numbers, `aliases`, `tags`); the list
+/// replaces the whole value and an empty list removes the key. Relation lists are refused
+/// (use the relation intents).
+pub fn set_property_values(
+    id: String,
+    key: String,
+    values: Vec<String>,
+) -> Result<String, CoreFailure> {
+    lift(|| with(|s| s.set_property_values(&id, &key, &values)))
+}
+
 /// Removes a property.
 pub fn remove_property(id: String, key: String) -> Result<String, CoreFailure> {
     lift(|| with(|s| s.remove_property(&id, &key)))
@@ -370,7 +381,8 @@ pub fn remove_alias(id: String, alias: String) -> Result<String, CoreFailure> {
     lift(|| with(|s| s.remove_alias(&id, &alias)))
 }
 
-/// Records a custody event of a document ("Record a move").
+/// Records a custody event of a document ("Record a move"); a draft without a date is
+/// recorded today in the account's time zone.
 pub fn record_custody(document_id: String, draft: CustodyDraft) -> Result<String, CoreFailure> {
     lift(|| with(|s| s.record_custody(&document_id, &draft)))
 }

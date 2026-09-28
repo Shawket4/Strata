@@ -114,6 +114,7 @@ fn custody(
         sentence: sentence.to_owned(),
         date_label: format!("{day} Sep"),
         here,
+        note: None,
     }
 }
 

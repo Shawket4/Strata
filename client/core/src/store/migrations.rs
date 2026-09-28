@@ -37,6 +37,11 @@ pub const ACCOUNT: &[Migration] = &[
         name: "server",
         sql: include_str!("migrations/account_0003_server.sql"),
     },
+    Migration {
+        version: 4,
+        name: "custody_note",
+        sql: include_str!("migrations/account_0004_custody_note.sql"),
+    },
 ];
 
 /// Device registry migrations.

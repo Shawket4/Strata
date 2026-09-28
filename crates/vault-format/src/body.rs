@@ -173,7 +173,18 @@ pub fn analyze(body: &str) -> BodyAnalysis {
     skip.sort_by_key(|r| r.start);
     let skip = merge(skip);
     let tags = scan_tags(body, &skip);
-    let mut inline = s.inline;
+    // A delimiter inside a wikilink (`[[*draft* plan]]`) is part of the link's path, not a
+    // style: the run is dropped (a run around a link, `**[[Ahmed]]**`, is kept).
+    let in_link = |r: &Range<usize>| {
+        links
+            .iter()
+            .any(|l| r.start < l.span.end && l.span.start < r.end)
+    };
+    let mut inline: Vec<InlineSpan> = s
+        .inline
+        .into_iter()
+        .filter(|i| !in_link(&i.open) && !in_link(&i.close))
+        .collect();
     inline.extend(scan_marks(body, &skip));
     inline.sort_by(|a, b| {
         a.span
@@ -951,6 +962,7 @@ mod tests {
         );
         // Code, links and unmatched delimiters are not styled.
         assert_eq!(styles("`**no**` [[a==b==c]] ** x ** == y ==\n"), vec![]);
+        assert_eq!(styles("[[*draft* plan]] [[a **b** c]]\n"), vec![]);
         // A run around a link keeps it; Arabic text keeps byte offsets.
         assert_eq!(
             styles("**[[Ahmed]]** و **مهم**\n"),

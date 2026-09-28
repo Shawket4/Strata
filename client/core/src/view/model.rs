@@ -670,6 +670,25 @@ pub struct AiActivityItem {
     pub decision_id: String,
     /// Already undone.
     pub reverted: bool,
+    /// Whether the target can be changed ("Repoint": a link, mention or concept of a note;
+    /// pick the new target from `repoint_choices`, then `repoint_ai_decision`).
+    pub can_repoint: bool,
+}
+
+/// A possible new target of an AI decision (Home → AI activity → Repoint): notes of the
+/// current target's kind, never the current target or the source.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RepointChoice {
+    /// Note ID.
+    pub id: String,
+    /// Title.
+    pub title: String,
+    /// Direction of `title`.
+    pub title_dir: TextDir,
+    /// Kind (`note`, `person`, `company`, `concept`, …).
+    pub kind: String,
+    /// Folder path ("people"), to tell equal titles apart.
+    pub folder: String,
 }
 
 /// Which notes the "Recent" block lists.
@@ -1104,6 +1123,12 @@ pub struct SuggestionDetail {
     pub entities: Vec<EntityRef>,
     /// Correction: the model's question when the reference is ambiguous.
     pub question: Option<String>,
+    /// Duplicates: the item accepting keeps (the note created first; for tasks the line the
+    /// shared rule keeps).
+    pub survivor_id: Option<String>,
+    /// Duplicates: what accepting does, in words ("Accepting keeps “Plan” and merges
+    /// “Plan 2” into it").
+    pub merge_label: Option<String>,
 }
 
 /// "Timeline · Mon 28 Sep (from “بكرة”)".
@@ -1150,6 +1175,8 @@ impl SuggestionDetail {
             recurrence: None,
             entities: Vec::new(),
             question: None,
+            survivor_id: None,
+            merge_label: None,
         }
     }
 }
@@ -1458,6 +1485,21 @@ pub struct EditorHint {
     pub task_id: Option<String>,
     /// `Heading`: level 1–6 (0 otherwise).
     pub level: u8,
+    /// The span's markdown markers as the shared parser matched them (UTF-16 offsets into
+    /// the content, sorted): `**`/`*`/`~~`/`==` of a styled run (`***x***` is an emphasis
+    /// around a strong run, each with its own markers), a heading's `#`s with the spaces
+    /// around them (and closing `#`s), a link's `[[`/`![[` (with `path|` when aliased) and
+    /// `]]`. Live preview hides exactly these.
+    pub markers: Vec<TextRange>,
+}
+
+/// A range of text (UTF-16 units; end exclusive).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TextRange {
+    /// Start (inclusive).
+    pub start: u32,
+    /// End (exclusive).
+    pub end: u32,
 }
 
 /// Sync state of one note.
@@ -2111,6 +2153,8 @@ pub struct CustodyItem {
     pub date_label: String,
     /// Place pages: the event happened at this place itself (not a nested one).
     pub here: bool,
+    /// The user's note on the event, as written on the custody line.
+    pub note: Option<String>,
 }
 
 /// A document page.
@@ -2406,6 +2450,14 @@ pub struct CitationPreview {
     pub date_label: Option<String>,
     /// Tags.
     pub tags: Vec<String>,
+    /// The anchor resolved (block ID without `^`, or the heading), `None` when absent or not
+    /// found; the route's `anchor` for the editor.
+    pub anchor: Option<String>,
+    /// 0-based line of the block (or heading) in the note's content, frontmatter included.
+    pub line: Option<u32>,
+    /// Offset of the block's start in the note's content (UTF-16 units): where the editor
+    /// puts the caret when the citation is opened.
+    pub offset: Option<u32>,
 }
 
 /// A node of a graph view, with its position.
@@ -2987,6 +3039,25 @@ pub struct SettingsView {
     pub integrity_warnings: Vec<IntegrityItem>,
     /// Last `refresh_settings` ("Updated 14:32").
     pub refreshed_label: Option<String>,
+}
+
+/// A time zone of the Settings picker (`timezones`, then `set_timezone(id)`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TimeZoneItem {
+    /// IANA ID (`Africa/Cairo`): what `set_timezone` takes.
+    pub id: String,
+    /// City or zone name in the UI language ("Cairo" / "القاهرة").
+    pub name: String,
+    /// Region in the UI language ("Africa" / "أفريقيا"; empty for UTC).
+    pub region: String,
+    /// Current offset from UTC in minutes (DST applied).
+    pub offset_minutes: i32,
+    /// "UTC+3", "UTC+5:30", "UTC".
+    pub offset_label: String,
+    /// The account's zone.
+    pub is_current: bool,
+    /// Direction of `name`.
+    pub name_dir: TextDir,
 }
 
 /// An account in Admin → Users.

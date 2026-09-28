@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 85507987;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1421183086;
 
 // Section: executor
 
@@ -2884,6 +2884,40 @@ fn wire__crate__api__intents__repoint_ai_decision_impl(
         },
     )
 }
+fn wire__crate__api__views__repoint_choices_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "repoint_choices",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_decision_id = <String>::sse_decode(&mut deserializer);
+            let api_query = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::view::model::CoreFailure>((move || {
+                    let output_ok = crate::api::views::repoint_choices(api_decision_id, api_query)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__intents__repoint_relation_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -3728,6 +3762,42 @@ fn wire__crate__api__intents__set_property_impl(
         },
     )
 }
+fn wire__crate__api__intents__set_property_values_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_property_values",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id = <String>::sse_decode(&mut deserializer);
+            let api_key = <String>::sse_decode(&mut deserializer);
+            let api_values = <Vec<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::view::model::CoreFailure>((move || {
+                    let output_ok =
+                        crate::api::intents::set_property_values(api_id, api_key, api_values)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__intents__set_quiet_hours_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -4437,6 +4507,39 @@ fn wire__crate__view__model__task_sections_default_impl(
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Ok::<_, ()>(crate::view::model::TaskSections::default())?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__views__timezones_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "timezones",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_query = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, crate::view::model::CoreFailure>((move || {
+                    let output_ok = crate::api::views::timezones(api_query)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -5691,6 +5794,7 @@ impl SseDecode for crate::view::model::AdminUserItem {
         let mut var_createdLabel = <String>::sse_decode(deserializer);
         let mut var_deletionLabel = <Option<String>>::sse_decode(deserializer);
         let mut var_passwordChangeRequired = <bool>::sse_decode(deserializer);
+        let mut var_exportDownloadedLabel = <Option<String>>::sse_decode(deserializer);
         return crate::view::model::AdminUserItem {
             id: var_id,
             username: var_username,
@@ -5705,6 +5809,7 @@ impl SseDecode for crate::view::model::AdminUserItem {
             created_label: var_createdLabel,
             deletion_label: var_deletionLabel,
             password_change_required: var_passwordChangeRequired,
+            export_downloaded_label: var_exportDownloadedLabel,
         };
     }
 }
@@ -5716,11 +5821,13 @@ impl SseDecode for crate::view::model::AdminUsersView {
         let mut var_pending = <Vec<crate::view::model::AdminUserItem>>::sse_decode(deserializer);
         let mut var_users = <Vec<crate::view::model::AdminUserItem>>::sse_decode(deserializer);
         let mut var_query = <String>::sse_decode(deserializer);
+        let mut var_deletionPreviewLabel = <Option<String>>::sse_decode(deserializer);
         return crate::view::model::AdminUsersView {
             availability: var_availability,
             pending: var_pending,
             users: var_users,
             query: var_query,
+            deletion_preview_label: var_deletionPreviewLabel,
         };
     }
 }
@@ -5738,6 +5845,7 @@ impl SseDecode for crate::view::model::AiActivityItem {
         let mut var_undoSuggestionId = <Option<String>>::sse_decode(deserializer);
         let mut var_decisionId = <String>::sse_decode(deserializer);
         let mut var_reverted = <bool>::sse_decode(deserializer);
+        let mut var_canRepoint = <bool>::sse_decode(deserializer);
         return crate::view::model::AiActivityItem {
             at_label: var_atLabel,
             kind: var_kind,
@@ -5749,6 +5857,7 @@ impl SseDecode for crate::view::model::AiActivityItem {
             undo_suggestion_id: var_undoSuggestionId,
             decision_id: var_decisionId,
             reverted: var_reverted,
+            can_repoint: var_canRepoint,
         };
     }
 }
@@ -6034,6 +6143,9 @@ impl SseDecode for crate::view::model::CitationPreview {
         let mut var_heading = <Option<String>>::sse_decode(deserializer);
         let mut var_dateLabel = <Option<String>>::sse_decode(deserializer);
         let mut var_tags = <Vec<String>>::sse_decode(deserializer);
+        let mut var_anchor = <Option<String>>::sse_decode(deserializer);
+        let mut var_line = <Option<u32>>::sse_decode(deserializer);
+        let mut var_offset = <Option<u32>>::sse_decode(deserializer);
         return crate::view::model::CitationPreview {
             note_id: var_noteId,
             title: var_title,
@@ -6043,6 +6155,9 @@ impl SseDecode for crate::view::model::CitationPreview {
             heading: var_heading,
             date_label: var_dateLabel,
             tags: var_tags,
+            anchor: var_anchor,
+            line: var_line,
+            offset: var_offset,
         };
     }
 }
@@ -6317,13 +6432,15 @@ impl SseDecode for crate::view::model::CustodyDraft {
         let mut var_placeId = <Option<String>>::sse_decode(deserializer);
         let mut var_personId = <Option<String>>::sse_decode(deserializer);
         let mut var_counterpartyId = <Option<String>>::sse_decode(deserializer);
-        let mut var_date = <chrono::NaiveDate>::sse_decode(deserializer);
+        let mut var_date = <Option<chrono::NaiveDate>>::sse_decode(deserializer);
+        let mut var_note = <Option<String>>::sse_decode(deserializer);
         return crate::view::model::CustodyDraft {
             kind: var_kind,
             place_id: var_placeId,
             person_id: var_personId,
             counterparty_id: var_counterpartyId,
             date: var_date,
+            note: var_note,
         };
     }
 }
@@ -6348,6 +6465,7 @@ impl SseDecode for crate::view::model::CustodyItem {
         let mut var_sentence = <String>::sse_decode(deserializer);
         let mut var_dateLabel = <String>::sse_decode(deserializer);
         let mut var_here = <bool>::sse_decode(deserializer);
+        let mut var_note = <Option<String>>::sse_decode(deserializer);
         return crate::view::model::CustodyItem {
             date: var_date,
             kind: var_kind,
@@ -6365,6 +6483,7 @@ impl SseDecode for crate::view::model::CustodyItem {
             sentence: var_sentence,
             date_label: var_dateLabel,
             here: var_here,
+            note: var_note,
         };
     }
 }
@@ -6756,6 +6875,7 @@ impl SseDecode for crate::view::model::EditorHint {
         let mut var_targetAnchor = <Option<String>>::sse_decode(deserializer);
         let mut var_taskId = <Option<String>>::sse_decode(deserializer);
         let mut var_level = <u8>::sse_decode(deserializer);
+        let mut var_markers = <Vec<crate::view::model::TextRange>>::sse_decode(deserializer);
         return crate::view::model::EditorHint {
             kind: var_kind,
             start: var_start,
@@ -6764,6 +6884,7 @@ impl SseDecode for crate::view::model::EditorHint {
             target_anchor: var_targetAnchor,
             task_id: var_taskId,
             level: var_level,
+            markers: var_markers,
         };
     }
 }
@@ -8127,6 +8248,20 @@ impl SseDecode for Vec<crate::view::model::ReminderItem> {
     }
 }
 
+impl SseDecode for Vec<crate::view::model::RepointChoice> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::view::model::RepointChoice>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::view::model::SearchHit> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8237,6 +8372,18 @@ impl SseDecode for Vec<crate::view::model::TaskItem> {
     }
 }
 
+impl SseDecode for Vec<crate::view::model::TextRange> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::view::model::TextRange>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::view::model::ThreadMessage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8246,6 +8393,18 @@ impl SseDecode for Vec<crate::view::model::ThreadMessage> {
             ans_.push(<crate::view::model::ThreadMessage>::sse_decode(
                 deserializer,
             ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::view::model::TimeZoneItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::view::model::TimeZoneItem>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -9349,6 +9508,24 @@ impl SseDecode for crate::view::model::RemindersSetting {
     }
 }
 
+impl SseDecode for crate::view::model::RepointChoice {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_titleDir = <crate::view::model::TextDir>::sse_decode(deserializer);
+        let mut var_kind = <String>::sse_decode(deserializer);
+        let mut var_folder = <String>::sse_decode(deserializer);
+        return crate::view::model::RepointChoice {
+            id: var_id,
+            title: var_title,
+            title_dir: var_titleDir,
+            kind: var_kind,
+            folder: var_folder,
+        };
+    }
+}
+
 impl SseDecode for crate::view::model::ResolutionKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -9603,6 +9780,8 @@ impl SseDecode for crate::view::model::SuggestionDetail {
         let mut var_recurrence = <Option<String>>::sse_decode(deserializer);
         let mut var_entities = <Vec<crate::view::model::EntityRef>>::sse_decode(deserializer);
         let mut var_question = <Option<String>>::sse_decode(deserializer);
+        let mut var_survivorId = <Option<String>>::sse_decode(deserializer);
+        let mut var_mergeLabel = <Option<String>>::sse_decode(deserializer);
         return crate::view::model::SuggestionDetail {
             kind: var_kind,
             title: var_title,
@@ -9633,6 +9812,8 @@ impl SseDecode for crate::view::model::SuggestionDetail {
             recurrence: var_recurrence,
             entities: var_entities,
             question: var_question,
+            survivor_id: var_survivorId,
+            merge_label: var_mergeLabel,
         };
     }
 }
@@ -10149,6 +10330,18 @@ impl SseDecode for crate::view::model::TextDir {
     }
 }
 
+impl SseDecode for crate::view::model::TextRange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_start = <u32>::sse_decode(deserializer);
+        let mut var_end = <u32>::sse_decode(deserializer);
+        return crate::view::model::TextRange {
+            start: var_start,
+            end: var_end,
+        };
+    }
+}
+
 impl SseDecode for crate::view::model::ThreadMessage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -10165,6 +10358,28 @@ impl SseDecode for crate::view::model::ThreadMessage {
             text_dir: var_textDir,
             created_label: var_createdLabel,
             pending_sync: var_pendingSync,
+        };
+    }
+}
+
+impl SseDecode for crate::view::model::TimeZoneItem {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <String>::sse_decode(deserializer);
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_region = <String>::sse_decode(deserializer);
+        let mut var_offsetMinutes = <i32>::sse_decode(deserializer);
+        let mut var_offsetLabel = <String>::sse_decode(deserializer);
+        let mut var_isCurrent = <bool>::sse_decode(deserializer);
+        let mut var_nameDir = <crate::view::model::TextDir>::sse_decode(deserializer);
+        return crate::view::model::TimeZoneItem {
+            id: var_id,
+            name: var_name,
+            region: var_region,
+            offset_minutes: var_offsetMinutes,
+            offset_label: var_offsetLabel,
+            is_current: var_isCurrent,
+            name_dir: var_nameDir,
         };
     }
 }
@@ -10368,134 +10583,139 @@ fn pde_ffi_dispatcher_primary_impl(
         82 => {
             wire__crate__api__intents__repoint_ai_decision_impl(port, ptr, rust_vec_len, data_len)
         }
-        83 => wire__crate__api__intents__repoint_relation_impl(port, ptr, rust_vec_len, data_len),
-        84 => wire__crate__api__reminders__report_notification_result_impl(
+        83 => wire__crate__api__views__repoint_choices_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__intents__repoint_relation_impl(port, ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__reminders__report_notification_result_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        85 => wire__crate__api__intents__request_relink_impl(port, ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__intents__reset_password_impl(port, ptr, rust_vec_len, data_len),
-        87 => wire__crate__api__intents__resolve_capture_duplicate_impl(
+        86 => wire__crate__api__intents__request_relink_impl(port, ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__intents__reset_password_impl(port, ptr, rust_vec_len, data_len),
+        88 => wire__crate__api__intents__resolve_capture_duplicate_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        88 => wire__crate__api__views__resolve_citation_impl(port, ptr, rust_vec_len, data_len),
-        89 => wire__crate__api__intents__resolve_conflict_impl(port, ptr, rust_vec_len, data_len),
-        90 => wire__crate__api__intents__resolve_duplicate_impl(port, ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__intents__resolve_link_or_create_impl(
+        89 => wire__crate__api__views__resolve_citation_impl(port, ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__intents__resolve_conflict_impl(port, ptr, rust_vec_len, data_len),
+        91 => wire__crate__api__intents__resolve_duplicate_impl(port, ptr, rust_vec_len, data_len),
+        92 => wire__crate__api__intents__resolve_link_or_create_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        92 => wire__crate__api__intents__retype_ai_decision_impl(port, ptr, rust_vec_len, data_len),
-        93 => wire__crate__api__intents__retype_relation_impl(port, ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__intents__revert_note_impl(port, ptr, rust_vec_len, data_len),
-        95 => wire__crate__api__intents__revoke_device_impl(port, ptr, rust_vec_len, data_len),
-        96 => {
+        93 => wire__crate__api__intents__retype_ai_decision_impl(port, ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__intents__retype_relation_impl(port, ptr, rust_vec_len, data_len),
+        95 => wire__crate__api__intents__revert_note_impl(port, ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__intents__revoke_device_impl(port, ptr, rust_vec_len, data_len),
+        97 => {
             wire__crate__api__intents__save_answer_as_note_impl(port, ptr, rust_vec_len, data_len)
         }
-        97 => wire__crate__api__intents__save_layout_impl(port, ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__intents__schedule_deletion_impl(port, ptr, rust_vec_len, data_len),
-        99 => wire__crate__api__views__search_impl(port, ptr, rust_vec_len, data_len),
-        100 => wire__crate__api__views__search_in_folder_impl(port, ptr, rust_vec_len, data_len),
-        101 => wire__crate__view__model__session_state_of_impl(port, ptr, rust_vec_len, data_len),
-        102 => wire__crate__api__intents__set_default_reminder_time_impl(
+        98 => wire__crate__api__intents__save_layout_impl(port, ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__intents__schedule_deletion_impl(port, ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__views__search_impl(port, ptr, rust_vec_len, data_len),
+        101 => wire__crate__api__views__search_in_folder_impl(port, ptr, rust_vec_len, data_len),
+        102 => wire__crate__view__model__session_state_of_impl(port, ptr, rust_vec_len, data_len),
+        103 => wire__crate__api__intents__set_default_reminder_time_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        103 => {
+        104 => {
             wire__crate__api__intents__set_device_reminders_impl(port, ptr, rust_vec_len, data_len)
         }
-        104 => wire__crate__api__app__set_display_name_impl(port, ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__intents__set_property_impl(port, ptr, rust_vec_len, data_len),
-        106 => wire__crate__api__intents__set_quiet_hours_impl(port, ptr, rust_vec_len, data_len),
+        105 => wire__crate__api__app__set_display_name_impl(port, ptr, rust_vec_len, data_len),
+        106 => wire__crate__api__intents__set_property_impl(port, ptr, rust_vec_len, data_len),
         107 => {
+            wire__crate__api__intents__set_property_values_impl(port, ptr, rust_vec_len, data_len)
+        }
+        108 => wire__crate__api__intents__set_quiet_hours_impl(port, ptr, rust_vec_len, data_len),
+        109 => {
             wire__crate__api__intents__set_reminders_enabled_impl(port, ptr, rust_vec_len, data_len)
         }
-        108 => {
+        110 => {
             wire__crate__api__intents__set_snooze_minutes_impl(port, ptr, rust_vec_len, data_len)
         }
-        109 => wire__crate__api__app__set_sync_paused_impl(port, ptr, rust_vec_len, data_len),
-        110 => wire__crate__api__app__set_timezone_impl(port, ptr, rust_vec_len, data_len),
-        111 => wire__crate__api__app__set_ui_language_impl(port, ptr, rust_vec_len, data_len),
-        112 => wire__crate__api__intents__set_user_enabled_impl(port, ptr, rust_vec_len, data_len),
-        113 => wire__crate__api__intents__set_user_role_impl(port, ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__app__sign_in_impl(port, ptr, rust_vec_len, data_len),
-        115 => wire__crate__api__app__sign_out_impl(port, ptr, rust_vec_len, data_len),
-        116 => wire__crate__api__app__sign_up_impl(port, ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__intents__stop_ask_impl(port, ptr, rust_vec_len, data_len),
-        118 => {
+        111 => wire__crate__api__app__set_sync_paused_impl(port, ptr, rust_vec_len, data_len),
+        112 => wire__crate__api__app__set_timezone_impl(port, ptr, rust_vec_len, data_len),
+        113 => wire__crate__api__app__set_ui_language_impl(port, ptr, rust_vec_len, data_len),
+        114 => wire__crate__api__intents__set_user_enabled_impl(port, ptr, rust_vec_len, data_len),
+        115 => wire__crate__api__intents__set_user_role_impl(port, ptr, rust_vec_len, data_len),
+        116 => wire__crate__api__app__sign_in_impl(port, ptr, rust_vec_len, data_len),
+        117 => wire__crate__api__app__sign_out_impl(port, ptr, rust_vec_len, data_len),
+        118 => wire__crate__api__app__sign_up_impl(port, ptr, rust_vec_len, data_len),
+        119 => wire__crate__api__intents__stop_ask_impl(port, ptr, rust_vec_len, data_len),
+        120 => {
             wire__crate__view__model__suggestion_detail_of_impl(port, ptr, rust_vec_len, data_len)
         }
-        119 => wire__crate__view__model__suggestion_edits_default_impl(
+        121 => wire__crate__view__model__suggestion_edits_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        120 => wire__crate__api__app__switch_account_impl(port, ptr, rust_vec_len, data_len),
-        121 => {
+        122 => wire__crate__api__app__switch_account_impl(port, ptr, rust_vec_len, data_len),
+        123 => {
             wire__crate__view__model__sync_activity_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        122 => wire__crate__api__app__sync_now_impl(port, ptr, rust_vec_len, data_len),
-        123 => wire__crate__view__model__sync_phase_default_impl(port, ptr, rust_vec_len, data_len),
-        124 => wire__crate__api__views__tags_impl(port, ptr, rust_vec_len, data_len),
-        125 => wire__crate__view__model__task_patch_default_impl(port, ptr, rust_vec_len, data_len),
-        126 => {
+        124 => wire__crate__api__app__sync_now_impl(port, ptr, rust_vec_len, data_len),
+        125 => wire__crate__view__model__sync_phase_default_impl(port, ptr, rust_vec_len, data_len),
+        126 => wire__crate__api__views__tags_impl(port, ptr, rust_vec_len, data_len),
+        127 => wire__crate__view__model__task_patch_default_impl(port, ptr, rust_vec_len, data_len),
+        128 => {
             wire__crate__view__model__task_sections_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        127 => wire__crate__api__intents__undo_suggestion_impl(port, ptr, rust_vec_len, data_len),
-        128 => wire__crate__api__intents__update_note_impl(port, ptr, rust_vec_len, data_len),
-        129 => wire__crate__api__intents__update_task_impl(port, ptr, rust_vec_len, data_len),
-        130 => wire__crate__api__intents__update_user_notes_impl(port, ptr, rust_vec_len, data_len),
-        131 => wire__crate__api__views__watch_ask_impl(port, ptr, rust_vec_len, data_len),
-        132 => wire__crate__api__views__watch_conflict_impl(port, ptr, rust_vec_len, data_len),
-        133 => wire__crate__api__views__watch_directory_impl(port, ptr, rust_vec_len, data_len),
-        134 => wire__crate__api__views__watch_directory_filtered_impl(
+        129 => wire__crate__api__views__timezones_impl(port, ptr, rust_vec_len, data_len),
+        130 => wire__crate__api__intents__undo_suggestion_impl(port, ptr, rust_vec_len, data_len),
+        131 => wire__crate__api__intents__update_note_impl(port, ptr, rust_vec_len, data_len),
+        132 => wire__crate__api__intents__update_task_impl(port, ptr, rust_vec_len, data_len),
+        133 => wire__crate__api__intents__update_user_notes_impl(port, ptr, rust_vec_len, data_len),
+        134 => wire__crate__api__views__watch_ask_impl(port, ptr, rust_vec_len, data_len),
+        135 => wire__crate__api__views__watch_conflict_impl(port, ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__views__watch_directory_impl(port, ptr, rust_vec_len, data_len),
+        137 => wire__crate__api__views__watch_directory_filtered_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        135 => {
+        138 => {
             wire__crate__api__views__watch_duplicate_prompts_impl(port, ptr, rust_vec_len, data_len)
         }
-        136 => wire__crate__api__views__watch_entity_impl(port, ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__views__watch_home_impl(port, ptr, rust_vec_len, data_len),
-        138 => wire__crate__api__views__watch_inbox_impl(port, ptr, rust_vec_len, data_len),
-        139 => {
+        139 => wire__crate__api__views__watch_entity_impl(port, ptr, rust_vec_len, data_len),
+        140 => wire__crate__api__views__watch_home_impl(port, ptr, rust_vec_len, data_len),
+        141 => wire__crate__api__views__watch_inbox_impl(port, ptr, rust_vec_len, data_len),
+        142 => {
             wire__crate__api__views__watch_inbox_filtered_impl(port, ptr, rust_vec_len, data_len)
         }
-        140 => wire__crate__api__views__watch_local_graph_impl(port, ptr, rust_vec_len, data_len),
-        141 => wire__crate__api__views__watch_local_graph_filtered_impl(
+        143 => wire__crate__api__views__watch_local_graph_impl(port, ptr, rust_vec_len, data_len),
+        144 => wire__crate__api__views__watch_local_graph_filtered_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        142 => wire__crate__api__views__watch_nav_impl(port, ptr, rust_vec_len, data_len),
-        143 => wire__crate__api__views__watch_note_impl(port, ptr, rust_vec_len, data_len),
-        144 => wire__crate__api__views__watch_notes_list_impl(port, ptr, rust_vec_len, data_len),
-        145 => wire__crate__api__reminders__watch_notification_ops_impl(
+        145 => wire__crate__api__views__watch_nav_impl(port, ptr, rust_vec_len, data_len),
+        146 => wire__crate__api__views__watch_note_impl(port, ptr, rust_vec_len, data_len),
+        147 => wire__crate__api__views__watch_notes_list_impl(port, ptr, rust_vec_len, data_len),
+        148 => wire__crate__api__reminders__watch_notification_ops_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        146 => wire__crate__api__views__watch_recent_impl(port, ptr, rust_vec_len, data_len),
-        147 => wire__crate__api__app__watch_session_impl(port, ptr, rust_vec_len, data_len),
-        148 => wire__crate__api__views__watch_settings_impl(port, ptr, rust_vec_len, data_len),
-        149 => wire__crate__api__views__watch_sync_status_impl(port, ptr, rust_vec_len, data_len),
-        150 => wire__crate__api__views__watch_task_impl(port, ptr, rust_vec_len, data_len),
-        151 => wire__crate__api__views__watch_task_homes_impl(port, ptr, rust_vec_len, data_len),
-        152 => wire__crate__api__views__watch_tasks_impl(port, ptr, rust_vec_len, data_len),
+        149 => wire__crate__api__views__watch_recent_impl(port, ptr, rust_vec_len, data_len),
+        150 => wire__crate__api__app__watch_session_impl(port, ptr, rust_vec_len, data_len),
+        151 => wire__crate__api__views__watch_settings_impl(port, ptr, rust_vec_len, data_len),
+        152 => wire__crate__api__views__watch_sync_status_impl(port, ptr, rust_vec_len, data_len),
+        153 => wire__crate__api__views__watch_task_impl(port, ptr, rust_vec_len, data_len),
+        154 => wire__crate__api__views__watch_task_homes_impl(port, ptr, rust_vec_len, data_len),
+        155 => wire__crate__api__views__watch_tasks_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -10559,6 +10779,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::AdminUserItem {
             self.created_label.into_into_dart().into_dart(),
             self.deletion_label.into_into_dart().into_dart(),
             self.password_change_required.into_into_dart().into_dart(),
+            self.export_downloaded_label.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -10582,6 +10803,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::AdminUsersView {
             self.pending.into_into_dart().into_dart(),
             self.users.into_into_dart().into_dart(),
             self.query.into_into_dart().into_dart(),
+            self.deletion_preview_label.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -10611,6 +10833,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::AiActivityItem {
             self.undo_suggestion_id.into_into_dart().into_dart(),
             self.decision_id.into_into_dart().into_dart(),
             self.reverted.into_into_dart().into_dart(),
+            self.can_repoint.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -10978,6 +11201,9 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::CitationPreview {
             self.heading.into_into_dart().into_dart(),
             self.date_label.into_into_dart().into_dart(),
             self.tags.into_into_dart().into_dart(),
+            self.anchor.into_into_dart().into_dart(),
+            self.line.into_into_dart().into_dart(),
+            self.offset.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11344,6 +11570,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::CustodyDraft {
             self.person_id.into_into_dart().into_dart(),
             self.counterparty_id.into_into_dart().into_dart(),
             self.date.into_into_dart().into_dart(),
+            self.note.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11379,6 +11606,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::CustodyItem {
             self.sentence.into_into_dart().into_dart(),
             self.date_label.into_into_dart().into_dart(),
             self.here.into_into_dart().into_dart(),
+            self.note.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11828,6 +12056,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::EditorHint {
             self.target_anchor.into_into_dart().into_dart(),
             self.task_id.into_into_dart().into_dart(),
             self.level.into_into_dart().into_dart(),
+            self.markers.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -13657,6 +13886,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::RemindersSetting>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::view::model::RepointChoice {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+            self.title_dir.into_into_dart().into_dart(),
+            self.kind.into_into_dart().into_dart(),
+            self.folder.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::view::model::RepointChoice
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::view::model::RepointChoice>
+    for crate::view::model::RepointChoice
+{
+    fn into_into_dart(self) -> crate::view::model::RepointChoice {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::view::model::ResolutionKind {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
@@ -13961,6 +14214,8 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::SuggestionDetail {
             self.recurrence.into_into_dart().into_dart(),
             self.entities.into_into_dart().into_dart(),
             self.question.into_into_dart().into_dart(),
+            self.survivor_id.into_into_dart().into_dart(),
+            self.merge_label.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -14567,6 +14822,24 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::TextDir>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::view::model::TextRange {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.start.into_into_dart().into_dart(),
+            self.end.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::view::model::TextRange {}
+impl flutter_rust_bridge::IntoIntoDart<crate::view::model::TextRange>
+    for crate::view::model::TextRange
+{
+    fn into_into_dart(self) -> crate::view::model::TextRange {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::view::model::ThreadMessage {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -14588,6 +14861,32 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::ThreadMessage>
     for crate::view::model::ThreadMessage
 {
     fn into_into_dart(self) -> crate::view::model::ThreadMessage {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::view::model::TimeZoneItem {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.name.into_into_dart().into_dart(),
+            self.region.into_into_dart().into_dart(),
+            self.offset_minutes.into_into_dart().into_dart(),
+            self.offset_label.into_into_dart().into_dart(),
+            self.is_current.into_into_dart().into_dart(),
+            self.name_dir.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::view::model::TimeZoneItem
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::view::model::TimeZoneItem>
+    for crate::view::model::TimeZoneItem
+{
+    fn into_into_dart(self) -> crate::view::model::TimeZoneItem {
         self
     }
 }
@@ -14889,6 +15188,7 @@ impl SseEncode for crate::view::model::AdminUserItem {
         <String>::sse_encode(self.created_label, serializer);
         <Option<String>>::sse_encode(self.deletion_label, serializer);
         <bool>::sse_encode(self.password_change_required, serializer);
+        <Option<String>>::sse_encode(self.export_downloaded_label, serializer);
     }
 }
 
@@ -14899,6 +15199,7 @@ impl SseEncode for crate::view::model::AdminUsersView {
         <Vec<crate::view::model::AdminUserItem>>::sse_encode(self.pending, serializer);
         <Vec<crate::view::model::AdminUserItem>>::sse_encode(self.users, serializer);
         <String>::sse_encode(self.query, serializer);
+        <Option<String>>::sse_encode(self.deletion_preview_label, serializer);
     }
 }
 
@@ -14915,6 +15216,7 @@ impl SseEncode for crate::view::model::AiActivityItem {
         <Option<String>>::sse_encode(self.undo_suggestion_id, serializer);
         <String>::sse_encode(self.decision_id, serializer);
         <bool>::sse_encode(self.reverted, serializer);
+        <bool>::sse_encode(self.can_repoint, serializer);
     }
 }
 
@@ -15123,6 +15425,9 @@ impl SseEncode for crate::view::model::CitationPreview {
         <Option<String>>::sse_encode(self.heading, serializer);
         <Option<String>>::sse_encode(self.date_label, serializer);
         <Vec<String>>::sse_encode(self.tags, serializer);
+        <Option<String>>::sse_encode(self.anchor, serializer);
+        <Option<u32>>::sse_encode(self.line, serializer);
+        <Option<u32>>::sse_encode(self.offset, serializer);
     }
 }
 
@@ -15309,7 +15614,8 @@ impl SseEncode for crate::view::model::CustodyDraft {
         <Option<String>>::sse_encode(self.place_id, serializer);
         <Option<String>>::sse_encode(self.person_id, serializer);
         <Option<String>>::sse_encode(self.counterparty_id, serializer);
-        <chrono::NaiveDate>::sse_encode(self.date, serializer);
+        <Option<chrono::NaiveDate>>::sse_encode(self.date, serializer);
+        <Option<String>>::sse_encode(self.note, serializer);
     }
 }
 
@@ -15332,6 +15638,7 @@ impl SseEncode for crate::view::model::CustodyItem {
         <String>::sse_encode(self.sentence, serializer);
         <String>::sse_encode(self.date_label, serializer);
         <bool>::sse_encode(self.here, serializer);
+        <Option<String>>::sse_encode(self.note, serializer);
     }
 }
 
@@ -15598,6 +15905,7 @@ impl SseEncode for crate::view::model::EditorHint {
         <Option<String>>::sse_encode(self.target_anchor, serializer);
         <Option<String>>::sse_encode(self.task_id, serializer);
         <u8>::sse_encode(self.level, serializer);
+        <Vec<crate::view::model::TextRange>>::sse_encode(self.markers, serializer);
     }
 }
 
@@ -16635,6 +16943,16 @@ impl SseEncode for Vec<crate::view::model::ReminderItem> {
     }
 }
 
+impl SseEncode for Vec<crate::view::model::RepointChoice> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::view::model::RepointChoice>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::view::model::SearchHit> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -16725,12 +17043,32 @@ impl SseEncode for Vec<crate::view::model::TaskItem> {
     }
 }
 
+impl SseEncode for Vec<crate::view::model::TextRange> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::view::model::TextRange>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::view::model::ThreadMessage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::view::model::ThreadMessage>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::view::model::TimeZoneItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::view::model::TimeZoneItem>::sse_encode(item, serializer);
         }
     }
 }
@@ -17588,6 +17926,17 @@ impl SseEncode for crate::view::model::RemindersSetting {
     }
 }
 
+impl SseEncode for crate::view::model::RepointChoice {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.title, serializer);
+        <crate::view::model::TextDir>::sse_encode(self.title_dir, serializer);
+        <String>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.folder, serializer);
+    }
+}
+
 impl SseEncode for crate::view::model::ResolutionKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -17779,6 +18128,8 @@ impl SseEncode for crate::view::model::SuggestionDetail {
         <Option<String>>::sse_encode(self.recurrence, serializer);
         <Vec<crate::view::model::EntityRef>>::sse_encode(self.entities, serializer);
         <Option<String>>::sse_encode(self.question, serializer);
+        <Option<String>>::sse_encode(self.survivor_id, serializer);
+        <Option<String>>::sse_encode(self.merge_label, serializer);
     }
 }
 
@@ -18147,6 +18498,14 @@ impl SseEncode for crate::view::model::TextDir {
     }
 }
 
+impl SseEncode for crate::view::model::TextRange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.start, serializer);
+        <u32>::sse_encode(self.end, serializer);
+    }
+}
+
 impl SseEncode for crate::view::model::ThreadMessage {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -18156,6 +18515,19 @@ impl SseEncode for crate::view::model::ThreadMessage {
         <crate::view::model::TextDir>::sse_encode(self.text_dir, serializer);
         <String>::sse_encode(self.created_label, serializer);
         <bool>::sse_encode(self.pending_sync, serializer);
+    }
+}
+
+impl SseEncode for crate::view::model::TimeZoneItem {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.id, serializer);
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.region, serializer);
+        <i32>::sse_encode(self.offset_minutes, serializer);
+        <String>::sse_encode(self.offset_label, serializer);
+        <bool>::sse_encode(self.is_current, serializer);
+        <crate::view::model::TextDir>::sse_encode(self.name_dir, serializer);
     }
 }
 
