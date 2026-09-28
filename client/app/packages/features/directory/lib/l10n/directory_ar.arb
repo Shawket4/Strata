@@ -119,6 +119,8 @@
   "editProperty": "تعديل {key}",
   "propertyKey": "الخاصية",
   "propertyValue": "القيمة",
+  "addValue": "إضافة قيمة",
+  "removeValue": "حذف القيمة",
   "save": "حفظ",
   "propertyActions": "إجراءات {key}",
   "edit": "تعديل",

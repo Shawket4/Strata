@@ -622,6 +622,14 @@
   "@propertyValue": {
     "description": "Label of the property value field."
   },
+  "addValue": "Add value",
+  "@addValue": {
+    "description": "Adds another value field to a property (several phone numbers)."
+  },
+  "removeValue": "Remove value",
+  "@removeValue": {
+    "description": "Removes one value field of a property."
+  },
   "save": "Save",
   "@save": {
     "description": "Saves a property."

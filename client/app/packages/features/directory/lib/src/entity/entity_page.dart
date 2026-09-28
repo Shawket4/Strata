@@ -5,6 +5,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_directory/src/common/l10n.dart';
 import 'package:strata_directory/src/entity/entity_picker.dart';
+import 'package:strata_directory/src/entity/property_dialog.dart';
 import 'package:strata_directory/src/entity/sections.dart';
 import 'package:strata_documents/strata_documents.dart';
 import 'package:strata_maps/strata_maps.dart';
@@ -350,31 +351,30 @@ class EntityPageBody extends ConsumerWidget {
     }
 
     Future<void> editProperty([PropertyItem? property]) async {
-      final values = await showFieldsDialog(
+      final edit = await showPropertyDialog(
         context,
         title: property == null
             ? l10n.addProperty
             : l10n.editProperty(key: property.key),
-        labels: [l10n.propertyKey, l10n.propertyValue],
-        confirm: l10n.save,
-        initial: [
-          if (property != null) ...[
-            property.key,
-            if (property.values.isNotEmpty) property.values.first,
-          ],
-        ],
+        key: property?.key ?? '',
+        values: property?.values ?? const [],
       );
-      if (values == null || !context.mounted) return;
-      if (property != null && property.key != values[0]) {
+      if (edit == null || !context.mounted) return;
+      if (property != null && property.key != edit.key) {
         final removed = await runEntityIntent(
           context,
           () => core.removeProperty(id: entity.id, key: property.key),
         );
         if (!removed || !context.mounted) return;
       }
+      // Every value, as a list: the core writes one value as a scalar.
       await runEntityIntent(
         context,
-        () => core.setProperty(id: entity.id, key: values[0], value: values[1]),
+        () => core.setPropertyValues(
+          id: entity.id,
+          key: edit.key,
+          values: edit.values,
+        ),
       );
     }
 
