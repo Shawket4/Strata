@@ -8,7 +8,7 @@ import 'package:strata_directory/src/directory/directory_screen.dart';
 import 'package:strata_directory/src/entity/entity_screen.dart';
 
 export 'package:strata_documents/strata_documents.dart'
-    show DocumentScreen, EntityLinks, OpenNoteAt, PlaceScreen;
+    show DocumentScreen, EntityLinks, PlaceScreen;
 
 export 'src/common/l10n.dart'
     show DirectoryLocalizationScope, DirectoryLocalizations;

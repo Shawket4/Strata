@@ -37,6 +37,7 @@ class AdaptiveScaffold extends StatelessWidget {
     required this.navigationLabel,
     super.key,
     this.capture,
+    this.search,
     this.appBarActions = const [],
     this.syncIndicatorBuilder,
     this.sidebarSections = const [],
@@ -63,8 +64,13 @@ class AdaptiveScaffold extends StatelessWidget {
   /// Accessibility label of the navigation region.
   final String navigationLabel;
 
-  /// Capture action: top of the rail, "New capture" in the sidebar.
+  /// Capture action: top of the rail, "New capture" in the sidebar
+  /// (⌘N / Ctrl+N).
   final StrataAction? capture;
+
+  /// Search action: the compact app bar's search button, under the capture
+  /// button in the rail, a "Search" row in the sidebar (⌘K / Ctrl+K).
+  final StrataAction? search;
 
   /// Compact app bar actions (e.g. search).
   final List<Widget> appBarActions;
@@ -104,13 +110,22 @@ class AdaptiveScaffold extends StatelessWidget {
       SizeClass.expanded => _buildExpanded(context),
     };
     final action = capture;
-    if (action == null) return shell;
+    final find = search;
+    if (action == null && find == null) return shell;
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
-            action.onPressed,
-        const SingleActivator(LogicalKeyboardKey.keyN, control: true):
-            action.onPressed,
+        if (action != null) ...{
+          const SingleActivator(LogicalKeyboardKey.keyN, meta: true):
+              action.onPressed,
+          const SingleActivator(LogicalKeyboardKey.keyN, control: true):
+              action.onPressed,
+        },
+        if (find != null) ...{
+          const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+              find.onPressed,
+          const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+              find.onPressed,
+        },
       },
       child: shell,
     );
@@ -130,10 +145,17 @@ class AdaptiveScaffold extends StatelessWidget {
       if (selected < 0) selected = 0;
     }
     final sync = syncIndicatorBuilder?.call(context, SizeClass.compact);
+    final find = search;
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
         actions: [
+          if (find != null)
+            IconButton(
+              tooltip: find.label,
+              onPressed: find.onPressed,
+              icon: Icon(find.icon),
+            ),
           ...appBarActions,
           if (sync != null)
             Padding(
@@ -184,6 +206,7 @@ class AdaptiveScaffold extends StatelessWidget {
     final railSelected = primary.indexOf(selectedIndex);
     final sync = syncIndicatorBuilder?.call(context, SizeClass.medium);
     final action = capture;
+    final find = search;
     return Scaffold(
       body: Row(
         children: [
@@ -197,18 +220,32 @@ class AdaptiveScaffold extends StatelessWidget {
                 scrollable: true,
                 selectedIndex: railSelected < 0 ? null : railSelected,
                 onDestinationSelected: (i) => onDestinationSelected(primary[i]),
-                leading: action == null
+                leading: action == null && find == null
                     ? null
                     : Padding(
                         padding: const EdgeInsets.only(
                           top: StrataSpacing.s2,
                           bottom: StrataSpacing.s3,
                         ),
-                        child: FloatingActionButton(
-                          heroTag: null,
-                          tooltip: action.label,
-                          onPressed: action.onPressed,
-                          child: Icon(action.icon),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (action != null)
+                              FloatingActionButton(
+                                heroTag: null,
+                                tooltip: action.label,
+                                onPressed: action.onPressed,
+                                child: Icon(action.icon),
+                              ),
+                            if (find != null) ...[
+                              const SizedBox(height: StrataSpacing.s2),
+                              IconButton(
+                                tooltip: find.label,
+                                onPressed: find.onPressed,
+                                icon: Icon(find.icon),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                 trailingAtBottom: true,
@@ -260,6 +297,7 @@ class AdaptiveScaffold extends StatelessWidget {
             onDestinationSelected: onDestinationSelected,
             navigationLabel: navigationLabel,
             capture: capture,
+            search: search,
             sections: sidebarSections,
             syncIndicator: syncIndicatorBuilder?.call(
               context,
@@ -363,6 +401,7 @@ class StrataSidebar extends StatelessWidget {
     required this.navigationLabel,
     super.key,
     this.capture,
+    this.search,
     this.sections = const [],
     this.syncIndicator,
   });
@@ -382,6 +421,9 @@ class StrataSidebar extends StatelessWidget {
   /// "New capture" action.
   final StrataAction? capture;
 
+  /// "Search" action (a row with its ⌘K hint).
+  final StrataAction? search;
+
   /// Extra scrollable sections below the navigation.
   final List<Widget> sections;
 
@@ -392,6 +434,7 @@ class StrataSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.strataColors;
     final action = capture;
+    final find = search;
     final sync = syncIndicator;
     SidebarItem item(int i) => SidebarItem(
       destination: destinations[i],
@@ -426,6 +469,14 @@ class StrataSidebar extends StatelessWidget {
                     vertical: StrataSpacing.s1,
                   ),
                   child: _CaptureButton(action: action),
+                ),
+              if (find != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: StrataSpacing.s3,
+                    vertical: StrataSpacing.s1,
+                  ),
+                  child: _SearchButton(action: find),
                 ),
               Expanded(
                 child: Semantics(
@@ -499,6 +550,41 @@ class _CaptureButton extends StatelessWidget {
             ),
           ),
           if (keys != null) KeyboardHintChip(keys: keys, onAccent: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchButton extends StatelessWidget {
+  const new({required this.action});
+
+  final StrataAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.strataColors;
+    final keys = action.shortcutKeys;
+    return OutlinedButton(
+      onPressed: action.onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: Size(0, StrataLayout.minTapTarget(context)),
+        padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s3),
+        backgroundColor: colors.surface,
+        foregroundColor: colors.text2,
+      ),
+      child: Row(
+        children: [
+          Icon(action.icon, size: 20),
+          const SizedBox(width: StrataSpacing.s2),
+          Expanded(
+            child: Text(
+              action.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (keys != null) KeyboardHintChip(keys: keys),
         ],
       ),
     );

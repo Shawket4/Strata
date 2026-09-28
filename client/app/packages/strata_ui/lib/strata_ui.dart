@@ -7,6 +7,7 @@ export 'src/brand/strata_bands.dart';
 export 'src/brand/strata_symbol.dart';
 export 'src/brand/strata_wordmark.dart';
 export 'src/layout/adaptive_scaffold.dart';
+export 'src/layout/callbacks.dart';
 export 'src/layout/destination.dart';
 export 'src/layout/panes.dart';
 export 'src/layout/size_class.dart';

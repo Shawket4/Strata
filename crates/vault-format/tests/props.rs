@@ -349,3 +349,45 @@ proptest! {
         prop_assert_eq!(edited.to_spec(), expected);
     }
 }
+
+/// Vault-like paths over a small alphabet, so names, folders and case variants collide.
+fn index_path() -> impl Strategy<Value = String> {
+    (
+        prop::sample::select(vec!["", "notes/", "notes/a/", "Notes/", "x/"]),
+        "[aAbB]{1,2}",
+        prop::sample::select(vec![".md", ".MD", ".pdf", ""]),
+    )
+        .prop_map(|(dir, name, ext)| format!("{dir}{name}{ext}"))
+}
+
+proptest! {
+    /// A path index kept current with `insert`/`remove` equals one rebuilt from the final
+    /// set, and resolves every link the same way.
+    #[test]
+    fn path_index_updates_match_a_rebuild(
+        start in prop::collection::vec(index_path(), 0..12),
+        edits in prop::collection::vec((any::<bool>(), index_path()), 0..24),
+        links in prop::collection::vec(("[aAbB]{1,2}", prop::sample::select(vec!["", "notes/", "a/", "./", "../"])), 0..8),
+    ) {
+        let mut set: std::collections::BTreeSet<String> = start.iter().cloned().collect();
+        let mut index = vault_format::PathIndex::new(start);
+        for (add, p) in edits {
+            if add {
+                index.insert(&p);
+                set.insert(p);
+            } else {
+                index.remove(&p);
+                set.remove(&p);
+            }
+        }
+        let rebuilt = vault_format::PathIndex::new(set.iter().cloned());
+        prop_assert_eq!(&index, &rebuilt);
+        for (name, prefix) in links {
+            let link = format!("{prefix}{name}");
+            prop_assert_eq!(
+                index.resolve(&link, Some("notes/a/src.md")),
+                rebuilt.resolve(&link, Some("notes/a/src.md"))
+            );
+        }
+    }
+}

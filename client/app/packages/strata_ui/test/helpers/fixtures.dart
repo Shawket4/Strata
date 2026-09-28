@@ -72,6 +72,7 @@ class TestShell extends StatelessWidget {
     this.selectedIndex = Dest.inbox,
     this.onSelected,
     this.onCapture,
+    this.onSearch,
     this.body,
     this.sync = const SyncOffline(queued: 3),
     super.key,
@@ -80,6 +81,9 @@ class TestShell extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int>? onSelected;
   final VoidCallback? onCapture;
+
+  /// When set, the shell gets a search action instead of the app bar button.
+  final VoidCallback? onSearch;
   final Widget? body;
   final SyncStatus sync;
 
@@ -98,12 +102,22 @@ class TestShell extends StatelessWidget {
         onPressed: onCapture ?? () {},
         shortcutKeys: const ['⌘', 'N'],
       ),
-      appBarActions: [
-        IconButton(
-          tooltip: l10n.actionSearch,
-          icon: const Icon(Icons.search),
-          onPressed: () {},
+      search: switch (onSearch) {
+        final onPressed? => StrataAction(
+          label: l10n.actionSearch,
+          icon: Icons.search,
+          onPressed: onPressed,
+          shortcutKeys: const ['⌘', 'K'],
         ),
+        null => null,
+      },
+      appBarActions: [
+        if (onSearch == null)
+          IconButton(
+            tooltip: l10n.actionSearch,
+            icon: const Icon(Icons.search),
+            onPressed: () {},
+          ),
       ],
       syncIndicatorBuilder: (context, sizeClass) =>
           SyncPill(status: sync, dense: sizeClass == SizeClass.medium),

@@ -40,10 +40,10 @@ enum AppDestination {
 
 /// Builds the [StrataDestination]s for [l10n] (SCREEN_SPEC "Additions":
 /// compact bar = Home, Inbox, Notes, Directory, Ask; rail and sidebar add
-/// Tasks and Map). [inboxCount] is the core's `HomeView.inboxCount`.
+/// Tasks and Map) with the core's navigation counts ([NavView]).
 List<StrataDestination> appDestinations(
   StrataLocalizations l10n, {
-  int? inboxCount,
+  NavView? nav,
 }) => [
   StrataDestination(
     icon: Icons.home_outlined,
@@ -54,12 +54,13 @@ List<StrataDestination> appDestinations(
     icon: Icons.inbox_outlined,
     selectedIcon: Icons.inbox,
     label: l10n.navInbox,
-    count: inboxCount,
+    count: nav?.inboxCount,
   ),
   StrataDestination(
     icon: Icons.check_circle_outline,
     selectedIcon: Icons.check_circle,
     label: l10n.navTasks,
+    count: nav?.tasksDueCount,
     showInCompact: false,
     compactHostIndex: AppDestination.home.index,
   ),
@@ -67,6 +68,7 @@ List<StrataDestination> appDestinations(
     icon: Icons.description_outlined,
     selectedIcon: Icons.description,
     label: l10n.navNotes,
+    count: nav?.notesCount,
   ),
   StrataDestination(
     icon: Icons.hub_outlined,
@@ -79,6 +81,7 @@ List<StrataDestination> appDestinations(
     icon: Icons.people_outline,
     selectedIcon: Icons.people,
     label: l10n.navDirectory,
+    count: nav?.directoryCount,
   ),
   StrataDestination(
     icon: Icons.chat_bubble_outline,
@@ -99,9 +102,9 @@ List<StrataDestination> appDestinations(
 bool isDetailLocation(Uri location) => location.pathSegments.length > 1;
 
 /// Hosts the shell branches in the [AdaptiveScaffold]: destinations with the
-/// core's counts, the sync pill / block opening the sync sheet, drawer or
-/// popover, the folder tree on expanded, app lifecycle forwarding and the
-/// reminders adapter.
+/// core's counts (`watch_nav`), the sync pill / block opening the sync sheet,
+/// drawer or popover, search (⌘K / Ctrl+K), the pinned notes and folder tree
+/// on expanded, app lifecycle forwarding and the reminders adapter.
 ///
 /// The branch navigators live under one [GlobalKey], so their state (stacks,
 /// scroll positions, text being typed) survives every change of size class
@@ -158,9 +161,9 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final sizeClass = SizeClass.of(context);
-    final inbox = ref.watch(homeProvider).value?.inboxCount;
-    final destinations = appDestinations(l10n, inboxCount: inbox);
-    final pill = ref.watch(syncStatusProvider).value?.pill;
+    final nav = ref.watch(navProvider).value;
+    final destinations = appDestinations(l10n, nav: nav);
+    final pill = nav?.sync_;
     // A semantics boundary: the branch navigators' routes block the
     // semantics painted before them (the rail and sidebar) otherwise.
     final body = Semantics(
@@ -185,6 +188,12 @@ class _AppShellState extends ConsumerState<AppShell> {
           onPressed: () => _go(AppDestination.home.index),
           shortcutKeys: const [KeyboardHintChip.commandKey, 'N'],
         ),
+        search: StrataAction(
+          label: l10n.actionSearch,
+          icon: Icons.search,
+          onPressed: () => const SearchRoute().go(context),
+          shortcutKeys: const [KeyboardHintChip.commandKey, 'K'],
+        ),
         appBarActions: [
           IconButton(
             tooltip: l10n.navSettings,
@@ -193,7 +202,10 @@ class _AppShellState extends ConsumerState<AppShell> {
           ),
         ],
         sidebarSections: [
-          if (sizeClass == SizeClass.expanded) const _FolderTree(),
+          if (sizeClass == SizeClass.expanded) ...[
+            _PinnedNotes(pinned: nav?.pinned ?? const []),
+            const _FolderTree(),
+          ],
         ],
         syncIndicatorBuilder: pill == null
             ? null
@@ -212,6 +224,34 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 }
 
+/// The sidebar's pinned notes (this device's pins, in pin order, from the
+/// core's `NavView.pinned`).
+class _PinnedNotes extends StatelessWidget {
+  const new({required this.pinned});
+
+  final List<NoteListItem> pinned;
+
+  @override
+  Widget build(BuildContext context) {
+    if (pinned.isEmpty) return const SizedBox.shrink();
+    final l10n = context.appL10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        StrataSectionHeader(title: l10n.pinnedNotesTitle),
+        for (final note in pinned)
+          _SidebarRow(
+            icon: Icons.push_pin_outlined,
+            label: note.title,
+            labelDirection: textDirectionOf(note.titleDir),
+            semanticsLabel: l10n.pinnedSemantics(title: note.title),
+            onTap: () => NoteEditorRoute(noteId: note.id).go(context),
+          ),
+      ],
+    );
+  }
+}
+
 /// The sidebar's folder tree: the vault root's folders with their note
 /// counts, from the core's notes list.
 class _FolderTree extends ConsumerWidget {
@@ -222,59 +262,87 @@ class _FolderTree extends ConsumerWidget {
     final folders = ref.watch(notesListProvider('')).value?.folders;
     if (folders == null || folders.isEmpty) return const SizedBox.shrink();
     final l10n = context.appL10n;
-    final colors = context.strataColors;
-    final text = context.strataText;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        StrataSectionHeader(title: l10n.pinnedTitle),
+        StrataSectionHeader(title: l10n.foldersTitle),
         for (final folder in folders)
-          Semantics(
-            container: true,
-            button: true,
-            label: l10n.folderSemantics(
+          _SidebarRow(
+            icon: Icons.folder_outlined,
+            label: folder.name,
+            count: folder.noteCount,
+            semanticsLabel: l10n.folderSemantics(
               name: folder.name,
               count: folder.noteCount,
             ),
-            excludeSemantics: true,
-            child: InkWell(
-              borderRadius: StrataRadii.inputRadius,
-              onTap: () => const NotesRoute().go(context),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: StrataLayout.minTapTarget(context).clamp(32, 48),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: StrataSpacing.s3,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.folder_outlined,
-                        size: 18,
-                        color: colors.text2,
-                      ),
-                      const SizedBox(width: StrataSpacing.s2),
-                      Expanded(
-                        child: Text(
-                          folder.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: text.label,
-                        ),
-                      ),
-                      Text(
-                        '${folder.noteCount}',
-                        style: text.caption.copyWith(color: colors.text2),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+            onTap: () => NotesRoute(folder: folder.path).go(context),
           ),
       ],
+    );
+  }
+}
+
+/// One sidebar row of the pinned notes or the folder tree.
+class _SidebarRow extends StatelessWidget {
+  const new({
+    required this.icon,
+    required this.label,
+    required this.semanticsLabel,
+    required this.onTap,
+    this.count,
+    this.labelDirection,
+  });
+
+  final IconData icon;
+  final String label;
+  final String semanticsLabel;
+  final VoidCallback onTap;
+  final int? count;
+  final TextDirection? labelDirection;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final n = count;
+    return Semantics(
+      container: true,
+      button: true,
+      label: semanticsLabel,
+      excludeSemantics: true,
+      child: InkWell(
+        borderRadius: StrataRadii.inputRadius,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: StrataLayout.minTapTarget(context).clamp(32, 48),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s3),
+            child: Row(
+              children: [
+                Icon(icon, size: 18, color: colors.text2),
+                const SizedBox(width: StrataSpacing.s2),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textDirection: labelDirection,
+                    textAlign: TextAlign.start,
+                    style: text.label,
+                  ),
+                ),
+                if (n != null)
+                  Text(
+                    '$n',
+                    style: text.caption.copyWith(color: colors.text2),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

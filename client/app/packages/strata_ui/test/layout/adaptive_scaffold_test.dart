@@ -282,6 +282,66 @@ void main() {
     });
   });
 
+  group('AdaptiveScaffold search', () {
+    for (final v in variants()) {
+      testWidgets('search action at every size $v', (tester) async {
+        var searches = 0;
+        await pumpVariant(tester, v, TestShell(onSearch: () => searches++));
+        final l10n = await StrataLocalizations.delegate.load(v.locale);
+        switch (v.sizeClass) {
+          case SizeClass.compact:
+            await tester.tap(find.byTooltip(l10n.actionSearch));
+          case SizeClass.medium:
+            expect(
+              find.descendant(
+                of: find.byType(NavigationRail),
+                matching: find.byTooltip(l10n.actionSearch),
+              ),
+              findsOneWidget,
+            );
+            await tester.tap(find.byTooltip(l10n.actionSearch));
+          case SizeClass.expanded:
+            expect(
+              find.descendant(
+                of: find.byType(StrataSidebar),
+                matching: find.byWidgetPredicate(
+                  (w) =>
+                      w is KeyboardHintChip &&
+                      w.keys.length == 2 &&
+                      w.keys.last == 'K',
+                ),
+              ),
+              findsOneWidget,
+            );
+            await tester.tap(find.text(l10n.actionSearch));
+        }
+        expect(searches, 1);
+        expectNoRenderErrors(tester);
+        await expectAccessible(tester);
+      });
+    }
+
+    testWidgets('Ctrl+K and Cmd+K open search', (tester) async {
+      var searches = 0;
+      await pumpVariant(
+        tester,
+        variants(textScales: const [1])
+            .firstWhere((v) => v.sizeClass == SizeClass.expanded),
+        TestShell(
+          onSearch: () => searches++,
+          body: const Focus(autofocus: true, child: SizedBox.expand()),
+        ),
+      );
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+      expect(searches, 2);
+    });
+  });
+
   group('AdaptiveScaffold live resize', () {
     testWidgets('re-evaluates the navigation on every resize', (tester) async {
       final v = variants(textScales: const [1]).first;

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:strata/src/shell/app_shell.dart';
 import 'package:strata_accounts/strata_accounts.dart';
 import 'package:strata_admin/strata_admin.dart';
-import 'package:strata_ask/strata_ask.dart' show AskScreen;
+import 'package:strata_ask/strata_ask.dart' show AskScreen, SearchScreen;
 import 'package:strata_directory/strata_directory.dart';
 import 'package:strata_home/strata_home.dart';
 import 'package:strata_inbox/strata_inbox.dart';
@@ -109,7 +109,12 @@ class _StandaloneScreen extends StatelessWidget {
       ],
     ),
     TypedStatefulShellBranch<AskBranch>(
-      routes: [TypedGoRoute<AskRoute>(path: '/ask')],
+      routes: [
+        TypedGoRoute<AskRoute>(
+          path: '/ask',
+          routes: [TypedGoRoute<SearchRoute>(path: 'search')],
+        ),
+      ],
     ),
     TypedStatefulShellBranch<SettingsBranch>(
       routes: [
@@ -280,10 +285,10 @@ class TaskRoute extends GoRouteData with $TaskRoute {
   );
 }
 
-/// Opens a note for an `OpenNoteAt` callback (the anchor is not routed
-/// yet: the notes screen takes no block or heading).
+/// Opens a note for an [OpenNoteAt] callback, at [anchor] (a block ID or a
+/// heading the core resolved) when given.
 void _openNote(BuildContext context, String id, [String? anchor]) =>
-    NoteEditorRoute(noteId: id).go(context);
+    NoteEditorRoute(noteId: id, anchor: anchor).go(context);
 
 /// `/notes?folder=`: the notes list of a folder.
 class NotesRoute extends GoRouteData with $NotesRoute {
@@ -300,31 +305,35 @@ class NotesRoute extends GoRouteData with $NotesRoute {
       folder: folder,
       onOpenFolder: (path) => NotesRoute(folder: path).go(context),
       onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
-      onOpenLink: (id) => NoteEditorRoute(noteId: id).go(context),
+      onOpenLink: (id, anchor) => _openNote(context, id, anchor),
       onOpenConflict: (opId) => ConflictRoute(opId: opId).go(context),
       onOpenLocalMap: (id) => MindMapRoute(noteId: id).go(context),
     ),
   );
 }
 
-/// `/notes/:noteId`: a note (list + detail on wider windows, the note alone
-/// on compact).
+/// `/notes/:noteId?anchor=`: a note (list + detail on wider windows, the
+/// note alone on compact), optionally at a block (`#^id`) or heading.
 class NoteEditorRoute extends GoRouteData with $NoteEditorRoute {
-  /// Creates the route for [noteId].
-  const new({required this.noteId});
+  /// Creates the route for [noteId] at [anchor].
+  const new({required this.noteId, this.anchor});
 
   /// The note's stable ID (from the core).
   final String noteId;
+
+  /// A block ID (without `^`) or heading the core resolved.
+  final String? anchor;
 
   @override
   Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
     state,
     NotesScreen(
       selectedNoteId: noteId,
+      anchor: anchor,
       onOpenFolder: (path) => NotesRoute(folder: path).go(context),
       onOpenNote: (id) => NoteEditorRoute(noteId: id).go(context),
       onCloseNote: () => const NotesRoute().go(context),
-      onOpenLink: (id) => NoteEditorRoute(noteId: id).go(context),
+      onOpenLink: (id, anchor) => _openNote(context, id, anchor),
       onOpenConflict: (opId) => ConflictRoute(opId: opId).go(context),
       onOpenLocalMap: (id) => MindMapRoute(noteId: id).go(context),
     ),
@@ -420,7 +429,7 @@ class EntityRoute extends GoRouteData with $EntityRoute {
   Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
     state,
     _BySize(
-      compact: (context) => EntityScreen(
+      compact: (context) => EntityPage(
         entityId,
         onOpenEntity: (id) => EntityRoute(entityId: id).go(context),
         onOpenNote: (id, anchor) => _openNote(context, id, anchor),
@@ -486,8 +495,38 @@ class AskRoute extends GoRouteData with $AskRoute {
   const new();
 
   @override
-  Page<void> buildPage(BuildContext context, GoRouterState state) =>
-      _page(state, const AskScreen());
+  Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
+    state,
+    AskScreen(onOpenNote: (id, anchor) => _openNote(context, id, anchor)),
+  );
+}
+
+/// `/ask/search?q=`: search (⌘K / Ctrl+K from anywhere in the shell);
+/// full screen with a back button on compact.
+class SearchRoute extends GoRouteData with $SearchRoute {
+  /// Creates the route with [q] typed.
+  const new({this.q = ''});
+
+  /// The query shown first.
+  final String q;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) {
+    final search = SearchScreen(
+      initialQuery: q,
+      onOpenNote: (id, anchor) => _openNote(context, id, anchor),
+    );
+    return _page(
+      state,
+      _BySize(
+        compact: (context) => Scaffold(
+          appBar: AppBar(title: Text(context.l10n.actionSearch)),
+          body: search,
+        ),
+        wide: (_) => search,
+      ),
+    );
+  }
 }
 
 /// Builds the settings screen for [section] with the app's navigation.

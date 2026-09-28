@@ -41,10 +41,6 @@
   "@channelDescription": {
     "description": "Android notification channel description."
   },
-  "pinnedTitle": "Folders",
-  "@pinnedTitle": {
-    "description": "Sidebar folder tree heading."
-  },
   "folderSemantics": "{name}, {count} notes",
   "@folderSemantics": {
     "description": "Accessibility label of a sidebar folder.",
@@ -60,5 +56,22 @@
   "accountLabel": "Account",
   "@accountLabel": {
     "description": "App bar account button tooltip."
+  },
+  "foldersTitle": "Folders",
+  "@foldersTitle": {
+    "description": "Sidebar folder tree heading."
+  },
+  "pinnedNotesTitle": "Pinned",
+  "@pinnedNotesTitle": {
+    "description": "Sidebar pinned notes heading."
+  },
+  "pinnedSemantics": "Pinned note: {title}",
+  "@pinnedSemantics": {
+    "description": "Accessibility label of a pinned note in the sidebar.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   }
 }

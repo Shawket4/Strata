@@ -19,11 +19,37 @@ pub enum Resolution {
 }
 
 /// Index of vault paths for resolution and for choosing the shortest link to a file.
-#[derive(Debug, Clone, Default)]
+///
+/// Built once with [`PathIndex::new`] and kept current with [`PathIndex::insert`] and
+/// [`PathIndex::remove`], which cost the same whatever the number of paths (bar moving the
+/// sorted path list), so a writer can maintain one index across writes.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PathIndex {
+    /// Every path, sorted and unique.
     paths: Vec<String>,
-    by_name: HashMap<String, Vec<usize>>,
-    by_link_path: HashMap<String, Vec<usize>>,
+    /// Lower-cased link name → paths with it, sorted.
+    by_name: HashMap<String, Vec<String>>,
+    /// Lower-cased link path (and, for notes, the lower-cased path with `.md`) → paths,
+    /// sorted.
+    by_link_path: HashMap<String, Vec<String>>,
+}
+
+/// Adds `path` to the sorted `list` of `key` (no duplicates).
+fn add_to(map: &mut HashMap<String, Vec<String>>, key: String, path: &str) {
+    let list = map.entry(key).or_default();
+    if let Err(at) = list.binary_search_by(|p| p.as_str().cmp(path)) {
+        list.insert(at, path.to_owned());
+    }
+}
+
+/// Removes `path` from the list of `key`, dropping the key when the list empties.
+fn remove_from(map: &mut HashMap<String, Vec<String>>, key: &str, path: &str) {
+    if let Some(list) = map.get_mut(key) {
+        list.retain(|p| p != path);
+        if list.is_empty() {
+            map.remove(key);
+        }
+    }
 }
 
 fn is_markdown(path: &str) -> bool {
@@ -78,26 +104,52 @@ impl PathIndex {
         let mut paths: Vec<String> = paths.into_iter().map(Into::into).collect();
         paths.sort();
         paths.dedup();
-        let mut by_name: HashMap<String, Vec<usize>> = HashMap::new();
-        let mut by_link_path: HashMap<String, Vec<usize>> = HashMap::new();
-        for (i, p) in paths.iter().enumerate() {
-            by_name
-                .entry(link_name(p).to_lowercase())
-                .or_default()
-                .push(i);
-            by_link_path
-                .entry(link_path(p).to_lowercase())
-                .or_default()
-                .push(i);
-            if is_markdown(p) {
-                // `[[notes/x.md]]` also names the file.
-                by_link_path.entry(p.to_lowercase()).or_default().push(i);
-            }
+        let mut index = Self::default();
+        for p in &paths {
+            index.add_keys(p);
         }
-        Self {
-            paths,
-            by_name,
-            by_link_path,
+        index.paths = paths;
+        index
+    }
+
+    fn keys(path: &str) -> [Option<String>; 3] {
+        [
+            Some(link_name(path).to_lowercase()),
+            Some(link_path(path).to_lowercase()),
+            // `[[notes/x.md]]` also names the file.
+            is_markdown(path).then(|| path.to_lowercase()),
+        ]
+    }
+
+    fn add_keys(&mut self, path: &str) {
+        let [name, lp, full] = Self::keys(path);
+        if let Some(k) = name {
+            add_to(&mut self.by_name, k, path);
+        }
+        for k in [lp, full].into_iter().flatten() {
+            add_to(&mut self.by_link_path, k, path);
+        }
+    }
+
+    /// Adds `path` (no-op if present).
+    pub fn insert(&mut self, path: &str) {
+        if let Err(at) = self.paths.binary_search_by(|p| p.as_str().cmp(path)) {
+            self.paths.insert(at, path.to_owned());
+            self.add_keys(path);
+        }
+    }
+
+    /// Removes `path` (no-op if absent).
+    pub fn remove(&mut self, path: &str) {
+        if let Ok(at) = self.paths.binary_search_by(|p| p.as_str().cmp(path)) {
+            self.paths.remove(at);
+            let [name, lp, full] = Self::keys(path);
+            if let Some(k) = name {
+                remove_from(&mut self.by_name, &k, path);
+            }
+            for k in [lp, full].into_iter().flatten() {
+                remove_from(&mut self.by_link_path, &k, path);
+            }
         }
     }
 
@@ -146,46 +198,46 @@ impl PathIndex {
                 exact
             }
         } else {
-            let mut c = self
+            let mut c: Vec<&str> = self
                 .by_name
                 .get(&strip_md(t).to_lowercase())
-                .cloned()
+                .map(|v| v.iter().map(String::as_str).collect())
                 .unwrap_or_default();
             if is_markdown(t) {
-                c.retain(|&i| is_markdown(&self.paths[i]));
+                c.retain(|p| is_markdown(p));
             }
             c
         };
         self.narrow(candidates, t, source)
     }
 
-    fn exact(&self, t: &str) -> Vec<usize> {
+    fn exact(&self, t: &str) -> Vec<&str> {
         self.by_link_path
             .get(&t.to_lowercase())
-            .cloned()
+            .map(|v| v.iter().map(String::as_str).collect())
             .unwrap_or_default()
     }
 
-    fn suffix(&self, t: &str) -> Vec<usize> {
+    fn suffix(&self, t: &str) -> Vec<&str> {
         let needle = format!("/{}", strip_md(t).to_lowercase());
         self.paths
             .iter()
-            .enumerate()
-            .filter(|(_, p)| link_path(p).to_lowercase().ends_with(&needle))
-            .map(|(i, _)| i)
+            .filter(|p| link_path(p).to_lowercase().ends_with(&needle))
+            .map(String::as_str)
             .collect()
     }
 
-    fn narrow(&self, mut c: Vec<usize>, written: &str, source: Option<&str>) -> Resolution {
+    #[allow(clippy::unused_self)] // kept a method beside `exact` and `suffix`
+    fn narrow(&self, mut c: Vec<&str>, written: &str, source: Option<&str>) -> Resolution {
         c.sort_unstable();
         c.dedup();
         if c.len() > 1 {
             let written = strip_md(written);
-            let exact_case: Vec<usize> = c
+            let exact_case: Vec<&str> = c
                 .iter()
                 .copied()
-                .filter(|&i| {
-                    let lp = link_path(&self.paths[i]);
+                .filter(|p| {
+                    let lp = link_path(p);
                     lp == written || lp.ends_with(&format!("/{written}"))
                 })
                 .collect();
@@ -197,19 +249,15 @@ impl PathIndex {
             && let Some(src) = source
         {
             let dir = folder(src);
-            let same: Vec<usize> = c
-                .iter()
-                .copied()
-                .filter(|&i| folder(&self.paths[i]) == dir)
-                .collect();
+            let same: Vec<&str> = c.iter().copied().filter(|p| folder(p) == dir).collect();
             if same.len() == 1 {
                 c = same;
             }
         }
         match c.as_slice() {
             [] => Resolution::Unresolved,
-            [i] => Resolution::Resolved(self.paths[*i].clone()),
-            many => Resolution::Ambiguous(many.iter().map(|&i| self.paths[i].clone()).collect()),
+            [p] => Resolution::Resolved((*p).to_owned()),
+            many => Resolution::Ambiguous(many.iter().map(|p| (*p).to_owned()).collect()),
         }
     }
 
@@ -306,6 +354,38 @@ mod tests {
             i.resolve("../../../x", Some("notes/a/x.md")),
             Resolution::Unresolved
         );
+    }
+
+    #[test]
+    fn insert_and_remove_match_a_rebuild() {
+        let mut i = idx();
+        i.insert("notes/c/Meeting.md");
+        i.insert("notes/Pricing.md");
+        i.remove("notes/a/Meeting.md");
+        i.remove("notes/missing.md");
+        i.remove("Readme.md");
+        let rebuilt = PathIndex::new([
+            "notes/Pricing.md",
+            "notes/b/Meeting.md",
+            "notes/c/Meeting.md",
+            "people/أحمد سمير.md",
+            "attachments/2026/09/scan.pdf",
+            "notes/v1.2 plan.md",
+            "notes/readme.md",
+        ]);
+        assert_eq!(i, rebuilt);
+        assert_eq!(
+            i.resolve("Meeting", None),
+            Resolution::Ambiguous(vec![
+                "notes/b/Meeting.md".into(),
+                "notes/c/Meeting.md".into()
+            ])
+        );
+        assert_eq!(i.resolve("README", None), r("notes/readme.md"));
+        for p in rebuilt.paths().to_vec() {
+            i.remove(&p);
+        }
+        assert_eq!(i, PathIndex::default());
     }
 
     #[test]

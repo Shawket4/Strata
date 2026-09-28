@@ -218,8 +218,8 @@ abstract final class StrataFixtures {
     pendingSync: false,
     titleDir: TextDir.ltr,
     snippetDir: TextDir.ltr,
-    updatedLabel: '',
-    linkCount: 0,
+    updatedLabel: '12:05',
+    linkCount: 4,
     highlights: [],
   );
 
@@ -234,9 +234,9 @@ abstract final class StrataFixtures {
     updatedAt: DateTime.utc(2026, 9, 26, 16, 40),
     pendingSync: true,
     titleDir: TextDir.ltr,
-    snippetDir: TextDir.ltr,
-    updatedLabel: '',
-    linkCount: 0,
+    snippetDir: TextDir.rtl,
+    updatedLabel: 'Sat',
+    linkCount: 2,
     highlights: [],
   );
 
@@ -250,10 +250,10 @@ abstract final class StrataFixtures {
     tags: const ['pricing'],
     updatedAt: DateTime.utc(2026, 9, 25, 12),
     pendingSync: false,
-    titleDir: TextDir.ltr,
-    snippetDir: TextDir.ltr,
-    updatedLabel: '',
-    linkCount: 0,
+    titleDir: TextDir.rtl,
+    snippetDir: TextDir.rtl,
+    updatedLabel: 'Fri',
+    linkCount: 1,
     highlights: [],
   );
 
@@ -1602,13 +1602,13 @@ abstract final class StrataFixtures {
 
   /// A sample [NavView].
   static final NavView navView = NavView(
-    inboxCount: 0,
-    tasksDueCount: 0,
-    notesCount: 0,
-    directoryCount: 0,
-    clusterCount: 0,
-    pinned: [],
-    sync_: syncPill,
+    inboxCount: 4,
+    tasksDueCount: 3,
+    notesCount: 214,
+    directoryCount: 23,
+    clusterCount: 5,
+    pinned: [noteListItem, noteListItemArabic],
+    sync_: syncPillConflict,
   );
 
   /// A sample [NewUserRequest].

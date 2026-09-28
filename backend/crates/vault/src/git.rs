@@ -6,7 +6,7 @@ use std::path::Path;
 
 use chrono::{DateTime, Utc};
 use git2::{
-    DiffFindOptions, IndexAddOption, Oid, Repository, RepositoryInitOptions, Signature,
+    DiffFindOptions, FileMode, IndexAddOption, Oid, Repository, RepositoryInitOptions, Signature,
     StatusOptions, Time,
 };
 
@@ -99,56 +99,87 @@ fn head_commit(repo: &Repository) -> Option<git2::Commit<'_>> {
     repo.head().ok()?.peel_to_commit().ok()
 }
 
+/// Commits `tree` on top of `parent` (moving `HEAD`), unless it is the parent's tree.
+fn commit_tree(
+    repo: &Repository,
+    parent: Option<&git2::Commit<'_>>,
+    tree_id: Oid,
+    message: &str,
+    at: DateTime<Utc>,
+) -> Result<Option<String>> {
+    if parent.is_some_and(|p| p.tree_id() == tree_id) {
+        return Ok(None);
+    }
+    let tree = repo.find_tree(tree_id)?;
+    let sig = signature(at)?;
+    let parents: Vec<&git2::Commit<'_>> = parent.into_iter().collect();
+    let oid = repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)?;
+    Ok(Some(oid.to_string()))
+}
+
 fn commit_index(
     repo: &Repository,
     index: &mut git2::Index,
     message: &str,
     at: DateTime<Utc>,
 ) -> Result<Option<String>> {
-    let pt = crate::prof::g("git.index_write");
-    index.write()?;
-    drop(pt);
-    let pt = crate::prof::g("git.write_tree");
+    // The tree first: writing it fills the index's tree cache, which `write` then persists,
+    // so later tree builds from this index only rehash the directories that changed.
     let tree_id = index.write_tree()?;
-    drop(pt);
-    let _pc = crate::prof::g("git.commit_obj");
+    index.write()?;
     let parent = head_commit(repo);
-    if parent.as_ref().is_some_and(|p| p.tree_id() == tree_id) {
-        return Ok(None);
-    }
-    let tree = repo.find_tree(tree_id)?;
-    let sig = signature(at)?;
-    let parents: Vec<&git2::Commit<'_>> = parent.iter().collect();
-    let oid = repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &parents)?;
-    Ok(Some(oid.to_string()))
+    commit_tree(repo, parent.as_ref(), tree_id, message, at)
 }
 
 /// Stages exactly `paths` (added/modified if the file exists, removed otherwise) and
 /// commits. Returns the commit ID, or `None` if nothing changed.
+///
+/// The commit's tree is `HEAD`'s tree with exactly `paths` replaced or removed, built
+/// incrementally (only the trees on the paths' ancestor directories are rewritten), so a
+/// commit costs the same whatever the size of the vault; nothing else staged in the index
+/// is committed. The index is updated for the same paths so the working tree stays clean.
 pub fn commit_paths(
     dir: &Path,
     paths: &[String],
     message: &str,
     at: DateTime<Utc>,
 ) -> Result<Option<String>> {
-    let pt = crate::prof::g("git.open");
     let repo = open(dir)?;
-    drop(pt);
-    let pt = crate::prof::g("git.index_read");
     let mut index = repo.index()?;
-    drop(pt);
-    let pt = crate::prof::g("git.add_paths");
+    let parent = head_commit(&repo);
+    let base = match &parent {
+        Some(p) => p.tree()?,
+        None => repo.find_tree(repo.treebuilder(None)?.write()?)?,
+    };
+    let mut update = git2::build::TreeUpdateBuilder::new();
     for p in paths {
+        let rel = Path::new(p);
         let full = crate::fsio::resolve(dir, p);
         let is_file = std::fs::symlink_metadata(&full).is_ok_and(|m| m.is_file());
         if is_file {
-            index.add_path(Path::new(p))?;
-        } else if index.get_path(Path::new(p), 0).is_some() {
-            index.remove_path(Path::new(p))?;
+            index.add_path(rel)?;
+            let entry = index
+                .get_path(rel, 0)
+                .ok_or_else(|| VaultError::Internal("staged path missing".into()))?;
+            let mode = match base.get_path(rel) {
+                Ok(e) if e.filemode() == i32::from(FileMode::BlobExecutable) => {
+                    FileMode::BlobExecutable
+                }
+                _ => FileMode::Blob,
+            };
+            update.upsert(p.as_str(), entry.id, mode);
+        } else {
+            if index.get_path(rel, 0).is_some() {
+                index.remove_path(rel)?;
+            }
+            if base.get_path(rel).is_ok() {
+                update.remove(p.as_str());
+            }
         }
     }
-    drop(pt);
-    commit_index(&repo, &mut index, message, at)
+    let tree_id = update.create_updated(&repo, &base)?;
+    index.write()?;
+    commit_tree(&repo, parent.as_ref(), tree_id, message, at)
 }
 
 /// Stages every change in the working tree (new, modified, deleted) and commits.

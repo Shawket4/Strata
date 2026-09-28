@@ -7,6 +7,5 @@ import 'package:strata_ask/src/ask_screen.dart';
 import 'package:strata_ask/src/search_screen.dart';
 
 export 'src/ask_screen.dart' show AskScreen;
-export 'src/common.dart' show OpenNoteAt;
 export 'src/l10n.dart' show AskLocalizationScope, AskLocalizations;
 export 'src/search_screen.dart' show SearchScreen;

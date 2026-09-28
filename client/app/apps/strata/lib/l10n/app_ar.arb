@@ -9,7 +9,9 @@
   "notificationOpen": "فتح",
   "channelName": "التذكيرات",
   "channelDescription": "تذكيرات المهام من Strata",
-  "pinnedTitle": "المجلدات",
   "folderSemantics": "{name}، {count} ملاحظة",
-  "accountLabel": "الحساب"
+  "accountLabel": "الحساب",
+  "foldersTitle": "المجلدات",
+  "pinnedNotesTitle": "المثبّتة",
+  "pinnedSemantics": "ملاحظة مثبّتة: {title}"
 }

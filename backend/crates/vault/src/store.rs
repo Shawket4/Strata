@@ -662,7 +662,7 @@ impl Core {
                 before_versions.insert(m.id, (p.clone(), m.version.clone()));
                 touched.insert(m.id);
             }
-            if state.attachments.remove(p) {
+            if state.remove_attachment(p) {
                 names.insert(name_key(p));
             }
             if let Some(id) = sidecar_id(p)
@@ -702,7 +702,7 @@ impl Core {
                     state.put_trash(p, meta);
                 }
             } else if paths::is_content(p) {
-                state.attachments.insert(p.clone());
+                state.add_attachment(p);
                 names.insert(name_key(p));
             }
         }
@@ -950,10 +950,8 @@ impl Core {
         drop(pt);
         let state = self.state_mut()?;
         for (id, names) in link_names {
-            if let Some(path) = state.by_id.get(&id).cloned()
-                && let Some(m) = state.notes.get_mut(&path)
-            {
-                m.link_names = names;
+            if let Some(path) = state.by_id.get(&id).cloned() {
+                state.set_link_names(&path, names);
             }
         }
         Ok(out)

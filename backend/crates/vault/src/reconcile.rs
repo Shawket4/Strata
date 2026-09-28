@@ -224,7 +224,7 @@ fn build_state(files: &[String], texts: &BTreeMap<String, String>) -> VaultState
                 state.put_trash(f, meta);
             }
         } else if paths::is_content(f) {
-            state.attachments.insert(f.clone());
+            state.add_attachment(f);
         }
     }
     state
@@ -657,9 +657,7 @@ fn derive_all(
         }
     }
     for (path, n) in names {
-        if let Some(m) = state.notes.get_mut(&path) {
-            m.link_names = n;
-        }
+        state.set_link_names(&path, n);
     }
     out
 }

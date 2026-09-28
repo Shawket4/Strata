@@ -244,9 +244,7 @@ void main() {
       expect(tester.getSize(find.byType(StrataTapTarget)), const Size(32, 32));
     });
 
-    testWidgets('avatar shows the core initials, or the icon', (
-      tester,
-    ) async {
+    testWidgets('avatar shows the core initials, or the icon', (tester) async {
       await _pumpSingle(
         tester,
         const Row(
@@ -271,10 +269,7 @@ void main() {
           matching: find.byType(Container),
         ),
       );
-      expect(
-        (square.decoration! as BoxDecoration).shape,
-        BoxShape.rectangle,
-      );
+      expect((square.decoration! as BoxDecoration).shape, BoxShape.rectangle);
       final handle = tester.ensureSemantics();
       expect(find.bySemanticsLabel('AS'), findsNothing);
       handle.dispose();

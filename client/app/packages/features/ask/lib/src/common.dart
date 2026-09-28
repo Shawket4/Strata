@@ -3,8 +3,7 @@ import 'package:strata_ask/src/l10n.dart';
 import 'package:strata_state/strata_state.dart' hide RelationChip;
 import 'package:strata_ui/strata_ui.dart';
 
-/// Opens a note, optionally at a block (`anchor` without `^`) or heading.
-typedef OpenNoteAt = void Function(String noteId, String? anchor);
+
 
 /// The loading state.
 class AskLoading extends StatelessWidget {
