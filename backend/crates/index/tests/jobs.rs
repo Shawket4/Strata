@@ -404,3 +404,35 @@ async fn concurrent_workers_claim_each_job_exactly_once() {
     .expect("count");
     assert_eq!(running, i64::try_from(JOBS).expect("small"));
 }
+
+#[tokio::test]
+async fn the_wakeup_trigger_works_from_a_session_without_the_strata_search_path() {
+    // Maintenance SQL run as `postgres` (search_path "$user", public) that requeues a job
+    // used to fail inside the trigger: relation "job_wakeups" does not exist.
+    let db = TestDb::new().await.expect("db");
+    let u = TestUser::new("alice").create(&db).await.expect("u").id;
+    let now = db.clock.now();
+    let mut tx = db.begin(u).await.expect("tx");
+    jobs::enqueue(
+        &mut tx,
+        &new_job(&db, "embed", now + Duration::hours(1)),
+        now,
+    )
+    .await
+    .expect("enqueue");
+    tx.commit().await.expect("commit");
+
+    let mut conn = db.superuser.acquire().await.expect("conn");
+    sqlx::query("SET search_path = \"$user\", public")
+        .execute(&mut *conn)
+        .await
+        .expect("search_path");
+    sqlx::query("UPDATE strata.jobs SET run_after = $1 WHERE user_id = $2")
+        .bind(now + Duration::seconds(1))
+        .bind(u)
+        .execute(&mut *conn)
+        .await
+        .expect("requeue as postgres");
+    drop(conn);
+    assert_eq!(wakeups(&db).await, vec![(u, now + Duration::seconds(1))]);
+}
