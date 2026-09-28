@@ -22,7 +22,7 @@ use strata_core::net::EventSignal;
 use strata_core::store::notes;
 use strata_core::sync::engine::Trigger;
 use strata_core::view::model::{
-    AppLifecycle, CoreConfig, Platform, SearchMode, SessionKind, SignInRequest,
+    AppLifecycle, CoreConfig, DeviceFacts, Platform, SearchMode, SessionKind, SignInRequest,
 };
 use strata_index::types::UserRole;
 use world::World;
@@ -64,7 +64,13 @@ async fn the_background_loop_pushes_pulls_and_follows_events() {
     let state = app::init_core(CoreConfig {
         app_data_dir: dir.path().to_str().expect("utf-8").to_owned(),
         platform: Platform::Linux,
-        default_device_name: "Live laptop".to_owned(),
+        device: DeviceFacts {
+            device_name: String::new(),
+            manufacturer: String::new(),
+            model: String::new(),
+            model_name: String::new(),
+            host_name: "Live laptop".to_owned(),
+        },
         server_url: url.clone(),
         release_build: false,
     })

@@ -3,8 +3,11 @@ import 'package:strata_accounts/src/l10n.dart';
 import 'package:strata_ui/strata_ui.dart';
 
 /// The frame of the signed-out screens (SCREEN_SPEC LoginCompact /
-/// LoginExpanded): on compact one scrolling column over the strata bands; on
-/// medium a centred form; on expanded a split with the brand panel.
+/// LoginExpanded): on compact one scrolling column over the strata bands
+/// (without the sand seam on phones, owner decision 2026-09-28); on medium a
+/// centred form over the bands with the seam; on expanded a split with the
+/// brand panel. On compact and medium the bands run to the bottom edge,
+/// under the system navigation inset, and keep their full depth above it.
 class AuthLayout extends StatelessWidget {
   /// Creates the frame around [child] (the form column).
   const new({required this.child, super.key, this.header});
@@ -20,6 +23,15 @@ class AuthLayout extends StatelessWidget {
     final colors = context.strataColors;
     final sizeClass = SizeClass.of(context);
     final head = header;
+    // The bottom inset (gesture or navigation bar) the bands extend under.
+    final inset = MediaQuery.paddingOf(context).bottom;
+    Widget bands({required double height, required bool seam}) =>
+        ExcludeSemantics(
+          child: SizedBox(
+            height: height + inset,
+            child: StrataBands(showSeam: seam, bleed: inset),
+          ),
+        );
     Widget form(double maxWidth) => Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(
@@ -35,6 +47,8 @@ class AuthLayout extends StatelessWidget {
     return Scaffold(
       backgroundColor: colors.background,
       body: SafeArea(
+        // The bands of compact and medium fill the bottom inset themselves.
+        bottom: sizeClass == SizeClass.expanded,
         child: switch (sizeClass) {
           SizeClass.compact => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -51,9 +65,7 @@ class AuthLayout extends StatelessWidget {
                   child: child,
                 ),
               ),
-              const ExcludeSemantics(
-                child: SizedBox(height: 72, child: StrataBands()),
-              ),
+              bands(height: 72, seam: false),
             ],
           ),
           SizeClass.medium => Column(
@@ -61,9 +73,7 @@ class AuthLayout extends StatelessWidget {
             children: [
               ?head,
               Expanded(child: form(440)),
-              const ExcludeSemantics(
-                child: SizedBox(height: 96, child: StrataBands()),
-              ),
+              bands(height: 96, seam: true),
             ],
           ),
           SizeClass.expanded => Row(

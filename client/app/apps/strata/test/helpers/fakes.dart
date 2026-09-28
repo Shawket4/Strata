@@ -5,11 +5,15 @@ import 'package:strata/strata.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 
-/// A [CoreBootstrap] that loads nothing and reports the fixture config;
-/// [gate] holds the start until completed (splash tests).
+/// A [CoreBootstrap] that loads nothing and reports [coreConfig] (the
+/// fixture config by default); [gate] holds the start until completed
+/// (splash tests).
 class FakeBootstrap implements CoreBootstrap {
   /// Creates the bootstrap.
-  new({this.gate, this.error});
+  new({this.gate, this.error, this.coreConfig = StrataFixtures.coreConfig});
+
+  /// The configuration [config] reports.
+  final CoreConfig coreConfig;
 
   /// Completes the library load when given.
   final Completer<void>? gate;
@@ -29,7 +33,7 @@ class FakeBootstrap implements CoreBootstrap {
   }
 
   @override
-  Future<CoreConfig> config() async => StrataFixtures.coreConfig;
+  Future<CoreConfig> config() async => coreConfig;
 }
 
 /// One call on the [FakeNotificationPlatform].

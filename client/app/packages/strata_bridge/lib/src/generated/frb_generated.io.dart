@@ -347,6 +347,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   CustodyItem dco_decode_custody_item(dynamic raw);
 
   @protected
+  DeviceFacts dco_decode_device_facts(dynamic raw);
+
+  @protected
   DeviceItem dco_decode_device_item(dynamic raw);
 
   @protected
@@ -1432,6 +1435,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   CustodyItem sse_decode_custody_item(SseDeserializer deserializer);
+
+  @protected
+  DeviceFacts sse_decode_device_facts(SseDeserializer deserializer);
 
   @protected
   DeviceItem sse_decode_device_item(SseDeserializer deserializer);
@@ -2742,6 +2748,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   void sse_encode_custody_item(CustodyItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_device_facts(DeviceFacts self, SseSerializer serializer);
 
   @protected
   void sse_encode_device_item(DeviceItem self, SseSerializer serializer);

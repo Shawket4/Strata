@@ -3,6 +3,7 @@ library;
 
 export 'src/app.dart';
 export 'src/boot/core_bootstrap.dart';
+export 'src/boot/device_facts.dart';
 export 'src/l10n.dart';
 export 'src/reminders/background.dart';
 export 'src/reminders/local_notifications_platform.dart';

@@ -32,7 +32,13 @@ void main() {
         config: CoreConfig(
           appDataDir: dir.path,
           platform: Platform.linux,
-          defaultDeviceName: 'Linux desktop',
+          device: const DeviceFacts(
+            deviceName: '',
+            manufacturer: '',
+            model: '',
+            modelName: '',
+            hostName: 'Linux desktop',
+          ),
           serverUrl: 'https://strata-ai.duckdns.org',
           releaseBuild: true,
         ),
@@ -64,7 +70,13 @@ void main() {
           config: CoreConfig(
             appDataDir: dir.path,
             platform: Platform.linux,
-            defaultDeviceName: 'Linux desktop',
+            device: const DeviceFacts(
+              deviceName: '',
+              manufacturer: '',
+              model: '',
+              modelName: '',
+              hostName: 'Linux desktop',
+            ),
             serverUrl: 'http://127.0.0.1:8080',
             releaseBuild: true,
           ),
@@ -93,7 +105,13 @@ void main() {
         config: CoreConfig(
           appDataDir: dir.path,
           platform: Platform.linux,
-          defaultDeviceName: 'Linux desktop',
+          device: const DeviceFacts(
+            deviceName: '',
+            manufacturer: '',
+            model: '',
+            modelName: '',
+            hostName: 'Linux desktop',
+          ),
           serverUrl: 'https://strata-ai.duckdns.org',
           releaseBuild: true,
         ),

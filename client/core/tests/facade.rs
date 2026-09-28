@@ -24,12 +24,12 @@ use pretty_assertions::assert_eq;
 use strata_core::api::{app, intents, views};
 use strata_core::view::model::{
     AdminUserItem, AppLifecycle, AskScope, AskScopeKind, Availability, ConflictResolution,
-    CoreConfig, CoreFailure, CustodyDraft, DocumentDraft, DuplicateChoice, EditorHint, GraphFilter,
-    GraphLens, HintKind, ImportSummary, LinkOrCreateChoice, LinkOrCreateKind, MarkerRange,
-    MentionEdit, NewUserRequest, NodePosition, NotificationAction, NotificationActionKind,
-    NotificationResult, PasswordLevel, PlaceDraft, Platform, RecurrenceCompose,
-    RecurrenceFrequency, RecurrencePreviewItem, ResolutionKind, SearchMode, SessionKind,
-    SignInRequest, SignUpRequest, SuggestionEdits, TagItem, TaskDraft, TaskPatch,
+    CoreConfig, CoreFailure, CustodyDraft, DeviceFacts, DocumentDraft, DuplicateChoice, EditorHint,
+    GraphFilter, GraphLens, HintKind, ImportSummary, LinkOrCreateChoice, LinkOrCreateKind,
+    MarkerRange, MentionEdit, NewUserRequest, NodePosition, NotificationAction,
+    NotificationActionKind, NotificationResult, PasswordLevel, PlaceDraft, Platform,
+    RecurrenceCompose, RecurrenceFrequency, RecurrencePreviewItem, ResolutionKind, SearchMode,
+    SessionKind, SignInRequest, SignUpRequest, SuggestionEdits, TagItem, TaskDraft, TaskPatch,
 };
 use strata_index::types::UserRole;
 use world::World;
@@ -115,7 +115,13 @@ fn the_facade_drives_the_core_end_to_end() {
     let config = |server_url: &str, release_build: bool| CoreConfig {
         app_data_dir: dir.path().to_str().expect("utf-8").to_owned(),
         platform: Platform::Linux,
-        default_device_name: "Facade laptop".to_owned(),
+        device: DeviceFacts {
+            device_name: String::new(),
+            manufacturer: String::new(),
+            model: String::new(),
+            model_name: String::new(),
+            host_name: "Facade laptop".to_owned(),
+        },
         server_url: server_url.to_owned(),
         release_build,
     };

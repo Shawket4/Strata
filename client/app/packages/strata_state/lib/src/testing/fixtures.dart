@@ -107,7 +107,13 @@ abstract final class StrataFixtures {
   static const CoreConfig coreConfig = CoreConfig(
     appDataDir: '/home/shawket/.local/share/strata',
     platform: Platform.linux,
-    defaultDeviceName: 'shawket-laptop',
+    device: DeviceFacts(
+      deviceName: '',
+      manufacturer: '',
+      model: '',
+      modelName: '',
+      hostName: 'shawket-laptop',
+    ),
     serverUrl: serverUrl,
     releaseBuild: false,
   );

@@ -38,6 +38,9 @@ Gaps filled while implementing the owner decision below; the owner may revisit a
 - **CI fails** the Android and macOS builds when `STRATA_DEFAULT_SERVER` is set but not `https://…`, warns when it is unset, and checks the APK package name and the macOS bundle identifier.
 - **Other IDs:** the Windows notification app user model ID is `com.shawket.strata`, the Windows version resource's company is `com.shawket`, the FFI plugin's Android namespace is `com.shawket.strata.bridge`; the Android notification channel stays `reminders` (not derived from the app ID).
 
+### TLS in the apps (owner)
+- The apps trust the bundled Mozilla root certificates (webpki-roots) through one shared rustls configuration (ring provider) for HTTPS and WebSockets, not the platform trust store: Android needs JNI set-up for the platform verifier, and its store cannot be read for WebSockets. User-installed CAs are not trusted. Found in production 2026-09-28: sign-in on the Android release build never reached the server.
+
 ### No server address in the UI (owner)
 - The apps have **no server field**: the server address is fixed at build time and never shown or editable. Release builds without an address fail; debug builds may pass one for local testing. The current CI build keeps the field only until it is green; then the field is removed and the app builds wait for the owner's domain, which goes into the build workflow.
 

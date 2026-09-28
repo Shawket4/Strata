@@ -73,6 +73,11 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.strataColors;
+    // Phones show the bands without the sand seam (owner decision
+    // 2026-09-28); the bands run under the system navigation inset and keep
+    // their full depth above it.
+    final compact = SizeClass.of(context) == SizeClass.compact;
+    final inset = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       backgroundColor: colors.background,
       body: Column(
@@ -96,8 +101,11 @@ class SplashScreen extends StatelessWidget {
               ),
             ),
           ),
-          const ExcludeSemantics(
-            child: SizedBox(height: 160, child: StrataBands()),
+          ExcludeSemantics(
+            child: SizedBox(
+              height: 160 + inset,
+              child: StrataBands(showSeam: !compact, bleed: inset),
+            ),
           ),
         ],
       ),

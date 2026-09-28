@@ -261,13 +261,33 @@ pub struct CoreConfig {
     pub app_data_dir: String,
     /// Platform.
     pub platform: Platform,
-    /// Default device name for login (e.g. the host name).
-    pub default_device_name: String,
+    /// What the platform says about this device; the core turns it into the default
+    /// device name of the sign-in form ([`crate::session::device_name::default_device_name`]).
+    pub device: DeviceFacts,
     /// The server every account of this install uses, fixed at build time
     /// (`STRATA_SERVER_URL`, [`crate::net::server_url`]).
     pub server_url: String,
     /// Whether this is a release build (only `https://` server addresses start).
     pub release_build: bool,
+}
+
+/// Raw facts about this device, as the platform reports them (`device_info_plus` and the
+/// host name in the app shell). Dart passes them unchanged; the core picks, cleans and formats
+/// the default device name from them (L15). A fact the platform does not have is empty.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeviceFacts {
+    /// The user-visible device name: Android's `Settings.Global.DEVICE_NAME` (usually the
+    /// marketing name, "Galaxy S24"), iOS's `UIDevice.name`, the macOS and Windows computer
+    /// name; empty on Linux.
+    pub device_name: String,
+    /// The manufacturer (Android `Build.MANUFACTURER`, "samsung").
+    pub manufacturer: String,
+    /// The model: Android `Build.MODEL` ("SM-S921B"), iOS `UIDevice.model` ("iPhone").
+    pub model: String,
+    /// The commercial model name (iOS "iPhone 16 Pro", macOS "MacBook Pro (16-inch, 2021)").
+    pub model_name: String,
+    /// The network host name.
+    pub host_name: String,
 }
 
 /// The signed-in account.

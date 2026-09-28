@@ -6382,13 +6382,13 @@ impl SseDecode for crate::view::model::CoreConfig {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_appDataDir = <String>::sse_decode(deserializer);
         let mut var_platform = <crate::view::model::Platform>::sse_decode(deserializer);
-        let mut var_defaultDeviceName = <String>::sse_decode(deserializer);
+        let mut var_device = <crate::view::model::DeviceFacts>::sse_decode(deserializer);
         let mut var_serverUrl = <String>::sse_decode(deserializer);
         let mut var_releaseBuild = <bool>::sse_decode(deserializer);
         return crate::view::model::CoreConfig {
             app_data_dir: var_appDataDir,
             platform: var_platform,
-            default_device_name: var_defaultDeviceName,
+            device: var_device,
             server_url: var_serverUrl,
             release_build: var_releaseBuild,
         };
@@ -6488,6 +6488,24 @@ impl SseDecode for crate::view::model::CustodyItem {
             here: var_here,
             note: var_note,
             note_dir: var_noteDir,
+        };
+    }
+}
+
+impl SseDecode for crate::view::model::DeviceFacts {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_deviceName = <String>::sse_decode(deserializer);
+        let mut var_manufacturer = <String>::sse_decode(deserializer);
+        let mut var_model = <String>::sse_decode(deserializer);
+        let mut var_modelName = <String>::sse_decode(deserializer);
+        let mut var_hostName = <String>::sse_decode(deserializer);
+        return crate::view::model::DeviceFacts {
+            device_name: var_deviceName,
+            manufacturer: var_manufacturer,
+            model: var_model,
+            model_name: var_modelName,
+            host_name: var_hostName,
         };
     }
 }
@@ -11492,7 +11510,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::CoreConfig {
         [
             self.app_data_dir.into_into_dart().into_dart(),
             self.platform.into_into_dart().into_dart(),
-            self.default_device_name.into_into_dart().into_dart(),
+            self.device.into_into_dart().into_dart(),
             self.server_url.into_into_dart().into_dart(),
             self.release_build.into_into_dart().into_dart(),
         ]
@@ -11615,6 +11633,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::CustodyItem>
     for crate::view::model::CustodyItem
 {
     fn into_into_dart(self) -> crate::view::model::CustodyItem {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::view::model::DeviceFacts {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.device_name.into_into_dart().into_dart(),
+            self.manufacturer.into_into_dart().into_dart(),
+            self.model.into_into_dart().into_dart(),
+            self.model_name.into_into_dart().into_dart(),
+            self.host_name.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::view::model::DeviceFacts
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::view::model::DeviceFacts>
+    for crate::view::model::DeviceFacts
+{
+    fn into_into_dart(self) -> crate::view::model::DeviceFacts {
         self
     }
 }
@@ -15576,7 +15618,7 @@ impl SseEncode for crate::view::model::CoreConfig {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.app_data_dir, serializer);
         <crate::view::model::Platform>::sse_encode(self.platform, serializer);
-        <String>::sse_encode(self.default_device_name, serializer);
+        <crate::view::model::DeviceFacts>::sse_encode(self.device, serializer);
         <String>::sse_encode(self.server_url, serializer);
         <bool>::sse_encode(self.release_build, serializer);
     }
@@ -15635,6 +15677,17 @@ impl SseEncode for crate::view::model::CustodyItem {
         <bool>::sse_encode(self.here, serializer);
         <Option<String>>::sse_encode(self.note, serializer);
         <crate::view::model::TextDir>::sse_encode(self.note_dir, serializer);
+    }
+}
+
+impl SseEncode for crate::view::model::DeviceFacts {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.device_name, serializer);
+        <String>::sse_encode(self.manufacturer, serializer);
+        <String>::sse_encode(self.model, serializer);
+        <String>::sse_encode(self.model_name, serializer);
+        <String>::sse_encode(self.host_name, serializer);
     }
 }
 

@@ -206,6 +206,39 @@ void main() {
       ]);
     });
 
+    test('device_info_plus is allowed in the app shell only', () {
+      final root = _workspace(
+        members: {
+          'apps/strata': _pubspec(
+            'strata',
+            deps: '  device_info_plus: ^13.2.0\n',
+          ),
+          'packages/features/accounts': _pubspec(
+            'strata_accounts',
+            deps: '  device_info_plus: ^13.2.0\n',
+          ),
+          'packages/strata_state': _pubspec(
+            'strata_state',
+            deps: '  device_info_plus: ^13.2.0\n',
+          ),
+        },
+      );
+      expect(runGuard(root), [
+        const Violation(
+          'strata_accounts',
+          'dependencies "device_info_plus" is not allowed: '
+              'device facts are read by the app shell only '
+              '(CoreBootstrap); the core names the device',
+        ),
+        const Violation(
+          'strata_state',
+          'dependencies "device_info_plus" is not allowed: '
+              'device facts are read by the app shell only '
+              '(CoreBootstrap); the core names the device',
+        ),
+      ]);
+    });
+
     test('the icon and splash generators are dev dependencies of the app '
         'shell only', () {
       final root = _workspace(

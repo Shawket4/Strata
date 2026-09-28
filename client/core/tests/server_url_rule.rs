@@ -20,7 +20,7 @@ use strata_core::session::{Core, CoreEnv};
 use strata_core::sync::engine::Trigger;
 use strata_core::testing::{FakeAccountApi, FakeServer};
 use strata_core::view::model::{
-    CoreConfig, CoreFailure, Platform, SessionKind, SignInRequest, SignUpRequest,
+    CoreConfig, CoreFailure, DeviceFacts, Platform, SessionKind, SignInRequest, SignUpRequest,
 };
 use tempfile::TempDir;
 
@@ -30,7 +30,13 @@ fn config(dir: &TempDir, url: &str, release_build: bool) -> CoreConfig {
     CoreConfig {
         app_data_dir: dir.path().to_string_lossy().into_owned(),
         platform: Platform::Linux,
-        default_device_name: "laptop".to_owned(),
+        device: DeviceFacts {
+            device_name: String::new(),
+            manufacturer: String::new(),
+            model: String::new(),
+            model_name: String::new(),
+            host_name: "laptop".to_owned(),
+        },
         server_url: url.to_owned(),
         release_build,
     }

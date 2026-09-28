@@ -1,7 +1,6 @@
-import 'dart:io' as io;
-
 import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:strata/src/boot/device_facts.dart';
 import 'package:strata_bridge/strata_bridge.dart' as bridge;
 import 'package:strata_state/strata_state.dart';
 
@@ -19,8 +18,9 @@ abstract interface class CoreBootstrap {
 }
 
 /// The production bootstrap: `loadStrataCore`, the app-support directory
-/// from `strataAppDataDirectory`, the platform, the host name as the default
-/// device name, and the build's fixed server address and mode.
+/// from `strataAppDataDirectory`, the platform, this device's raw facts
+/// ([readDeviceFacts]; the core makes the default device name from them),
+/// and the build's fixed server address and mode.
 class NativeCoreBootstrap implements CoreBootstrap {
   /// Creates the bootstrap.
   const new();
@@ -32,7 +32,7 @@ class NativeCoreBootstrap implements CoreBootstrap {
   Future<CoreConfig> config() async => CoreConfig(
     appDataDir: await bridge.strataAppDataDirectory(),
     platform: platformOf(defaultTargetPlatform),
-    defaultDeviceName: io.Platform.localHostname,
+    device: await readDeviceFacts(),
     serverUrl: serverUrl,
     releaseBuild: kReleaseMode,
   );

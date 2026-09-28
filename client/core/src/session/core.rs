@@ -145,7 +145,10 @@ impl CoreEnv {
                     Err(e) => Arc::new(crate::net::client::BrokenSyncApi(e)),
                 }
             }),
-            default_device_name: config.default_device_name.clone(),
+            default_device_name: super::device_name::default_device_name(
+                config.platform,
+                &config.device,
+            ),
             server_url,
             device_timezone: device_timezone(),
         })

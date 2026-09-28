@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:strata_ui/src/theme/strata_theme.dart';
 
 /// The signature "strata bands": horizontal bands of uneven depth, one tone
-/// apart, with a single thin sand seam. Purely decorative (hidden from
-/// semantics); an optional [child] is laid on top.
+/// apart, with a single thin sand seam ([showSeam]; phones drop it, owner
+/// decision 2026-09-28). Purely decorative (hidden from semantics); an
+/// optional [child] is laid on top.
 class StrataBands extends StatelessWidget {
   /// Creates the band decoration.
   const new({
@@ -13,6 +14,8 @@ class StrataBands extends StatelessWidget {
     this.seamAfter = 2,
     this.baseColor,
     this.toneColor,
+    this.showSeam = true,
+    this.bleed = 0,
   });
 
   /// Relative depths of the bands from top to bottom (normalised to fill).
@@ -33,6 +36,15 @@ class StrataBands extends StatelessWidget {
   /// Colour each lower band steps towards; defaults to the accent (tide).
   final Color? toneColor;
 
+  /// Whether the sand seam is drawn (after band [seamAfter]). Compact
+  /// layouts pass `false`: bands without the seam on phones.
+  final bool showSeam;
+
+  /// Depth at the bottom, in logical pixels, that continues the last band
+  /// (e.g. the system navigation inset the bands extend under), so the bands
+  /// above it keep their proportions.
+  final double bleed;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.strataColors;
@@ -40,6 +52,8 @@ class StrataBands extends StatelessWidget {
       painter: StrataBandsPainter(
         depths: depths,
         seamAfter: seamAfter,
+        showSeam: showSeam,
+        bleed: bleed,
         base: baseColor ?? colors.background,
         tone: toneColor ?? colors.accent,
         seam: colors.sand,
@@ -58,6 +72,8 @@ class StrataBandsPainter extends CustomPainter {
     required this.base,
     required this.tone,
     required this.seam,
+    this.showSeam = true,
+    this.bleed = 0,
   });
 
   /// Relative band depths, top to bottom.
@@ -75,6 +91,12 @@ class StrataBandsPainter extends CustomPainter {
   /// Seam colour (sand).
   final Color seam;
 
+  /// Whether the seam is drawn.
+  final bool showSeam;
+
+  /// Depth at the bottom that continues the last band.
+  final double bleed;
+
   /// Opacity step between neighbouring bands ("one tone apart").
   static const double toneStep = 0.08;
 
@@ -89,10 +111,13 @@ class StrataBandsPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final total = depths.fold<double>(0, (sum, d) => sum + d);
     if (total <= 0 || size.isEmpty) return;
+    final extra = bleed.clamp(0, size.height).toDouble();
+    final banded = size.height - extra;
     var top = 0.0;
     double? seamY;
     for (var i = 0; i < depths.length; i++) {
-      final height = size.height * depths[i] / total;
+      final last = i == depths.length - 1;
+      final height = banded * depths[i] / total + (last ? extra : 0);
       canvas.drawRect(
         Rect.fromLTWH(0, top, size.width, height),
         Paint()..color = bandColor(i),
@@ -100,7 +125,7 @@ class StrataBandsPainter extends CustomPainter {
       top += height;
       if (i == seamAfter) seamY = top;
     }
-    if (seamY != null) {
+    if (showSeam && seamY != null) {
       canvas.drawRect(
         Rect.fromLTWH(0, seamY - seamThickness / 2, size.width, seamThickness),
         Paint()..color = seam,
@@ -114,6 +139,8 @@ class StrataBandsPainter extends CustomPainter {
       oldDelegate.tone != tone ||
       oldDelegate.seam != seam ||
       oldDelegate.seamAfter != seamAfter ||
+      oldDelegate.showSeam != showSeam ||
+      oldDelegate.bleed != bleed ||
       !_listEquals(oldDelegate.depths, depths);
 
   static bool _listEquals(List<double> a, List<double> b) {

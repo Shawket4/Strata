@@ -8,6 +8,7 @@
 mod account_ops;
 pub mod ask;
 mod core;
+pub mod device_name;
 mod editing;
 mod intents;
 mod online;

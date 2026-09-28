@@ -6397,7 +6397,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     return CoreConfig(
       appDataDir: dco_decode_String(arr[0]),
       platform: dco_decode_platform(arr[1]),
-      defaultDeviceName: dco_decode_String(arr[2]),
+      device: dco_decode_device_facts(arr[2]),
       serverUrl: dco_decode_String(arr[3]),
       releaseBuild: dco_decode_bool(arr[4]),
     );
@@ -6472,6 +6472,21 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       here: dco_decode_bool(arr[15]),
       note: dco_decode_opt_String(arr[16]),
       noteDir: dco_decode_text_dir(arr[17]),
+    );
+  }
+
+  @protected
+  DeviceFacts dco_decode_device_facts(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return DeviceFacts(
+      deviceName: dco_decode_String(arr[0]),
+      manufacturer: dco_decode_String(arr[1]),
+      model: dco_decode_String(arr[2]),
+      modelName: dco_decode_String(arr[3]),
+      hostName: dco_decode_String(arr[4]),
     );
   }
 
@@ -10014,13 +10029,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_appDataDir = sse_decode_String(deserializer);
     var var_platform = sse_decode_platform(deserializer);
-    var var_defaultDeviceName = sse_decode_String(deserializer);
+    var var_device = sse_decode_device_facts(deserializer);
     var var_serverUrl = sse_decode_String(deserializer);
     var var_releaseBuild = sse_decode_bool(deserializer);
     return CoreConfig(
       appDataDir: var_appDataDir,
       platform: var_platform,
-      defaultDeviceName: var_defaultDeviceName,
+      device: var_device,
       serverUrl: var_serverUrl,
       releaseBuild: var_releaseBuild,
     );
@@ -10112,6 +10127,23 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       here: var_here,
       note: var_note,
       noteDir: var_noteDir,
+    );
+  }
+
+  @protected
+  DeviceFacts sse_decode_device_facts(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_deviceName = sse_decode_String(deserializer);
+    var var_manufacturer = sse_decode_String(deserializer);
+    var var_model = sse_decode_String(deserializer);
+    var var_modelName = sse_decode_String(deserializer);
+    var var_hostName = sse_decode_String(deserializer);
+    return DeviceFacts(
+      deviceName: var_deviceName,
+      manufacturer: var_manufacturer,
+      model: var_model,
+      modelName: var_modelName,
+      hostName: var_hostName,
     );
   }
 
@@ -14758,7 +14790,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.appDataDir, serializer);
     sse_encode_platform(self.platform, serializer);
-    sse_encode_String(self.defaultDeviceName, serializer);
+    sse_encode_device_facts(self.device, serializer);
     sse_encode_String(self.serverUrl, serializer);
     sse_encode_bool(self.releaseBuild, serializer);
   }
@@ -14813,6 +14845,16 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_bool(self.here, serializer);
     sse_encode_opt_String(self.note, serializer);
     sse_encode_text_dir(self.noteDir, serializer);
+  }
+
+  @protected
+  void sse_encode_device_facts(DeviceFacts self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.deviceName, serializer);
+    sse_encode_String(self.manufacturer, serializer);
+    sse_encode_String(self.model, serializer);
+    sse_encode_String(self.modelName, serializer);
+    sse_encode_String(self.hostName, serializer);
   }
 
   @protected
