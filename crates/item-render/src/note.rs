@@ -55,6 +55,54 @@ pub fn new_note(content: &str, id: Ulid, created: &DateTime<Utc>) -> Result<Stri
     Ok(doc.render())
 }
 
+/// The content a `note.create` requested at `requested` writes when it lands at `path`
+/// instead (the first free name, `<stem> 2.md`, when `requested` was taken): the title rule —
+/// `title` is set to the requested file stem when the stems differ and the content has no
+/// `title` of its own. Content written at the requested path is returned unchanged, byte for
+/// byte. Both the server (push) and the device (local apply) write these bytes.
+pub fn titled_for_path(content: &str, requested: &str, path: &str) -> Result<String, RenderError> {
+    let name = crate::entity::path_stem(requested);
+    if crate::entity::path_stem(path) == name {
+        return Ok(content.to_owned());
+    }
+    let mut doc = Document::parse(content);
+    let fm = doc.frontmatter_mut();
+    if let Some(e) = fm.error() {
+        return Err(RenderError::Unreadable(e.clone()));
+    }
+    if fm.text(KnownKey::Title).is_some_and(|t| !t.trim().is_empty()) {
+        return Ok(content.to_owned());
+    }
+    fm.set_text(KnownKey::Title, name)
+        .map_err(RenderError::property("title"))?;
+    Ok(doc.render())
+}
+
+/// Where a `note.create` requested at `requested` lands given the vault paths already
+/// `taken`, and the note it writes there: `requested` when it is free, else the first free
+/// `<stem> N.md` next to it with the title rule applied ([`titled_for_path`]); `id`, `created`
+/// and `updated` as [`new_note`].
+pub fn new_note_at<'a>(
+    content: &str,
+    id: Ulid,
+    created: &DateTime<Utc>,
+    requested: &str,
+    taken: impl IntoIterator<Item = &'a str>,
+) -> Result<(String, String), RenderError> {
+    let taken: Vec<&str> = taken.into_iter().collect();
+    let path = if taken.contains(&requested) {
+        crate::paths::free_note_path(
+            crate::paths::parent(requested),
+            crate::entity::path_stem(requested),
+            taken,
+        )
+    } else {
+        requested.to_owned()
+    };
+    let content = titled_for_path(content, requested, &path)?;
+    Ok((path, new_note(&content, id, created)?))
+}
+
 /// `content` with its `id` property set to `id` (added when missing). Content that already
 /// has this `id` is returned unchanged, byte for byte.
 pub fn with_id(content: &str, id: Ulid) -> Result<String, RenderError> {
@@ -168,5 +216,38 @@ mod tests {
             .map(str::to_owned)
             .collect();
         assert_eq!(clean_list(&items), vec!["client", "أحمد"]);
+    }
+
+    #[test]
+    fn a_renamed_create_gets_the_title_rule() {
+        let t = ts("2026-09-27T11:32:00Z");
+        assert_eq!(
+            titled_for_path("# Plan\n", "notes/Plan.md", "notes/Plan 2.md"),
+            Ok("---\ntitle: Plan\n---\n# Plan\n".to_owned())
+        );
+        // Same stem: unchanged bytes.
+        assert_eq!(
+            titled_for_path("x\r\n", "notes/Plan.md", "notes/Plan.md"),
+            Ok("x\r\n".to_owned())
+        );
+        // A title of its own is kept.
+        assert_eq!(
+            titled_for_path("---\ntitle: Q3 plan\n---\nx\n", "Plan.md", "Plan 2.md"),
+            Ok("---\ntitle: Q3 plan\n---\nx\n".to_owned())
+        );
+        assert_eq!(
+            new_note_at("---\ntags: [a]\n---\nخطة\n", id(), &t, "notes/خطة.md", ["notes/خطة.md", "notes/خطة 2.md", "x.md"]),
+            Ok((
+                "notes/خطة 3.md".to_owned(),
+                "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\ntitle: خطة\ntags: [a]\ncreated: 2026-09-27T11:32:00Z\nupdated: 2026-09-27T11:32:00Z\n---\nخطة\n".to_owned()
+            ))
+        );
+        assert_eq!(
+            new_note_at("x\n", id(), &t, "Plan.md", ["Other.md"]),
+            Ok((
+                "Plan.md".to_owned(),
+                "---\nid: 01J8ZK3M4X7Q9W2E5R6T8Y0V1H\ncreated: 2026-09-27T11:32:00Z\nupdated: 2026-09-27T11:32:00Z\n---\nx\n".to_owned()
+            ))
+        );
     }
 }
