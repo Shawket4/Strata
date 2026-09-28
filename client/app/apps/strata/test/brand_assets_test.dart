@@ -43,16 +43,13 @@ void main() {
 
     test('Android launch and window backgrounds', () {
       const res = 'android/app/src/main/res';
-      for (final (dir, colour) in [
-        ('values', light),
-        ('values-night', dark),
-      ]) {
+      for (final (dir, colour) in [('values', light), ('values-night', dark)]) {
         final colours = File('$res/$dir/splash_colors.xml').readAsStringSync();
         expect(
           _hex(
-            RegExp(
-              '<color name="strata_background">(#[0-9A-Fa-f]{6})</color>',
-            ).firstMatch(colours)!.group(1)!,
+            RegExp('<color name="strata_background">(#[0-9A-Fa-f]{6})</color>')
+                .firstMatch(colours)!
+                .group(1)!,
           ),
           colour,
           reason: dir,
@@ -65,9 +62,9 @@ void main() {
         final styles = File('$res/$dir/styles.xml').readAsStringSync();
         expect(
           _hex(
-            RegExp(
-              'windowSplashScreenBackground">(#[0-9A-Fa-f]{6})<',
-            ).firstMatch(styles)!.group(1)!,
+            RegExp('windowSplashScreenBackground">(#[0-9A-Fa-f]{6})<')
+                .firstMatch(styles)!
+                .group(1)!,
           ),
           colour,
           reason: dir,
@@ -85,10 +82,7 @@ void main() {
         final normal = styles.substring(styles.indexOf('"NormalTheme"'));
         expect(
           normal,
-          contains(
-            '<item name="android:windowBackground">'
-            '@color/strata_background</item>',
-          ),
+          contains('<item name="android:windowBackground">$_background</item>'),
           reason: dir,
         );
       }
@@ -104,9 +98,8 @@ void main() {
     });
 
     test('macOS window background until the first frame', () {
-      final swift = File(
-        'macos/Runner/MainFlutterWindow.swift',
-      ).readAsStringSync();
+      final swift = File('macos/Runner/MainFlutterWindow.swift')
+          .readAsStringSync();
       final colours = RegExp(
         r'NSColor\(srgbRed: 0x(\w\w) / 255\.0, green: 0x(\w\w) / 255\.0, '
         r'blue: 0x(\w\w) / 255\.0',
@@ -146,9 +139,8 @@ void main() {
           reason: 'android12splash $density',
         );
       }
-      final adaptive = File(
-        '$res/mipmap-anydpi-v26/ic_launcher.xml',
-      ).readAsStringSync();
+      final adaptive = File('$res/mipmap-anydpi-v26/ic_launcher.xml')
+          .readAsStringSync();
       expect(adaptive, contains('@color/ic_launcher_background'));
       expect(adaptive, contains('@drawable/ic_launcher_foreground'));
       expect(adaptive, contains('@drawable/ic_launcher_monochrome'));
@@ -182,37 +174,32 @@ void main() {
         expect(_size(path), _pixels(image), reason: path);
         pixels.add(_pixels(image));
       }
-      expect(
-        images.map((i) => '${i['size']}@${i['scale']}').toSet(),
-        {
-          for (final s in [16, 32, 128, 256, 512]) ...{
-            '${s}x$s@1x',
-            '${s}x$s@2x',
-          },
+      expect(images.map((i) => '${i['size']}@${i['scale']}').toSet(), {
+        for (final s in [16, 32, 128, 256, 512]) ...{
+          '${s}x$s@1x',
+          '${s}x$s@2x',
         },
-      );
+      });
       expect(pixels, {16, 32, 64, 128, 256, 512, 1024});
     });
 
     test('Windows .ico holds every size', () {
-      final ico = File(
-        'windows/runner/resources/app_icon.ico',
-      ).readAsBytesSync();
+      final ico = File('windows/runner/resources/app_icon.ico')
+          .readAsBytesSync();
       final data = ByteData.sublistView(ico);
       expect(data.getUint16(2, Endian.little), 1, reason: 'type: icon');
       final count = data.getUint16(4, Endian.little);
+      // Each 16-byte directory entry starts with the width (0 means 256).
       final sizes = [
-        for (var i = 0; i < count; i++)
-          ico[6 + 16 * i] == 0 ? 256 : ico[6 + 16 * i],
+        for (var i = 0; i < count; i++) (ico[6 + 16 * i] + 255) % 256 + 1,
       ]..sort();
       expect(sizes, [16, 20, 24, 32, 40, 48, 64, 128, 256]);
     });
 
     test('Linux icon and desktop entry', () {
       expect(_size('linux/runner/resources/app_icon.png'), 256);
-      final desktop = File(
-        'linux/runner/resources/app.strata.strata.desktop',
-      ).readAsStringSync();
+      final desktop = File('linux/runner/resources/app.strata.strata.desktop')
+          .readAsStringSync();
       expect(desktop, contains('Name=Strata\n'));
       expect(desktop, contains('Icon=app.strata.strata\n'));
       expect(desktop, contains('StartupWMClass=app.strata.strata\n'));
@@ -266,13 +253,16 @@ void main() {
   });
 }
 
+/// The window background resource of every Android theme.
+const _background = '@color/strata_background';
+
 Color _hex(String hex) =>
     Color(0xFF000000 | int.parse(hex.substring(1), radix: 16));
 
 List<Map<String, dynamic>> _contents(String dir) {
-  final json =
-      jsonDecode(File('$dir/Contents.json').readAsStringSync())
-          as Map<String, dynamic>;
+  final json = jsonDecode(
+    File('$dir/Contents.json').readAsStringSync(),
+  ) as Map<String, dynamic>;
   return (json['images'] as List).cast<Map<String, dynamic>>();
 }
 

@@ -157,12 +157,12 @@ jobs:
           done
       - name: Verify signatures
         run: |
-          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)/apksigner"
           for apk in dist/*.apk; do
             echo "== $apk"
-            "$apksigner" verify --print-certs "$apk" | head -3
+            "$apksigner" verify --print-certs "$apk"
           done
-          (cd dist && sha256sum *.apk > SHA256SUMS)
+          (cd dist && sha256sum -- *.apk > SHA256SUMS)
           ls -l dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -214,7 +214,7 @@ jobs:
           ln -s /Applications dist/dmg/Applications
           hdiutil create -volname Strata -srcfolder dist/dmg -ov -format UDZO "dist/$name.dmg"
           rm -rf dist/dmg dist/Strata.app
-          (cd dist && shasum -a 256 *.zip *.dmg > SHA256SUMS)
+          (cd dist && shasum -a 256 -- *.zip *.dmg > SHA256SUMS)
           ls -l dist
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
