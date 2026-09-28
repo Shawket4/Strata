@@ -3,7 +3,16 @@
 //! every problem type), what a request puts on the wire (query, headers, zip bodies, `Accept`),
 //! and the WebSocket subscription's handling of frames the demo server never sends (error
 //! frames, undecodable frames, control frames, unknown kinds) and of a `401` handshake.
-#![allow(clippy::expect_used, clippy::unwrap_used, clippy::too_many_lines)] // tests
+// Tests: expect/unwrap, long tables, local helper items; the handshake callback's error type
+// is tungstenite's.
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::too_many_lines,
+    clippy::items_after_statements,
+    clippy::type_complexity,
+    clippy::result_large_err
+)]
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicU32, Ordering};
