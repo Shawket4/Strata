@@ -940,7 +940,7 @@ impl Core {
                 &lpath,
                 &spath,
                 &survivor_link,
-                &index,
+                index,
             ) {
                 changes.insert(p, Some(d.render().into_bytes()));
             }

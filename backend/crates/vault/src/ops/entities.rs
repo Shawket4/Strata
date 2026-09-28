@@ -606,7 +606,7 @@ impl Core {
                 _ => self.read_text(&p).await?.unwrap_or_default(),
             };
             let mut d = Document::parse(&text);
-            if retarget_links(&mut d, &p, &lpath, &spath, &survivor_link, &index) {
+            if retarget_links(&mut d, &p, &lpath, &spath, &survivor_link, index) {
                 changes.insert(p, Some(d.render().into_bytes()));
             }
         }

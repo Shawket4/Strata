@@ -140,7 +140,6 @@ pub async fn find_with(
     let thresholds = thresholds(overrides);
     let q = CandidateQuery::for_item(item, &thresholds);
     let kinds: Vec<String> = q.kinds.iter().map(|k| k.as_str().to_owned()).collect();
-    let pt = crate::prof::g("dup.candidates_sql");
     let blobs = vrepo::dedupe_candidates(
         tx,
         &kinds,
@@ -151,12 +150,6 @@ pub async fn find_with(
         200,
     )
     .await?;
-    drop(pt);
-    crate::prof::add(
-        "dup.blobs(us=count)",
-        std::time::Duration::from_micros(blobs.len() as u64),
-    );
-    let pt = crate::prof::g("dup.semantic");
     let mut existing: Vec<Existing> = blobs
         .iter()
         .filter_map(|b| rmp_serde::from_slice::<Item>(b).ok())
@@ -180,8 +173,6 @@ pub async fn find_with(
             }
         }
     }
-    drop(pt);
-    let pt = crate::prof::g("dup.keepboth+check");
     let mut keep = KeepBothSet::new();
     if let Some(own) = &item.id {
         for (kind, a, b) in vrepo::keep_both_pairs_of(tx, own).await? {
@@ -190,10 +181,7 @@ pub async fn find_with(
             }
         }
     }
-    drop(pt);
-    let pt = crate::prof::g("dup.check_cpu");
     let outcome = dedupe::check(item, &existing, &thresholds, &keep);
-    drop(pt);
     let mut out = Vec::with_capacity(outcome.candidates.len());
     for c in outcome.candidates {
         let id = match c.id.parse::<NoteId>() {

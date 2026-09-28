@@ -168,8 +168,6 @@ impl Core {
         use crate::store::CrashPoint;
         let paths: BTreeSet<String> = changes.iter().map(|(p, _)| p.clone()).collect();
         self.drop_notice_keep_merge();
-        let _pf = crate::prof::g("finish");
-        let pt = crate::prof::g("finish.write_files");
         let written = match self.write_files(&changes).await {
             Ok(()) => self.crash_point(CrashPoint::AfterFileWrite),
             Err(e) => Err(e),
@@ -178,7 +176,6 @@ impl Core {
             self.failed();
             return Err(e);
         }
-        drop(pt);
         if let Err(e) = self.sync_paths(&mut tx, &paths).await {
             self.failed();
             return Err(e);
@@ -193,7 +190,6 @@ impl Core {
             changes.into_iter().collect();
         let slot = self.receipt.clone();
         let now = self.now();
-        let pt = crate::prof::g("finish.receipt_settle");
         let settled = {
             let after = crate::receipt::AfterWrite::new(self.state.as_ref(), &files);
             crate::receipt::settle(slot.as_ref(), &mut tx, &after, now).await
@@ -209,8 +205,6 @@ impl Core {
             Some(p) => format!("{message}{}", p.trailers()),
             None => message.clone(),
         };
-        drop(pt);
-        let pt = crate::prof::g("finish.commit_files");
         let committed = match self
             .commit_files(files.into_keys().collect(), full_message)
             .await
@@ -225,8 +219,6 @@ impl Core {
                 return Err(e);
             }
         };
-        drop(pt);
-        let pt = crate::prof::g("finish.head+txcommit");
         if let Some(c) = &commit
             && let Err(e) = strata_index::repo::sync::set_vault_head(&mut tx, c, now).await
         {
@@ -241,8 +233,6 @@ impl Core {
             self.failed();
             return Err(e);
         }
-        drop(pt);
-        let _pn = crate::prof::g("finish.notice");
         if let Some(p) = pending {
             p.commit();
         }
@@ -352,10 +342,7 @@ impl Core {
         {
             return Err(VaultError::invalid("a note with this id already exists"));
         }
-        let _pcn = crate::prof::g("create_note");
-        let pt = crate::prof::g("create.begin");
         let mut tx = self.begin(&scope).await?;
-        drop(pt);
         let given = Document::parse(&req.content)
             .frontmatter()
             .and_then(|f| f.id().ok().flatten())
@@ -365,16 +352,8 @@ impl Core {
             .id
             .or(given)
             .unwrap_or_else(|| NoteId::generate(self.ids()));
-        let pt = crate::prof::g("create.prepare");
         let doc = self.prepare(&mut tx, &req.content, id, None, true).await?;
-        drop(pt);
-        let pt = crate::prof::g("create.check_duplicates");
         let candidates = self.check_duplicates(&mut tx, &req.path, &doc, id).await?;
-        drop(pt);
-        crate::prof::add(
-            "create.candidates(us=count)",
-            std::time::Duration::from_micros(candidates.len() as u64),
-        );
         let mut changes = Vec::new();
         if !candidates.is_empty() {
             if !req.force {
@@ -395,7 +374,6 @@ impl Core {
         changes.insert(0, (req.path.clone(), Some(text.into_bytes())));
         self.finish(tx, changes, author.message("create", &req.path))
             .await?;
-        let _pv = crate::prof::g("create.view");
         self.view(id).await
     }
 
@@ -433,7 +411,7 @@ impl Core {
         let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
         if let Some(mut sc) = self.sidecar(id).await? {
             let state = self.state()?;
-            let edges = prepare::frontmatter_edges(&doc, &path, &state.path_index(), state);
+            let edges = prepare::frontmatter_edges(&doc, &path, state.path_index(), state);
             if prepare::prune_sidecar(&mut sc, &edges) {
                 changes.push(Core::sidecar_change(&sc)?);
             }
@@ -459,7 +437,7 @@ impl Core {
                 .iter()
                 .map(|p| if p == old { new.to_owned() } else { p.clone() }),
         );
-        let moves = MoveSet::new(&before, &after, [(old.to_owned(), new.to_owned())]);
+        let moves = MoveSet::new(before, &after, [(old.to_owned(), new.to_owned())]);
         let names: BTreeSet<String> = [name_key(old), name_key(new)].into();
         let mut sources: Vec<String> = state
             .linking_to(&names)

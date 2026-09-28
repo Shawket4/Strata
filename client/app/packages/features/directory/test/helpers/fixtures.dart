@@ -123,6 +123,92 @@ abstract final class DirFixtures {
     expiringCount: 0,
   );
 
+  /// "Who is “أبو علي”?" with one candidate.
+  static final SuggestionItem whoIs = SuggestionItem(
+    id: 's-who-is-abu-ali',
+    noteId: 'n-capture-abu-ali',
+    status: 'pending',
+    detail: const SuggestionDetail(
+      kind: SuggestionKind.entityLink,
+      title: '',
+      folder: '',
+      tags: [],
+      mention: 'أبو علي',
+      candidates: [StrataFixtures.ahmedSamirRef],
+      line: '',
+      confidence: 0.72,
+      duplicates: [],
+      relType: '',
+      reason: 'Called “Abu Ali” in two notes about Acme.',
+      serverKind: 'entity_link',
+      documentChoices: [],
+      entityKind: 'person',
+      isNickname: true,
+      quote: '',
+      entities: [],
+    ),
+    created: DateTime.utc(2026, 9, 27, 8),
+    pendingSync: false,
+    createdLabel: '2 hours ago',
+    sourceText: 'أبو علي هيبعت العقد بكرة',
+    sourceDir: TextDir.rtl,
+    autoApplied: false,
+    canAccept: false,
+    needsYou: true,
+    thread: [],
+  );
+
+  /// The People tab with the core's sections and the who-is suggestion.
+  static final DirectoryView people = DirectoryView(
+    tab: DirectoryTab.people,
+    query: '',
+    items: StrataFixtures.directoryView.items,
+    counts: StrataFixtures.directoryCounts,
+    filter: StrataFixtures.directoryView.filter,
+    sort: DirectorySort.name,
+    filterOptions: StrataFixtures.directoryView.filterOptions,
+    sections: [
+      DirectorySection(
+        label: 'All people · A–Z',
+        items: StrataFixtures.directoryView.items,
+      ),
+    ],
+    suggestions: [whoIs],
+    expiringCount: 0,
+  );
+
+  /// The People tab filtered to the role "Operations manager".
+  static final DirectoryView peopleByRole = DirectoryView(
+    tab: DirectoryTab.people,
+    query: '',
+    items: const [StrataFixtures.directoryItem],
+    counts: StrataFixtures.directoryCounts,
+    filter: const DirectoryFilter(
+      tags: [],
+      role: 'Operations manager',
+      expiring: false,
+      hasOpenItems: false,
+    ),
+    sort: DirectorySort.name,
+    filterOptions: const [
+      FilterOption(
+        facet: 'role',
+        value: 'Operations manager',
+        label: 'Operations manager',
+        count: 1,
+        selected: true,
+      ),
+    ],
+    sections: const [
+      DirectorySection(
+        label: 'Results',
+        items: [StrataFixtures.directoryItem],
+      ),
+    ],
+    suggestions: const [],
+    expiringCount: 0,
+  );
+
   /// Ahmed Samir with unsynced changes (offline edits).
   static const EntityScreen ahmedPending = EntityScreen(
     id: 'p-ahmed-samir',

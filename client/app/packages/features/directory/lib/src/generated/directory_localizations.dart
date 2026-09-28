@@ -137,12 +137,6 @@ abstract class DirectoryLocalizations {
   /// **'Places'**
   String get tabPlaces;
 
-  /// Tab label with count (wide).
-  ///
-  /// In en, this message translates to:
-  /// **'{tab} · {count}'**
-  String tabWithCount({required String tab, required int count});
-
   /// Search label.
   ///
   /// In en, this message translates to:
@@ -184,66 +178,6 @@ abstract class DirectoryLocalizations {
   /// In en, this message translates to:
   /// **'Filters'**
   String get filtersLabel;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Tag'**
-  String get filterTag;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Role'**
-  String get filterRole;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Company'**
-  String get filterCompany;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Industry'**
-  String get filterIndustry;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Type'**
-  String get filterType;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Status'**
-  String get filterStatus;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Place'**
-  String get filterPlace;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Expiring'**
-  String get filterExpiring;
-
-  /// Filter.
-  ///
-  /// In en, this message translates to:
-  /// **'Holder'**
-  String get filterHolder;
-
-  /// Tooltip of disabled filters.
-  ///
-  /// In en, this message translates to:
-  /// **'Filters aren\'t available yet'**
-  String get filtersUnavailable;
 
   /// Count.
   ///
@@ -515,12 +449,6 @@ abstract class DirectoryLocalizations {
   /// **'Merge…'**
   String get merge;
 
-  /// Tooltip of disabled merge.
-  ///
-  /// In en, this message translates to:
-  /// **'Merging isn\'t available yet'**
-  String get mergeUnavailable;
-
   /// Asks the AI to re-read the notes.
   ///
   /// In en, this message translates to:
@@ -599,12 +527,6 @@ abstract class DirectoryLocalizations {
   /// **'Repoint {title}'**
   String repointRelation({required String title});
 
-  /// Tooltip of disabled repoint.
-  ///
-  /// In en, this message translates to:
-  /// **'Repointing isn\'t available yet'**
-  String get repointUnavailable;
-
   /// Section.
   ///
   /// In en, this message translates to:
@@ -646,12 +568,6 @@ abstract class DirectoryLocalizations {
   /// In en, this message translates to:
   /// **'Only you edit this section · ## Notes'**
   String get yourNotesHint;
-
-  /// Placeholder.
-  ///
-  /// In en, this message translates to:
-  /// **'Editing your notes here isn\'t available yet. Open the note to edit its ## Notes section.'**
-  String get yourNotesUnavailable;
 
   /// Entity tab.
   ///
@@ -755,17 +671,221 @@ abstract class DirectoryLocalizations {
   /// **'Select an item to see it here'**
   String get selectSomething;
 
-  /// Date.
+  /// Tooltip of the directory sort menu.
   ///
   /// In en, this message translates to:
-  /// **'{date}'**
-  String dateShort({required DateTime date});
+  /// **'Sort'**
+  String get sortBy;
 
-  /// Mention date.
+  /// Sort by name.
   ///
   /// In en, this message translates to:
-  /// **'{date}'**
-  String mentionDate({required DateTime date});
+  /// **'Name A–Z'**
+  String get sortName;
+
+  /// Sort by last activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Last active'**
+  String get sortLastActive;
+
+  /// Documents sorted by their latest move.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently moved'**
+  String get sortRecentlyMoved;
+
+  /// A filter chip: the core's label and the matching row count.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} · {count}'**
+  String filterOption({required String label, required int count});
+
+  /// Directory row activity: mention count and the core's last-active label.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No mentions} =1{1 mention} other{{count} mentions}} · {when}'**
+  String rowActivity({required int count, required String when});
+
+  /// Directory table column: mentions and last activity.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity'**
+  String get colActivity;
+
+  /// How many notes mention the entity.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No mentions} =1{1 mention} other{{count} mentions}}'**
+  String mentionCount({required int count});
+
+  /// Label of the entity picker search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get pickerSearch;
+
+  /// Title of the repoint picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Point {title} to…'**
+  String repointTitle({required String title});
+
+  /// Snack bar for a failed directory action.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work ({code}).'**
+  String actionFailed({required String code});
+
+  /// Title of the merge target picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge {title} into…'**
+  String mergeInto({required String title});
+
+  /// Title of the merge confirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge pages'**
+  String get mergeTitle;
+
+  /// Merge confirmation body.
+  ///
+  /// In en, this message translates to:
+  /// **'{source} will be merged into {into}.'**
+  String mergeBody({required String source, required String into});
+
+  /// What a merge moves (from the core's preview).
+  ///
+  /// In en, this message translates to:
+  /// **'Moves {mentions, plural, =0{no mentions} =1{1 mention} other{{mentions} mentions}} and {relations, plural, =0{no relations} =1{1 relation} other{{relations} relations}}.'**
+  String mergeMoves({required int mentions, required int relations});
+
+  /// Heading of the aliases a merge adds.
+  ///
+  /// In en, this message translates to:
+  /// **'Aliases added'**
+  String get mergeAliases;
+
+  /// Confirms a merge.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge'**
+  String get mergeConfirm;
+
+  /// Snack bar after a merge.
+  ///
+  /// In en, this message translates to:
+  /// **'Merged'**
+  String get merged;
+
+  /// Adds an alias.
+  ///
+  /// In en, this message translates to:
+  /// **'Add alias'**
+  String get addAlias;
+
+  /// Label of the alias field.
+  ///
+  /// In en, this message translates to:
+  /// **'Alias'**
+  String get aliasField;
+
+  /// Confirms adding.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get add;
+
+  /// Adds a property.
+  ///
+  /// In en, this message translates to:
+  /// **'Add property'**
+  String get addProperty;
+
+  /// Title of the property editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit {key}'**
+  String editProperty({required String key});
+
+  /// Label of the property name field.
+  ///
+  /// In en, this message translates to:
+  /// **'Property'**
+  String get propertyKey;
+
+  /// Label of the property value field.
+  ///
+  /// In en, this message translates to:
+  /// **'Value'**
+  String get propertyValue;
+
+  /// Saves a property.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// Tooltip of a property's menu.
+  ///
+  /// In en, this message translates to:
+  /// **'{key} actions'**
+  String propertyActions({required String key});
+
+  /// Menu item: edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// Menu item: remove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get remove;
+
+  /// Tooltip of an alias chip's delete button.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove alias {alias}'**
+  String removeAlias({required String alias});
+
+  /// Entity header subtitle with the core's last-active label.
+  ///
+  /// In en, this message translates to:
+  /// **'{subtitle} · active {when}'**
+  String entitySubtitleActive({required String subtitle, required String when});
+
+  /// Caption of an AI section with its update time.
+  ///
+  /// In en, this message translates to:
+  /// **'AI-maintained · updated {when}'**
+  String aiUpdated({required String when});
+
+  /// Caption of Open items: counts from the core.
+  ///
+  /// In en, this message translates to:
+  /// **'{open} open · {done} done'**
+  String openDone({required int open, required int done});
+
+  /// Snack bar when creating from a who-is suggestion finds a duplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Already exists: {title}'**
+  String createExists({required String title});
+
+  /// Who-is answer linking the mention to a candidate.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s {title}'**
+  String linkTo({required String title});
+
+  /// Who-is answer creating a company.
+  ///
+  /// In en, this message translates to:
+  /// **'Create company…'**
+  String get createCompany;
 }
 
 class _DirectoryLocalizationsDelegate

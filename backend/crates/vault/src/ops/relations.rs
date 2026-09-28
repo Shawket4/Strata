@@ -138,7 +138,7 @@ impl Core {
         let (src_path, dst_path, _) = self.edge_paths(src, dst)?;
         let (mut doc, sc) = self.load(src, &src_path).await?;
         let index = self.state()?.path_index();
-        if !add_link(&mut doc, rel, &dst_path, &index, &src_path)? {
+        if !add_link(&mut doc, rel, &dst_path, index, &src_path)? {
             return Ok(false);
         }
         self.save(
@@ -185,7 +185,7 @@ impl Core {
         let (src_path, dst_path, _) = self.edge_paths(src, dst)?;
         let (mut doc, mut sc) = self.load(src, &src_path).await?;
         let index = self.state()?.path_index();
-        if remove_links(&mut doc, rel, &dst_path, &index, &src_path)? == 0 {
+        if remove_links(&mut doc, rel, &dst_path, index, &src_path)? == 0 {
             return Err(VaultError::NotFound);
         }
         let was_ai = self.reject(&mut sc, rel, dst);
@@ -215,10 +215,10 @@ impl Core {
         let (src_path, dst_path, _) = self.edge_paths(src, dst)?;
         let (mut doc, mut sc) = self.load(src, &src_path).await?;
         let index = self.state()?.path_index();
-        if remove_links(&mut doc, rel, &dst_path, &index, &src_path)? == 0 {
+        if remove_links(&mut doc, rel, &dst_path, index, &src_path)? == 0 {
             return Err(VaultError::NotFound);
         }
-        add_link(&mut doc, new_rel, &dst_path, &index, &src_path)?;
+        add_link(&mut doc, new_rel, &dst_path, index, &src_path)?;
         self.reject(&mut sc, rel, dst);
         sc.relations
             .retain(|r| !(r.kind == new_rel && r.target_id == dst.as_ulid()));
@@ -254,7 +254,7 @@ impl Core {
             let Ok((dst_path, _)) = self.live(e.dst) else {
                 continue;
             };
-            if add_link(&mut doc, e.rel, &dst_path, &index, &src_path)? {
+            if add_link(&mut doc, e.rel, &dst_path, index, &src_path)? {
                 sc.relations
                     .retain(|r| !(r.kind == e.rel && r.target_id == e.dst.as_ulid()));
                 sc.relations.push(SidecarRelation {

@@ -237,11 +237,8 @@ impl VaultService {
         let (done_tx, done_rx) = oneshot::channel();
         // A pushed op's receipt in scope of the caller applies to the write this job makes.
         let receipt = crate::receipt::current();
-        let queued_at = std::time::Instant::now();
         let job: Job = Box::new(move |core: &mut Core| {
             Box::pin(async move {
-                crate::prof::add("actor.queue", queued_at.elapsed());
-                let _pj = crate::prof::g("actor.job");
                 core.receipt = receipt;
                 let loaded = if load {
                     core.ensure_loaded(scope).await
@@ -534,11 +531,8 @@ impl Core {
         let dir = self.dir.clone();
         let changes = changes.to_vec();
         blocking(move || {
-            let _pw = crate::prof::g("write.files_total");
             let paths: Vec<String> = changes.iter().map(|(p, _)| p.clone()).collect();
-            let pt = crate::prof::g("write.journal_begin");
             crate::journal::begin(&dir, &paths)?;
-            drop(pt);
             for (path, content) in &changes {
                 match content {
                     Some(bytes) => fsio::atomic_write(&dir, path, bytes)?,
@@ -560,12 +554,8 @@ impl Core {
         let dir = self.dir.clone();
         let at = self.now();
         blocking(move || {
-            let pt = crate::prof::g("git.commit_paths");
             let commit = git::commit_paths(&dir, &paths, &message, at)?;
-            drop(pt);
-            let pt = crate::prof::g("git.journal_end");
             crate::journal::end(&dir)?;
-            drop(pt);
             Ok(commit)
         })
         .await
@@ -607,11 +597,7 @@ impl Core {
         tx: &mut ScopedTx,
         paths: &BTreeSet<String>,
     ) -> Result<Synced> {
-        let _ps = crate::prof::g("sync_paths");
-        let pt = crate::prof::g("sync.tz");
         let tz = self.tz(tx).await?;
-        drop(pt);
-        let pt = crate::prof::g("sync.read_contents");
         let mut contents: BTreeMap<String, Option<String>> = BTreeMap::new();
         for p in paths {
             let is_md = p.ends_with(".md");
@@ -636,8 +622,6 @@ impl Core {
                 );
             }
         }
-        drop(pt);
-        let pt = crate::prof::g("sync.state_update");
         let state = self.state_mut()?;
         let mut before_versions: HashMap<NoteId, (String, String)> = HashMap::new();
         // Live path and kind of every touched note before the change (for the notice).
@@ -706,15 +690,8 @@ impl Core {
                 names.insert(name_key(p));
             }
         }
-        drop(pt);
-        let pt = crate::prof::g("sync.linking_to");
         let mut affected: BTreeSet<NoteId> = touched.clone();
         affected.extend(state.linking_to(&names));
-        drop(pt);
-        crate::prof::add(
-            "sync.affected_count(us=count)",
-            std::time::Duration::from_micros(affected.len() as u64),
-        );
         let watch_sidecars = paths.iter().any(|p| sidecar_id(p).is_some());
         let derived = self.derive_ids(&affected, tz).await?;
         // Keep-both rows only change as the derived rows of these notes say (they are added
@@ -731,12 +708,8 @@ impl Core {
             Some(p) => crate::diff::KeepBoth::Among(p),
             None => crate::diff::KeepBoth::Skip,
         };
-        let pt = crate::prof::g("sync.snapshot_before");
         let before = crate::diff::Snapshot::take(tx, &affected, keep_both).await?;
-        drop(pt);
-        let pt = crate::prof::g("sync.reindex_ids");
         let synced = self.write_derived(tx, derived).await?;
-        drop(pt);
         let state = self.state()?;
         let mut out = Synced::default();
         for id in &touched {
@@ -759,15 +732,9 @@ impl Core {
             indexer::purge(tx, *id, synced.get(id)).await?;
         }
         let notes = self.note_events(&touched, &before_live, &before_versions)?;
-        let pt = crate::prof::g("sync.log_changes");
         self.log_changes(tx, &out).await?;
-        drop(pt);
-        let pt = crate::prof::g("sync.snapshot_after");
         let after = crate::diff::Snapshot::take(tx, &affected, keep_both).await?;
-        drop(pt);
-        let pt = crate::prof::g("sync.derived_diff");
         let mut notice = self.log_derived_diff(tx, &before, &after).await?;
-        drop(pt);
         notice.notes = notes;
         self.pending.absorb(notice);
         Ok(out)
@@ -935,7 +902,6 @@ impl Core {
             let sidecar = self.sidecar(*id).await?;
             texts.push((*id, path.clone(), *trashed, text, sidecar));
         }
-        let pt = crate::prof::g("reidx.derive");
         let state = self.state()?;
         let ctx = Context {
             index: state.path_index(),
@@ -948,7 +914,6 @@ impl Core {
                 out.push((*id, d));
             }
         }
-        drop(pt);
         Ok(out)
     }
 
@@ -959,10 +924,8 @@ impl Core {
         tx: &mut ScopedTx,
         derived: Vec<(NoteId, Derived)>,
     ) -> Result<HashMap<NoteId, Derived>> {
-        let pt = crate::prof::g("reidx.indexer_write");
         let batch: Vec<Derived> = derived.iter().map(|(_, d)| d.clone()).collect();
         indexer::write(tx, &batch).await?;
-        drop(pt);
         let state = self.state_mut()?;
         let mut out = HashMap::with_capacity(derived.len());
         for (id, d) in derived {

@@ -766,6 +766,42 @@ abstract class DocumentsLocalizations {
   /// In en, this message translates to:
   /// **'{date}'**
   String dateShort({required DateTime date});
+
+  /// Empty user notes section.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing written yet.'**
+  String get userNotesEmpty;
+
+  /// Button that opens the user notes editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit notes'**
+  String get userNotesEdit;
+
+  /// Label of the user notes text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Your notes'**
+  String get userNotesField;
+
+  /// Saves the user notes section.
+  ///
+  /// In en, this message translates to:
+  /// **'Save notes'**
+  String get userNotesSave;
+
+  /// Snack bar after saving the user notes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes saved'**
+  String get userNotesSaved;
+
+  /// Snack bar when saving user notes fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save your notes ({code}).'**
+  String userNotesFailed({required String code});
 }
 
 class _DocumentsLocalizationsDelegate

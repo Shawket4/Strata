@@ -28,11 +28,6 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
   String get tabPlaces => 'الأماكن';
 
   @override
-  String tabWithCount({required String tab, required int count}) {
-    return '$tab · $count';
-  }
-
-  @override
   String get searchPeople => 'ابحث في الأشخاص';
 
   @override
@@ -52,36 +47,6 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
 
   @override
   String get filtersLabel => 'الفلاتر';
-
-  @override
-  String get filterTag => 'وسم';
-
-  @override
-  String get filterRole => 'الدور';
-
-  @override
-  String get filterCompany => 'الشركة';
-
-  @override
-  String get filterIndustry => 'المجال';
-
-  @override
-  String get filterType => 'النوع';
-
-  @override
-  String get filterStatus => 'الحالة';
-
-  @override
-  String get filterPlace => 'المكان';
-
-  @override
-  String get filterExpiring => 'قرب ينتهي';
-
-  @override
-  String get filterHolder => 'الحائز';
-
-  @override
-  String get filtersUnavailable => 'الفلاتر مش متاحة لسه';
 
   @override
   String peopleCount({required int count}) {
@@ -277,9 +242,6 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
   String get merge => 'دمج…';
 
   @override
-  String get mergeUnavailable => 'الدمج مش متاح لسه';
-
-  @override
   String get refreshInsights => 'تحديث الرؤى';
 
   @override
@@ -323,9 +285,6 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
   }
 
   @override
-  String get repointUnavailable => 'تغيير الربط مش متاح لسه';
-
-  @override
   String get mentioningNotes => 'ملاحظات بتذكره';
 
   @override
@@ -345,10 +304,6 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
 
   @override
   String get yourNotesHint => 'إنت بس اللي بتعدّل القسم ده · ## Notes';
-
-  @override
-  String get yourNotesUnavailable =>
-      'تعديل ملاحظاتك من هنا مش متاح لسه. افتح الملاحظة وعدّل قسم ## Notes.';
 
   @override
   String get tabOverview => 'نظرة عامة';
@@ -415,24 +370,185 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
   String get selectSomething => 'اختار عنصر علشان يظهر هنا';
 
   @override
-  String dateShort({required DateTime date}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat(
-      'EEE d MMM y',
-      localeName,
-    );
-    final String dateString = dateDateFormat.format(date);
+  String get sortBy => 'الترتيب';
 
-    return '$dateString';
+  @override
+  String get sortName => 'الاسم أ–ي';
+
+  @override
+  String get sortLastActive => 'آخر نشاط';
+
+  @override
+  String get sortRecentlyMoved => 'نُقلت مؤخرًا';
+
+  @override
+  String filterOption({required String label, required int count}) {
+    return '$label · $count';
   }
 
   @override
-  String mentionDate({required DateTime date}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat(
-      'EEE d MMM',
-      localeName,
+  String rowActivity({required int count, required String when}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count إشارة',
+      many: '$count إشارة',
+      few: '$count إشارات',
+      two: 'إشارتان',
+      one: 'إشارة واحدة',
+      zero: 'لا إشارات',
     );
-    final String dateString = dateDateFormat.format(date);
-
-    return '$dateString';
+    return '$_temp0 · $when';
   }
+
+  @override
+  String get colActivity => 'النشاط';
+
+  @override
+  String mentionCount({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count إشارة',
+      many: '$count إشارة',
+      few: '$count إشارات',
+      two: 'إشارتان',
+      one: 'إشارة واحدة',
+      zero: 'لا إشارات',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pickerSearch => 'بحث';
+
+  @override
+  String repointTitle({required String title}) {
+    return 'توجيه $title إلى…';
+  }
+
+  @override
+  String actionFailed({required String code}) {
+    return 'لم يتم ذلك ($code).';
+  }
+
+  @override
+  String mergeInto({required String title}) {
+    return 'دمج $title في…';
+  }
+
+  @override
+  String get mergeTitle => 'دمج الصفحتين';
+
+  @override
+  String mergeBody({required String source, required String into}) {
+    return 'سيتم دمج $source في $into.';
+  }
+
+  @override
+  String mergeMoves({required int mentions, required int relations}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      mentions,
+      locale: localeName,
+      other: '$mentions إشارة',
+      many: '$mentions إشارة',
+      few: '$mentions إشارات',
+      two: 'إشارتين',
+      one: 'إشارة واحدة',
+      zero: 'لا إشارات',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      relations,
+      locale: localeName,
+      other: '$relations علاقة',
+      many: '$relations علاقة',
+      few: '$relations علاقات',
+      two: 'علاقتين',
+      one: 'علاقة واحدة',
+      zero: 'لا علاقات',
+    );
+    return 'ينقل $_temp0 و$_temp1.';
+  }
+
+  @override
+  String get mergeAliases => 'أسماء بديلة تُضاف';
+
+  @override
+  String get mergeConfirm => 'دمج';
+
+  @override
+  String get merged => 'تم الدمج';
+
+  @override
+  String get addAlias => 'إضافة اسم بديل';
+
+  @override
+  String get aliasField => 'الاسم البديل';
+
+  @override
+  String get add => 'إضافة';
+
+  @override
+  String get addProperty => 'إضافة خاصية';
+
+  @override
+  String editProperty({required String key}) {
+    return 'تعديل $key';
+  }
+
+  @override
+  String get propertyKey => 'الخاصية';
+
+  @override
+  String get propertyValue => 'القيمة';
+
+  @override
+  String get save => 'حفظ';
+
+  @override
+  String propertyActions({required String key}) {
+    return 'إجراءات $key';
+  }
+
+  @override
+  String get edit => 'تعديل';
+
+  @override
+  String get remove => 'إزالة';
+
+  @override
+  String removeAlias({required String alias}) {
+    return 'إزالة الاسم البديل $alias';
+  }
+
+  @override
+  String entitySubtitleActive({
+    required String subtitle,
+    required String when,
+  }) {
+    return '$subtitle · آخر نشاط $when';
+  }
+
+  @override
+  String aiUpdated({required String when}) {
+    return 'يحدّثه الذكاء الاصطناعي · آخر تحديث $when';
+  }
+
+  @override
+  String openDone({required int open, required int done}) {
+    return '$open مفتوحة · $done منجزة';
+  }
+
+  @override
+  String createExists({required String title}) {
+    return 'موجود بالفعل: $title';
+  }
+
+  @override
+  String linkTo({required String title}) {
+    return 'إنه $title';
+  }
+
+  @override
+  String get createCompany => 'إنشاء شركة…';
 }

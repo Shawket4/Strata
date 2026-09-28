@@ -19,6 +19,7 @@ export 'src/common/l10n.dart'
 export 'src/common/labels.dart';
 export 'src/common/record_move.dart'
     show MoveEvent, RecordMoveForm, openRecordMove, showRecordMove;
+export 'src/common/user_notes.dart';
 export 'src/common/widgets.dart';
 export 'src/document/document_screen.dart' show DocumentPage, DocumentScreen;
 export 'src/document/documents_list_screen.dart' show DocumentsScreen;

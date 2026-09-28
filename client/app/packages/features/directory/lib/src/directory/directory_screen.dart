@@ -5,19 +5,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_directory/src/common/l10n.dart';
 import 'package:strata_directory/src/directory/new_entity.dart';
 import 'package:strata_directory/src/directory/suggestions.dart';
-import 'package:strata_directory/src/entity/entity_screen.dart';
+import 'package:strata_directory/src/entity/entity_page.dart';
 import 'package:strata_directory/src/entity/sections.dart';
 import 'package:strata_documents/strata_documents.dart';
 import 'package:strata_state/strata_state.dart' hide RelationChip;
 import 'package:strata_ui/strata_ui.dart';
-
-/// The glyph kind of a directory tab's rows.
-NodeKind tabKind(DirectoryTab tab) => switch (tab) {
-  DirectoryTab.people => NodeKind.person,
-  DirectoryTab.companies => NodeKind.company,
-  DirectoryTab.documents => NodeKind.document,
-  DirectoryTab.places => NodeKind.place,
-};
 
 /// The directory (PLAN §11 screen 7): People / Companies / Documents /
 /// Places tabs with search in both scripts (the core matches names and
@@ -69,6 +61,38 @@ class DirectoryScreen extends StatelessWidget {
   );
 }
 
+/// No directory filter (the default of every tab).
+const DirectoryFilter emptyDirectoryFilter = DirectoryFilter(
+  tags: [],
+  expiring: false,
+  hasOpenItems: false,
+);
+
+/// [filter] with [option] toggled (the intent argument for
+/// `watch_directory_filtered`; the core says which options are selected).
+DirectoryFilter toggleFilter(DirectoryFilter filter, FilterOption option) {
+  final on = !option.selected;
+  final value = on ? option.value : null;
+  return DirectoryFilter(
+    tags: option.facet == 'tag'
+        ? [
+            for (final tag in filter.tags)
+              if (tag != option.value) tag,
+            if (on) option.value,
+          ]
+        : filter.tags,
+    role: option.facet == 'role' ? value : filter.role,
+    companyId: option.facet == 'company' ? value : filter.companyId,
+    industry: option.facet == 'industry' ? value : filter.industry,
+    docType: option.facet == 'doc_type' ? value : filter.docType,
+    status: option.facet == 'status' ? value : filter.status,
+    placeId: option.facet == 'place' ? value : filter.placeId,
+    holderId: option.facet == 'holder' ? value : filter.holderId,
+    expiring: option.facet == 'expiring' ? on : filter.expiring,
+    hasOpenItems: option.facet == 'has_open_items' ? on : filter.hasOpenItems,
+  );
+}
+
 class _Directory extends HookConsumerWidget {
   const new({required this.initialTab, required this.selectedId});
 
@@ -79,9 +103,20 @@ class _Directory extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tab = useState(initialTab);
     final query = useState('');
+    final filter = useState(emptyDirectoryFilter);
+    final sort = useState(DirectorySort.name);
     final selected = useState(selectedId);
-    final async = ref.watch(directoryProvider(tab.value, query.value));
-    final view = async.value;
+    final async = ref.watch(
+      directoryFilteredProvider(
+        tab.value,
+        query.value,
+        filter.value,
+        sort.value,
+      ),
+    );
+    final last = useRef<DirectoryView?>(null);
+    if (async.value != null) last.value = async.value;
+    final view = async.value ?? (async.isLoading ? last.value : null);
     final sizeClass = SizeClass.of(context);
     final links = EntityLinks.of(context);
 
@@ -89,7 +124,10 @@ class _Directory extends HookConsumerWidget {
       if (next == tab.value) return;
       tab.value = next;
       query.value = '';
+      filter.value = emptyDirectoryFilter;
+      sort.value = DirectorySort.name;
       selected.value = null;
+      last.value = null;
     }
 
     final tabs = _Tabs(
@@ -102,7 +140,19 @@ class _Directory extends HookConsumerWidget {
       tab: tab.value,
       onChanged: (value) => query.value = value,
     );
-    final filters = _Filters(tab: tab.value);
+    final filters = _Filters(
+      view: view?.tab == tab.value ? view : null,
+      sort: sort.value,
+      onFilter: (next) => filter.value = next,
+      onSort: (next) => sort.value = next,
+    );
+    final suggestions = SuggestionStrip(
+      suggestions: view?.tab == tab.value ? view!.suggestions : const [],
+    );
+    final wideSuggestions = SuggestionStrip(
+      suggestions: view?.tab == tab.value ? view!.suggestions : const [],
+      columns: 2,
+    );
     final Widget list = switch (async) {
       AsyncError(:final error) when view == null => PageError(error: error),
       _ when view == null => const PageLoading(),
@@ -133,7 +183,7 @@ class _Directory extends HookConsumerWidget {
                       0,
                     ),
                     sliver: SliverList.list(
-                      children: [search, filters, const SuggestionStrip()],
+                      children: [search, filters, suggestions],
                     ),
                   ),
                   SliverFillRemaining(hasScrollBody: false, child: list),
@@ -177,11 +227,7 @@ class _Directory extends HookConsumerWidget {
                             0,
                           ),
                           sliver: SliverList.list(
-                            children: [
-                              search,
-                              filters,
-                              const SuggestionStrip(),
-                            ],
+                            children: [search, filters, suggestions],
                           ),
                         ),
                         SliverFillRemaining(hasScrollBody: false, child: list),
@@ -239,7 +285,7 @@ class _Directory extends HookConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SuggestionStrip(columns: 2),
+                      wideSuggestions,
                       Wrap(
                         spacing: StrataSpacing.s3,
                         runSpacing: StrataSpacing.s2,
@@ -280,6 +326,7 @@ class _Directory extends HookConsumerWidget {
               child: _Preview(
                 entityId: selected.value!,
                 onClose: () => selected.value = null,
+                onMerged: (into) => selected.value = into,
               ),
             ),
           ],
@@ -450,83 +497,99 @@ class _SearchField extends StatelessWidget {
   }
 }
 
+/// The core's filter chips of the tab (label, count, selected) and the
+/// sort order; choosing either re-queries the core.
 class _Filters extends StatelessWidget {
-  const new({required this.tab});
+  const new({
+    required this.view,
+    required this.sort,
+    required this.onFilter,
+    required this.onSort,
+  });
 
-  final DirectoryTab tab;
+  final DirectoryView? view;
+  final DirectorySort sort;
+  final ValueChanged<DirectoryFilter> onFilter;
+  final ValueChanged<DirectorySort> onSort;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.dirL10n;
-    final colors = context.strataColors;
-    final names = switch (tab) {
-      DirectoryTab.people => [
-        l10n.filterTag,
-        l10n.filterRole,
-        l10n.filterCompany,
-      ],
-      DirectoryTab.companies => [l10n.filterTag, l10n.filterIndustry],
-      DirectoryTab.documents => [
-        l10n.filterType,
-        l10n.filterStatus,
-        l10n.filterPlace,
-        l10n.filterHolder,
-        l10n.filterExpiring,
-      ],
-      DirectoryTab.places => [l10n.filterTag],
-    };
+    final current = view;
+    final sorts = [
+      DirectorySort.name,
+      DirectorySort.lastActive,
+      if (current?.tab == DirectoryTab.documents) DirectorySort.recentlyMoved,
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s2),
       child: Semantics(
         label: l10n.filtersLabel,
         container: true,
         explicitChildNodes: true,
-        child: Tooltip(
-          message: l10n.filtersUnavailable,
-          child: Wrap(
-            spacing: StrataSpacing.s2,
-            runSpacing: StrataSpacing.s1,
-            children: [
-              for (final name in names)
-                Semantics(
-                  button: true,
-                  enabled: false,
-                  label: name,
-                  excludeSemantics: true,
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 32),
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      StrataSpacing.s3,
-                      0,
-                      StrataSpacing.s2,
-                      0,
-                    ),
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      border: Border.all(color: colors.border),
-                      borderRadius: StrataRadii.pillRadius,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          name,
-                          style: context.strataText.bodySmall.copyWith(
-                            color: colors.text2,
-                          ),
-                        ),
-                        Icon(Icons.expand_more, size: 16, color: colors.text2),
-                      ],
-                    ),
+        child: Wrap(
+          spacing: StrataSpacing.s2,
+          runSpacing: StrataSpacing.s1,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            PopupMenuButton<DirectorySort>(
+              tooltip: l10n.sortBy,
+              initialValue: sort,
+              onSelected: onSort,
+              itemBuilder: (_) => [
+                for (final value in sorts)
+                  CheckedPopupMenuItem(
+                    value: value,
+                    checked: value == sort,
+                    child: Text(_sortLabel(l10n, value)),
                   ),
+              ],
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: StrataLayout.minTouchTarget,
                 ),
-            ],
-          ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.sort,
+                      size: 18,
+                      color: context.strataColors.text2,
+                    ),
+                    const SizedBox(width: StrataSpacing.s1),
+                    Text(
+                      _sortLabel(l10n, sort),
+                      style: context.strataText.bodySmall.copyWith(
+                        color: context.strataColors.text2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (current != null)
+              for (final option in current.filterOptions)
+                FilterChip(
+                  label: Text(
+                    l10n.filterOption(label: option.label, count: option.count),
+                  ),
+                  selected: option.selected,
+                  onSelected: (_) =>
+                      onFilter(toggleFilter(current.filter, option)),
+                ),
+          ],
         ),
       ),
     );
   }
 }
+
+String _sortLabel(DirectoryLocalizations l10n, DirectorySort sort) =>
+    switch (sort) {
+      DirectorySort.name => l10n.sortName,
+      DirectorySort.lastActive => l10n.sortLastActive,
+      DirectorySort.recentlyMoved => l10n.sortRecentlyMoved,
+    };
 
 class _RowList extends StatelessWidget {
   const new({required this.view, required this.selected, required this.onTap});
@@ -552,6 +615,10 @@ class _RowList extends StatelessWidget {
         message: view.query.isEmpty ? l10n.emptyMessage : l10n.noMatchesMessage,
       );
     }
+    final sections = view.sections.isEmpty
+        ? [DirectorySection(label: '', items: view.items)]
+        : view.sections;
+    final text = context.strataText;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         StrataSpacing.s3,
@@ -559,28 +626,54 @@ class _RowList extends StatelessWidget {
         StrataSpacing.s3,
         StrataSpacing.s6,
       ),
-      child: Card(
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            for (var i = 0; i < view.items.length; i++) ...[
-              if (i > 0) Divider(height: 1, color: colors.border),
-              DirectoryRow(
-                item: view.items[i],
-                kind: tabKind(view.tab),
-                selected: view.items[i].id == selected,
-                onTap: () => onTap(view.items[i].id),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final section in sections) ...[
+            if (section.label.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  StrataSpacing.s1,
+                  StrataSpacing.s2,
+                  StrataSpacing.s1,
+                  StrataSpacing.s1,
+                ),
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    section.label,
+                    style: text.caption
+                        .withWeight(FontWeight.w700)
+                        .copyWith(color: colors.text2),
+                  ),
+                ),
               ),
-            ],
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < section.items.length; i++) ...[
+                    if (i > 0) Divider(height: 1, color: colors.border),
+                    DirectoryRow(
+                      item: section.items[i],
+                      kind: tabKind(view.tab),
+                      selected: section.items[i].id == selected,
+                      onTap: () => onTap(section.items[i].id),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-/// A directory row: kind avatar, name, first alias, and the core's subtitle
-/// (role · company, document status and location, parent place).
+/// A directory row: the core's initials (or the kind's glyph), name in its
+/// own direction, first alias, the core's subtitle (role · company,
+/// document status and location, parent place) and its activity or expiry.
 class DirectoryRow extends StatelessWidget {
   /// Creates the row.
   const new({
@@ -605,9 +698,12 @@ class DirectoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.dirL10n;
     final colors = context.strataColors;
     final text = context.strataText;
     final subtitle = item.subtitle;
+    final active = item.lastActiveLabel;
+    final expires = item.expiresLabel;
     return Semantics(
       selected: selected,
       button: true,
@@ -622,7 +718,7 @@ class DirectoryRow extends StatelessWidget {
             ),
             child: Row(
               children: [
-                EntityAvatar(kind: kind),
+                EntityAvatar(kind: kind, initials: item.initials),
                 const SizedBox(width: StrataSpacing.s3),
                 Expanded(
                   child: Column(
@@ -634,6 +730,7 @@ class DirectoryRow extends StatelessWidget {
                         children: [
                           Text(
                             item.title,
+                            textDirection: textDirectionOf(item.titleDir),
                             style: text.body.withWeight(FontWeight.w600),
                           ),
                           for (final alias in item.aliases.take(1))
@@ -649,6 +746,25 @@ class DirectoryRow extends StatelessWidget {
                         Text(
                           subtitle,
                           style: text.bodySmall.copyWith(color: colors.text2),
+                        ),
+                      if (item.expiringSoon && expires != null)
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            top: StrataSpacing.s1,
+                          ),
+                          child: StatusPill(
+                            label: expires,
+                            tone: StatusTone.warning,
+                            icon: Icons.event_busy_outlined,
+                          ),
+                        )
+                      else if (active != null)
+                        Text(
+                          l10n.rowActivity(
+                            count: item.mentionCount,
+                            when: active,
+                          ),
+                          style: text.caption.copyWith(color: colors.text2),
                         ),
                     ],
                   ),
@@ -738,9 +854,10 @@ class _EntityTable extends HookWidget {
         .copyWith(color: colors.text2);
     Widget cells(List<Widget> children) => Row(
       children: [
-        Expanded(flex: 30, child: children[0]),
-        Expanded(flex: 30, child: children[1]),
-        Expanded(flex: 40, child: children[2]),
+        Expanded(flex: 28, child: children[0]),
+        Expanded(flex: 24, child: children[1]),
+        Expanded(flex: 30, child: children[2]),
+        Expanded(flex: 18, child: children[3]),
       ],
     );
     return CallbackShortcuts(
@@ -771,6 +888,7 @@ class _EntityTable extends HookWidget {
                     Text(l10n.colName, style: head),
                     Text(l10n.colAliases, style: head),
                     Text(l10n.colDetails, style: head),
+                    Text(l10n.colActivity, style: head),
                   ]),
                 ),
               ),
@@ -802,12 +920,16 @@ class _EntityTable extends HookWidget {
                                 children: [
                                   EntityAvatar(
                                     kind: tabKind(view.tab),
+                                    initials: item.initials,
                                     size: 28,
                                   ),
                                   const SizedBox(width: StrataSpacing.s2),
                                   Flexible(
                                     child: Text(
                                       item.title,
+                                      textDirection: textDirectionOf(
+                                        item.titleDir,
+                                      ),
                                       style: text.bodySmall.withWeight(
                                         FontWeight.w600,
                                       ),
@@ -827,6 +949,22 @@ class _EntityTable extends HookWidget {
                                 style: text.bodySmall.copyWith(
                                   color: colors.text2,
                                 ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.mentionCount(count: item.mentionCount),
+                                    style: text.bodySmall,
+                                  ),
+                                  if (item.lastActiveLabel case final active?)
+                                    Text(
+                                      active,
+                                      style: text.caption.copyWith(
+                                        color: colors.text2,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ]),
                           ),
@@ -866,10 +1004,15 @@ class _EntityTable extends HookWidget {
 }
 
 class _Preview extends ConsumerWidget {
-  const new({required this.entityId, required this.onClose});
+  const new({
+    required this.entityId,
+    required this.onClose,
+    required this.onMerged,
+  });
 
   final String entityId;
   final VoidCallback onClose;
+  final ValueChanged<String> onMerged;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -926,6 +1069,7 @@ class _Preview extends ConsumerWidget {
                             children: [
                               EntityAvatar(
                                 kind: entityKindOf(entity.kind),
+                                initials: entity.initials,
                                 size: 52,
                               ),
                               const SizedBox(width: StrataSpacing.s3),
@@ -937,7 +1081,18 @@ class _Preview extends ConsumerWidget {
                                       header: true,
                                       child: Text(
                                         entity.title,
+                                        textDirection: textDirectionOf(
+                                          entity.titleDir,
+                                        ),
                                         style: text.titleSmall,
+                                      ),
+                                    ),
+                                    Text(
+                                      l10n.mentionCount(
+                                        count: entity.mentionCount,
+                                      ),
+                                      style: text.caption.copyWith(
+                                        color: colors.text2,
                                       ),
                                     ),
                                     for (final alias in entity.aliases.take(1))
@@ -958,6 +1113,10 @@ class _Preview extends ConsumerWidget {
                             children: [
                               Text(
                                 entity.summary ?? l10n.noSummary,
+                                textDirection: entity.summary == null
+                                    ? null
+                                    : textDirectionOf(entity.summaryDir),
+                                textAlign: TextAlign.start,
                                 style: text.bodySmall,
                               ),
                             ],
@@ -999,15 +1158,18 @@ class _Preview extends ConsumerWidget {
                     ),
                   const SizedBox(width: StrataSpacing.s2),
                   Expanded(
-                    child: Tooltip(
-                      message: l10n.mergeUnavailable,
-                      child: OutlinedButton(
-                        onPressed: null,
-                        style: OutlinedButton.styleFrom(
-                          disabledForegroundColor: colors.text2,
-                        ),
-                        child: Text(l10n.merge),
-                      ),
+                    child: OutlinedButton(
+                      onPressed: entity == null
+                          ? null
+                          : () async {
+                              final into = await mergeEntity(
+                                context,
+                                ref,
+                                entity,
+                              );
+                              if (into != null) onMerged(into);
+                            },
+                      child: Text(l10n.merge),
                     ),
                   ),
                 ],

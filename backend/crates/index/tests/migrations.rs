@@ -61,7 +61,7 @@ async fn migrations_apply_cleanly_from_empty_and_rerun_is_a_no_op() {
 #[tokio::test]
 async fn each_migration_upgrades_the_previous_schema_and_keeps_data() {
     let db = TestDb::new_unmigrated().await.expect("db");
-    let expected_new_tables: [&[&str]; 12] = [
+    let expected_new_tables: [&[&str]; 13] = [
         &[
             "_sqlx_migrations",
             "audit_log",

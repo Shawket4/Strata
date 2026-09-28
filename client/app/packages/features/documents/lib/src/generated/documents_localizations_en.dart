@@ -412,4 +412,24 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
 
     return '$dateString';
   }
+
+  @override
+  String get userNotesEmpty => 'Nothing written yet.';
+
+  @override
+  String get userNotesEdit => 'Edit notes';
+
+  @override
+  String get userNotesField => 'Your notes';
+
+  @override
+  String get userNotesSave => 'Save notes';
+
+  @override
+  String get userNotesSaved => 'Notes saved';
+
+  @override
+  String userNotesFailed({required String code}) {
+    return 'Couldn\'t save your notes ($code).';
+  }
 }

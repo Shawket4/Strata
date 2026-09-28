@@ -28,11 +28,6 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
   String get tabPlaces => 'Places';
 
   @override
-  String tabWithCount({required String tab, required int count}) {
-    return '$tab · $count';
-  }
-
-  @override
   String get searchPeople => 'Search people';
 
   @override
@@ -52,36 +47,6 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
 
   @override
   String get filtersLabel => 'Filters';
-
-  @override
-  String get filterTag => 'Tag';
-
-  @override
-  String get filterRole => 'Role';
-
-  @override
-  String get filterCompany => 'Company';
-
-  @override
-  String get filterIndustry => 'Industry';
-
-  @override
-  String get filterType => 'Type';
-
-  @override
-  String get filterStatus => 'Status';
-
-  @override
-  String get filterPlace => 'Place';
-
-  @override
-  String get filterExpiring => 'Expiring';
-
-  @override
-  String get filterHolder => 'Holder';
-
-  @override
-  String get filtersUnavailable => 'Filters aren\'t available yet';
 
   @override
   String peopleCount({required int count}) {
@@ -277,9 +242,6 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
   String get merge => 'Merge…';
 
   @override
-  String get mergeUnavailable => 'Merging isn\'t available yet';
-
-  @override
   String get refreshInsights => 'Refresh insights';
 
   @override
@@ -323,9 +285,6 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
   }
 
   @override
-  String get repointUnavailable => 'Repointing isn\'t available yet';
-
-  @override
   String get mentioningNotes => 'Mentioning notes';
 
   @override
@@ -345,10 +304,6 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
 
   @override
   String get yourNotesHint => 'Only you edit this section · ## Notes';
-
-  @override
-  String get yourNotesUnavailable =>
-      'Editing your notes here isn\'t available yet. Open the note to edit its ## Notes section.';
 
   @override
   String get tabOverview => 'Overview';
@@ -416,24 +371,173 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
   String get selectSomething => 'Select an item to see it here';
 
   @override
-  String dateShort({required DateTime date}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat(
-      'EEE d MMM y',
-      localeName,
-    );
-    final String dateString = dateDateFormat.format(date);
+  String get sortBy => 'Sort';
 
-    return '$dateString';
+  @override
+  String get sortName => 'Name A–Z';
+
+  @override
+  String get sortLastActive => 'Last active';
+
+  @override
+  String get sortRecentlyMoved => 'Recently moved';
+
+  @override
+  String filterOption({required String label, required int count}) {
+    return '$label · $count';
   }
 
   @override
-  String mentionDate({required DateTime date}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat(
-      'EEE d MMM',
-      localeName,
+  String rowActivity({required int count, required String when}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mentions',
+      one: '1 mention',
+      zero: 'No mentions',
     );
-    final String dateString = dateDateFormat.format(date);
-
-    return '$dateString';
+    return '$_temp0 · $when';
   }
+
+  @override
+  String get colActivity => 'Activity';
+
+  @override
+  String mentionCount({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count mentions',
+      one: '1 mention',
+      zero: 'No mentions',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get pickerSearch => 'Search';
+
+  @override
+  String repointTitle({required String title}) {
+    return 'Point $title to…';
+  }
+
+  @override
+  String actionFailed({required String code}) {
+    return 'That didn\'t work ($code).';
+  }
+
+  @override
+  String mergeInto({required String title}) {
+    return 'Merge $title into…';
+  }
+
+  @override
+  String get mergeTitle => 'Merge pages';
+
+  @override
+  String mergeBody({required String source, required String into}) {
+    return '$source will be merged into $into.';
+  }
+
+  @override
+  String mergeMoves({required int mentions, required int relations}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      mentions,
+      locale: localeName,
+      other: '$mentions mentions',
+      one: '1 mention',
+      zero: 'no mentions',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      relations,
+      locale: localeName,
+      other: '$relations relations',
+      one: '1 relation',
+      zero: 'no relations',
+    );
+    return 'Moves $_temp0 and $_temp1.';
+  }
+
+  @override
+  String get mergeAliases => 'Aliases added';
+
+  @override
+  String get mergeConfirm => 'Merge';
+
+  @override
+  String get merged => 'Merged';
+
+  @override
+  String get addAlias => 'Add alias';
+
+  @override
+  String get aliasField => 'Alias';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get addProperty => 'Add property';
+
+  @override
+  String editProperty({required String key}) {
+    return 'Edit $key';
+  }
+
+  @override
+  String get propertyKey => 'Property';
+
+  @override
+  String get propertyValue => 'Value';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String propertyActions({required String key}) {
+    return '$key actions';
+  }
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get remove => 'Remove';
+
+  @override
+  String removeAlias({required String alias}) {
+    return 'Remove alias $alias';
+  }
+
+  @override
+  String entitySubtitleActive({
+    required String subtitle,
+    required String when,
+  }) {
+    return '$subtitle · active $when';
+  }
+
+  @override
+  String aiUpdated({required String when}) {
+    return 'AI-maintained · updated $when';
+  }
+
+  @override
+  String openDone({required int open, required int done}) {
+    return '$open open · $done done';
+  }
+
+  @override
+  String createExists({required String title}) {
+    return 'Already exists: $title';
+  }
+
+  @override
+  String linkTo({required String title}) {
+    return 'It\'s $title';
+  }
+
+  @override
+  String get createCompany => 'Create company…';
 }

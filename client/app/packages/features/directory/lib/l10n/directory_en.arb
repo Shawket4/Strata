@@ -24,18 +24,6 @@
   "@tabPlaces": {
     "description": "Tab."
   },
-  "tabWithCount": "{tab} · {count}",
-  "@tabWithCount": {
-    "description": "Tab label with count (wide).",
-    "placeholders": {
-      "tab": {
-        "type": "String"
-      },
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "searchPeople": "Search people",
   "@searchPeople": {
     "description": "Search label."
@@ -63,46 +51,6 @@
   "filtersLabel": "Filters",
   "@filtersLabel": {
     "description": "Filters group label."
-  },
-  "filterTag": "Tag",
-  "@filterTag": {
-    "description": "Filter."
-  },
-  "filterRole": "Role",
-  "@filterRole": {
-    "description": "Filter."
-  },
-  "filterCompany": "Company",
-  "@filterCompany": {
-    "description": "Filter."
-  },
-  "filterIndustry": "Industry",
-  "@filterIndustry": {
-    "description": "Filter."
-  },
-  "filterType": "Type",
-  "@filterType": {
-    "description": "Filter."
-  },
-  "filterStatus": "Status",
-  "@filterStatus": {
-    "description": "Filter."
-  },
-  "filterPlace": "Place",
-  "@filterPlace": {
-    "description": "Filter."
-  },
-  "filterExpiring": "Expiring",
-  "@filterExpiring": {
-    "description": "Filter."
-  },
-  "filterHolder": "Holder",
-  "@filterHolder": {
-    "description": "Filter."
-  },
-  "filtersUnavailable": "Filters aren't available yet",
-  "@filtersUnavailable": {
-    "description": "Tooltip of disabled filters."
   },
   "peopleCount": "{count, plural, =0{No people} =1{1 person} other{{count} people}}",
   "@peopleCount": {
@@ -342,10 +290,6 @@
   "@merge": {
     "description": "Merge action."
   },
-  "mergeUnavailable": "Merging isn't available yet",
-  "@mergeUnavailable": {
-    "description": "Tooltip of disabled merge."
-  },
   "refreshInsights": "Refresh insights",
   "@refreshInsights": {
     "description": "Asks the AI to re-read the notes."
@@ -411,10 +355,6 @@
       }
     }
   },
-  "repointUnavailable": "Repointing isn't available yet",
-  "@repointUnavailable": {
-    "description": "Tooltip of disabled repoint."
-  },
   "mentioningNotes": "Mentioning notes",
   "@mentioningNotes": {
     "description": "Section."
@@ -442,10 +382,6 @@
   "yourNotesHint": "Only you edit this section · ## Notes",
   "@yourNotesHint": {
     "description": "User section caption."
-  },
-  "yourNotesUnavailable": "Editing your notes here isn't available yet. Open the note to edit its ## Notes section.",
-  "@yourNotesUnavailable": {
-    "description": "Placeholder."
   },
   "tabOverview": "Overview",
   "@tabOverview": {
@@ -533,26 +469,246 @@
   "@selectSomething": {
     "description": "Empty detail pane."
   },
-  "dateShort": "{date}",
-  "@dateShort": {
-    "description": "Date.",
+  "sortBy": "Sort",
+  "@sortBy": {
+    "description": "Tooltip of the directory sort menu."
+  },
+  "sortName": "Name A–Z",
+  "@sortName": {
+    "description": "Sort by name."
+  },
+  "sortLastActive": "Last active",
+  "@sortLastActive": {
+    "description": "Sort by last activity."
+  },
+  "sortRecentlyMoved": "Recently moved",
+  "@sortRecentlyMoved": {
+    "description": "Documents sorted by their latest move."
+  },
+  "filterOption": "{label} · {count}",
+  "@filterOption": {
+    "description": "A filter chip: the core's label and the matching row count.",
     "placeholders": {
-      "date": {
-        "type": "DateTime",
-        "format": "EEE d MMM y",
-        "isCustomDateFormat": "true"
+      "label": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
       }
     }
   },
-  "mentionDate": "{date}",
-  "@mentionDate": {
-    "description": "Mention date.",
+  "rowActivity": "{count, plural, =0{No mentions} =1{1 mention} other{{count} mentions}} · {when}",
+  "@rowActivity": {
+    "description": "Directory row activity: mention count and the core's last-active label.",
     "placeholders": {
-      "date": {
-        "type": "DateTime",
-        "format": "EEE d MMM",
-        "isCustomDateFormat": "true"
+      "count": {
+        "type": "int"
+      },
+      "when": {
+        "type": "String"
       }
     }
+  },
+  "colActivity": "Activity",
+  "@colActivity": {
+    "description": "Directory table column: mentions and last activity."
+  },
+  "mentionCount": "{count, plural, =0{No mentions} =1{1 mention} other{{count} mentions}}",
+  "@mentionCount": {
+    "description": "How many notes mention the entity.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pickerSearch": "Search",
+  "@pickerSearch": {
+    "description": "Label of the entity picker search field."
+  },
+  "repointTitle": "Point {title} to…",
+  "@repointTitle": {
+    "description": "Title of the repoint picker.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "actionFailed": "That didn't work ({code}).",
+  "@actionFailed": {
+    "description": "Snack bar for a failed directory action.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "mergeInto": "Merge {title} into…",
+  "@mergeInto": {
+    "description": "Title of the merge target picker.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "mergeTitle": "Merge pages",
+  "@mergeTitle": {
+    "description": "Title of the merge confirmation."
+  },
+  "mergeBody": "{source} will be merged into {into}.",
+  "@mergeBody": {
+    "description": "Merge confirmation body.",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      },
+      "into": {
+        "type": "String"
+      }
+    }
+  },
+  "mergeMoves": "Moves {mentions, plural, =0{no mentions} =1{1 mention} other{{mentions} mentions}} and {relations, plural, =0{no relations} =1{1 relation} other{{relations} relations}}.",
+  "@mergeMoves": {
+    "description": "What a merge moves (from the core's preview).",
+    "placeholders": {
+      "mentions": {
+        "type": "int"
+      },
+      "relations": {
+        "type": "int"
+      }
+    }
+  },
+  "mergeAliases": "Aliases added",
+  "@mergeAliases": {
+    "description": "Heading of the aliases a merge adds."
+  },
+  "mergeConfirm": "Merge",
+  "@mergeConfirm": {
+    "description": "Confirms a merge."
+  },
+  "merged": "Merged",
+  "@merged": {
+    "description": "Snack bar after a merge."
+  },
+  "addAlias": "Add alias",
+  "@addAlias": {
+    "description": "Adds an alias."
+  },
+  "aliasField": "Alias",
+  "@aliasField": {
+    "description": "Label of the alias field."
+  },
+  "add": "Add",
+  "@add": {
+    "description": "Confirms adding."
+  },
+  "addProperty": "Add property",
+  "@addProperty": {
+    "description": "Adds a property."
+  },
+  "editProperty": "Edit {key}",
+  "@editProperty": {
+    "description": "Title of the property editor.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "propertyKey": "Property",
+  "@propertyKey": {
+    "description": "Label of the property name field."
+  },
+  "propertyValue": "Value",
+  "@propertyValue": {
+    "description": "Label of the property value field."
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Saves a property."
+  },
+  "propertyActions": "{key} actions",
+  "@propertyActions": {
+    "description": "Tooltip of a property's menu.",
+    "placeholders": {
+      "key": {
+        "type": "String"
+      }
+    }
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Menu item: edit."
+  },
+  "remove": "Remove",
+  "@remove": {
+    "description": "Menu item: remove."
+  },
+  "removeAlias": "Remove alias {alias}",
+  "@removeAlias": {
+    "description": "Tooltip of an alias chip's delete button.",
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "entitySubtitleActive": "{subtitle} · active {when}",
+  "@entitySubtitleActive": {
+    "description": "Entity header subtitle with the core's last-active label.",
+    "placeholders": {
+      "subtitle": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "aiUpdated": "AI-maintained · updated {when}",
+  "@aiUpdated": {
+    "description": "Caption of an AI section with its update time.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "openDone": "{open} open · {done} done",
+  "@openDone": {
+    "description": "Caption of Open items: counts from the core.",
+    "placeholders": {
+      "open": {
+        "type": "int"
+      },
+      "done": {
+        "type": "int"
+      }
+    }
+  },
+  "createExists": "Already exists: {title}",
+  "@createExists": {
+    "description": "Snack bar when creating from a who-is suggestion finds a duplicate.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "linkTo": "It's {title}",
+  "@linkTo": {
+    "description": "Who-is answer linking the mention to a candidate.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "createCompany": "Create company…",
+  "@createCompany": {
+    "description": "Who-is answer creating a company."
   }
 }

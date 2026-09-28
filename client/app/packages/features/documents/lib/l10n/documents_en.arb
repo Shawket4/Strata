@@ -528,5 +528,34 @@
         "isCustomDateFormat": "true"
       }
     }
+  },
+  "userNotesEmpty": "Nothing written yet.",
+  "@userNotesEmpty": {
+    "description": "Empty user notes section."
+  },
+  "userNotesEdit": "Edit notes",
+  "@userNotesEdit": {
+    "description": "Button that opens the user notes editor."
+  },
+  "userNotesField": "Your notes",
+  "@userNotesField": {
+    "description": "Label of the user notes text field."
+  },
+  "userNotesSave": "Save notes",
+  "@userNotesSave": {
+    "description": "Saves the user notes section."
+  },
+  "userNotesSaved": "Notes saved",
+  "@userNotesSaved": {
+    "description": "Snack bar after saving the user notes."
+  },
+  "userNotesFailed": "Couldn't save your notes ({code}).",
+  "@userNotesFailed": {
+    "description": "Snack bar when saving user notes fails.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
   }
 }

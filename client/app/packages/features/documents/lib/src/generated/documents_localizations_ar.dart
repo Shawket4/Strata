@@ -409,4 +409,24 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
 
     return '$dateString';
   }
+
+  @override
+  String get userNotesEmpty => 'لم تُكتب ملاحظات بعد.';
+
+  @override
+  String get userNotesEdit => 'تعديل الملاحظات';
+
+  @override
+  String get userNotesField => 'ملاحظاتك';
+
+  @override
+  String get userNotesSave => 'حفظ الملاحظات';
+
+  @override
+  String get userNotesSaved => 'تم حفظ الملاحظات';
+
+  @override
+  String userNotesFailed({required String code}) {
+    return 'تعذّر حفظ ملاحظاتك ($code).';
+  }
 }

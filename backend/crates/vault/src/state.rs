@@ -230,7 +230,10 @@ mod tests {
         assert_eq!(s.linking_to(&names(&["scan.pdf"])), ids(&[]));
         assert!(s.remove_attachment("files/scan.pdf"));
         assert!(!s.remove_attachment("files/scan.pdf"));
-        assert_eq!(s.remove_note("notes/B.md").map(|m| m.id), ids(&[2]).pop_first());
+        assert_eq!(
+            s.remove_note("notes/B.md").map(|m| m.id),
+            ids(&[2]).pop_first()
+        );
         assert_eq!(s.linking_to(&names(&["a2"])), ids(&[]));
         assert_eq!(s.linking_to(&names(&["b"])), ids(&[1]));
         assert_eq!(s.path_index(), &PathIndex::new(["notes/sub/A2.md"]));

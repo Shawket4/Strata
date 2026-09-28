@@ -311,7 +311,7 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
             && let Some(note_text) = scanned.texts.get(path)
         {
             let edges =
-                prepare::frontmatter_edges(&Document::parse(note_text), path, &index, &state);
+                prepare::frontmatter_edges(&Document::parse(note_text), path, index, &state);
             changed |= prepare::prune_sidecar(&mut sc, &edges);
         }
         if changed {
@@ -646,7 +646,7 @@ fn derive_all(
     let mut names = Vec::new();
     {
         let ctx = Context {
-            index: &index,
+            index,
             state: &*state,
             tz,
         };

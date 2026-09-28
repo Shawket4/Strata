@@ -76,7 +76,9 @@ fn derive_all(state: &VaultState, notes: &[Note]) -> Vec<Derived> {
     };
     notes
         .iter()
-        .map(|(path, text, sc)| derive::derive(path, text, sc.as_ref(), &ctx, false).expect("derived"))
+        .map(|(path, text, sc)| {
+            derive::derive(path, text, sc.as_ref(), &ctx, false).expect("derived")
+        })
         .collect()
 }
 
@@ -115,7 +117,11 @@ async fn measured_write(db: &TestDb, name: &str, filler: u128) -> BTreeMap<Strin
     let mut state = VaultState::default();
     for (path, text, _) in notes.iter().chain(&measured) {
         let doc = vault_format::Document::parse(text);
-        let nid = NoteId::from_ulid(doc.frontmatter().and_then(|f| f.id().ok().flatten()).expect("id"));
+        let nid = NoteId::from_ulid(
+            doc.frontmatter()
+                .and_then(|f| f.id().ok().flatten())
+                .expect("id"),
+        );
         state.put_note(
             path,
             NoteMeta {
@@ -128,7 +134,9 @@ async fn measured_write(db: &TestDb, name: &str, filler: u128) -> BTreeMap<Strin
     }
     let mut tx = db.begin(user).await.expect("tx");
     let all: Vec<Note> = notes.iter().chain(&measured).cloned().collect();
-    indexer::write(&mut tx, &derive_all(&state, &all)).await.expect("vault");
+    indexer::write(&mut tx, &derive_all(&state, &all))
+        .await
+        .expect("vault");
     tx.commit().await.expect("commit");
 
     // Planner statistics as a live database has them (a fresh table has none, and every
@@ -179,10 +187,15 @@ async fn measured_write(db: &TestDb, name: &str, filler: u128) -> BTreeMap<Strin
         1
     );
     assert_eq!(
-        dedupe::keep_both_among(&mut tx, &pairs).await.expect("among").len(),
+        dedupe::keep_both_among(&mut tx, &pairs)
+            .await
+            .expect("among")
+            .len(),
         1
     );
-    indexer::purge(&mut tx, id(1), batch.get(1)).await.expect("purge");
+    indexer::purge(&mut tx, id(1), batch.get(1))
+        .await
+        .expect("purge");
     let end = reads(&mut tx).await;
     tx.commit().await.expect("commit");
 
@@ -193,7 +206,11 @@ async fn measured_write(db: &TestDb, name: &str, filler: u128) -> BTreeMap<Strin
         .into_iter()
         .map(|c| (c.seq, c.version))
         .collect();
-    assert_eq!(log, vec![(1, Some("x".into())), (2, Some("y".into()))], "consecutive seqs");
+    assert_eq!(
+        log,
+        vec![(1, Some("x".into())), (2, Some("y".into()))],
+        "consecutive seqs"
+    );
     tx.commit().await.expect("commit");
     end.into_iter()
         .map(|(rel, n)| {
@@ -298,15 +315,17 @@ fn a_commit_builds_on_heads_tree_not_on_the_index() {
         git::blob_at(dir, &second, "notes/sub/B.md").expect("blob"),
         Some(b"b\n".to_vec())
     );
-    assert_eq!(git::blob_at(dir, &second, "notes/A.md").expect("blob"), None);
+    assert_eq!(
+        git::blob_at(dir, &second, "notes/A.md").expect("blob"),
+        None
+    );
     assert_eq!(
         git::blob_at(dir, &first, "notes/A.md").expect("blob"),
         Some(b"a\n".to_vec())
     );
     // Committing unchanged paths is no commit.
     assert_eq!(
-        git::commit_paths(dir, &["notes/sub/C.md".to_owned()], "user: noop", at())
-            .expect("commit"),
+        git::commit_paths(dir, &["notes/sub/C.md".to_owned()], "user: noop", at()).expect("commit"),
         None
     );
 }

@@ -110,5 +110,11 @@
   "searchPlaces": "ابحث في الأماكن",
   "searchPeople": "ابحث في الأشخاص",
   "mentionsUnavailable": "الملاحظات اللي بتذكره هتظهر هنا.",
-  "dateShort": "{date}"
+  "dateShort": "{date}",
+  "userNotesEmpty": "لم تُكتب ملاحظات بعد.",
+  "userNotesEdit": "تعديل الملاحظات",
+  "userNotesField": "ملاحظاتك",
+  "userNotesSave": "حفظ الملاحظات",
+  "userNotesSaved": "تم حفظ الملاحظات",
+  "userNotesFailed": "تعذّر حفظ ملاحظاتك ({code})."
 }

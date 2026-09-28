@@ -38,6 +38,7 @@ abstract final class StrataFixtures {
   static const EntityRef acmeLogisticsRef = EntityRef(
     id: 'c-acme-logistics',
     title: 'Acme Logistics',
+    kind: 'company',
   );
 
   /// Watanya (company).
@@ -94,7 +95,7 @@ abstract final class StrataFixtures {
     by: 'ai',
     confidence: 0.94,
     reason: 'Ahmed is described as Acme’s operations manager in the call note.',
-    relLabel: '',
+    relLabel: 'works at',
     citations: [],
   );
 
@@ -898,16 +899,19 @@ abstract final class StrataFixtures {
     title: 'Ahmed Samir',
     subtitle: 'Operations manager, Acme Logistics',
     aliases: ['أحمد سمير', 'Ahmed Sameer'],
-    kind: '',
+    kind: 'person',
     titleDir: TextDir.ltr,
-    initials: '',
-    mentionCount: 0,
-    tags: [],
+    initials: 'AS',
+    mentionCount: 12,
+    lastActiveLabel: '2 days ago',
+    role: 'Operations manager',
+    company: acmeLogisticsRef,
+    tags: ['client'],
     location: [],
     expiringSoon: false,
     breadcrumb: [],
-    documentCount: 0,
-    hasOpenItems: false,
+    documentCount: 1,
+    hasOpenItems: true,
   );
 
   /// The People tab.
@@ -921,10 +925,12 @@ abstract final class StrataFixtures {
         title: 'Mona Hassan',
         subtitle: 'Finance lead, Nile Freight',
         aliases: ['منى حسن'],
-        kind: '',
+        kind: 'person',
         titleDir: TextDir.ltr,
-        initials: '',
-        mentionCount: 0,
+        initials: 'MH',
+        mentionCount: 4,
+        lastActiveLabel: 'Sep 14',
+        role: 'Finance lead',
         tags: [],
         location: [],
         expiringSoon: false,
@@ -936,7 +942,29 @@ abstract final class StrataFixtures {
     counts: directoryCounts,
     filter: DirectoryFilter(tags: [], expiring: false, hasOpenItems: false),
     sort: DirectorySort.name,
-    filterOptions: [],
+    filterOptions: [
+      FilterOption(
+        facet: 'role',
+        value: 'Operations manager',
+        label: 'Operations manager',
+        count: 1,
+        selected: false,
+      ),
+      FilterOption(
+        facet: 'company',
+        value: 'c-acme-logistics',
+        label: 'Acme Logistics',
+        count: 1,
+        selected: false,
+      ),
+      FilterOption(
+        facet: 'has_open_items',
+        value: '',
+        label: 'Open items',
+        count: 1,
+        selected: false,
+      ),
+    ],
     sections: [],
     suggestions: [],
     expiringCount: 0,
@@ -1056,6 +1084,23 @@ abstract final class StrataFixtures {
     path: '',
   );
 
+  /// The call note as a mention of Ahmed (the mention highlighted).
+  static final NoteListItem mentionItem = NoteListItem(
+    id: 'n-call-2026-09-12-acme',
+    title: 'Call 2026-09-12 — Acme',
+    path: 'notes/clients/acme/Call 2026-09-12 — Acme.md',
+    kind: 'note',
+    snippet: 'أحمد طلب invoicing أسبوعي بدل شهري ابتداءً من أكتوبر.',
+    tags: const ['acme', 'invoicing'],
+    updatedAt: DateTime.utc(2026, 9, 26, 16, 40),
+    pendingSync: false,
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.rtl,
+    updatedLabel: 'Sat',
+    linkCount: 2,
+    highlights: const [HighlightSpan(start: 0, end: 4)],
+  );
+
   /// Ahmed Samir's page.
   static final EntityView entityView = EntityView(
     id: 'p-ahmed-samir',
@@ -1083,21 +1128,23 @@ abstract final class StrataFixtures {
         date: DateTime.utc(2026, 9, 12),
         citations: const [citation],
         dir: TextDir.ltr,
+        dateLabel: '12 Sep 2026',
       ),
     ],
-    mentions: [noteListItemMixed],
+    mentions: [mentionItem],
     related: const [relationChip],
     documents: const [],
     pendingSync: false,
     titleDir: TextDir.ltr,
-    initials: '',
-    path: '',
-    tags: [],
-    userNotes: '',
-    summaryCitations: [],
-    openCount: 0,
-    doneCount: 0,
-    mentionCount: 0,
+    initials: 'AS',
+    path: 'people/Ahmed Samir.md',
+    tags: const ['client'],
+    userNotes: 'Prefers WhatsApp to email.',
+    summaryCitations: const [citation],
+    openCount: 1,
+    doneCount: 2,
+    mentionCount: 12,
+    lastActiveLabel: '2 days ago',
     summaryDir: TextDir.ltr,
   );
 
@@ -1594,10 +1641,10 @@ abstract final class StrataFixtures {
   /// A sample [MergePreview].
   static const MergePreview mergePreview = MergePreview(
     source: ahmedSamirRef,
-    into: ahmedSamirRef,
-    aliases: [],
-    mentionCount: 0,
-    relationCount: 0,
+    into: EntityRef(id: 'p-mona-hassan', title: 'Mona Hassan', kind: 'person'),
+    aliases: ['Ahmed Samir', 'أحمد سمير'],
+    mentionCount: 12,
+    relationCount: 3,
   );
 
   /// A sample [NavView].
