@@ -15,6 +15,7 @@ export 'src/tokens/colors.dart';
 export 'src/tokens/graph.dart';
 export 'src/tokens/metrics.dart';
 export 'src/tokens/typography.dart';
+export 'src/widgets/avatar.dart';
 export 'src/widgets/citation_chip.dart';
 export 'src/widgets/empty_state.dart';
 export 'src/widgets/keyboard_hint_chip.dart';

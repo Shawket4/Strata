@@ -244,6 +244,42 @@ void main() {
       expect(tester.getSize(find.byType(StrataTapTarget)), const Size(32, 32));
     });
 
+    testWidgets('avatar shows the core initials, or the icon', (
+      tester,
+    ) async {
+      await _pumpSingle(
+        tester,
+        const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            StrataAvatar(initials: 'AS'),
+            StrataAvatar(initials: 'أس', square: true, size: 56),
+            StrataAvatar(initials: ''),
+          ],
+        ),
+      );
+      expect(find.text('AS'), findsOneWidget);
+      expect(find.text('أس'), findsOneWidget);
+      expect(find.byIcon(Icons.person_outline), findsOneWidget);
+      expect(
+        tester.getSize(find.byType(StrataAvatar).at(1)),
+        const Size(56, 56),
+      );
+      final square = tester.widget<Container>(
+        find.descendant(
+          of: find.byType(StrataAvatar).at(1),
+          matching: find.byType(Container),
+        ),
+      );
+      expect(
+        (square.decoration! as BoxDecoration).shape,
+        BoxShape.rectangle,
+      );
+      final handle = tester.ensureSemantics();
+      expect(find.bySemanticsLabel('AS'), findsNothing);
+      handle.dispose();
+    });
+
     test('AI tag text uses two decimals', () {
       expect(RelationChip.aiTagText('AI', 0.8), 'AI · 0.80');
       expect(RelationChip.aiTagText('AI', 0.8249), 'AI · 0.82');

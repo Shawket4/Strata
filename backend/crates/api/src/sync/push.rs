@@ -210,13 +210,19 @@ pub async fn push(
     }
     let mut submitted = Submitted::new();
     let mut results: Vec<(OpId, Vec<u8>)> = Vec::with_capacity(ops.len());
+    strata_vault::prof::reset();
+    let _pp = strata_vault::prof::g("push.total");
     for op in ops {
+        let _po = strata_vault::prof::g("push.op");
         let op_id = OpId::from_ulid(op.op_id);
+        let pt = strata_vault::prof::g("push.idem_get");
         let mut tx = ctx.db.begin(ctx.scope).await.map_err(|e| index(&e))?;
         let stored = log::idempotency_get(&mut tx, op_id)
             .await
             .map_err(|e| index(&e))?;
         tx.commit().await.map_err(|e| index(&e))?;
+        drop(pt);
+        let pt = strata_vault::prof::g("push.apply");
         let bytes = if let Some(rec) = stored {
             rec.result
         } else {
@@ -238,8 +244,11 @@ pub async fn push(
                 rec.result
             }
         };
+        drop(pt);
         results.push((op_id, bytes));
     }
+    drop(_pp);
+    strata_vault::prof::dump("push");
     Ok(encode_response(&results))
 }
 

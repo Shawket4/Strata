@@ -105,8 +105,13 @@ fn commit_index(
     message: &str,
     at: DateTime<Utc>,
 ) -> Result<Option<String>> {
+    let pt = crate::prof::g("git.index_write");
     index.write()?;
+    drop(pt);
+    let pt = crate::prof::g("git.write_tree");
     let tree_id = index.write_tree()?;
+    drop(pt);
+    let _pc = crate::prof::g("git.commit_obj");
     let parent = head_commit(repo);
     if parent.as_ref().is_some_and(|p| p.tree_id() == tree_id) {
         return Ok(None);
@@ -126,8 +131,13 @@ pub fn commit_paths(
     message: &str,
     at: DateTime<Utc>,
 ) -> Result<Option<String>> {
+    let pt = crate::prof::g("git.open");
     let repo = open(dir)?;
+    drop(pt);
+    let pt = crate::prof::g("git.index_read");
     let mut index = repo.index()?;
+    drop(pt);
+    let pt = crate::prof::g("git.add_paths");
     for p in paths {
         let full = crate::fsio::resolve(dir, p);
         let is_file = std::fs::symlink_metadata(&full).is_ok_and(|m| m.is_file());
@@ -137,6 +147,7 @@ pub fn commit_paths(
             index.remove_path(Path::new(p))?;
         }
     }
+    drop(pt);
     commit_index(&repo, &mut index, message, at)
 }
 

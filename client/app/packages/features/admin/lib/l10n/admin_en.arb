@@ -243,10 +243,6 @@
   "@footnoteReset": {
     "description": "Footnote under the table."
   },
-  "notAvailableYet": "Not available yet",
-  "@notAvailableYet": {
-    "description": "Tooltip of an action the app cannot perform yet."
-  },
   "scheduleTitle": "Schedule deletion of @{username}?",
   "@scheduleTitle": {
     "description": "Schedule deletion confirmation title.",
@@ -256,14 +252,11 @@
       }
     }
   },
-  "scheduleBody": "{name}'s account is signed out everywhere and deleted on {date}. Until then {name} can sign in only to download an export of their notes. You won't see the export.",
+  "scheduleBody": "{name}'s account is signed out everywhere and deleted when the grace period ends. Until then {name} can sign in only to download an export of their notes. You won't see the export.",
   "@scheduleBody": {
-    "description": "Schedule deletion confirmation body.",
+    "description": "Schedule deletion confirmation body (the purge date is known only once scheduled).",
     "placeholders": {
       "name": {
-        "type": "String"
-      },
-      "date": {
         "type": "String"
       }
     }
@@ -356,6 +349,103 @@
     "description": "A username.",
     "placeholders": {
       "username": {
+        "type": "String"
+      }
+    }
+  },
+  "you": "you",
+  "@you": {
+    "description": "Badge next to the signed-in admin's own row."
+  },
+  "yourAccount": "Your account",
+  "@yourAccount": {
+    "description": "Actions cell of the admin's own row."
+  },
+  "searchLabel": "Search users",
+  "@searchLabel": {
+    "description": "Search field label."
+  },
+  "noMatches": "No user matches “{query}”.",
+  "@noMatches": {
+    "description": "Empty search result.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "roleSemantics": "Role of {name}",
+  "@roleSemantics": {
+    "description": "Role picker label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "makeAdmin": "Make admin",
+  "@makeAdmin": {
+    "description": "Compact action: set role to admin."
+  },
+  "makeMember": "Make member",
+  "@makeMember": {
+    "description": "Compact action: set role to member."
+  },
+  "passwordChangePending": "Must choose a new password",
+  "@passwordChangePending": {
+    "description": "Status note after a reset."
+  },
+  "createTitle": "Create account",
+  "@createTitle": {
+    "description": "Create account dialog title."
+  },
+  "createBody": "The account is active right away. Pass the password on privately; they choose a new one after signing in.",
+  "@createBody": {
+    "description": "Create account dialog body."
+  },
+  "fieldUsername": "Username",
+  "@fieldUsername": {
+    "description": "Create account field."
+  },
+  "fieldDisplayName": "Display name",
+  "@fieldDisplayName": {
+    "description": "Create account field."
+  },
+  "fieldPassword": "Temporary password",
+  "@fieldPassword": {
+    "description": "Create account field."
+  },
+  "fieldRole": "Role",
+  "@fieldRole": {
+    "description": "Create account field."
+  },
+  "create": "Create",
+  "@create": {
+    "description": "Create account confirm."
+  },
+  "created": "Account @{username} created",
+  "@created": {
+    "description": "Snack bar after creating an account.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "approved": "{name} approved",
+  "@approved": {
+    "description": "Snack bar after approving.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "rejected": "{name} rejected",
+  "@rejected": {
+    "description": "Snack bar after rejecting.",
+    "placeholders": {
+      "name": {
         "type": "String"
       }
     }

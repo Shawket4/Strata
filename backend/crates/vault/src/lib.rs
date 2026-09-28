@@ -41,6 +41,7 @@ pub mod model;
 pub mod ops;
 pub mod paths;
 pub mod prepare;
+pub mod prof;
 pub mod receipt;
 pub mod reconcile;
 pub mod revert;
