@@ -28,6 +28,37 @@ pub struct Heading {
     pub span: Range<usize>,
     /// Texts of the enclosing headings followed by this heading's text.
     pub path: Vec<String>,
+    /// The heading's markdown markers: an ATX heading's opening `#`s with the whitespace
+    /// around them and its closing `#`s with the whitespace before them; a setext heading's
+    /// underline line. Sorted, never overlapping the text.
+    pub markers: Vec<Range<usize>>,
+}
+
+/// An inline style (`**strong**`, `*emphasis*`, `~~strike~~`, `==mark==`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum InlineStyle {
+    /// `**x**` / `__x__`.
+    Strong,
+    /// `*x*` / `_x_`.
+    Emphasis,
+    /// `~~x~~` / `~x~`.
+    Strikethrough,
+    /// `==x==` (Obsidian highlight).
+    Mark,
+}
+
+/// A styled run with its exact delimiter ranges, as the `CommonMark` parser matched them
+/// (`***x***` is an emphasis around a strong run: `*` + `**` … `**` + `*`).
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct InlineSpan {
+    /// Style.
+    pub style: InlineStyle,
+    /// The whole run, delimiters included.
+    pub span: Range<usize>,
+    /// The opening delimiter.
+    pub open: Range<usize>,
+    /// The closing delimiter.
+    pub close: Range<usize>,
 }
 
 /// The kind of a citable block.
@@ -98,6 +129,9 @@ pub struct BodyAnalysis {
     pub blocks: Vec<Block>,
     /// Spans where markdown syntax is inert (code blocks, inline code, math), sorted.
     pub code_spans: Vec<Range<usize>>,
+    /// Styled runs (strong, emphasis, strikethrough, mark) outside code, sorted by start then
+    /// by end descending (outer runs first).
+    pub inline: Vec<InlineSpan>,
 }
 
 impl BodyAnalysis {
@@ -137,14 +171,66 @@ pub fn analyze(body: &str) -> BodyAnalysis {
     let mut skip: Vec<Range<usize>> = code_spans.clone();
     skip.extend(links.iter().map(|l| l.span.clone()));
     skip.sort_by_key(|r| r.start);
-    let tags = scan_tags(body, &merge(skip));
+    let skip = merge(skip);
+    let tags = scan_tags(body, &skip);
+    let mut inline = s.inline;
+    inline.extend(scan_marks(body, &skip));
+    inline.sort_by(|a, b| {
+        a.span
+            .start
+            .cmp(&b.span.start)
+            .then(b.span.end.cmp(&a.span.end))
+    });
     BodyAnalysis {
         links,
         tags,
         headings: s.headings,
         blocks: s.blocks,
         code_spans,
+        inline,
     }
+}
+
+/// `==mark==` runs (not part of `CommonMark`): on one line, the text between the delimiters is
+/// not empty and neither starts nor ends with whitespace, and no delimiter is inside `skip`
+/// (code, links). Runs are matched left to right.
+fn scan_marks(body: &str, skip: &[Range<usize>]) -> Vec<InlineSpan> {
+    let mut out = Vec::new();
+    let mut base = 0;
+    for (line, eol) in markdown_lines(body) {
+        let mut from = 0;
+        while let Some(open) = line[from..].find("==").map(|i| from + i) {
+            let content_start = open + 2;
+            let Some(close) = line[content_start..]
+                .find("==")
+                .map(|i| content_start + i)
+            else {
+                break;
+            };
+            let content = &line[content_start..close];
+            let (o, c) = (base + open..base + content_start, base + close..base + close + 2);
+            let free = |r: &Range<usize>| !skip.iter().any(|k| r.start < k.end && k.start < r.end);
+            if !content.is_empty()
+                && !content.starts_with(char::is_whitespace)
+                && !content.ends_with(char::is_whitespace)
+                && !content.starts_with('=')
+                && free(&o)
+                && free(&c)
+            {
+                out.push(InlineSpan {
+                    style: InlineStyle::Mark,
+                    span: o.start..c.end,
+                    open: o,
+                    close: c,
+                });
+                from = close + 2;
+            } else {
+                from = open + 1;
+            }
+        }
+        base += line.len() + eol.len();
+    }
+    out
 }
 
 /// Wikilinks and embeds outside code.
@@ -271,6 +357,16 @@ struct Structure {
     code_spans: Vec<Range<usize>>,
     headings: Vec<Heading>,
     blocks: Vec<Block>,
+    inline: Vec<InlineSpan>,
+}
+
+/// A styled run whose end the parser has not reached yet: its range, and the extent of the
+/// events inside it so far (their first start and last end are the delimiters' inner edges).
+struct OpenStyle {
+    style: InlineStyle,
+    range: Range<usize>,
+    first: Option<usize>,
+    last: usize,
 }
 
 impl Structure {
@@ -279,8 +375,34 @@ impl Structure {
         let mut stack: Vec<Container> = Vec::new();
         let mut path: Vec<(u8, String)> = Vec::new();
         let parser = Parser::new_ext(&prepared.text, markdown_options()).into_offset_iter();
+        let mut styles: Vec<OpenStyle> = Vec::new();
         for (event, range) in parser {
             let range = prepared.map_range(range);
+            let style = match &event {
+                Event::Start(Tag::Strong) => Some(InlineStyle::Strong),
+                Event::Start(Tag::Emphasis) => Some(InlineStyle::Emphasis),
+                Event::Start(Tag::Strikethrough) => Some(InlineStyle::Strikethrough),
+                _ => None,
+            };
+            if let Event::End(TagEnd::Strong | TagEnd::Emphasis | TagEnd::Strikethrough) = event {
+                if let Some(open) = styles.pop() {
+                    s.close_style(open);
+                }
+                continue;
+            }
+            for open in &mut styles {
+                open.first.get_or_insert(range.start);
+                open.last = open.last.max(range.end);
+            }
+            if let Some(style) = style {
+                styles.push(OpenStyle {
+                    style,
+                    last: range.start,
+                    range,
+                    first: None,
+                });
+                continue;
+            }
             let nested = stack.iter().any(|c| {
                 matches!(
                     c,
@@ -307,6 +429,25 @@ impl Structure {
             }
         }
         s
+    }
+
+    fn close_style(&mut self, open: OpenStyle) {
+        let OpenStyle {
+            style,
+            range,
+            first,
+            last,
+        } = open;
+        let Some(first) = first else { return };
+        if first <= range.start || last >= range.end || first > last {
+            return;
+        }
+        self.inline.push(InlineSpan {
+            style,
+            open: range.start..first,
+            close: last..range.end,
+            span: range,
+        });
     }
 
     fn start(
@@ -340,6 +481,7 @@ impl Structure {
                     self.headings.push(Heading {
                         level,
                         text,
+                        markers: heading_markers(body, &span),
                         span: span.clone(),
                         path: full,
                     });
@@ -475,6 +617,41 @@ pub(crate) fn trailing_block_id(text: &str, span: &Range<usize>) -> Option<Block
         id: id.to_owned(),
         span: start..start + 1 + id.len(),
     })
+}
+
+/// The marker ranges of the heading at `span` (see [`Heading::markers`]).
+fn heading_markers(body: &str, span: &Range<usize>) -> Vec<Range<usize>> {
+    let src = &body[span.clone()];
+    let first_line_len = src.find(['\r', '\n']).unwrap_or(src.len());
+    let line = &src[..first_line_len];
+    let indent = line.len() - line.trim_start().len();
+    let after_indent = &line[indent..];
+    if !after_indent.starts_with('#') {
+        // Setext: the underline is the last line.
+        let start = src
+            .trim_end_matches(['\r', '\n'])
+            .rfind('\n')
+            .map_or(src.len(), |i| i + 1);
+        return (start < src.len())
+            .then(|| span.start + start..span.end)
+            .into_iter()
+            .collect();
+    }
+    let hashes = after_indent.len() - after_indent.trim_start_matches('#').len();
+    let rest = &after_indent[hashes..];
+    let text_start = indent + hashes + (rest.len() - rest.trim_start().len());
+    let mut out = vec![span.start..span.start + text_start];
+    let tail = line[text_start..].trim_end();
+    let without = tail.trim_end_matches('#');
+    if without.len() < tail.len() && without.ends_with([' ', '\t']) {
+        let close_start = text_start + without.trim_end().len();
+        out.push(span.start + close_start..span.start + line.len());
+    } else if tail.len() < line.len() - text_start {
+        // Trailing whitespace after the text.
+        out.push(span.start + text_start + tail.len()..span.start + line.len());
+    }
+    out.retain(|r| r.start < r.end);
+    out
 }
 
 fn heading_text(src: &str) -> String {
@@ -727,5 +904,85 @@ mod tests {
         assert_eq!(a.blocks[1].heading_path, ["S"]);
         assert_eq!(a.blocks[0].kind, BlockKind::Heading);
         assert!(a.blocks[0].heading_path.is_empty());
+    }
+
+    fn styles(body: &str) -> Vec<(InlineStyle, &str, &str, &str)> {
+        analyze(body)
+            .inline
+            .into_iter()
+            .map(|i| {
+                (
+                    i.style,
+                    &body[i.span.clone()],
+                    &body[i.open.clone()],
+                    &body[i.close.clone()],
+                )
+            })
+            .collect()
+    }
+
+    #[test]
+    fn inline_styles_carry_exact_delimiters() {
+        use InlineStyle::{Emphasis, Mark, Strikethrough, Strong};
+        assert_eq!(
+            styles("a ***both*** b\n"),
+            vec![
+                (Emphasis, "***both***", "*", "*"),
+                (Strong, "**both**", "**", "**")
+            ]
+        );
+        assert_eq!(
+            styles("**bold *it* more** and __u__ _e_\n"),
+            vec![
+                (Strong, "**bold *it* more**", "**", "**"),
+                (Emphasis, "*it*", "*", "*"),
+                (Strong, "__u__", "__", "__"),
+                (Emphasis, "_e_", "_", "_"),
+            ]
+        );
+        assert_eq!(
+            styles("~~gone~~ ~one~ ==hi== x==y==z\n"),
+            vec![
+                (Strikethrough, "~~gone~~", "~~", "~~"),
+                (Strikethrough, "~one~", "~", "~"),
+                (Mark, "==hi==", "==", "=="),
+                (Mark, "==y==", "==", "=="),
+            ]
+        );
+        // Code, links and unmatched delimiters are not styled.
+        assert_eq!(styles("`**no**` [[a==b==c]] ** x ** == y ==\n"), vec![]);
+        // A run around a link keeps it; Arabic text keeps byte offsets.
+        assert_eq!(
+            styles("**[[Ahmed]]** و **مهم**\n"),
+            vec![
+                (Strong, "**[[Ahmed]]**", "**", "**"),
+                (Strong, "**مهم**", "**", "**"),
+            ]
+        );
+    }
+
+    #[test]
+    fn heading_markers_are_exact() {
+        let markers = |body: &str| -> Vec<Vec<String>> {
+            analyze(body)
+                .headings
+                .iter()
+                .map(|h| h.markers.iter().map(|m| body[m.clone()].to_owned()).collect())
+                .collect()
+        };
+        assert_eq!(markers("# One\n"), vec![vec!["# ".to_owned()]]);
+        assert_eq!(markers("###   Three\n"), vec![vec!["###   ".to_owned()]]);
+        assert_eq!(
+            markers("## Closed ##\n"),
+            vec![vec!["## ".to_owned(), " ##".to_owned()]]
+        );
+        assert_eq!(markers("  ## Indented\n"), vec![vec!["## ".to_owned()]]);
+        assert_eq!(
+            markers("Setext\n===\n"),
+            vec![vec!["===".to_owned()]]
+        );
+        assert_eq!(markers("#\n"), vec![vec!["#".to_owned()]]);
+        let h = &analyze("x\n\n## عنوان\n").headings[0];
+        assert_eq!((h.text.as_str(), h.markers.clone()), ("عنوان", vec![3..6]));
     }
 }

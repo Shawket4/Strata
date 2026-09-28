@@ -190,6 +190,7 @@ fn samples() -> Vec<SyncOp> {
                 place_id: None,
                 person_id: Some(u(10)),
                 counterparty_id: None,
+                note: Some("for the audit".into()),
             }),
             None,
         ),
@@ -208,6 +209,10 @@ fn samples() -> Vec<SyncOp> {
         (
             Op::PlacePatch(EntityPatch {
                 id: u(11),
+                set_lists: BTreeMap::from([(
+                    "phone".to_owned(),
+                    vec!["+20 100".to_owned(), "+20 101".to_owned()],
+                )]),
                 ..EntityPatch::default()
             }),
             base.clone(),

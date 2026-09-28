@@ -147,13 +147,43 @@ fn check_patchable(key: &str) -> Result<(), ApplyError> {
     }
 }
 
-/// `entity.patch` / `document.patch` / `place.patch`: sets and removes scalar user fields
-/// and adds/removes aliases (kept in order, each once). `id` and `kind` are immutable;
+/// Whether `key` may be set to a list by `set_lists`: `aliases`, `tags` and any scalar user
+/// field (several phone numbers); never `id`/`kind`, relation lists or the custody fields.
+fn check_list_patchable(key: &str) -> Result<(), ApplyError> {
+    match KnownKey::from_name(key) {
+        Some(KnownKey::Aliases | KnownKey::Tags) => Ok(()),
+        Some(KnownKey::Relation(_)) => Err(ApplyError::NotPatchable(key.to_owned())),
+        _ => check_patchable(key),
+    }
+}
+
+/// A list value as `set_lists` writes it: items trimmed, empty items and repeats dropped
+/// (first occurrence kept); tags also lose a leading `#`.
+pub fn clean_list_value(key: &str, values: &[String]) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for v in values {
+        let mut t = v.trim();
+        if key == KnownKey::Tags.as_str() {
+            t = t.trim_start_matches('#').trim();
+        }
+        if !t.is_empty() && !out.iter().any(|o| o == t) {
+            out.push(t.to_owned());
+        }
+    }
+    out
+}
+
+/// `entity.patch` / `document.patch` / `place.patch`: sets and removes scalar user fields,
+/// sets list values (`set_lists`: each list replaces the key's value; an empty list removes
+/// it) and adds/removes aliases (kept in order, each once). `id` and `kind` are immutable;
 /// relation lists change through relation ops and `location`/`holder`/`last-holder`/`status`
 /// only through custody events (§6.12). Nothing is changed when any key is refused.
 pub fn entity_patch(fm: &mut Frontmatter, patch: &EntityPatch) -> Result<(), ApplyError> {
     for key in patch.set.keys().chain(&patch.unset) {
         check_patchable(key)?;
+    }
+    for key in patch.set_lists.keys() {
+        check_list_patchable(key)?;
     }
     let mut next = fm.clone();
     for (key, value) in &patch.set {
@@ -161,6 +191,16 @@ pub fn entity_patch(fm: &mut Frontmatter, patch: &EntityPatch) -> Result<(), App
     }
     for key in &patch.unset {
         next.remove(key)?;
+    }
+    for (key, values) in &patch.set_lists {
+        let values = clean_list_value(key, values);
+        match KnownKey::from_name(key) {
+            _ if values.is_empty() => {
+                next.remove(key)?;
+            }
+            Some(k @ (KnownKey::Aliases | KnownKey::Tags)) => next.set_list(k, values)?,
+            _ => next.set(key, vault_format::PropertyValue::List(values))?,
+        }
     }
     if !patch.add_aliases.is_empty() || !patch.remove_aliases.is_empty() {
         let mut aliases = next.aliases();
@@ -201,11 +241,19 @@ pub fn custody_event(
         person: resolve(op.person_id)?,
         counterparty: resolve(op.counterparty_id)?,
         citations,
+        note: op.note.as_deref().and_then(custody::clean_note),
     };
     // Round-trip through the line format so an event that the section parser would reject
-    // is refused now rather than written.
-    CustodyEvent::parse(&event.to_line())
-        .map_err(|e| ApplyError::InvalidCustodyEvent(e.to_string()))
+    // (or read back differently, e.g. a note of links only) is refused now rather than written.
+    let back = CustodyEvent::parse(&event.to_line())
+        .map_err(|e| ApplyError::InvalidCustodyEvent(e.to_string()))?;
+    if back == event {
+        Ok(back)
+    } else {
+        Err(ApplyError::InvalidCustodyEvent(
+            "the event does not read back unchanged".to_owned(),
+        ))
+    }
 }
 
 const CUSTODY: &str = "Custody";

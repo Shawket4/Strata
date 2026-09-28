@@ -84,6 +84,7 @@ fn entity_patch_sets_fields_and_aliases() {
         unset: vec!["phone".into()],
         add_aliases: vec!["A. Samir".into(), "أحمد سمير".into()],
         remove_aliases: vec!["Ahmed S.".into()],
+        set_lists: BTreeMap::new(),
     };
     assert_eq!(entity_patch(doc.frontmatter_mut(), &patch), Ok(()));
     assert_eq!(
@@ -122,6 +123,7 @@ fn custody_op(
         place_id: place.map(Ulid::from),
         person_id: person.map(Ulid::from),
         counterparty_id: None,
+        note: None,
     }
 }
 

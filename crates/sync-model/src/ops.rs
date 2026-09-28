@@ -518,6 +518,10 @@ pub struct EntityPatch {
     /// Aliases to remove.
     #[serde(default)]
     pub remove_aliases: Vec<String>,
+    /// List values to set, each replacing the whole list (`tags`, `aliases`, several phone
+    /// numbers); an empty list removes the key. Relation keys change through relation ops.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub set_lists: BTreeMap<String, Vec<String>>,
 }
 
 /// `entity.merge`: `id` (the loser) into `into_id` (the survivor).
@@ -576,6 +580,10 @@ pub struct DocumentCustody {
     pub person_id: Option<Ulid>,
     /// Third party involved.
     pub counterparty_id: Option<Ulid>,
+    /// The user's note on the event, written last on the custody line (one line; see
+    /// `vault_format::custody::clean_note`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 /// `place.create`.

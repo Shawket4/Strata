@@ -7,9 +7,15 @@
 //! - 2026-09-20 — returned-by [[Shady]] to [[Safe — Nasr City office]] — [[Capture 2026-09-20#^c1d2]]
 //! ```
 //!
-//! `- <date> — <type> <arguments>[ — <citation> [<citation> …]]`. Arguments are wikilinks: the
-//! type's primary argument without a keyword, others after `at`/`to`/`in` (place), `by`
-//! (person) or `with`/`from` (counterparty).
+//! `- <date> — <type> <arguments>[ — <citation> [<citation> …]][ — <note>]`. Arguments are
+//! wikilinks: the type's primary argument without a keyword, others after `at`/`to`/`in`
+//! (place), `by` (person) or `with`/`from` (counterparty). The optional note is free text the
+//! user wrote when recording the event ("Record a move"); it is the last part and is not a
+//! list of wikilinks only (that part is the citations):
+//!
+//! ```text
+//! - 2026-09-21 — handed-to [[Shady]] — for the audit
+//! ```
 //!
 //! Citations are required for AI-produced events (PLAN §6.12: "each cited"; enforced by
 //! [`crate::sections::validate_content`], which every AI write goes through). An event the
@@ -70,6 +76,15 @@ pub struct CustodyEvent {
     /// Citations (wikilinks to the notes/blocks stating the event). Empty only for an event
     /// the user recorded ([`Self::is_user_recorded`]); AI events always cite.
     pub citations: Vec<String>,
+    /// The user's note on the event (one line, see [`clean_note`]), written last.
+    pub note: Option<String>,
+}
+
+/// A custody note as written on the line: whitespace runs (line breaks included) become one
+/// space, and the text is trimmed; `None` when nothing is left.
+pub fn clean_note(text: &str) -> Option<String> {
+    let cleaned = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    (!cleaned.is_empty()).then_some(cleaned)
 }
 
 /// Why a custody line did not parse.
@@ -149,6 +164,10 @@ impl CustodyEvent {
                 out.push_str(c);
             }
         }
+        if let Some(note) = &self.note {
+            out.push_str(" — ");
+            out.push_str(note);
+        }
         out
     }
 
@@ -185,10 +204,25 @@ impl CustodyEvent {
             .ok_or(CustodyParseError::MissingSeparator)?;
         let body = &after_date[sep.len()..];
         let links = wikilink::find_all(body);
-        // No second separator: a user-recorded event without citations.
-        let (event, citations) = match last_separator_outside(body, &links) {
-            Some((end, start)) => (&body[..end], parse_citations(&body[start..])?),
-            None => (body, Vec::new()),
+        // Parts after the event: citations (wikilinks only), then the note (the rest, verbatim).
+        let seps = separators_outside(body, &links);
+        let (event, citations, note) = match seps.first() {
+            None => (body, Vec::new(), None),
+            Some(&(end, start)) => {
+                let next = seps.get(1).copied();
+                let part = &body[start..next.map_or(body.len(), |(e, _)| e)];
+                match parse_citations(part) {
+                    Ok(citations) => (
+                        &body[..end],
+                        citations,
+                        next.and_then(|(_, s)| clean_note(&body[s..])),
+                    ),
+                    Err(_) => match clean_note(&body[start..]) {
+                        Some(note) => (&body[..end], Vec::new(), Some(note)),
+                        None => (body, Vec::new(), None),
+                    },
+                }
+            }
         };
         let mut words = event.splitn(2, ' ');
         let kind_text = words.next().unwrap_or("");
@@ -203,6 +237,7 @@ impl CustodyEvent {
             person: None,
             counterparty: None,
             citations,
+            note,
         };
         ev.parse_arguments(words.next().unwrap_or(""))?;
         if let Some(p) = primary(kind)
@@ -250,24 +285,24 @@ impl CustodyEvent {
     }
 }
 
-/// Finds the last ` — ` (or `–`/`-`) outside wikilinks: (separator start, citations start).
-fn last_separator_outside(body: &str, links: &[WikiLink]) -> Option<(usize, usize)> {
-    let mut best = None;
+/// The ` — ` separators outside wikilinks, in order: (separator start, next part start). Only
+/// one kind counts: the em dash when the text has one outside links, else ` – `, else ` - `.
+fn separators_outside(body: &str, links: &[WikiLink]) -> Vec<(usize, usize)> {
     for sep in SEPARATORS {
+        let mut found = Vec::new();
         let mut from = 0;
         while let Some(rel) = body[from..].find(sep) {
             let at = from + rel;
-            if !links.iter().any(|l| l.span.contains(&at)) && best.is_none_or(|(b, _)| at > b) {
-                best = Some((at, at + sep.len()));
+            if !links.iter().any(|l| l.span.contains(&at)) {
+                found.push((at, at + sep.len()));
             }
             from = at + sep.len();
         }
-        // Prefer the em dash when present.
-        if best.is_some() {
-            return best;
+        if !found.is_empty() {
+            return found;
         }
     }
-    best
+    Vec::new()
 }
 
 fn parse_citations(text: &str) -> Result<Vec<String>, CustodyParseError> {
@@ -459,6 +494,7 @@ mod tests {
                 person: Some("[[Shady]]".into()),
                 counterparty: None,
                 citations: vec!["[[Capture 2026-09-20#^c1d2]]".into()],
+                note: None,
             })
         );
         assert_eq!(e.map(|e| e.to_line()).as_deref(), Ok(line));
@@ -474,6 +510,7 @@ mod tests {
                 person: Some("[[شادي]]".into()),
                 counterparty: Some("[[Watanya]]".into()),
                 citations: vec!["[[A#^x]]".into(), "[[B]]".into()],
+                note: None,
             };
             if primary(kind).is_none() {
                 e.counterparty = None;
@@ -484,6 +521,15 @@ mod tests {
             e.citations.clear();
             let line = e.to_line();
             assert!(!line.ends_with('—'), "{line}");
+            assert_eq!(CustodyEvent::parse(&line), Ok(e.clone()), "{line}");
+            // With a note, cited or not.
+            e.note = Some("for the audit — urgent".into());
+            let line = e.to_line();
+            assert!(line.ends_with("]] — for the audit — urgent"), "{line}");
+            assert_eq!(CustodyEvent::parse(&line), Ok(e.clone()), "{line}");
+            e.citations = vec!["[[C]]".into()];
+            let line = e.to_line();
+            assert!(line.ends_with(" — [[C]] — for the audit — urgent"), "{line}");
             assert_eq!(CustodyEvent::parse(&line), Ok(e), "{line}");
         }
     }
@@ -513,14 +559,6 @@ mod tests {
             ),
             ("- 2026-01-01 — lost —", E::Unexpected("—".into())),
             (
-                "- 2026-01-01 — handed-to [[x]] - see notes",
-                E::Unexpected("see notes".into()),
-            ),
-            (
-                "- 2026-01-01 — lost — see notes",
-                E::Unexpected("see notes".into()),
-            ),
-            (
                 "- 2026-01-01 — lost [[x]] — [[a]]",
                 E::Unexpected("[[x]]".into()),
             ),
@@ -543,6 +581,7 @@ mod tests {
                 person: Some("[[Shady]]".into()),
                 counterparty: None,
                 citations: vec![],
+                note: None,
             })
         );
         let e = e.expect("parsed");
@@ -573,6 +612,36 @@ mod tests {
             CustodyState::derive(&events).map(|s| (s.holder, s.status)),
             Some((Some("[[Shady]]".into()), DocumentStatus::CheckedOut))
         );
+    }
+
+    #[test]
+    fn notes_are_the_last_part() {
+        let parse = |line: &str| CustodyEvent::parse(line).map(|e| (e.citations, e.note));
+        let note = |s: &str| Some(s.to_owned());
+        assert_eq!(
+            parse("- 2026-01-01 — handed-to [[x]] - see notes"),
+            Ok((vec![], note("see notes")))
+        );
+        assert_eq!(
+            parse("- 2026-01-01 — lost — see notes"),
+            Ok((vec![], note("see notes")))
+        );
+        assert_eq!(
+            parse("- 2026-01-01 — lost — [[a]] [[b]] — kept in  the [[Safe]] — now"),
+            Ok((
+                vec!["[[a]]".to_owned(), "[[b]]".to_owned()],
+                note("kept in the [[Safe]] — now")
+            ))
+        );
+        // A part that is not only links is the note, citations absent.
+        assert_eq!(
+            parse("- 2026-01-01 — lost — [[a]] was here"),
+            Ok((vec![], note("[[a]] was here")))
+        );
+        // Links only after the event are citations, never a note.
+        assert_eq!(parse("- 2026-01-01 — lost — [[a]]"), Ok((vec!["[[a]]".to_owned()], None)));
+        assert_eq!(clean_note("  a\n  b\tc "), note("a b c"));
+        assert_eq!(clean_note(" \n "), None);
     }
 
     #[test]

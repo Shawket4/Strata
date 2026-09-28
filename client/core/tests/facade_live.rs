@@ -53,6 +53,9 @@ fn local_titles(query: &str) -> Vec<String> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_background_loop_pushes_pulls_and_follows_events() {
     let w = World::new().await;
+    // The facade runs on the system clock; the server refuses creation times ahead of its
+    // own, so its (fake) clock starts at the real time here.
+    w.db.clock.set(chrono::Utc::now());
     let alice_id = w.account("alice", UserRole::Member).await;
     w.account("root", UserRole::Admin).await;
     let dir = tempfile::TempDir::new().expect("app data");
@@ -91,11 +94,6 @@ async fn the_background_loop_pushes_pulls_and_follows_events() {
     .expect("create")
     .id
     .expect("created");
-    for i in 0..20 {
-        tokio::time::sleep(Duration::from_millis(250)).await;
-        let asked = app::sign_out(false).await.expect("probe");
-        eprintln!("probe {i}: {asked:?} state {:?}", app::dismiss_pending().map(|s| s.kind));
-    }
     let signal = next_signal(&mut events).await;
     assert!(
         matches!(signal, EventSignal::Changed { .. }),
