@@ -251,7 +251,8 @@ jobs:
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     permissions:
-      contents: write
+      actions: read # gh run download: this run's artifacts (private repository)
+      contents: write # gh release create / delete
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
