@@ -939,6 +939,8 @@ pub async fn recluster_graph(
 }
 /// Liveness probe.
 ///
+/// `HEAD` answers with the same status and headers and no body.
+///
 /// `GET /api/v1/health`
 pub async fn health(client: &crate::Client) -> ::std::result::Result<types::Health, crate::Error> {
     let request = crate::Request::new(

@@ -1,4 +1,4 @@
-//! `GET /api/v1/health`: unauthenticated liveness. Reveals nothing but "the process answers".
+//! `GET /api/v1/health` (and `HEAD`): unauthenticated liveness. Reveals nothing but "the process answers".
 
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -21,6 +21,8 @@ pub struct Health {
 }
 
 /// Liveness probe.
+///
+/// `HEAD` answers with the same status and headers and no body.
 #[utoipa::path(
     get,
     path = "/health",

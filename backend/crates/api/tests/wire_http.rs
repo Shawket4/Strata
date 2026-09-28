@@ -370,6 +370,20 @@ async fn health_is_exact_and_conforms_to_the_contract() {
 }
 
 #[actix_web::test]
+async fn health_answers_head_like_get() {
+    // Uptime monitors and `curl -I` probe with HEAD; it must not be a 404 or 405.
+    let req = test::TestRequest::default()
+        .method(actix_web::http::Method::HEAD)
+        .uri("/api/v1/health");
+    let reply = send(req).await;
+    assert_eq!(reply.status, StatusCode::OK);
+    assert_eq!(
+        reply.content_type.as_deref(),
+        Some("application/vnd.msgpack")
+    );
+}
+
+#[actix_web::test]
 async fn every_problem_response_conforms_to_the_problem_schema() {
     let contract = Contract::production();
     let reply = send(test::TestRequest::get().uri("/api/v1/nope")).await;

@@ -61,6 +61,7 @@ fn health_operation_is_public_msgpack_and_carries_standard_responses() {
         &json!({
             "operationId": "health",
             "summary": "Liveness probe.",
+            "description": "`HEAD` answers with the same status and headers and no body.",
             "tags": ["system"],
             "security": [{}],
             "responses": {

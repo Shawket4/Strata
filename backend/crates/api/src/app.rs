@@ -3,7 +3,7 @@
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceFactory, ServiceRequest, ServiceResponse};
 use actix_web::middleware::{ErrorHandlers, from_fn};
-use actix_web::{Error, Scope, web};
+use actix_web::{Error, Scope, guard, web};
 
 use crate::health;
 use crate::wire::negotiate::{problemize, require_msgpack};
@@ -20,7 +20,14 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// Every production route, relative to [`API_PREFIX`]. Endpoint authors add theirs here and
 /// list the handler in [`crate::openapi::ApiDoc`].
 pub fn routes(cfg: &mut web::ServiceConfig) {
-    cfg.route("/health", web::get().to(health::health));
+    // HEAD answers too (uptime monitors and `curl -I`); actix sends the GET headers without
+    // the body. It is the same `health` operation, so the contract lists it once.
+    cfg.route(
+        "/health",
+        web::route()
+            .guard(guard::Any(guard::Get()).or(guard::Head()))
+            .to(health::health),
+    );
     crate::routes::auth::configure(cfg);
     crate::routes::me::configure(cfg);
     crate::routes::devices::configure(cfg);

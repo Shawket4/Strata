@@ -11206,6 +11206,7 @@
     },
     "/api/v1/health": {
       "get": {
+        "description": "`HEAD` answers with the same status and headers and no body.",
         "operationId": "health",
         "responses": {
           "200": {

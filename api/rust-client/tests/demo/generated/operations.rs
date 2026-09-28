@@ -385,6 +385,8 @@ pub async fn update_device(
 }
 /// Liveness probe.
 ///
+/// `HEAD` answers with the same status and headers and no body.
+///
 /// `GET /api/v1/health`
 pub async fn health(
     client: &::strata_client::Client,
