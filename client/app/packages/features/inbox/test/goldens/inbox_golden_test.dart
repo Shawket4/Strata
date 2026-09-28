@@ -11,9 +11,9 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
 import '../helpers/fixtures.dart';
-import '../helpers/harness.dart';
 
-FakeCoreApi _fake(InboxView view) => FakeCoreApi()..inbox.add(view);
+FakeCoreApi _fake(InboxView view) =>
+    FakeCoreApi()..inboxFiltered[InboxFilter.all].add(view);
 
 /// The inbox (captures with proposals, link-or-create) at compact / medium /
 /// expanded × light/dark × LTR/RTL (1.0; compact also 2.0), and the custody,
@@ -21,41 +21,57 @@ FakeCoreApi _fake(InboxView view) => FakeCoreApi()..inbox.add(view);
 void main() {
   setUpAll(loadStrataFonts);
 
-  for (final v in goldenMatrix()) {
+  for (final v in goldenVariants()) {
     unawaited(
       goldenTest(
         'inbox $v',
         fileName: 'inbox_${v.id}',
-        builder: () =>
-            goldenScreen(v, const InboxScreen(), _fake(InboxFixtures.full)),
+        builder: () => goldenFrame(
+          v,
+          const InboxScreen(),
+          fake: _fake(InboxFixtures.full),
+          scaffold: true,
+        ),
       ),
     );
   }
-  for (final v in goldenMatrix(
+  for (final v in goldenVariants(
     sizes: const {'compact': StrataTestSizes.compact},
   )) {
     unawaited(
       goldenTest(
         'inbox custody $v',
         fileName: 'inbox_custody_${v.id}',
-        builder: () =>
-            goldenScreen(v, const InboxScreen(), _fake(InboxFixtures.custody)),
+        builder: () => goldenFrame(
+          v,
+          const InboxScreen(),
+          fake: _fake(InboxFixtures.custody),
+          scaffold: true,
+        ),
       ),
     );
     unawaited(
       goldenTest(
         'inbox duplicate $v',
         fileName: 'inbox_duplicate_${v.id}',
-        builder: () =>
-            goldenScreen(v, const InboxScreen(), _fake(InboxFixtures.others)),
+        builder: () => goldenFrame(
+          v,
+          const InboxScreen(),
+          fake: _fake(InboxFixtures.others),
+          scaffold: true,
+        ),
       ),
     );
     unawaited(
       goldenTest(
         'inbox empty $v',
         fileName: 'inbox_empty_${v.id}',
-        builder: () =>
-            goldenScreen(v, const InboxScreen(), _fake(InboxFixtures.empty)),
+        builder: () => goldenFrame(
+          v,
+          const InboxScreen(),
+          fake: _fake(InboxFixtures.empty),
+          scaffold: true,
+        ),
       ),
     );
   }

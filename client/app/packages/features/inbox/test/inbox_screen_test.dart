@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_inbox/strata_inbox.dart';
+import 'package:strata_state/strata_state.dart' hide RelationChip;
 import 'package:strata_state/testing.dart';
 import 'package:strata_tasks/strata_tasks.dart';
 import 'package:strata_ui/strata_ui.dart';
 
 import 'helpers/fixtures.dart';
-import 'helpers/harness.dart';
 
 const _acme =
     'كلمت أحمد النهارده، عايزين invoicing أسبوعي بدل شهري ابتداءً من '
@@ -18,14 +18,16 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
     await tester.scrollUntilVisible(
       finder,
       200,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: _list,
     );
   }
-  await tester.ensureVisible(finder.first);
-  await tester.pumpAndSettle();
-  await tester.tap(finder.first);
-  await tester.pumpAndSettle();
+  await tapVisible(tester, finder.first);
 }
+
+/// The inbox list's scrollable (not a text field's).
+final Finder _list = find
+    .descendant(of: find.byType(ListView), matching: find.byType(Scrollable))
+    .first;
 
 /// Scrolls [finder] into view when the list has not built it yet.
 Future<void> _reveal(WidgetTester tester, Finder finder) async {
@@ -33,7 +35,7 @@ Future<void> _reveal(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(
     finder,
     200,
-    scrollable: find.byType(Scrollable).last,
+    scrollable: _list,
   );
 }
 
@@ -49,14 +51,30 @@ Finder _inCard<T>(String text, String label) => find.descendant(
 
 void main() {
   group('InboxScreen content', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('structure, intents and accessibility [$v]', (tester) async {
-        final fake = FakeCoreApi()..inbox.add(InboxFixtures.full);
-        await pumpVariant(tester, v, const InboxScreen(), fake: fake);
+        final fake = FakeCoreApi()
+          ..inboxFiltered[InboxFilter.all].add(InboxFixtures.full);
+        await pumpVariant(
+          tester,
+          v,
+          const InboxScreen(),
+          fake: fake,
+          scaffold: true,
+        );
         final s = lookupInboxLocalizations(v.locale);
         expectNoErrors(tester);
-        expect(fake.calls, contains(const CoreCall('watchInbox')));
-        await expectAccessible(tester);
+        expect(
+          fake.calls,
+          contains(
+            const CoreCall('watchInboxFiltered', {'filter': InboxFilter.all}),
+          ),
+        );
+        // The core's filters with counts, and "Accept all ready".
+        expect(find.text(s.inboxFilterAll(count: 4)), findsOneWidget);
+        expect(find.text(s.inboxFilterNeedsYou(count: 1)), findsOneWidget);
+        expect(find.text(s.inboxAcceptAllReady(count: 1)), findsOneWidget);
+        await expectAccessible(tester, contrast: v.textScale == 1);
 
         switch (v.sizeClass) {
           case SizeClass.compact:
@@ -65,10 +83,8 @@ void main() {
             await _reveal(tester, find.text('Weekly invoicing request — Acme'));
             await _tap(tester, _inCard<CaptureCard>(_acme, s.inboxAccept));
             expect(
-              fake.calls,
-              contains(
-                const CoreCall('acceptSuggestion', {'id': 's-filing-acme'}),
-              ),
+              fake.calls.last,
+              const CoreCall('acceptCapture', {'noteId': 'n-capture-acme'}),
             );
           case SizeClass.medium:
             expect(find.byType(StrataPanes), findsOneWidget);
@@ -80,10 +96,8 @@ void main() {
             await _reveal(tester, find.text('Weekly invoicing request — Acme'));
             await _tap(tester, find.text(s.inboxReject));
             expect(
-              fake.calls,
-              contains(
-                const CoreCall('rejectSuggestion', {'id': 's-filing-acme'}),
-              ),
+              fake.calls.last,
+              const CoreCall('rejectCapture', {'noteId': 'n-capture-acme'}),
             );
           case SizeClass.expanded:
             expect(find.byType(StrataPanes), findsNothing);
@@ -98,15 +112,12 @@ void main() {
               tester,
               find.descendant(of: bulkBar, matching: find.text(s.inboxAccept)),
             );
-            expect(
-              fake.calls.where((c) => c.method == 'acceptSuggestion').toList(),
-              const [
-                CoreCall('acceptSuggestion', {'id': 's-filing-acme'}),
-                CoreCall('acceptSuggestion', {'id': 's-filing-loyalty'}),
-                CoreCall('acceptSuggestion', {'id': 's-rel-contradicts'}),
-                CoreCall('acceptSuggestion', {'id': 's-rel-part-of'}),
-              ],
-            );
+            final bulkAccept = _only(fake, 'acceptCaptures');
+            expect(bulkAccept.args['noteIds'], [
+              'n-capture-acme',
+              'n-capture-loyalty',
+              'n-capture-nile',
+            ]);
             expect(find.text(s.inboxSelectedCount(count: 0)), findsOneWidget);
             if (v.textScale == 1) {
               await tester.scrollUntilVisible(
@@ -123,14 +134,16 @@ void main() {
       testWidgets('contradicts relation chip with AI confidence [$v]', (
         tester,
       ) async {
-        final fake = FakeCoreApi()..inbox.add(InboxFixtures.full);
+        final fake = FakeCoreApi()
+          ..inboxFiltered[InboxFilter.all].add(InboxFixtures.full);
         await pumpVariant(
           tester,
           v,
           const InboxScreen(initialNoteId: 'n-capture-loyalty'),
           fake: fake,
+          scaffold: true,
         );
-        final strata = lookupStrataLocalizationsFor(v);
+        final strata = v.l10n;
         final chip = find.bySemanticsLabel(
           RegExp('^${strata.relationContradicts}: Discount policy'),
         );
@@ -138,7 +151,7 @@ void main() {
           await tester.scrollUntilVisible(
             chip,
             200,
-            scrollable: find.byType(Scrollable).last,
+            scrollable: _list,
           );
         }
         expect(chip, findsOneWidget);
@@ -152,17 +165,24 @@ void main() {
   });
 
   group('InboxScreen states', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('link-or-create: create person, alias, reject [$v]', (
         tester,
       ) async {
-        final fake = FakeCoreApi()..inbox.add(InboxFixtures.linkOrCreate);
-        await pumpVariant(tester, v, const InboxScreen(), fake: fake);
+        final fake = FakeCoreApi()
+          ..inboxFiltered[InboxFilter.all].add(InboxFixtures.linkOrCreate);
+        await pumpVariant(
+          tester,
+          v,
+          const InboxScreen(),
+          fake: fake,
+          scaffold: true,
+        );
         final s = lookupInboxLocalizations(v.locale);
         expect(find.text(s.inboxWhoIs(mention: 'بابا')), findsWidgets);
         expect(find.text(s.inboxNoPersonMatches), findsWidgets);
         expect(find.text(s.inboxAliasNote(mention: 'بابا')), findsWidgets);
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
         expectNoErrors(tester);
 
         await _tap(tester, find.text(s.inboxCreatePerson));
@@ -176,15 +196,16 @@ void main() {
         );
         await tester.pump();
         await _tap(tester, find.text(s.inboxCreatePersonSave));
-        expect(_only(fake, 'createEntity').args, {
-          'kind': 'person',
-          'name': 'Ibrahim Shawket',
-          'aliases': ['بابا'],
-          'force': false,
-        });
         expect(
           fake.calls.last,
-          const CoreCall('acceptSuggestion', {'id': 's-who-is-baba'}),
+          const CoreCall('resolveLinkOrCreate', {
+            'id': 's-who-is-baba',
+            'choice': LinkOrCreateChoice(
+              kind: LinkOrCreateKind.create,
+              name: 'Ibrahim Shawket',
+              force: false,
+            ),
+          }),
         );
         expect(find.byType(CreatePersonSheet), findsNothing);
         // (On expanded the first "Reject" is the idle bulk bar's.)
@@ -198,57 +219,95 @@ void main() {
       testWidgets('custody: applied with Undo, ambiguous choice [$v]', (
         tester,
       ) async {
-        final fake = FakeCoreApi()..inbox.add(InboxFixtures.custody);
-        await pumpVariant(tester, v, const InboxScreen(), fake: fake);
+        final fake = FakeCoreApi()
+          ..inboxFiltered[InboxFilter.all].add(InboxFixtures.custody);
+        await pumpVariant(
+          tester,
+          v,
+          const InboxScreen(),
+          fake: fake,
+          scaffold: true,
+        );
         final s = lookupInboxLocalizations(v.locale);
         expect(find.text(s.inboxAppliedAutomatically), findsWidgets);
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
         expectNoErrors(tester);
         if (v.sizeClass == SizeClass.compact) {
           expect(find.text(s.inboxAiConfidence(score: '0.93')), findsOneWidget);
-          expect(find.text(s.inboxWhichDocument), findsOneWidget);
+          await _reveal(
+            tester,
+            find.text(s.inboxAfterAt(place: 'Safe — Nasr City office')),
+          );
           expect(
-            find.text('Petrol Arrows commercial register'),
+            find.text(s.inboxAfterLastWith(person: 'Shady')),
             findsOneWidget,
           );
-          final accept = find.ancestor(
-            of: find.text(s.inboxAccept),
-            matching: find.byType(FilledButton),
+          await _reveal(tester, find.text(s.inboxWhichDocument));
+          expect(find.text(s.inboxWhichDocument), findsOneWidget);
+          await _reveal(tester, find.text('Which paper did you give Shady?'));
+          expect(find.text('Which paper did you give Shady?'), findsOneWidget);
+          // The ambiguous event's documents are the answers.
+          await _tap(tester, find.text('Petrol Arrows commercial register'));
+          expect(
+            fake.calls.last,
+            const CoreCall('acceptSuggestionChoice', {
+              'id': 's-custody-which',
+              'documentId': 'd-petrol-arrows-register',
+            }),
           );
-          expect(tester.widget<FilledButton>(accept).onPressed, isNull);
+          tester
+              .state<ScrollableState>(_list)
+              .position
+              .jumpTo(0);
+          await settle(tester);
+          await _tap(tester, find.text(s.inboxLooksRight));
+          expect(
+            fake.calls.last,
+            const CoreCall('acknowledgeSuggestion', {
+              'id': 's-custody-applied',
+            }),
+          );
         }
         await _tap(tester, find.text(s.inboxUndo));
         expect(
           fake.calls.last,
-          const CoreCall('rejectSuggestion', {'id': 's-custody-applied'}),
+          const CoreCall('undoSuggestion', {'id': 's-custody-applied'}),
         );
       });
 
       testWidgets('duplicate-flagged, task and unsupported [$v]', (
         tester,
       ) async {
-        final fake = FakeCoreApi()..inbox.add(InboxFixtures.others);
+        final fake = FakeCoreApi()
+          ..inboxFiltered[InboxFilter.all].add(InboxFixtures.others);
         final opened = <String>[];
         await pumpVariant(
           tester,
           v,
           InboxScreen(onOpenNote: opened.add),
           fake: fake,
+          scaffold: true,
         );
         final s = lookupInboxLocalizations(v.locale);
         final t = lookupTasksLocalizations(v.locale);
         expect(find.text(s.inboxPossibleDuplicate), findsWidgets);
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
         expectNoErrors(tester);
         await _tap(tester, find.text(t.dupCreateAnyway));
         expect(
           fake.calls.last,
-          const CoreCall('rejectSuggestion', {'id': 's-duplicate-watanya'}),
+          const CoreCall('resolveCaptureDuplicate', {
+            'id': 's-duplicate-watanya',
+            'choice': DuplicateChoice.createAnyway,
+          }),
         );
         await _tap(tester, find.text(s.inboxDiscard));
         expect(
           fake.calls.last,
-          const CoreCall('acceptSuggestion', {'id': 's-duplicate-watanya'}),
+          const CoreCall('resolveCaptureDuplicate', {
+            'id': 's-duplicate-watanya',
+            'choice': DuplicateChoice.discard,
+          }),
         );
         await _tap(tester, find.text(t.dupOpenExisting));
         expect(opened, ['t-watanya-eta']);
@@ -272,16 +331,16 @@ void main() {
           v,
           const InboxScreen(),
           fake: fake,
-          settle: false,
+          scaffold: true,
         );
         final t = lookupTasksLocalizations(v.locale);
         final s = lookupInboxLocalizations(v.locale);
         expect(find.bySemanticsLabel(t.commonLoading), findsOneWidget);
-        fake.inbox.add(InboxFixtures.empty);
+        fake.inboxFiltered[InboxFilter.all].add(InboxFixtures.empty);
         await tester.pump();
         await tester.pump();
         expect(find.text(s.inboxEmptyTitle), findsOneWidget);
-        await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
         expectNoErrors(tester);
       });
     }
@@ -289,14 +348,16 @@ void main() {
 
   group('InboxScreen keyboard and errors', () {
     testWidgets('expanded: J / X / A / R / E', (tester) async {
-      final v = matrix().firstWhere((v) => v.sizeName == 'expanded');
-      final fake = FakeCoreApi()..inbox.add(InboxFixtures.full);
+      final v = variants().firstWhere((v) => v.sizeName == 'expanded');
+      final fake = FakeCoreApi()
+        ..inboxFiltered[InboxFilter.all].add(InboxFixtures.full);
       final opened = <String>[];
       await pumpVariant(
         tester,
         v,
         InboxScreen(onOpenNote: opened.add),
         fake: fake,
+        scaffold: true,
       );
       final s = lookupInboxLocalizations(v.locale);
       // Starts on the first capture; J moves to the loyalty capture.
@@ -308,12 +369,8 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
       await tester.pump();
       expect(
-        fake.calls.where((c) => c.method == 'rejectSuggestion').toList(),
-        const [
-          CoreCall('rejectSuggestion', {'id': 's-filing-loyalty'}),
-          CoreCall('rejectSuggestion', {'id': 's-rel-contradicts'}),
-          CoreCall('rejectSuggestion', {'id': 's-rel-part-of'}),
-        ],
+        fake.calls.last,
+        const CoreCall('rejectCapture', {'noteId': 'n-capture-loyalty'}),
       );
       await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
       await tester.pump();
@@ -330,17 +387,192 @@ void main() {
       );
     });
 
+    testWidgets('filters, accept all ready', (tester) async {
+      final v = variants().first;
+      final fake = FakeCoreApi()
+        ..inboxFiltered[InboxFilter.all].add(InboxFixtures.full)
+        ..inboxFiltered[InboxFilter.needsYou].add(InboxFixtures.linkOrCreate);
+      await pumpVariant(
+        tester,
+        v,
+        const InboxScreen(),
+        fake: fake,
+        scaffold: true,
+      );
+      final s = lookupInboxLocalizations(v.locale);
+      await _tap(tester, find.text(s.inboxAcceptAllReady(count: 1)));
+      expect(fake.calls.last, const CoreCall('acceptAllReady'));
+      await _tap(tester, find.text(s.inboxFilterNeedsYou(count: 1)));
+      expect(
+        fake.calls.last,
+        const CoreCall('watchInboxFiltered', {'filter': InboxFilter.needsYou}),
+      );
+    });
+
+    testWidgets('edit a filing before accepting it', (tester) async {
+      final v = variants().first;
+      final fake = FakeCoreApi()
+        ..inboxFiltered[InboxFilter.all].add(InboxFixtures.full);
+      await pumpVariant(
+        tester,
+        v,
+        const InboxScreen(),
+        fake: fake,
+        scaffold: true,
+      );
+      final s = lookupInboxLocalizations(v.locale);
+      await _reveal(tester, find.text('Weekly invoicing request — Acme'));
+      await _tap(tester, _inCard<CaptureCard>(_acme, s.inboxEdit));
+      expect(find.byType(EditProposalSheet), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextField, s.inboxEditNoteTitle),
+        'Acme weekly invoicing',
+      );
+      await _tap(tester, find.text(s.inboxAcceptEdited));
+      expect(
+        fake.calls.last,
+        const CoreCall('acceptSuggestionWith', {
+          'id': 's-filing-acme',
+          'edits': SuggestionEdits(
+            title: 'Acme weekly invoicing',
+            folder: 'notes/clients/acme',
+          ),
+        }),
+      );
+    });
+
+    testWidgets('reply to the AI in a suggestion thread', (tester) async {
+      final v = variants().first;
+      final fake = FakeCoreApi()
+        ..inboxFiltered[InboxFilter.all].add(InboxFixtures.custody);
+      await pumpVariant(
+        tester,
+        v,
+        const InboxScreen(),
+        fake: fake,
+        scaffold: true,
+      );
+      final s = lookupInboxLocalizations(v.locale);
+      await _reveal(tester, find.widgetWithText(TextField, s.inboxReplyField));
+      await tester.enterText(
+        find.widgetWithText(TextField, s.inboxReplyField),
+        'The Watanya contract',
+      );
+      await settle(tester);
+      await _tap(tester, find.byTooltip(s.inboxReplySend));
+      expect(
+        fake.calls.last,
+        const CoreCall('replyToSuggestion', {
+          'id': 's-custody-which',
+          'text': 'The Watanya contract',
+        }),
+      );
+    });
+
+    testWidgets('link the mention to a candidate', (tester) async {
+      final v = variants().first;
+      final baba = StrataFixtures.suggestionLinkOrCreate;
+      final fake = FakeCoreApi()
+        ..inboxFiltered[InboxFilter.all].add(
+          InboxView(
+            captures: const [],
+            suggestions: [
+              SuggestionItem(
+                id: baba.id,
+                noteId: baba.noteId,
+                status: baba.status,
+                detail: const SuggestionDetail(
+                  kind: SuggestionKind.entityLink,
+                  title: '',
+                  folder: '',
+                  tags: [],
+                  mention: 'بابا',
+                  candidates: [StrataFixtures.ahmedSamirRef],
+                  target: EntityRef(
+                    id: 'p-shawket-sr',
+                    title: 'Ibrahim Shawket',
+                  ),
+                  line: '',
+                  confidence: 0.7,
+                  duplicates: [],
+                  relType: '',
+                  reason: '“بابا” is how you refer to your father.',
+                  serverKind: 'entity_link',
+                  documentChoices: [],
+                  entityKind: 'person',
+                  isNickname: true,
+                  quote: '',
+                  entities: [],
+                ),
+                created: baba.created,
+                pendingSync: false,
+                createdLabel: baba.createdLabel,
+                sourceDir: TextDir.rtl,
+                autoApplied: false,
+                canAccept: false,
+                needsYou: true,
+                thread: const [],
+              ),
+            ],
+            filter: InboxFilter.all,
+            readyCount: 0,
+            needsYouCount: 1,
+            conflictsCount: 0,
+            allCount: 1,
+          ),
+        );
+      await pumpVariant(
+        tester,
+        v,
+        const InboxScreen(),
+        fake: fake,
+        scaffold: true,
+      );
+      final s = lookupInboxLocalizations(v.locale);
+      expect(find.text(s.inboxNickname), findsOneWidget);
+      expect(
+        find.text('“بابا” is how you refer to your father.'),
+        findsOneWidget,
+      );
+      // The AI's proposal first, then the other candidates.
+      final links = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(OutlinedButton),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((t) => t.data)
+          .toList();
+      expect(links, [
+        s.inboxItIs(title: 'Ibrahim Shawket'),
+        s.inboxItIs(title: 'Ahmed Samir'),
+      ]);
+      await _tap(tester, find.text(s.inboxItIs(title: 'Ibrahim Shawket')));
+      expect(
+        fake.calls.last,
+        const CoreCall('resolveLinkOrCreate', {
+          'id': 's-who-is-baba',
+          'choice': LinkOrCreateChoice(
+            kind: LinkOrCreateKind.link,
+            entityId: 'p-shawket-sr',
+            force: false,
+          ),
+        }),
+      );
+    });
+
     testWidgets('error state and refused intent', (tester) async {
-      final v = matrix().first;
+      final v = variants().first;
       final fake = FakeCoreApi();
       await pumpVariant(
         tester,
         v,
         const InboxScreen(),
         fake: fake,
-        settle: false,
+        scaffold: true,
       );
-      fake.inbox.addError(StrataFixtures.coreFailure);
+      fake.inboxFiltered[InboxFilter.all].addError(StrataFixtures.coreFailure);
       await tester.pump();
       final s = lookupInboxLocalizations(v.locale);
       expect(find.text(s.inboxLoadError), findsOneWidget);

@@ -82,7 +82,7 @@ async fn recurring_completion_writes_exactly_two_lines_in_one_commit() {
     );
     assert!(task.id.starts_with("t-"));
     let home = format!(
-        "---\nid: {}\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\n---\n## September 2026\n{line}\n",
+        "---\nid: {}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\n---\n## September 2026\n{line}\n",
         task.note_id
     );
     assert_eq!(h.read(alice.id, "tasks/Tasks.md"), home);
@@ -404,7 +404,7 @@ async fn duplicate_tasks_are_refused_until_forced_and_keep_both_is_remembered() 
     assert_eq!(
         sidecar,
         format!(
-            "{{\n  \"id\": \"{}\",\n  \"relations\": [],\n  \"rejected\": [],\n  \"keep_both_items\": [\n    {{\n      \"a\": \"{a}\",\n      \"at\": \"2026-09-27T12:00:00+00:00\",\n      \"b\": \"{b}\",\n      \"kind\": \"task\"\n    }}\n  ]\n}}\n",
+            "{{\n  \"id\": \"{}\",\n  \"relations\": [],\n  \"rejected\": [],\n  \"keep_both_items\": [\n    {{\n      \"a\": \"{a}\",\n      \"at\": \"2026-09-27T12:00:00Z\",\n      \"b\": \"{b}\",\n      \"kind\": \"task\"\n    }}\n  ]\n}}\n",
             first.note_id
         )
     );

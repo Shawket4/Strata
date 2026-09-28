@@ -92,7 +92,7 @@ async fn entities_in_both_scripts_duplicates_force_keep_both_and_merge() {
     assert_eq!(
         h.read(alice.id, "people/Watanya.md"),
         format!(
-            "---\nid: {}\nkind: person\naliases: [واتانيا]\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\nrole: Accountant\n---\n## Notes\n",
+            "---\nid: {}\nkind: person\naliases: [واتانيا]\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\nrole: Accountant\n---\n## Notes\n",
             watanya.id
         )
     );
@@ -177,7 +177,7 @@ async fn entities_in_both_scripts_duplicates_force_keep_both_and_merge() {
     assert_eq!(
         h.read(alice.id, "people/Watanya.md"),
         format!(
-            "---\nid: {}\nkind: person\naliases: [واتانيا]\ntags: [client]\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\nemail: w@example.com\n---\n## Notes\n",
+            "---\nid: {}\nkind: person\naliases: [واتانيا]\ntags: [client]\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\nemail: w@example.com\n---\n## Notes\n",
             watanya.id
         )
     );

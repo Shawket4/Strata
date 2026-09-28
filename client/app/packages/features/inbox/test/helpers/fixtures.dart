@@ -16,6 +16,12 @@ SuggestionDetail _detail({
   String relType = '',
   String reason = '',
   String serverKind = '',
+  List<EntityRef> documentChoices = const [],
+  EntityRef? location,
+  EntityRef? holder,
+  EntityRef? lastHolder,
+  String quote = '',
+  String? dateLabel,
 }) => SuggestionDetail(
   kind: kind,
   title: title,
@@ -31,11 +37,15 @@ SuggestionDetail _detail({
   relType: relType,
   reason: reason,
   serverKind: serverKind,
-  documentChoices: [],
+  documentChoices: documentChoices,
+  location: location,
+  holder: holder,
+  lastHolder: lastHolder,
   entityKind: '',
   isNickname: false,
-  quote: '',
-  entities: [],
+  quote: quote,
+  dateLabel: dateLabel,
+  entities: const [],
 );
 
 SuggestionItem _suggestion(
@@ -44,6 +54,9 @@ SuggestionItem _suggestion(
   String? noteId,
   String status = 'pending',
   bool pendingSync = false,
+  bool autoApplied = false,
+  List<ThreadMessage> thread = const [],
+  String? sourceText,
 }) => SuggestionItem(
   id: id,
   noteId: noteId,
@@ -51,12 +64,13 @@ SuggestionItem _suggestion(
   detail: detail,
   created: DateTime.utc(2026, 9, 27, 8),
   pendingSync: pendingSync,
-  createdLabel: '',
-  sourceDir: TextDir.ltr,
-  autoApplied: false,
-  canAccept: false,
+  createdLabel: '08:00',
+  sourceText: sourceText,
+  sourceDir: TextDir.rtl,
+  autoApplied: autoApplied,
+  canAccept: !autoApplied,
   needsYou: false,
-  thread: [],
+  thread: thread,
 );
 
 /// Inbox fixtures beyond `StrataFixtures` (SCREEN_SPEC sample content).
@@ -123,8 +137,13 @@ abstract final class InboxFixtures {
       document: StrataFixtures.watanyaContractRef,
       line: 'Returned to Safe — Nasr City office · last holder Shady',
       confidence: 0.93,
+      location: StrataFixtures.safeRef,
+      lastHolder: StrataFixtures.shadyRef,
+      quote: 'شادي رجع العقد الخزنة',
+      dateLabel: 'Today',
     ),
     status: 'accepted',
+    autoApplied: true,
   );
 
   static final SuggestionItem custodyAmbiguous = _suggestion(
@@ -132,15 +151,27 @@ abstract final class InboxFixtures {
     _detail(
       kind: SuggestionKind.custody,
       line: 'Handed to Shady · today',
-      candidates: const [
+      documentChoices: const [
         StrataFixtures.watanyaContractRef,
         EntityRef(
           id: 'd-petrol-arrows-register',
           title: 'Petrol Arrows commercial register',
         ),
       ],
+      holder: StrataFixtures.shadyRef,
       confidence: 0.62,
     ),
+    sourceText: 'اديت الورق لشادي',
+    thread: const [
+      ThreadMessage(
+        id: 'm-1',
+        author: 'ai',
+        text: 'Which paper did you give Shady?',
+        textDir: TextDir.ltr,
+        createdLabel: '08:01',
+        pendingSync: false,
+      ),
+    ],
   );
 
   static final SuggestionItem duplicate = _suggestion(
@@ -175,10 +206,10 @@ abstract final class InboxFixtures {
     ],
     suggestions: [StrataFixtures.suggestionLinkOrCreate],
     filter: InboxFilter.all,
-    readyCount: 0,
-    needsYouCount: 0,
+    readyCount: 1,
+    needsYouCount: 1,
     conflictsCount: 0,
-    allCount: 0,
+    allCount: 4,
   );
 
   /// Custody items (CustodyInboxCompact).

@@ -48,7 +48,7 @@ async fn capture_is_never_refused_and_duplicates_become_suggestions() {
     assert_eq!(
         h.read(alice.id, "inbox/2026-09-27-120000.md"),
         format!(
-            "---\nid: {}\ncreated: 2026-09-27T12:00:00+00:00\n---\n{text}\n",
+            "---\nid: {}\ncreated: 2026-09-27T12:00:00Z\n---\n{text}\n",
             first.note.id
         )
     );
@@ -211,7 +211,7 @@ async fn relations_add_retype_remove_and_ai_rejections_stick() {
     assert_eq!(
         plan.content,
         format!(
-            "---\nid: {}\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\nsupports: [\"[[Budget]]\"]\n---\nThe plan.\n",
+            "---\nid: {}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\nsupports: [\"[[Budget]]\"]\n---\nThe plan.\n",
             a.id
         )
     );

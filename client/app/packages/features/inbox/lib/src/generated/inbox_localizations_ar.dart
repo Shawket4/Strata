@@ -142,12 +142,6 @@ class InboxLocalizationsAr extends InboxLocalizations {
   String get inboxPossibleMatches => 'تطابقات محتملة في خزنتك:';
 
   @override
-  String get inboxLinkExisting => 'ربط بشخص موجود…';
-
-  @override
-  String get inboxLinkUnavailable => 'الربط بشخص موجود غير متاح بعد';
-
-  @override
   String get inboxCreatePerson => 'إنشاء شخص…';
 
   @override
@@ -169,9 +163,6 @@ class InboxLocalizationsAr extends InboxLocalizations {
 
   @override
   String get inboxWhichDocument => 'أي مستند؟';
-
-  @override
-  String get inboxChoiceUnavailable => 'اختيار واحد من هذه غير متاح بعد';
 
   @override
   String get inboxCaptureSemantics => 'فكرة ملتقطة';
@@ -237,4 +228,106 @@ class InboxLocalizationsAr extends InboxLocalizations {
 
   @override
   String get inboxKeyEdit => 'تعديل';
+
+  @override
+  String get inboxReady => 'جاهز';
+
+  @override
+  String get inboxLooksRight => 'يبدو صحيحًا';
+
+  @override
+  String get inboxKeepBoth => 'احتفظ بالاثنين';
+
+  @override
+  String inboxYouSaid({required String words}) {
+    return 'قلت: \"$words\"';
+  }
+
+  @override
+  String get inboxNickname => 'لقب';
+
+  @override
+  String inboxItIs({required String title}) {
+    return 'إنه $title';
+  }
+
+  @override
+  String get inboxCreateCompany => 'إنشاء شركة…';
+
+  @override
+  String inboxQuote({required String quote}) {
+    return '\"$quote\"';
+  }
+
+  @override
+  String inboxAfterAt({required String place}) {
+    return 'بعدها في $place';
+  }
+
+  @override
+  String inboxAfterWith({required String person}) {
+    return 'بعدها مع $person';
+  }
+
+  @override
+  String inboxAfterLastWith({required String person}) {
+    return 'لا أحد معه · آخر مرة مع $person';
+  }
+
+  @override
+  String inboxThreadAi({required String when}) {
+    return 'الذكاء الاصطناعي · $when';
+  }
+
+  @override
+  String inboxThreadYou({required String when}) {
+    return 'أنت · $when';
+  }
+
+  @override
+  String get inboxReply => 'رد على الذكاء الاصطناعي';
+
+  @override
+  String get inboxReplyField => 'ردك';
+
+  @override
+  String get inboxReplySend => 'إرسال الرد';
+
+  @override
+  String get inboxEditTitle => 'عدّل قبل القبول';
+
+  @override
+  String get inboxEditTaskText => 'المهمة';
+
+  @override
+  String get inboxEditNoteTitle => 'عنوان الملاحظة';
+
+  @override
+  String get inboxEditFolder => 'المجلد';
+
+  @override
+  String get inboxAcceptEdited => 'قبول مع التعديلات';
+
+  @override
+  String inboxFilterAll({required int count}) {
+    return 'الكل · $count';
+  }
+
+  @override
+  String inboxFilterNeedsYou({required int count}) {
+    return 'يحتاجك · $count';
+  }
+
+  @override
+  String inboxFilterConflicts({required int count}) {
+    return 'تعارضات · $count';
+  }
+
+  @override
+  String get inboxFilterLabel => 'عرض';
+
+  @override
+  String inboxAcceptAllReady({required int count}) {
+    return 'قبول كل الجاهز · $count';
+  }
 }

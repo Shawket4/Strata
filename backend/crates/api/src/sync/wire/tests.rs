@@ -80,7 +80,7 @@ fn every_op() -> Vec<Op> {
         Op::Capture(o::Capture {
             id: u(2),
             text: "call Sam".into(),
-            created: at,
+            created: at.to_utc(),
         }),
         Op::RelationAdd(o::RelationRef {
             src_id: u(1),

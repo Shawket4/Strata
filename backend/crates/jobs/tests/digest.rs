@@ -186,7 +186,7 @@ async fn the_weekly_digest_summarises_new_notes_open_items_and_contradictions() 
     assert_eq!(
         w.read(a, path),
         format!(
-            "---\nid: {job}\ntitle: Weekly digest 2026-W39\ncreated: 2026-09-28T03:00:00+00:00\nupdated: 2026-09-28T03:00:00+00:00\n---\nWeek 2026-W39: 2026-09-21 – 2026-09-27.\n\n## Highlights\n- Acme gets a flat 10% discount [[Deal#^d1]]\n\n## Open questions\n- Shady still owes the signed copy [[Deal#^d1]]\n\n## Contradictions\n- Deal gives 10% while Pricing caps discounts at 5% [[Deal#^d1]] [[Pricing#^{pb}]]\n"
+            "---\nid: {job}\ntitle: Weekly digest 2026-W39\ncreated: 2026-09-28T03:00:00Z\nupdated: 2026-09-28T03:00:00Z\n---\nWeek 2026-W39: 2026-09-21 – 2026-09-27.\n\n## Highlights\n- Acme gets a flat 10% discount [[Deal#^d1]]\n\n## Open questions\n- Shady still owes the signed copy [[Deal#^d1]]\n\n## Contradictions\n- Deal gives 10% while Pricing caps discounts at 5% [[Deal#^d1]] [[Pricing#^{pb}]]\n"
         )
     );
     // The cited block of Pricing got its ID in the same commit.

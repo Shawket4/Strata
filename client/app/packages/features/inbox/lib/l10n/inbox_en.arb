@@ -175,14 +175,6 @@
   "@inboxPossibleMatches": {
     "description": "Link-or-create with candidates."
   },
-  "inboxLinkExisting": "Link to existing person…",
-  "@inboxLinkExisting": {
-    "description": "Link-or-create action."
-  },
-  "inboxLinkUnavailable": "Linking to an existing person is not available yet",
-  "@inboxLinkUnavailable": {
-    "description": "Link-or-create link action is not provided by the core yet."
-  },
   "inboxCreatePerson": "Create person…",
   "@inboxCreatePerson": {
     "description": "Link-or-create action."
@@ -215,10 +207,6 @@
   "inboxWhichDocument": "Which document?",
   "@inboxWhichDocument": {
     "description": "Ambiguous custody suggestion question."
-  },
-  "inboxChoiceUnavailable": "Choosing one of these is not available yet",
-  "@inboxChoiceUnavailable": {
-    "description": "The core has no intent to accept with a choice yet."
   },
   "inboxCaptureSemantics": "Capture",
   "@inboxCaptureSemantics": {
@@ -300,5 +288,169 @@
   "inboxKeyEdit": "edit",
   "@inboxKeyEdit": {
     "description": "Shortcut legend."
+  },
+  "inboxReady": "Ready",
+  "@inboxReady": {
+    "description": "A capture ready to accept as proposed."
+  },
+  "inboxLooksRight": "Looks right",
+  "@inboxLooksRight": {
+    "description": "Acknowledges an automatic change."
+  },
+  "inboxKeepBoth": "Keep both",
+  "@inboxKeepBoth": {
+    "description": "Keeps two items that look like duplicates."
+  },
+  "inboxYouSaid": "You said: “{words}”",
+  "@inboxYouSaid": {
+    "description": "A correction in the user's words.",
+    "placeholders": {
+      "words": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxNickname": "Nickname",
+  "@inboxNickname": {
+    "description": "The mention is a nickname."
+  },
+  "inboxItIs": "It's {title}",
+  "@inboxItIs": {
+    "description": "Links the mention to an entity.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxCreateCompany": "Create company…",
+  "@inboxCreateCompany": {
+    "description": "Creates a company for the mention."
+  },
+  "inboxQuote": "“{quote}”",
+  "@inboxQuote": {
+    "description": "The capture's words a custody event comes from.",
+    "placeholders": {
+      "quote": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxAfterAt": "Then at {place}",
+  "@inboxAfterAt": {
+    "description": "Where the document is after the event.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxAfterWith": "Then with {person}",
+  "@inboxAfterWith": {
+    "description": "Who holds the document after the event.",
+    "placeholders": {
+      "person": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxAfterLastWith": "Nobody has it · last with {person}",
+  "@inboxAfterLastWith": {
+    "description": "Nobody holds it after the event.",
+    "placeholders": {
+      "person": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxThreadAi": "AI · {when}",
+  "@inboxThreadAi": {
+    "description": "An AI message of a suggestion thread.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxThreadYou": "You · {when}",
+  "@inboxThreadYou": {
+    "description": "The user's message of a suggestion thread.",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxReply": "Reply to the AI",
+  "@inboxReply": {
+    "description": "Opens the reply field of a suggestion."
+  },
+  "inboxReplyField": "Your reply",
+  "@inboxReplyField": {
+    "description": "Label of the reply field."
+  },
+  "inboxReplySend": "Send reply",
+  "@inboxReplySend": {
+    "description": "Sends the reply."
+  },
+  "inboxEditTitle": "Edit before accepting",
+  "@inboxEditTitle": {
+    "description": "Title of the proposal editor."
+  },
+  "inboxEditTaskText": "Task",
+  "@inboxEditTaskText": {
+    "description": "Task text field."
+  },
+  "inboxEditNoteTitle": "Note title",
+  "@inboxEditNoteTitle": {
+    "description": "Note title field."
+  },
+  "inboxEditFolder": "Folder",
+  "@inboxEditFolder": {
+    "description": "Folder field."
+  },
+  "inboxAcceptEdited": "Accept with changes",
+  "@inboxAcceptEdited": {
+    "description": "Accepts the edited proposal."
+  },
+  "inboxFilterAll": "All · {count}",
+  "@inboxFilterAll": {
+    "description": "Inbox filter: all.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inboxFilterNeedsYou": "Needs you · {count}",
+  "@inboxFilterNeedsYou": {
+    "description": "Inbox filter: needs you.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inboxFilterConflicts": "Conflicts · {count}",
+  "@inboxFilterConflicts": {
+    "description": "Inbox filter: conflicts.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "inboxFilterLabel": "Show",
+  "@inboxFilterLabel": {
+    "description": "Label of the inbox filters."
+  },
+  "inboxAcceptAllReady": "Accept all ready · {count}",
+  "@inboxAcceptAllReady": {
+    "description": "Accepts every ready capture.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

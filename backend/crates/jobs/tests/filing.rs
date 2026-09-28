@@ -69,7 +69,7 @@ async fn setup(w: &World, s: &strata_index::UserScope) -> (NoteId, NoteId) {
         .await;
     let capture = w
         .vault
-        .capture(s, TEXT.into())
+        .capture(s, TEXT.into(), strata_common::clock::default_test_epoch())
         .await
         .expect("capture")
         .note

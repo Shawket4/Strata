@@ -45,7 +45,7 @@ type Note = (String, String, Option<NoteSidecar>);
 fn note(n: u128, name: &str, other: &str, other_id: NoteId, keep_both: bool) -> Note {
     let nid = id(n);
     let text = format!(
-        "---\nid: {}\ncreated: 2026-09-27T12:00:00+00:00\nrelated: [\"[[{other}]]\"]\n---\n\
+        "---\nid: {}\ncreated: 2026-09-27T12:00:00Z\nrelated: [\"[[{other}]]\"]\n---\n\
          {name} with [[{other}]] #work ^b{n}\n\n- [ ] Call [[{other}]] 📅 2026-10-01 ^t{n}\n",
         nid.as_ulid()
     );
@@ -62,7 +62,7 @@ fn note(n: u128, name: &str, other: &str, other_id: NoteId, keep_both: bool) -> 
 
 fn person(n: u128, name: &str) -> Note {
     let text = format!(
-        "---\nid: {}\nkind: person\ncreated: 2026-09-27T12:00:00+00:00\naliases: [\"شادي {n}\"]\n---\n## Notes\n",
+        "---\nid: {}\nkind: person\ncreated: 2026-09-27T12:00:00Z\naliases: [\"شادي {n}\"]\n---\n## Notes\n",
         id(n).as_ulid()
     );
     (format!("people/{name}.md"), text, None)

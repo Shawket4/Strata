@@ -193,7 +193,7 @@ async fn writes_produce_the_exact_event_sequence() {
                 Op::Capture(o::Capture {
                     id: id(i),
                     text: "call the notary tomorrow".into(),
-                    created: strata_testkit::default_test_epoch().fixed_offset()
+                    created: strata_testkit::default_test_epoch()
                         + chrono::Duration::seconds(i64::try_from(i).expect("small")),
                 }),
             )],

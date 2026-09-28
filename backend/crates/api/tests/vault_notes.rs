@@ -46,7 +46,7 @@ fn props(id: &str, updated: &str) -> Vec<types::Property> {
         types::Property {
             key: "created".into(),
             value: types::PropertyValueDto::Text {
-                value: "2026-09-27T12:00:00+00:00".into(),
+                value: "2026-09-27T12:00:00Z".into(),
             },
         },
         types::Property {
@@ -91,7 +91,7 @@ async fn notes_crud_move_trash_history_and_revert() {
         id: created.id,
         kind: types::NoteKind::Note,
         path: "notes/Pricing.md".into(),
-        properties: props(&id, "2026-09-27T12:00:00+00:00"),
+        properties: props(&id, "2026-09-27T12:00:00Z"),
         title: "Pricing".into(),
         trashed: false,
         updated: epoch(),
@@ -174,13 +174,13 @@ async fn notes_crud_move_trash_history_and_revert() {
     .await
     .expect("update");
     let content2 = format!(
-        "---\nid: {id}\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:10:00+00:00\n---\n# Pricing\n\nTiers ^t1\n\nMore.\n"
+        "---\nid: {id}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:10:00Z\n---\n# Pricing\n\nTiers ^t1\n\nMore.\n"
     );
     assert_eq!(
         updated,
         types::Note {
             content: content2.clone(),
-            properties: props(&id, "2026-09-27T12:10:00+00:00"),
+            properties: props(&id, "2026-09-27T12:10:00Z"),
             updated: epoch() + chrono::Duration::minutes(10),
             version: version(&content2),
             ..expected.clone()
@@ -221,7 +221,8 @@ async fn notes_crud_move_trash_history_and_revert() {
     assert_eq!(
         ops::get_note(c, refs.id).await.expect("refs").content,
         format!(
-            "---\nid: {}\ncreated: 2026-09-27T12:10:00+00:00\nupdated: 2026-09-27T12:10:00+00:00\n---\nSee [[Pricing 2026#^t1]] and [[Pricing 2026]].\n",
+            // The request's `created` (the device's time), not the server's clock (12:10).
+            "---\nid: {}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\n---\nSee [[Pricing 2026#^t1]] and [[Pricing 2026]].\n",
             refs.id
         )
     );

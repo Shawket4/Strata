@@ -17,7 +17,10 @@ typedef _RowKey = ({bool capture, String id});
 
 /// The Inbox: captures with the AI's proposal (Accept / Edit / Reject),
 /// entity link-or-create cards, custody items (applied automatically with
-/// Undo, or suggestions), duplicate-flagged items and other suggestions.
+/// Undo / Looks right, or suggestions with a document choice),
+/// duplicate-flagged captures and other suggestions — each answered with its
+/// own core intent. The core filters the list (All / Needs you / Conflicts,
+/// with counts) and accepts every ready capture at once.
 ///
 /// * compact: one list of cards;
 /// * medium: list + detail pane;
@@ -47,7 +50,8 @@ class InboxScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final value = ref.watch(inboxProvider);
+    final filter = useState(InboxFilter.all);
+    final value = ref.watch(inboxFilteredProvider(filter.value));
     final initial = initialNoteId;
     final selected = useState<_RowKey?>(
       initial == null ? null : (capture: true, id: initial),
@@ -61,17 +65,31 @@ class InboxScreen extends HookConsumerWidget {
           errorTitle: context.inboxL10n.inboxLoadError,
           data: (view) {
             final l10n = context.inboxL10n;
+            final filters = _Filters(
+              view: view,
+              onFilter: (value) => filter.value = value,
+            );
             if (view.captures.isEmpty && view.suggestions.isEmpty) {
-              return StrataEmptyState(
-                icon: InboxScreen.icon,
-                title: l10n.inboxEmptyTitle,
-                message: l10n.inboxEmptyMessage,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  filters,
+                  Expanded(
+                    child: StrataEmptyState(
+                      icon: InboxScreen.icon,
+                      title: l10n.inboxEmptyTitle,
+                      message: l10n.inboxEmptyMessage,
+                    ),
+                  ),
+                ],
               );
             }
             if (sizeClass == SizeClass.compact) {
               return ListView(
                 padding: const EdgeInsets.all(StrataSpacing.s4),
                 children: [
+                  filters,
+                  const SizedBox(height: StrataSpacing.s2),
                   for (final suggestion in view.suggestions) ...[
                     SuggestionCard(
                       suggestion: suggestion,
@@ -103,6 +121,7 @@ class InboxScreen extends HookConsumerWidget {
                 : rows.first;
             final bulk = sizeClass == SizeClass.expanded;
             final list = _InboxList(
+              filters: filters,
               view: view,
               selected: current,
               onSelect: (key) => selected.value = key,
@@ -240,6 +259,7 @@ class _InboxKeyboard extends ConsumerWidget {
 
 class _InboxList extends ConsumerWidget {
   const new({
+    required this.filters,
     required this.view,
     required this.selected,
     required this.onSelect,
@@ -248,6 +268,7 @@ class _InboxList extends ConsumerWidget {
     required this.onChecked,
   });
 
+  final Widget filters;
   final InboxView view;
   final _RowKey selected;
   final ValueChanged<_RowKey> onSelect;
@@ -266,11 +287,18 @@ class _InboxList extends ConsumerWidget {
         if (checked.contains(item.noteId)) item,
     ];
     Future<void> bulkAct({required bool accept}) async {
-      for (final item in checkedCaptures) {
-        await (accept
-            ? acceptCapture(context, api, item)
-            : rejectCapture(context, api, item));
-        if (!context.mounted) return;
+      if (accept) {
+        await forwardIntent(
+          context,
+          api.acceptCaptures(
+            noteIds: [for (final item in checkedCaptures) item.noteId],
+          ),
+        );
+      } else {
+        for (final item in checkedCaptures) {
+          await rejectCapture(context, api, item);
+          if (!context.mounted) return;
+        }
       }
       onChecked(const {});
     }
@@ -289,6 +317,10 @@ class _InboxList extends ConsumerWidget {
             container: true,
             child: Text(l10n.inboxTitle, style: text.title),
           ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s3),
+          child: filters,
         ),
         if (bulk)
           Semantics(
@@ -468,7 +500,7 @@ class _SuggestionRow extends StatelessWidget {
     };
     final badge = switch (detail.kind) {
       SuggestionKind.entityLink => l10n.inboxNeedsYou,
-      SuggestionKind.custody when suggestion.status == 'accepted' =>
+      SuggestionKind.custody when suggestion.autoApplied =>
         l10n.inboxAppliedAutomatically,
       SuggestionKind.custody => l10n.inboxCustodySuggestion,
       SuggestionKind.duplicate ||
@@ -562,7 +594,11 @@ class _CaptureRow extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CaptureText(text: item.text, maxLines: 2),
+                      CaptureText(
+                        text: item.text,
+                        maxLines: 2,
+                        dir: item.textDir,
+                      ),
                       const SizedBox(height: 2),
                       Row(
                         children: [
@@ -576,6 +612,13 @@ class _CaptureRow extends StatelessWidget {
                               style: text.caption.copyWith(color: colors.text2),
                             ),
                           ),
+                          if (item.createdLabel.isNotEmpty) ...[
+                            const SizedBox(width: StrataSpacing.s2),
+                            Text(
+                              item.createdLabel,
+                              style: text.caption.copyWith(color: colors.text2),
+                            ),
+                          ],
                           if (item.pendingSync) ...[
                             const SizedBox(width: StrataSpacing.s1),
                             const NotSyncedMarker(),
@@ -716,14 +759,74 @@ class _CapturePanel extends StatelessWidget {
             const SizedBox(height: StrataSpacing.s2),
             Text(
               item.text,
+              textDirection: textDirectionOf(item.textDir),
               textAlign: TextAlign.start,
               style: text.titleSmall.withWeight(FontWeight.w500),
             ),
             const SizedBox(height: StrataSpacing.s3),
+            if (item.createdLabel.isNotEmpty)
+              Text(
+                item.createdLabel,
+                style: text.caption.copyWith(color: colors.text2),
+              ),
+            if (item.sourceLabel case final source?)
+              Text(source, style: text.caption.copyWith(color: colors.text2)),
             Text(item.title, style: meta, textDirection: TextDirection.ltr),
-            Text(item.noteId, style: meta, textDirection: TextDirection.ltr),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The core's filters with their counts, and "Accept all ready".
+class _Filters extends ConsumerWidget {
+  const new({required this.view, required this.onFilter});
+
+  final InboxView view;
+  final ValueChanged<InboxFilter> onFilter;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.inboxL10n;
+    return Semantics(
+      label: l10n.inboxFilterLabel,
+      container: true,
+      explicitChildNodes: true,
+      child: Wrap(
+        spacing: StrataSpacing.s2,
+        runSpacing: StrataSpacing.s1,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          for (final (value, label) in [
+            (InboxFilter.all, l10n.inboxFilterAll(count: view.allCount)),
+            (
+              InboxFilter.needsYou,
+              l10n.inboxFilterNeedsYou(count: view.needsYouCount),
+            ),
+            (
+              InboxFilter.conflicts,
+              l10n.inboxFilterConflicts(count: view.conflictsCount),
+            ),
+          ])
+            ChoiceChip(
+              label: Text(label),
+              selected: view.filter == value,
+              onSelected: (_) => onFilter(value),
+            ),
+          if (view.readyCount > 0)
+            FilledButton.tonalIcon(
+              style: tallFilledButton,
+              onPressed: () => unawaited(
+                forwardIntent(
+                  context,
+                  ref.read(coreApiProvider).acceptAllReady(),
+                ),
+              ),
+              icon: const Icon(Icons.done_all),
+              label: Text(l10n.inboxAcceptAllReady(count: view.readyCount)),
+            ),
+        ],
       ),
     );
   }

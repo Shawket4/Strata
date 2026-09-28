@@ -70,7 +70,7 @@ async fn create_update_move_delete_restore_purge() {
     assert_eq!(
         a2.content,
         format!(
-            "---\nid: {id}\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:05:00+00:00\n---\n# A\n\nSecond.\n"
+            "---\nid: {id}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:05:00Z\n---\n# A\n\nSecond.\n"
         )
     );
     assert_eq!(w.log(u)[0], "user: update notes/A.md");
@@ -344,7 +344,7 @@ async fn move_rewrites_every_inbound_link_form_and_relation_in_one_commit() {
     assert_eq!(
         refs,
         format!(
-            "---\nid: {}\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\nrelated: [\"[[Pricing 2026]]\"]\nsupports: [\"[[Pricing 2026|p]]\"]\ncustom: \"[[Pricing]]\"\n---\nLinks: [[Pricing 2026]], [[Pricing 2026|the plan]], [[Pricing 2026#Tiers]], [[Pricing 2026#^tier1]], ![[Pricing 2026]], [[Pricing 2026]], [[Pricing 2026.md]], `[[Pricing]]` in code.\n",
+            "---\nid: {}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\nrelated: [\"[[Pricing 2026]]\"]\nsupports: [\"[[Pricing 2026|p]]\"]\ncustom: \"[[Pricing]]\"\n---\nLinks: [[Pricing 2026]], [[Pricing 2026|the plan]], [[Pricing 2026#Tiers]], [[Pricing 2026#^tier1]], ![[Pricing 2026]], [[Pricing 2026]], [[Pricing 2026.md]], `[[Pricing]]` in code.\n",
             b.id
         )
     );
@@ -555,21 +555,29 @@ async fn capture_is_saved_first_and_duplicates_only_flag_it() {
     let (u, s) = w.user("alice").await;
     let first = w
         .vault
-        .capture(&s, "Watanya's ETA invoice".into())
+        .capture(
+            &s,
+            "Watanya's ETA invoice".into(),
+            strata_common::clock::default_test_epoch(),
+        )
         .await
         .expect("capture");
     assert_eq!(first.note.path, "inbox/2026-09-27-120000.md");
     assert_eq!(
         first.note.content,
         format!(
-            "---\nid: {}\ncreated: 2026-09-27T12:00:00+00:00\n---\nWatanya's ETA invoice\n",
+            "---\nid: {}\ncreated: 2026-09-27T12:00:00Z\n---\nWatanya's ETA invoice\n",
             first.note.id
         )
     );
     assert_eq!(first.duplicates, vec![]);
     let second = w
         .vault
-        .capture(&s, "ETA invoice for Watanya".into())
+        .capture(
+            &s,
+            "ETA invoice for Watanya".into(),
+            strata_common::clock::default_test_epoch(),
+        )
         .await
         .expect("capture is never refused");
     assert_eq!(second.note.path, "inbox/2026-09-27-120000 2.md");

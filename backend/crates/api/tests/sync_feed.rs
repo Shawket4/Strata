@@ -436,7 +436,7 @@ async fn feeds_never_include_another_users_data() {
                 Op::Capture(o::Capture {
                     id: id(2),
                     text: "alice capture".into(),
-                    created: strata_testkit::default_test_epoch().fixed_offset(),
+                    created: strata_testkit::default_test_epoch(),
                 }),
             ),
         ],

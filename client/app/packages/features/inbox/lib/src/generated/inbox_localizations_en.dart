@@ -138,13 +138,6 @@ class InboxLocalizationsEn extends InboxLocalizations {
   String get inboxPossibleMatches => 'Possible matches in your vault:';
 
   @override
-  String get inboxLinkExisting => 'Link to existing person…';
-
-  @override
-  String get inboxLinkUnavailable =>
-      'Linking to an existing person is not available yet';
-
-  @override
   String get inboxCreatePerson => 'Create person…';
 
   @override
@@ -166,10 +159,6 @@ class InboxLocalizationsEn extends InboxLocalizations {
 
   @override
   String get inboxWhichDocument => 'Which document?';
-
-  @override
-  String get inboxChoiceUnavailable =>
-      'Choosing one of these is not available yet';
 
   @override
   String get inboxCaptureSemantics => 'Capture';
@@ -232,4 +221,106 @@ class InboxLocalizationsEn extends InboxLocalizations {
 
   @override
   String get inboxKeyEdit => 'edit';
+
+  @override
+  String get inboxReady => 'Ready';
+
+  @override
+  String get inboxLooksRight => 'Looks right';
+
+  @override
+  String get inboxKeepBoth => 'Keep both';
+
+  @override
+  String inboxYouSaid({required String words}) {
+    return 'You said: “$words”';
+  }
+
+  @override
+  String get inboxNickname => 'Nickname';
+
+  @override
+  String inboxItIs({required String title}) {
+    return 'It\'s $title';
+  }
+
+  @override
+  String get inboxCreateCompany => 'Create company…';
+
+  @override
+  String inboxQuote({required String quote}) {
+    return '“$quote”';
+  }
+
+  @override
+  String inboxAfterAt({required String place}) {
+    return 'Then at $place';
+  }
+
+  @override
+  String inboxAfterWith({required String person}) {
+    return 'Then with $person';
+  }
+
+  @override
+  String inboxAfterLastWith({required String person}) {
+    return 'Nobody has it · last with $person';
+  }
+
+  @override
+  String inboxThreadAi({required String when}) {
+    return 'AI · $when';
+  }
+
+  @override
+  String inboxThreadYou({required String when}) {
+    return 'You · $when';
+  }
+
+  @override
+  String get inboxReply => 'Reply to the AI';
+
+  @override
+  String get inboxReplyField => 'Your reply';
+
+  @override
+  String get inboxReplySend => 'Send reply';
+
+  @override
+  String get inboxEditTitle => 'Edit before accepting';
+
+  @override
+  String get inboxEditTaskText => 'Task';
+
+  @override
+  String get inboxEditNoteTitle => 'Note title';
+
+  @override
+  String get inboxEditFolder => 'Folder';
+
+  @override
+  String get inboxAcceptEdited => 'Accept with changes';
+
+  @override
+  String inboxFilterAll({required int count}) {
+    return 'All · $count';
+  }
+
+  @override
+  String inboxFilterNeedsYou({required int count}) {
+    return 'Needs you · $count';
+  }
+
+  @override
+  String inboxFilterConflicts({required int count}) {
+    return 'Conflicts · $count';
+  }
+
+  @override
+  String get inboxFilterLabel => 'Show';
+
+  @override
+  String inboxAcceptAllReady({required int count}) {
+    return 'Accept all ready · $count';
+  }
 }

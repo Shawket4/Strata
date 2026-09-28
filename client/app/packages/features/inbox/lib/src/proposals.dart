@@ -164,9 +164,23 @@ class ProposalContent extends ConsumerWidget {
         final target = detail.target;
         final targetId = target?.id;
         final openNote = onOpenNote;
+        final question = detail.question;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (detail.title.isNotEmpty)
+              Text(
+                l10n.inboxYouSaid(words: detail.title),
+                style: text.bodySmall.copyWith(color: colors.text),
+              ),
+            if (question != null && question.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: StrataSpacing.s1),
+                child: Text(
+                  question,
+                  style: text.bodySmall.withWeight(FontWeight.w600),
+                ),
+              ),
             Row(
               children: [
                 Flexible(
@@ -226,11 +240,31 @@ class ProposalContent extends ConsumerWidget {
                     style: text.caption.copyWith(color: colors.text2),
                   ),
                   Text(
-                    detail.line,
+                    detail.title.isEmpty ? detail.line : detail.title,
                     style: text.bodySmall.withWeight(FontWeight.w500),
                   ),
-                  if (confidence != null)
-                    AiConfidenceTag(confidence: confidence),
+                  Wrap(
+                    spacing: StrataSpacing.s2,
+                    runSpacing: StrataSpacing.s1,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      if (detail.dateLabel case final date?)
+                        StatusPill(label: date, icon: Icons.event),
+                      if (detail.recurrence case final rule?)
+                        StatusPill(label: rule, icon: Icons.repeat),
+                      for (final entity in detail.entities)
+                        EntityRefChip(entity: entity, onOpen: onOpenEntity),
+                      if (confidence != null)
+                        AiConfidenceTag(confidence: confidence),
+                    ],
+                  ),
+                  if (density == ProposalDensity.detail &&
+                      detail.title.isNotEmpty)
+                    Text(
+                      detail.line,
+                      textDirection: TextDirection.ltr,
+                      style: text.monoSmall.copyWith(color: colors.text2),
+                    ),
                 ],
               ),
             ),
@@ -286,7 +320,7 @@ class SuggestionCard extends HookConsumerWidget {
     final detail = suggestion.detail;
     final api = ref.read(coreApiProvider);
     final pending = suggestion.status == 'pending';
-    final applied = suggestion.status == 'accepted';
+    final applied = suggestion.autoApplied;
     final confidence = detail.confidence;
 
     void accept() => unawaited(
@@ -294,6 +328,18 @@ class SuggestionCard extends HookConsumerWidget {
     );
     void reject() => unawaited(
       forwardIntent(context, api.rejectSuggestion(id: suggestion.id)),
+    );
+    void undo() => unawaited(
+      forwardIntent(context, api.undoSuggestion(id: suggestion.id)),
+    );
+    void looksRight() => unawaited(
+      forwardIntent(context, api.acknowledgeSuggestion(id: suggestion.id)),
+    );
+    void duplicate(DuplicateChoice choice) => unawaited(
+      forwardIntent(
+        context,
+        api.resolveCaptureDuplicate(id: suggestion.id, choice: choice),
+      ),
     );
 
     final (
@@ -363,10 +409,19 @@ class SuggestionCard extends HookConsumerWidget {
         actions = applied
             ? [
                 OutlinedButton.icon(
-                  onPressed: reject,
+                  onPressed: undo,
                   icon: const Icon(Icons.undo),
                   label: Text(
                     l10n.inboxUndo,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                FilledButton(
+                  style: tallFilledButton,
+                  onPressed: looksRight,
+                  child: Text(
+                    l10n.inboxLooksRight,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -381,7 +436,7 @@ class SuggestionCard extends HookConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (detail.candidates.isEmpty)
+                if (detail.documentChoices.isEmpty)
                   FilledButton(
                     style: tallFilledButton,
                     onPressed: accept,
@@ -392,20 +447,38 @@ class SuggestionCard extends HookConsumerWidget {
                     ),
                   )
                 else
-                  Tooltip(
-                    message: l10n.inboxChoiceUnavailable,
-                    child: FilledButton(
-                      style: tallFilledButton,
-                      onPressed: null,
-                      child: Text(
-                        l10n.inboxAccept,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                  for (final document in detail.documentChoices)
+                    if (document.id case final documentId?)
+                      FilledButton.tonal(
+                        style: tallFilledButton,
+                        onPressed: () => unawaited(
+                          forwardIntent(
+                            context,
+                            api.acceptSuggestionChoice(
+                              id: suggestion.id,
+                              documentId: documentId,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          document.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ),
               ];
-      case SuggestionKind.duplicate || SuggestionKind.duplicates:
+      case SuggestionKind.duplicate:
+        body = DuplicateCandidatesView(
+          kind: 'item',
+          title: null,
+          candidates: detail.duplicates,
+          onOpenExisting: (candidate) => onOpenNote?.call(candidate.id),
+          onCreateAnyway: () => duplicate(DuplicateChoice.createAnyway),
+          onCancel: () => duplicate(DuplicateChoice.discard),
+          cancelLabel: l10n.inboxDiscard,
+        );
+        actions = const [];
+      case SuggestionKind.duplicates:
         body = DuplicateCandidatesView(
           kind: 'item',
           title: null,
@@ -413,7 +486,8 @@ class SuggestionCard extends HookConsumerWidget {
           onOpenExisting: (candidate) => onOpenNote?.call(candidate.id),
           onCreateAnyway: reject,
           onCancel: accept,
-          cancelLabel: l10n.inboxDiscard,
+          createAnywayLabel: l10n.inboxKeepBoth,
+          cancelLabel: l10n.inboxAccept,
         );
         actions = const [];
       case SuggestionKind.correction:
@@ -476,8 +550,27 @@ class SuggestionCard extends HookConsumerWidget {
             if (suggestion.pendingSync) const NotSyncedMarker(),
           ],
         ),
+        if (suggestion.sourceText case final source?
+            when source.isNotEmpty) ...[
+          const SizedBox(height: StrataSpacing.s1),
+          Text(
+            source,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            textDirection: textDirectionOf(suggestion.sourceDir),
+            textAlign: TextAlign.start,
+            style: text.bodySmall.copyWith(color: colors.text2),
+          ),
+        ],
+        if (suggestion.createdLabel.isNotEmpty)
+          Text(
+            suggestion.createdLabel,
+            style: text.caption.copyWith(color: colors.text2),
+          ),
         const SizedBox(height: StrataSpacing.s2),
         body,
+        if (pending || suggestion.thread.isNotEmpty)
+          SuggestionThread(suggestion: suggestion),
         if (actions.isNotEmpty && (pending || applied)) ...[
           const SizedBox(height: StrataSpacing.s3),
           Wrap(
@@ -515,6 +608,9 @@ class SuggestionCard extends HookConsumerWidget {
   }
 }
 
+/// "Who is “بابا”?": the AI's proposed entity and the other candidates
+/// (each links the mention, `resolve_link_or_create` with `link`), or a new
+/// person / company with the mention as alias.
 class _LinkOrCreate extends ConsumerWidget {
   const new({required this.suggestion});
 
@@ -526,6 +622,27 @@ class _LinkOrCreate extends ConsumerWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final detail = suggestion.detail;
+    final api = ref.read(coreApiProvider);
+    final proposed = detail.target;
+    final confidence = detail.confidence;
+    final choices = [
+      if (proposed != null && proposed.id != null) proposed,
+      for (final candidate in detail.candidates)
+        if (candidate.id != null && candidate.id != proposed?.id) candidate,
+    ];
+    void link(EntityRef entity) => unawaited(
+      forwardIntent(
+        context,
+        api.resolveLinkOrCreate(
+          id: suggestion.id,
+          choice: LinkOrCreateChoice(
+            kind: LinkOrCreateKind.link,
+            entityId: entity.id,
+            force: false,
+          ),
+        ),
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -538,47 +655,58 @@ class _LinkOrCreate extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 2),
+        Wrap(
+          spacing: StrataSpacing.s2,
+          runSpacing: StrataSpacing.s1,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (detail.isNickname)
+              StatusPill(
+                label: l10n.inboxNickname,
+                icon: Icons.alternate_email,
+              ),
+            if (confidence != null) AiConfidenceTag(confidence: confidence),
+          ],
+        ),
+        if (detail.reason.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              detail.reason,
+              style: text.bodySmall.copyWith(color: colors.text2),
+            ),
+          ),
+        const SizedBox(height: StrataSpacing.s1),
         Text(
-          detail.candidates.isEmpty
+          choices.isEmpty
               ? l10n.inboxNoPersonMatches
               : l10n.inboxPossibleMatches,
           style: text.bodySmall.copyWith(color: colors.text2),
         ),
-        if (detail.candidates.isNotEmpty) ...[
-          const SizedBox(height: StrataSpacing.s2),
-          Wrap(
-            spacing: StrataSpacing.s2,
-            runSpacing: StrataSpacing.s1,
-            children: [
-              for (final candidate in detail.candidates)
-                EntityRefChip(entity: candidate, kind: NodeKind.person),
-            ],
-          ),
-        ],
-        const SizedBox(height: StrataSpacing.s3),
+        const SizedBox(height: StrataSpacing.s2),
         Wrap(
           spacing: StrataSpacing.s2,
           runSpacing: StrataSpacing.s2,
           children: [
-            Tooltip(
-              message: l10n.inboxLinkUnavailable,
-              child: OutlinedButton.icon(
-                onPressed: null,
+            for (final entity in choices)
+              OutlinedButton.icon(
+                onPressed: () => link(entity),
                 icon: const Icon(Icons.link),
                 label: Text(
-                  l10n.inboxLinkExisting,
+                  l10n.inboxItIs(title: entity.title),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
             FilledButton.tonalIcon(
               style: tallFilledButton,
               onPressed: () =>
                   CreatePersonSheet.show(context, suggestion: suggestion),
               icon: const Icon(Icons.person_add_alt),
               label: Text(
-                l10n.inboxCreatePerson,
+                detail.entityKind == 'company'
+                    ? l10n.inboxCreateCompany
+                    : l10n.inboxCreatePerson,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -595,6 +723,10 @@ class _LinkOrCreate extends ConsumerWidget {
   }
 }
 
+/// A custody event to confirm: the document, the custody line it would
+/// write, when, the quote it comes from, and where the document ends up
+/// (location and holder, as vault-format's rules compute them). An
+/// ambiguous event lists its documents; the choice is an action.
 class _Custody extends StatelessWidget {
   const new({required this.suggestion, required this.onOpenEntity});
 
@@ -608,6 +740,10 @@ class _Custody extends StatelessWidget {
     final text = context.strataText;
     final detail = suggestion.detail;
     final document = detail.document;
+    final location = detail.location;
+    final holder = detail.holder;
+    final lastHolder = detail.lastHolder;
+    final muted = text.caption.copyWith(color: colors.text2);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -618,34 +754,44 @@ class _Custody extends StatelessWidget {
             onOpen: onOpenEntity,
           ),
         const SizedBox(height: StrataSpacing.s1),
-        Text(detail.line, style: text.body.withWeight(FontWeight.w500)),
-        if (detail.candidates.isNotEmpty) ...[
+        Text(
+          detail.line,
+          textDirection: TextDirection.ltr,
+          style: text.body.withWeight(FontWeight.w500),
+        ),
+        if (detail.dateLabel case final date?) Text(date, style: muted),
+        if (detail.quote.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: StrataSpacing.s1),
+            child: Text(
+              l10n.inboxQuote(quote: detail.quote),
+              style: text.bodySmall.copyWith(color: colors.text2),
+            ),
+          ),
+        if (location != null || holder != null || lastHolder != null) ...[
+          const SizedBox(height: StrataSpacing.s2),
+          Wrap(
+            spacing: StrataSpacing.s2,
+            runSpacing: StrataSpacing.s1,
+            children: [
+              if (location != null)
+                Text(l10n.inboxAfterAt(place: location.title), style: muted),
+              if (holder != null)
+                Text(l10n.inboxAfterWith(person: holder.title), style: muted)
+              else if (lastHolder != null)
+                Text(
+                  l10n.inboxAfterLastWith(person: lastHolder.title),
+                  style: muted,
+                ),
+            ],
+          ),
+        ],
+        if (detail.documentChoices.isNotEmpty) ...[
           const SizedBox(height: StrataSpacing.s3),
           Semantics(
             header: true,
             container: true,
             child: Text(l10n.inboxWhichDocument, style: text.titleSmall),
-          ),
-          const SizedBox(height: StrataSpacing.s1),
-          for (final candidate in detail.candidates)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(
-                children: [
-                  const NodeKindGlyph(
-                    kind: NodeKind.document,
-                    size: 14,
-                    decorative: true,
-                  ),
-                  const SizedBox(width: StrataSpacing.s2),
-                  Expanded(child: Text(candidate.title, style: text.bodySmall)),
-                ],
-              ),
-            ),
-          const SizedBox(height: StrataSpacing.s1),
-          Text(
-            l10n.inboxChoiceUnavailable,
-            style: text.caption.copyWith(color: colors.text2),
           ),
         ],
       ],
@@ -653,11 +799,246 @@ class _Custody extends StatelessWidget {
   }
 }
 
+/// The conversation with the AI about a suggestion (`thread`) and a reply
+/// field (`reply_to_suggestion`).
+class SuggestionThread extends HookConsumerWidget {
+  /// Creates the thread of [suggestion].
+  const new({required this.suggestion, super.key});
+
+  /// The suggestion.
+  final SuggestionItem suggestion;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.inboxL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final reply = useTextEditingController();
+    final value = useValueListenable(reply);
+    final open = useState(suggestion.thread.isNotEmpty);
+    Future<void> send() async {
+      final message = reply.text.trim();
+      if (message.isEmpty) return;
+      await forwardIntent(
+        context,
+        ref
+            .read(coreApiProvider)
+            .replyToSuggestion(id: suggestion.id, text: message),
+      );
+      reply.clear();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: StrataSpacing.s2),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final message in suggestion.thread)
+            Align(
+              alignment: message.author == 'ai'
+                  ? AlignmentDirectional.centerStart
+                  : AlignmentDirectional.centerEnd,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: StrataSpacing.s1),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: StrataSpacing.s3,
+                  vertical: StrataSpacing.s2,
+                ),
+                decoration: BoxDecoration(
+                  color: message.author == 'ai'
+                      ? colors.surface2
+                      : colors.accentTint,
+                  borderRadius: StrataRadii.cardRadius,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message.text,
+                      textDirection: textDirectionOf(message.textDir),
+                      style: text.bodySmall,
+                    ),
+                    Text(
+                      message.author == 'ai'
+                          ? l10n.inboxThreadAi(when: message.createdLabel)
+                          : l10n.inboxThreadYou(when: message.createdLabel),
+                      style: text.caption.copyWith(color: colors.text2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (!open.value)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                onPressed: () => open.value = true,
+                icon: const Icon(Icons.reply, size: 18),
+                label: Text(l10n.inboxReply),
+              ),
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: reply,
+                    minLines: 1,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      labelText: l10n.inboxReplyField,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: l10n.inboxReplySend,
+                  onPressed: value.text.trim().isEmpty
+                      ? null
+                      : () => unawaited(send()),
+                  icon: const Icon(Icons.send),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Changes a proposal before accepting it (`accept_suggestion_with`): the
+/// filing's title and folder, or a proposed task's text.
+class EditProposalSheet extends HookConsumerWidget {
+  /// Creates the editor of [suggestion].
+  const new({required this.suggestion, super.key});
+
+  /// A filing or task suggestion.
+  final SuggestionItem suggestion;
+
+  /// Presents the editor (sheet on compact, dialog otherwise).
+  static Future<void> show(
+    BuildContext context, {
+    required SuggestionItem suggestion,
+  }) {
+    final sheet = EditProposalSheet(suggestion: suggestion);
+    if (SizeClass.of(context) == SizeClass.compact) {
+      return showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        showDragHandle: true,
+        builder: (_) => sheet,
+      );
+    }
+    return showDialog<void>(
+      context: context,
+      builder: (_) => Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: sheet,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detail = suggestion.detail;
+    final task = detail.kind == SuggestionKind.task;
+    final title = useTextEditingController(
+      text: task ? detail.line : detail.title,
+    );
+    final folder = useTextEditingController(text: detail.folder);
+    return InboxL10nScope(
+      child: Builder(
+        builder: (context) {
+          final l10n = context.inboxL10n;
+          final text = context.strataText;
+          Future<void> save() async {
+            final navigator = Navigator.of(context);
+            await forwardIntent(
+              context,
+              ref
+                  .read(coreApiProvider)
+                  .acceptSuggestionWith(
+                    id: suggestion.id,
+                    edits: task
+                        ? SuggestionEdits(text: title.text)
+                        : SuggestionEdits(
+                            title: title.text,
+                            folder: folder.text,
+                          ),
+                  ),
+            );
+            await navigator.maybePop();
+          }
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              StrataSpacing.s5,
+              StrataSpacing.s4,
+              StrataSpacing.s5,
+              StrataSpacing.s5 + MediaQuery.viewInsetsOf(context).bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Semantics(
+                  header: true,
+                  container: true,
+                  child: Text(l10n.inboxEditTitle, style: text.title),
+                ),
+                const SizedBox(height: StrataSpacing.s4),
+                TextField(
+                  controller: title,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: task
+                        ? l10n.inboxEditTaskText
+                        : l10n.inboxEditNoteTitle,
+                  ),
+                ),
+                if (!task) ...[
+                  const SizedBox(height: StrataSpacing.s3),
+                  TextField(
+                    controller: folder,
+                    textDirection: TextDirection.ltr,
+                    decoration: InputDecoration(
+                      labelText: l10n.inboxEditFolder,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: StrataSpacing.s5),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: StrataSpacing.s2,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.maybePop(context),
+                      child: Text(l10n.inboxCancel),
+                    ),
+                    FilledButton(
+                      style: tallFilledButton,
+                      onPressed: () => unawaited(save()),
+                      child: Text(l10n.inboxAcceptEdited),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 /// "Create person…" for an entity link-or-create suggestion: the person's
-/// name, with the mention as an alias. Saves with `CoreApi.createEntity`
-/// (`kind: person`, `aliases: [mention]`, duplicate-checked; the candidates
-/// are shown in place and Create anyway resends with `force: true`), then
-/// accepts the suggestion (`CoreApi.acceptSuggestion`).
+/// (or company's) name, with the mention as an alias, created and linked in
+/// one intent (`resolve_link_or_create` with `create`; duplicate-checked —
+/// the candidates are shown in place and Create anyway resends with
+/// `force: true`).
 class CreatePersonSheet extends HookConsumerWidget {
   /// Creates the sheet for [suggestion].
   const new({required this.suggestion, super.key, this.onOpenEntity});
@@ -710,17 +1091,21 @@ class CreatePersonSheet extends HookConsumerWidget {
       final messenger = ScaffoldMessenger.maybeOf(context);
       final l10n = lookupInboxLocalizations(Localizations.localeOf(context));
       try {
-        final outcome = await api.createEntity(
-          kind: 'person',
-          name: name.text,
-          aliases: [mention],
-          force: force,
+        final outcome = await api.resolveLinkOrCreate(
+          id: suggestion.id,
+          choice: LinkOrCreateChoice(
+            kind: LinkOrCreateKind.create,
+            name: name.text,
+            entityKind: suggestion.detail.entityKind.isEmpty
+                ? null
+                : suggestion.detail.entityKind,
+            force: force,
+          ),
         );
         if (outcome.id == null) {
           candidates.value = outcome.candidates;
           return;
         }
-        await api.acceptSuggestion(id: suggestion.id);
         if (context.mounted) await Navigator.maybePop(context);
       } on Object catch (error) {
         messenger?.showSnackBar(

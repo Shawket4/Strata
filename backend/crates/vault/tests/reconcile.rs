@@ -326,6 +326,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
         .capture(
             &s,
             "Watanya's contract is at the Nasr City office in the safe, last with Shady".into(),
+            strata_common::clock::default_test_epoch(),
         )
         .await
         .expect("capture");
@@ -414,7 +415,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
                         .and_hms_opt(9, 0, 0)
                         .expect("t"),
                 ],
-                ..NewTask::default()
+                ..NewTask::new(strata_common::clock::default_test_epoch())
             },
         )
         .await

@@ -311,18 +311,6 @@ abstract class InboxLocalizations {
   /// Link-or-create action.
   ///
   /// In en, this message translates to:
-  /// **'Link to existing person…'**
-  String get inboxLinkExisting;
-
-  /// Link-or-create link action is not provided by the core yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Linking to an existing person is not available yet'**
-  String get inboxLinkUnavailable;
-
-  /// Link-or-create action.
-  ///
-  /// In en, this message translates to:
   /// **'Create person…'**
   String get inboxCreatePerson;
 
@@ -361,12 +349,6 @@ abstract class InboxLocalizations {
   /// In en, this message translates to:
   /// **'Which document?'**
   String get inboxWhichDocument;
-
-  /// The core has no intent to accept with a choice yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Choosing one of these is not available yet'**
-  String get inboxChoiceUnavailable;
 
   /// Semantics label of a capture card.
   ///
@@ -469,6 +451,162 @@ abstract class InboxLocalizations {
   /// In en, this message translates to:
   /// **'edit'**
   String get inboxKeyEdit;
+
+  /// A capture ready to accept as proposed.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get inboxReady;
+
+  /// Acknowledges an automatic change.
+  ///
+  /// In en, this message translates to:
+  /// **'Looks right'**
+  String get inboxLooksRight;
+
+  /// Keeps two items that look like duplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep both'**
+  String get inboxKeepBoth;
+
+  /// A correction in the user's words.
+  ///
+  /// In en, this message translates to:
+  /// **'You said: “{words}”'**
+  String inboxYouSaid({required String words});
+
+  /// The mention is a nickname.
+  ///
+  /// In en, this message translates to:
+  /// **'Nickname'**
+  String get inboxNickname;
+
+  /// Links the mention to an entity.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s {title}'**
+  String inboxItIs({required String title});
+
+  /// Creates a company for the mention.
+  ///
+  /// In en, this message translates to:
+  /// **'Create company…'**
+  String get inboxCreateCompany;
+
+  /// The capture's words a custody event comes from.
+  ///
+  /// In en, this message translates to:
+  /// **'“{quote}”'**
+  String inboxQuote({required String quote});
+
+  /// Where the document is after the event.
+  ///
+  /// In en, this message translates to:
+  /// **'Then at {place}'**
+  String inboxAfterAt({required String place});
+
+  /// Who holds the document after the event.
+  ///
+  /// In en, this message translates to:
+  /// **'Then with {person}'**
+  String inboxAfterWith({required String person});
+
+  /// Nobody holds it after the event.
+  ///
+  /// In en, this message translates to:
+  /// **'Nobody has it · last with {person}'**
+  String inboxAfterLastWith({required String person});
+
+  /// An AI message of a suggestion thread.
+  ///
+  /// In en, this message translates to:
+  /// **'AI · {when}'**
+  String inboxThreadAi({required String when});
+
+  /// The user's message of a suggestion thread.
+  ///
+  /// In en, this message translates to:
+  /// **'You · {when}'**
+  String inboxThreadYou({required String when});
+
+  /// Opens the reply field of a suggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply to the AI'**
+  String get inboxReply;
+
+  /// Label of the reply field.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reply'**
+  String get inboxReplyField;
+
+  /// Sends the reply.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reply'**
+  String get inboxReplySend;
+
+  /// Title of the proposal editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit before accepting'**
+  String get inboxEditTitle;
+
+  /// Task text field.
+  ///
+  /// In en, this message translates to:
+  /// **'Task'**
+  String get inboxEditTaskText;
+
+  /// Note title field.
+  ///
+  /// In en, this message translates to:
+  /// **'Note title'**
+  String get inboxEditNoteTitle;
+
+  /// Folder field.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder'**
+  String get inboxEditFolder;
+
+  /// Accepts the edited proposal.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept with changes'**
+  String get inboxAcceptEdited;
+
+  /// Inbox filter: all.
+  ///
+  /// In en, this message translates to:
+  /// **'All · {count}'**
+  String inboxFilterAll({required int count});
+
+  /// Inbox filter: needs you.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs you · {count}'**
+  String inboxFilterNeedsYou({required int count});
+
+  /// Inbox filter: conflicts.
+  ///
+  /// In en, this message translates to:
+  /// **'Conflicts · {count}'**
+  String inboxFilterConflicts({required int count});
+
+  /// Label of the inbox filters.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get inboxFilterLabel;
+
+  /// Accepts every ready capture.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept all ready · {count}'**
+  String inboxAcceptAllReady({required int count});
 }
 
 class _InboxLocalizationsDelegate

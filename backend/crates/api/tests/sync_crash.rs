@@ -129,7 +129,7 @@ fn crashing(a: &str) -> Vec<SyncOp> {
             Op::Capture(o::Capture {
                 id: id(14),
                 text: "call the landlord".into(),
-                created: at,
+                created: at.to_utc(),
             }),
         ),
     ]

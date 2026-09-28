@@ -116,7 +116,7 @@ async fn a_correction_in_words_repoints_the_decision_and_its_hint_changes_the_ne
     // 2. The user captures the correction; filing flags it and queues the correction job.
     let capture = w
         .vault
-        .capture(&sa, CORRECTION.into())
+        .capture(&sa, CORRECTION.into(), strata_common::clock::default_test_epoch())
         .await
         .expect("capture")
         .note

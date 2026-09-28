@@ -146,7 +146,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             Op::Capture(o::Capture {
                 id: id(3),
                 text: "Call the notary".into(),
-                created: at,
+                created: at.to_utc(),
             }),
         ),
     )
@@ -155,7 +155,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
     assert_eq!(
         cap,
         format!(
-            "---\nid: {}\ncreated: 2026-09-26T08:30:05+00:00\n---\nCall the notary\n",
+            "---\nid: {}\ncreated: 2026-09-26T08:30:05Z\n---\nCall the notary\n",
             id(3)
         )
     );
@@ -664,7 +664,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             Op::Capture(o::Capture {
                 id: id(i),
                 text: "Call the notary".into(),
-                created: at + chrono::Duration::seconds(i64::try_from(i).expect("small")),
+                created: (at + chrono::Duration::seconds(i64::try_from(i).expect("small"))).to_utc(),
             }),
         )
     };
@@ -1452,7 +1452,7 @@ async fn document_create_writes_its_links_in_the_same_single_commit() {
     assert_eq!(
         copy,
         format!(
-            "---\nid: {}\nkind: document\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\ndoc-type: contract\ncopy: copy\npeople: [\"[[Sam Hany]]\", \"[[Mona Adel]]\"]\ncompanies: [\"[[Watanya]]\"]\ncopy-of: [\"[[Lease original]]\"]\n---\n## Notes\n",
+            "---\nid: {}\nkind: document\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\ndoc-type: contract\ncopy: copy\npeople: [\"[[Sam Hany]]\", \"[[Mona Adel]]\"]\ncompanies: [\"[[Watanya]]\"]\ncopy-of: [\"[[Lease original]]\"]\n---\n## Notes\n",
             id(5)
         )
     );
@@ -1598,7 +1598,7 @@ async fn suggestion_accept_applies_edits_and_relink_forces_a_run() {
                     Op::Capture(o::Capture {
                         id: id(2),
                         text: "Watanya wants ETA invoices monthly".into(),
-                        created: at,
+                        created: at.to_utc(),
                     }),
                 ),
             ],
@@ -1745,7 +1745,7 @@ async fn suggestion_accept_applies_edits_and_relink_forces_a_run() {
                     Op::Capture(o::Capture {
                         id: id(6),
                         text: "Ask Shady about the contract".into(),
-                        created: at + chrono::Duration::minutes(1),
+                        created: (at + chrono::Duration::minutes(1)).to_utc(),
                     }),
                 ),
                 op(6, None, Op::RelinkRequest(o::NoteRef { id: id(6) })),

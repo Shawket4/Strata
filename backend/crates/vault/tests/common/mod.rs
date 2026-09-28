@@ -84,6 +84,6 @@ impl World {
 /// The frontmatter Strata writes for a new note created at the test epoch in UTC.
 pub fn header(id: &str) -> String {
     format!(
-        "---\nid: {id}\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\n---\n"
+        "---\nid: {id}\ncreated: 2026-09-27T12:00:00Z\nupdated: 2026-09-27T12:00:00Z\n---\n"
     )
 }
