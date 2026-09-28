@@ -7261,7 +7261,6 @@ impl SseDecode for crate::view::model::InboxItem {
         let mut var_textDir = <crate::view::model::TextDir>::sse_decode(deserializer);
         let mut var_createdLabel = <String>::sse_decode(deserializer);
         let mut var_sourceLabel = <Option<String>>::sse_decode(deserializer);
-        let mut var_filingConfidence = <Option<f64>>::sse_decode(deserializer);
         let mut var_needsYou = <bool>::sse_decode(deserializer);
         let mut var_ready = <bool>::sse_decode(deserializer);
         let mut var_isDuplicate = <bool>::sse_decode(deserializer);
@@ -7275,7 +7274,6 @@ impl SseDecode for crate::view::model::InboxItem {
             text_dir: var_textDir,
             created_label: var_createdLabel,
             source_label: var_sourceLabel,
-            filing_confidence: var_filingConfidence,
             needs_you: var_needsYou,
             ready: var_ready,
             is_duplicate: var_isDuplicate,
@@ -9596,6 +9594,15 @@ impl SseDecode for crate::view::model::SuggestionDetail {
             <Vec<crate::view::model::EntityRef>>::sse_decode(deserializer);
         let mut var_timeline = <Option<crate::view::model::TimelineChip>>::sse_decode(deserializer);
         let mut var_other = <Option<crate::view::model::EntityRef>>::sse_decode(deserializer);
+        let mut var_decisionId = <Option<String>>::sse_decode(deserializer);
+        let mut var_entityKind = <String>::sse_decode(deserializer);
+        let mut var_isNickname = <bool>::sse_decode(deserializer);
+        let mut var_quote = <String>::sse_decode(deserializer);
+        let mut var_date = <Option<chrono::NaiveDate>>::sse_decode(deserializer);
+        let mut var_dateLabel = <Option<String>>::sse_decode(deserializer);
+        let mut var_recurrence = <Option<String>>::sse_decode(deserializer);
+        let mut var_entities = <Vec<crate::view::model::EntityRef>>::sse_decode(deserializer);
+        let mut var_question = <Option<String>>::sse_decode(deserializer);
         return crate::view::model::SuggestionDetail {
             kind: var_kind,
             title: var_title,
@@ -9617,6 +9624,15 @@ impl SseDecode for crate::view::model::SuggestionDetail {
             document_choices: var_documentChoices,
             timeline: var_timeline,
             other: var_other,
+            decision_id: var_decisionId,
+            entity_kind: var_entityKind,
+            is_nickname: var_isNickname,
+            quote: var_quote,
+            date: var_date,
+            date_label: var_dateLabel,
+            recurrence: var_recurrence,
+            entities: var_entities,
+            question: var_question,
         };
     }
 }
@@ -9630,6 +9646,9 @@ impl SseDecode for crate::view::model::SuggestionEdits {
         let mut var_text = <Option<String>>::sse_decode(deserializer);
         let mut var_due = <Option<chrono::NaiveDate>>::sse_decode(deserializer);
         let mut var_recurrence = <Option<String>>::sse_decode(deserializer);
+        let mut var_reminders = <Option<Vec<chrono::NaiveDateTime>>>::sse_decode(deserializer);
+        let mut var_targetId = <Option<String>>::sse_decode(deserializer);
+        let mut var_aliases = <Option<Vec<String>>>::sse_decode(deserializer);
         return crate::view::model::SuggestionEdits {
             title: var_title,
             folder: var_folder,
@@ -9637,6 +9656,9 @@ impl SseDecode for crate::view::model::SuggestionEdits {
             text: var_text,
             due: var_due,
             recurrence: var_recurrence,
+            reminders: var_reminders,
+            target_id: var_targetId,
+            aliases: var_aliases,
         };
     }
 }
@@ -9681,10 +9703,10 @@ impl SseDecode for crate::view::model::SuggestionKind {
         let mut inner = <i32>::sse_decode(deserializer);
         return match inner {
             0 => crate::view::model::SuggestionKind::Filing,
-            1 => crate::view::model::SuggestionKind::EntityLinkOrCreate,
+            1 => crate::view::model::SuggestionKind::EntityLink,
             2 => crate::view::model::SuggestionKind::Custody,
             3 => crate::view::model::SuggestionKind::Duplicate,
-            4 => crate::view::model::SuggestionKind::Relation,
+            4 => crate::view::model::SuggestionKind::Correction,
             5 => crate::view::model::SuggestionKind::Task,
             6 => crate::view::model::SuggestionKind::Conflict,
             7 => crate::view::model::SuggestionKind::Duplicates,
@@ -12388,7 +12410,6 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::InboxItem {
             self.text_dir.into_into_dart().into_dart(),
             self.created_label.into_into_dart().into_dart(),
             self.source_label.into_into_dart().into_dart(),
-            self.filing_confidence.into_into_dart().into_dart(),
             self.needs_you.into_into_dart().into_dart(),
             self.ready.into_into_dart().into_dart(),
             self.is_duplicate.into_into_dart().into_dart(),
@@ -13931,6 +13952,15 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::SuggestionDetail {
             self.document_choices.into_into_dart().into_dart(),
             self.timeline.into_into_dart().into_dart(),
             self.other.into_into_dart().into_dart(),
+            self.decision_id.into_into_dart().into_dart(),
+            self.entity_kind.into_into_dart().into_dart(),
+            self.is_nickname.into_into_dart().into_dart(),
+            self.quote.into_into_dart().into_dart(),
+            self.date.into_into_dart().into_dart(),
+            self.date_label.into_into_dart().into_dart(),
+            self.recurrence.into_into_dart().into_dart(),
+            self.entities.into_into_dart().into_dart(),
+            self.question.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -13956,6 +13986,9 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::SuggestionEdits {
             self.text.into_into_dart().into_dart(),
             self.due.into_into_dart().into_dart(),
             self.recurrence.into_into_dart().into_dart(),
+            self.reminders.into_into_dart().into_dart(),
+            self.target_id.into_into_dart().into_dart(),
+            self.aliases.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -14008,10 +14041,10 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::SuggestionKind {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
             Self::Filing => 0.into_dart(),
-            Self::EntityLinkOrCreate => 1.into_dart(),
+            Self::EntityLink => 1.into_dart(),
             Self::Custody => 2.into_dart(),
             Self::Duplicate => 3.into_dart(),
-            Self::Relation => 4.into_dart(),
+            Self::Correction => 4.into_dart(),
             Self::Task => 5.into_dart(),
             Self::Conflict => 6.into_dart(),
             Self::Duplicates => 7.into_dart(),
@@ -15935,7 +15968,6 @@ impl SseEncode for crate::view::model::InboxItem {
         <crate::view::model::TextDir>::sse_encode(self.text_dir, serializer);
         <String>::sse_encode(self.created_label, serializer);
         <Option<String>>::sse_encode(self.source_label, serializer);
-        <Option<f64>>::sse_encode(self.filing_confidence, serializer);
         <bool>::sse_encode(self.needs_you, serializer);
         <bool>::sse_encode(self.ready, serializer);
         <bool>::sse_encode(self.is_duplicate, serializer);
@@ -17738,6 +17770,15 @@ impl SseEncode for crate::view::model::SuggestionDetail {
         <Vec<crate::view::model::EntityRef>>::sse_encode(self.document_choices, serializer);
         <Option<crate::view::model::TimelineChip>>::sse_encode(self.timeline, serializer);
         <Option<crate::view::model::EntityRef>>::sse_encode(self.other, serializer);
+        <Option<String>>::sse_encode(self.decision_id, serializer);
+        <String>::sse_encode(self.entity_kind, serializer);
+        <bool>::sse_encode(self.is_nickname, serializer);
+        <String>::sse_encode(self.quote, serializer);
+        <Option<chrono::NaiveDate>>::sse_encode(self.date, serializer);
+        <Option<String>>::sse_encode(self.date_label, serializer);
+        <Option<String>>::sse_encode(self.recurrence, serializer);
+        <Vec<crate::view::model::EntityRef>>::sse_encode(self.entities, serializer);
+        <Option<String>>::sse_encode(self.question, serializer);
     }
 }
 
@@ -17750,6 +17791,9 @@ impl SseEncode for crate::view::model::SuggestionEdits {
         <Option<String>>::sse_encode(self.text, serializer);
         <Option<chrono::NaiveDate>>::sse_encode(self.due, serializer);
         <Option<String>>::sse_encode(self.recurrence, serializer);
+        <Option<Vec<chrono::NaiveDateTime>>>::sse_encode(self.reminders, serializer);
+        <Option<String>>::sse_encode(self.target_id, serializer);
+        <Option<Vec<String>>>::sse_encode(self.aliases, serializer);
     }
 }
 
@@ -17778,10 +17822,10 @@ impl SseEncode for crate::view::model::SuggestionKind {
         <i32>::sse_encode(
             match self {
                 crate::view::model::SuggestionKind::Filing => 0,
-                crate::view::model::SuggestionKind::EntityLinkOrCreate => 1,
+                crate::view::model::SuggestionKind::EntityLink => 1,
                 crate::view::model::SuggestionKind::Custody => 2,
                 crate::view::model::SuggestionKind::Duplicate => 3,
-                crate::view::model::SuggestionKind::Relation => 4,
+                crate::view::model::SuggestionKind::Correction => 4,
                 crate::view::model::SuggestionKind::Task => 5,
                 crate::view::model::SuggestionKind::Conflict => 6,
                 crate::view::model::SuggestionKind::Duplicates => 7,

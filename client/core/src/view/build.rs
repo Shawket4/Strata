@@ -15,7 +15,7 @@ use crate::format::direction::dir_of;
 use crate::format::labels::{self, Labels, Lang, NOTES, tr};
 use crate::format::{self, hints};
 use crate::store::{account, cache, conflicts, from_msgpack, outbox, settings, sync_state};
-use crate::sync::model::SuggestionPayload;
+use crate::sync::model::DecodedPayload;
 use crate::view::ViewCtx;
 #[allow(clippy::wildcard_imports)] // the builders construct every view-model type
 use crate::view::model::*;
@@ -1030,7 +1030,7 @@ pub fn task_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Tas
 fn suggestion_summary(d: &SuggestionDetail, lang: Lang) -> String {
     match d.kind {
         SuggestionKind::Filing => format!("→ {}", d.title),
-        SuggestionKind::EntityLinkOrCreate => match lang {
+        SuggestionKind::EntityLink => match lang {
             Lang::En => format!("Who is “{}”?", d.mention),
             Lang::Ar => format!("من هو «{}»؟", d.mention),
         },
@@ -1040,14 +1040,7 @@ fn suggestion_summary(d: &SuggestionDetail, lang: Lang) -> String {
             (Lang::Ar, Some(c)) => format!("موجود بالفعل · {}", c.title),
             _ => tr(lang, "Already exists", "موجود بالفعل"),
         },
-        SuggestionKind::Relation => format!(
-            "{} → {}",
-            labels::relation_label(&d.rel_type, lang),
-            d.target
-                .as_ref()
-                .map(|t| t.title.clone())
-                .unwrap_or_default()
-        ),
+        SuggestionKind::Correction => d.question.clone().unwrap_or_else(|| d.title.clone()),
         SuggestionKind::Conflict => match lang {
             Lang::En => format!("Conflict copy · {}", d.folder),
             Lang::Ar => format!("نسخة تعارض · {}", d.folder),
@@ -1064,10 +1057,9 @@ fn suggestion_summary(d: &SuggestionDetail, lang: Lang) -> String {
     }
 }
 
-/// Whether a suggestion is a contradiction or conflict (Inbox "Conflicts" tab).
+/// Whether a suggestion is a conflict (Inbox "Conflicts" tab).
 fn is_conflict(s: &SuggestionItem) -> bool {
     s.detail.kind == SuggestionKind::Conflict
-        || (s.detail.kind == SuggestionKind::Relation && s.detail.rel_type == "contradicts")
 }
 
 fn open_items(conn: &Connection, ctx: &ViewCtx) -> CoreResult<Vec<OpenItem>> {
@@ -1166,16 +1158,14 @@ pub fn home(conn: &Connection, ctx: &ViewCtx) -> CoreResult<HomeView> {
             }
         })
         .collect();
+    // Contradictions are AI relations (decisions), not suggestions: the ones in the activity
+    // feed that are still in place.
+    let (ai_activity, ai_activity_items, ai_activity_headline) = ai_activity(conn, ctx)?;
     let contradictions_count = u32_of(
         i64::try_from(
-            inbox_view
-                .captures
+            ai_activity_items
                 .iter()
-                .flat_map(|c| &c.suggestions)
-                .chain(&inbox_view.suggestions)
-                .filter(|s| {
-                    s.detail.kind == SuggestionKind::Relation && s.detail.rel_type == "contradicts"
-                })
+                .filter(|a| a.kind == "contradiction" && !a.reverted)
                 .count(),
         )
         .unwrap_or(0),
@@ -1196,7 +1186,6 @@ pub fn home(conn: &Connection, ctx: &ViewCtx) -> CoreResult<HomeView> {
         });
     }
     let open_item_list = open_items(conn, ctx)?;
-    let (ai_activity, ai_activity_items, ai_activity_headline) = ai_activity(conn, ctx)?;
     Ok(HomeView {
         recent_notes,
         inbox_count: u32_of(inbox_count),
@@ -1381,19 +1370,19 @@ pub(crate) fn complete_candidate(
     Ok(c)
 }
 
-fn server_candidate(
+fn duplicate_item(
     conn: &Connection,
-    c: crate::sync::model::ServerCandidate,
+    c: sync_model::suggestions::DuplicateItem,
     lang: Lang,
 ) -> CoreResult<CandidateItem> {
     complete_candidate(
         conn,
         CandidateItem {
-            id: c.id,
+            id: c.id.to_string(),
             kind: c.kind,
             title: c.title,
             snippet: c.snippet,
-            match_level: c.match_level,
+            match_level: c.match_level.as_str().to_owned(),
             score: c.score,
             path: None,
             reason: String::new(),
@@ -1402,106 +1391,235 @@ fn server_candidate(
     )
 }
 
+/// A participant of a custody suggestion: the resolved entity, else the mention as written.
+fn custody_target(
+    conn: &Connection,
+    t: &sync_model::suggestions::CustodyTarget,
+) -> CoreResult<EntityRef> {
+    let resolved = match t.id {
+        Some(id) => entity_ref(conn, Some(id.to_string()), Some(t.mention.clone()))?,
+        None => None,
+    };
+    Ok(resolved.unwrap_or_else(|| EntityRef {
+        id: t.id.map(|i| i.to_string()),
+        title: t.mention.clone(),
+        kind: None,
+    }))
+}
+
+fn ulid_ref(conn: &Connection, id: ulid::Ulid) -> CoreResult<EntityRef> {
+    Ok(
+        entity_ref(conn, Some(id.to_string()), None)?.unwrap_or_else(|| EntityRef {
+            id: Some(id.to_string()),
+            title: String::new(),
+            kind: None,
+        }),
+    )
+}
+
+/// The custody line a suggestion proposes (`2026-09-20 — stored-at [[Desk drawer]]`) and the
+/// location / holder / last holder it results in (`vault-format`'s custody rules, L16).
+fn custody_preview(
+    p: &sync_model::suggestions::CustodyPayload,
+    place: Option<&EntityRef>,
+    person: Option<&EntityRef>,
+    counterparty: Option<&EntityRef>,
+) -> (
+    String,
+    Option<EntityRef>,
+    Option<EntityRef>,
+    Option<EntityRef>,
+) {
+    use vault_format::custody::{CustodyEvent, CustodyState};
+    let link = |r: Option<&EntityRef>| r.map(|r| format!("[[{}]]", r.title));
+    let Ok(kind) = p.event.parse::<domain::CustodyEventType>() else {
+        return (
+            format!("{} — {}", p.date.format("%Y-%m-%d"), p.event),
+            None,
+            None,
+            None,
+        );
+    };
+    let event = CustodyEvent {
+        date: p.date,
+        kind,
+        place: link(place),
+        person: link(person),
+        counterparty: link(counterparty),
+        citations: Vec::new(),
+    };
+    let line = event.to_line();
+    let line = line.strip_prefix("- ").unwrap_or(&line).to_owned();
+    let state = CustodyState::derive(std::slice::from_ref(&event));
+    let pick = |v: Option<&String>| -> Option<EntityRef> {
+        let v = v?;
+        [place, person, counterparty]
+            .into_iter()
+            .flatten()
+            .find(|r| &format!("[[{}]]", r.title) == v)
+            .cloned()
+    };
+    match state {
+        Some(st) => (
+            line,
+            pick(st.location.as_ref()),
+            pick(st.holder.as_ref()),
+            pick(st.last_holder.as_ref()),
+        ),
+        None => (line, None, None, None),
+    }
+}
+
+/// The task line a suggestion proposes (Tasks format: recurrence, then due).
+fn task_line(p: &sync_model::suggestions::TaskPayload) -> String {
+    use std::fmt::Write as _;
+    let mut line = format!("- [ ] {}", p.title.trim());
+    if let Some(r) = &p.recurrence {
+        let _ = write!(line, " 🔁 {r}");
+    }
+    if let Some(d) = p.due {
+        let _ = write!(line, " 📅 {}", d.format("%Y-%m-%d"));
+    }
+    line
+}
+
 #[allow(clippy::too_many_lines)] // one arm per suggestion kind
 fn suggestion_detail(
     conn: &Connection,
-    p: SuggestionPayload,
-    lang: Lang,
-) -> CoreResult<(SuggestionDetail, bool, Option<f64>)> {
-    let mut auto = false;
-    let mut filing_conf = None;
+    ctx: &ViewCtx,
+    p: DecodedPayload,
+) -> CoreResult<SuggestionDetail> {
+    use sync_model::SuggestionPayload as P;
+    let lang = ctx.lang;
+    let labels = ctx.labels();
+    let date_label = |d: NaiveDate| labels.date_in_list(d);
+    let p = match p {
+        DecodedPayload::Known(p) => p,
+        DecodedPayload::Other { kind } => {
+            return Ok(SuggestionDetail {
+                server_kind: kind,
+                ..SuggestionDetail::of(SuggestionKind::Unsupported)
+            });
+        }
+    };
     let detail = match p {
-        SuggestionPayload::Filing {
-            title,
-            folder,
-            tags,
-            confidence,
-        } => {
-            filing_conf = confidence;
-            SuggestionDetail {
-                title,
-                folder,
-                tags,
-                confidence,
-                ..SuggestionDetail::of(SuggestionKind::Filing)
-            }
-        }
-        SuggestionPayload::EntityLinkOrCreate {
-            mention,
-            candidates,
-        } => {
-            let mut refs = Vec::new();
-            for (id, title) in candidates {
-                let mut r = entity_ref(conn, Some(id), Some(title.clone()))?.unwrap_or(EntityRef {
-                    id: None,
-                    title: title.clone(),
-                    kind: None,
-                });
-                if r.title.is_empty() {
-                    r.title = title;
-                }
-                refs.push(r);
-            }
-            SuggestionDetail {
-                mention,
-                candidates: refs,
-                ..SuggestionDetail::of(SuggestionKind::EntityLinkOrCreate)
-            }
-        }
-        SuggestionPayload::Custody {
-            document_id,
-            line,
-            confidence,
-            auto_applied,
-            document_choices,
-        } => {
-            auto = auto_applied;
-            let document = entity_ref(conn, document_id.clone(), None)?;
-            let (location, holder, last_holder) = match &document_id {
-                Some(d) => {
-                    let b = document_brief(conn, d)?;
-                    (b.location, b.holder, b.last_holder)
-                }
-                None => (None, None, None),
+        P::Filing(f) => SuggestionDetail {
+            title: f.title,
+            folder: f.folder,
+            tags: f.tags,
+            decision_id: Some(f.decision_id.to_string()),
+            ..SuggestionDetail::of(SuggestionKind::Filing)
+        },
+        P::EntityLink(e) => {
+            let target = match e.proposed {
+                Some(id) => Some(ulid_ref(conn, id)?),
+                None => None,
             };
-            let mut choices = Vec::new();
-            for (id, title) in document_choices {
-                choices.extend(entity_ref(conn, Some(id), Some(title))?);
+            let mut candidates = Vec::new();
+            for id in e.proposed.into_iter().chain(e.candidates) {
+                let r = ulid_ref(conn, id)?;
+                if !candidates.contains(&r) {
+                    candidates.push(r);
+                }
             }
             SuggestionDetail {
-                document,
+                mention: e.mention,
+                entity_kind: e.kind,
+                target,
+                candidates,
+                is_nickname: e.is_nickname,
+                confidence: Some(e.confidence),
+                reason: e.reason,
+                decision_id: Some(e.decision_id.to_string()),
+                ..SuggestionDetail::of(SuggestionKind::EntityLink)
+            }
+        }
+        P::Custody(c) => {
+            let document = custody_target(conn, &c.document)?;
+            let mut choices = Vec::new();
+            for id in &c.document.candidates {
+                choices.push(ulid_ref(conn, *id)?);
+            }
+            let place = c
+                .place
+                .as_ref()
+                .map(|t| custody_target(conn, t))
+                .transpose()?;
+            let person = c
+                .person
+                .as_ref()
+                .map(|t| custody_target(conn, t))
+                .transpose()?;
+            let counterparty = c
+                .counterparty
+                .as_ref()
+                .map(|t| custody_target(conn, t))
+                .transpose()?;
+            let (line, location, holder, last_holder) =
+                custody_preview(&c, place.as_ref(), person.as_ref(), counterparty.as_ref());
+            SuggestionDetail {
+                document: Some(document),
                 line,
-                confidence: Some(confidence),
+                date: Some(c.date),
+                date_label: Some(date_label(c.date)),
                 location,
                 holder,
                 last_holder,
                 document_choices: choices,
+                quote: c.quote,
+                confidence: Some(c.confidence),
+                reason: c.reason,
+                decision_id: Some(c.decision_id.to_string()),
                 ..SuggestionDetail::of(SuggestionKind::Custody)
             }
         }
-        SuggestionPayload::Duplicate { candidates } => {
+        P::Task(t) => {
+            let mut entities = Vec::new();
+            for id in &t.entities {
+                entities.push(ulid_ref(conn, *id)?);
+            }
+            SuggestionDetail {
+                line: task_line(&t),
+                title: t.title,
+                date: t.due,
+                date_label: t.due.map(date_label),
+                recurrence: t.recurrence,
+                entities,
+                confidence: Some(t.confidence),
+                decision_id: Some(t.decision_id.to_string()),
+                ..SuggestionDetail::of(SuggestionKind::Task)
+            }
+        }
+        P::Correction(c) => {
+            let first = c.fixes.first();
+            let target = match first.and_then(|f| f.new_target) {
+                Some(id) => Some(ulid_ref(conn, id)?),
+                None => None,
+            };
+            SuggestionDetail {
+                title: c.message,
+                question: c.question,
+                rel_type: first.and_then(|f| f.new_type.clone()).unwrap_or_default(),
+                target,
+                reason: first.map(|f| f.reason.clone()).unwrap_or_default(),
+                confidence: first.map(|f| f.confidence),
+                decision_id: Some(c.decision_id.to_string()),
+                ..SuggestionDetail::of(SuggestionKind::Correction)
+            }
+        }
+        P::Duplicate(d) => {
             let mut v = Vec::new();
-            for c in candidates {
-                v.push(complete_candidate(conn, candidate_item(c), lang)?);
+            for c in d.candidates {
+                v.push(duplicate_item(conn, c, lang)?);
             }
             SuggestionDetail {
                 duplicates: v,
                 ..SuggestionDetail::of(SuggestionKind::Duplicate)
             }
         }
-        SuggestionPayload::DuplicateOf { candidates } => {
-            let mut v = Vec::new();
-            for c in candidates {
-                v.push(server_candidate(conn, c, lang)?);
-            }
-            SuggestionDetail {
-                duplicates: v,
-                ..SuggestionDetail::of(SuggestionKind::Duplicate)
-            }
-        }
-        SuggestionPayload::Duplicates { a, b, reason } => {
-            let a = server_candidate(conn, a, lang)?;
-            let b = server_candidate(conn, b, lang)?;
+        P::Duplicates(d) => {
+            let a = duplicate_item(conn, d.a, lang)?;
+            let b = duplicate_item(conn, d.b, lang)?;
             SuggestionDetail {
                 title: a.title.clone(),
                 other: Some(EntityRef {
@@ -1509,56 +1627,35 @@ fn suggestion_detail(
                     title: b.title.clone(),
                     kind: Some(b.kind.clone()),
                 }),
-                reason: reason.unwrap_or_default(),
+                reason: d.reason.unwrap_or_default(),
                 duplicates: vec![a, b],
                 ..SuggestionDetail::of(SuggestionKind::Duplicates)
             }
         }
-        SuggestionPayload::Conflict {
-            copy_id, copy_path, ..
-        } => SuggestionDetail {
-            folder: copy_path.clone(),
+        P::Conflict(c) => SuggestionDetail {
+            folder: c.copy_path.clone(),
             other: Some(EntityRef {
-                id: Some(copy_id),
-                title: format::title_of(&copy_path),
+                id: Some(c.copy_id.to_string()),
+                title: format::title_of(&c.copy_path),
                 kind: Some("note".to_owned()),
             }),
             ..SuggestionDetail::of(SuggestionKind::Conflict)
         },
-        SuggestionPayload::Relation {
-            dst_id,
-            rel_type,
-            confidence,
-            reason,
-        } => SuggestionDetail {
-            target: entity_ref(conn, Some(dst_id), None)?,
-            rel_type,
-            confidence: Some(confidence),
-            reason,
-            ..SuggestionDetail::of(SuggestionKind::Relation)
-        },
-        SuggestionPayload::Task { line } => SuggestionDetail {
-            line,
-            ..SuggestionDetail::of(SuggestionKind::Task)
-        },
-        SuggestionPayload::Other { kind } => SuggestionDetail {
-            server_kind: kind,
-            ..SuggestionDetail::of(SuggestionKind::Unsupported)
-        },
     };
-    Ok((detail, auto, filing_conf))
+    Ok(detail)
 }
 
 /// Whether only the user can decide a suggestion.
 pub fn needs_you(d: &SuggestionDetail) -> bool {
     match d.kind {
-        SuggestionKind::EntityLinkOrCreate
+        SuggestionKind::EntityLink
         | SuggestionKind::Duplicate
         | SuggestionKind::Duplicates
         | SuggestionKind::Conflict
         | SuggestionKind::Unsupported => true,
         SuggestionKind::Custody => !d.document_choices.is_empty(),
-        SuggestionKind::Filing | SuggestionKind::Relation | SuggestionKind::Task => false,
+        SuggestionKind::Correction => d.question.is_some(),
+        SuggestionKind::Filing | SuggestionKind::Task => false,
     }
 }
 
@@ -1567,6 +1664,8 @@ struct ReplyRow {
     id: String,
     text: String,
     at: String,
+    #[serde(default)]
+    author: crate::sync::model::ReplyAuthor,
 }
 
 /// Suggestions (pending only, or all) with their details, labels and threads, newest first.
@@ -1610,8 +1709,10 @@ pub fn suggestion_items(
     };
     let mut out = Vec::new();
     for (id, note_id, payload, status, created, kind, replies, acknowledged) in rows {
-        let payload = SuggestionPayload::decode(&kind, &payload);
-        let (detail, auto_applied, _) = suggestion_detail(conn, payload, ctx.lang)?;
+        let detail = suggestion_detail(conn, ctx, DecodedPayload::decode(&kind, &payload))?;
+        // Suggestions are what the AI did *not* apply (applied changes are AI decisions, in
+        // the activity feed); an accepted one is never "applied automatically".
+        let auto_applied = false;
         let shown = status == "pending" || (auto_applied && status == "accepted" && !acknowledged);
         if only_pending && !shown {
             continue;
@@ -1626,7 +1727,11 @@ pub fn suggestion_items(
                 text_dir: dir_of(&r.text),
                 created_label: labels.moment_label(ts(&r.at)),
                 id: r.id,
-                author: "user".to_owned(),
+                author: match r.author {
+                    crate::sync::model::ReplyAuthor::User => "user",
+                    crate::sync::model::ReplyAuthor::Ai => "ai",
+                }
+                .to_owned(),
                 text: r.text,
                 pending_sync: false,
             });
@@ -1718,10 +1823,6 @@ pub fn inbox(conn: &Connection, ctx: &ViewCtx, filter: InboxFilter) -> CoreResul
                 .map(|v| vault_format::resolve::link_name(v.trim_matches(['[', ']'])).to_owned());
             let suggestions = by_note.remove(&id).unwrap_or_default();
             let created = ts(&created);
-            let filing_confidence = suggestions
-                .iter()
-                .find(|s| s.detail.kind == SuggestionKind::Filing)
-                .and_then(|s| s.detail.confidence);
             InboxItem {
                 pending_sync: note_pending(&pending, &id),
                 needs_you: suggestions.iter().any(|s| s.needs_you),
@@ -1729,7 +1830,6 @@ pub fn inbox(conn: &Connection, ctx: &ViewCtx, filter: InboxFilter) -> CoreResul
                 is_duplicate: suggestions
                     .iter()
                     .any(|s| s.detail.kind == SuggestionKind::Duplicate),
-                filing_confidence,
                 suggestions,
                 note_id: id,
                 title,
@@ -2887,10 +2987,7 @@ pub fn directory_filtered(
             (_, SuggestionKind::Duplicates) => {
                 s.detail.duplicates.first().is_some_and(|c| c.kind == kind)
             }
-            (
-                DirectoryTab::People | DirectoryTab::Companies,
-                SuggestionKind::EntityLinkOrCreate,
-            )
+            (DirectoryTab::People | DirectoryTab::Companies, SuggestionKind::EntityLink)
             | (DirectoryTab::Documents, SuggestionKind::Custody) => true,
             _ => false,
         })

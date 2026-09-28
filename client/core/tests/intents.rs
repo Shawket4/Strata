@@ -12,11 +12,16 @@ use pretty_assertions::assert_eq;
 use strata_core::net::{EventSignal, NetError};
 use strata_core::store::outbox;
 use strata_core::sync::engine::Trigger;
+use strata_core::sync::model::suggestions::{
+    CorrectionFix, CorrectionPayload, CustodyPayload, CustodyTarget, EntityLinkPayload,
+    SuggestionPayload, TaskPayload,
+};
 use strata_core::sync::model::{
-    Op, Record, SuggestionPayload, SuggestionRecord, SuggestionStatus, Version,
+    Op, Record, ReplyAuthor, SuggestionRecord, SuggestionReplyRecord, SuggestionStatus, Version,
 };
 use strata_core::view::build;
 use strata_core::view::model::{InboxFilter, SessionKind, SignInRequest};
+use strata_core::view::model::{SuggestionEdits, SuggestionKind};
 use ulid::Ulid;
 
 const NOTE: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0V1B";
@@ -168,13 +173,21 @@ async fn a_pending_account_waits_and_check_again_signs_in_once_approved() {
     assert_eq!(state.pending, None);
 }
 
-fn suggestion(n: u128, note_id: &str, kind: &str, payload: &SuggestionPayload) -> Record {
+fn ulid(s: &str) -> Ulid {
+    Ulid::from_string(s).expect("ulid")
+}
+
+fn decision(n: u128) -> Ulid {
+    Ulid::from_parts(1_790_000_000_001, n)
+}
+
+fn suggestion(n: u128, note_id: &str, payload: &SuggestionPayload) -> Record {
     Record::Suggestion(SuggestionRecord {
         id: Ulid::from_parts(1_790_000_000_000, n),
         note_id: Some(Ulid::from_string(note_id).expect("id")),
-        kind: kind.into(),
+        kind: payload.kind().into(),
         status: SuggestionStatus::Pending,
-        payload: rmp_serde::to_vec_named(payload).expect("payload"),
+        payload: payload.to_bytes(),
         created: DateTime::parse_from_rfc3339("2026-09-27T12:00:00+03:00").expect("ts"),
         replies: Vec::new(),
     })
@@ -201,19 +214,33 @@ async fn inbox_filters_and_capture_intents() {
     h.server.remote_record(suggestion(
         1,
         CAP1,
-        "task",
-        &SuggestionPayload::Task {
-            line: "- [ ] Call Ahmed 📅 2026-09-28".into(),
-        },
+        &SuggestionPayload::Task(TaskPayload {
+            decision_id: decision(1),
+            source_note: ulid(CAP1),
+            block_id: None,
+            title: "Call Ahmed".into(),
+            due: NaiveDate::from_ymd_opt(2026, 9, 28),
+            recurrence: None,
+            reminders: Vec::new(),
+            entities: Vec::new(),
+            confidence: 0.9,
+        }),
     ));
     h.server.remote_record(suggestion(
         2,
         CAP2,
-        "entity_link_or_create",
-        &SuggestionPayload::EntityLinkOrCreate {
+        &SuggestionPayload::EntityLink(EntityLinkPayload {
+            decision_id: decision(2),
             mention: "Mona".into(),
-            candidates: vec![(PERSON.into(), "Mona Adel".into())],
-        },
+            kind: "person".into(),
+            source_note: ulid(CAP2),
+            block_id: None,
+            proposed: None,
+            candidates: vec![ulid(PERSON)],
+            is_nickname: false,
+            confidence: 0.55,
+            reason: "ambiguous".into(),
+        }),
     ));
     let s = h.sign_in_a().await;
     s.sync(Trigger::Start).await.expect("bootstrap");
@@ -327,4 +354,188 @@ async fn reminders_pins_and_notification_settings() {
             .message_key(),
         "error.invalid_input"
     );
+}
+
+#[tokio::test]
+async fn shared_suggestion_payloads_map_to_the_inbox_view() {
+    const DOC: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0V3D";
+    const DRAWER: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0V3E";
+    const SRC: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0V3F";
+    let h = Harness::new();
+    h.server.remote_upsert(
+        DOC,
+        "documents/Car license.md",
+        &format!("---\nid: {DOC}\nkind: document\n---\n"),
+    );
+    h.server.remote_upsert(
+        DRAWER,
+        "places/Desk drawer.md",
+        &format!("---\nid: {DRAWER}\nkind: place\n---\n"),
+    );
+    h.server.remote_upsert(
+        PERSON,
+        "people/Mona Adel.md",
+        &format!("---\nid: {PERSON}\nkind: person\n---\n"),
+    );
+    h.server.remote_upsert(
+        SRC,
+        "notes/Errands.md",
+        &format!("---\nid: {SRC}\n---\nPut the car license in the drawer.\n"),
+    );
+    let custody = SuggestionPayload::Custody(CustodyPayload {
+        decision_id: decision(3),
+        source_note: ulid(SRC),
+        block_id: None,
+        event: "stored-at".into(),
+        date: NaiveDate::from_ymd_opt(2026, 9, 20).expect("date"),
+        document: CustodyTarget {
+            mention: "car license".into(),
+            id: Some(ulid(DOC)),
+            candidates: Vec::new(),
+        },
+        place: Some(CustodyTarget {
+            mention: "the drawer".into(),
+            id: Some(ulid(DRAWER)),
+            candidates: Vec::new(),
+        }),
+        place_part_of: None,
+        person: None,
+        counterparty: None,
+        confidence: 0.7,
+        reason: "low_confidence".into(),
+        quote: "Put the car license in the drawer.".into(),
+    });
+    let correction = SuggestionPayload::Correction(CorrectionPayload {
+        decision_id: decision(4),
+        message: "That Mona is Mona Adel".into(),
+        fixes: vec![CorrectionFix {
+            decision_id: decision(9),
+            action: "repoint".into(),
+            new_target: Some(ulid(PERSON)),
+            new_type: None,
+            confidence: 0.6,
+            reason: "Same first name, same company.".into(),
+        }],
+        hints: Vec::new(),
+        question: Some("Which Mona do you mean?".into()),
+    });
+    let mut with_thread = suggestion(5, SRC, &correction);
+    if let Record::Suggestion(r) = &mut with_thread {
+        r.replies = vec![
+            SuggestionReplyRecord {
+                id: Ulid::from_parts(1_790_000_000_002, 1),
+                text: "The one at Acme".into(),
+                at: DateTime::parse_from_rfc3339("2026-09-27T12:05:00+03:00").expect("ts"),
+                author: ReplyAuthor::User,
+            },
+            SuggestionReplyRecord {
+                id: Ulid::from_parts(1_790_000_000_002, 2),
+                text: "Mona Adel, then.".into(),
+                at: DateTime::parse_from_rfc3339("2026-09-27T12:06:00+03:00").expect("ts"),
+                author: ReplyAuthor::Ai,
+            },
+        ];
+    }
+    h.server.remote_record(suggestion(4, SRC, &custody));
+    h.server.remote_record(with_thread);
+    // A kind this client does not know is kept, as "unsupported".
+    h.server.remote_record(Record::Suggestion(SuggestionRecord {
+        id: Ulid::from_parts(1_790_000_000_000, 6),
+        note_id: Some(ulid(SRC)),
+        kind: "hunch".into(),
+        status: SuggestionStatus::Pending,
+        payload: vec![0x80],
+        created: DateTime::parse_from_rfc3339("2026-09-27T12:00:00+03:00").expect("ts"),
+        replies: Vec::new(),
+    }));
+    let s = h.sign_in_a().await;
+    s.sync(Trigger::Start).await.expect("bootstrap");
+    let inbox = s
+        .read(|c, ctx| build::inbox(c, ctx, InboxFilter::All))
+        .expect("inbox");
+    let by_kind = |k: SuggestionKind| {
+        inbox
+            .suggestions
+            .iter()
+            .find(|x| x.detail.kind == k)
+            .unwrap_or_else(|| panic!("{k:?}"))
+            .clone()
+    };
+
+    let c = by_kind(SuggestionKind::Custody);
+    assert_eq!(c.detail.line, "2026-09-20 — stored-at [[Desk drawer]]");
+    assert_eq!(
+        c.detail.document.as_ref().map(|d| d.title.as_str()),
+        Some("Car license")
+    );
+    assert_eq!(
+        c.detail.location.as_ref().and_then(|l| l.id.as_deref()),
+        Some(DRAWER)
+    );
+    assert_eq!(
+        (c.detail.holder.clone(), c.detail.last_holder.clone()),
+        (None, None)
+    );
+    assert_eq!(c.detail.date_label.as_deref(), Some("20 Sep"));
+    assert_eq!(c.detail.quote, "Put the car license in the drawer.");
+    assert_eq!(c.detail.decision_id, Some(decision(3).to_string()));
+    assert_eq!(
+        (c.detail.confidence, c.can_accept, c.auto_applied),
+        (Some(0.7), true, false)
+    );
+
+    let k = by_kind(SuggestionKind::Correction);
+    assert_eq!(k.detail.title, "That Mona is Mona Adel");
+    assert_eq!(
+        k.detail.question.as_deref(),
+        Some("Which Mona do you mean?")
+    );
+    assert_eq!(
+        k.detail.target.as_ref().and_then(|t| t.id.as_deref()),
+        Some(PERSON)
+    );
+    assert!(k.needs_you);
+    assert_eq!(
+        k.thread
+            .iter()
+            .map(|m| (m.author.as_str(), m.text.as_str()))
+            .collect::<Vec<_>>(),
+        [("user", "The one at Acme"), ("ai", "Mona Adel, then.")]
+    );
+
+    let u = by_kind(SuggestionKind::Unsupported);
+    assert_eq!(u.detail.server_kind, "hunch");
+
+    // Accept with edits: the op carries every edit (`suggestion.accept`).
+    let op = s
+        .accept_suggestion_with(
+            &c.id,
+            SuggestionEdits {
+                target_id: Some(DOC.into()),
+                aliases: Some(vec!["الرخصة".into()]),
+                ..SuggestionEdits::default()
+            },
+        )
+        .expect("accept");
+    let queued = s.read(|c, _| outbox::all(c)).expect("outbox");
+    let accept = queued
+        .iter()
+        .find(|o| o.op_id.to_string() == op)
+        .expect("op");
+    match &accept.op {
+        Op::SuggestionAccept(a) => {
+            let e = a.edits.as_ref().expect("edits");
+            assert_eq!(e.target_id, Some(ulid(DOC)));
+            assert_eq!(e.aliases.as_deref(), Some(&["الرخصة".to_owned()][..]));
+        }
+        other => panic!("{other:?}"),
+    }
+
+    // Forced relink (`relink.request`).
+    let relink = s.request_relink(SRC).expect("relink");
+    let queued = s.read(|c, _| outbox::all(c)).expect("outbox");
+    assert!(matches!(
+        queued.iter().find(|o| o.op_id.to_string() == relink).map(|o| &o.op),
+        Some(Op::RelinkRequest(r)) if r.id == ulid(SRC)
+    ));
 }

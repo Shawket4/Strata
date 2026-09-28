@@ -87,10 +87,20 @@ fn suggestion() -> Record {
         note_id: None,
         kind: "task".into(),
         status: SuggestionStatus::Pending,
-        payload: rmp_serde::to_vec_named(&strata_core::sync::model::SuggestionPayload::Task {
-            line: "- [ ] Call Ahmed".into(),
-        })
-        .expect("payload"),
+        payload: strata_core::sync::model::suggestions::SuggestionPayload::Task(
+            strata_core::sync::model::suggestions::TaskPayload {
+                decision_id: Ulid::from_string("01J8ZKD0000000000000000001").expect("id"),
+                source_note: Ulid::from_string(N1).expect("id"),
+                block_id: None,
+                title: "Call Ahmed".into(),
+                due: None,
+                recurrence: None,
+                reminders: Vec::new(),
+                entities: Vec::new(),
+                confidence: 0.8,
+            },
+        )
+        .to_bytes(),
         created: DateTime::parse_from_rfc3339("2026-09-27T12:00:00+03:00").expect("ts"),
         replies: Vec::new(),
     })

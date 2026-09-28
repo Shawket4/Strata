@@ -3720,9 +3720,6 @@ class InboxItem {
   /// Where it came from ("Typed on Pixel 8", "Voice"), from the note's `source:`.
   final String? sourceLabel;
 
-  /// The AI's filing confidence, when it proposed a filing.
-  final double? filingConfidence;
-
   /// Some suggestion needs the user.
   final bool needsYou;
 
@@ -3742,7 +3739,6 @@ class InboxItem {
     required this.textDir,
     required this.createdLabel,
     this.sourceLabel,
-    this.filingConfidence,
     required this.needsYou,
     required this.ready,
     required this.isDuplicate,
@@ -3759,7 +3755,6 @@ class InboxItem {
       textDir.hashCode ^
       createdLabel.hashCode ^
       sourceLabel.hashCode ^
-      filingConfidence.hashCode ^
       needsYou.hashCode ^
       ready.hashCode ^
       isDuplicate.hashCode;
@@ -3778,7 +3773,6 @@ class InboxItem {
           textDir == other.textDir &&
           createdLabel == other.createdLabel &&
           sourceLabel == other.sourceLabel &&
-          filingConfidence == other.filingConfidence &&
           needsYou == other.needsYou &&
           ready == other.ready &&
           isDuplicate == other.isDuplicate;
@@ -6383,6 +6377,34 @@ class SuggestionDetail {
   /// Conflict / duplicates: the other note (conflict copy, second item).
   final EntityRef? other;
 
+  /// The AI decision behind it (filing, entity link, custody, task, correction), for D13
+  /// corrections.
+  final String? decisionId;
+
+  /// Entity link: the entity kind (`person`, `company`, `document`, `place`).
+  final String entityKind;
+
+  /// Entity link: a nickname or kinship term (never created automatically).
+  final bool isNickname;
+
+  /// Custody: the span of the note stating it.
+  final String quote;
+
+  /// Custody: the event date; task: the due date.
+  final DateTime? date;
+
+  /// `date` as a label ("Sun 20 Sep").
+  final String? dateLabel;
+
+  /// Task: the recurrence phrase.
+  final String? recurrence;
+
+  /// Task: the entities it concerns.
+  final List<EntityRef> entities;
+
+  /// Correction: the model's question when the reference is ambiguous.
+  final String? question;
+
   const SuggestionDetail({
     required this.kind,
     required this.title,
@@ -6404,6 +6426,15 @@ class SuggestionDetail {
     required this.documentChoices,
     this.timeline,
     this.other,
+    this.decisionId,
+    required this.entityKind,
+    required this.isNickname,
+    required this.quote,
+    this.date,
+    this.dateLabel,
+    this.recurrence,
+    required this.entities,
+    this.question,
   });
 
   /// An empty detail of `kind`.
@@ -6431,7 +6462,16 @@ class SuggestionDetail {
       lastHolder.hashCode ^
       documentChoices.hashCode ^
       timeline.hashCode ^
-      other.hashCode;
+      other.hashCode ^
+      decisionId.hashCode ^
+      entityKind.hashCode ^
+      isNickname.hashCode ^
+      quote.hashCode ^
+      date.hashCode ^
+      dateLabel.hashCode ^
+      recurrence.hashCode ^
+      entities.hashCode ^
+      question.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -6457,7 +6497,16 @@ class SuggestionDetail {
           lastHolder == other.lastHolder &&
           documentChoices == other.documentChoices &&
           timeline == other.timeline &&
-          other == other.other;
+          other == other.other &&
+          decisionId == other.decisionId &&
+          entityKind == other.entityKind &&
+          isNickname == other.isNickname &&
+          quote == other.quote &&
+          date == other.date &&
+          dateLabel == other.dateLabel &&
+          recurrence == other.recurrence &&
+          entities == other.entities &&
+          question == other.question;
 }
 
 /// Edits to a proposal before accepting it (`InboxExpanded`).
@@ -6480,6 +6529,15 @@ class SuggestionEdits {
   /// Task: recurrence phrase.
   final String? recurrence;
 
+  /// Task: reminder times (local).
+  final List<DateTime>? reminders;
+
+  /// Entity link / correction: the entity (or note) to point at instead.
+  final String? targetId;
+
+  /// Entity link: spellings of the mention to add as aliases.
+  final List<String>? aliases;
+
   const SuggestionEdits({
     this.title,
     this.folder,
@@ -6487,6 +6545,9 @@ class SuggestionEdits {
     this.text,
     this.due,
     this.recurrence,
+    this.reminders,
+    this.targetId,
+    this.aliases,
   });
 
   static Future<SuggestionEdits> default_() =>
@@ -6499,7 +6560,10 @@ class SuggestionEdits {
       tags.hashCode ^
       text.hashCode ^
       due.hashCode ^
-      recurrence.hashCode;
+      recurrence.hashCode ^
+      reminders.hashCode ^
+      targetId.hashCode ^
+      aliases.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -6511,7 +6575,10 @@ class SuggestionEdits {
           tags == other.tags &&
           text == other.text &&
           due == other.due &&
-          recurrence == other.recurrence;
+          recurrence == other.recurrence &&
+          reminders == other.reminders &&
+          targetId == other.targetId &&
+          aliases == other.aliases;
 }
 
 /// A suggestion.
@@ -6608,27 +6675,31 @@ class SuggestionItem {
           thread == other.thread;
 }
 
-/// What a suggestion proposes.
+/// What a suggestion proposes (the shared suggestion kinds of `sync_model::suggestions`).
 enum SuggestionKind {
   /// AI filing of a capture (`title`, `folder`, `tags`).
   filing,
 
-  /// "Who is “بابا”?": link to a candidate or create a person (`mention`, `candidates`).
-  entityLinkOrCreate,
+  /// "Who is “بابا”?": link a mention to an entity or create it (`mention`, `entity_kind`,
+  /// `target` = the proposed entity, `candidates`, `is_nickname`, `confidence`, `reason`).
+  entityLink,
 
-  /// A custody event to confirm (`document`, `line`, `confidence`).
+  /// A custody event to confirm (`document`, `line`, `date_label`, `location` / `holder` /
+  /// `last_holder` it results in, `document_choices`, `quote`, `confidence`, `reason`).
   custody,
 
   /// The item resembles existing items (`duplicates`).
   duplicate,
 
-  /// A low-confidence relation (`target`, `rel_type`, `confidence`, `reason`).
-  relation,
+  /// A correction in words to confirm (`title` = the user's words, `question`, and the first
+  /// fix as `rel_type` / `target` / `reason` / `confidence`).
+  correction,
 
-  /// A task proposed from a capture (`line`).
+  /// A task proposed from a note (`title`, `line`, `date_label`, `recurrence`, `entities`,
+  /// `confidence`).
   task,
 
-  /// An edit made offline conflicted; the server kept both (`copy`).
+  /// An edit made offline conflicted; the server kept both (`other` = the copy).
   conflict,
 
   /// Two stored items look like duplicates (nightly sweep, `duplicates`).

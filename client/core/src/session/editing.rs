@@ -195,7 +195,9 @@ impl Session {
         self.accept_captures(&ids)
     }
 
-    /// Accepts a proposal with the user's edits (title, folder, tags, task fields).
+    /// Accepts a proposal with the user's edits (`suggestion.accept` with edits): filing title,
+    /// folder and tags; task text, due date, recurrence and reminders; the entity to point at
+    /// and the aliases to add.
     pub fn accept_suggestion_with(&self, id: &str, e: SuggestionEdits) -> CoreResult<String> {
         self.suggestion(id)?;
         self.accept_with(
@@ -204,12 +206,16 @@ impl Session {
                 title: e.title,
                 tags: e.tags,
                 folder: e.folder,
-                target_id: None,
-                aliases: None,
+                target_id: e
+                    .target_id
+                    .as_deref()
+                    .map(|t| ulid_of(t, "target_id"))
+                    .transpose()?,
+                aliases: e.aliases,
                 text: e.text,
                 due: e.due,
                 recurrence: e.recurrence,
-                reminders: None,
+                reminders: e.reminders,
             }),
         )
     }
@@ -236,7 +242,14 @@ impl Session {
                     .map(str::trim)
                     .filter(|n| !n.is_empty())
                     .ok_or_else(|| CoreError::invalid("name", "empty"))?;
-                let kind = match choice.entity_kind.as_deref().unwrap_or("person") {
+                // The payload says which kind the mention is; the user may override it.
+                let kind_name = choice
+                    .entity_kind
+                    .clone()
+                    .filter(|k| !k.is_empty())
+                    .or_else(|| Some(s.detail.entity_kind.clone()).filter(|k| !k.is_empty()))
+                    .unwrap_or_else(|| "person".to_owned());
+                let kind = match kind_name.as_str() {
                     "person" => domain::NoteKind::Person,
                     "company" => domain::NoteKind::Company,
                     _ => return Err(CoreError::invalid("entity_kind", "unknown")),

@@ -1014,22 +1014,26 @@ pub struct CandidateItem {
     pub reason: String,
 }
 
-/// What a suggestion proposes.
+/// What a suggestion proposes (the shared suggestion kinds of `sync_model::suggestions`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SuggestionKind {
     /// AI filing of a capture (`title`, `folder`, `tags`).
     Filing,
-    /// "Who is “بابا”?": link to a candidate or create a person (`mention`, `candidates`).
-    EntityLinkOrCreate,
-    /// A custody event to confirm (`document`, `line`, `confidence`).
+    /// "Who is “بابا”?": link a mention to an entity or create it (`mention`, `entity_kind`,
+    /// `target` = the proposed entity, `candidates`, `is_nickname`, `confidence`, `reason`).
+    EntityLink,
+    /// A custody event to confirm (`document`, `line`, `date_label`, `location` / `holder` /
+    /// `last_holder` it results in, `document_choices`, `quote`, `confidence`, `reason`).
     Custody,
     /// The item resembles existing items (`duplicates`).
     Duplicate,
-    /// A low-confidence relation (`target`, `rel_type`, `confidence`, `reason`).
-    Relation,
-    /// A task proposed from a capture (`line`).
+    /// A correction in words to confirm (`title` = the user's words, `question`, and the first
+    /// fix as `rel_type` / `target` / `reason` / `confidence`).
+    Correction,
+    /// A task proposed from a note (`title`, `line`, `date_label`, `recurrence`, `entities`,
+    /// `confidence`).
     Task,
-    /// An edit made offline conflicted; the server kept both (`copy`).
+    /// An edit made offline conflicted; the server kept both (`other` = the copy).
     Conflict,
     /// Two stored items look like duplicates (nightly sweep, `duplicates`).
     Duplicates,
@@ -1081,6 +1085,25 @@ pub struct SuggestionDetail {
     pub timeline: Option<TimelineChip>,
     /// Conflict / duplicates: the other note (conflict copy, second item).
     pub other: Option<EntityRef>,
+    /// The AI decision behind it (filing, entity link, custody, task, correction), for D13
+    /// corrections.
+    pub decision_id: Option<String>,
+    /// Entity link: the entity kind (`person`, `company`, `document`, `place`).
+    pub entity_kind: String,
+    /// Entity link: a nickname or kinship term (never created automatically).
+    pub is_nickname: bool,
+    /// Custody: the span of the note stating it.
+    pub quote: String,
+    /// Custody: the event date; task: the due date.
+    pub date: Option<NaiveDate>,
+    /// `date` as a label ("Sun 20 Sep").
+    pub date_label: Option<String>,
+    /// Task: the recurrence phrase.
+    pub recurrence: Option<String>,
+    /// Task: the entities it concerns.
+    pub entities: Vec<EntityRef>,
+    /// Correction: the model's question when the reference is ambiguous.
+    pub question: Option<String>,
 }
 
 /// "Timeline · Mon 28 Sep (from “بكرة”)".
@@ -1118,6 +1141,15 @@ impl SuggestionDetail {
             document_choices: Vec::new(),
             timeline: None,
             other: None,
+            decision_id: None,
+            entity_kind: String::new(),
+            is_nickname: false,
+            quote: String::new(),
+            date: None,
+            date_label: None,
+            recurrence: None,
+            entities: Vec::new(),
+            question: None,
         }
     }
 }
@@ -1194,8 +1226,6 @@ pub struct InboxItem {
     pub created_label: String,
     /// Where it came from ("Typed on Pixel 8", "Voice"), from the note's `source:`.
     pub source_label: Option<String>,
-    /// The AI's filing confidence, when it proposed a filing.
-    pub filing_confidence: Option<f64>,
     /// Some suggestion needs the user.
     pub needs_you: bool,
     /// Every suggestion can be accepted as is ("Accept all ready").
@@ -1249,6 +1279,12 @@ pub struct SuggestionEdits {
     pub due: Option<NaiveDate>,
     /// Task: recurrence phrase.
     pub recurrence: Option<String>,
+    /// Task: reminder times (local).
+    pub reminders: Option<Vec<NaiveDateTime>>,
+    /// Entity link / correction: the entity (or note) to point at instead.
+    pub target_id: Option<String>,
+    /// Entity link: spellings of the mention to add as aliases.
+    pub aliases: Option<Vec<String>>,
 }
 
 /// Link-or-create answer.

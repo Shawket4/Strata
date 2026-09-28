@@ -6958,8 +6958,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   InboxItem dco_decode_inbox_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return InboxItem(
       noteId: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -6970,10 +6970,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       textDir: dco_decode_text_dir(arr[6]),
       createdLabel: dco_decode_String(arr[7]),
       sourceLabel: dco_decode_opt_String(arr[8]),
-      filingConfidence: dco_decode_opt_box_autoadd_f_64(arr[9]),
-      needsYou: dco_decode_bool(arr[10]),
-      ready: dco_decode_bool(arr[11]),
-      isDuplicate: dco_decode_bool(arr[12]),
+      needsYou: dco_decode_bool(arr[9]),
+      ready: dco_decode_bool(arr[10]),
+      isDuplicate: dco_decode_bool(arr[11]),
     );
   }
 
@@ -8370,8 +8369,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SuggestionDetail dco_decode_suggestion_detail(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 20)
-      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
+    if (arr.length != 29)
+      throw Exception('unexpected arr length: expect 29 but see ${arr.length}');
     return SuggestionDetail(
       kind: dco_decode_suggestion_kind(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -8393,6 +8392,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       documentChoices: dco_decode_list_entity_ref(arr[17]),
       timeline: dco_decode_opt_box_autoadd_timeline_chip(arr[18]),
       other: dco_decode_opt_box_autoadd_entity_ref(arr[19]),
+      decisionId: dco_decode_opt_String(arr[20]),
+      entityKind: dco_decode_String(arr[21]),
+      isNickname: dco_decode_bool(arr[22]),
+      quote: dco_decode_String(arr[23]),
+      date: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[24]),
+      dateLabel: dco_decode_opt_String(arr[25]),
+      recurrence: dco_decode_opt_String(arr[26]),
+      entities: dco_decode_list_entity_ref(arr[27]),
+      question: dco_decode_opt_String(arr[28]),
     );
   }
 
@@ -8400,8 +8408,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   SuggestionEdits dco_decode_suggestion_edits(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return SuggestionEdits(
       title: dco_decode_opt_String(arr[0]),
       folder: dco_decode_opt_String(arr[1]),
@@ -8409,6 +8417,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       text: dco_decode_opt_String(arr[3]),
       due: dco_decode_opt_box_autoadd_Chrono_NaiveDate(arr[4]),
       recurrence: dco_decode_opt_String(arr[5]),
+      reminders: dco_decode_opt_list_Chrono_NaiveDateTime(arr[6]),
+      targetId: dco_decode_opt_String(arr[7]),
+      aliases: dco_decode_opt_list_String(arr[8]),
     );
   }
 
@@ -10654,7 +10665,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_textDir = sse_decode_text_dir(deserializer);
     var var_createdLabel = sse_decode_String(deserializer);
     var var_sourceLabel = sse_decode_opt_String(deserializer);
-    var var_filingConfidence = sse_decode_opt_box_autoadd_f_64(deserializer);
     var var_needsYou = sse_decode_bool(deserializer);
     var var_ready = sse_decode_bool(deserializer);
     var var_isDuplicate = sse_decode_bool(deserializer);
@@ -10668,7 +10678,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       textDir: var_textDir,
       createdLabel: var_createdLabel,
       sourceLabel: var_sourceLabel,
-      filingConfidence: var_filingConfidence,
       needsYou: var_needsYou,
       ready: var_ready,
       isDuplicate: var_isDuplicate,
@@ -12845,6 +12854,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_documentChoices = sse_decode_list_entity_ref(deserializer);
     var var_timeline = sse_decode_opt_box_autoadd_timeline_chip(deserializer);
     var var_other = sse_decode_opt_box_autoadd_entity_ref(deserializer);
+    var var_decisionId = sse_decode_opt_String(deserializer);
+    var var_entityKind = sse_decode_String(deserializer);
+    var var_isNickname = sse_decode_bool(deserializer);
+    var var_quote = sse_decode_String(deserializer);
+    var var_date = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
+    var var_dateLabel = sse_decode_opt_String(deserializer);
+    var var_recurrence = sse_decode_opt_String(deserializer);
+    var var_entities = sse_decode_list_entity_ref(deserializer);
+    var var_question = sse_decode_opt_String(deserializer);
     return SuggestionDetail(
       kind: var_kind,
       title: var_title,
@@ -12866,6 +12884,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       documentChoices: var_documentChoices,
       timeline: var_timeline,
       other: var_other,
+      decisionId: var_decisionId,
+      entityKind: var_entityKind,
+      isNickname: var_isNickname,
+      quote: var_quote,
+      date: var_date,
+      dateLabel: var_dateLabel,
+      recurrence: var_recurrence,
+      entities: var_entities,
+      question: var_question,
     );
   }
 
@@ -12878,6 +12905,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_text = sse_decode_opt_String(deserializer);
     var var_due = sse_decode_opt_box_autoadd_Chrono_NaiveDate(deserializer);
     var var_recurrence = sse_decode_opt_String(deserializer);
+    var var_reminders = sse_decode_opt_list_Chrono_NaiveDateTime(deserializer);
+    var var_targetId = sse_decode_opt_String(deserializer);
+    var var_aliases = sse_decode_opt_list_String(deserializer);
     return SuggestionEdits(
       title: var_title,
       folder: var_folder,
@@ -12885,6 +12915,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       text: var_text,
       due: var_due,
       recurrence: var_recurrence,
+      reminders: var_reminders,
+      targetId: var_targetId,
+      aliases: var_aliases,
     );
   }
 
@@ -14989,7 +15022,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_text_dir(self.textDir, serializer);
     sse_encode_String(self.createdLabel, serializer);
     sse_encode_opt_String(self.sourceLabel, serializer);
-    sse_encode_opt_box_autoadd_f_64(self.filingConfidence, serializer);
     sse_encode_bool(self.needsYou, serializer);
     sse_encode_bool(self.ready, serializer);
     sse_encode_bool(self.isDuplicate, serializer);
@@ -16808,6 +16840,15 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_list_entity_ref(self.documentChoices, serializer);
     sse_encode_opt_box_autoadd_timeline_chip(self.timeline, serializer);
     sse_encode_opt_box_autoadd_entity_ref(self.other, serializer);
+    sse_encode_opt_String(self.decisionId, serializer);
+    sse_encode_String(self.entityKind, serializer);
+    sse_encode_bool(self.isNickname, serializer);
+    sse_encode_String(self.quote, serializer);
+    sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.date, serializer);
+    sse_encode_opt_String(self.dateLabel, serializer);
+    sse_encode_opt_String(self.recurrence, serializer);
+    sse_encode_list_entity_ref(self.entities, serializer);
+    sse_encode_opt_String(self.question, serializer);
   }
 
   @protected
@@ -16822,6 +16863,9 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.text, serializer);
     sse_encode_opt_box_autoadd_Chrono_NaiveDate(self.due, serializer);
     sse_encode_opt_String(self.recurrence, serializer);
+    sse_encode_opt_list_Chrono_NaiveDateTime(self.reminders, serializer);
+    sse_encode_opt_String(self.targetId, serializer);
+    sse_encode_opt_list_String(self.aliases, serializer);
   }
 
   @protected
