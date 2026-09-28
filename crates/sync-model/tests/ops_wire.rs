@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use chrono::{DateTime, NaiveDate};
+use chrono::{DateTime, NaiveDate, Utc};
 use dedupe::{DedupeKind, DuplicateCandidate, KeepBoth, MatchLevel};
 use domain::{CopyKind, CustodyEventType, NoteKind, Priority, RelationOrigin};
 use pretty_assertions::assert_eq;
@@ -32,6 +32,13 @@ fn d(s: &str) -> NaiveDate {
     NaiveDate::from_str(s).unwrap()
 }
 
+/// The device's creation time of the sample creates.
+fn t() -> DateTime<Utc> {
+    DateTime::parse_from_rfc3339("2026-09-27T14:32:00+03:00")
+        .unwrap()
+        .to_utc()
+}
+
 fn v(s: &str) -> Version {
     Version::of_text(s)
 }
@@ -44,6 +51,7 @@ fn samples() -> Vec<SyncOp> {
                 id: u(1),
                 path: "notes/A.md".into(),
                 content: "# A\n".into(),
+                created: t(),
                 force: true,
             }),
             None,
@@ -67,7 +75,7 @@ fn samples() -> Vec<SyncOp> {
             Op::Capture(Capture {
                 id: u(2),
                 text: "remind me to make Watanya's invoice".into(),
-                created: DateTime::parse_from_rfc3339("2026-09-27T14:32:00+03:00").unwrap(),
+                created: t(),
             }),
             None,
         ),
@@ -104,6 +112,7 @@ fn samples() -> Vec<SyncOp> {
                     aliases: Some(vec!["أحمد".into()]),
                     ..SuggestionEdits::default()
                 }),
+                created: t(),
             }),
             None,
         ),
@@ -129,6 +138,7 @@ fn samples() -> Vec<SyncOp> {
                 name: "Ahmed Samir".into(),
                 aliases: vec!["أحمد سمير".into()],
                 fields: BTreeMap::from([("role".to_owned(), "Ops".to_owned())]),
+                created: t(),
                 force: false,
             }),
             None,
@@ -159,6 +169,7 @@ fn samples() -> Vec<SyncOp> {
                 companies: vec![u(9)],
                 people: vec![],
                 expires: Some(d("2027-03-31")),
+                created: t(),
                 force: false,
             }),
             None,
@@ -189,6 +200,7 @@ fn samples() -> Vec<SyncOp> {
                 aliases: vec![],
                 parent_id: Some(u(12)),
                 address: None,
+                created: t(),
                 force: true,
             }),
             None,
@@ -211,6 +223,8 @@ fn samples() -> Vec<SyncOp> {
                 recurrence: Some("every month on the 1st".into()),
                 reminders: vec![d("2026-10-01").and_hms_opt(9, 0, 0).unwrap()],
                 priority: Some(Priority::High),
+                created: t(),
+                home_id: Some(u(14)),
                 force: false,
             }),
             None,
@@ -286,6 +300,18 @@ fn every_kind_has_a_sample_that_round_trips_and_validates() {
             op.op.force(),
             matches!(&op.op, Op::NoteCreate(_) | Op::PlaceCreate(_))
         );
+        // Every op that creates a note carries the device's creation time.
+        let creates = matches!(
+            &op.op,
+            Op::NoteCreate(_)
+                | Op::Capture(_)
+                | Op::EntityCreate(_)
+                | Op::DocumentCreate(_)
+                | Op::PlaceCreate(_)
+                | Op::TaskCreate(_)
+                | Op::SuggestionAccept(_)
+        );
+        assert_eq!(op.op.created(), creates.then(t).as_ref(), "{}", op.op.kind());
     }
     let request = PushRequest { ops };
     assert_eq!(request.validate(), Ok(()));
@@ -336,6 +362,45 @@ fn envelope_shape_is_stable() {
         serde_json::to_value(&rel).unwrap()["op"],
         json!({"kind": "relation.add", "payload": {"src_id": "00000000000000000000000003", "dst_id": "00000000000000000000000004", "type": "part-of"}})
     );
+}
+
+/// The device's creation time is UTC on the wire, required, and a time sent with another
+/// offset is read as the same instant in UTC.
+#[test]
+fn creation_times_are_required_and_utc() {
+    let capture = Op::Capture(Capture {
+        id: u(2),
+        text: "x".into(),
+        created: t(),
+    });
+    assert_eq!(
+        serde_json::to_value(&capture).unwrap()["payload"],
+        json!({"id": "00000000000000000000000002", "text": "x", "created": "2026-09-27T11:32:00Z"})
+    );
+    let payload = json!({"id": "00000000000000000000000002", "text": "x", "created": "2026-09-27T14:32:00+03:00"});
+    let bytes = rmp_serde::to_vec_named(&payload).unwrap();
+    assert_eq!(Op::from_parts(OpKind::Capture, &bytes), Ok(capture));
+    let without = json!({"id": "00000000000000000000000001", "path": "notes/A.md", "content": "# A\n"});
+    let err = Op::from_parts(
+        OpKind::NoteCreate,
+        &rmp_serde::to_vec_named(&without).unwrap(),
+    )
+    .unwrap_err();
+    assert!(
+        matches!(&err, OpError::InvalidPayload { kind: OpKind::NoteCreate, reason } if reason.contains("created")),
+        "{err:?}"
+    );
+    // `home_id` of a task create is optional.
+    let task = json!({
+        "id": "t-01j9a2", "note_id": null, "text": "a", "due": null, "scheduled": null,
+        "start": null, "recurrence": null, "priority": null, "created": "2026-09-27T11:32:00Z"
+    });
+    let Op::TaskCreate(back) =
+        Op::from_parts(OpKind::TaskCreate, &rmp_serde::to_vec_named(&task).unwrap()).unwrap()
+    else {
+        panic!("kind changed")
+    };
+    assert_eq!((back.created, back.home_id), (t(), None));
 }
 
 #[test]

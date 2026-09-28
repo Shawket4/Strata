@@ -2312,6 +2312,7 @@ name = "item-render"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "chrono-tz",
  "domain",
  "pretty_assertions",
  "proptest",

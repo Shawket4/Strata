@@ -95,7 +95,7 @@ void main() {
               const GraphFilter(
                 edgeKinds: [],
                 nodeKinds: [],
-                similarity: true,
+                similarity: false,
                 lens: GraphLens.notes,
                 includeTags: false,
               ),
@@ -177,6 +177,7 @@ void main() {
       String? opened;
       String? mapped;
       final fake = _fake();
+      final small = MapFixtures.globalSmall;
       await pumpVariant(
         tester,
         expanded,
@@ -187,19 +188,39 @@ void main() {
         fake: fake,
         scaffold: true,
       );
-      await tester.tapAt(nodeOnScreen(tester, 'c-acme-logistics'));
-      await tester.pump();
-      await tester.pump();
-      expect(find.text('Focused on Acme Logistics'), findsOneWidget);
-      expect(
-        fake.calls,
-        contains(
-          const CoreCall('watchLocalGraph', {
-            'id': 'c-acme-logistics',
-            'depth': 1,
-          }),
+      // The core answers the focused query with the node's neighbours.
+      fake.globalGraphFilteredAnswer.returns(
+        GlobalGraphView(
+          nodes: small.nodes,
+          edges: small.edges,
+          clusters: small.clusters,
+          filter: const GraphFilter(
+            edgeKinds: [],
+            nodeKinds: [],
+            similarity: false,
+            lens: GraphLens.notes,
+            focus: 'c-acme-logistics',
+            includeTags: false,
+          ),
+          edgeCounts: small.edgeCounts,
+          nodeCounts: small.nodeCounts,
+          neighbours: const [
+            'p-ahmed-samir',
+            'n-call-acme',
+            'n-weekly-invoicing',
+          ],
+          similarity: Availability.available,
         ),
       );
+      await tester.tapAt(nodeOnScreen(tester, 'c-acme-logistics'));
+      await settle(tester);
+      expect(find.text('Focused on Acme Logistics'), findsOneWidget);
+      final focused =
+          fake.calls
+                  .lastWhere((c) => c.method == 'globalGraphFiltered')
+                  .args['filter']!
+              as GraphFilter;
+      expect(focused.focus, 'c-acme-logistics');
       final viewport = tester.widget<GraphViewport>(find.byType(GraphViewport));
       final scene = viewport.scene;
       expect(viewport.options.selected, scene.index['c-acme-logistics']);
@@ -217,8 +238,90 @@ void main() {
       await tester.tap(find.text('Open local map'));
       expect(mapped, 'c-acme-logistics');
       await tester.tap(find.text('Clear'));
-      await tester.pump();
+      await settle(tester);
       expect(find.text('Focused on Acme Logistics'), findsNothing);
+      final cleared =
+          fake.calls
+                  .lastWhere((c) => c.method == 'globalGraphFiltered')
+                  .args['filter']!
+              as GraphFilter;
+      expect(cleared.focus, isNull);
+    });
+
+    testWidgets('lens, similarity and tags ask the core', (tester) async {
+      final fake = _fake();
+      await pumpVariant(
+        tester,
+        expanded,
+        const GlobalMapScreen(),
+        fake: fake,
+        scaffold: true,
+      );
+      GraphFilter lastQuery() =>
+          fake.calls
+                  .lastWhere((c) => c.method == 'globalGraphFiltered')
+                  .args['filter']!
+              as GraphFilter;
+      expect(lastQuery().lens, GraphLens.notes);
+      expect(lastQuery().similarity, isFalse);
+      await tester.tap(find.text('People'));
+      await settle(tester);
+      expect(lastQuery().lens, GraphLens.people);
+      await tester.tap(find.widgetWithText(SwitchListTile, 'AI similarity'));
+      await settle(tester);
+      expect(fake.calls.map((c) => c.method), contains('refreshSimilarity'));
+      expect(lastQuery().similarity, isTrue);
+      expect(lastQuery().lens, GraphLens.people);
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Tags as nodes'));
+      await settle(tester);
+      expect(lastQuery().includeTags, isTrue);
+    });
+
+    testWidgets('similarity is off while the server is unreachable', (
+      tester,
+    ) async {
+      final small = MapFixtures.globalSmall;
+      final fake = _fake()
+        ..globalGraphFilteredAnswer.returns(
+          GlobalGraphView(
+            nodes: small.nodes,
+            edges: small.edges,
+            clusters: small.clusters,
+            filter: small.filter,
+            edgeCounts: const [
+              KindCount(kind: 'relation:supports', label: 'supports', count: 4),
+            ],
+            nodeCounts: const [
+              KindCount(kind: 'person', label: 'People', count: 2),
+            ],
+            neighbours: const [],
+            similarity: Availability.offline,
+          ),
+        );
+      await pumpVariant(
+        tester,
+        expanded,
+        const GlobalMapScreen(),
+        fake: fake,
+        scaffold: true,
+      );
+      final toggle = tester.widget<SwitchListTile>(
+        find.widgetWithText(SwitchListTile, 'AI similarity'),
+      );
+      expect(toggle.onChanged, isNull);
+      expect(
+        find.text('Similarity links need a connection to the server.'),
+        findsOneWidget,
+      );
+      // The core's counts next to the edge class and node kind.
+      expect(
+        find.descendant(
+          of: find.widgetWithText(CheckboxListTile, 'supports'),
+          matching: find.text('4'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.widgetWithText(FilterChip, 'Person · 2'), findsOneWidget);
     });
 
     testWidgets('tapping empty canvas clears the selection', (tester) async {
@@ -374,7 +477,11 @@ void main() {
       await gesture.moveTo(nodeOnScreen(tester, 'p-ahmed-samir'));
       await tester.pump();
       expect(find.text('Ahmed Samir'), findsOneWidget);
-      expect(find.text('6 links'), findsOneWidget);
+      expect(
+        find.text('Operations manager at Acme Logistics.'),
+        findsOneWidget,
+      );
+      expect(find.text('6 links · Sat'), findsOneWidget);
     });
 
     testWidgets('keyboard zoom and escape', (tester) async {

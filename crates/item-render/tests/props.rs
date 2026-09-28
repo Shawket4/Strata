@@ -2,7 +2,7 @@
 //! parsers and path rules).
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use chrono::{DateTime, FixedOffset, NaiveDate, TimeZone};
+use chrono::{DateTime, Utc};
 use domain::NoteKind;
 use item_render::capture::capture_content;
 use item_render::entity::EntitySpec;
@@ -44,17 +44,12 @@ fn kind() -> impl Strategy<Value = NoteKind> {
     prop::sample::select(KINDS.to_vec())
 }
 
-fn created() -> impl Strategy<Value = DateTime<FixedOffset>> {
+fn created() -> impl Strategy<Value = DateTime<Utc>> {
     (
         0i64..4_102_444_800, // 1970 .. 2100
-        -12i32..=14,
+        0u32..1_000_000_000,
     )
-        .prop_map(|(secs, h)| {
-            FixedOffset::east_opt(h * 3600)
-                .unwrap()
-                .timestamp_opt(secs, 0)
-                .unwrap()
-        })
+        .prop_map(|(secs, nanos)| DateTime::from_timestamp(secs, nanos).unwrap())
 }
 
 fn stems_of<'a>(paths: &'a [String], folder: &'a str) -> impl Iterator<Item = String> + 'a {
@@ -110,8 +105,8 @@ proptest! {
         prop_assert!(stem.len() <= 200);
     }
 
-    /// A capture path is `inbox/YYYY-MM-DD-HHmmss[ N].md` in the capture's own offset, a
-    /// valid inbox path, and free.
+    /// A capture path is `inbox/YYYY-MM-DD-HHmmss[ N].md` in UTC, a valid inbox path, and
+    /// free.
     #[test]
     fn capture_paths(created in created(), n in 0usize..4) {
         let stem = created.format("%Y-%m-%d-%H%M%S").to_string();
@@ -130,15 +125,16 @@ proptest! {
     #[test]
     fn conflict_copies(kind in kind(), name in name(), secs in 0i64..4_102_444_800, n in 1u32..30) {
         let path = entity_path(kind, &name, []);
-        let at = DateTime::from_timestamp(secs, 0).unwrap().naive_utc();
-        let copy = conflict_copy_path(&path, at, n);
+        let at = DateTime::from_timestamp(secs, 0).unwrap();
+        let copy = conflict_copy_path(&path, &at, n);
         prop_assert_eq!(validate_vault_path(&copy), Ok(()));
         prop_assert_eq!(parent(&copy), parent(&path));
         prop_assert_ne!(&copy, &path);
-        prop_assert_ne!(copy, conflict_copy_path(&path, at, n + 1));
+        prop_assert_ne!(copy, conflict_copy_path(&path, &at, n + 1));
     }
 
-    /// A capture reads back as its ID, its time and the text (ending with a line break).
+    /// A capture reads back as its ID, its time in UTC whole seconds and the text (ending
+    /// with a line break).
     #[test]
     fn captures_read_back(text in "[\\PC\n]{0,60}(\r\n[\\PC]{0,10})?", created in created(), raw in any::<u128>()) {
         let id = Ulid(raw);
@@ -146,7 +142,8 @@ proptest! {
         let doc = Document::parse(&content);
         let fm = doc.frontmatter().unwrap();
         prop_assert_eq!(fm.id(), Ok(Some(id)));
-        prop_assert_eq!(fm.created(), Ok(Some(created)));
+        prop_assert_eq!(fm.created(), Ok(Some(DateTime::from_timestamp(created.timestamp(), 0).unwrap().fixed_offset())));
+        prop_assert!(fm.text(vault_format::KnownKey::Created).unwrap().ends_with('Z'));
         let mut body = text.clone();
         if !body.ends_with('\n') {
             body.push('\n');
@@ -166,38 +163,41 @@ proptest! {
         prop_assert_eq!(doc.frontmatter().unwrap().tags(), tags);
     }
 
-    /// An entity note reads back as its kind, ID, cleaned aliases and title rule.
+    /// An entity note reads back as its kind, ID, cleaned aliases, creation time and the title
+    /// rule (a title exactly when the file stem — free or suffixed — differs from the name).
     #[test]
     fn entities_read_back(
         kind in kind(),
         name in name().prop_filter("a name", |n| !n.trim().is_empty() && !n.contains('\0')),
         aliases in prop::collection::vec("[a-zA-Zأحمد #]{0,8}", 0..4),
+        taken in any::<bool>(),
+        created in created(),
         raw in any::<u128>(),
     ) {
         let id = Ulid(raw);
         let spec = EntitySpec { aliases: aliases.clone(), ..EntitySpec::new(kind, name.clone()) };
-        let content = spec.render(id, None, None).unwrap();
+        let taken_path = format!("{}/{}.md", kind.default_folder(), spec.stem());
+        let path = spec.path(taken.then_some(taken_path.as_str()));
+        let content = spec.render(id, &path, &created).unwrap();
         let doc = Document::parse(&content);
         let fm = doc.frontmatter().unwrap();
         prop_assert_eq!(fm.id(), Ok(Some(id)));
         prop_assert_eq!(fm.kind().and_then(|k| k.known()), Some(kind));
         prop_assert_eq!(fm.aliases(), clean_list(&aliases));
-        let title = (spec.stem() != name.trim()).then(|| name.trim().to_owned());
+        let stem = file_name(&path).strip_suffix(".md").unwrap();
+        prop_assert_eq!(taken, stem != spec.stem());
+        let title = (stem != name.trim()).then(|| name.trim().to_owned());
         prop_assert_eq!(fm.title().map(str::to_owned), title);
+        let written = DateTime::from_timestamp(created.timestamp(), 0).unwrap().fixed_offset();
+        prop_assert_eq!(fm.created(), Ok(Some(written)));
+        prop_assert_eq!(fm.updated(), Ok(Some(written)));
         prop_assert_eq!(doc.body(), "## Notes\n");
     }
 }
 
 #[test]
-fn capture_path_uses_the_captures_offset() {
+fn capture_paths_are_utc() {
+    // Half past midnight in Cairo is still the previous day in UTC.
     let cairo = DateTime::parse_from_rfc3339("2026-09-27T00:30:00+03:00").unwrap();
-    assert_eq!(capture_path(&cairo, []), "inbox/2026-09-27-003000.md");
-    assert_eq!(
-        capture_path(&cairo.with_timezone(&FixedOffset::east_opt(0).unwrap()), []),
-        "inbox/2026-09-26-213000.md"
-    );
-    assert_eq!(
-        NaiveDate::from_ymd_opt(2026, 9, 26).map(|d| d.to_string()),
-        Some("2026-09-26".to_owned())
-    );
+    assert_eq!(capture_path(&cairo.to_utc(), []), "inbox/2026-09-26-213000.md");
 }

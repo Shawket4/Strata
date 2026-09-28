@@ -343,6 +343,8 @@ fn create(id: &str, text: &str) -> TaskCreate {
         recurrence: None,
         reminders: Vec::new(),
         priority: None,
+        created: chrono::DateTime::from_timestamp(1_790_510_400, 0).unwrap(),
+        home_id: None,
         force: false,
     }
 }

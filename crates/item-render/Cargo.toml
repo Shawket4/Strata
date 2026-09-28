@@ -14,6 +14,7 @@ sync-model = { workspace = true }
 thiserror = { workspace = true }
 ulid = { workspace = true }
 chrono = { workspace = true }
+chrono-tz = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

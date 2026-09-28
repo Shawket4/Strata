@@ -72,7 +72,7 @@ void main() {
             findsOneWidget,
           );
           expect(find.text(l10n.saveLayout), findsOneWidget);
-          expect(find.byTooltip(l10n.saveLayoutUnavailable), findsOneWidget);
+          expect(find.byTooltip(l10n.saveLayoutHint), findsOneWidget);
         }
         if (v.textScale == 1) await expectAccessible(tester);
       });
@@ -294,6 +294,73 @@ void main() {
           'depth': 2,
           'edgeKinds': <String>[],
         }),
+      );
+    });
+
+    testWidgets('save layout writes the shown positions', (tester) async {
+      final fake = _fake();
+      await pumpVariant(
+        tester,
+        expanded,
+        const MindMapScreen(_id),
+        fake: fake,
+        scaffold: true,
+      );
+      await tester.tap(find.text('Save layout'));
+      await settle(tester);
+      final name = find.widgetWithText(TextField, 'Map name');
+      expect(
+        tester.widget<TextField>(name).controller!.text,
+        'Pricing experiments',
+      );
+      await tester.enterText(name, 'Pricing map');
+      await tester.tap(find.widgetWithText(FilledButton, 'Save layout'));
+      await settle(tester);
+      final call = fake.calls.last;
+      expect(call.method, 'saveLayout');
+      expect(call.args['centerId'], _id);
+      expect(call.args['name'], 'Pricing map');
+      expect(call.args['positions'], [
+        for (final node in MapFixtures.pricingLocal.nodes)
+          NodePosition(id: node.id, x: node.x, y: node.y),
+      ]);
+      expect(find.textContaining('Saved to '), findsOneWidget);
+    });
+
+    testWidgets('offline: save layout is off', (tester) async {
+      final local = MapFixtures.pricingLocal;
+      final fake = FakeCoreApi();
+      for (final depth in const [1, 2]) {
+        fake.localGraphFiltered[(_id, depth, '')].add(
+          LocalGraphView(
+            center: local.center,
+            found: true,
+            depth: depth,
+            nodes: local.nodes,
+            edges: local.edges,
+            relationCount: 5,
+            aiRelationCount: 2,
+            relationLabel: '5 relations · 2 by AI',
+            saveLayout: Availability.offline,
+            proposeRelation: local.proposeRelation,
+          ),
+        );
+      }
+      await pumpVariant(
+        tester,
+        expanded,
+        const MindMapScreen(_id),
+        fake: fake,
+        scaffold: true,
+      );
+      expect(find.text('5 relations · 2 by AI'), findsOneWidget);
+      final save = tester.widget<OutlinedButton>(
+        find.widgetWithText(OutlinedButton, 'Save layout'),
+      );
+      expect(save.onPressed, isNull);
+      expect(
+        find.byTooltip('Saving layouts needs a connection to the server'),
+        findsOneWidget,
       );
     });
 

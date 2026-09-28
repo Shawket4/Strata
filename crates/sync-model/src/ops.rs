@@ -16,12 +16,16 @@
 //!   captures never do, because a capture is never refused (principle 5).
 //! - Creates carry client-generated ULIDs (task block IDs `t-<ulid>`), so offline-created
 //!   items keep their IDs.
+//! - Every op that creates a note carries the device's `created` time (UTC; [`Op::created`]):
+//!   the server writes it as the new note's `created` and `updated` and never substitutes the
+//!   time it received the op, so an item created offline on Monday keeps Monday when it syncs
+//!   on Wednesday. The server refuses a time too far in the future (`created_in_future`).
 
 use std::collections::BTreeMap;
 use std::fmt;
 use std::str::FromStr;
 
-use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use domain::{CopyKind, CustodyEventType, NoteKind, Priority};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
@@ -289,6 +293,23 @@ impl Op {
         }
     }
 
+    /// The device's creation time of an op that creates a note (`note.create`, `capture`,
+    /// `entity/document/place.create`, `task.create` — a new `tasks/Tasks.md` —, and
+    /// `suggestion.accept`, whose acceptance may create an entity note or the task note);
+    /// `None` for every other op.
+    pub const fn created(&self) -> Option<&DateTime<Utc>> {
+        match self {
+            Self::NoteCreate(p) => Some(&p.created),
+            Self::Capture(p) => Some(&p.created),
+            Self::EntityCreate(p) => Some(&p.created),
+            Self::DocumentCreate(p) => Some(&p.created),
+            Self::PlaceCreate(p) => Some(&p.created),
+            Self::TaskCreate(p) => Some(&p.created),
+            Self::SuggestionAccept(p) => Some(&p.created),
+            _ => None,
+        }
+    }
+
     /// `force` of a create op; `false` for every other op.
     pub const fn force(&self) -> bool {
         match self {
@@ -334,6 +355,8 @@ pub struct NoteCreate {
     pub path: String,
     /// Full file content.
     pub content: String,
+    /// When the note was created on the device (UTC): its `created` and `updated`.
+    pub created: DateTime<Utc>,
     /// Create even if duplicates exist (records keep-both pairs).
     #[serde(default)]
     pub force: bool,
@@ -371,8 +394,8 @@ pub struct Capture {
     pub id: Ulid,
     /// Captured text.
     pub text: String,
-    /// When it was captured on the device (names the inbox file, §6.9).
-    pub created: DateTime<FixedOffset>,
+    /// When it was captured on the device (UTC; names the inbox file, §6.9).
+    pub created: DateTime<Utc>,
 }
 
 /// `relation.add` / `relation.remove`: the edge `src --type--> dst`.
@@ -431,6 +454,9 @@ pub struct SuggestionAccept {
     pub id: Ulid,
     /// Optional edits.
     pub edits: Option<SuggestionEdits>,
+    /// When the user accepted on the device (UTC): `created`/`updated` of any note the
+    /// acceptance creates (a new entity, `tasks/Tasks.md`).
+    pub created: DateTime<Utc>,
 }
 
 /// `suggestion.reject`.
@@ -468,6 +494,8 @@ pub struct EntityCreate {
     /// User fields (`role`, `industry`, `phone`, …).
     #[serde(default)]
     pub fields: BTreeMap<String, String>,
+    /// When it was created on the device (UTC): the note's `created` and `updated`.
+    pub created: DateTime<Utc>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,
@@ -525,6 +553,8 @@ pub struct DocumentCreate {
     pub people: Vec<Ulid>,
     /// `expires`.
     pub expires: Option<NaiveDate>,
+    /// When it was created on the device (UTC): the note's `created` and `updated`.
+    pub created: DateTime<Utc>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,
@@ -562,6 +592,8 @@ pub struct PlaceCreate {
     pub parent_id: Option<Ulid>,
     /// Address (user-entered only).
     pub address: Option<String>,
+    /// When it was created on the device (UTC): the note's `created` and `updated`.
+    pub created: DateTime<Utc>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,
@@ -589,6 +621,15 @@ pub struct TaskCreate {
     pub reminders: Vec<NaiveDateTime>,
     /// Priority.
     pub priority: Option<Priority>,
+    /// When it was created on the device (UTC). Its date in the user's time zone picks the
+    /// `## <Month> <YYYY>` heading of `tasks/Tasks.md`; a `tasks/Tasks.md` this create makes
+    /// gets it as `created` and `updated`.
+    pub created: DateTime<Utc>,
+    /// The ID `tasks/Tasks.md` gets when this create makes it (no `note_id` and no such note
+    /// yet): the device's ID for it, so the device and the server write the same bytes.
+    /// Ignored otherwise; absent = the server picks one.
+    #[serde(default)]
+    pub home_id: Option<Ulid>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,

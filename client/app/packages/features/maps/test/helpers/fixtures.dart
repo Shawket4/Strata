@@ -12,6 +12,9 @@ abstract final class MapFixtures {
     int degree = 3,
     int depth = 1,
     String? cluster,
+    String? summary,
+    String updatedLabel = '',
+    TextDir titleDir = TextDir.ltr,
   }) => GraphNode(
     id: id,
     title: title,
@@ -21,10 +24,18 @@ abstract final class MapFixtures {
     degree: degree,
     x: x,
     y: y,
-    titleDir: TextDir.ltr,
-    updatedLabel: '',
-    labelRank: 0,
-    isHub: false,
+    titleDir: titleDir,
+    summary: summary,
+    updatedLabel: updatedLabel,
+    // As the core ranks labels (hubs from degree 6).
+    labelRank: degree >= 6
+        ? 0
+        : degree >= 3
+        ? 1
+        : degree >= 1
+        ? 2
+        : 3,
+    isHub: degree >= 6,
   );
 
   static GraphEdge _e(
@@ -224,6 +235,8 @@ abstract final class MapFixtures {
         -110,
         degree: 6,
         cluster: 'k-clients',
+        summary: 'Operations manager at Acme Logistics.',
+        updatedLabel: 'Sat',
       ),
       _n(
         'n-call-acme',
@@ -276,6 +289,7 @@ abstract final class MapFixtures {
         -170,
         -20,
         degree: 2,
+        titleDir: TextDir.rtl,
       ),
     ],
     edges: [
@@ -310,18 +324,28 @@ abstract final class MapFixtures {
         id: 'k-clients',
         name: 'Clients · Acme',
         size: 4,
-        x: 0,
-        y: 0,
-        hull: [],
+        x: 302.5,
+        y: -164,
+        hull: [
+          GraphPoint(x: 190, y: -150),
+          GraphPoint(x: 440, y: -150),
+          GraphPoint(x: 440, y: 110),
+          GraphPoint(x: 190, y: 110),
+        ],
         radius: 0,
       ),
       ClusterLabel(
         id: 'k-docs',
         name: 'Documents & places',
         size: 4,
-        x: 0,
-        y: 0,
-        hull: [],
+        x: 280,
+        y: 206,
+        hull: [
+          GraphPoint(x: 140, y: 220),
+          GraphPoint(x: 420, y: 220),
+          GraphPoint(x: 420, y: 370),
+          GraphPoint(x: 140, y: 370),
+        ],
         radius: 0,
       ),
       ClusterLabel(
@@ -329,8 +353,13 @@ abstract final class MapFixtures {
         name: 'Pricing & plans',
         size: 6,
         x: 0,
-        y: 0,
-        hull: [],
+        y: -124,
+        hull: [
+          GraphPoint(x: -120, y: -110),
+          GraphPoint(x: 120, y: -110),
+          GraphPoint(x: 120, y: 160),
+          GraphPoint(x: -120, y: 160),
+        ],
         radius: 0,
       ),
     ],

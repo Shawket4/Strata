@@ -14,11 +14,12 @@
 //!
 //! - [`paths`]: inbox paths of captures, entity paths, free names next to taken ones,
 //!   conflict-copy names, inbox membership.
-//! - [`note`]: the `id`/`created`/`updated` stamp, `with_id`, list cleaning.
+//! - [`note`]: the `id`/`created`/`updated` stamp (UTC), new notes, `with_id`, list cleaning.
 //! - [`capture`]: the markdown of a new capture (§6.9).
 //! - [`entity`]: the skeletons of entity, document, place (§6.7, §6.12) and concept (§6.6)
 //!   notes, and the op payload → skeleton conversions of `entity/document/place.create`.
-//! - [`task`]: the task line a task suggestion proposes (§6.11). Task *creation* is
+//! - [`task`]: the task line a task suggestion proposes (§6.11), the month-heading date and
+//!   the home-note stamp of a new task. Task *creation* is
 //!   `sync_model::apply::apply_task_create`.
 
 pub mod capture;
