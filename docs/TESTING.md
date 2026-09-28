@@ -130,7 +130,21 @@ STRATA_FUZZ_CASES=20000 STRATA_FUZZ_SEED=7 \
 Operations added to the contract are fuzzed automatically. Findings become regression tests in
 the same file (`regression_*`).
 
-{{FUZZ_STATS}}
+Measured 2026-09-28 (dev container, debug build; machine in §3.7):
+
+| Run | Cases | Operations | Time | 2xx / 101 / 4xx / 5xx | Operations with ≥ 1 success |
+|---|---|---|---|---|---|
+| default (`cargo test`) | 368 | 92 | ~9 s | 141 / 8 / 219 / 0 | 54 |
+| seed `0x5354524154410016` | 6 000 | 92 | 129 s | 2 314 / 77 / 3 609 / 0 | 69 |
+| seeds `0x3`, `0x4`, `0x5`, `0x16`, `0x12d687` | 6 000 each | 92 | 127–166 s each | 0 `5xx` after the fixes below | 67–72 |
+
+Bodies per 6 000 cases: ~1 300 valid MessagePack, ~1 000 mutated, ~50 zip, ~15 random, the
+rest body-less operations. Findings, each now a `regression_*` test in `schema_fuzz.rs`:
+a NUL character in entity/place/document names, aliases, tags, fields, task text or a
+suggestion reply reached PostgreSQL (`500`; now `422`); a username with NUL at login (`500`;
+now `401 invalid_credentials`); `POST /tasks` answered an undocumented `404` for an unknown
+`note_id` (now in the contract); importing an entry at a path that already holds a note but
+without that note's ID answered `500` (the note now keeps its ID).
 
 ### 3.6 Security checklist (PLAN §15)
 
@@ -152,6 +166,14 @@ from the contract where the item concerns "every endpoint":
 cargo test -p strata-api --test security_checklist
 ```
 
+Last run (2026-09-28): 12 tests green; the traversal sweep sends 1 602 hostile requests over 89
+parameters of 54 operations. Findings when the suite was written: capture and Ask had no rate
+limit (added: `auth.rate_limits.capture_per_user`, `ask_per_user`, `429` in the contract); a NUL
+byte in a task ID path parameter or in `GET /entities?tag=` answered `500` (task IDs are now
+checked as block IDs first → `404`; a NUL tag matches nothing). Open: `PUT /maps/{id}` quotes the
+canvas's missing file reference in its `422` issue message (`strata_graph::maps`); the content
+test lists it in `KNOWN_ECHOES` until its owner decides, so any new echo still fails.
+
 ### 3.7 Performance (PLAN §16.7)
 
 **Timed suite** (`#[ignore]`d; run alone, in release mode):
@@ -162,7 +184,7 @@ cargo test -p strata-graph --test perf             # GET /graph assembly gate at
 ```
 
 `strata_testkit::SyntheticVault` generates the 10 000-file vault deterministically (seed
-2026): 9 450 notes in 20 topic folders (one third Arabic titles, mixed Arabic/English prose),
+2026): 9 549 notes in 20 topic folders (one third Arabic titles, mixed Arabic/English prose),
 200 people, 100 companies, 50 nested places, 100 documents, `tasks/Tasks.md`, body wikilinks,
 frontmatter relations (`related`, `part-of`, `people`, `companies`), tags, block IDs and
 Obsidian Tasks lines. `tests/performance.rs` imports it (`POST /import`), requires zero
@@ -175,7 +197,49 @@ integrity warnings, and measures the operations below against the budgets.
 search normalisation and transliteration keys over 1 MiB of mixed text; dedupe keys, trigrams
 and trigram similarity over 10 000 titles).
 
-{{PERF}}
+**Budgets and measurements** — reference machine: the dev container, 4 vCPU Intel Xeon @
+2.10 GHz, 15 GiB RAM, Linux 6.18, rustc 1.94.1, PostgreSQL 16.13 on the same host, release
+profile, measured 2026-09-28 (`tests/performance.rs`, 10 000 files: 9 549 notes, 200 people,
+100 companies, 50 places, 100 documents, 1 948 tasks, 23 570 links, 20 900 relations; 8.0 MiB,
+6.3 MiB zipped):
+
+| Measurement | Measured | Budget |
+|---|---|---|
+| Import (`POST /import`, one commit) | 64.2 s | 240 s |
+| Full reindex (`VaultService::reindex`, 10 000 notes) | 49.0 s | 180 s |
+| `GET /graph` (median of 5; 5.3 MiB payload) | 0.62 s | 3 s |
+| Keyword search, 200 queries (`limit=20`) | p50 24.6 ms, p95 34.5 ms, max 51.6 ms | p50 100 ms, p95 250 ms |
+| `GET /sync/bootstrap`, all 155 pages (30 892 records) | 2.8 s | 30 s |
+| `POST /sync/push`, 500 `note.create` ops | **182.0 s (364 ms/op) — over budget** | 120 s |
+
+The push budget is not met: every op is its own vault write (one git commit and index
+transaction), and the per-op cost grows with the vault (183 ms/op on a 500-file vault, 364 ms/op
+at 10 000 files). The suite therefore fails at 10 000 files until push is made faster or the
+owner sets a different budget (recorded as an open item, not relaxed here). The budgets are
+proposals with 3–4× headroom over this machine; the graph crate's own gate
+(`strata-graph` `tests/perf.rs`, index read + assembly, debug) is 2 s and measured 0.53 s.
+
+Criterion (same machine, `cargo bench`, medians):
+
+| Benchmark | Time | Throughput |
+|---|---|---|
+| `vault_format_1mib_note/parse` | 61.2 µs | (lazy split; analysis below) |
+| `vault_format_1mib_note/render` | 45.9 µs | |
+| `vault_format_1mib_note/render_canonical` | 81.5 µs | |
+| `vault_format_1mib_note/analyze_body` | 9.67 ms | 103 MiB/s |
+| `vault_format_1mib_note/extract_tasks` | 12.8 ms | 78 MiB/s |
+| `vault_format_1mib_note/parse_render_round_trip` | 228 µs | |
+| `vault_format_1000_notes/parse_analyze` | 28.7 ms | 51 MiB/s |
+| `vault_format_1000_notes/frontmatter_edit_render` | 31.6 ms | 46 MiB/s |
+| `text_normalize_1mib/normalize_for_search` | 68.7 ms | 14.6 MiB/s |
+| `text_normalize_1mib/transliteration_key` | 84.6 ms | 11.8 MiB/s |
+| `text_normalize_10k_titles/dedupe_key` | 21.3 ms | 470 K titles/s |
+| `text_normalize_10k_titles/trigrams` | 40.1 ms | 249 K titles/s |
+| `text_normalize_10k_titles/trigram_similarity_vs_one` | 81.6 ms | 123 K titles/s |
+
+CI does not yet compare criterion results against a stored baseline (PLAN §16.7 asks it to
+fail on significant regressions); until it does, compare with
+`cargo bench -p <crate> -- --save-baseline main` and `--baseline main`.
 
 ### 3.8 Mutation testing (PLAN §16.2)
 
@@ -184,8 +248,8 @@ cargo install cargo-mutants
 cargo mutants -p vault-format -p text-normalize -p domain --timeout 180 --no-shuffle
 ```
 
-A surviving mutant fails CI unless it is justified in a comment next to the code (an
-equivalent mutant) and excluded explicitly.
+`cargo mutants` exits non-zero when a mutant survives, which fails the job; an equivalent
+mutant is excluded explicitly (e.g. `#[mutants::skip]`) with a comment explaining why.
 
 ### 3.9 Flutter (PLAN §16.5)
 
@@ -201,12 +265,13 @@ melos run test:goldens       # alchemist goldens only (CI variant, bundled fonts
 melos run test:goldens:update   # regenerate goldens; review every image diff before committing
 ```
 
-Widget tests run every screen at compact 390×844, medium 1024×768, expanded 1440×900 and large
-1920×1080, with live resizes across breakpoints; goldens cover every screen and key state ×
-size class × light/dark × LTR (English) / RTL (Arabic) × text scale 1.0/2.0, rendered with the
-bundled fonts (only the CI variant is committed; platform-font variants are ignored). Every
-widget test also runs the tap-target, labelled-tap-target and text-contrast guidelines. Widgets
-are fed view-model fixtures of the types the core streams (no logic in Dart to test, L15).
+The bar (PLAN §16.5): widget tests for every screen at compact 390×844, medium 1024×768,
+expanded 1440×900 and large 1920×1080, with live resizes across breakpoints; goldens for every
+screen and key state × size class × light/dark × LTR (English) / RTL (Arabic) × text scale
+1.0/2.0, rendered with the bundled fonts (only that CI variant is committed); the tap-target,
+labelled-tap-target and text-contrast guidelines in widget tests. Widgets are fed view-model
+fixtures of the types the core streams (no logic in Dart to test, L15). Golden tests carry the
+`golden` tag and live under each package's `test/goldens/`.
 
 **Integration tests (`integration_test`) and full-stack E2E (`e2e/`)** are not written yet;
 PLAN §16.5–16.6 describe them (the real app with the real core against a spawned `stratad` on
@@ -257,7 +322,36 @@ cargo llvm-cov report --html                      # target/llvm-cov/html
 cargo llvm-cov clean --profraw-only               # drop the raw profiles afterwards
 ```
 
-{{COVERAGE}}
+**Measured 2026-09-28** (dev container, working tree of that day including other in-flight
+work; every non-ignored test of every workspace crate, merged per source file across test
+binaries). The disk did not allow one instrumented build of the whole workspace at once, so the
+tests ran in groups (`cargo llvm-cov --no-report -p …` per group, `cargo llvm-cov report --lcov`,
+then the group's binaries and raw profiles deleted) and the lcov files were merged line by line
+(a line counts as covered if any test binary executed it):
+
+| Scope | Lines covered |
+|---|---|
+| Workspace, everything | **70.4 %** (52 346 / 74 396) |
+| Workspace without generated code (`client/core/src/frb_generated.rs`, `api/rust-client/src/generated/`) | 86.3 % (51 044 / 59 181) |
+| Backend and shared crates | 92.9 % (39 912 / 42 968) |
+
+Lowest-covered crates (lines, generated code included):
+
+| Crate | Lines |
+|---|---|
+| `client/core` | 35.8 % (66.8 % without `frb_generated.rs`, 13 043 lines never executed by Rust tests) |
+| `api/rust-client` | 65.7 % (88.6 % without `generated/`) |
+| `backend/bin/stratad` | 66.8 % (`serve::run` and the background loops are only exercised by a live server) |
+| `backend/crates/testkit` | 89.0 % |
+| `backend/crates/vault` | 89.2 % |
+| `backend/crates/jobs` | 92.2 % |
+| `backend/crates/api` | 92.4 % |
+| `crates/domain` | 92.8 % |
+
+Every other crate is above 94 %. The CI gate as configured (`--fail-under-lines 90` over the
+whole workspace, generated code included) would therefore fail today; excluding generated code
+(`--ignore-filename-regex 'frb_generated|/generated/'`) is a decision for the owner, and the
+client core's hand-written code (66.8 %) is below the gate either way.
 
 ## 6. CI jobs (`.github/workflows/ci.yml`)
 
