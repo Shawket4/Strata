@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Strata
+Comment=Personal knowledge system
+Exec=strata
+Icon=app.strata.strata
+Terminal=false
+Categories=Office;Utility;
+StartupWMClass=app.strata.strata

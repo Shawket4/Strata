@@ -31,6 +31,10 @@ fn blob(repo: &Repository, tree: &git2::Tree<'_>, path: &str) -> Result<Option<V
 }
 
 fn merge_text(base: &str, ours: &str, theirs: &str) -> Result<String> {
+    // `git2::merge_file` (unlike repository calls) does not initialise libgit2 itself: in a
+    // process that has made no other git2 call it fails with "no error". `Buf::new` runs
+    // git2's one-time initialisation.
+    drop(git2::Buf::new());
     let mut b = MergeFileInput::new();
     b.content(base.as_bytes());
     let mut o = MergeFileInput::new();
