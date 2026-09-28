@@ -304,6 +304,7 @@ impl Session {
                 pending: Vec::new(),
                 users: Vec::new(),
                 query: query.to_owned(),
+                deletion_preview_label: None,
             });
         };
         let url = self.server_url()?;
@@ -311,13 +312,23 @@ impl Session {
             Ok(users) => {
                 let pending = users.iter().filter(|u| u.status == "pending").count();
                 self.cache_put(cache::ADMIN_PENDING, &u32::try_from(pending).unwrap_or(0))?;
-                Ok(build::admin_users(&ctx, &me, users, query))
+                let mut view = build::admin_users(&ctx, &me, users, query);
+                // An older server without `GET /admin/settings` keeps the generic wording.
+                view.deletion_preview_label = self
+                    .env
+                    .account_api
+                    .admin_settings(self.server_url()?, self.tokens())
+                    .await
+                    .ok()
+                    .map(|grace| build::deletion_preview_label(&ctx, grace));
+                Ok(view)
             }
             Err(NetError::Offline(_)) => Ok(AdminUsersView {
                 availability: Availability::Offline,
                 pending: Vec::new(),
                 users: Vec::new(),
                 query: query.to_owned(),
+                deletion_preview_label: None,
             }),
             Err(e) => {
                 self.account_failure(&e)?;

@@ -661,7 +661,7 @@ impl JobHandler for ReplyHandler {
                         source_block: p.block_id.clone(),
                         target_type: "entity".into(),
                         target_id: t.to_string(),
-                        summary: format!("\"{}\" → {name}? (reply)", p.mention),
+                        summary: format!("\"{}\" · {name}? (reply)", p.mention),
                         confidence: None,
                         rel_type: own.as_ref().and_then(|o| o.rel_type.clone()),
                         mention: Some(p.mention.clone()),
@@ -675,7 +675,7 @@ impl JobHandler for ReplyHandler {
                     set.ai_replies.push((
                         sid,
                         reply_id,
-                        format!("New suggestion: \"{}\" → {name}.", p.mention),
+                        format!("New suggestion: \"{}\" · {name}.", p.mention),
                     ));
                 } else {
                     set.ai_replies.push((

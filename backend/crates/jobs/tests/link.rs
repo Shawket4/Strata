@@ -177,7 +177,7 @@ async fn edits_are_linked_30_seconds_later_with_relations_at_or_above_the_thresh
             kind: "relation".into(),
             source: Some(note.to_string()),
             target: caps.to_string(),
-            summary: "contradicts → Discount caps: Flat 10% versus a 5% cap.".into(),
+            summary: "contradicts · Discount caps: Flat 10% versus a 5% cap.".into(),
             rel: Some("contradicts".into()),
             mention: None,
             suggested: false,

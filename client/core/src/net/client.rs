@@ -235,6 +235,20 @@ impl AccountApi for ClientAccountApi {
         })
     }
 
+    fn admin_settings(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+    ) -> BoxFuture<'_, Result<i64, NetError>> {
+        Box::pin(async move {
+            let c = client(&server_url, Some(tokens))?;
+            operations::admin_settings(&c)
+                .await
+                .map(|s| s.deletion_grace_secs)
+                .map_err(|e| classify(&e))
+        })
+    }
+
     fn update_me(
         &self,
         server_url: String,

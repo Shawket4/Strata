@@ -979,7 +979,7 @@ impl<'a> Planner<'a> {
                 let mut d = self.new_decision(DecisionKind::Relation);
                 d.target_type = "note".into();
                 d.target_id = dst.to_string();
-                d.summary = format!("duplicates → {title}: {}", r.reason);
+                d.summary = format!("duplicates · {title}: {}", r.reason);
                 d.confidence = conf32(r.confidence);
                 d.rel_type = Some(rel.as_str().into());
                 d.suggestion = Some(sid);
@@ -993,7 +993,7 @@ impl<'a> Planner<'a> {
             let mut d = self.new_decision(DecisionKind::Relation);
             d.target_type = "note".into();
             d.target_id = dst.to_string();
-            d.summary = format!("{} → {title}: {}", rel.as_str(), r.reason);
+            d.summary = format!("{} · {title}: {}", rel.as_str(), r.reason);
             d.confidence = conf32(r.confidence);
             d.rel_type = Some(rel.as_str().into());
             self.decision(d);
@@ -1124,7 +1124,7 @@ impl<'a> Planner<'a> {
                 d.source_block.clone_from(&m.evidence_block_id);
                 d.target_type = "entity".into();
                 d.target_id = t.to_string();
-                d.summary = format!("\"{}\" → {}", m.text, self.title(t));
+                d.summary = format!("\"{}\" · {}", m.text, self.title(t));
                 d.confidence = conf32(m.confidence);
                 d.rel_type = Some(rel.as_str().into());
                 d.mention = Some(m.text.clone());
@@ -1179,7 +1179,7 @@ impl<'a> Planner<'a> {
             d.target_type = "entity".into();
             d.target_id = proposed.map_or_else(String::new, |p| p.to_string());
             d.summary = match proposed {
-                Some(p) => format!("\"{}\" → {}? ({reason})", m.text, self.title(p)),
+                Some(p) => format!("\"{}\" · {}? ({reason})", m.text, self.title(p)),
                 None => format!("\"{}\": link or create ({reason})", m.text),
             };
             d.confidence = conf32(m.confidence);

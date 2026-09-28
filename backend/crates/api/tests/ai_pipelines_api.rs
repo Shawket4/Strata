@@ -201,7 +201,7 @@ async fn decisions_are_listed_repointed_and_rejected_through_the_api() {
             source_title: Some("Call".into()),
             suggestion_id: None,
             suggestion_status: None,
-            summary: "\"Ahmed\" → Ahmed Samir".into(),
+            summary: "\"Ahmed\" · Ahmed Samir".into(),
             target_id: samir.to_string(),
             target_name: Some("Ahmed Samir".into()),
             target_type: "entity".into(),

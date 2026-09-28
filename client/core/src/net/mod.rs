@@ -480,6 +480,14 @@ pub trait AccountApi: Send + Sync + fmt::Debug {
     ) -> BoxFuture<'_, Result<(), NetError>> {
         not_available("delete_device")
     }
+    /// `GET /admin/settings`: the deletion grace period in seconds (D25).
+    fn admin_settings(
+        &self,
+        server_url: String,
+        tokens: Tokens,
+    ) -> BoxFuture<'_, Result<i64, NetError>> {
+        not_available("admin_settings")
+    }
     /// `POST /admin/users/{id}/approve`.
     fn admin_approve(
         &self,

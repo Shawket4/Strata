@@ -3018,6 +3018,9 @@ pub struct AdminUserItem {
     pub deletion_label: Option<String>,
     /// Must change the password (after a reset).
     pub password_change_required: bool,
+    /// "Export downloaded 12 Sep 14:31" (account time zone) when the user downloaded their
+    /// export.
+    pub export_downloaded_label: Option<String>,
 }
 
 /// Admin → Users (online only, admins only).
@@ -3031,6 +3034,10 @@ pub struct AdminUsersView {
     pub users: Vec<AdminUserItem>,
     /// Search text applied (username / display name, both scripts).
     pub query: String,
+    /// The purge date a deletion scheduled now would get ("Deleted on 12 Oct 2026": now plus
+    /// the server's grace period), shown before `schedule_deletion`; `None` when the server
+    /// does not say.
+    pub deletion_preview_label: Option<String>,
 }
 
 /// A new account created by an admin.

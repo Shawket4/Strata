@@ -392,7 +392,7 @@ async fn an_ambiguous_mention_is_a_suggestion_and_a_reply_re_proposes() {
             ),
             (
                 strata_index::types::ReplyAuthor::Ai,
-                "New suggestion: \"Ahmed\" → Ahmed Fathy.".to_owned()
+                "New suggestion: \"Ahmed\" · Ahmed Fathy.".to_owned()
             ),
         ]
     );

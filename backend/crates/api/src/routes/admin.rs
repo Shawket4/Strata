@@ -135,6 +135,14 @@ pub struct UpdateUserResult {
     pub temporary_password: Option<String>,
 }
 
+/// `GET /admin/settings`: server settings an admin needs before acting.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct AdminSettings {
+    /// The grace period (seconds) between scheduling an account's deletion and its purge
+    /// (D25): `DELETE /admin/users/{id}` sets `deletion_at` to now plus this.
+    pub deletion_grace_secs: i64,
+}
+
 /// The caller's account if it is an active admin; `403 forbidden` otherwise.
 async fn require_admin(state: &AuthState, auth: &Authenticated) -> Result<User, AccountError> {
     match state.accounts.user_by_id(auth.user_id()).await? {
@@ -182,6 +190,28 @@ pub async fn list_users(
         .list_users(query.status.map(UserStatus::from))
         .await?;
     Ok(MsgPack(users.into_iter().map(AdminUser::from).collect()))
+}
+
+/// Server settings an admin needs before acting (the deletion grace period, so the purge date
+/// can be shown before a deletion is scheduled).
+#[utoipa::path(
+    get,
+    path = "/admin/settings",
+    tag = "admin",
+    operation_id = "admin_settings",
+    responses(
+        (status = 200, description = "The settings.", body = AdminSettings),
+        (status = 403, description = "`forbidden`: the caller is not an active admin. Also `account_deletion_pending` and `password_change_required`, as on every secured operation.", body = Problem),
+    ),
+)]
+pub async fn settings(
+    state: web::Data<AuthState>,
+    auth: Authenticated,
+) -> Result<MsgPack<AdminSettings>, AccountError> {
+    require_admin(&state, &auth).await?;
+    Ok(MsgPack(AdminSettings {
+        deletion_grace_secs: state.settings.deletion_grace.num_seconds(),
+    }))
 }
 
 /// Create an active account (with its vault).
@@ -571,6 +601,7 @@ pub async fn cancel_deletion(
 
 /// Mounts the admin routes.
 pub fn configure(cfg: &mut web::ServiceConfig) {
+    cfg.route("/admin/settings", web::get().to(settings));
     cfg.service(
         web::scope("/admin/users")
             .app_data(MsgPackConfig::default().with_body_limit(8 * 1024))

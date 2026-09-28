@@ -368,24 +368,37 @@ fn op_detail(conn: &Connection, op: &outbox::OutboxOp, lang: Lang) -> CoreResult
             .chars()
             .take(120)
             .collect(),
-        Op::NoteMove(m) => format!("→ {}", m.new_path),
+        Op::NoteMove(m) => match lang {
+            Lang::En => format!("Moved to {}", m.new_path),
+            Lang::Ar => format!("نُقلت إلى {}", m.new_path),
+        },
         Op::NoteDelete(_) => tr(lang, "Deleted", "حذف"),
         Op::RelationAdd(r) => format!(
-            "{} → {}",
+            "{} · {}",
             labels::relation_label(r.relation.as_str(), lang),
             title_of(&r.dst_id)?
         ),
-        Op::RelationRemove(r) => format!(
-            "− {} → {}",
-            labels::relation_label(r.relation.as_str(), lang),
-            title_of(&r.dst_id)?
-        ),
-        Op::RelationRetype(r) => format!(
-            "{} → {} ({})",
-            labels::relation_label(r.relation.as_str(), lang),
-            labels::relation_label(r.new_type.as_str(), lang),
-            title_of(&r.dst_id)?
-        ),
+        Op::RelationRemove(r) => {
+            let (rel, title) = (
+                labels::relation_label(r.relation.as_str(), lang),
+                title_of(&r.dst_id)?,
+            );
+            match lang {
+                Lang::En => format!("Removed {rel} · {title}"),
+                Lang::Ar => format!("أُزيلت {rel} · {title}"),
+            }
+        }
+        Op::RelationRetype(r) => {
+            let (from, to, title) = (
+                labels::relation_label(r.relation.as_str(), lang),
+                labels::relation_label(r.new_type.as_str(), lang),
+                title_of(&r.dst_id)?,
+            );
+            match lang {
+                Lang::En => format!("Changed from {from} to {to} · {title}"),
+                Lang::Ar => format!("تغيّرت من {from} إلى {to} · {title}"),
+            }
+        }
         Op::EntityCreate(p) => p.name.clone(),
         Op::DocumentCreate(p) => p.name.clone(),
         Op::PlaceCreate(p) => p.name.clone(),
@@ -399,7 +412,13 @@ fn op_detail(conn: &Connection, op: &outbox::OutboxOp, lang: Lang) -> CoreResult
         Op::TaskReopen(p) | Op::TaskDelete(p) => task_description(conn, &p.id)?,
         Op::SuggestionReply(r) => r.text.clone(),
         Op::DocumentCustody(c) => c.event.as_str().to_owned(),
-        Op::EntityMerge(m) => format!("→ {}", title_of(&m.into_id)?),
+        Op::EntityMerge(m) => {
+            let into = title_of(&m.into_id)?;
+            match lang {
+                Lang::En => format!("Merged into {into}"),
+                Lang::Ar => format!("دُمج في {into}"),
+            }
+        }
         _ => String::new(),
     })
 }
@@ -1029,7 +1048,10 @@ pub fn task_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Tas
 /// One-line summary of what a suggestion proposes (Home inbox preview).
 fn suggestion_summary(d: &SuggestionDetail, lang: Lang) -> String {
     match d.kind {
-        SuggestionKind::Filing => format!("→ {}", d.title),
+        SuggestionKind::Filing => match lang {
+            Lang::En => format!("File as {}", d.title),
+            Lang::Ar => format!("يُحفظ باسم {}", d.title),
+        },
         SuggestionKind::EntityLink => match lang {
             Lang::En => format!("Who is “{}”?", d.mention),
             Lang::Ar => format!("من هو «{}»؟", d.mention),
@@ -2369,6 +2391,10 @@ pub fn admin_user_item(ctx: &ViewCtx, me: &str, u: crate::net::AdminUserInfo) ->
             Lang::Ar => format!("يُحذف في {}", labels.date_long(labels.local(d).date())),
         }),
         password_change_required: u.password_change_required,
+        export_downloaded_label: u.export_downloaded_at.map(|d| match ctx.lang {
+            Lang::En => format!("Export downloaded {}", labels.moment_label(d)),
+            Lang::Ar => format!("نُزّل التصدير {}", labels.moment_label(d)),
+        }),
         id: u.id,
         username: u.username,
         display_name: u.display_name,
@@ -2409,6 +2435,20 @@ pub fn admin_users(
         pending,
         users: others,
         query: query.to_owned(),
+        deletion_preview_label: None,
+    }
+}
+
+/// The purge date of a deletion scheduled now with the server's grace period `grace_secs`
+/// ("Deleted on 12 Oct 2026", the account-zone date; the same words as
+/// `AdminUserItem::deletion_label` once scheduled).
+pub fn deletion_preview_label(ctx: &ViewCtx, grace_secs: i64) -> String {
+    let labels = ctx.labels();
+    let at = ctx.now + chrono::Duration::seconds(grace_secs);
+    let date = labels.date_long(labels.local(at).date());
+    match ctx.lang {
+        Lang::En => format!("Deleted on {date}"),
+        Lang::Ar => format!("يُحذف في {date}"),
     }
 }
 

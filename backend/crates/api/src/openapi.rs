@@ -48,6 +48,7 @@ use crate::wire::{
         crate::routes::devices::list_devices,
         crate::routes::devices::update_device,
         crate::routes::devices::delete_device,
+        crate::routes::admin::settings,
         crate::routes::admin::list_users,
         crate::routes::admin::create_user,
         crate::routes::admin::approve_user,

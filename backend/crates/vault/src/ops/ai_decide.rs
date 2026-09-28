@@ -27,7 +27,7 @@ use strata_index::repo::suggestions::{self as srepo, Suggestion};
 use strata_index::types::{DecisionKind, SuggestionStatus};
 use sync_model::ops::SuggestionEdits;
 use sync_model::suggestions::{
-    CorrectionPayload, CustodyPayload, CustodyTarget, DuplicatesPayload, EntityLinkPayload,
+    CorrectionPayload, CustodyPayload, CustodyTarget, DuplicatesPayload, DuplicatesSurvivor, EntityLinkPayload,
     FilingPayload, TaskPayload,
 };
 use vault_format::custody::CustodyEventType;
@@ -786,21 +786,27 @@ impl Core {
         }
     }
 
-    /// Merges a `duplicates` pair (older survives).
+    /// Merges a `duplicates` pair: the survivor is the shared rule's
+    /// ([`DuplicatesPayload::survivor`]: the note created first; for tasks the line whose ID
+    /// sorts first, the other is cancelled).
     async fn merge_duplicates(&mut self, scope: UserScope, p: &DuplicatesPayload) -> Result<()> {
-        let kind = p.a.kind.as_str();
-        if kind == "task" {
-            // Keep the older task line; cancel the newer one.
-            let mut ids = [p.a.item.clone(), p.b.item.clone()];
-            ids.sort();
+        if p.is_task_pair() {
+            let cancel = match p.survivor(None, None) {
+                DuplicatesSurvivor::A => &p.b.item,
+                DuplicatesSurvivor::B => &p.a.item,
+            };
             return self
-                .transition_task(scope, &ids[1], Transition::Cancel, None)
+                .transition_task(scope, cancel, Transition::Cancel, None)
                 .await
                 .map(|_| ());
         }
         let a: NoteId = p.a.item.parse().map_err(|_| VaultError::NotFound)?;
         let b: NoteId = p.b.item.parse().map_err(|_| VaultError::NotFound)?;
-        let (survivor, loser) = self.older_first(a, b).await?;
+        let (survivor, loser) = match p.survivor(self.created_of(a).await?, self.created_of(b).await?)
+        {
+            DuplicatesSurvivor::A => (a, b),
+            DuplicatesSurvivor::B => (b, a),
+        };
         match self.live_kind(survivor) {
             Some(NoteKind::Person | NoteKind::Company | NoteKind::Document | NoteKind::Place) => {
                 self.merge_entities(scope, loser, survivor)
@@ -812,19 +818,15 @@ impl Core {
         }
     }
 
-    async fn older_first(&self, a: NoteId, b: NoteId) -> Result<(NoteId, NoteId)> {
-        let created = |text: Option<String>| {
-            text.and_then(|t| {
-                Document::parse(&t)
-                    .frontmatter()
-                    .and_then(|f| f.created().ok().flatten())
-            })
-        };
-        let (pa, _) = self.live(a)?;
-        let (pb, _) = self.live(b)?;
-        let ca = created(self.read_text(&pa).await?);
-        let cb = created(self.read_text(&pb).await?);
-        Ok(if (ca, a) <= (cb, b) { (a, b) } else { (b, a) })
+    /// The `created` of a live note (`None` when it has none).
+    async fn created_of(&self, id: NoteId) -> Result<Option<chrono::DateTime<chrono::Utc>>> {
+        let (path, _) = self.live(id)?;
+        Ok(self.read_text(&path).await?.and_then(|t| {
+            Document::parse(&t)
+                .frontmatter()
+                .and_then(|f| f.created().ok().flatten())
+                .map(|c| c.with_timezone(&chrono::Utc))
+        }))
     }
 
     /// Merges note `loser` into `survivor` (PLAN §9.7 duplicates), one commit:

@@ -98,6 +98,45 @@ pub struct DuplicatesPayload {
     pub reason: Option<String>,
 }
 
+/// Which item of a `duplicates` pair accepting the suggestion keeps (§9.7).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DuplicatesSurvivor {
+    /// [`DuplicatesPayload::a`] survives.
+    A,
+    /// [`DuplicatesPayload::b`] survives.
+    B,
+}
+
+impl DuplicatesPayload {
+    /// Whether the pair is two task lines (accepting cancels one line instead of merging).
+    pub fn is_task_pair(&self) -> bool {
+        self.a.kind == "task"
+    }
+
+    /// The item accepting keeps, the same on the server (which merges) and the device (which
+    /// says so before the user accepts). Task pairs keep the line whose block ID sorts first
+    /// and cancel the other. Notes and entities keep the one created first (`created_a`,
+    /// `created_b`: each note's `created`; a note without one counts as the oldest), ties by
+    /// ID; the other is merged into it.
+    pub fn survivor(
+        &self,
+        created_a: Option<chrono::DateTime<chrono::Utc>>,
+        created_b: Option<chrono::DateTime<chrono::Utc>>,
+    ) -> DuplicatesSurvivor {
+        let keeps_a = if self.is_task_pair() {
+            self.a.item <= self.b.item
+        } else {
+            let id = |d: &DuplicateItem| d.item.parse::<Ulid>().unwrap_or(d.id);
+            (created_a, id(&self.a)) <= (created_b, id(&self.b))
+        };
+        if keeps_a {
+            DuplicatesSurvivor::A
+        } else {
+            DuplicatesSurvivor::B
+        }
+    }
+}
+
 /// `filing`: title, tags and folder for an inbox capture. Accepting (optionally with `title`,
 /// `tags`, `folder` edits) applies them and moves the capture in one commit.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

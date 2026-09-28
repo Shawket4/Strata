@@ -124,6 +124,13 @@ impl ::std::convert::TryFrom<::std::string::String> for AccountStatus {
         value.parse()
     }
 }
+///`GET /admin/settings`: server settings an admin needs before acting.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct AdminSettings {
+    /**The grace period (seconds) between scheduling an account's deletion and its purge
+    (D25): `DELETE /admin/users/{id}` sets `deletion_at` to now plus this.*/
+    pub deletion_grace_secs: i64,
+}
 ///An account as admins see it: status and dates, never content.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct AdminUser {
@@ -1009,6 +1016,11 @@ pub struct CustodyEventRequest {
     ///Third party, person or company (required for `sent-to`, `received-from`).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub counterparty_id: ::std::option::Option<::ulid::Ulid>,
+    /**The user's note on the event, written last on the custody line (whitespace runs become
+    one space). A note of wikilinks only is refused (`validation`): it would read back as
+    citations.*/
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub note: ::std::option::Option<::std::string::String>,
     ///Person (required for `handed-to`, `returned-by`).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub person_id: ::std::option::Option<::ulid::Ulid>,
@@ -3557,6 +3569,9 @@ pub struct SyncDocumentCustody {
     pub counterparty_id: ::std::option::Option<::ulid::Ulid>,
     ///Document ID.
     pub document_id: ::ulid::Ulid,
+    ///The user's note on the event (one line), written last on the custody line.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub note: ::std::option::Option<::std::string::String>,
     ///Person.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub person_id: ::std::option::Option<::ulid::Ulid>,
@@ -3634,6 +3649,14 @@ pub struct SyncEntityPatch {
         skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
     )]
     pub set: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
+    /**List values to set, each replacing the key's whole value (`tags`, `aliases`, several
+    phone numbers); an empty list removes the key.*/
+    #[serde(
+        default,
+        skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+    )]
+    pub set_lists:
+        ::std::collections::HashMap<::std::string::String, ::std::vec::Vec<::std::string::String>>,
     ///Fields to remove.
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub unset: ::std::vec::Vec<::std::string::String>,
