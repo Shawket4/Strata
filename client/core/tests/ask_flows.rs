@@ -207,7 +207,8 @@ async fn world() -> (Harness, Arc<AskApi>, Arc<Session>) {
 
 fn view(s: &Session) -> AskView {
     let entries = s.ask_entries();
-    s.read(|c, ctx| build::ask(c, ctx, &entries)).expect("ask view")
+    s.read(|c, ctx| build::ask(c, ctx, &entries))
+        .expect("ask view")
 }
 
 /// `(id, role, text, streaming, error_key)` of every message.
@@ -219,7 +220,12 @@ fn messages(s: &Session) -> Vec<(String, String, String, bool, Option<String>)> 
         .collect()
 }
 
-fn msg(id: &str, role: &str, text: &str, error: Option<&str>) -> (String, String, String, bool, Option<String>) {
+fn msg(
+    id: &str,
+    role: &str,
+    text: &str,
+    error: Option<&str>,
+) -> (String, String, String, bool, Option<String>) {
     (
         id.to_owned(),
         role.to_owned(),
@@ -319,7 +325,10 @@ async fn stop_ends_the_stream_and_an_early_end_keeps_what_arrived() {
         Step::StopThen(AskEvent::Tokens("8%".into())),
         tokens(" in November."),
     ]));
-    assert_eq!(s.ask("Prices?", None, "All notes").await, Ok("ask-1".into()));
+    assert_eq!(
+        s.ask("Prices?", None, "All notes").await,
+        Ok("ask-1".into())
+    );
 
     // A stream that ends without its final answer.
     api.asks.lock().unwrap().push_back(Ok("ask-2".into()));
@@ -327,7 +336,10 @@ async fn stop_ends_the_stream_and_an_early_end_keeps_what_arrived() {
         .lock()
         .unwrap()
         .push_back(Ok(vec![tokens("Mona leads it.")]));
-    assert_eq!(s.ask("Who leads?", None, "All notes").await, Ok("ask-2".into()));
+    assert_eq!(
+        s.ask("Who leads?", None, "All notes").await,
+        Ok("ask-2".into())
+    );
     assert_eq!(
         messages(&s),
         [
@@ -355,7 +367,9 @@ async fn citations_become_sources_and_markers() {
         Step::Event(Ok(citation(3, PRICING, "Pricing", Some("b7")))),
         tokens("see [[Pricing#^b7]]"),
     ]));
-    s.ask("Q4?", Some("notes".into()), "notes/").await.expect("ask");
+    s.ask("Q4?", Some("notes".into()), "notes/")
+        .await
+        .expect("ask");
 
     let answer = view(&s).messages.pop().expect("answer");
     assert_eq!(
@@ -476,12 +490,16 @@ async fn the_ai_status_panel_reads_the_cached_status() {
     let v = view(&s);
     assert_eq!(v.availability, Availability::NotAllowed);
     assert_eq!(
-        v.ai_status.map(|a| (a.budget_used_percent, a.embedding_percent)),
+        v.ai_status
+            .map(|a| (a.budget_used_percent, a.embedding_percent)),
         Some((0, Some(100)))
     );
     // Offline: Ask is unavailable and refuses questions.
     h.server.set_offline(true);
     s.sync(Trigger::Manual).await.expect("cycle");
     assert_eq!(view(&s).availability, Availability::Offline);
-    assert_eq!(s.ask("Q4?", None, "All notes").await, Err(CoreError::Offline));
+    assert_eq!(
+        s.ask("Q4?", None, "All notes").await,
+        Err(CoreError::Offline)
+    );
 }

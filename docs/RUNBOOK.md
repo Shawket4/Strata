@@ -1,43 +1,72 @@
 # Runbook
 
-Operating `stratad` on the VPS (PLAN §14). Commands assume the service user `strata`, the
-config at `/etc/strata/stratad.toml` and the data root `/srv/strata`. Every subcommand takes
-`--config <path>` (or `STRATA_CONFIG`); `STRATA__<SECTION>__<KEY>` environment variables
-override single keys (e.g. `STRATA__DATABASE__APP_URL`).
+Operating `stratad` on the VPS (PLAN §14). **First install: follow
+[`deploy/VPS_SETUP.md`](../deploy/VPS_SETUP.md) step by step**; this runbook explains the parts
+and covers operations. Commands assume the service user `strata`, the settings file
+`/etc/strata/stratad.env` and the data root `/srv/strata`. Every subcommand takes
+`--env-file <path>` (or `STRATA_ENV_FILE`); without it, `stratad` reads `.env` from its working
+directory if one exists.
 
-## 1. Configuration
+## 1. Configuration (`.env`)
 
-Minimal `/etc/strata/stratad.toml` (owner `root:strata`, mode `0640`; it holds database
+Every setting is one environment variable: `STRATA_` + the setting's path with `__` between
+the parts, upper-case (`bind` → `STRATA_BIND`, `database.app_url` → `STRATA_DATABASE__APP_URL`,
+`ai.claude_cli.command` → `STRATA_AI__CLAUDE_CLI__COMMAND`, `thresholds.dedupe.note.near` →
+`STRATA_THRESHOLDS__DEDUPE__NOTE__NEAR`). **The full list, with defaults and comments, is
+`deploy/stratad.env.example`** (a test keeps it in step with `strata_common::Config`); start from
+it and change what differs.
+
+Precedence: built-in defaults → the env file → the process environment (a real environment
+variable always wins). The file is parsed with `dotenvy` (values only; stratad's environment is
+not modified):
+
+- `NAME=value`, one per line, `#` comments. Single-quote a value that contains spaces, `#`, `$`
+  or quotes (`'postgres://strata_app:pa$$word@127.0.0.1/strata'`); in unquoted and
+  double-quoted values `$NAME` is expanded.
+- Numbers, `true`/`false`, paths and text as written. `STRATA_AI__CLAUDE_CLI__COMMAND` is the
+  program and its arguments separated by spaces; `STRATA_AI__USER_PROVIDERS` is
+  `username=provider` pairs separated by commas. An empty value unsets an optional setting.
+- Every name in the file must be a setting (a typo stops `stratad` with a "did you mean"). In
+  the environment, a `STRATA_…__…` name that is not a setting is an error; other `STRATA_`
+  names (test and tool variables) are ignored.
+- Errors name the variable and never repeat a value (database URLs carry passwords); invalid
+  settings exit with status 2 before anything else happens.
+
+Minimal `/etc/strata/stratad.env` (owner `root:strata`, mode `0640`; it holds database
 passwords):
 
-```toml
-data_root = "/srv/strata"
-bind = "127.0.0.1:8080"
-default_timezone = "Africa/Cairo"
-
-[database]
-owner_url = "postgres://strata_owner:…@127.0.0.1/strata"
-app_url = "postgres://strata_app:…@127.0.0.1/strata"
-accounts_url = "postgres://strata_accounts:…@127.0.0.1/strata"
-max_connections = 5
-
-[auth]
-signing_key_file = "/etc/strata/token-signing-key.pem"
-trust_forwarded_for = true   # only because nginx is the sole client of 127.0.0.1:8080
+```sh
+STRATA_DATA_ROOT=/srv/strata
+STRATA_BIND=127.0.0.1:8080
+STRATA_DEFAULT_TIMEZONE=Africa/Cairo
+STRATA_DATABASE__OWNER_URL='postgres://strata_owner:…@127.0.0.1/strata'
+STRATA_DATABASE__APP_URL='postgres://strata_app:…@127.0.0.1/strata'
+STRATA_DATABASE__ACCOUNTS_URL='postgres://strata_accounts:…@127.0.0.1/strata'
+STRATA_AUTH__SIGNING_KEY_FILE=/etc/strata/token-signing-key.pem
+# only because nginx is the sole client of 127.0.0.1:8080:
+STRATA_AUTH__TRUST_FORWARDED_FOR=true
 ```
 
-With `trust_forwarded_for`, the login and sign-up rate limits key on the address nginx
-reports, so nginx must **overwrite** the header rather than append to what the client sent:
-`proxy_set_header X-Forwarded-For $remote_addr;` (not `$proxy_add_x_forwarded_for`) and no
-`Forwarded` header passed through.
+Check a file without connecting anywhere; it prints every effective setting as env lines
+(database passwords masked as `***`):
 
-`max_future_skew_secs` (default 300) is how far ahead of the server's clock a device's creation
-time may be before a create is refused with `422 created_in_future`: a device whose clock is
-wrong sees its creates rejected until the clock is fixed; items created offline in the past are
-always accepted with their own time.
+```sh
+stratad --env-file /etc/strata/stratad.env check-config
+```
 
-Every key, with its default and a comment, is in `deploy/stratad.example.toml` (a test keeps it
-in step with `strata_common::Config::default`); start from it and change what differs.
+With `STRATA_AUTH__TRUST_FORWARDED_FOR`, the login and sign-up rate limits key on the address
+nginx reports, so nginx must **overwrite** the header rather than append to what the client
+sent: `proxy_set_header X-Forwarded-For $remote_addr;` (not `$proxy_add_x_forwarded_for`) and
+no `Forwarded` header passed through.
+
+`STRATA_MAX_FUTURE_SKEW_SECS` (default 300) is how far ahead of the server's clock a device's
+creation time may be before a create is refused with `422 created_in_future`: a device whose
+clock is wrong sees its creates rejected until the clock is fixed; items created offline in the
+past are always accepted with their own time.
+
+Secrets are never values in the file: the signing key, the Anthropic API key and push
+credentials are **file paths** (`…_FILE` / `…_PATH` variables) whose files must be regular files
+with no group/other permissions (§4), or `serve` refuses to start.
 
 The data root must exist and belong to the service user only:
 
@@ -78,67 +107,76 @@ prepares the database (connect grants, `vector` and `pg_trgm` extensions, schema
 `search_path`). It is idempotent. Either apply it directly:
 
 ```sh
-sudo -u strata stratad -c /etc/strata/stratad.toml bootstrap-roles \
+stratad --env-file /etc/strata/stratad.env bootstrap-roles \
   --superuser-url 'postgres://postgres@/postgres?host=/var/run/postgresql'
 ```
 
 or review and run the SQL yourself (connect to the `strata` database):
 
 ```sh
-stratad -c /etc/strata/stratad.toml bootstrap-roles --print > bootstrap.sql
-sudo -u postgres psql -d strata -f bootstrap.sql
+stratad --env-file /etc/strata/stratad.env bootstrap-roles --print > bootstrap.sql
+sudo -u postgres psql -d strata -f bootstrap.sql && rm bootstrap.sql
 ```
 
 Then apply the migrations as `strata_owner` (safe to re-run; run after every upgrade):
 
 ```sh
-sudo -u strata stratad -c /etc/strata/stratad.toml migrate
+sudo -u strata stratad --env-file /etc/strata/stratad.env migrate
 ```
 
 ## 4. Generate the token signing key
 
-Access tokens are signed with an Ed25519 key (PKCS#8 PEM). Create it once, as the service
-user, at the configured path:
+Access tokens are signed with an Ed25519 key (PKCS#8 PEM). Create it once at the configured
+path (`STRATA_AUTH__SIGNING_KEY_FILE`). `/etc/strata` is `root:strata 0750`, so run `keygen`
+as root and hand the key to the service user:
 
 ```sh
-sudo install -d -o strata -g strata -m 0700 /etc/strata/keys   # if you keep keys apart
-sudo -u strata stratad -c /etc/strata/stratad.toml keygen
+stratad --env-file /etc/strata/stratad.env keygen
+chown strata:strata /etc/strata/token-signing-key.pem
 ```
 
 The file is written with mode `0600`; `keygen` refuses to overwrite an existing key. Every
-secret file (`auth.signing_key_file`, `ai.anthropic_api.api_key_file`, push credentials) must be a regular
-file with no group/other permissions, or `serve` refuses to start.
+secret file (`STRATA_AUTH__SIGNING_KEY_FILE`, `STRATA_AI__ANTHROPIC_API__API_KEY_FILE`, the
+`STRATA_PUSH__…_PATH` credentials) must be a regular file with no group/other permissions, or
+`serve` refuses to start.
 
-**Rotation.** `stratad keygen --force` replaces the key. Access tokens signed with the old key
-stop working at once; clients refresh (refresh tokens are unaffected) and continue. Restart
-`stratad` after rotating.
+**Rotation.** `stratad keygen --force` (then the `chown` again) replaces the key. Access tokens
+signed with the old key stop working at once; clients refresh (refresh tokens are unaffected)
+and continue. Restart `stratad` after rotating.
 
 ## 5. Create the first admin
 
 ```sh
 read -rs PW && printf '%s\n' "$PW" | \
-  sudo -u strata stratad -c /etc/strata/stratad.toml create-user \
+  sudo -u strata stratad --env-file /etc/strata/stratad.env create-user \
     --username owner --display-name 'Owner' --admin
 ```
 
 The password is read from standard input (first line); it must meet
-`auth.min_password_length` (default 10). The account is active immediately, its vault
+`STRATA_AUTH__MIN_PASSWORD_LENGTH` (default 10). The account is active immediately, its vault
 `/srv/strata/users/<id>/vault` is created as a git repository, and a `user.create` audit entry
 is written. Further accounts sign up in the app and wait for approval (Admin → Users), or an
 admin creates them (`POST /api/v1/admin/users`).
 
 ## 6. Run
 
-systemd unit (excerpt):
+The systemd unit is `deploy/stratad.service` (shipped in the release tarball; install it as
+`/etc/systemd/system/stratad.service`):
 
 ```ini
 [Service]
 User=strata
-Environment=STRATA_CONFIG=/etc/strata/stratad.toml
+Group=strata
+ExecStart=/usr/local/bin/stratad --env-file /etc/strata/stratad.env serve
 Environment=RUST_LOG=info
-ExecStart=/usr/local/bin/stratad serve
 Restart=on-failure
+TimeoutStopSec=40
+# No NoNewPrivileges: stratad runs claude through sudo (§9).
 ```
+
+`RUST_LOG` belongs in the unit (or the environment), not in the env file: the file holds
+`STRATA_` settings only. An override for one setting can go in a drop-in
+(`systemctl edit stratad` → `Environment=STRATA_JOBS__MAX_CONCURRENCY=1`); it wins over the file.
 
 Startup checks, in order: secret file permissions → signing key loads → data root exists →
 database encoding UTF8 and `LC_CTYPE` not `C`/`POSIX` → revocation set loads. Any failure is
@@ -150,6 +188,18 @@ Run exactly **one** `stratad` process: revocations and rate limits are held in m
 
 Liveness: `curl -H 'Accept: application/vnd.msgpack' http://127.0.0.1:8080/api/v1/health`.
 
+**Manual deploy / upgrade** (until deploys are automated): copy the release tarball (§13) to the
+VPS, verify it (`sha256sum -c stratad-*-linux-x86_64.tar.gz.sha256`), unpack it, then
+
+```sh
+install -m 0755 stratad /usr/local/bin/stratad
+sudo -u strata stratad --env-file /etc/strata/stratad.env migrate
+systemctl restart stratad
+```
+
+The env file stays in place across upgrades; compare it with the new `stratad.env.example`
+for added settings (unknown or renamed ones stop `stratad` with the variable's name).
+
 ## 7. Account operations
 
 - **Approve / reject sign-ups, disable, reset a password, change a role, schedule or cancel a
@@ -157,9 +207,10 @@ Liveness: `curl -H 'Accept: application/vnd.msgpack' http://127.0.0.1:8080/api/v
   written to `audit_log`.
 - **Password reset** returns a one-time temporary password (shown once); the user must change
   it at the next sign-in, and all their sessions end immediately.
-- **Deletion** (D25): the account becomes `deletion_pending` for `accounts.deletion_grace_days`
-  (default 14); the user can sign in only to download their export or confirm the deletion.
-  The purge runs every `accounts.purge_interval_secs` and removes the user's directory and
+- **Deletion** (D25): the account becomes `deletion_pending` for
+  `STRATA_ACCOUNTS__DELETION_GRACE_DAYS` (default 14); the user can sign in only to download
+  their export or confirm the deletion. The purge runs every
+  `STRATA_ACCOUNTS__PURGE_INTERVAL_SECS` and removes the user's directory and
   every row of theirs, leaving one `user.purge` audit entry.
 - **Audit trail**: `SELECT * FROM strata.audit_log ORDER BY at DESC LIMIT 50;` (as a
   superuser or `strata_accounts`).
@@ -238,18 +289,17 @@ exec /usr/bin/env -i \
 strata ALL=(strata-ai) NOPASSWD: /usr/local/lib/strata/claude-ai
 ```
 
-Configure the launcher in `stratad.toml`:
+Configure the launcher in the env file:
 
-```toml
-[ai.claude_cli]
-command = ["sudo", "-n", "-u", "strata-ai", "/usr/local/lib/strata/claude-ai"]
-scratch_dir = "/var/lib/strata-ai/scratch"
-max_concurrency = 1
-timeout_secs = 300
+```sh
+STRATA_AI__CLAUDE_CLI__COMMAND='sudo -n -u strata-ai /usr/local/lib/strata/claude-ai'
+STRATA_AI__CLAUDE_CLI__SCRATCH_DIR=/var/lib/strata-ai/scratch
+# defaults: STRATA_AI__CLAUDE_CLI__MAX_CONCURRENCY=1, STRATA_AI__CLAUDE_CLI__TIMEOUT_SECS=300
 ```
 
 On timeout `stratad` sends SIGTERM to the process group (sudo relays it to `claude`), then
-SIGKILL after `kill_grace_secs`. By default every account uses this provider (D23); see §11
+SIGKILL after `STRATA_AI__CLAUDE_CLI__KILL_GRACE_SECS`. Because `claude` runs through `sudo`,
+the systemd unit must not set `NoNewPrivileges`. By default every account uses this provider (D23); see §11
 for per-user overrides.
 
 Check the whole chain as `strata` (spends a tiny amount of subscription usage):
@@ -300,10 +350,9 @@ delete the downloaded archive.
 Point `stratad` at the files (restart to apply); until both paths exist, embeddings are off and
 startup logs `embeddings disabled` with the reason:
 
-```toml
-[ai.embedding]
-model_dir = "/opt/models/granite-embedding-97m-multilingual-r2"
-onnxruntime_lib = "/opt/onnxruntime/lib/libonnxruntime.so.1.30.0"
+```sh
+STRATA_AI__EMBEDDING__MODEL_DIR=/opt/models/granite-embedding-97m-multilingual-r2
+STRATA_AI__EMBEDDING__ONNXRUNTIME_LIB=/opt/onnxruntime/lib/libonnxruntime.so.1.30.0
 ```
 
 Runtime behaviour: one worker thread at nice 19, ONNX Runtime with one intra-op and one inter-op
@@ -314,7 +363,7 @@ long notes must be chunked; short texts take milliseconds.
 
 The quint8 export's output changes when a text is padded inside a batch (cosine 0.96–0.99 to the
 same text embedded alone; the fp32 export gives 1.0), so the embedder only batches texts of equal
-token length (`pad_batches = false`).
+token length (`STRATA_AI__EMBEDDING__PAD_BATCHES=false`).
 
 Smoke test against the real model (compares with reference vectors from the Python
 `onnxruntime` + `tokenizers` packages, `backend/crates/ai/tests/fixtures/embeddings/`):
@@ -327,17 +376,19 @@ STRATA_ONNXRUNTIME_LIB=/opt/onnxruntime/lib/libonnxruntime.so.1.30.0 \
 
 ## 11. AI: Anthropic API provider (D20, D23)
 
-Selectable per user (`[ai.user_providers]`, `<username> = "anthropic_api"`, the username exactly
-as stored) or as the default (`ai.default_provider`). The key lives in a file
-(`ai.anthropic_api.api_key_file`, e.g. `/etc/strata/anthropic.key`), owner `strata`, mode `0600`;
+Selectable per user (`STRATA_AI__USER_PROVIDERS=<username>=anthropic_api`, several pairs
+separated by commas, the username exactly as stored) or as the default
+(`STRATA_AI__DEFAULT_PROVIDER=anthropic_api`). The key lives in a file
+(`STRATA_AI__ANTHROPIC_API__API_KEY_FILE`, e.g. `/etc/strata/anthropic.key`), owner `strata`,
+mode `0600`;
 `stratad` refuses to start when a user is routed to the API without a key file, or when the file
 is readable by group or others, and never logs the key. Default model `claude-opus-5-5`
-(`ai.anthropic_api.model`, with its prices in `input_micros_per_mtok` / `output_micros_per_mtok`
-for cost caps); transient errors (408/409/429/5xx/529) are retried with exponential
+(`STRATA_AI__ANTHROPIC_API__MODEL`, with its prices in `…__INPUT_MICROS_PER_MTOK` /
+`…__OUTPUT_MICROS_PER_MTOK` for cost caps); transient errors (408/409/429/5xx/529) are retried with exponential
 backoff honouring `retry-after`; a 429 that outlasts the retries pauses that user's AI work.
 
-Budgets (`[budgets]`): per-user and global daily token and cost caps, counted in calendar days
-of `budgets.timezone` (default `default_timezone`); totals are in `strata.ai_usage` (per user) and `strata.ai_usage_global` (per
+Budgets (`STRATA_BUDGETS__…`): per-user and global daily token and cost caps, counted in
+calendar days of `STRATA_BUDGETS__TIMEZONE` (default `STRATA_DEFAULT_TIMEZONE`); totals are in `strata.ai_usage` (per user) and `strata.ai_usage_global` (per
 day). A reached cap pauses AI work until the next day starts; nothing fails.
 
 ```sql
@@ -364,15 +415,15 @@ echo "$(cat /tmp/model.onnx.sha256)  onnx/model.onnx" >> SHA256SUMS
 rm -f /tmp/model.onnx.sha256
 ```
 
-The defaults (`deploy/stratad.example.toml`) then need only the two paths of §10. The model ID
+The defaults (`deploy/stratad.env.example`) then need only the two paths of §10. The model ID
 stored with every vector changes (`…@onnx/model`), so the first start after switching queues a
-resumable re-embed of every note (below). To stay on the int8 file, set `model_file =
-"onnx/model_quint8_avx2.onnx"`, `model_id =
-"ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2"` and `pad_batches =
-false`.
+resumable re-embed of every note (below). To stay on the int8 file, set
+`STRATA_AI__EMBEDDING__MODEL_FILE=onnx/model_quint8_avx2.onnx`,
+`STRATA_AI__EMBEDDING__MODEL_ID=ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model_quint8_avx2`
+and `STRATA_AI__EMBEDDING__PAD_BATCHES=false`.
 
 The model is not loaded at startup: the first embedding loads it (a second or two) and it is
-unloaded after `ai.embedding.idle_unload_secs` (default 300) without calls. Real-model checks
+unloaded after `STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS` (default 300) without calls. Real-model checks
 (fp32 padding invariance and agreement with the quint8 reference; load → idle unload → reload):
 
 ```sh
@@ -382,14 +433,14 @@ STRATA_ONNXRUNTIME_LIB=/opt/onnxruntime/lib/libonnxruntime.so.1.30.0 \
 ```
 
 ### Background jobs
-`stratad serve` runs the job runner (`[jobs]`: `max_concurrency` 2, `poll_interval_secs`,
-`backoff_base_secs`/`backoff_max_secs`, `nightly_hour` 3 in `default_timezone`,
-`shutdown_grace_secs`). Kinds: `embed` (after each content change), `embed_backfill` (at every
+`stratad serve` runs the job runner (`STRATA_JOBS__…`: `MAX_CONCURRENCY` 2,
+`POLL_INTERVAL_SECS`, `BACKOFF_BASE_SECS`/`BACKOFF_MAX_SECS`, `NIGHTLY_HOUR` 3 in the default
+timezone, `SHUTDOWN_GRACE_SECS`). Kinds: `embed` (after each content change), `embed_backfill` (at every
 start when embeddings are configured, until every note is current), `summarize` (after `embed`;
 sidecar summary, `ai: summarize <path>`), `dedupe` (nightly semantic duplicate sweep producing
 `duplicates` suggestions). Jobs of kinds without a handler yet (`link`, `file_inbox`) stay
 queued. A reached budget or provider usage limit pauses LLM jobs (they wait, attempts are not
-spent); `ai.daily_job_limit` caps LLM jobs per UTC day (in memory, reset at restart).
+spent); `STRATA_AI__DAILY_JOB_LIMIT` caps LLM jobs per UTC day (in memory, reset at restart).
 Jobs left `running` by a stopped process are re-queued at the next start.
 
 Inspect a user's queue (as the owner role, inside the user's scope):

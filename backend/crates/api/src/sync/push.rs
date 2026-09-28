@@ -575,11 +575,8 @@ async fn note_create(
     // A path taken meanwhile gets a free name next to it: the device's note is never lost.
     for n in 2..=50 {
         // The title rule (§6.4): a note written at `<stem> 2.md` keeps its name as `title`.
-        let content = match item_render::note::titled_for_path(&p.content, &p.path, &path) {
-            Ok(c) => c,
-            Err(_) => {
-                return from_vault(&VaultError::invalid("the frontmatter cannot be edited"));
-            }
+        let Ok(content) = item_render::note::titled_for_path(&p.content, &p.path, &path) else {
+            return from_vault(&VaultError::invalid("the frontmatter cannot be edited"));
         };
         let req = CreateNote {
             path: path.clone(),

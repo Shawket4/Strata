@@ -128,6 +128,7 @@ impl<'a> Utf16Map<'a> {
 }
 
 /// Highlight spans of a whole note, sorted by start, then end, then kind.
+#[allow(clippy::too_many_lines)] // one pass per span kind of the shared analysis
 pub fn editor_hints(content: &str) -> Vec<Span> {
     let doc = Document::parse(content);
     let map = Utf16Map::new(content);

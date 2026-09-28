@@ -72,24 +72,31 @@ If `pg_hba.conf` requires passwords for local TCP, the three roles need a `host 
 
 ## 3. The binary
 
-From CI: download the `stratad-linux-x86_64` artifact (or the draft release on a `v*` tag),
-check it and install:
+From CI: download the `stratad-linux-x86_64` artifact of a green `build` workflow run (a zip
+holding `stratad-<version>-linux-x86_64.tar.gz` and its `.sha256`), or the two files from the
+draft GitHub Release of a `v*` tag. Copy them to the VPS, check and install:
 
 ```sh
+sha256sum -c stratad-*-linux-x86_64.tar.gz.sha256
 tar xzf stratad-*-linux-x86_64.tar.gz
-sha256sum -c stratad-*.sha256
+cd stratad-*-linux-x86_64/     # stratad, stratad.env.example, stratad.service, README.md, VPS_SETUP.md
 install -m 0755 stratad /usr/local/bin/stratad
 stratad --version
 ```
+
+The binary needs glibc ≥ 2.35 (Debian 12+, Ubuntu 22.04+).
 
 (Or build it yourself on an Ubuntu 22.04+ machine: `cargo build --release -p stratad`.)
 
 ## 4. Settings (`/etc/strata/stratad.env`)
 
 ```sh
-cp stratad.env.example /etc/strata/stratad.env
-chown root:strata /etc/strata/stratad.env && chmod 0640 /etc/strata/stratad.env
+install -o root -g strata -m 0640 stratad.env.example /etc/strata/stratad.env
 ```
+
+Each setting is one `STRATA_…` line; the file lists all of them with their defaults (commented
+lines are defaults you can leave alone). Single-quote any value that contains spaces, `#`,
+`$` or quotes.
 
 Set at least:
 
@@ -118,7 +125,8 @@ stratad --env-file /etc/strata/stratad.env check-config
 
 ```sh
 sudo -u strata stratad --env-file /etc/strata/stratad.env migrate
-sudo -u strata stratad --env-file /etc/strata/stratad.env keygen
+stratad --env-file /etc/strata/stratad.env keygen          # as root: /etc/strata is not writable by strata
+chown strata:strata /etc/strata/token-signing-key.pem
 read -rs PW && printf '%s\n' "$PW" | sudo -u strata stratad --env-file /etc/strata/stratad.env \
   create-user --username owner --display-name 'Shawket' --admin
 ```
@@ -189,7 +197,13 @@ echo 'Say OK' | sudo -u strata sudo -n -u strata-ai /usr/local/lib/strata/claude
 
 ## 8. systemd
 
-`/etc/systemd/system/stratad.service`:
+Install the unit shipped in the tarball (`stratad.service`, the same as `deploy/stratad.service`):
+
+```sh
+install -m 0644 stratad.service /etc/systemd/system/stratad.service
+```
+
+It reads:
 
 ```ini
 [Unit]

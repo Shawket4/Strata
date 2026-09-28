@@ -36,7 +36,10 @@ fn stored() -> StoredTokens {
 fn account_databases_open_migrated_and_are_deleted_with_their_companions() {
     let user = Ulid::from_string(USER).expect("id");
     let mem = AccountDb::open_in_memory(user).expect("in memory");
-    assert_eq!((mem.user_id(), mem.path().as_os_str().is_empty()), (user, true));
+    assert_eq!(
+        (mem.user_id(), mem.path().as_os_str().is_empty()),
+        (user, true)
+    );
     tokens::put(mem.conn(), &stored()).expect("put");
     assert_eq!(tokens::get(mem.conn()), Ok(Some(stored())));
     assert_eq!(mem.delete(), Ok(()), "nothing on disk to delete");
@@ -96,7 +99,9 @@ fn tokens_never_appear_in_debug_output() {
     };
     assert_eq!(
         format!("{session:?}"),
-        format!("SessionTokens {{ user_id: \"{USER}\", device_id: \"dev-1\", export_only: true, .. }}")
+        format!(
+            "SessionTokens {{ user_id: \"{USER}\", device_id: \"dev-1\", export_only: true, .. }}"
+        )
     );
 }
 

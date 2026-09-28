@@ -60,7 +60,8 @@ fn write_config(db: &str, dir: &Path, bind: &str) -> PathBuf {
 /// working directory without a `.env`.
 fn stratad(config: Option<&Path>) -> Command {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_stratad"));
-    cmd.env("RUST_LOG", "info").current_dir(env!("CARGO_TARGET_TMPDIR"));
+    cmd.env("RUST_LOG", "info")
+        .current_dir(env!("CARGO_TARGET_TMPDIR"));
     for (name, _) in std::env::vars() {
         if name.starts_with("STRATA_") {
             cmd.env_remove(name);
@@ -211,7 +212,9 @@ fn check_config_prints_the_effective_settings_from_every_source() {
     assert_eq!(stdout(&out), expected(&config));
     assert!(!stdout(&out).contains("hunter2"));
 
-    let out = run(stratad(None).env("STRATA_ENV_FILE", &path).arg("check-config"));
+    let out = run(stratad(None)
+        .env("STRATA_ENV_FILE", &path)
+        .arg("check-config"));
     assert_eq!(stdout(&out), expected(&config));
 
     let out = run(stratad(None)

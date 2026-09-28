@@ -1,0 +1,22 @@
+# systemd unit for stratad (docs/RUNBOOK.md §6, deploy/VPS_SETUP.md step 8).
+# Install as /etc/systemd/system/stratad.service, then:
+#   systemctl daemon-reload && systemctl enable --now stratad
+[Unit]
+Description=Strata API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=strata
+Group=strata
+ExecStart=/usr/local/bin/stratad --env-file /etc/strata/stratad.env serve
+Environment=RUST_LOG=info
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=40
+PrivateTmp=yes
+ProtectHome=yes
+# No NoNewPrivileges: stratad runs claude through sudo (VPS_SETUP.md step 7).
+
+[Install]
+WantedBy=multi-user.target

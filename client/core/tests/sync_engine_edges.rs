@@ -153,7 +153,11 @@ async fn a_changes_page_from_a_new_epoch_starts_a_new_bootstrap() {
             outcome: CycleOutcome::Synced,
         }
     );
-    assert_eq!(h.server.bootstrap_calls(), 2, "the snapshot was fetched again");
+    assert_eq!(
+        h.server.bootstrap_calls(),
+        2,
+        "the snapshot was fetched again"
+    );
     // Nothing of the rejected page was applied; the snapshot is what the client has.
     assert_eq!(local_ids(&s), [N1.to_owned()]);
     let state = s.read(|c, _| sync_state::get(c)).expect("state");
@@ -189,7 +193,10 @@ async fn a_page_whose_seqs_go_backwards_fails_the_cycle_and_keeps_the_cursor() {
     assert_eq!(status.last_error.as_deref(), Some("error.internal"));
     assert_eq!(status.pill.connectivity, Connectivity::Online);
     assert_eq!(
-        status.log.first().map(|l| (l.kind.as_str(), l.detail.as_str())),
+        status
+            .log
+            .first()
+            .map(|l| (l.kind.as_str(), l.detail.as_str())),
         Some(("failed", "error.internal"))
     );
 

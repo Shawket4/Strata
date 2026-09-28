@@ -40,9 +40,15 @@ fn every_value_changed() -> Config {
     .collect();
     c.ai.daily_job_limit = 100;
     let cli = &mut c.ai.claude_cli;
-    cli.command = ["sudo", "-n", "-u", "strata-ai", "/usr/local/lib/strata/claude-ai"]
-        .map(str::to_owned)
-        .to_vec();
+    cli.command = [
+        "sudo",
+        "-n",
+        "-u",
+        "strata-ai",
+        "/usr/local/lib/strata/claude-ai",
+    ]
+    .map(str::to_owned)
+    .to_vec();
     cli.scratch_dir = "/tmp/scratch".into();
     cli.model = Some("opus".into());
     cli.max_concurrency = 2;
@@ -177,7 +183,10 @@ fn every_setting_has_exactly_one_variable_named_after_its_path() {
 fn every_variable_round_trips_through_the_environment_and_a_file() {
     let config = every_value_changed();
     let vars = to_vars(&config);
-    assert_eq!(from_vars(&EnvFile::none(), vars.clone()), Ok(config.clone()));
+    assert_eq!(
+        from_vars(&EnvFile::none(), vars.clone()),
+        Ok(config.clone())
+    );
     let text = to_env_file(&config);
     let parsed = file(&text);
     assert_eq!(parsed.vars, vars);
@@ -230,9 +239,15 @@ fn values_are_written_the_documented_way() {
     .expect("valid");
     let mut expected = Config::default();
     expected.bind = "0.0.0.0:9000".parse().expect("addr");
-    expected.ai.claude_cli.command = ["sudo", "-n", "-u", "strata-ai", "/usr/local/lib/strata/claude-ai"]
-        .map(str::to_owned)
-        .to_vec();
+    expected.ai.claude_cli.command = [
+        "sudo",
+        "-n",
+        "-u",
+        "strata-ai",
+        "/usr/local/lib/strata/claude-ai",
+    ]
+    .map(str::to_owned)
+    .to_vec();
     expected.ai.user_providers = [
         ("kid".to_owned(), AiProviderKind::Disabled),
         ("owner".to_owned(), AiProviderKind::ClaudeCli),
@@ -321,14 +336,26 @@ fn malformed_values_name_the_variable_and_what_is_expected() {
         "low",
         "expected a whole number from -2147483648 to 2147483647",
     );
-    value("STRATA_THRESHOLDS__RELATION", "high", "expected a number, e.g. 0.75");
-    value("STRATA_THRESHOLDS__RELATION", "NaN", "expected a number, e.g. 0.75");
+    value(
+        "STRATA_THRESHOLDS__RELATION",
+        "high",
+        "expected a number, e.g. 0.75",
+    );
+    value(
+        "STRATA_THRESHOLDS__RELATION",
+        "NaN",
+        "expected a number, e.g. 0.75",
+    );
     value(
         "STRATA_THRESHOLDS__DEDUPE__NOTE__SEMANTIC",
         "x",
         "expected a number, e.g. 0.75, or nothing to leave it unset",
     );
-    value("STRATA_AUTH__TRUST_FORWARDED_FOR", "yes", "expected true or false");
+    value(
+        "STRATA_AUTH__TRUST_FORWARDED_FOR",
+        "yes",
+        "expected true or false",
+    );
     value(
         "STRATA_BIND",
         "localhost:8080",
@@ -339,7 +366,11 @@ fn malformed_values_name_the_variable_and_what_is_expected() {
         "gpt",
         "expected one of claude_cli, anthropic_api, disabled",
     );
-    value("STRATA_AI__EMBEDDING__POOLING", "max", "expected cls or mean");
+    value(
+        "STRATA_AI__EMBEDDING__POOLING",
+        "max",
+        "expected cls or mean",
+    );
     let providers = "expected comma-separated username=provider pairs, e.g. \
                      owner=claude_cli,guest=anthropic_api (providers: claude_cli, \
                      anthropic_api, disabled; each username once)";
@@ -380,13 +411,14 @@ fn unknown_variables_are_errors_with_a_correction() {
             hint: Some("did you mean STRATA_DATABASE__APP_URL?".into()),
         })
     );
-    assert_eq!(
-        from_vars(&EnvFile::none(), Vec::new()).map(|_| ()),
-        Ok(())
-    );
+    assert_eq!(from_vars(&EnvFile::none(), Vec::new()).map(|_| ()), Ok(()));
     // In the file, every name must be a setting.
     for (text, name, hint) in [
-        ("STRATA_BINDD=127.0.0.1:1\n", "STRATA_BINDD", Some("did you mean STRATA_BIND?")),
+        (
+            "STRATA_BINDD=127.0.0.1:1\n",
+            "STRATA_BINDD",
+            Some("did you mean STRATA_BIND?"),
+        ),
         ("STRATA_SOMETHING=1\n", "STRATA_SOMETHING", None),
         (
             "RUST_LOG=debug\n",
@@ -421,7 +453,10 @@ fn unknown_variables_are_errors_with_a_correction() {
          prefix is now STRATA_ (STRATA_DATABASE__APP_URL)"
     );
     assert_eq!(
-        from_env(&[("STRATA_BINDD", "x"), ("STRATA_CONFIG", "/etc/strata/stratad.toml")]),
+        from_env(&[
+            ("STRATA_BINDD", "x"),
+            ("STRATA_CONFIG", "/etc/strata/stratad.toml")
+        ]),
         Ok(Config::default())
     );
 }
@@ -434,10 +469,13 @@ fn env_file_syntax_errors_give_the_line_and_never_its_content() {
         "STRATA_BIND=127.0.0.1:1\n# ok\nSTRATA_DATABASE__APP_URL=postgres://a:secret pw@db/s\n",
     )
     .expect_err("unquoted space");
-    assert_eq!(err, ConfigError::Syntax {
-        path: path.into(),
-        line: 3
-    });
+    assert_eq!(
+        err,
+        ConfigError::Syntax {
+            path: path.into(),
+            line: 3
+        }
+    );
     let message = err.to_string();
     assert_eq!(
         message,
@@ -473,15 +511,22 @@ fn errors_never_contain_values() {
     let secret = "hunter2-SECRET";
     let cases: Vec<Result<Config, ConfigError>> = vec![
         from_env(&[("STRATA_DATABASE__MAX_CONNECTIONS", secret)]),
-        from_env(&[("STRATA_DATABASE__APP_URL", &format!("mysql://u:{secret}@db/s"))]),
-        from_env(&[("STRATA_DATABASE__APP_URLL", &format!("postgres://u:{secret}@db/s"))]),
+        from_env(&[(
+            "STRATA_DATABASE__APP_URL",
+            &format!("mysql://u:{secret}@db/s"),
+        )]),
+        from_env(&[(
+            "STRATA_DATABASE__APP_URLL",
+            &format!("postgres://u:{secret}@db/s"),
+        )]),
         from_env(&[("STRATA_AI__USER_PROVIDERS", secret)]),
         from_env(&[("STRATA_BIND", secret)]),
         from_vars(
             &file(&format!("STRATA_DATABASE__PASSWORD='{secret}'\n")),
             Vec::new(),
         ),
-        EnvFile::parse(Path::new("/e"), &format!("STRATA_X=a {secret}\n")).map(|_| Config::default()),
+        EnvFile::parse(Path::new("/e"), &format!("STRATA_X=a {secret}\n"))
+            .map(|_| Config::default()),
     ];
     for case in cases {
         let err = case.expect_err("error");
@@ -546,7 +591,11 @@ fn example_file_documents_every_variable_with_its_default() {
     let mut sorted = documented.clone();
     sorted.sort();
     sorted.dedup();
-    assert_eq!(sorted.len(), documented.len(), "a variable is documented twice");
+    assert_eq!(
+        sorted.len(),
+        documented.len(),
+        "a variable is documented twice"
+    );
     assert_eq!(documented, variables(), "documented in the variable order");
 }
 
@@ -558,7 +607,11 @@ fn quoting_and_url_redaction() {
     assert_eq!(quote("it's $x \"q\" \\"), "\"it's \\$x \\\"q\\\" \\\\\"");
     for value in ["a b", "it's $x \"q\" \\", "#x", "p$$w"] {
         let parsed = file(&format!("STRATA_AUTH__ISSUER={}\n", quote(value)));
-        assert_eq!(parsed.vars, pairs(&[("STRATA_AUTH__ISSUER", value)]), "{value}");
+        assert_eq!(
+            parsed.vars,
+            pairs(&[("STRATA_AUTH__ISSUER", value)]),
+            "{value}"
+        );
     }
     assert_eq!(
         redact_url("postgres://strata_app:pa:ss@db:5432/strata"),

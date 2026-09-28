@@ -28,9 +28,7 @@ use std::collections::{BTreeMap, HashMap};
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
-use super::{
-    AiProviderKind, Config, DEFAULT_DEDUPE_THRESHOLDS, DedupeThreshold, EmbeddingPooling,
-};
+use super::{AiProviderKind, Config, DEFAULT_DEDUPE_THRESHOLDS, DedupeThreshold, EmbeddingPooling};
 use crate::error::ConfigError;
 
 /// Prefix of every configuration variable.
@@ -384,7 +382,11 @@ fn variables_table() -> Vec<Var> {
         vars.push(Var {
             name: format!("{PREFIX}THRESHOLDS__DEDUPE__{upper}__NEAR"),
             set: Box::new(move |c: &mut Config, raw: &str| {
-                let t = c.thresholds.dedupe.entry(kind.to_owned()).or_insert(default);
+                let t = c
+                    .thresholds
+                    .dedupe
+                    .entry(kind.to_owned())
+                    .or_insert(default);
                 t.near = parse_var(raw, &t.near)?;
                 Ok(())
             }),
@@ -399,7 +401,11 @@ fn variables_table() -> Vec<Var> {
         vars.push(Var {
             name: format!("{PREFIX}THRESHOLDS__DEDUPE__{upper}__SEMANTIC"),
             set: Box::new(move |c: &mut Config, raw: &str| {
-                let t = c.thresholds.dedupe.entry(kind.to_owned()).or_insert(default);
+                let t = c
+                    .thresholds
+                    .dedupe
+                    .entry(kind.to_owned())
+                    .or_insert(default);
                 t.semantic = parse_var(raw, &t.semantic)?;
                 Ok(())
             }),

@@ -565,13 +565,19 @@ impl Config {
                 )))
             }
         };
-        unit("STRATA_THRESHOLDS__RELATION".into(), self.thresholds.relation)?;
+        unit(
+            "STRATA_THRESHOLDS__RELATION".into(),
+            self.thresholds.relation,
+        )?;
         unit("STRATA_THRESHOLDS__CUSTODY".into(), self.thresholds.custody)?;
         for (kind, t) in &self.thresholds.dedupe {
             let kind = kind.to_ascii_uppercase();
             unit(format!("STRATA_THRESHOLDS__DEDUPE__{kind}__NEAR"), t.near)?;
             if let Some(semantic) = t.semantic {
-                unit(format!("STRATA_THRESHOLDS__DEDUPE__{kind}__SEMANTIC"), semantic)?;
+                unit(
+                    format!("STRATA_THRESHOLDS__DEDUPE__{kind}__SEMANTIC"),
+                    semantic,
+                )?;
             }
         }
         if self.database.max_connections == 0 {
@@ -616,7 +622,10 @@ impl Config {
             "STRATA_AI__CLAUDE_CLI__MAX_CONCURRENCY",
             u64::from(cli.max_concurrency),
         )?;
-        positive("STRATA_AI__CLAUDE_CLI__TIMEOUT_SECS", u64::from(cli.timeout_secs))?;
+        positive(
+            "STRATA_AI__CLAUDE_CLI__TIMEOUT_SECS",
+            u64::from(cli.timeout_secs),
+        )?;
         positive(
             "STRATA_AI__CLAUDE_CLI__USAGE_LIMIT_PAUSE_SECS",
             u64::from(cli.usage_limit_pause_secs),
@@ -643,7 +652,10 @@ impl Config {
         if api.max_retries > 10 {
             return invalid("STRATA_AI__ANTHROPIC_API__MAX_RETRIES must be at most 10".into());
         }
-        positive("STRATA_AI__ANTHROPIC_API__TIMEOUT_SECS", u64::from(api.timeout_secs))?;
+        positive(
+            "STRATA_AI__ANTHROPIC_API__TIMEOUT_SECS",
+            u64::from(api.timeout_secs),
+        )?;
         if api.api_key_file.is_none() {
             if ai.default_provider == AiProviderKind::AnthropicApi {
                 return invalid(
@@ -669,7 +681,10 @@ impl Config {
             return invalid("STRATA_AI__EMBEDDING__MODEL_ID must not be empty".into());
         }
         positive("STRATA_AI__EMBEDDING__DIMS", u64::from(emb.dims))?;
-        positive("STRATA_AI__EMBEDDING__MAX_TOKENS", u64::from(emb.max_tokens))?;
+        positive(
+            "STRATA_AI__EMBEDDING__MAX_TOKENS",
+            u64::from(emb.max_tokens),
+        )?;
         if emb.max_batch_tokens < emb.max_tokens {
             return invalid(
                 "STRATA_AI__EMBEDDING__MAX_BATCH_TOKENS must be at least STRATA_AI__EMBEDDING__MAX_TOKENS".into(),
@@ -699,14 +714,23 @@ impl Config {
             }
         };
         let jobs = &self.jobs;
-        positive("STRATA_JOBS__MAX_CONCURRENCY", u64::from(jobs.max_concurrency))?;
+        positive(
+            "STRATA_JOBS__MAX_CONCURRENCY",
+            u64::from(jobs.max_concurrency),
+        )?;
         positive(
             "STRATA_JOBS__POLL_INTERVAL_SECS",
             u64::from(jobs.poll_interval_secs),
         )?;
-        positive("STRATA_JOBS__BACKOFF_BASE_SECS", u64::from(jobs.backoff_base_secs))?;
+        positive(
+            "STRATA_JOBS__BACKOFF_BASE_SECS",
+            u64::from(jobs.backoff_base_secs),
+        )?;
         if jobs.backoff_max_secs < jobs.backoff_base_secs {
-            return invalid("STRATA_JOBS__BACKOFF_MAX_SECS must be at least STRATA_JOBS__BACKOFF_BASE_SECS".into());
+            return invalid(
+                "STRATA_JOBS__BACKOFF_MAX_SECS must be at least STRATA_JOBS__BACKOFF_BASE_SECS"
+                    .into(),
+            );
         }
         if jobs.nightly_hour > 23 {
             return invalid(format!(
@@ -732,9 +756,15 @@ impl Config {
                 Ok(())
             }
         };
-        positive("STRATA_AUTH__ACCESS_TOKEN_TTL_SECS", auth.access_token_ttl_secs)?;
+        positive(
+            "STRATA_AUTH__ACCESS_TOKEN_TTL_SECS",
+            auth.access_token_ttl_secs,
+        )?;
         positive("STRATA_AUTH__SESSION_TTL_DAYS", auth.session_ttl_days)?;
-        positive("STRATA_AUTH__REVOCATION_RELOAD_SECS", auth.revocation_reload_secs)?;
+        positive(
+            "STRATA_AUTH__REVOCATION_RELOAD_SECS",
+            auth.revocation_reload_secs,
+        )?;
         positive("STRATA_AUTH__MIN_PASSWORD_LENGTH", auth.min_password_length)?;
         positive(
             "STRATA_ACCOUNTS__PURGE_INTERVAL_SECS",
@@ -785,7 +815,9 @@ impl Config {
         match &self.budgets.timezone {
             None => self.default_tz(),
             Some(name) => Tz::from_str(name).map_err(|_| {
-                ConfigError::Invalid(format!("STRATA_BUDGETS__TIMEZONE `{name}` is not an IANA timezone"))
+                ConfigError::Invalid(format!(
+                    "STRATA_BUDGETS__TIMEZONE `{name}` is not an IANA timezone"
+                ))
             }),
         }
     }
@@ -814,7 +846,6 @@ impl Config {
         self.thresholds.dedupe.get(kind).copied()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -1027,10 +1058,7 @@ mod tests {
             ("STRATA_JOBS__DIGEST_WEEKDAY", "fri"),
         ])
         .expect("valid");
-        assert_eq!(
-            config.default_tz().expect("tz"),
-            chrono_tz::Africa::Cairo
-        );
+        assert_eq!(config.default_tz().expect("tz"), chrono_tz::Africa::Cairo);
         assert_eq!(config.budget_tz().expect("tz"), chrono_tz::Europe::Berlin);
         assert_eq!(
             config.ai_provider_for("guest"),

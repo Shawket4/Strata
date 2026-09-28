@@ -651,7 +651,7 @@ fn heading_markers(body: &str, span: &Range<usize>) -> Vec<Range<usize>> {
     let hashes = after_indent.len() - after_indent.trim_start_matches('#').len();
     let rest = &after_indent[hashes..];
     let text_start = indent + hashes + (rest.len() - rest.trim_start().len());
-    let mut out = vec![span.start..span.start + text_start];
+    let mut out: Vec<Range<usize>> = std::iter::once(span.start..span.start + text_start).collect();
     let tail = line[text_start..].trim_end();
     let without = tail.trim_end_matches('#');
     if without.len() < tail.len() && without.ends_with([' ', '\t']) {
@@ -997,6 +997,9 @@ mod tests {
         assert_eq!(markers("Setext\n===\n"), vec![vec!["===".to_owned()]]);
         assert_eq!(markers("#\n"), vec![vec!["#".to_owned()]]);
         let h = &analyze("x\n\n## عنوان\n").headings[0];
-        assert_eq!((h.text.as_str(), h.markers.clone()), ("عنوان", vec![3..6]));
+        assert_eq!(
+            (h.text.as_str(), h.markers.len(), h.markers.first().cloned()),
+            ("عنوان", 1, Some(3..6))
+        );
     }
 }

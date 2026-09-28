@@ -24,8 +24,9 @@ fn pair(a: DuplicateItem, b: DuplicateItem) -> DuplicatesPayload {
     DuplicatesPayload { a, b, reason: None }
 }
 
+/// A creation time as `survivor` takes it.
 fn at(s: &str) -> Option<DateTime<Utc>> {
-    Some(s.parse().unwrap_or_default())
+    s.parse().ok()
 }
 
 fn note(n: u128) -> DuplicateItem {

@@ -48,8 +48,11 @@ async fn rows(lang: &str) -> Vec<(String, Option<String>, String)> {
     h.server.set_offline(true);
 
     let content = |body: &str| format!("---\nid: {NOTE}\nrelated: [\"[[Acme]]\"]\n---\n{body}");
-    s.update_note(NOTE, &content(&BODY.replace("First.", "First, revised.\nSecond.")))
-        .expect("update");
+    s.update_note(
+        NOTE,
+        &content(&BODY.replace("First.", "First, revised.\nSecond.")),
+    )
+    .expect("update");
     s.add_relation(NOTE, MONA, "people").expect("add");
     s.retype_relation(NOTE, ACME, "related", "part-of")
         .expect("retype");
@@ -92,7 +95,12 @@ async fn rows(lang: &str) -> Vec<(String, Option<String>, String)> {
         .expect("capture");
 
     let status = s.read(build::sync_status).expect("status");
-    assert!(status.outbox.iter().all(|o| o.status == OutboxStatus::Pending));
+    assert!(
+        status
+            .outbox
+            .iter()
+            .all(|o| o.status == OutboxStatus::Pending)
+    );
     status
         .outbox
         .into_iter()
@@ -125,7 +133,11 @@ async fn every_queued_change_is_described_in_english() {
             row("task.delete", pricing, "Print slides"),
             row("entity.merge", Some("Mona A"), "Merged into Mona Adel"),
             row("document.custody", Some("Car license"), "handed-to"),
-            row("note.move", Some("Old ideas"), "Moved to archive/Old ideas.md"),
+            row(
+                "note.move",
+                Some("Old ideas"),
+                "Moved to archive/Old ideas.md"
+            ),
             row("note.delete", Some("Old ideas"), "Deleted"),
             // A capture's note is named by its time until filed.
             row(

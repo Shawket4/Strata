@@ -68,7 +68,15 @@ cargo test --workspace --doc            # doctests (compile_fail proofs of UserS
 - **Client core** (`client/core/tests`): headless view-model streams, sync state machine
   (proptest, with `sync.proptest-regressions`), write path, reminders, accounts; `server_e2e.rs`
   runs against a real in-process backend.
-- `stratad` (`backend/bin/stratad/tests`): startup checks, commands and wiring.
+- `stratad` (`backend/bin/stratad/tests`): startup checks, commands and wiring; `cli.rs` runs
+  the binary with an env file (`--env-file`, `STRATA_ENV_FILE`, `./.env`), environment
+  overrides and `check-config`, with exact error output.
+- Configuration (`strata-common`, `config::env::tests`): one variable per setting named after
+  its path (checked against the serialised `Config`), every variable round-tripping through the
+  environment and through env-file text, environment over file over defaults, exact messages
+  for malformed, empty, unknown (with "did you mean") and out-of-range values, env-file syntax
+  errors by line number, no value ever echoed in an error, and `deploy/stratad.env.example`
+  documenting every variable with its default.
 
 ### 3.2 Contract
 
@@ -388,6 +396,10 @@ client core's hand-written code (66.8 %) is below the gate either way.
 | `fuzz-smoke` | every `vault-format` fuzz target for 60 s |
 | `mutants` | `cargo mutants` on `vault-format`, `text-normalize`, `domain` |
 | `flutter` | format check, analyze, logic guard, widget + golden tests |
+
+Release builds are a separate workflow, `.github/workflows/build.yml` (push to `main`, pull
+requests, `v*` tags, manual): `stratad-linux-x86_64`, `app-android`, `app-macos`
+(`docs/RUNBOOK.md` §13). They build and package; the tests stay in `ci.yml`.
 
 The security checklist and the schema fuzzer (at its default case count) run in the `rust` job
 as ordinary integration tests. The performance suite and long fuzz campaigns are run by hand

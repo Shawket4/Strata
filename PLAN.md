@@ -935,7 +935,7 @@ Run as a design session (Claude Design) before any code. Output to `/design`:
 
 - **VPS**: Linux, systemd service `stratad` running as an unprivileged user; data root `/srv/strata` laid out per §5.2, permissions 0700 for that service user only.
 - **nginx**: TLS (Let's Encrypt), reverse proxy to Actix with streaming-friendly settings for D24 (`proxy_buffering off`, long read timeout, WebSocket upgrade headers if D24 = a), security headers (HSTS). No static site.
-- **Config**: `stratad.toml` + env for secrets. Settings: data root, bind address, AI provider/model/keys, embedding config, thresholds, budgets, schedules.
+- **Config**: environment variables loaded from a `.env` file (`STRATA_…`, owner decision 2026-09-28; the real environment overrides the file; secrets are file paths). Settings: data root, bind address, AI provider/model/keys, embedding config, thresholds, budgets, schedules.
 - **Database**: the existing PostgreSQL instance on the VPS; `stratad` gets its own database and the three roles from §5.2. The `strata` database must be created with UTF-8 encoding and a non-`C` character locale (e.g. `LC_CTYPE = 'C.UTF-8'`), otherwise `pg_trgm` treats Arabic letters as non-word characters and server/offline duplicate scores diverge; `stratad` checks this at startup and refuses to run otherwise. Connection pool kept small (VPS: 4 GB RAM, 1 core).
 - **Backups**: out of scope for this project. The owner already runs WAL archiving and full backups for PostgreSQL and handles vault-directory backups with their own DevOps scripts.
 - **Observability**: structured logs (`tracing`), `/api/v1/health` (unauthenticated liveness only, no data), AI usage stats.
