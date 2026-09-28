@@ -27,7 +27,7 @@ const BODY: &str = "First.\n- [ ] Send the offer ^t1\n- [ ] Call Mona ^t2\n- [ ]
 async fn rows(lang: &str) -> Vec<(String, Option<String>, String)> {
     let h = Harness::new();
     h.accounts
-        .update_user("shawket", |m| m.ui_language = lang.to_owned());
+        .update_user("shawket", |m| lang.clone_into(&mut m.ui_language));
     h.server.remote_upsert(
         NOTE,
         "notes/Pricing.md",

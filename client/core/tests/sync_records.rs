@@ -49,7 +49,10 @@ fn table(s: &Session, sql: &str) -> Vec<String> {
 }
 
 /// `(rel_type, target title, by, confidence, reason)` of the note's relation chips.
-fn chips(s: &Session) -> Vec<(String, String, String, Option<f64>, Option<String>)> {
+/// `(rel_type, target title, by, confidence, reason)`.
+type Chip = (String, String, String, Option<f64>, Option<String>);
+
+fn chips(s: &Session) -> Vec<Chip> {
     s.read(|c, ctx| build::note_screen(c, ctx, NOTE))
         .expect("note")
         .note

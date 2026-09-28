@@ -33,8 +33,11 @@ fn strip_stamps(text: &str) -> String {
         .filter(|l| {
             !l.starts_with("id: ") && !l.starts_with("created: ") && !l.starts_with("updated: ")
         })
-        .map(|l| format!("{l}\n"))
-        .collect()
+        .fold(String::new(), |mut out, l| {
+            out.push_str(l);
+            out.push('\n');
+            out
+        })
 }
 
 #[tokio::test]
@@ -42,7 +45,7 @@ async fn the_losers_relations_and_notes_move_into_the_survivor() {
     let w = World::new().await;
     let (u, s) = w.user("alice").await;
     let create = |path: &'static str, content: &'static str| {
-        let (vault, s) = (w.vault.clone(), s.clone());
+        let (vault, s) = (w.vault.clone(), s);
         async move {
             vault
                 .create_note(&s, note(path, content))
@@ -129,7 +132,7 @@ async fn a_survivor_without_notes_gets_the_section_and_bad_merges_are_refused() 
     let w = World::new().await;
     let (u, s) = w.user("alice").await;
     let create = |path: &'static str, content: &'static str| {
-        let (vault, s) = (w.vault.clone(), s.clone());
+        let (vault, s) = (w.vault.clone(), s);
         async move {
             vault
                 .create_note(&s, note(path, content))

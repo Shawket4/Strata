@@ -52,7 +52,7 @@ async fn defaults_route_everyone_to_claude_cli_without_embeddings() {
     assert_eq!(
         parts.embedder_state,
         EmbedderState::Disabled {
-            reason: "ai.embedding.model_dir and ai.embedding.onnxruntime_lib are not set".into()
+            reason: "STRATA_AI__EMBEDDING__MODEL_DIR and STRATA_AI__EMBEDDING__ONNXRUNTIME_LIB are not set".into()
         }
     );
     assert_eq!(

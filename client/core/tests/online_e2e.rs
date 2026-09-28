@@ -6,7 +6,13 @@
 //!
 //! Needs `PostgreSQL` (`STRATA_TEST_DATABASE_URL` or the testkit default).
 
-#![allow(clippy::expect_used, clippy::unwrap_used, clippy::too_many_lines)]
+#![allow(
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::too_many_lines,
+    clippy::items_after_statements,
+    clippy::many_single_char_names
+)]
 
 #[path = "support/world.rs"]
 mod world;
@@ -36,7 +42,7 @@ async fn devices_are_listed_renamed_muted_and_revoked() {
 
     s1.refresh_settings().await.expect("refresh");
     let devices = |s: &strata_core::session::Session| {
-        s.read(|c, ctx| build::settings_view(c, ctx))
+        s.read(build::settings_view)
             .expect("settings")
             .expect("signed in")
             .device_list
@@ -147,7 +153,7 @@ async fn the_account_is_changed_exported_and_deleted_through_me() {
     d.core.set_ui_language("ar").await.expect("language");
     d.core.set_timezone("Africa/Cairo").await.expect("zone");
     let account = s
-        .read(|c, ctx| build::settings_view(c, ctx))
+        .read(build::settings_view)
         .expect("settings")
         .expect("signed in")
         .account;
@@ -330,7 +336,7 @@ async fn history_diff_and_revert_come_from_the_server() {
         }
     );
     let first = V1;
-    s.revert_note(&id, &first).await.expect("revert");
+    s.revert_note(&id, first).await.expect("revert");
     s.sync(Trigger::Manual).await.expect("pull");
     assert_eq!(
         s.read(|c, _| notes::current(c, &id))

@@ -1,4 +1,4 @@
-//! Builds the AI foundation from `[ai]` and `[budgets]` (PLAN §9.1, §9.1b, D9, D20, D23):
+//! Builds the AI foundation from the `STRATA_AI__…` and `STRATA_BUDGETS__…` settings (PLAN §9.1, §9.1b, D9, D20, D23):
 //! the providers the routing rules need, the per-user router, the budget guard and the
 //! optional in-process embedder, sharing one [`CpuGate`] so an embedding never overlaps a
 //! `claude -p` process.
@@ -110,9 +110,11 @@ pub fn anthropic_api_config(config: &Config) -> AnthropicApiConfig {
 pub fn embedder_config(s: &EmbeddingSettings) -> Result<OnnxEmbedderConfig, String> {
     let (Some(model_dir), Some(lib)) = (&s.model_dir, &s.onnxruntime_lib) else {
         let missing = match (&s.model_dir, &s.onnxruntime_lib) {
-            (None, None) => "ai.embedding.model_dir and ai.embedding.onnxruntime_lib are",
-            (None, Some(_)) => "ai.embedding.model_dir is",
-            _ => "ai.embedding.onnxruntime_lib is",
+            (None, None) => {
+                "STRATA_AI__EMBEDDING__MODEL_DIR and STRATA_AI__EMBEDDING__ONNXRUNTIME_LIB are"
+            }
+            (None, Some(_)) => "STRATA_AI__EMBEDDING__MODEL_DIR is",
+            _ => "STRATA_AI__EMBEDDING__ONNXRUNTIME_LIB is",
         };
         return Err(format!("{missing} not set"));
     };
@@ -178,7 +180,7 @@ fn load_embedder(
             tracing::warn!(
                 reason = %reason,
                 "embeddings disabled: semantic search, similarity edges and duplicate \
-                 embeddings stay off until ai.embedding is configured (docs/RUNBOOK.md §10)"
+                 embeddings stay off until STRATA_AI__EMBEDDING__… is configured (docs/RUNBOOK.md §10)"
             );
             (None, EmbedderState::Disabled { reason })
         }
@@ -209,7 +211,7 @@ pub fn build(config: &Config, db: AppDb, clock: Arc<dyn Clock>) -> Result<AiPart
                 .anthropic_api
                 .api_key_file
                 .as_deref()
-                .ok_or_else(|| ai_error("ai.anthropic_api.api_key_file is not set"))?;
+                .ok_or_else(|| ai_error("STRATA_AI__ANTHROPIC_API__API_KEY_FILE is not set"))?;
             let key = ApiKey::from_file(path).map_err(ai_error)?;
             let p = AnthropicApiProvider::new(
                 anthropic_api_config(config),
@@ -268,7 +270,7 @@ pub fn build(config: &Config, db: AppDb, clock: Arc<dyn Clock>) -> Result<AiPart
 pub fn scratch_dir_hint(path: &Path) -> Option<String> {
     (!path.is_dir()).then(|| {
         format!(
-            "ai.claude_cli.scratch_dir {} is not visible to stratad (fine when it belongs to \
+            "STRATA_AI__CLAUDE_CLI__SCRATCH_DIR {} is not visible to stratad (fine when it belongs to \
              the strata-ai user; see docs/RUNBOOK.md §9)",
             path.display()
         )
@@ -335,19 +337,19 @@ mod tests {
         let mut s = Config::default().ai.embedding;
         assert_eq!(
             embedder_config(&s),
-            Err("ai.embedding.model_dir and ai.embedding.onnxruntime_lib are not set".into())
+            Err("STRATA_AI__EMBEDDING__MODEL_DIR and STRATA_AI__EMBEDDING__ONNXRUNTIME_LIB are not set".into())
         );
         s.onnxruntime_lib = Some("/nonexistent/libonnxruntime.so".into());
         assert_eq!(
             embedder_config(&s),
-            Err("ai.embedding.model_dir is not set".into())
+            Err("STRATA_AI__EMBEDDING__MODEL_DIR is not set".into())
         );
         let dir = tempfile::tempdir().expect("tempdir");
         s.model_dir = Some(dir.path().to_path_buf());
         s.onnxruntime_lib = None;
         assert_eq!(
             embedder_config(&s),
-            Err("ai.embedding.onnxruntime_lib is not set".into())
+            Err("STRATA_AI__EMBEDDING__ONNXRUNTIME_LIB is not set".into())
         );
         let lib = dir.path().join("libonnxruntime.so");
         s.onnxruntime_lib = Some(lib.clone());
@@ -392,7 +394,7 @@ mod tests {
         assert_eq!(
             scratch_dir_hint(Path::new("/nonexistent/scratch")),
             Some(
-                "ai.claude_cli.scratch_dir /nonexistent/scratch is not visible to stratad (fine \
+                "STRATA_AI__CLAUDE_CLI__SCRATCH_DIR /nonexistent/scratch is not visible to stratad (fine \
                  when it belongs to the strata-ai user; see docs/RUNBOOK.md §9)"
                     .into()
             )

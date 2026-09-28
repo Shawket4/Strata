@@ -172,7 +172,7 @@ async fn clusters_are_named_regions_and_one_can_be_kept_alone() {
             .iter()
             .filter(|n| n.cluster_id.as_deref() == Some(c.id.as_str()))
             .collect();
-        assert_eq!(members.len() as u32, c.size);
+        assert_eq!(u32::try_from(members.len()).unwrap(), c.size);
     }
 
     let meetings = map(
