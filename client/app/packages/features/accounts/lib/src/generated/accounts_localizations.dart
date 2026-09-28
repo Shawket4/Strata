@@ -287,11 +287,11 @@ abstract class AccountsLocalizations {
   /// **'Waiting for approval'**
   String get pendingTitle;
 
-  /// Waiting-for-approval text.
+  /// Pending approval body with the core's request time label.
   ///
   /// In en, this message translates to:
-  /// **'Your request for @{username} was sent.'**
-  String pendingBody({required String username});
+  /// **'Your request for @{username} was sent {requested}.'**
+  String pendingBody({required String username, required String requested});
 
   /// Waiting-for-approval explanation.
   ///
@@ -304,12 +304,6 @@ abstract class AccountsLocalizations {
   /// In en, this message translates to:
   /// **'Check again'**
   String get checkAgain;
-
-  /// Snackbar after checking again.
-  ///
-  /// In en, this message translates to:
-  /// **'Still waiting for approval.'**
-  String get stillPending;
 
   /// Returns to the sign-in screen.
   ///
@@ -467,7 +461,7 @@ abstract class AccountsLocalizations {
   /// **'{count, plural, =0{Deleted today} =1{1 day left} other{{count} days left}}'**
   String daysLeft({required int count});
 
-  /// Deletion pending explanation.
+  /// Deletion pending body with the core's date label.
   ///
   /// In en, this message translates to:
   /// **'An administrator scheduled @{username} for deletion on {date}. Download your notes before then.'**
@@ -508,12 +502,6 @@ abstract class AccountsLocalizations {
   /// In en, this message translates to:
   /// **'Your notes are read-only until then.'**
   String get readOnlyNote;
-
-  /// Tooltip of an action the app cannot perform yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not available yet'**
-  String get notAvailableYet;
 
   /// Password change required title.
   ///
@@ -610,6 +598,114 @@ abstract class AccountsLocalizations {
   /// In en, this message translates to:
   /// **'{kind} · {time}'**
   String unsyncedItem({required String kind, required String time});
+
+  /// Password strength: weak.
+  ///
+  /// In en, this message translates to:
+  /// **'Weak'**
+  String get strengthWeak;
+
+  /// Password strength: fair.
+  ///
+  /// In en, this message translates to:
+  /// **'Fair'**
+  String get strengthFair;
+
+  /// Password strength: strong.
+  ///
+  /// In en, this message translates to:
+  /// **'Strong'**
+  String get strengthStrong;
+
+  /// Password length against the minimum, after the level.
+  ///
+  /// In en, this message translates to:
+  /// **'· {length, plural, =1{1 character} other{{length} characters}} · at least {min}'**
+  String strengthDetail({required int length, required int min});
+
+  /// This device row in the account sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · signed in {signedIn}'**
+  String thisDeviceDetail({required String name, required String signedIn});
+
+  /// Pending approvals next to Admin → Users.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{none pending} =1{1 pending} other{{count} pending}}'**
+  String pendingCount({required int count});
+
+  /// Path dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to'**
+  String get exportPathTitle;
+
+  /// Path field label.
+  ///
+  /// In en, this message translates to:
+  /// **'File path'**
+  String get exportPath;
+
+  /// Save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// After an export download.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved {label}'**
+  String exportSaved({required String label});
+
+  /// After exporting unsynced changes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 change saved} other{{count} changes saved}}'**
+  String unsyncedSaved({required int count});
+
+  /// Delete now confirmation title.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete @{username} now?'**
+  String deleteNowTitle({required String username});
+
+  /// Delete now confirmation body.
+  ///
+  /// In en, this message translates to:
+  /// **'The account and every note on the server are deleted now. This can\'t be undone.'**
+  String get deleteNowBody;
+
+  /// Delete now while changes are unsynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete anyway'**
+  String get deleteAnyway;
+
+  /// The one-time password field.
+  ///
+  /// In en, this message translates to:
+  /// **'Temporary password'**
+  String get fieldTemporaryPassword;
+
+  /// After changing the password.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed'**
+  String get passwordChanged;
+
+  /// Check again: still pending.
+  ///
+  /// In en, this message translates to:
+  /// **'Still waiting for approval.'**
+  String get stillPending;
+
+  /// Password strength: too short.
+  ///
+  /// In en, this message translates to:
+  /// **'Too short'**
+  String get strengthTooShort;
 }
 
 class _AccountsLocalizationsDelegate

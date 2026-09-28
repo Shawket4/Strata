@@ -84,14 +84,7 @@ class AccountSheet extends ConsumerWidget {
             if (account != null)
               Row(
                 children: [
-                  ExcludeSemantics(
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: colors.accentTint,
-                      foregroundColor: colors.accentText,
-                      child: const Icon(Icons.person_outline, size: 28),
-                    ),
-                  ),
+                  StrataAvatar(initials: account.initials, size: 56),
                   const SizedBox(width: StrataSpacing.s3),
                   Expanded(
                     child: Column(
@@ -142,7 +135,13 @@ class AccountSheet extends ConsumerWidget {
                         l10n.thisDevice,
                         style: text.caption.copyWith(color: colors.text2),
                       ),
-                      Text(session.deviceName, style: text.bodyStrong),
+                      Text(switch (session.thisDevice) {
+                        final device? => l10n.thisDeviceDetail(
+                          name: device.name,
+                          signedIn: device.signedInLabel,
+                        ),
+                        null => session.deviceName,
+                      }, style: text.bodyStrong),
                     ],
                   ),
                 ),
@@ -152,12 +151,17 @@ class AccountSheet extends ConsumerWidget {
             _NavRow(
               icon: Icons.devices_outlined,
               label: l10n.devices,
+              detail: session?.deviceCount?.toString(),
               onTap: onOpenDevices,
             ),
             if (admin == Availability.available)
               _NavRow(
                 icon: Icons.admin_panel_settings_outlined,
                 label: l10n.adminUsers,
+                detail: switch (session?.pendingApprovals) {
+                  final count? => l10n.pendingCount(count: count),
+                  null => null,
+                },
                 onTap: onOpenAdminUsers,
               ),
             Divider(height: StrataSpacing.s4, color: colors.border),
@@ -180,24 +184,55 @@ class _NavRow extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.danger = false,
+    this.detail,
   });
 
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
   final bool danger;
+  final String? detail;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.strataColors;
+    final text = context.strataText;
     final color = danger ? colors.dangerText : colors.text;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      minTileHeight: 52,
-      leading: Icon(icon, color: color),
-      title: Text(label, style: context.strataText.body.copyWith(color: color)),
-      trailing: danger ? null : const Icon(Icons.chevron_right),
-      onTap: onTap,
+    final extra = detail;
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 52),
+          child: Row(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(width: StrataSpacing.s4),
+              Expanded(
+                child: Text(label, style: text.body.copyWith(color: color)),
+              ),
+              if (extra != null) ...[
+                const SizedBox(width: StrataSpacing.s2),
+                Flexible(
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: Text(
+                      extra,
+                      textAlign: TextAlign.end,
+                      style: text.bodySmall.copyWith(color: colors.text2),
+                    ),
+                  ),
+                ),
+              ],
+              if (!danger) ...[
+                const SizedBox(width: StrataSpacing.s1),
+                Icon(Icons.chevron_right, color: colors.text2),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

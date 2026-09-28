@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_accounts/src/account_sheet.dart';
 import 'package:strata_accounts/src/auth_layout.dart';
 import 'package:strata_accounts/src/l10n.dart';
+import 'package:strata_accounts/src/sign_up_screen.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
@@ -138,39 +139,98 @@ class _Illustration extends StatelessWidget {
   }
 }
 
-/// An action the core cannot perform yet (see docs/CORE_GAPS.md): shown
-/// disabled with a "Not available yet" tooltip.
-class _PendingAction extends StatelessWidget {
-  const new({required this.label, required this.icon, this.filled = false});
+/// A full-width action button (filled or outlined).
+class _ActionButton extends StatelessWidget {
+  const new({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+    this.filled = false,
+  });
 
   final String label;
   final IconData icon;
+  final VoidCallback? onPressed;
   final bool filled;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.accountsL10n;
     const style = ButtonStyle(
       minimumSize: WidgetStatePropertyAll(
         Size.fromHeight(StrataLayout.minTouchTarget),
       ),
     );
-    return Tooltip(
-      message: l10n.notAvailableYet,
-      child: filled
-          ? FilledButton.icon(
-              onPressed: null,
-              style: style,
-              icon: Icon(icon, size: 20),
-              label: Text(label),
-            )
-          : OutlinedButton.icon(
-              onPressed: null,
-              style: style,
-              icon: Icon(icon, size: 20),
-              label: Text(label),
-            ),
+    return filled
+        ? FilledButton.icon(
+            onPressed: onPressed,
+            style: style,
+            icon: Icon(icon, size: 20),
+            label: Text(label),
+          )
+        : OutlinedButton.icon(
+            onPressed: onPressed,
+            style: style,
+            icon: Icon(icon, size: 20),
+            label: Text(label),
+          );
+  }
+}
+
+/// Asks where to save a file (no platform file picker is on the §11.1
+/// allow-list yet; docs/CORE_GAPS.md); `null` when cancelled.
+Future<String?> askSavePath(BuildContext context) =>
+    showDialog<String>(context: context, builder: (_) => const _PathDialog());
+
+class _PathDialog extends HookWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.accountsL10n;
+    final path = useTextEditingController();
+    return AlertDialog(
+      title: Text(l10n.exportPathTitle),
+      content: TextField(
+        controller: path,
+        autofocus: true,
+        textDirection: TextDirection.ltr,
+        decoration: InputDecoration(labelText: l10n.exportPath),
+        onSubmitted: (value) => Navigator.of(context).pop(value),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(path.text),
+          child: Text(l10n.save),
+        ),
+      ],
     );
+  }
+}
+
+/// Asks for a path, runs [save] with it and shows what [done] says about the
+/// result (or the failure).
+Future<void> _saveTo<T>(
+  BuildContext context,
+  Future<T> Function(String path) save,
+  String Function(T result) done,
+) async {
+  final l10n = context.accountsL10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final path = await askSavePath(context);
+  if (path == null) return;
+  try {
+    final result = await save(path);
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(done(result))));
+  } on CoreFailure catch (error) {
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.failure(error))));
   }
 }
 
@@ -228,7 +288,7 @@ class _UnsyncedList extends ConsumerWidget {
                     Text(
                       l10n.unsyncedItem(
                         kind: SyncLabels.kind(sync, item.kind),
-                        time: formatSyncClock(context, item.created),
+                        time: item.createdLabel,
                       ),
                       style: text.caption.copyWith(color: colors.text2),
                     ),
@@ -299,10 +359,18 @@ class AccountDisabledScreen extends HookConsumerWidget {
               const SizedBox(height: StrataSpacing.s5),
               _UnsyncedList(count: unsynced),
               const SizedBox(height: StrataSpacing.s4),
-              _PendingAction(
+              _ActionButton(
                 label: l10n.exportFirst,
                 icon: Icons.download_outlined,
                 filled: true,
+                onPressed: () => unawaited(
+                  _saveTo(
+                    context,
+                    (path) =>
+                        ref.read(coreApiProvider).exportUnsynced(path: path),
+                    (count) => l10n.unsyncedSaved(count: count),
+                  ),
+                ),
               ),
               const SizedBox(height: StrataSpacing.s1),
               Text(
@@ -339,8 +407,9 @@ class DeletionPendingScreen extends ConsumerWidget {
     final session = ref.watch(sessionProvider).value;
     final account = session?.account;
     final days = session?.daysRemaining;
-    final at = session?.deletionAt;
     final unsynced = session?.unsyncedOps ?? 0;
+    final exportLabel = session?.exportLabel;
+    final core = ref.read(coreApiProvider);
     return RestrictedLayout(
       caption: account?.serverUrl ?? '',
       child: Column(
@@ -374,19 +443,31 @@ class DeletionPendingScreen extends ConsumerWidget {
           Text(
             l10n.deletionBody(
               username: account?.username ?? '',
-              date: at == null
-                  ? ''
-                  : MaterialLocalizations.of(context)
-                        .formatFullDate(at.toLocal()),
+              date: session?.deletionLabel ?? '',
             ),
             style: text.body,
           ),
           const SizedBox(height: StrataSpacing.s5),
-          _PendingAction(
+          _ActionButton(
             label: l10n.downloadExport,
             icon: Icons.download_outlined,
             filled: true,
+            onPressed: () => unawaited(
+              _saveTo(
+                context,
+                (path) => core.downloadExport(path: path),
+                (summary) => l10n.exportSaved(label: summary.label),
+              ),
+            ),
           ),
+          if (exportLabel != null) ...[
+            const SizedBox(height: StrataSpacing.s1),
+            Text(
+              exportLabel,
+              textAlign: TextAlign.center,
+              style: text.caption.copyWith(color: colors.text2),
+            ),
+          ],
           if (unsynced > 0) ...[
             const SizedBox(height: StrataSpacing.s5),
             Container(
@@ -413,9 +494,16 @@ class DeletionPendingScreen extends ConsumerWidget {
                     style: text.bodySmall.copyWith(color: colors.text),
                   ),
                   const SizedBox(height: StrataSpacing.s3),
-                  _PendingAction(
+                  _ActionButton(
                     label: l10n.saveAsFile,
                     icon: Icons.save_alt_outlined,
+                    onPressed: () => unawaited(
+                      _saveTo(
+                        context,
+                        (path) => core.exportUnsynced(path: path),
+                        (count) => l10n.unsyncedSaved(count: count),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -429,7 +517,18 @@ class DeletionPendingScreen extends ConsumerWidget {
             style: text.caption.copyWith(color: colors.text2),
           ),
           const SizedBox(height: StrataSpacing.s3),
-          _PendingAction(label: l10n.deleteNow, icon: Icons.delete_outline),
+          _ActionButton(
+            label: l10n.deleteNow,
+            icon: Icons.delete_outline,
+            onPressed: () => unawaited(
+              _deleteNow(
+                context,
+                core,
+                username: account?.username ?? '',
+                unsynced: unsynced,
+              ),
+            ),
+          ),
           const SizedBox(height: StrataSpacing.s2),
           TextButton(
             onPressed: () => unawaited(signOutFlow(context, ref)),
@@ -438,6 +537,60 @@ class DeletionPendingScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// "Delete now" (D25): confirms, then `delete_account_now`; with unsynced
+/// changes on this device the confirmation says so and forces it.
+Future<void> _deleteNow(
+  BuildContext context,
+  CoreApi core, {
+  required String username,
+  required int unsynced,
+}) async {
+  final l10n = context.accountsL10n;
+  final colors = context.strataColors;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      icon: Icon(Icons.delete_forever_outlined, color: colors.dangerText),
+      title: Text(l10n.deleteNowTitle(username: username)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.deleteNowBody),
+          if (unsynced > 0) ...[
+            const SizedBox(height: StrataSpacing.s3),
+            Text(
+              l10n.unsyncedNotInExport(count: unsynced),
+              style: TextStyle(color: colors.warningText),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialog).pop(false),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: colors.dangerTint,
+            foregroundColor: colors.dangerText,
+          ),
+          onPressed: () => Navigator.of(dialog).pop(true),
+          child: Text(unsynced > 0 ? l10n.deleteAnyway : l10n.deleteNow),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  try {
+    await core.deleteAccountNow(force: unsynced > 0);
+  } on CoreFailure catch (error) {
+    messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
   }
 }
 
@@ -453,8 +606,32 @@ class PasswordChangeRequiredScreen extends HookConsumerWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final account = ref.watch(sessionProvider).value?.account;
+    final current = useTextEditingController();
     final password = useTextEditingController();
     final confirm = useTextEditingController();
+    useListenable(password);
+    useListenable(confirm);
+    final busy = useState(false);
+    final failure = useState<String?>(null);
+    // Input check of the two password fields only (ephemeral form state).
+    final confirmed = confirm.text.isNotEmpty && confirm.text == password.text;
+
+    Future<void> submit() async {
+      if (busy.value || !confirmed) return;
+      busy.value = true;
+      failure.value = null;
+      try {
+        await ref
+            .read(coreApiProvider)
+            .changePassword(current: current.text, new_: password.text);
+      } on CoreFailure catch (error) {
+        failure.value = l10n.failure(error);
+      } finally {
+        if (context.mounted) busy.value = false;
+      }
+    }
+
+    final error = failure.value;
     return RestrictedLayout(
       caption: account?.serverUrl ?? '',
       child: Column(
@@ -474,22 +651,42 @@ class PasswordChangeRequiredScreen extends HookConsumerWidget {
           ),
           const SizedBox(height: StrataSpacing.s5),
           LabeledField(
+            label: l10n.fieldTemporaryPassword,
+            controller: current,
+            obscure: true,
+          ),
+          const SizedBox(height: StrataSpacing.s4),
+          LabeledField(
             label: l10n.fieldNewPassword,
             controller: password,
             obscure: true,
           ),
+          if (password.text.isNotEmpty) ...[
+            const SizedBox(height: StrataSpacing.s2),
+            PasswordStrengthMeter(password: password.text),
+          ],
           const SizedBox(height: StrataSpacing.s4),
           LabeledField(
             label: l10n.fieldConfirmPassword,
             controller: confirm,
             obscure: true,
             textInputAction: TextInputAction.done,
+            onSubmitted: (_) => submit(),
+            helper: confirmed ? l10n.passwordsMatch : null,
+            error: confirm.text.isNotEmpty && !confirmed
+                ? l10n.passwordsDiffer
+                : null,
           ),
+          if (error != null) ...[
+            const SizedBox(height: StrataSpacing.s3),
+            FormAlert(message: error),
+          ],
           const SizedBox(height: StrataSpacing.s5),
-          _PendingAction(
+          PrimaryButton(
             label: l10n.changePassword,
             icon: Icons.check,
-            filled: true,
+            busy: busy.value,
+            onPressed: confirmed ? submit : null,
           ),
           const SizedBox(height: StrataSpacing.s2),
           TextButton(

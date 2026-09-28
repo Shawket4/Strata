@@ -11,8 +11,7 @@ import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_maps/strata_maps.dart';
 import 'package:strata_notes/strata_notes.dart';
 import 'package:strata_settings/strata_settings.dart';
-import 'package:strata_state/strata_state.dart'
-    show DirectoryTab, SignInRequest;
+import 'package:strata_state/strata_state.dart' show DirectoryTab;
 import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_tasks/strata_tasks.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
@@ -585,8 +584,7 @@ class SignInRoute extends GoRouteData with $SignInRoute {
     state,
     SignInScreen(
       onCreateAccount: (server) => SignUpRoute(server: server).go(context),
-      onPendingApproval: (request, {required rejected}) =>
-          ApprovalRoute(rejected: rejected, $extra: request).go(context),
+      onPendingApproval: () => const ApprovalRoute().go(context),
     ),
   );
 }
@@ -606,41 +604,25 @@ class SignUpRoute extends GoRouteData with $SignUpRoute {
     SignUpScreen(
       serverUrl: server,
       onBack: () => const SignInRoute().go(context),
-      onRequested: (request) => ApprovalRoute($extra: request).go(context),
+      onRequested: () => const ApprovalRoute().go(context),
     ),
   );
 }
 
-/// `/approval`: waiting for approval (or not approved). The sign-in to
-/// retry travels in memory (`extra`), never in the URL.
+/// `/approval`: waiting for approval (or not approved), rendered from the
+/// session's pending request (`SessionKind.pendingApproval` / `rejected`).
 @TypedGoRoute<ApprovalRoute>(path: '/approval')
 class ApprovalRoute extends GoRouteData with $ApprovalRoute {
   /// Creates the route.
-  const new({this.rejected = false, this.$extra});
-
-  /// Shows the "not approved" variant.
-  final bool rejected;
-
-  /// The sign-in "Check again" retries.
-  final SignInRequest? $extra;
+  const new();
 
   @override
-  Page<void> buildPage(BuildContext context, GoRouterState state) {
-    final request = $extra;
-    return _page(
-      state,
-      request == null
-          ? SignInScreen(
-              onCreateAccount: (server) =>
-                  SignUpRoute(server: server).go(context),
-            )
-          : PendingApprovalScreen(
-              request: request,
-              rejected: rejected,
-              onUseAnotherAccount: () => const SignInRoute().go(context),
-            ),
-    );
-  }
+  Page<void> buildPage(BuildContext context, GoRouterState state) => _page(
+    state,
+    PendingApprovalScreen(
+      onUseAnotherAccount: () => const SignInRoute().go(context),
+    ),
+  );
 }
 
 /// `/account-disabled` (§12.7).

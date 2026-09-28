@@ -6,20 +6,19 @@ import 'package:strata_ui/testing.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/hosts.dart';
-import '../helpers/matrix.dart';
 
 void main() {
   setUpAll(loadStrataFonts);
 
-  goldens(
+  screenGoldens(
     'sign_in',
     (v) => goldenFrame(
       v,
       const SignInScreen(),
-      fake: FakeCoreApi()..session.add(StrataFixtures.sessionSignedOut),
+      fake: FakeCoreApi()..session.add(AccountFixtures.signedOut),
     ),
   );
-  goldens(
+  screenGoldens(
     'sign_up',
     (v) => goldenFrame(
       v,
@@ -27,34 +26,33 @@ void main() {
       fake: FakeCoreApi()..session.add(StrataFixtures.sessionSignedOut),
     ),
   );
-  goldens(
+  screenGoldens(
     'pending_approval',
     (v) => goldenFrame(
       v,
-      const PendingApprovalScreen(request: StrataFixtures.signInRequest),
+      const PendingApprovalScreen(),
+      fake: FakeCoreApi()..session.add(AccountFixtures.waiting),
     ),
   );
-  goldens(
+  screenGoldens(
     'not_approved',
     (v) => goldenFrame(
       v,
-      const PendingApprovalScreen(
-        request: StrataFixtures.signInRequest,
-        rejected: true,
-      ),
+      const PendingApprovalScreen(),
+      fake: FakeCoreApi()..session.add(AccountFixtures.notApproved),
     ),
   );
-  goldens(
+  screenGoldens(
     'account_sheet',
     (v) => goldenFrame(
       v,
       AccountSheetPreview(sizeClass: v.sizeClass),
       fake: FakeCoreApi()
-        ..session.add(StrataFixtures.sessionActive)
+        ..session.add(AccountFixtures.active)
         ..settings.add(StrataFixtures.settingsView),
     ),
   );
-  goldens(
+  screenGoldens(
     'sign_out_warning',
     (v) => goldenFrame(
       v,
@@ -62,7 +60,7 @@ void main() {
       fake: FakeCoreApi()..syncStatus.add(AccountFixtures.unsynced),
     ),
   );
-  goldens(
+  screenGoldens(
     'account_disabled',
     (v) => goldenFrame(
       v,
@@ -72,17 +70,17 @@ void main() {
         ..syncStatus.add(AccountFixtures.unsynced),
     ),
   );
-  goldens(
+  screenGoldens(
     'deletion_pending',
     (v) => goldenFrame(
       v,
       const DeletionPendingScreen(),
       fake: FakeCoreApi()
-        ..session.add(StrataFixtures.sessionDeletionPending)
+        ..session.add(AccountFixtures.deletionPending)
         ..syncStatus.add(AccountFixtures.unsynced),
     ),
   );
-  goldens(
+  screenGoldens(
     'password_change',
     (v) => goldenFrame(
       v,

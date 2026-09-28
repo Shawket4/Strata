@@ -423,24 +423,15 @@
   "@strengthStrong": {
     "description": "Password strength: strong."
   },
-  "strengthDetail": "{length, plural, =1{1 character} other{{length} characters}} · at least {min}",
+  "strengthDetail": "· {length, plural, =1{1 character} other{{length} characters}} · at least {min}",
   "@strengthDetail": {
-    "description": "Password length against the minimum.",
+    "description": "Password length against the minimum, after the level.",
     "placeholders": {
       "length": {
         "type": "int"
       },
       "min": {
         "type": "int"
-      }
-    }
-  },
-  "strengthSemantics": "Password strength: {level}",
-  "@strengthSemantics": {
-    "description": "Strength meter label.",
-    "placeholders": {
-      "level": {
-        "type": "String"
       }
     }
   },
@@ -456,7 +447,7 @@
       }
     }
   },
-  "pendingCount": "{count, plural, =1{1 pending} other{{count} pending}}",
+  "pendingCount": "{count, plural, =0{none pending} =1{1 pending} other{{count} pending}}",
   "@pendingCount": {
     "description": "Pending approvals next to Admin → Users.",
     "placeholders": {
@@ -519,5 +510,13 @@
   "passwordChanged": "Password changed",
   "@passwordChanged": {
     "description": "After changing the password."
+  },
+  "stillPending": "Still waiting for approval.",
+  "@stillPending": {
+    "description": "Check again: still pending."
+  },
+  "strengthTooShort": "Too short",
+  "@strengthTooShort": {
+    "description": "Password strength: too short."
   }
 }

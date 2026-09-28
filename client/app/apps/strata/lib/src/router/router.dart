@@ -22,11 +22,7 @@ part 'router.g.dart';
         home: const ApprovalRoute().location,
       ),
       SessionKind.notInitialised || SessionKind.signedOut => (
-        allowed: [
-          const SignInRoute().location,
-          const SignUpRoute().location,
-          const ApprovalRoute().location,
-        ],
+        allowed: [const SignInRoute().location, const SignUpRoute().location],
         home: const SignInRoute().location,
       ),
       SessionKind.active => (

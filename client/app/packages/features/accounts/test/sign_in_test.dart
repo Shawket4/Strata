@@ -6,7 +6,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
 Finder _field(String label) => find.widgetWithText(TextField, label);
 
@@ -24,13 +23,13 @@ Future<void> _submit(WidgetTester tester, [String label = 'Sign in']) async {
 
 void main() {
   group('sign in matrix', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('prefilled with a known account $v', (tester) async {
         final l10n = lookupAccountsLocalizations(v.locale);
-        final fake = FakeCoreApi()
-          ..session.add(StrataFixtures.sessionSignedOut);
+        final fake = FakeCoreApi()..session.add(AccountFixtures.signedOut);
         await pumpVariant(tester, v, const SignInScreen(), fake: fake);
         expect(find.text(l10n.signInTitle), findsWidgets);
+        expect(find.text('S'), findsOneWidget);
         expect(find.text(StrataFixtures.serverUrl), findsWidgets);
         expect(find.text('shawket-laptop'), findsWidgets);
         expect(find.text(l10n.continueAs(name: 'Shawket')), findsOneWidget);
@@ -71,7 +70,7 @@ void main() {
   });
 
   group('sign in intents', () {
-    final v = matrix().first;
+    final v = variants().first;
 
     testWidgets('signs in with exactly what was typed', (tester) async {
       final fake = FakeCoreApi()..session.add(StrataFixtures.sessionSignedOut);
@@ -94,29 +93,23 @@ void main() {
       expect(fake.calls.last.method, 'signIn');
     });
 
-    for (final (failure, rejected) in [
-      (AccountFixtures.pending, false),
-      (AccountFixtures.rejected, true),
-    ]) {
+    for (final failure in [AccountFixtures.pending, AccountFixtures.rejected]) {
       testWidgets('${failure.code} leads to the approval screen', (
         tester,
       ) async {
-        final seen = <(SignInRequest, bool)>[];
+        var pending = 0;
         final fake = FakeCoreApi()
           ..session.add(StrataFixtures.sessionSignedOut)
           ..signInAnswer.throws(failure);
         await pumpVariant(
           tester,
           v,
-          SignInScreen(
-            onPendingApproval: (request, {required rejected}) =>
-                seen.add((request, rejected)),
-          ),
+          SignInScreen(onPendingApproval: () => pending++),
           fake: fake,
         );
         await _fill(tester);
         await _submit(tester);
-        expect(seen, [(StrataFixtures.signInRequest, rejected)]);
+        expect(pending, 1);
         expect(find.byType(FormAlert), findsNothing);
       });
     }

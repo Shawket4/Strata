@@ -7,9 +7,9 @@ import 'package:strata_state/strata_state.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 /// Sign up (SCREEN_SPEC SignupCompact): display name, username, password
-/// with confirmation, and the approval notice (D22). A registered account
-/// waits for approval: [onRequested] receives the sign-in request "Check
-/// again" retries.
+/// with the core's strength meter and confirmation, and the approval notice
+/// (D22). A registered account waits for approval: the session becomes
+/// `pendingApproval` (the app routes on it) and [onRequested] is called.
 class SignUpScreen extends HookConsumerWidget {
   /// Creates the sign-up screen.
   const new({super.key, this.serverUrl, this.onBack, this.onRequested});
@@ -21,7 +21,7 @@ class SignUpScreen extends HookConsumerWidget {
   final VoidCallback? onBack;
 
   /// The account was registered and waits for approval.
-  final ValueChanged<SignInRequest>? onRequested;
+  final VoidCallback? onRequested;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,7 +49,7 @@ class SignUpScreen extends HookConsumerWidget {
       busy.value = true;
       failure.value = null;
       try {
-        final outcome = await ref
+        await ref
             .read(coreApiProvider)
             .signUp(
               request: SignUpRequest(
@@ -59,14 +59,7 @@ class SignUpScreen extends HookConsumerWidget {
                 displayName: name.text,
               ),
             );
-        onRequested?.call(
-          SignInRequest(
-            serverUrl: server.text,
-            username: outcome.username,
-            password: password.text,
-            deviceName: session?.deviceName ?? '',
-          ),
-        );
+        onRequested?.call();
       } on CoreFailure catch (error) {
         failure.value = l10n.failure(error);
       } finally {
@@ -139,6 +132,10 @@ class SignUpScreen extends HookConsumerWidget {
                 onToggle: () => obscured.value = !obscured.value,
               ),
             ),
+            if (password.text.isNotEmpty) ...[
+              const SizedBox(height: StrataSpacing.s2),
+              PasswordStrengthMeter(password: password.text),
+            ],
             const SizedBox(height: StrataSpacing.s4),
             LabeledField(
               label: l10n.fieldConfirmPassword,
@@ -199,6 +196,77 @@ class SignUpScreen extends HookConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The core's verdict on a password (`password_strength`): a four-step bar,
+/// the level and the length against the server's minimum.
+class PasswordStrengthMeter extends ConsumerWidget {
+  /// Creates the meter for [password].
+  const new({required this.password, super.key});
+
+  /// The password typed so far.
+  final String password;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.accountsL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final strength = ref.watch(passwordStrengthProvider(password)).value;
+    if (strength == null) return const SizedBox.shrink();
+    final (label, color, steps) = switch (strength.level) {
+      PasswordLevel.tooShort => (l10n.strengthTooShort, colors.danger, 1),
+      PasswordLevel.weak => (l10n.strengthWeak, colors.warning, 2),
+      PasswordLevel.fair => (l10n.strengthFair, colors.accent, 3),
+      PasswordLevel.strong => (l10n.strengthStrong, colors.success, 4),
+    };
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ExcludeSemantics(
+            child: Row(
+              children: [
+                for (var i = 0; i < 4; i++) ...[
+                  if (i > 0) const SizedBox(width: StrataSpacing.s1),
+                  Expanded(
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: i < steps ? color : colors.surface2,
+                        borderRadius: StrataRadii.pillRadius,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: StrataSpacing.s1),
+          Wrap(
+            spacing: StrataSpacing.s1,
+            children: [
+              Text(
+                label,
+                style: text.caption
+                    .withWeight(FontWeight.w600)
+                    .copyWith(color: colors.text2),
+              ),
+              Text(
+                l10n.strengthDetail(
+                  length: strength.length,
+                  min: strength.minLength,
+                ),
+                style: text.caption.copyWith(color: colors.text2),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

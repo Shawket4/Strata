@@ -111,8 +111,8 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   String get pendingTitle => 'في انتظار الموافقة';
 
   @override
-  String pendingBody({required String username}) {
-    return 'طلبك للحساب @$username اتبعت.';
+  String pendingBody({required String username, required String requested}) {
+    return 'طلبك لـ @$username اتبعت $requested.';
   }
 
   @override
@@ -120,9 +120,6 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
 
   @override
   String get checkAgain => 'اتأكد تاني';
-
-  @override
-  String get stillPending => 'لسه في انتظار الموافقة.';
 
   @override
   String get useAnotherAccount => 'استخدم حساب تاني';
@@ -280,9 +277,6 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   String get readOnlyNote => 'ملاحظاتك للقراءة بس لحد وقتها.';
 
   @override
-  String get notAvailableYet => 'غير متاح بعد';
-
-  @override
   String get passwordChangeTitle => 'اختار كلمة مرور جديدة';
 
   @override
@@ -338,4 +332,96 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   String unsyncedItem({required String kind, required String time}) {
     return '$kind · $time';
   }
+
+  @override
+  String get strengthWeak => 'ضعيفة';
+
+  @override
+  String get strengthFair => 'مقبولة';
+
+  @override
+  String get strengthStrong => 'قوية';
+
+  @override
+  String strengthDetail({required int length, required int min}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      length,
+      locale: localeName,
+      other: '$length حرف',
+      few: '$length حروف',
+      two: 'حرفين',
+      one: 'حرف واحد',
+    );
+    return '· $_temp0 · على الأقل $min';
+  }
+
+  @override
+  String thisDeviceDetail({required String name, required String signedIn}) {
+    return '$name · دخل $signedIn';
+  }
+
+  @override
+  String pendingCount({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مستني',
+      few: '$count مستنيين',
+      two: 'اتنين مستنيين',
+      one: 'واحد مستني',
+      zero: 'مفيش حد مستني',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportPathTitle => 'احفظ في';
+
+  @override
+  String get exportPath => 'مسار الملف';
+
+  @override
+  String get save => 'حفظ';
+
+  @override
+  String exportSaved({required String label}) {
+    return 'اتحفظ $label';
+  }
+
+  @override
+  String unsyncedSaved({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'اتحفظ $count تغيير',
+      few: 'اتحفظ $count تغييرات',
+      two: 'اتحفظ تغييرين',
+      one: 'اتحفظ تغيير واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deleteNowTitle({required String username}) {
+    return 'تمسح @$username دلوقتي؟';
+  }
+
+  @override
+  String get deleteNowBody =>
+      'الحساب وكل الملاحظات على السيرفر هيتمسحوا دلوقتي. مفيش رجوع.';
+
+  @override
+  String get deleteAnyway => 'امسح برضه';
+
+  @override
+  String get fieldTemporaryPassword => 'كلمة السر المؤقتة';
+
+  @override
+  String get passwordChanged => 'اتغيرت كلمة السر';
+
+  @override
+  String get stillPending => 'لسه مستني الموافقة.';
+
+  @override
+  String get strengthTooShort => 'قصيرة';
 }

@@ -5,8 +5,6 @@ import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
-import 'helpers/matrix.dart';
-
 Finder _field(String label) => find.widgetWithText(TextField, label);
 
 Future<void> _fill(
@@ -31,7 +29,7 @@ Future<void> _request(WidgetTester tester) async {
 
 void main() {
   group('sign up matrix', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('form with the approval notice $v', (tester) async {
         final l10n = lookupAccountsLocalizations(v.locale);
         await pumpVariant(
@@ -63,6 +61,31 @@ void main() {
         await expectAccessible(tester, contrast: v.textScale == 1);
       });
 
+      testWidgets('strength meter $v', (tester) async {
+        final l10n = lookupAccountsLocalizations(v.locale);
+        final fake = FakeCoreApi()
+          ..passwordStrengthAnswer.returns(
+            const PasswordStrength(
+              level: PasswordLevel.weak,
+              length: 11,
+              minLength: 10,
+            ),
+          );
+        await pumpVariant(tester, v, const SignUpScreen(), fake: fake);
+        await tester.enterText(
+          find.widgetWithText(TextField, l10n.fieldPassword),
+          'nilefreight',
+        );
+        await settle(tester);
+        expect(find.text(l10n.strengthWeak), findsOneWidget);
+        expect(
+          find.text(l10n.strengthDetail(length: 11, min: 10)),
+          findsOneWidget,
+        );
+        expectNoErrors(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
+      });
+
       testWidgets('passwords differ $v', (tester) async {
         final l10n = lookupAccountsLocalizations(v.locale);
         await pumpVariant(tester, v, const SignUpScreen());
@@ -75,19 +98,17 @@ void main() {
   });
 
   group('sign up intents', () {
-    final v = matrix().first;
+    final v = variants().first;
 
-    testWidgets('requests the account and hands over the sign-in', (
-      tester,
-    ) async {
-      final requested = <SignInRequest>[];
+    testWidgets('requests the account', (tester) async {
+      var requested = 0;
       final fake = FakeCoreApi()..session.add(StrataFixtures.sessionSignedOut);
       await pumpVariant(
         tester,
         v,
         SignUpScreen(
           serverUrl: StrataFixtures.serverUrl,
-          onRequested: requested.add,
+          onRequested: () => requested++,
         ),
         fake: fake,
       );
@@ -98,14 +119,34 @@ void main() {
         fake.calls.last,
         const CoreCall('signUp', {'request': StrataFixtures.signUpRequest}),
       );
-      expect(requested, [
-        const SignInRequest(
-          serverUrl: StrataFixtures.serverUrl,
-          username: 'mona',
-          password: 'nile-freight-2026',
-          deviceName: 'shawket-laptop',
-        ),
-      ]);
+      expect(requested, 1);
+    });
+
+    testWidgets('the strength meter shows the core verdict', (tester) async {
+      final fake = FakeCoreApi()
+        ..passwordStrengthAnswer.returns(
+          const PasswordStrength(
+            level: PasswordLevel.strong,
+            length: 19,
+            minLength: 10,
+          ),
+        );
+      await pumpVariant(tester, v, const SignUpScreen(), fake: fake);
+      expect(find.byType(PasswordStrengthMeter), findsNothing);
+      await tester.enterText(_field('Password'), 'nile-freight-2026-ok');
+      await settle(tester);
+      expect(
+        fake.calls.last,
+        const CoreCall('passwordStrength', {
+          'password': 'nile-freight-2026-ok',
+        }),
+      );
+      expect(find.text('Strong'), findsOneWidget);
+      expect(find.text('· 19 characters · at least 10'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('^Strong\n· 19 characters')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a refused sign-up shows the core error', (tester) async {

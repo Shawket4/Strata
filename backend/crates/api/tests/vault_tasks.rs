@@ -80,7 +80,7 @@ async fn recurring_completion_writes_exactly_two_lines_in_one_commit() {
     );
     assert!(task.id.starts_with("t-"));
     let home = format!(
-        "---\nid: {}\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\n---\n# Tasks\n\n## 2026-09\n\n{line}\n",
+        "---\nid: {}\ncreated: 2026-09-27T12:00:00+00:00\nupdated: 2026-09-27T12:00:00+00:00\n---\n## September 2026\n{line}\n",
         task.note_id
     );
     assert_eq!(h.read(alice.id, "tasks/Tasks.md"), home);

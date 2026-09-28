@@ -1,41 +1,5 @@
 {
   "@@locale": "en",
-  "pillOffline": "{count, plural, =0{Offline} =1{Offline · 1 queued} other{Offline · {count} queued}}",
-  "@pillOffline": {
-    "description": "Sync pill while offline, with the queued op count.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "pillOnline": "{count, plural, =0{Synced} =1{Online · 1 queued} other{Online · {count} queued}}",
-  "@pillOnline": {
-    "description": "Sync pill while online.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "pillUnknown": "{count, plural, =0{Not synced yet} =1{Not synced · 1 queued} other{Not synced · {count} queued}}",
-  "@pillUnknown": {
-    "description": "Sync pill before the first request completed.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
-  "pillConflicts": "{count, plural, =1{1 conflict} other{{count} conflicts}}",
-  "@pillConflicts": {
-    "description": "Conflict count badge on the sync pill.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "pillSemantics": "Sync status: {status}",
   "@pillSemantics": {
     "description": "Accessibility label of the sync pill.",
@@ -48,18 +12,6 @@
   "pillOpenHint": "Open sync status",
   "@pillOpenHint": {
     "description": "Accessibility hint: the pill opens the sync status."
-  },
-  "titleOnline": "Online",
-  "@titleOnline": {
-    "description": "Sync panel headline when the server is reachable."
-  },
-  "titleOffline": "Offline",
-  "@titleOffline": {
-    "description": "Sync panel headline when offline."
-  },
-  "titleUnknown": "Connecting",
-  "@titleUnknown": {
-    "description": "Sync panel headline before the first request completed."
   },
   "bodyOnline": "Changes sync automatically with your server.",
   "@bodyOnline": {
@@ -139,18 +91,6 @@
   "lastSyncedNever": "Never",
   "@lastSyncedNever": {
     "description": "No sync completed yet."
-  },
-  "lastSyncedValue": "{date} {time}",
-  "@lastSyncedValue": {
-    "description": "Date and time of the last sync.",
-    "placeholders": {
-      "date": {
-        "type": "String"
-      },
-      "time": {
-        "type": "String"
-      }
-    }
   },
   "server": "Server",
   "@server": {
@@ -518,18 +458,6 @@
       }
     }
   },
-  "pillWithConflicts": "{status} · {conflicts}",
-  "@pillWithConflicts": {
-    "description": "Sync pill copy followed by the conflict badge.",
-    "placeholders": {
-      "status": {
-        "type": "String"
-      },
-      "conflicts": {
-        "type": "String"
-      }
-    }
-  },
   "pillSemanticsWithHint": "Sync status: {status}. Open sync status",
   "@pillSemanticsWithHint": {
     "description": "Accessibility label of the sync pill when it opens the sync status.",
@@ -538,5 +466,110 @@
         "type": "String"
       }
     }
+  },
+  "bodySyncing": "Sending your changes, then pulling the server's.",
+  "@bodySyncing": {
+    "description": "Sync panel body while syncing."
+  },
+  "bodyConflict": "A note was edited here and on the server. Review it to keep syncing it.",
+  "@bodyConflict": {
+    "description": "Sync panel body with a conflict."
+  },
+  "bodyDuplicates": "A change looks like something that already exists. Choose what to keep.",
+  "@bodyDuplicates": {
+    "description": "Sync panel body with a duplicate prompt."
+  },
+  "bodyPaused": "Sync is paused. Your changes stay on this device until you resume.",
+  "@bodyPaused": {
+    "description": "Sync panel body while paused."
+  },
+  "bodyError": "The last sync failed. It retries automatically.",
+  "@bodyError": {
+    "description": "Sync panel body after an error."
+  },
+  "progressItems": "{done} of {total} items",
+  "@progressItems": {
+    "description": "Sync progress.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "pulledCount": "{count, plural, =0{Nothing pulled yet} =1{1 change pulled} other{{count} changes pulled}}",
+  "@pulledCount": {
+    "description": "Changes pulled so far.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pauseSync": "Pause sync",
+  "@pauseSync": {
+    "description": "Pause sync button."
+  },
+  "resumeSync": "Resume sync",
+  "@resumeSync": {
+    "description": "Resume sync button."
+  },
+  "syncLog": "Sync log",
+  "@syncLog": {
+    "description": "Sync log section."
+  },
+  "syncLogEmpty": "Nothing logged yet.",
+  "@syncLogEmpty": {
+    "description": "Empty sync log."
+  },
+  "saveBothCopies": "Save both as copies",
+  "@saveBothCopies": {
+    "description": "Conflict: keep the server version and store the local text as a copy."
+  },
+  "conflictCopySaved": "A copy was saved at {path}",
+  "@conflictCopySaved": {
+    "description": "Where the conflict copy was saved.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "legendAdded": "Added",
+  "@legendAdded": {
+    "description": "Diff legend: added."
+  },
+  "legendRemoved": "Removed",
+  "@legendRemoved": {
+    "description": "Diff legend: removed."
+  },
+  "legendChanged": "Changed on both sides",
+  "@legendChanged": {
+    "description": "Diff legend: changed on both sides."
+  },
+  "lineSemantics": "Line {number}, {change}: {text}",
+  "@lineSemantics": {
+    "description": "One annotated line.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "change": {
+        "type": "String"
+      },
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "lineSame": "unchanged",
+  "@lineSame": {
+    "description": "Line change: same."
+  },
+  "lineChangedOneSide": "changed",
+  "@lineChangedOneSide": {
+    "description": "Line change: changed on one side."
   }
 }

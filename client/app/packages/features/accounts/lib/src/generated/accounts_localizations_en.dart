@@ -112,8 +112,8 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   String get pendingTitle => 'Waiting for approval';
 
   @override
-  String pendingBody({required String username}) {
-    return 'Your request for @$username was sent.';
+  String pendingBody({required String username, required String requested}) {
+    return 'Your request for @$username was sent $requested.';
   }
 
   @override
@@ -122,9 +122,6 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
 
   @override
   String get checkAgain => 'Check again';
-
-  @override
-  String get stillPending => 'Still waiting for approval.';
 
   @override
   String get useAnotherAccount => 'Use a different account';
@@ -270,9 +267,6 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   String get readOnlyNote => 'Your notes are read-only until then.';
 
   @override
-  String get notAvailableYet => 'Not available yet';
-
-  @override
   String get passwordChangeTitle => 'Choose a new password';
 
   @override
@@ -331,4 +325,90 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   String unsyncedItem({required String kind, required String time}) {
     return '$kind · $time';
   }
+
+  @override
+  String get strengthWeak => 'Weak';
+
+  @override
+  String get strengthFair => 'Fair';
+
+  @override
+  String get strengthStrong => 'Strong';
+
+  @override
+  String strengthDetail({required int length, required int min}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      length,
+      locale: localeName,
+      other: '$length characters',
+      one: '1 character',
+    );
+    return '· $_temp0 · at least $min';
+  }
+
+  @override
+  String thisDeviceDetail({required String name, required String signedIn}) {
+    return '$name · signed in $signedIn';
+  }
+
+  @override
+  String pendingCount({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending',
+      one: '1 pending',
+      zero: 'none pending',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get exportPathTitle => 'Save to';
+
+  @override
+  String get exportPath => 'File path';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String exportSaved({required String label}) {
+    return 'Saved $label';
+  }
+
+  @override
+  String unsyncedSaved({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count changes saved',
+      one: '1 change saved',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String deleteNowTitle({required String username}) {
+    return 'Delete @$username now?';
+  }
+
+  @override
+  String get deleteNowBody =>
+      'The account and every note on the server are deleted now. This can\'t be undone.';
+
+  @override
+  String get deleteAnyway => 'Delete anyway';
+
+  @override
+  String get fieldTemporaryPassword => 'Temporary password';
+
+  @override
+  String get passwordChanged => 'Password changed';
+
+  @override
+  String get stillPending => 'Still waiting for approval.';
+
+  @override
+  String get strengthTooShort => 'Too short';
 }

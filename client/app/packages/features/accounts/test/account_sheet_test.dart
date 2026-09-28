@@ -7,10 +7,9 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 import 'helpers/fixtures.dart';
 import 'helpers/hosts.dart';
-import 'helpers/matrix.dart';
 
 FakeCoreApi _fake() => FakeCoreApi()
-  ..session.add(StrataFixtures.sessionActive)
+  ..session.add(AccountFixtures.active)
   ..settings.add(StrataFixtures.settingsView)
   ..syncStatus.add(AccountFixtures.unsynced);
 
@@ -38,7 +37,7 @@ Future<void> _signOut(WidgetTester tester, [String label = 'Sign out']) async {
 
 void main() {
   group('account sheet matrix', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('who is signed in $v', (tester) async {
         final l10n = lookupAccountsLocalizations(v.locale);
         await _open(tester, v);
@@ -53,9 +52,20 @@ void main() {
         expect(find.text('Shawket'), findsOneWidget);
         expect(find.text(l10n.atUsername(username: 'shawket')), findsOne);
         expect(find.text(l10n.roleAdmin), findsOneWidget);
-        expect(find.text('shawket-laptop'), findsOneWidget);
+        expect(find.text('S'), findsOneWidget);
+        expect(
+          find.text(
+            l10n.thisDeviceDetail(
+              name: "Shawket's Pixel 9",
+              signedIn: '12 Sep',
+            ),
+          ),
+          findsOneWidget,
+        );
         expect(find.text(l10n.devices), findsOneWidget);
+        expect(find.text('3'), findsOneWidget);
         expect(find.text(l10n.adminUsers), findsOneWidget);
+        expect(find.text(l10n.pendingCount(count: 2)), findsOneWidget);
         expect(find.text(l10n.signOut), findsOneWidget);
         expectNoErrors(tester);
         await expectAccessible(tester, contrast: v.textScale == 1);
@@ -81,7 +91,7 @@ void main() {
   });
 
   group('account sheet intents', () {
-    final v = matrix().first;
+    final v = variants().first;
 
     testWidgets('a member sees no Admin → Users', (tester) async {
       await _open(
@@ -103,6 +113,16 @@ void main() {
           ),
       );
       expect(find.text('Admin → Users'), findsNothing);
+    });
+
+    testWidgets('without device details: the device name only', (tester) async {
+      await _open(
+        tester,
+        v,
+        fake: _fake()..session.add(StrataFixtures.sessionActive),
+      );
+      expect(find.text('shawket-laptop'), findsOneWidget);
+      expect(find.byIcon(Icons.person_outline), findsOneWidget);
     });
 
     testWidgets('Devices and Admin → Users close the sheet first', (

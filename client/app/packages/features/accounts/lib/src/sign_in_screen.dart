@@ -11,8 +11,9 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// session; accounts with data on this device can be resumed.
 ///
 /// A successful sign-in changes the session stream (the app routes on it);
-/// `account_pending` / `account_rejected` failures lead to
-/// [onPendingApproval].
+/// an account waiting for approval (or refused) becomes a session state of
+/// its own, which the app routes to the approval screen
+/// ([onPendingApproval] is called too).
 class SignInScreen extends HookConsumerWidget {
   /// Creates the sign-in screen.
   const new({super.key, this.onCreateAccount, this.onPendingApproval});
@@ -23,10 +24,8 @@ class SignInScreen extends HookConsumerWidget {
   /// Opens sign-up with the server URL typed so far.
   final ValueChanged<String>? onCreateAccount;
 
-  /// The account exists but is not approved (`rejected`: the request was
-  /// turned down); the request can be retried with "Check again".
-  final void Function(SignInRequest request, {required bool rejected})?
-  onPendingApproval;
+  /// The account exists but is not approved (or was turned down).
+  final VoidCallback? onPendingApproval;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -63,11 +62,9 @@ class SignInScreen extends HookConsumerWidget {
       try {
         await ref.read(coreApiProvider).signIn(request: request);
       } on CoreFailure catch (error) {
-        final pending = onPendingApproval;
-        if (pending != null && error.code == 'account_pending') {
-          pending(request, rejected: false);
-        } else if (pending != null && error.code == 'account_rejected') {
-          pending(request, rejected: true);
+        if (error.code == 'account_pending' ||
+            error.code == 'account_rejected') {
+          onPendingApproval?.call();
         } else {
           failure.value = l10n.failure(error);
         }
@@ -230,7 +227,7 @@ class _KnownAccountTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         minTileHeight: StrataLayout.minTouchTarget + StrataSpacing.s2,
-        leading: Icon(Icons.account_circle_outlined, color: colors.text2),
+        leading: StrataAvatar(initials: account.initials),
         title: Text(l10n.continueAs(name: account.displayName)),
         subtitle: Text(
           account.serverUrl,

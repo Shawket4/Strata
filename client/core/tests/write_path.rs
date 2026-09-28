@@ -99,7 +99,7 @@ async fn capture_queues_one_op_and_updates_home() {
     assert_eq!(
         content(&s, &id),
         format!(
-            "---\nid: {}\ncreated: 2026-09-27T13:00:00+03:00\n---\nكلمت أحمد النهارده",
+            "---\nid: {}\ncreated: 2026-09-27T13:00:00+03:00\n---\nكلمت أحمد النهارده\n",
             seq_id(1)
         )
     );
@@ -350,7 +350,8 @@ async fn tasks_create_complete_recurring_and_sections() {
     )
     .expect("watch");
 
-    // No task home yet: a local `tasks/Tasks.md` placeholder is created under a new ID.
+    // No task home yet: a local `tasks/Tasks.md` placeholder is created under a new ID; the
+    // line goes under the month heading of its creation (the shared `task.create` rule).
     let one_off = s
         .create_task(
             &NewTask {
@@ -384,7 +385,8 @@ async fn tasks_create_complete_recurring_and_sections() {
     assert_eq!(
         content(&s, &home_id),
         format!(
-            "- [ ] Send weekly invoicing proposal to Ahmed 📅 2026-09-29 ^{t1}\n\
+            "## September 2026\n\
+             - [ ] Send weekly invoicing proposal to Ahmed 📅 2026-09-29 ^{t1}\n\
              - [ ] Petrol Arrows invoice (@2026-09-27 10:00) 🔁 every week on Sunday 📅 2026-09-27 ^{t2}\n"
         )
     );
@@ -394,7 +396,8 @@ async fn tasks_create_complete_recurring_and_sections() {
     assert_eq!(
         content(&s, &home_id),
         format!(
-            "- [ ] Send weekly invoicing proposal to Ahmed 📅 2026-09-29 ^{t1}\n\
+            "## September 2026\n\
+             - [ ] Send weekly invoicing proposal to Ahmed 📅 2026-09-29 ^{t1}\n\
              - [ ] Petrol Arrows invoice (@2026-10-04 10:00) 🔁 every week on Sunday 📅 2026-10-04 ^{t3}\n\
              - [x] Petrol Arrows invoice (@2026-09-27 10:00) 🔁 every week on Sunday 📅 2026-09-27 ✅ 2026-09-27 ^{t2}\n"
         )
@@ -468,7 +471,7 @@ async fn tasks_create_complete_recurring_and_sections() {
             &home_id,
             "Send weekly invoicing proposal to Ahmed",
             "2026-09-29",
-            1,
+            2,
             "Tue 29 Sep"
         )]
     );
@@ -491,7 +494,7 @@ async fn tasks_create_complete_recurring_and_sections() {
             &home_id,
             "Petrol Arrows invoice",
             "2026-09-27",
-            2,
+            3,
             "Today",
         )
     };

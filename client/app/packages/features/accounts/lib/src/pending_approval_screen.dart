@@ -9,24 +9,18 @@ import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 /// "Waiting for approval" after sign-up or a sign-in of a pending account
 /// (SCREEN_SPEC PendingApprovalCompact), with the "not approved" variant.
 ///
-/// "Check again" retries [request]: the core answers with the session (the
-/// app routes on), `account_pending` (still waiting) or `account_rejected`.
+/// Rendered from the session: `SessionKind.pendingApproval` /
+/// `SessionKind.rejected` with its [PendingApproval] (who, where, when it was
+/// requested and last checked). "Check again" asks the core
+/// (`check_approval`, which retries the sign-in it keeps in memory); "Use a
+/// different account" leaves the screen (`dismiss_pending`). The app routes
+/// on the session that follows.
 class PendingApprovalScreen extends HookConsumerWidget {
-  /// Creates the screen for [request]'s username.
-  const new({
-    required this.request,
-    super.key,
-    this.rejected = false,
-    this.onUseAnotherAccount,
-  });
+  /// Creates the screen.
+  const new({super.key, this.onUseAnotherAccount});
 
-  /// The sign-in to retry.
-  final SignInRequest request;
-
-  /// Shows the "not approved" variant.
-  final bool rejected;
-
-  /// Back to the sign-in screen.
+  /// Called after the pending request was dismissed (the router also
+  /// follows the session).
   final VoidCallback? onUseAnotherAccount;
 
   @override
@@ -34,7 +28,9 @@ class PendingApprovalScreen extends HookConsumerWidget {
     final l10n = context.accountsL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final isRejected = useState(rejected);
+    final session = ref.watch(sessionProvider).value;
+    final pending = session?.pending;
+    final rejected = session?.kind == SessionKind.rejected;
     final busy = useState(false);
 
     Future<void> checkAgain() async {
@@ -42,21 +38,35 @@ class PendingApprovalScreen extends HookConsumerWidget {
       busy.value = true;
       final messenger = ScaffoldMessenger.maybeOf(context);
       try {
-        await ref.read(coreApiProvider).signIn(request: request);
+        await ref.read(coreApiProvider).checkApproval();
       } on CoreFailure catch (error) {
-        if (error.code == 'account_rejected') {
-          isRejected.value = true;
-        } else if (error.code == 'account_pending') {
-          messenger?.showSnackBar(SnackBar(content: Text(l10n.stillPending)));
-        } else {
-          messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+        final message = switch (error.code) {
+          'account_pending' => l10n.stillPending,
+          // The session turns into the "not approved" variant.
+          'account_rejected' => null,
+          _ => l10n.failure(error),
+        };
+        if (message != null) {
+          messenger
+            ?..hideCurrentSnackBar()
+            ..showSnackBar(SnackBar(content: Text(message)));
         }
       } finally {
         if (context.mounted) busy.value = false;
       }
     }
 
-    final other = onUseAnotherAccount;
+    Future<void> useAnother() async {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      try {
+        await ref.read(coreApiProvider).dismissPending();
+        onUseAnotherAccount?.call();
+      } on CoreFailure catch (error) {
+        messenger?.showSnackBar(SnackBar(content: Text(l10n.failure(error))));
+      }
+    }
+
+    final checked = pending?.lastCheckedLabel;
     return AuthLayout(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -67,7 +77,7 @@ class PendingApprovalScreen extends HookConsumerWidget {
               const Spacer(),
               Flexible(
                 child: Text(
-                  request.serverUrl,
+                  pending?.serverUrl ?? session?.serverUrl ?? '',
                   textDirection: TextDirection.ltr,
                   overflow: TextOverflow.ellipsis,
                   style: text.monoSmall.copyWith(color: colors.text2),
@@ -76,8 +86,8 @@ class PendingApprovalScreen extends HookConsumerWidget {
             ],
           ),
           const SizedBox(height: StrataSpacing.s8),
-          if (isRejected.value)
-            _Rejected(onUseAnotherAccount: other)
+          if (rejected)
+            _Rejected(onUseAnotherAccount: useAnother)
           else ...[
             ExcludeSemantics(
               child: Align(
@@ -113,10 +123,14 @@ class PendingApprovalScreen extends HookConsumerWidget {
               child: Text(l10n.pendingTitle, style: text.display),
             ),
             const SizedBox(height: StrataSpacing.s2),
-            Text(
-              l10n.pendingBody(username: request.username),
-              style: text.body.copyWith(color: colors.text),
-            ),
+            if (pending != null)
+              Text(
+                l10n.pendingBody(
+                  username: pending.username,
+                  requested: pending.requestedLabel,
+                ),
+                style: text.body.copyWith(color: colors.text),
+              ),
             const SizedBox(height: StrataSpacing.s2),
             Text(
               l10n.pendingNext,
@@ -127,16 +141,27 @@ class PendingApprovalScreen extends HookConsumerWidget {
               label: l10n.checkAgain,
               icon: Icons.refresh,
               busy: busy.value,
-              onPressed: checkAgain,
+              onPressed: pending?.canCheck ?? false ? checkAgain : null,
             ),
             const SizedBox(height: StrataSpacing.s3),
             OutlinedButton(
-              onPressed: other,
+              onPressed: useAnother,
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(StrataLayout.minTouchTarget),
               ),
               child: Text(l10n.useAnotherAccount),
             ),
+            if (checked != null) ...[
+              const SizedBox(height: StrataSpacing.s3),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  checked,
+                  textAlign: TextAlign.center,
+                  style: text.caption.copyWith(color: colors.text2),
+                ),
+              ),
+            ],
           ],
         ],
       ),
@@ -147,7 +172,7 @@ class PendingApprovalScreen extends HookConsumerWidget {
 class _Rejected extends StatelessWidget {
   const new({required this.onUseAnotherAccount});
 
-  final VoidCallback? onUseAnotherAccount;
+  final VoidCallback onUseAnotherAccount;
 
   @override
   Widget build(BuildContext context) {
