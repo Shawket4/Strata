@@ -401,24 +401,25 @@ class DocumentBriefTile extends StatelessWidget {
                       Text(l10n.withHolder(name: holder.title), style: muted)
                     else if (last != null)
                       Text(l10n.lastWithName(name: last.title), style: muted),
+                    if (status != null || document.expiringSoon)
+                      Padding(
+                        padding: const EdgeInsets.only(top: StrataSpacing.s1),
+                        child: Wrap(
+                          spacing: StrataSpacing.s1,
+                          runSpacing: StrataSpacing.s1,
+                          children: [
+                            if (status != null) DocumentStatusPill(status),
+                            if (document.expiringSoon)
+                              StatusPill(
+                                label: l10n.expiringSoon,
+                                tone: StatusTone.warning,
+                                icon: Icons.event_busy_outlined,
+                              ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
-              ),
-              const SizedBox(width: StrataSpacing.s2),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (status != null) DocumentStatusPill(status),
-                  if (document.expiringSoon)
-                    Padding(
-                      padding: const EdgeInsets.only(top: StrataSpacing.s1),
-                      child: StatusPill(
-                        label: l10n.expiringSoon,
-                        tone: StatusTone.warning,
-                        icon: Icons.event_busy_outlined,
-                      ),
-                    ),
-                ],
               ),
             ],
           ),

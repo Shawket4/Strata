@@ -5,10 +5,10 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
 import '../helpers/fixtures.dart';
-import '../helpers/matrix.dart';
 
-FakeCoreApi _with(EntityScreen screen) =>
-    FakeCoreApi()..entity[screen.id].add(screen);
+FakeCoreApi _with(EntityScreen screen) => FakeCoreApi()
+  ..placeOptionsAnswer.returns(StrataFixtures.placeOptions)
+  ..entity[screen.id].add(screen);
 
 /// Document and place pages × size class × theme × direction (1.0; compact
 /// also 2.0), plus key states.
@@ -18,25 +18,37 @@ void main() {
   group('document goldens', () {
     screenGoldens(
       'document',
-      () => DocumentScreen(
-        'd-watanya-contract',
-        onBack: () {},
-        onOpenEntity: (_) {},
-        onOpenNote: (_, _) {},
+      (v) => goldenFrame(
+        v,
+        DocumentScreen(
+          'd-watanya-contract',
+          onBack: () {},
+          onOpenEntity: (_) {},
+          onOpenNote: (_, _) {},
+        ),
+        fake: _with(StrataFixtures.entityScreenDocument)
+          ..localGraph[('d-watanya-contract', 1)].add(DocFixtures.watanyaGraph),
+        scaffold: true,
       ),
-      () => _with(StrataFixtures.entityScreenDocument)
-        ..localGraph[('d-watanya-contract', 1)].add(DocFixtures.watanyaGraph),
     );
     screenGoldens(
       'document_checked_out',
-      () => const DocumentScreen('d-car-licence'),
-      () => _with(DocFixtures.carLicence),
+      (v) => goldenFrame(
+        v,
+        const DocumentScreen('d-car-licence'),
+        fake: _with(DocFixtures.carLicence),
+        scaffold: true,
+      ),
       cells: goldenVariants(wide: false),
     );
     screenGoldens(
       'document_not_found',
-      () => const DocumentScreen('x-gone'),
-      () => _with(DocFixtures.notFound),
+      (v) => goldenFrame(
+        v,
+        const DocumentScreen('x-gone'),
+        fake: _with(DocFixtures.notFound),
+        scaffold: true,
+      ),
       cells: goldenVariants(wide: false),
     );
   });
@@ -44,18 +56,26 @@ void main() {
   group('place goldens', () {
     screenGoldens(
       'place',
-      () => PlaceScreen(
-        'pl-nasr-city-office',
-        onBack: () {},
-        onOpenEntity: (_) {},
-        onOpenNote: (_, _) {},
+      (v) => goldenFrame(
+        v,
+        PlaceScreen(
+          'pl-nasr-city-office',
+          onBack: () {},
+          onOpenEntity: (_) {},
+          onOpenNote: (_, _) {},
+        ),
+        fake: _with(StrataFixtures.entityScreenPlace),
+        scaffold: true,
       ),
-      () => _with(StrataFixtures.entityScreenPlace),
     );
     screenGoldens(
       'place_empty',
-      () => const PlaceScreen('pl-nasr-city-safe'),
-      () => _with(DocFixtures.safe),
+      (v) => goldenFrame(
+        v,
+        const PlaceScreen('pl-nasr-city-safe'),
+        fake: _with(DocFixtures.safe),
+        scaffold: true,
+      ),
       cells: goldenVariants(wide: false),
     );
   });

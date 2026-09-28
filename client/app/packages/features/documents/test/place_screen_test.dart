@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_documents/src/generated/documents_localizations.dart';
 import 'package:strata_documents/strata_documents.dart';
@@ -6,35 +7,44 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
 const _id = 'pl-nasr-city-office';
 
 FakeCoreApi _fake([EntityScreen? screen]) {
-  final fake = FakeCoreApi();
+  final fake = FakeCoreApi()
+    ..placeOptionsAnswer.returns(StrataFixtures.placeOptions);
   fake.entity[screen?.id ?? _id].add(
     screen ?? StrataFixtures.entityScreenPlace,
   );
   return fake;
 }
 
+Future<FakeCoreApi> _pump(
+  WidgetTester tester,
+  Variant v,
+  Widget page, [
+  FakeCoreApi? fake,
+]) => pumpVariant(tester, v, page, fake: fake ?? _fake(), scaffold: true);
+
 void main() {
   group('PlaceScreen matrix', () {
     for (final v in variants()) {
       testWidgets('content $v', (tester) async {
-        final fake = _fake();
         final opened = <String>[];
-        await pumpVariant(
+        final fake = await _pump(
           tester,
           v,
           PlaceScreen(_id, onOpenEntity: opened.add, onBack: () {}),
-          fake,
         );
         final l10n = lookupDocumentsLocalizations(v.locale);
         expectNoErrors(tester);
         expect(
           fake.calls,
           contains(const CoreCall('watchEntity', {'id': _id})),
+        );
+        expect(
+          directionOf(tester, find.byType(PlacePage)),
+          v.rtl ? TextDirection.rtl : TextDirection.ltr,
         );
         expect(find.text('Nasr City office'), findsWidgets);
         expect(find.text(l10n.everythingHere), findsOneWidget);
@@ -46,6 +56,18 @@ void main() {
           ),
           findsOneWidget,
         );
+        // The core's tree at every depth with document counts.
+        expect(find.text('Top shelf'), findsOneWidget);
+        expect(find.text(l10n.placeDocuments(count: 1)), findsNWidgets(2));
+        expect(find.text(l10n.placeDocuments(count: 0)), findsOneWidget);
+        // Out with people, and a movement at a nested place.
+        expect(find.text(l10n.outWithPeople), findsOneWidget);
+        expect(find.text('Watanya contract — copy'), findsOneWidget);
+        expect(
+          find.text(l10n.atPlace(place: 'Safe — Nasr City office')),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.userNotesEmpty), findsOneWidget);
         final compact = v.sizeClass == SizeClass.compact;
         expect(
           find.bySemanticsLabel(
@@ -53,11 +75,14 @@ void main() {
           ),
           compact ? findsNothing : findsOneWidget,
         );
+        expect(
+          find.text('places/Nasr City office.md'),
+          compact ? findsNothing : findsOneWidget,
+        );
         expect(find.text(l10n.recordMove), findsOneWidget);
-        if (v.textScale == 1) await expectAccessible(tester);
-        await tester.ensureVisible(find.bySemanticsLabel('Cabinet B').first);
-        await tester.tap(find.bySemanticsLabel('Cabinet B').first);
-        expect(opened, ['pl-nasr-city-cabinet-b']);
+        await expectAccessible(tester, contrast: v.textScale == 1);
+        await tapVisible(tester, find.bySemanticsLabel('Top shelf').first);
+        expect(opened, ['pl-cabinet-b-top']);
       });
     }
   });
@@ -65,7 +90,7 @@ void main() {
   group('PlaceScreen states', () {
     for (final v in variants(scales: const [1])) {
       testWidgets('loading $v', (tester) async {
-        await pumpVariant(tester, v, const PlaceScreen(_id), FakeCoreApi());
+        await _pump(tester, v, const PlaceScreen(_id), FakeCoreApi());
         expect(
           find.bySemanticsLabel(lookupDocumentsLocalizations(v.locale).loading),
           findsOneWidget,
@@ -73,7 +98,7 @@ void main() {
       });
 
       testWidgets('not found $v', (tester) async {
-        await pumpVariant(
+        await _pump(
           tester,
           v,
           const PlaceScreen('x-gone'),
@@ -86,7 +111,7 @@ void main() {
       });
 
       testWidgets('nested and empty $v', (tester) async {
-        await pumpVariant(
+        await _pump(
           tester,
           v,
           const PlaceScreen('pl-nasr-city-safe'),
@@ -101,16 +126,27 @@ void main() {
         expect(find.text(l10n.noDocumentsHere), findsOneWidget);
         expect(find.text(l10n.noMovements), findsOneWidget);
         expect(find.text(l10n.noSubPlaces), findsOneWidget);
+        expect(find.text(l10n.nobodyOut), findsOneWidget);
         await expectAccessible(tester);
       });
 
       testWidgets('record a move lists the documents here $v', (tester) async {
-        await pumpVariant(tester, v, const PlaceScreen(_id), _fake());
+        final fake = await _pump(tester, v, const PlaceScreen(_id));
         final l10n = lookupDocumentsLocalizations(v.locale);
-        await tester.tap(find.text(l10n.recordMove));
-        await tester.pumpAndSettle();
+        await tapVisible(tester, find.text(l10n.recordMove).first);
         expect(find.text(l10n.whatHappened), findsOneWidget);
         expect(find.text('Petrol Arrows commercial register'), findsWidgets);
+        expect(
+          fake.calls,
+          contains(const CoreCall('placeOptions', {'documentId': null})),
+        );
+        // Without a document chosen, nothing is recorded.
+        await tapVisible(tester, find.text(l10n.recordMoveSubmit));
+        expect(find.text(l10n.chooseDocument), findsOneWidget);
+        expect(
+          fake.calls.map((c) => c.method),
+          isNot(contains('recordCustody')),
+        );
       });
     }
   });

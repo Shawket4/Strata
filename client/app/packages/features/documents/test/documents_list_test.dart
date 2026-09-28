@@ -3,8 +3,6 @@ import 'package:strata_documents/strata_documents.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 
-import 'helpers/matrix.dart';
-
 void main() {
   for (final v in variants()) {
     testWidgets('documents list $v', (tester) async {
@@ -49,7 +47,8 @@ void main() {
         tester,
         v,
         DocumentsScreen(onOpenEntity: opened.add),
-        fake,
+        fake: fake,
+        scaffold: true,
       );
       expectNoErrors(tester);
       expect(
@@ -61,7 +60,8 @@ void main() {
           }),
         ),
       );
-      if (v.textScale == 1) await expectAccessible(tester);
+      expect(find.text('Stored · Nasr City office › Safe'), findsOneWidget);
+      await expectAccessible(tester, contrast: v.textScale == 1);
       await tester.tap(find.text('Watanya contract'));
       expect(opened, ['d-watanya-contract']);
     });

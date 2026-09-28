@@ -219,9 +219,11 @@ class PlacePage extends StatelessWidget {
                       const SizedBox(width: StrataSpacing.s1),
                       Flexible(child: EntityLink(node.place)),
                       const SizedBox(width: StrataSpacing.s2),
-                      Text(
-                        l10n.placeDocuments(count: node.documentCount),
-                        style: text.caption.copyWith(color: colors.text2),
+                      Flexible(
+                        child: Text(
+                          l10n.placeDocuments(count: node.documentCount),
+                          style: text.caption.copyWith(color: colors.text2),
+                        ),
                       ),
                     ],
                   ),

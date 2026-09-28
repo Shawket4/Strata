@@ -205,18 +205,22 @@ profile, measured 2026-09-28 (`tests/performance.rs`, 10 000 files: 9 549 notes,
 
 | Measurement | Measured | Budget |
 |---|---|---|
-| Import (`POST /import`, one commit) | 64.2 s | 240 s |
+| Import (`POST /import`, one commit) | 49.8 s | 240 s |
 | Full reindex (`VaultService::reindex`, 10 000 notes) | 49.0 s | 180 s |
 | `GET /graph` (median of 5; 5.3 MiB payload) | 0.62 s | 3 s |
 | Keyword search, 200 queries (`limit=20`) | p50 24.6 ms, p95 34.5 ms, max 51.6 ms | p50 100 ms, p95 250 ms |
 | `GET /sync/bootstrap`, all 155 pages (30 892 records) | 2.8 s | 30 s |
-| `POST /sync/push`, 500 `note.create` ops | **182.0 s (364 ms/op) — over budget** | 120 s |
+| `POST /sync/push`, 500 `note.create` ops | 34.4 s (69 ms/op) | 120 s |
 
-The push budget is not met: every op is its own vault write (one git commit and index
-transaction), and the per-op cost grows with the vault (183 ms/op on a 500-file vault, 364 ms/op
-at 10 000 files). The suite therefore fails at 10 000 files until push is made faster or the
-owner sets a different budget (recorded as an open item, not relaxed here). The budgets are
-proposals with 3–4× headroom over this machine; the graph crate's own gate
+Push was 182.0 s (364 ms/op, 183 ms/op on a 500-file vault) before the write path was made
+independent of the vault size (docs/ARCHITECTURE.md "Vault store", write cost): each commit
+rebuilt every tree of the vault from the git index, and each write re-read every keep-both pair
+of the vault twice, scanned `dedupe_keys` and `dedupe_keep_both` without an index and rebuilt the
+link-resolution index from every path. Now it is 69 ms/op at 10 000 files and 48 ms/op at 500;
+most of the remaining growth is the trigram candidate scan of the duplicate check (RLS
+caveat, docs/ARCHITECTURE.md) and the git index file. The push workload is 500 near-identical
+forced captures, so every op also records keep-both pairs with up to 200 earlier ones. The
+budgets are proposals with 3–4× headroom over this machine; the graph crate's own gate
 (`strata-graph` `tests/perf.rs`, index read + assembly, debug) is 2 s and measured 0.53 s.
 
 Criterion (same machine, `cargo bench`, medians):

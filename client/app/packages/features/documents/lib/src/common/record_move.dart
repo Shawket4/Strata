@@ -134,7 +134,11 @@ class RecordMoveForm extends HookConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(name, style: label),
+          Semantics(
+            container: true,
+            header: true,
+            child: Text(name, style: label),
+          ),
           const SizedBox(height: StrataSpacing.s1),
           child,
         ],

@@ -3,8 +3,6 @@ import 'package:strata_documents/src/common/l10n.dart';
 import 'package:strata_state/strata_state.dart' hide RelationChip;
 import 'package:strata_ui/strata_ui.dart';
 
-
-
 /// Navigation the host app provides to entity-style pages (documents,
 /// places, people, companies). Every callback is optional: without it the
 /// matching links render as plain text.
