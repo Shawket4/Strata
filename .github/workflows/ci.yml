@@ -83,7 +83,10 @@ jobs:
           RUSTUP_TOOLCHAIN: nightly
           RUSTFLAGS: ""
         run: |
-          for t in $(cargo fuzz list); do cargo fuzz run "$t" -- -max_total_time=60; done
+          # cargo-fuzz from install-action is a musl build, so its default target is musl (no ASan).
+          for t in $(cargo fuzz list); do
+            cargo fuzz run --target x86_64-unknown-linux-gnu "$t" -- -max_total_time=60
+          done
 
   flutter:
     name: Flutter (analyze, logic guard, widget + golden tests)
