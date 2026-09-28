@@ -107,6 +107,10 @@ fn validate_text(text: &str) -> Result<()> {
     if text.contains(['\n', '\r']) {
         return Err(VaultError::invalid("the task text is a single line"));
     }
+    if text.contains('\0') {
+        // PostgreSQL text cannot store NUL.
+        return Err(VaultError::invalid("text must not contain NUL characters"));
+    }
     Ok(())
 }
 

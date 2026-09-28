@@ -281,7 +281,13 @@ pub async fn login(
         .check(&key)
         .map_err(limited("too many login attempts for this account"))?;
     let device_name = check_device_name(input.device_name)?;
-    let Some(user) = state.accounts.user_by_username(&key).await? else {
+    // No username contains NUL (and PostgreSQL text cannot hold it): an unknown user.
+    let found = if key.contains('\0') {
+        None
+    } else {
+        state.accounts.user_by_username(&key).await?
+    };
+    let Some(user) = found else {
         state.passwords.verify_dummy(input.password);
         return Err(AccountError::InvalidCredentials);
     };

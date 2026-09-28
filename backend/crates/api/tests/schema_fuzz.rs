@@ -350,9 +350,10 @@ async fn every_operation_survives_schema_driven_fuzzing() {
     h.finish().await;
 }
 
-/// Regression (found by this fuzzer, seed `0x5354524154410016`, case 1125): a NUL character
-/// in a name, alias, tag, field or reply reached PostgreSQL (which cannot store it) and
-/// answered `500`. Every such input is now `422 invalid_body`, and nothing is written.
+/// Regression (found by this fuzzer; seeds and cases below): a NUL character in a name,
+/// alias, tag, field, task text or reply reached PostgreSQL (which cannot store it) and
+/// answered `500`. Every such input is now `422 invalid_body` and nothing is written; a
+/// username with NUL is an unknown user (`401 invalid_credentials`).
 #[tokio::test]
 async fn regression_nul_characters_in_text_are_422_not_500() {
     fn mp(v: &M) -> Vec<u8> {
@@ -375,6 +376,7 @@ async fn regression_nul_characters_in_text_are_422_not_500() {
     let place = format!("/api/v1/places/{}", fx.place);
     let person = format!("/api/v1/entities/{}", fx.person);
     let reply = format!("/api/v1/suggestions/{}/reply", fx.suggestion);
+    let task = format!("/api/v1/tasks/{}", fx.task.id);
     let cases: Vec<(&str, &str, &str, M)> = vec![
         ("create_place", "POST", "/api/v1/places", map(&[("name", M::from(z))])),
         ("create_place", "POST", "/api/v1/places", map(&[("name", M::from("A")), ("aliases", list(z))])),
@@ -387,6 +389,9 @@ async fn regression_nul_characters_in_text_are_422_not_500() {
         ("patch_entity", "PATCH", &person, map(&[("tags", list(z))])),
         ("patch_entity", "PATCH", &person, map(&[("set_fields", map(&[("role", M::from(z))]))])),
         ("reply_suggestion", "POST", &reply, map(&[("body", M::from(z))])),
+        // Seed 0x12d687, case 1494: a forced task create.
+        ("create_task", "POST", "/api/v1/tasks", map(&[("text", M::from("\u{0} rent")), ("force", M::from(true))])),
+        ("patch_task", "PATCH", &task, map(&[("text", M::from(z))])),
     ];
     let log = h.log(u.id);
     let mut got = Vec::new();
@@ -402,5 +407,21 @@ async fn regression_nul_characters_in_text_are_422_not_500() {
         .collect();
     assert_eq!(got, expected);
     assert_eq!(h.log(u.id), log, "nothing written");
+    // Seed 0x16, case 4748: a username with NUL is simply unknown.
+    let login = h
+        .send(
+            Some("login"),
+            &Req::new("POST", "/api/v1/auth/login").msgpack(mp(&map(&[
+                ("username", M::from("alice\u{0}")),
+                ("password", M::from("whatever-password")),
+                ("device_name", M::from("d")),
+                ("platform", M::from("android")),
+            ]))),
+        )
+        .await;
+    assert_eq!(
+        (login.status, login.problem_type()),
+        (401, Some("invalid_credentials".to_owned()))
+    );
     h.finish().await;
 }

@@ -5041,7 +5041,7 @@ class PendingApproval {
   /// Last "Check again".
   final DateTime? lastCheckedAt;
 
-  /// "Last checked 14:32".
+  /// "Last checked 5 minutes ago".
   final String? lastCheckedLabel;
 
   /// Whether "Check again" can run without asking for the password again (the password
