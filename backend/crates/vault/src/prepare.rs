@@ -3,7 +3,7 @@
 
 use std::collections::BTreeSet;
 
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, Utc};
 use strata_common::{IdGenerator, NoteId};
 use vault_format::sidecar::NoteSidecar;
 use vault_format::tasks::extract_tasks;
@@ -57,8 +57,8 @@ pub fn assign_task_ids(body: &str, ids: &dyn IdGenerator, taken: &BTreeSet<Strin
 pub fn stamp(
     doc: &mut Document,
     id: NoteId,
-    created: Option<&DateTime<FixedOffset>>,
-    updated: Option<&DateTime<FixedOffset>>,
+    created: Option<&DateTime<Utc>>,
+    updated: Option<&DateTime<Utc>>,
 ) -> Result<()> {
     item_render::note::stamp(doc, id.as_ulid(), created, updated).map_err(|e| render_error(&e))
 }

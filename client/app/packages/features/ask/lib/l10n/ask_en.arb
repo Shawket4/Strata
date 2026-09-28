@@ -255,5 +255,14 @@
         "type": "int"
       }
     }
+  },
+  "score": "Score {value}",
+  "@score": {
+    "description": "A semantic or hybrid result's score.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -175,8 +175,13 @@ pub struct Tree {
 pub struct CreateNoteRequest {
     /// Vault path ending in `.md` (Obsidian-safe names, no hidden folders).
     pub path: String,
-    /// Full content; `id`, `created` and `updated` are set by the server.
+    /// Full content; `id` is set by the server, and `created` (unless the content has one)
+    /// and `updated` to `created` below.
     pub content: String,
+    /// When the item was created on the device (UTC; required, never the time the server
+    /// receives it). More than `max_future_skew_secs` ahead of the server's clock is
+    /// `422 created_in_future`.
+    pub created: DateTime<Utc>,
     /// Client-generated ID (offline creates keep their IDs).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>, format = "ulid")]
@@ -377,7 +382,7 @@ pub async fn tree(
     responses(
         (status = 201, description = "Created; one `user: create <path>` commit.", body = Note),
         (status = 409, description = "`duplicate_candidates` (resend with `force`) or `path_taken`.", body = Problem),
-        (status = 422, description = "`invalid_name` (path) or `invalid_body`.", body = Problem),
+        (status = 422, description = "`invalid_name` (path), `invalid_body` or `created_in_future`.", body = Problem),
     ),
 )]
 pub async fn create_note(
@@ -392,6 +397,7 @@ pub async fn create_note(
             CreateNote {
                 path: b.path,
                 content: b.content,
+                created: b.created,
                 id: b.id.map(NoteId::from_ulid),
                 force: b.force,
             },

@@ -25,7 +25,7 @@ use crate::prepare::{self, new_task_id};
 use crate::store::{Author, Core, VaultService};
 
 /// `POST /tasks`.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewTask {
     /// Description (may contain wikilinks and tags).
     pub text: String,
@@ -45,8 +45,34 @@ pub struct NewTask {
     pub note: Option<NoteId>,
     /// Client-generated block ID (`t-<ulid>`).
     pub id: Option<String>,
+    /// When it was created on the device (UTC): its date in the user's time zone picks the
+    /// month heading of `tasks/Tasks.md`; a `tasks/Tasks.md` this create makes gets it as
+    /// `created` and `updated`.
+    pub created: chrono::DateTime<chrono::Utc>,
+    /// The ID a `tasks/Tasks.md` this create makes gets (the device's ID for it).
+    pub home_id: Option<NoteId>,
     /// Create even if it looks like a duplicate.
     pub force: bool,
+}
+
+impl NewTask {
+    /// An empty task created at `created` (fill in the text).
+    pub fn new(created: chrono::DateTime<chrono::Utc>) -> Self {
+        Self {
+            text: String::new(),
+            due: None,
+            scheduled: None,
+            start: None,
+            recurrence: None,
+            reminders: Vec::new(),
+            priority: None,
+            note: None,
+            id: None,
+            created,
+            home_id: None,
+            force: false,
+        }
+    }
 }
 
 /// `PATCH /tasks/{id}`: `None` leaves a field; `Some(None)` clears it.
@@ -147,6 +173,7 @@ impl Core {
 
     /// Creates a task line (duplicate check unless `force`). Returns the task ID.
     pub async fn create_task(&mut self, scope: UserScope, req: NewTask) -> Result<String> {
+        self.check_created(&req.created)?;
         validate_text(&req.text)?;
         if let Some(r) = &req.recurrence {
             validate_recurrence(r)?;
@@ -170,6 +197,8 @@ impl Core {
             recurrence: req.recurrence.clone(),
             reminders: req.reminders.clone(),
             priority: req.priority,
+            created: req.created,
+            home_id: req.home_id.map(|h| h.as_ulid()),
             force: req.force,
         };
         let line = sync_model::apply::task_create_line(&op)
@@ -188,7 +217,6 @@ impl Core {
             return Err(VaultError::Duplicate(candidates));
         }
         let tz = self.tz(&mut tx).await?;
-        let now = self.local_now(tz);
         let (home_id, path, text) = match req.note {
             Some(n) => {
                 let (p, _) = self.live(n)?;
@@ -203,15 +231,20 @@ impl Core {
                         .ok_or(VaultError::NotFound)?;
                     (n, TASKS_NOTE.to_owned(), t)
                 }
+                // A new task note: the device's ID for it (so both write the same bytes),
+                // unless that ID is taken.
                 None => (
-                    NoteId::generate(self.ids()),
+                    req.home_id
+                        .filter(|h| !self.state().is_ok_and(|s| s.contains_id(*h)))
+                        .unwrap_or_else(|| NoteId::generate(self.ids())),
                     TASKS_NOTE.to_owned(),
                     String::new(),
                 ),
             },
         };
         let mut doc = Document::parse(&text);
-        let body = apply_task_create(doc.body(), &op, now.date_naive(), doc.line_ending())
+        let heading = item_render::task::heading_date(&req.created, tz);
+        let body = apply_task_create(doc.body(), &op, heading, doc.line_ending())
             .map_err(|e| match e {
                 ApplyError::TaskExists(_) => {
                     VaultError::invalid("a task with this id already exists")
@@ -219,10 +252,11 @@ impl Core {
                 _ => VaultError::invalid("the task line is invalid"),
             })?;
         doc.set_body(body);
-        // A new home note gets its id and timestamps; an existing one keeps `updated` (the
-        // device's optimistic apply of `task.create` writes the same bytes).
+        // A new home note gets its id and the device's creation time; an existing one keeps
+        // `updated` (the device's optimistic apply of `task.create` writes the same bytes).
         let is_new = !self.state()?.contains_id(home_id);
-        prepare::stamp(&mut doc, home_id, Some(&now), is_new.then_some(&now))?;
+        item_render::task::stamp_home(&mut doc, is_new.then_some(home_id.as_ulid()), &req.created)
+            .map_err(|e| prepare::render_error(&e))?;
         let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
         if !candidates.is_empty() {
             let mut sc = self
@@ -368,7 +402,7 @@ impl Core {
         let mut tx = self.begin(&scope).await?;
         let tz = self.tz(&mut tx).await?;
         tx.commit().await?;
-        let today = self.local_now(tz).date_naive();
+        let today = self.today(tz);
         let mut next = None;
         let (op, message) = match transition {
             Transition::Complete => {
@@ -414,7 +448,7 @@ impl VaultService {
                 let mut tx = core.begin(&scope).await?;
                 let tz = core.tz(&mut tx).await?;
                 tx.commit().await?;
-                Ok(core.local_now(tz).date_naive())
+                Ok(core.today(tz))
             })
         })
         .await

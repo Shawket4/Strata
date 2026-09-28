@@ -56,6 +56,8 @@ pub struct NewEntity {
     pub parent: Option<NoteId>,
     /// Client-generated ID.
     pub id: Option<NoteId>,
+    /// When it was created on the device (UTC): the note's `created` and `updated`.
+    pub created: chrono::DateTime<chrono::Utc>,
     /// Create even if it looks like a duplicate.
     pub force: bool,
 }
@@ -195,6 +197,7 @@ impl Core {
                 "kind must be person, company, document or place",
             ));
         }
+        self.check_created(&req.created)?;
         let name = req.name.trim();
         if name.is_empty() {
             return Err(VaultError::invalid("the name is empty"));
@@ -263,10 +266,8 @@ impl Core {
             relations: self.new_note_links(&path, &targets)?,
             ..item_render::entity::EntitySpec::new(req.kind, name)
         };
-        let tz = self.tz(&mut tx).await?;
-        let now = self.local_now(tz);
         let content = spec
-            .render(id.as_ulid(), Some(&now), Some(&now))
+            .render(id.as_ulid(), &path, &req.created)
             .map_err(|e| prepare::render_error(&e))?;
         let mut changes = vec![(path.clone(), Some(content.into_bytes()))];
         if !candidates.is_empty() {
@@ -487,7 +488,8 @@ impl Core {
         }
         let mut tx = self.begin(&scope).await?;
         let tz = self.tz(&mut tx).await?;
-        let now = self.local_now(tz);
+        let now = self.now();
+        let today = self.today(tz);
         let state = self.state()?;
         let index = state.path_index();
         let ltext = self.read_text(&lpath).await?.ok_or(VaultError::NotFound)?;
@@ -551,7 +553,7 @@ impl Core {
         // Notes section.
         let lnotes = section_text(ldoc.body(), "Notes").unwrap_or_default();
         if !lnotes.trim().is_empty() {
-            let heading = format!("### Merged from {ltitle} ({})", now.format("%Y-%m-%d"));
+            let heading = format!("### Merged from {ltitle} ({})", today.format("%Y-%m-%d"));
             let body = sdoc.body().to_owned();
             let secs = sections::sections(&body);
             let insert = format!("{heading}\n\n{}\n", lnotes.trim_end());

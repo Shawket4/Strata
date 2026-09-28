@@ -7,7 +7,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
 void main() {
   group('SearchScreen matrix', () {
@@ -25,7 +24,8 @@ void main() {
           tester,
           v,
           SearchScreen(onOpenNote: (id, anchor) => opened.add((id, anchor))),
-          fake,
+          fake: fake,
+          scaffold: true,
         );
         final l10n = lookupAskLocalizations(v.locale);
         expectNoErrors(tester);
@@ -43,13 +43,17 @@ void main() {
         );
         expect(find.text('Pricing experiments'), findsOneWidget);
         expect(
-          find.text('… a 5% loyalty discount on renewals …'),
+          find.byWidgetPredicate(
+            (w) =>
+                w is StrataHighlightedText &&
+                w.text == '… a 5% loyalty discount on renewals …',
+          ),
           findsOneWidget,
         );
         expect(find.text(l10n.resultsCount(count: 2)), findsOneWidget);
         expect(find.bySemanticsLabel(l10n.searchMode), findsOneWidget);
         expectNoErrors(tester);
-        if (v.textScale == 1) await expectAccessible(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
         await tester.tap(find.text('Pricing experiments'));
         await tester.pump();
         await tester.pump();
@@ -73,7 +77,8 @@ void main() {
           tester,
           v,
           const SearchScreen(initialQuery: 'pricing'),
-          fake,
+          fake: fake,
+          scaffold: true,
         );
         fake.searchAnswer.returns(AskFixtures.semanticOffline);
         final l10n = lookupAskLocalizations(v.locale);
@@ -94,13 +99,70 @@ void main() {
         await expectAccessible(tester);
       });
 
+      testWidgets('hybrid results with highlights and scores $v', (
+        tester,
+      ) async {
+        final fake = FakeCoreApi()..searchAnswer.returns(AskFixtures.hybrid);
+        await pumpVariant(
+          tester,
+          v,
+          const SearchScreen(initialQuery: 'pricing'),
+          fake: fake,
+          scaffold: true,
+        );
+        final l10n = lookupAskLocalizations(v.locale);
+        expectNoErrors(tester);
+        expect(find.text(l10n.score(value: '0.91')), findsOneWidget);
+        expect(find.text(l10n.score(value: '0.74')), findsOneWidget);
+        final hits = tester
+            .widgetList<StrataHighlightedText>(
+              find.byType(StrataHighlightedText),
+            )
+            .toList();
+        expect(hits.map((h) => h.highlights), [
+          [const TextRange(start: 2, end: 9)],
+          [const TextRange(start: 17, end: 24)],
+        ]);
+        expect(hits.map((h) => h.textDirection), [
+          TextDirection.ltr,
+          TextDirection.rtl,
+        ]);
+        await expectAccessible(tester);
+      });
+
+      testWidgets('modes the core cannot run are off $v', (tester) async {
+        final fake = FakeCoreApi()
+          ..searchAnswer.returns(AskFixtures.keywordOnly);
+        await pumpVariant(
+          tester,
+          v,
+          const SearchScreen(initialQuery: 'pricing'),
+          fake: fake,
+          scaffold: true,
+        );
+        final l10n = lookupAskLocalizations(v.locale);
+        final modes = tester.widget<SegmentedButton<SearchMode>>(
+          find.byType(SegmentedButton<SearchMode>),
+        );
+        expect(
+          {for (final s in modes.segments) s.value: s.enabled},
+          {
+            SearchMode.keyword: true,
+            SearchMode.semantic: false,
+            SearchMode.hybrid: false,
+          },
+        );
+        expect(find.text(l10n.score(value: '0.00')), findsNothing);
+      });
+
       testWidgets('no results $v', (tester) async {
         final fake = FakeCoreApi()..searchAnswer.returns(AskFixtures.noResults);
         await pumpVariant(
           tester,
           v,
           const SearchScreen(initialQuery: 'zz'),
-          fake,
+          fake: fake,
+          scaffold: true,
         );
         expect(
           find.text(lookupAskLocalizations(v.locale).noResults(query: 'zz')),
@@ -117,7 +179,8 @@ void main() {
           tester,
           v,
           const SearchScreen(initialQuery: 'x'),
-          fake,
+          fake: fake,
+          scaffold: true,
         );
         expect(
           find.text(lookupAskLocalizations(v.locale).errorTitle),

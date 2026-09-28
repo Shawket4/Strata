@@ -69,12 +69,25 @@ impl VaultService {
         Ok(out)
     }
 
-    /// Accepts (`true`) or rejects a pending suggestion, applying its effect.
+    /// Accepts (`true`) or rejects a pending suggestion, applying its effect, now (an online
+    /// decision: the server's clock is the time of the decision).
     pub async fn decide_suggestion(
         &self,
         scope: &UserScope,
         id: SuggestionId,
         accept: bool,
+    ) -> Result<SuggestionView> {
+        self.decide_suggestion_at(scope, id, accept, None).await
+    }
+
+    /// [`Self::decide_suggestion`] made on a device at `at` (UTC; `None` = now): notes an
+    /// acceptance creates get `at` as `created`/`updated`.
+    pub async fn decide_suggestion_at(
+        &self,
+        scope: &UserScope,
+        id: SuggestionId,
+        accept: bool,
+        at: Option<chrono::DateTime<chrono::Utc>>,
     ) -> Result<SuggestionView> {
         self.exec(scope, move |core, scope| {
             Box::pin(async move {
@@ -89,7 +102,7 @@ impl VaultService {
                 // AI suggestions (filing, entity links, custody, tasks, corrections, accepted
                 // duplicates) are decided by the AI pipelines' rules.
                 if crate::ops::ai_decide::handles(&s.kind, accept) {
-                    return core.decide_ai(scope, s, accept, None).await;
+                    return core.decide_ai(scope, s, accept, None, at).await;
                 }
                 // A pushed op's result is stored with the decision below, not with the
                 // keep-both writes before it (they are idempotent if the op is replayed).

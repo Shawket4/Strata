@@ -753,95 +753,98 @@ class _SourcePreview extends ConsumerWidget {
       explicitChildNodes: true,
       child: ColoredBox(
         color: colors.surface,
-        child: ListView(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(StrataSpacing.s4),
-          children: [
-            Semantics(
-              header: true,
-              child: Text(
-                l10n.sourcePreview,
-                style: text.bodySmall.withWeight(FontWeight.w700),
-              ),
-            ),
-            const SizedBox(height: StrataSpacing.s3),
-            if (shown == null)
-              Text(
-                l10n.sourcePreviewHint,
-                style: text.bodySmall.copyWith(color: colors.text2),
-              )
-            else if (preview case AsyncError(:final error))
-              Text(
-                l10n.errorMessage(
-                  code: error is CoreFailure ? error.code : 'internal',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                header: true,
+                child: Text(
+                  l10n.sourcePreview,
+                  style: text.bodySmall.withWeight(FontWeight.w700),
                 ),
-                style: text.bodySmall.copyWith(color: colors.text2),
-              )
-            else if (value == null)
-              const AskLoading()
-            else ...[
-              Text(value.title, style: text.titleSmall),
-              Text(
-                value.path,
-                textDirection: TextDirection.ltr,
-                style: text.monoSmall.copyWith(color: colors.text2),
               ),
-              if (value.noteId == null)
+              const SizedBox(height: StrataSpacing.s3),
+              if (shown == null)
                 Text(
-                  l10n.noteMissing,
+                  l10n.sourcePreviewHint,
                   style: text.bodySmall.copyWith(color: colors.text2),
-                ),
-              if (value.heading != null || value.dateLabel != null) ...[
-                const SizedBox(height: StrataSpacing.s2),
-                Wrap(
-                  spacing: StrataSpacing.s2,
-                  children: [
-                    if (value.heading case final heading?)
-                      Text(heading, style: text.bodySmall),
-                    if (value.dateLabel case final date?)
-                      Text(
-                        date,
-                        style: text.caption.copyWith(color: colors.text2),
-                      ),
-                  ],
-                ),
-              ],
-              if (value.blockText case final block?) ...[
-                const SizedBox(height: StrataSpacing.s2),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.accentTint,
-                    borderRadius: StrataRadii.cardRadius,
+                )
+              else if (preview case AsyncError(:final error))
+                Text(
+                  l10n.errorMessage(
+                    code: error is CoreFailure ? error.code : 'internal',
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(StrataSpacing.s3),
-                    child: Text(
-                      block,
-                      textDirection: textDirectionOf(value.blockDir),
-                      textAlign: TextAlign.start,
-                      style: text.body,
+                  style: text.bodySmall.copyWith(color: colors.text2),
+                )
+              else if (value == null)
+                const AskLoading()
+              else ...[
+                Text(value.title, style: text.titleSmall),
+                Text(
+                  value.path,
+                  textDirection: TextDirection.ltr,
+                  style: text.monoSmall.copyWith(color: colors.text2),
+                ),
+                if (value.noteId == null)
+                  Text(
+                    l10n.noteMissing,
+                    style: text.bodySmall.copyWith(color: colors.text2),
+                  ),
+                if (value.heading != null || value.dateLabel != null) ...[
+                  const SizedBox(height: StrataSpacing.s2),
+                  Wrap(
+                    spacing: StrataSpacing.s2,
+                    children: [
+                      if (value.heading case final heading?)
+                        Text(heading, style: text.bodySmall),
+                      if (value.dateLabel case final date?)
+                        Text(
+                          date,
+                          style: text.caption.copyWith(color: colors.text2),
+                        ),
+                    ],
+                  ),
+                ],
+                if (value.blockText case final block?) ...[
+                  const SizedBox(height: StrataSpacing.s2),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.accentTint,
+                      borderRadius: StrataRadii.cardRadius,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(StrataSpacing.s3),
+                      child: Text(
+                        block,
+                        textDirection: textDirectionOf(value.blockDir),
+                        textAlign: TextAlign.start,
+                        style: text.body,
+                      ),
                     ),
                   ),
-                ),
+                ],
+                if (value.tags.isNotEmpty) ...[
+                  const SizedBox(height: StrataSpacing.s2),
+                  Wrap(
+                    spacing: StrataSpacing.s1,
+                    runSpacing: StrataSpacing.s1,
+                    children: [
+                      for (final tag in value.tags) Chip(label: Text(tag)),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: StrataSpacing.s3),
+                if (open != null && value.noteId != null)
+                  FilledButton.icon(
+                    onPressed: () => open(shown.noteId, shown.anchor),
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: Text(l10n.openAtBlock),
+                  ),
               ],
-              if (value.tags.isNotEmpty) ...[
-                const SizedBox(height: StrataSpacing.s2),
-                Wrap(
-                  spacing: StrataSpacing.s1,
-                  runSpacing: StrataSpacing.s1,
-                  children: [
-                    for (final tag in value.tags) Chip(label: Text(tag)),
-                  ],
-                ),
-              ],
-              const SizedBox(height: StrataSpacing.s3),
-              if (open != null && value.noteId != null)
-                FilledButton.icon(
-                  onPressed: () => open(shown.noteId, shown.anchor),
-                  icon: const Icon(Icons.open_in_new, size: 18),
-                  label: Text(l10n.openAtBlock),
-                ),
             ],
-          ],
+          ),
         ),
       ),
     );

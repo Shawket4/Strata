@@ -53,5 +53,6 @@
   "answerFailed": "توقفت هذه الإجابة مبكرًا.",
   "savedAsNote": "تم الحفظ كملاحظة",
   "openSavedNote": "محفوظة · افتح الملاحظة",
-  "citationMarker": "الاستشهاد {index}"
+  "citationMarker": "الاستشهاد {index}",
+  "score": "الدرجة {value}"
 }

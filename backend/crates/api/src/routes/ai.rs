@@ -116,6 +116,10 @@ pub struct SaveAskRequest {
     /// Note title (file name in `notes/`); default: the question.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    /// When the user saved it on the device (UTC; required): the note's `created` and
+    /// `updated`. More than `max_future_skew_secs` ahead of the server's clock is
+    /// `422 created_in_future`.
+    pub created: chrono::DateTime<chrono::Utc>,
     /// Create even if it looks like a duplicate.
     #[serde(default)]
     pub force: bool,
@@ -398,6 +402,7 @@ pub async fn save_ask(
             CreateNote {
                 path: format!("notes/{name}.md"),
                 content,
+                created: req.created,
                 id: None,
                 force: req.force,
             },

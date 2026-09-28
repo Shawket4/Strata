@@ -163,6 +163,10 @@ pub struct CreateEntityRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>, format = "ulid")]
     pub id: Option<Ulid>,
+    /// When the item was created on the device (UTC; required, never the time the server
+    /// receives it). More than `max_future_skew_secs` ahead of the server's clock is
+    /// `422 created_in_future`.
+    pub created: DateTime<Utc>,
     /// Create even if it looks like a duplicate (records keep-both).
     #[serde(default)]
     pub force: bool,
@@ -386,6 +390,7 @@ pub(crate) fn new_entity(kind: EntityKind, b: CreateEntityRequest) -> NewEntity 
         fields: b.fields,
         parent: b.parent_id.map(NoteId::from_ulid),
         id: b.id.map(NoteId::from_ulid),
+        created: b.created,
         force: b.force,
     }
 }

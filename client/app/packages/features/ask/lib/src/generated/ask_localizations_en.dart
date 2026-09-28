@@ -204,4 +204,9 @@ class AskLocalizationsEn extends AskLocalizations {
   String citationMarker({required int index}) {
     return 'Citation $index';
   }
+
+  @override
+  String score({required String value}) {
+    return 'Score $value';
+  }
 }

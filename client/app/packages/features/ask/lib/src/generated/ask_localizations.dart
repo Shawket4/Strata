@@ -421,6 +421,12 @@ abstract class AskLocalizations {
   /// In en, this message translates to:
   /// **'Citation {index}'**
   String citationMarker({required int index});
+
+  /// A semantic or hybrid result's score.
+  ///
+  /// In en, this message translates to:
+  /// **'Score {value}'**
+  String score({required String value});
 }
 
 class _AskLocalizationsDelegate

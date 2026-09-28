@@ -1405,7 +1405,11 @@ abstract final class StrataFixtures {
       ),
     ],
     availability: Availability.available,
-    availableModes: [],
+    availableModes: [
+      SearchMode.keyword,
+      SearchMode.semantic,
+      SearchMode.hybrid,
+    ],
   );
 
   /// An answer with a citation.

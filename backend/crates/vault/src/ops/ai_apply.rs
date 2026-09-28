@@ -357,6 +357,9 @@ pub struct AiChangeSet {
     pub ai_replies: Vec<(SuggestionId, ReplyId, String)>,
     /// Jobs to enqueue.
     pub jobs: Vec<NewJob>,
+    /// When the user made the decision on their device (UTC): `created`/`updated` of the
+    /// notes this write creates. `None` (AI jobs) = the server's clock.
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 impl AiChangeSet {
@@ -391,6 +394,7 @@ impl AiChangeSet {
             hints: Vec::new(),
             ai_replies: Vec::new(),
             jobs: Vec::new(),
+            created_at: None,
         }
     }
 
@@ -767,9 +771,9 @@ impl Core {
         id: NoteId,
         path: &str,
         mut doc: Document,
-        now: &chrono::DateTime<chrono::FixedOffset>,
+        created: &chrono::DateTime<chrono::Utc>,
     ) -> Result<()> {
-        prepare::stamp(&mut doc, id, Some(now), Some(now))?;
+        prepare::stamp(&mut doc, id, Some(created), Some(created))?;
         ov.original.insert(path.to_owned(), None);
         Self::ov_put(ov, path, doc.render());
         ov.created.insert(id, path.to_owned());
@@ -825,9 +829,8 @@ impl Core {
             return Ok(AiApplied::Stale);
         }
         let mut tx = self.begin(&scope).await?;
-        let tz = self.tz(&mut tx).await?;
-        let local_now = self.local_now(tz);
         let now = self.now();
+        let created = set.created_at.unwrap_or(now);
         let mut ov = Overlay::default();
 
         // New notes first, so edges and citations can point at them.
@@ -838,7 +841,7 @@ impl Core {
             let doc =
                 item_render::entity::skeleton(NoteKind::Concept, &c.name, &stem, Vec::new(), &body)
                     .map_err(|e| prepare::render_error(&e))?;
-            Self::ov_create(&mut ov, c.id, &path, doc, &local_now)?;
+            Self::ov_create(&mut ov, c.id, &path, doc, &created)?;
         }
         for e in &set.entities {
             let folder = e.kind.default_folder();
@@ -859,7 +862,7 @@ impl Core {
                 item_render::entity::ENTITY_BODY,
             )
             .map_err(|e| prepare::render_error(&e))?;
-            Self::ov_create(&mut ov, e.id, &path, doc, &local_now)?;
+            Self::ov_create(&mut ov, e.id, &path, doc, &created)?;
         }
         for n in &set.ai_notes {
             if !n.path.starts_with("_ai/") || !n.path.ends_with(".md") {
@@ -887,7 +890,7 @@ impl Core {
                 doc.frontmatter_mut()
                     .set_text(KnownKey::Title, n.title.trim())
                     .map_err(frontmatter_err)?;
-                Self::ov_create(&mut ov, n.id, &n.path, doc, &local_now)?;
+                Self::ov_create(&mut ov, n.id, &n.path, doc, &created)?;
             }
         }
         self.ov_block_ids(&mut ov, &set.block_ids).await?;

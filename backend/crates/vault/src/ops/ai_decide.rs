@@ -574,7 +574,12 @@ impl Core {
         s: Suggestion,
         accept: bool,
         edits: Option<SuggestionEdits>,
+        at: Option<DateTime<Utc>>,
     ) -> Result<SuggestionView> {
+        if let Some(at) = &at {
+            self.check_created(at)?;
+        }
+        let at = at.unwrap_or_else(|| self.now());
         let edits = edits.unwrap_or_default();
         let id = s.id;
         let subject = s.note_id.filter(|n| self.live_kind(*n).is_some());
@@ -584,6 +589,7 @@ impl Core {
             subject.unwrap_or(NoteId::from_ulid(ulid::Ulid::nil())),
         )
         .by_user(&format!("{op} {}", s.kind));
+        set.created_at = Some(at);
         if !accept {
             Self::plan_reject(&mut set, &s)?;
             return self.finish_decision(scope, set, subject, id).await;
@@ -680,7 +686,7 @@ impl Core {
                     recurrence: edits.recurrence.clone().or(p.recurrence),
                     reminders: edits.reminders.clone().unwrap_or(p.reminders),
                     force: true,
-                    ..NewTask::default()
+                    ..NewTask::new(at)
                 };
                 let receipt = self.receipt.take();
                 let created = self.create_task(scope, req).await;
@@ -845,7 +851,7 @@ impl Core {
         let (spath, _) = self.live(survivor)?;
         let mut tx = self.begin(&scope).await?;
         let tz = self.tz(&mut tx).await?;
-        let today = self.local_now(tz).format("%Y-%m-%d").to_string();
+        let today = self.today(tz).format("%Y-%m-%d").to_string();
         let state = self.state()?;
         let index = state.path_index();
         let ltext = self.read_text(&lpath).await?.ok_or(VaultError::NotFound)?;
@@ -1012,8 +1018,8 @@ impl Core {
 }
 
 impl VaultService {
-    /// Accepts (with optional `edits`) or rejects a pending suggestion. Kinds without edit
-    /// support refuse non-empty edits.
+    /// Accepts (with optional `edits`) or rejects a pending suggestion, now. Kinds without
+    /// edit support refuse non-empty edits.
     pub async fn decide_suggestion_with(
         &self,
         scope: &UserScope,
@@ -1021,9 +1027,23 @@ impl VaultService {
         accept: bool,
         edits: Option<SuggestionEdits>,
     ) -> Result<SuggestionView> {
+        self.decide_suggestion_with_at(scope, id, accept, edits, None)
+            .await
+    }
+
+    /// [`Self::decide_suggestion_with`] made on a device at `at` (UTC; `None` = now): notes
+    /// an acceptance creates get `at` as `created`/`updated`.
+    pub async fn decide_suggestion_with_at(
+        &self,
+        scope: &UserScope,
+        id: SuggestionId,
+        accept: bool,
+        edits: Option<SuggestionEdits>,
+        at: Option<DateTime<Utc>>,
+    ) -> Result<SuggestionView> {
         let edits = edits.filter(|e| *e != SuggestionEdits::default());
         if edits.is_none() {
-            return self.decide_suggestion(scope, id, accept).await;
+            return self.decide_suggestion_at(scope, id, accept, at).await;
         }
         self.exec(scope, move |core, scope| {
             Box::pin(async move {
@@ -1040,7 +1060,7 @@ impl VaultService {
                         "edits are not supported for this suggestion kind",
                     ));
                 }
-                core.decide_ai(scope, s, true, edits).await
+                core.decide_ai(scope, s, true, edits, at).await
             })
         })
         .await

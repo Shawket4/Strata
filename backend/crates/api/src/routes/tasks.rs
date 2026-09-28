@@ -220,6 +220,16 @@ pub struct CreateTaskRequest {
     /// Client-generated block ID (`t-<ulid>`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
+    /// When the task was created on the device (UTC; required): its date in the user's time
+    /// zone picks the month heading of `tasks/Tasks.md`, and a `tasks/Tasks.md` this create
+    /// makes gets it as `created`/`updated`. More than `max_future_skew_secs` ahead of the
+    /// server's clock is `422 created_in_future`.
+    pub created: DateTime<Utc>,
+    /// The ID a `tasks/Tasks.md` this create makes gets (the device's ID for it); ignored
+    /// when the note exists or `note_id` is given.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<String>, format = "ulid")]
+    pub home_id: Option<Ulid>,
     /// Create even if it looks like a duplicate (records keep-both).
     #[serde(default)]
     pub force: bool,
@@ -369,6 +379,8 @@ pub async fn create_task(
                 priority: b.priority.map(Into::into),
                 note: b.note_id.map(NoteId::from_ulid),
                 id: b.id,
+                created: b.created,
+                home_id: b.home_id.map(NoteId::from_ulid),
                 force: b.force,
             },
         )

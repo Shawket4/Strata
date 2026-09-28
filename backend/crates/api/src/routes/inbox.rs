@@ -26,6 +26,10 @@ use crate::wire::{Binary, DuplicateCandidate, MatchLevel, MsgPack, MsgPackConfig
 pub struct CaptureRequest {
     /// The captured text (saved verbatim as the note body).
     pub text: String,
+    /// When it was captured on the device (UTC; required): names the inbox file
+    /// (`inbox/YYYY-MM-DD-HHmmss.md`, UTC) and is its `created`. More than
+    /// `max_future_skew_secs` ahead of the server's clock is `422 created_in_future`.
+    pub created: DateTime<Utc>,
 }
 
 /// A saved capture.
@@ -495,8 +499,9 @@ pub async fn capture(
     body: MsgPack<CaptureRequest>,
 ) -> Result<impl Responder, actix_web::Error> {
     state.check_capture_limit(auth.user_id())?;
+    let b = body.into_inner();
     let c = vault
-        .capture(auth.scope(), body.into_inner().text)
+        .capture(auth.scope(), b.text, b.created)
         .await
         .or_problem()?;
     Ok(MsgPack(Capture {

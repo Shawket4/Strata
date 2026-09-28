@@ -11,17 +11,29 @@ import 'package:strata_ui/strata_ui.dart';
 /// results with snippets. Expanded adds a preview of the selected result.
 class SearchScreen extends StatelessWidget {
   /// Creates Search.
-  const new({super.key, this.initialQuery = '', this.onOpenNote});
+  const new({
+    super.key,
+    this.initialQuery = '',
+    this.initialMode = SearchMode.keyword,
+    this.onOpenNote,
+  });
 
   /// Query shown first.
   final String initialQuery;
+
+  /// Mode chosen first.
+  final SearchMode initialMode;
 
   /// Opens a note.
   final OpenNoteAt? onOpenNote;
 
   @override
   Widget build(BuildContext context) => AskLocalizationScope(
-    child: _Search(initialQuery: initialQuery, onOpenNote: onOpenNote),
+    child: _Search(
+      initialQuery: initialQuery,
+      initialMode: initialMode,
+      onOpenNote: onOpenNote,
+    ),
   );
 }
 
@@ -41,9 +53,14 @@ NodeKind _kind(String kind) => switch (kind) {
 };
 
 class _Search extends HookConsumerWidget {
-  const new({required this.initialQuery, required this.onOpenNote});
+  const new({
+    required this.initialQuery,
+    required this.initialMode,
+    required this.onOpenNote,
+  });
 
   final String initialQuery;
+  final SearchMode initialMode;
   final OpenNoteAt? onOpenNote;
 
   @override
@@ -52,13 +69,15 @@ class _Search extends HookConsumerWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final query = useState(initialQuery);
-    final mode = useState(SearchMode.keyword);
+    final mode = useState(initialMode);
     final selected = useState<String?>(null);
     final controller = useTextEditingController(text: initialQuery);
     final expanded = SizeClass.of(context) == SizeClass.expanded;
     final async = query.value.isEmpty
         ? null
         : ref.watch(searchProvider(query.value, mode.value));
+    // The modes the core can run now (all, before the first answer).
+    final available = async?.value?.availableModes;
     final open = onOpenNote;
 
     Widget results;
@@ -134,6 +153,10 @@ class _Search extends HookConsumerWidget {
                       ButtonSegment(
                         value: value,
                         label: Text(_modeLabel(l10n, value)),
+                        enabled:
+                            available == null ||
+                            value == mode.value ||
+                            available.contains(value),
                       ),
                   ],
                   selected: {mode.value},
@@ -258,6 +281,7 @@ class _Results extends StatelessWidget {
                     hit: view.results[i],
                     selected: view.results[i].noteId == selected,
                     onTap: () => onTap(view.results[i]),
+                    showScore: view.mode != SearchMode.keyword,
                   ),
                 ],
               ],
@@ -270,11 +294,19 @@ class _Results extends StatelessWidget {
 }
 
 class _HitTile extends StatelessWidget {
-  const new({required this.hit, required this.selected, required this.onTap});
+  const new({
+    required this.hit,
+    required this.selected,
+    required this.onTap,
+    required this.showScore,
+  });
 
   final SearchHit hit;
   final bool selected;
   final VoidCallback onTap;
+
+  /// Semantic and hybrid results show the server's score.
+  final bool showScore;
 
   @override
   Widget build(BuildContext context) {
@@ -301,9 +333,25 @@ class _HitTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        hit.title,
-                        style: text.body.withWeight(FontWeight.w600),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              hit.title,
+                              textDirection: textDirectionOf(hit.titleDir),
+                              textAlign: TextAlign.start,
+                              style: text.body.withWeight(FontWeight.w600),
+                            ),
+                          ),
+                          if (showScore)
+                            Text(
+                              context.askL10n.score(
+                                value: hit.score.toStringAsFixed(2),
+                              ),
+                              style: text.caption.copyWith(color: colors.text2),
+                            ),
+                        ],
                       ),
                       Text(
                         hit.path,
@@ -311,9 +359,10 @@ class _HitTile extends StatelessWidget {
                         style: text.monoSmall.copyWith(color: colors.text2),
                       ),
                       if (hit.snippet.isNotEmpty)
-                        Text(
+                        StrataHighlightedText(
                           hit.snippet,
-                          textAlign: TextAlign.start,
+                          highlights: textRangesOf(hit.highlights),
+                          textDirection: textDirectionOf(hit.snippetDir),
                           style: text.bodySmall.copyWith(color: colors.text2),
                         ),
                     ],
@@ -349,7 +398,14 @@ class _Preview extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.all(StrataSpacing.s6),
         children: [
-          Semantics(header: true, child: Text(note.title, style: text.title)),
+          Semantics(
+            header: true,
+            child: Text(
+              note.title,
+              textDirection: textDirectionOf(note.titleDir),
+              style: text.title,
+            ),
+          ),
           Text(
             note.path,
             textDirection: TextDirection.ltr,

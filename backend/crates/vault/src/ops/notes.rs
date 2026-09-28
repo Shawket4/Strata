@@ -30,6 +30,9 @@ pub struct CreateNote {
     pub path: String,
     /// Full file content (frontmatter optional; `id`, `created`, `updated` are set).
     pub content: String,
+    /// When the note was created on the device (UTC): its `created` (unless the content has
+    /// one) and `updated`.
+    pub created: chrono::DateTime<chrono::Utc>,
     /// Client-generated ID (offline creates keep their IDs).
     pub id: Option<NoteId>,
     /// Create even if it looks like a duplicate (records keep-both).
@@ -240,21 +243,18 @@ impl Core {
         Ok(commit)
     }
 
-    /// Prepares new note content: stamps `id`/`created`/`updated` and gives task lines block
-    /// IDs. `created` is kept when present.
+    /// Prepares new note content: stamps `id`, `created` (kept when the content has one) and
+    /// `updated` (when given; UTC) and gives task lines block IDs.
     pub(crate) async fn prepare(
         &self,
         tx: &mut ScopedTx,
         content: &str,
         id: NoteId,
-        created_fallback: Option<chrono::DateTime<chrono::FixedOffset>>,
-        stamp_updated: bool,
+        created: &chrono::DateTime<chrono::Utc>,
+        updated: Option<&chrono::DateTime<chrono::Utc>>,
     ) -> Result<Document> {
-        let tz = self.tz(tx).await?;
-        let now = self.local_now(tz);
         let mut doc = Document::parse(content);
-        let created = created_fallback.unwrap_or(now);
-        prepare::stamp(&mut doc, id, Some(&created), stamp_updated.then_some(&now))?;
+        prepare::stamp(&mut doc, id, Some(created), updated)?;
         let taken = taken_task_ids(tx, doc.body(), id).await?;
         let body = prepare::assign_task_ids(doc.body(), self.ids(), &taken);
         if body != doc.body() {
@@ -333,6 +333,7 @@ impl Core {
         author: Author,
     ) -> Result<NoteView> {
         validate_note_path(&req.path)?;
+        self.check_created(&req.created)?;
         let state = self.state()?;
         if state.notes.contains_key(&req.path) || state.attachments.contains(&req.path) {
             return Err(VaultError::PathTaken);
@@ -352,7 +353,9 @@ impl Core {
             .id
             .or(given)
             .unwrap_or_else(|| NoteId::generate(self.ids()));
-        let doc = self.prepare(&mut tx, &req.content, id, None, true).await?;
+        let doc = self
+            .prepare(&mut tx, &req.content, id, &req.created, Some(&req.created))
+            .await?;
         let candidates = self.check_duplicates(&mut tx, &req.path, &doc, id).await?;
         let mut changes = Vec::new();
         if !candidates.is_empty() {
@@ -400,13 +403,21 @@ impl Core {
         {
             return Err(VaultError::invalid("the id property cannot change"));
         }
+        let now = self.now();
         let old_created = Document::parse(&old)
             .frontmatter()
-            .and_then(|f| f.created().ok().flatten());
+            .and_then(|f| f.created().ok().flatten())
+            .map_or(now, |c| c.to_utc());
         let mut tx = self.begin(&scope).await?;
         // `updated` records the user's edits; AI edits (frontmatter keys, AI sections) keep it.
         let doc = self
-            .prepare(&mut tx, &content, id, old_created, author == Author::User)
+            .prepare(
+                &mut tx,
+                &content,
+                id,
+                &old_created,
+                (author == Author::User).then_some(&now),
+            )
             .await?;
         let mut changes = vec![(path.clone(), Some(doc.render().into_bytes()))];
         if let Some(mut sc) = self.sidecar(id).await? {
@@ -707,30 +718,25 @@ impl Core {
         self.view(id).await
     }
 
-    /// Saves a capture in `inbox/YYYY-MM-DD-HHmmss.md` before anything else (PLAN §6.9,
-    /// principle 5). Never refused as a duplicate: likely duplicates become a `duplicate`
-    /// suggestion on the inbox note.
-    pub async fn capture(&mut self, scope: UserScope, text: String) -> Result<Captured> {
-        self.capture_as(scope, text, None, None).await
-    }
-
-    /// [`Self::capture`] with a client-generated ID and the device's capture time (offline
-    /// captures keep both, §7.5 Sync).
+    /// Saves a capture in `inbox/YYYY-MM-DD-HHmmss.md` (UTC) before anything else (PLAN §6.9,
+    /// principle 5), with a client-generated ID (or a new one) and the device's capture time
+    /// (offline captures keep both, §7.5 Sync). Never refused as a duplicate: likely
+    /// duplicates become a `duplicate` suggestion on the inbox note.
     pub async fn capture_as(
         &mut self,
         scope: UserScope,
         text: String,
         id: Option<NoteId>,
-        created: Option<chrono::DateTime<chrono::FixedOffset>>,
+        created: chrono::DateTime<chrono::Utc>,
     ) -> Result<Captured> {
+        self.check_created(&created)?;
         if let Some(id) = id
             && self.state()?.contains_id(id)
         {
             return Err(VaultError::invalid("a note with this id already exists"));
         }
         let mut tx = self.begin(&scope).await?;
-        let tz = self.tz(&mut tx).await?;
-        let now = created.unwrap_or_else(|| self.local_now(tz));
+        let now = created;
         let path = {
             let state = self.state()?;
             item_render::paths::capture_path(

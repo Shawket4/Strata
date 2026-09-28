@@ -346,6 +346,10 @@ pub struct CreateDocumentRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>, format = "ulid")]
     pub id: Option<Ulid>,
+    /// When the item was created on the device (UTC; required, never the time the server
+    /// receives it). More than `max_future_skew_secs` ahead of the server's clock is
+    /// `422 created_in_future`.
+    pub created: DateTime<Utc>,
     /// Create even if it looks like a duplicate.
     #[serde(default)]
     pub force: bool,
@@ -481,6 +485,10 @@ pub struct CreatePlaceRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>, format = "ulid")]
     pub id: Option<Ulid>,
+    /// When the item was created on the device (UTC; required, never the time the server
+    /// receives it). More than `max_future_skew_secs` ahead of the server's clock is
+    /// `422 created_in_future`.
+    pub created: DateTime<Utc>,
     /// Create even if it looks like a duplicate.
     #[serde(default)]
     pub force: bool,
@@ -638,6 +646,7 @@ pub async fn create_document(
         fields,
         parent_id: None,
         id: b.id,
+        created: b.created,
         force: b.force,
     };
     let note = vault
@@ -821,6 +830,7 @@ pub async fn create_place(
         fields,
         parent_id: b.parent_id,
         id: b.id,
+        created: b.created,
         force: b.force,
     };
     let note = vault

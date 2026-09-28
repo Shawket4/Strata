@@ -205,4 +205,9 @@ class AskLocalizationsAr extends AskLocalizations {
   String citationMarker({required int index}) {
     return 'الاستشهاد $index';
   }
+
+  @override
+  String score({required String value}) {
+    return 'الدرجة $value';
+  }
 }

@@ -388,8 +388,10 @@ async fn apply(
                 Err(e) => from_vault(&e)?,
             }
         }
-        Op::SuggestionAccept(p) => decide(ctx, rc, p.id, true, p.edits.clone()).await?,
-        Op::SuggestionReject(p) => decide(ctx, rc, p.id, false, None).await?,
+        Op::SuggestionAccept(p) => {
+            decide(ctx, rc, p.id, true, p.edits.clone(), Some(p.created)).await?
+        }
+        Op::SuggestionReject(p) => decide(ctx, rc, p.id, false, None, None).await?,
         Op::SuggestionReply(p) => {
             match rc
                 .armed(
@@ -419,6 +421,7 @@ async fn apply(
                 fields: p.fields.clone(),
                 parent: None,
                 id: Some(NoteId::from_ulid(p.id)),
+                created: p.created,
                 force: p.force,
             };
             create_entity(ctx, rc, req, Vec::new()).await?
@@ -453,6 +456,7 @@ async fn apply(
                 fields,
                 parent: None,
                 id: Some(NoteId::from_ulid(p.id)),
+                created: p.created,
                 force: p.force,
             };
             create_entity(ctx, rc, req, links).await?
@@ -485,6 +489,7 @@ async fn apply(
                 fields,
                 parent: p.parent_id.map(NoteId::from_ulid),
                 id: Some(NoteId::from_ulid(p.id)),
+                created: p.created,
                 force: p.force,
             };
             create_entity(ctx, rc, req, Vec::new()).await?
@@ -500,6 +505,8 @@ async fn apply(
                 priority: p.priority,
                 note: p.note_id.map(NoteId::from_ulid),
                 id: Some(p.id.clone()),
+                created: p.created,
+                home_id: p.home_id.map(NoteId::from_ulid),
                 force: p.force,
             };
             let block = p.id.clone();
@@ -569,6 +576,7 @@ async fn note_create(
         let req = CreateNote {
             path: path.clone(),
             content: p.content.clone(),
+            created: p.created,
             id: Some(id),
             force: p.force,
         };
@@ -706,7 +714,7 @@ async fn note_update(
 
 /// The path of a conflict copy of `path` made at `at` (the shared rule, in UTC).
 pub fn conflict_path(path: &str, at: DateTime<Utc>, n: u32) -> String {
-    item_render::paths::conflict_copy_path(path, at.naive_utc(), n)
+    item_render::paths::conflict_copy_path(path, &at, n)
 }
 
 /// Saves the device's content as a conflict copy, then records the `conflict` suggestion:
@@ -729,9 +737,11 @@ async fn conflict_copy(
     let mut made = None;
     for n in 1..=20 {
         let copy_path = conflict_path(path, now, n);
+        // The server makes the copy when it finds the conflict: its own clock is the time.
         let req = CreateNote {
             path: copy_path.clone(),
             content: content.to_owned(),
+            created: now,
             id: Some(copy_id),
             // The copy resembles the note by design: keep both.
             force: true,
@@ -791,20 +801,26 @@ async fn conflict_copy(
     Ok(result)
 }
 
-/// `suggestion.accept` (with optional edits, as `POST /suggestions/{id}/accept-with-edits`)
-/// and `suggestion.reject`.
+/// `suggestion.accept` (with optional edits, as `POST /suggestions/{id}/accept-with-edits`;
+/// `at` = the device's decision time, which notes it creates carry) and `suggestion.reject`.
 async fn decide(
     ctx: &PushContext<'_>,
     rc: &OpReceipt,
     id: ulid::Ulid,
     accept: bool,
     edits: Option<sm_ops::SuggestionEdits>,
+    at: Option<DateTime<Utc>>,
 ) -> Result<OpResult, Problem> {
     match rc
         .armed(
             applied_plain(),
-            ctx.vault
-                .decide_suggestion_with(ctx.scope, SuggestionId::from_ulid(id), accept, edits),
+            ctx.vault.decide_suggestion_with_at(
+                ctx.scope,
+                SuggestionId::from_ulid(id),
+                accept,
+                edits,
+                at,
+            ),
         )
         .await
     {

@@ -8,7 +8,7 @@
 
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, FixedOffset, NaiveDate};
+use chrono::{DateTime, FixedOffset, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use ulid::Ulid;
 use utoipa::ToSchema;
@@ -49,6 +49,9 @@ pub struct SyncNoteCreate {
     pub path: String,
     /// Full file content.
     pub content: String,
+    /// When it was created on the device (UTC; required): the new note's `created` and
+    /// `updated`.
+    pub created: DateTime<Utc>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,
@@ -90,8 +93,8 @@ pub struct SyncCapture {
     pub id: Ulid,
     /// Captured text.
     pub text: String,
-    /// Capture time on the device (names the inbox file).
-    pub created: DateTime<FixedOffset>,
+    /// Capture time on the device (UTC; names the inbox file).
+    pub created: DateTime<Utc>,
 }
 
 /// `relation.add`, `relation.remove`.
@@ -157,6 +160,9 @@ pub struct SyncSuggestionAccept {
     pub id: Ulid,
     /// Optional edits.
     pub edits: Option<SyncSuggestionEdits>,
+    /// When the user accepted on the device (UTC): `created`/`updated` of notes the
+    /// acceptance creates.
+    pub created: DateTime<Utc>,
 }
 
 /// `suggestion.reject`.
@@ -198,6 +204,9 @@ pub struct SyncEntityCreate {
     /// User fields.
     #[serde(default)]
     pub fields: BTreeMap<String, String>,
+    /// When it was created on the device (UTC; required): the new note's `created` and
+    /// `updated`.
+    pub created: DateTime<Utc>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,
@@ -262,6 +271,9 @@ pub struct SyncDocumentCreate {
     pub people: Vec<Ulid>,
     /// `expires`.
     pub expires: Option<NaiveDate>,
+    /// When it was created on the device (UTC; required): the new note's `created` and
+    /// `updated`.
+    pub created: DateTime<Utc>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,
@@ -305,6 +317,9 @@ pub struct SyncPlaceCreate {
     pub parent_id: Option<Ulid>,
     /// Address.
     pub address: Option<String>,
+    /// When it was created on the device (UTC; required): the new note's `created` and
+    /// `updated`.
+    pub created: DateTime<Utc>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,
@@ -334,6 +349,14 @@ pub struct SyncTaskCreate {
     pub reminders: Vec<LocalDateTime>,
     /// Priority.
     pub priority: Option<SyncPriority>,
+    /// When it was created on the device (UTC; required): its date in the user's time zone
+    /// picks the month heading of `tasks/Tasks.md`; a `tasks/Tasks.md` it makes gets it as
+    /// `created`/`updated`.
+    pub created: DateTime<Utc>,
+    /// The ID a `tasks/Tasks.md` this create makes gets (the device's ID for it).
+    #[serde(default)]
+    #[schema(value_type = Option<String>, format = "ulid")]
+    pub home_id: Option<Ulid>,
     /// Create even if duplicates exist.
     #[serde(default)]
     pub force: bool,

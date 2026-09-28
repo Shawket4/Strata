@@ -150,9 +150,14 @@ impl VaultService {
         ))
     }
 
-    /// `POST /capture`.
-    pub async fn capture(&self, scope: &UserScope, text: String) -> Result<Captured> {
-        on_actor!(self, scope, |core, s| core.capture(s, text))
+    /// `POST /capture`: the device's capture time `created` names the inbox file.
+    pub async fn capture(
+        &self,
+        scope: &UserScope,
+        text: String,
+        created: chrono::DateTime<chrono::Utc>,
+    ) -> Result<Captured> {
+        on_actor!(self, scope, |core, s| core.capture_as(s, text, None, created))
     }
 
     /// A capture pushed by a device: client-generated ID and capture time (sync).
@@ -161,13 +166,13 @@ impl VaultService {
         scope: &UserScope,
         text: String,
         id: NoteId,
-        created: chrono::DateTime<chrono::FixedOffset>,
+        created: chrono::DateTime<chrono::Utc>,
     ) -> Result<Captured> {
         on_actor!(self, scope, |core, s| core.capture_as(
             s,
             text,
             Some(id),
-            Some(created)
+            created
         ))
     }
 
