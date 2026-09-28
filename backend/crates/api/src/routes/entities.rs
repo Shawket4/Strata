@@ -409,6 +409,7 @@ pub(crate) fn entity_patch(b: PatchEntityRequest, if_match: Option<String>) -> E
         aliases: b.aliases,
         tags: b.tags,
         fields,
+        lists: BTreeMap::new(),
         parent: if b.clear_parent {
             Some(None)
         } else {

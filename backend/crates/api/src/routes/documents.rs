@@ -409,6 +409,11 @@ pub struct CustodyEventRequest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schema(value_type = Option<String>, format = "ulid")]
     pub source_note_id: Option<Ulid>,
+    /// The user's note on the event, written last on the custody line (whitespace runs become
+    /// one space). A note of wikilinks only is refused (`validation`): it would read back as
+    /// citations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 /// A place in a list.
@@ -768,6 +773,7 @@ pub async fn add_custody_event(
                 person: b.person_id.map(NoteId::from_ulid),
                 counterparty: b.counterparty_id.map(NoteId::from_ulid),
                 source: b.source_note_id.map(NoteId::from_ulid),
+                note: b.note,
             },
         )
         .await

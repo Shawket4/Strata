@@ -59,6 +59,7 @@ fn every_op() -> Vec<Op> {
         unset: vec!["phone".into()],
         add_aliases: vec!["Sam".into()],
         remove_aliases: vec![],
+        set_lists: BTreeMap::from([("phone".to_owned(), vec!["+20 1".to_owned()])]),
     };
     vec![
         Op::NoteCreate(o::NoteCreate {
@@ -157,6 +158,7 @@ fn every_op() -> Vec<Op> {
             place_id: None,
             person_id: Some(u(5)),
             counterparty_id: None,
+            note: Some("for the audit".into()),
         }),
         Op::PlaceCreate(o::PlaceCreate {
             created: strata_common::clock::default_test_epoch(),

@@ -230,6 +230,10 @@ pub struct SyncEntityPatch {
     /// Aliases to remove.
     #[serde(default)]
     pub remove_aliases: Vec<String>,
+    /// List values to set, each replacing the key's whole value (`tags`, `aliases`, several
+    /// phone numbers); an empty list removes the key.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub set_lists: BTreeMap<String, Vec<String>>,
 }
 
 /// `entity.merge`.
@@ -299,6 +303,9 @@ pub struct SyncDocumentCustody {
     /// Third party.
     #[schema(value_type = Option<String>, format = "ulid")]
     pub counterparty_id: Option<Ulid>,
+    /// The user's note on the event (one line), written last on the custody line.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub note: Option<String>,
 }
 
 /// `place.create`.

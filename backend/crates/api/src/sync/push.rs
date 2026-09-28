@@ -470,6 +470,7 @@ async fn apply(
                 person: p.person_id.map(NoteId::from_ulid),
                 counterparty: p.counterparty_id.map(NoteId::from_ulid),
                 source: None,
+                note: p.note.clone(),
             };
             match rc
                 .armed(applied_note(doc, false), v.add_custody_event(s, doc, event))
@@ -573,9 +574,16 @@ async fn note_create(
     let mut path = p.path.clone();
     // A path taken meanwhile gets a free name next to it: the device's note is never lost.
     for n in 2..=50 {
+        // The title rule (§6.4): a note written at `<stem> 2.md` keeps its name as `title`.
+        let content = match item_render::note::titled_for_path(&p.content, &p.path, &path) {
+            Ok(c) => c,
+            Err(_) => {
+                return from_vault(&VaultError::invalid("the frontmatter cannot be edited"));
+            }
+        };
         let req = CreateNote {
             path: path.clone(),
-            content: p.content.clone(),
+            content,
             created: p.created,
             id: Some(id),
             force: p.force,
@@ -904,11 +912,28 @@ async fn patch(
         for k in &p.unset {
             fields.insert(k.clone(), None);
         }
+        let mut set_lists = p.set_lists.clone();
+        let aliases = match set_lists.remove("aliases") {
+            // A whole list replaces the aliases; `add_aliases`/`remove_aliases` then apply to it.
+            Some(list) => {
+                let mut list = sync_model::apply::clean_list_value("aliases", &list);
+                list.retain(|a| !p.remove_aliases.contains(a));
+                for a in &p.add_aliases {
+                    if !list.contains(a) {
+                        list.push(a.clone());
+                    }
+                }
+                Some(list)
+            }
+            None => aliases,
+        };
+        let tags = set_lists.remove("tags");
         let req = VPatch {
             name: None,
             aliases,
-            tags: None,
+            tags,
             fields,
+            lists: set_lists,
             parent: None,
             if_match: Some(current.version.clone()),
             force: true,

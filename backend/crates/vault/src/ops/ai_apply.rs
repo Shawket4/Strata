@@ -953,6 +953,7 @@ impl Core {
                 place_id: c.place.map(|i| i.as_ulid()),
                 person_id: c.person.map(|i| i.as_ulid()),
                 counterparty_id: c.counterparty.map(|i| i.as_ulid()),
+                note: None,
             };
             let link = |u: ulid::Ulid| {
                 self.ov_path(&ov, NoteId::from_ulid(u))

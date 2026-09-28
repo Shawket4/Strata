@@ -73,6 +73,8 @@ pub struct EntityPatch {
     pub tags: Option<Vec<String>>,
     /// Sets (`Some`) or removes (`None`) user fields.
     pub fields: BTreeMap<String, Option<String>>,
+    /// Sets user fields to lists (several phone numbers); an empty list removes the field.
+    pub lists: BTreeMap<String, Vec<String>>,
     /// Places: sets (`Some(Some)`) or clears (`Some(None)`) the enclosing place.
     pub parent: Option<Option<NoteId>>,
     /// Current version, if the client checks it.
@@ -96,6 +98,8 @@ pub struct NewCustodyEvent {
     pub counterparty: Option<NoteId>,
     /// The note that states the event (cited); the document itself when absent.
     pub source: Option<NoteId>,
+    /// The user's note on the event (one line), written last on the custody line.
+    pub note: Option<String>,
 }
 
 fn validate_field(key: &str, value: &str) -> Result<()> {
@@ -301,6 +305,7 @@ impl Core {
                 .chain(patch.aliases.iter().flatten())
                 .chain(patch.tags.iter().flatten())
                 .chain(patch.fields.values().flatten())
+                .chain(patch.lists.values().flatten())
                 .map(String::as_str),
         )?;
         for (k, v) in &patch.fields {
@@ -308,6 +313,14 @@ impl Core {
                 return Err(VaultError::invalid("a field is not editable for this kind"));
             }
             if let Some(v) = v {
+                validate_field(k, v)?;
+            }
+        }
+        for (k, values) in &patch.lists {
+            if !user_fields(kind).contains(&k.as_str()) {
+                return Err(VaultError::invalid("a field is not editable for this kind"));
+            }
+            for v in values {
                 validate_field(k, v)?;
             }
         }
@@ -348,6 +361,7 @@ impl Core {
                 unset: Vec::new(),
                 add_aliases: Vec::new(),
                 remove_aliases: Vec::new(),
+                set_lists: patch.lists.clone(),
             };
             if let Some(aliases) = &patch.aliases {
                 let aliases = clean_list(aliases);
@@ -727,13 +741,20 @@ impl Core {
             place_id: ev.place.map(|i| i.as_ulid()),
             person_id: ev.person.map(|i| i.as_ulid()),
             counterparty_id: ev.counterparty.map(|i| i.as_ulid()),
+            note: ev.note.clone(),
         };
+        reject_nul(ev.note.iter().map(String::as_str))?;
         let event = sync_model::apply::custody_event(
             &op,
             |u| self.link_to(NoteId::from_ulid(u)).ok(),
             citations,
         )
-        .map_err(|_| VaultError::invalid("the event type's primary argument is missing"))?;
+        .map_err(|e| match e {
+            sync_model::apply::ApplyError::InvalidCustodyEvent(_) if ev.note.is_some() => {
+                VaultError::invalid("the note cannot be written on the custody line")
+            }
+            _ => VaultError::invalid("the event type's primary argument is missing"),
+        })?;
         let text = self.read_text(&path).await?.ok_or(VaultError::NotFound)?;
         let mut doc = Document::parse(&text);
         sync_model::apply::record_custody(&mut doc, event).map_err(|e| match e {
