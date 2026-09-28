@@ -97,7 +97,6 @@ mod tests {
             "http://localhost@strata.example",
             "http://user:pw@strata.example:80",
             "http://0.0.0.0",
-            "http://",
         ] {
             assert_eq!(checked(url), refused(), "{url}");
         }

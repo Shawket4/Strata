@@ -581,6 +581,12 @@ abstract class AccountsLocalizations {
   /// **'The server answered with an error ({status}).'**
   String errorServer({required String status});
 
+  /// Core error invalid_input on server_url with reason insecure_http: a plain-http server address that is not this device.
+  ///
+  /// In en, this message translates to:
+  /// **'Use an https:// address. Plain http:// works only for this device (localhost).'**
+  String get errorInsecureServer;
+
   /// Core error not_available.
   ///
   /// In en, this message translates to:

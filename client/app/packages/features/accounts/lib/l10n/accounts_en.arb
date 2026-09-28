@@ -386,6 +386,10 @@
       }
     }
   },
+  "errorInsecureServer": "Use an https:// address. Plain http:// works only for this device (localhost).",
+  "@errorInsecureServer": {
+    "description": "Core error invalid_input on server_url with reason insecure_http: a plain-http server address that is not this device."
+  },
   "errorNotAvailable": "This isn't available yet.",
   "@errorNotAvailable": {
     "description": "Core error not_available."

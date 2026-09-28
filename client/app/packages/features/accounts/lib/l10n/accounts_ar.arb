@@ -80,6 +80,7 @@
   "errorRateLimited": "محاولات كتير. استنى دقيقة وحاول تاني.",
   "errorInvalidInput": "راجع خانة {field}.",
   "errorServer": "الخادم رد بخطأ ({status}).",
+  "errorInsecureServer": "استخدم عنوان يبدأ بـ https://. عنوان http:// العادي بيشتغل بس مع الجهاز ده (localhost).",
   "errorNotAvailable": "ده مش متاح لسه.",
   "errorGeneric": "حصل خطأ ({code}).",
   "unsyncedItem": "{kind} · {time}",

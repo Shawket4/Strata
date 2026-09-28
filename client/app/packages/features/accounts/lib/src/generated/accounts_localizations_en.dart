@@ -314,6 +314,10 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   }
 
   @override
+  String get errorInsecureServer =>
+      'Use an https:// address. Plain http:// works only for this device (localhost).';
+
+  @override
   String get errorNotAvailable => 'This isn\'t available yet.';
 
   @override

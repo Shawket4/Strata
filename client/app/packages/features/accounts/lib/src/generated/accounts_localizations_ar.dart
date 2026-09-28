@@ -321,6 +321,10 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   }
 
   @override
+  String get errorInsecureServer =>
+      'استخدم عنوان يبدأ بـ https://. عنوان http:// العادي بيشتغل بس مع الجهاز ده (localhost).';
+
+  @override
   String get errorNotAvailable => 'ده مش متاح لسه.';
 
   @override

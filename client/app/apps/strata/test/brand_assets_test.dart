@@ -198,13 +198,13 @@ void main() {
 
     test('Linux icon and desktop entry', () {
       expect(_size('linux/runner/resources/app_icon.png'), 256);
-      final desktop = File('linux/runner/resources/app.strata.strata.desktop')
+      final desktop = File('linux/runner/resources/$_appId.desktop')
           .readAsStringSync();
       expect(desktop, contains('Name=Strata\n'));
-      expect(desktop, contains('Icon=app.strata.strata\n'));
-      expect(desktop, contains('StartupWMClass=app.strata.strata\n'));
+      expect(desktop, contains('Icon=$_appId\n'));
+      expect(desktop, contains('StartupWMClass=$_appId\n'));
       final cmake = File('linux/CMakeLists.txt').readAsStringSync();
-      expect(cmake, contains('set(APPLICATION_ID "app.strata.strata")'));
+      expect(cmake, contains('set(APPLICATION_ID "$_appId")'));
       expect(cmake, contains('"runner/resources/app_icon.png"'));
     });
 
@@ -221,6 +221,115 @@ void main() {
         expect(_size('assets/brand/$name.png'), size, reason: name);
       }
       expect(_colourType('assets/brand/icon-ios.png'), 2);
+    });
+  });
+
+  group('the app ID is $_appId on every platform', () {
+    test('Android application ID, namespace and activity package', () {
+      final gradle = File('android/app/build.gradle.kts').readAsStringSync();
+      expect(gradle, contains('namespace = "$_appId"\n'));
+      expect(gradle, contains('applicationId = "$_appId"\n'));
+      final kotlin = Directory('android/app/src/main/kotlin')
+          .listSync(recursive: true)
+          .whereType<File>()
+          .map((f) => f.path)
+          .toList();
+      expect(kotlin, [
+        'android/app/src/main/kotlin/com/shawket/strata/MainActivity.kt',
+      ]);
+      expect(
+        File(kotlin.single).readAsStringSync(),
+        startsWith('package $_appId\n'),
+      );
+    });
+
+    test('iOS and macOS bundle identifiers', () {
+      List<String> ids(String pbxproj) =>
+          RegExp(r'PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);')
+              .allMatches(File(pbxproj).readAsStringSync())
+              .map((m) => m[1]!)
+              .toList();
+      // Runner: Debug, Release, Profile; RunnerTests: the same three.
+      expect(ids('ios/Runner.xcodeproj/project.pbxproj')..sort(), [
+        for (var i = 0; i < 3; i++) _appId,
+        for (var i = 0; i < 3; i++) '$_appId.RunnerTests',
+      ]);
+      // The macOS Runner takes its identifier from AppInfo.xcconfig.
+      expect(ids('macos/Runner.xcodeproj/project.pbxproj'), [
+        for (var i = 0; i < 3; i++) '$_appId.RunnerTests',
+      ]);
+      expect(
+        File('macos/Runner/Configs/AppInfo.xcconfig').readAsStringSync(),
+        contains('PRODUCT_BUNDLE_IDENTIFIER = $_appId\n'),
+      );
+      for (final plist in [
+        'ios/Runner/Info.plist',
+        'macos/Runner/Info.plist',
+      ]) {
+        expect(
+          File(plist).readAsStringSync(),
+          contains(
+            '<key>CFBundleIdentifier</key>\n'
+            '\t<string>\$(PRODUCT_BUNDLE_IDENTIFIER)</string>',
+          ),
+          reason: plist,
+        );
+      }
+    });
+
+    test('Linux application ID', () {
+      expect(
+        File('linux/CMakeLists.txt').readAsStringSync(),
+        contains('set(APPLICATION_ID "$_appId")'),
+      );
+      expect(
+        File('linux/runner/resources/$_appId.desktop').existsSync(),
+        isTrue,
+      );
+    });
+
+    test('Windows version resource and notification app user model ID', () {
+      final rc = File('windows/runner/Runner.rc').readAsStringSync();
+      expect(rc, contains('VALUE "CompanyName", "com.shawket" "\\0"'));
+      expect(
+        File('lib/src/reminders/local_notifications_platform.dart')
+            .readAsStringSync(),
+        contains("appUserModelId: '$_appId',"),
+      );
+    });
+
+    test('no platform folder names the old ID', () {
+      const old = 'app.strata.strata';
+      for (final dir in [
+        'android',
+        'ios',
+        'macos',
+        'linux',
+        'windows',
+        'lib',
+      ]) {
+        for (final entity in Directory(dir).listSync(recursive: true)) {
+          if (entity.path.contains('/build/') ||
+              entity.path.contains('/Pods/') ||
+              entity.path.contains('/.gradle/') ||
+              entity.path.contains('/ephemeral/')) {
+            continue;
+          }
+          expect(entity.path, isNot(contains(old)));
+          expect(entity.path, isNot(contains('app/strata/strata')));
+          if (entity is! File || entity.path.endsWith('.png')) continue;
+          if (entity.path.endsWith('.ico') || entity.path.endsWith('.jar')) {
+            continue;
+          }
+          final text = entity.readAsStringSync();
+          expect(text, isNot(contains(old)), reason: entity.path);
+          expect(
+            text,
+            isNot(contains('app.strata.Strata')),
+            reason: entity.path,
+          );
+        }
+      }
     });
   });
 
@@ -252,6 +361,10 @@ void main() {
     );
   });
 }
+
+/// The app ID on every platform (docs/DECISIONS.md "App ID, server address,
+/// HTTPS first").
+const _appId = 'com.shawket.strata';
 
 /// The window background resource of every Android theme.
 const _background = '@color/strata_background';

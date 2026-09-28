@@ -19,8 +19,8 @@ abstract interface class CoreBootstrap {
 }
 
 /// The production bootstrap: `loadStrataCore`, the app-support directory
-/// from `strataAppDataDirectory`, the platform and the host name as the
-/// default device name.
+/// from `strataAppDataDirectory`, the platform, the host name as the default
+/// device name and the build's default server address.
 class NativeCoreBootstrap implements CoreBootstrap {
   /// Creates the bootstrap.
   const new();
@@ -33,6 +33,14 @@ class NativeCoreBootstrap implements CoreBootstrap {
     appDataDir: await bridge.strataAppDataDirectory(),
     platform: platformOf(defaultTargetPlatform),
     defaultDeviceName: io.Platform.localHostname,
+    defaultServerUrl: defaultServer,
+  );
+
+  /// The server address baked in at build time
+  /// (`--dart-define=STRATA_DEFAULT_SERVER=<url>`, docs/RUNBOOK.md §13);
+  /// empty when unset, which the core treats as no default.
+  static const String defaultServer = String.fromEnvironment(
+    'STRATA_DEFAULT_SERVER',
   );
 }
 
