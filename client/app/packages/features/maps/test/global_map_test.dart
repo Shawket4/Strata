@@ -12,7 +12,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
 FakeCoreApi _fake() => FakeCoreApi()
   ..globalGraphFilteredAnswer.returns(MapFixtures.globalSmall)
@@ -31,7 +30,13 @@ void main() {
     for (final v in variants()) {
       testWidgets('content $v', (tester) async {
         final fake = _fake();
-        await pumpVariant(tester, v, const GlobalMapScreen(), fake);
+        await pumpVariant(
+          tester,
+          v,
+          const GlobalMapScreen(),
+          fake: fake,
+          scaffold: true,
+        );
         final l10n = lookupMapsLocalizations(v.locale);
         expectNoErrors(tester);
         if (v.sizeClass == SizeClass.compact) {
@@ -83,7 +88,8 @@ void main() {
           tester,
           v,
           const GlobalMapScreen(),
-          _fake(),
+          fake: _fake(),
+          scaffold: true,
           overrides: [
             globalGraphFilteredProvider(
               const GraphFilter(
@@ -123,7 +129,13 @@ void main() {
               similarity: Availability.available,
             ),
           );
-        await pumpVariant(tester, v, const GlobalMapScreen(), fake);
+        await pumpVariant(
+          tester,
+          v,
+          const GlobalMapScreen(),
+          fake: fake,
+          scaffold: true,
+        );
         expect(
           find.text(lookupMapsLocalizations(v.locale).mapEmptyTitle),
           findsOneWidget,
@@ -136,7 +148,13 @@ void main() {
           ..globalGraphFilteredAnswer.throws(
             const CoreFailure(code: 'store', messageKey: 'error.store'),
           );
-        await pumpVariant(tester, v, const GlobalMapScreen(), fake);
+        await pumpVariant(
+          tester,
+          v,
+          const GlobalMapScreen(),
+          fake: fake,
+          scaffold: true,
+        );
         final l10n = lookupMapsLocalizations(v.locale);
         expect(find.text(l10n.errorTitle), findsOneWidget);
         expect(find.text(l10n.errorMessage(code: 'store')), findsOneWidget);
@@ -166,7 +184,8 @@ void main() {
           onOpenNote: (id) => opened = id,
           onOpenMindMap: (id) => mapped = id,
         ),
-        fake,
+        fake: fake,
+        scaffold: true,
       );
       await tester.tapAt(nodeOnScreen(tester, 'c-acme-logistics'));
       await tester.pump();
@@ -203,7 +222,13 @@ void main() {
     });
 
     testWidgets('tapping empty canvas clears the selection', (tester) async {
-      await pumpVariant(tester, expanded, const GlobalMapScreen(), _fake());
+      await pumpVariant(
+        tester,
+        expanded,
+        const GlobalMapScreen(),
+        fake: _fake(),
+        scaffold: true,
+      );
       await tester.tapAt(nodeOnScreen(tester, 'c-acme-logistics'));
       await tester.pump();
       expect(find.text('Focused on Acme Logistics'), findsOneWidget);
@@ -215,7 +240,13 @@ void main() {
 
     testWidgets('search focuses a result from the core', (tester) async {
       final fake = _fake();
-      await pumpVariant(tester, expanded, const GlobalMapScreen(), fake);
+      await pumpVariant(
+        tester,
+        expanded,
+        const GlobalMapScreen(),
+        fake: fake,
+        scaffold: true,
+      );
       await tester.enterText(find.byType(TextField), 'pricing');
       await tester.pump();
       await tester.pump();
@@ -239,7 +270,13 @@ void main() {
     testWidgets('zoom buttons change the camera and the zoom band', (
       tester,
     ) async {
-      await pumpVariant(tester, expanded, const GlobalMapScreen(), _fake());
+      await pumpVariant(
+        tester,
+        expanded,
+        const GlobalMapScreen(),
+        fake: _fake(),
+        scaffold: true,
+      );
       final viewport = tester.widget<GraphViewport>(find.byType(GraphViewport));
       final before = viewport.view.camera.scale;
       await tester.tap(find.byTooltip('Zoom in'));
@@ -256,7 +293,13 @@ void main() {
 
     testWidgets('filters hide edge classes and node kinds', (tester) async {
       final fake = _fake();
-      await pumpVariant(tester, expanded, const GlobalMapScreen(), fake);
+      await pumpVariant(
+        tester,
+        expanded,
+        const GlobalMapScreen(),
+        fake: fake,
+        scaffold: true,
+      );
       await tester.tap(find.widgetWithText(CheckboxListTile, 'contradicts'));
       await tester.pump();
       await tester.tap(find.widgetWithText(FilterChip, 'Person'));
@@ -299,7 +342,13 @@ void main() {
     });
 
     testWidgets('medium opens and closes the filters drawer', (tester) async {
-      await pumpVariant(tester, medium, const GlobalMapScreen(), _fake());
+      await pumpVariant(
+        tester,
+        medium,
+        const GlobalMapScreen(),
+        fake: _fake(),
+        scaffold: true,
+      );
       expect(find.text('Edge types'), findsNothing);
       await tester.tap(find.text('Filters'));
       await tester.pump();
@@ -312,7 +361,13 @@ void main() {
     });
 
     testWidgets('hovering a node shows its card', (tester) async {
-      await pumpVariant(tester, expanded, const GlobalMapScreen(), _fake());
+      await pumpVariant(
+        tester,
+        expanded,
+        const GlobalMapScreen(),
+        fake: _fake(),
+        scaffold: true,
+      );
       final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
@@ -323,7 +378,13 @@ void main() {
     });
 
     testWidgets('keyboard zoom and escape', (tester) async {
-      await pumpVariant(tester, expanded, const GlobalMapScreen(), _fake());
+      await pumpVariant(
+        tester,
+        expanded,
+        const GlobalMapScreen(),
+        fake: _fake(),
+        scaffold: true,
+      );
       final viewport = tester.widget<GraphViewport>(find.byType(GraphViewport));
       await tester.tapAt(nodeOnScreen(tester, 'c-acme-logistics'));
       await tester.pump();

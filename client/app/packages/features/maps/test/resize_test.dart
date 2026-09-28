@@ -7,7 +7,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
 /// Live resize: the global map is medium/expanded only; the filters panel
 /// is a side panel on expanded and a drawer on medium (PLAN §11, §16.5).
@@ -17,7 +16,13 @@ void main() {
   ) async {
     final fake = FakeCoreApi()
       ..globalGraphFilteredAnswer.returns(MapFixtures.globalSmall);
-    await pumpVariant(tester, variants().first, const GlobalMapScreen(), fake);
+    await pumpVariant(
+      tester,
+      variants().first,
+      const GlobalMapScreen(),
+      fake: fake,
+      scaffold: true,
+    );
     final l10n = lookupMapsLocalizations(const Locale('en'));
     expect(find.text(l10n.mapCompactTitle), findsOneWidget);
 

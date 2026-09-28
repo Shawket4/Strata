@@ -168,12 +168,6 @@ abstract class MapsLocalizations {
   /// **'Companies'**
   String get lensCompanies;
 
-  /// Tooltip / helper of a control that the core does not support yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not available yet'**
-  String get notAvailableYet;
-
   /// Placeholder of the map search field.
   ///
   /// In en, this message translates to:
@@ -384,10 +378,10 @@ abstract class MapsLocalizations {
   /// **'→ .canvas'**
   String get saveLayoutTarget;
 
-  /// Tooltip of the disabled Save layout button.
+  /// Tooltip of a disabled Save layout.
   ///
   /// In en, this message translates to:
-  /// **'Saving layouts isn\'t available yet'**
+  /// **'Saving layouts needs a connection to the server'**
   String get saveLayoutUnavailable;
 
   /// Mind map hint.
@@ -559,6 +553,54 @@ abstract class MapsLocalizations {
   /// In en, this message translates to:
   /// **'Map / Local map'**
   String get mapBreadcrumb;
+
+  /// Similarity switch subtitle while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Similarity links need a connection to the server.'**
+  String get similarityOffline;
+
+  /// Switch that shows tags on the map.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags as nodes'**
+  String get showTags;
+
+  /// Node-kind chip with the core's count.
+  ///
+  /// In en, this message translates to:
+  /// **'{kind} · {count}'**
+  String kindWithCount({required String kind, required String count});
+
+  /// Hover card: link count and the core's last-change label.
+  ///
+  /// In en, this message translates to:
+  /// **'{links} · {updated}'**
+  String hoverLinksUpdated({required String links, required String updated});
+
+  /// Tooltip of Save layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves this map as a JSON Canvas file in your vault'**
+  String get saveLayoutHint;
+
+  /// Name field of the saved layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Map name'**
+  String get layoutName;
+
+  /// Snack bar after saving a layout.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {path}'**
+  String layoutSaved({required String path});
+
+  /// Cancels a dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
 }
 
 class _MapsLocalizationsDelegate

@@ -14,10 +14,22 @@ import 'package:strata_ui/strata_ui.dart';
 /// The expanded map header: title, counts, lens and search.
 class MapHeader extends StatelessWidget {
   /// Creates the header.
-  const new({required this.counts, required this.search, super.key});
+  const new({
+    required this.counts,
+    required this.search,
+    required this.lens,
+    required this.onLens,
+    super.key,
+  });
 
   /// "N nodes · M edges · K clusters".
   final String counts;
+
+  /// The current lens.
+  final GraphLens lens;
+
+  /// Switches the lens.
+  final ValueChanged<GraphLens> onLens;
 
   /// The search-to-focus field.
   final Widget search;
@@ -50,7 +62,7 @@ class MapHeader extends StatelessWidget {
               Text(counts, style: text.caption.copyWith(color: colors.text2)),
             ],
           ),
-          const LensSelector(),
+          LensSelector(lens: lens, onChanged: onLens),
           SizedBox(width: 280, child: search),
         ],
       ),
@@ -58,11 +70,17 @@ class MapHeader extends StatelessWidget {
   }
 }
 
-/// The lens selector (Notes / People / Companies). Only the note graph is
-/// streamed by the core so far; the entity lenses are shown disabled.
+/// The lens selector (Notes / People / Companies): the core builds the
+/// graph for the lens (`GraphFilter.lens`).
 class LensSelector extends StatelessWidget {
   /// Creates the selector.
-  const new({super.key});
+  const new({required this.lens, required this.onChanged, super.key});
+
+  /// The current lens.
+  final GraphLens lens;
+
+  /// Switches the lens.
+  final ValueChanged<GraphLens> onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -70,32 +88,18 @@ class LensSelector extends StatelessWidget {
     return Semantics(
       label: l10n.lensLabel,
       container: true,
-      child: SegmentedButton<int>(
+      child: SegmentedButton<GraphLens>(
         showSelectedIcon: false,
-        style: ButtonStyle(
-          foregroundColor: WidgetStateProperty.resolveWith(
-            (states) => states.contains(WidgetState.disabled)
-                ? context.strataColors.text2
-                : null,
-          ),
-        ),
         segments: [
-          ButtonSegment(value: 0, label: Text(l10n.lensNotes)),
+          ButtonSegment(value: GraphLens.notes, label: Text(l10n.lensNotes)),
+          ButtonSegment(value: GraphLens.people, label: Text(l10n.lensPeople)),
           ButtonSegment(
-            value: 1,
-            label: Text(l10n.lensPeople),
-            tooltip: l10n.notAvailableYet,
-            enabled: false,
-          ),
-          ButtonSegment(
-            value: 2,
+            value: GraphLens.companies,
             label: Text(l10n.lensCompanies),
-            tooltip: l10n.notAvailableYet,
-            enabled: false,
           ),
         ],
-        selected: const {0},
-        onSelectionChanged: (_) {},
+        selected: {lens},
+        onSelectionChanged: (value) => onChanged(value.first),
       ),
     );
   }
@@ -383,10 +387,23 @@ class HoverCard extends StatelessWidget {
                   node.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  textDirection: textDirectionOf(node.titleDir),
                   style: text.bodySmall.withWeight(FontWeight.w600),
                 ),
+                if (node.summary case final summary?)
+                  Text(
+                    summary,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.caption.copyWith(color: colors.text),
+                  ),
                 Text(
-                  l10n.hoverLinks(count: node.degree),
+                  node.updatedLabel.isEmpty
+                      ? l10n.hoverLinks(count: node.degree)
+                      : l10n.hoverLinksUpdated(
+                          links: l10n.hoverLinks(count: node.degree),
+                          updated: node.updatedLabel,
+                        ),
                   style: text.caption.copyWith(color: colors.text2),
                 ),
               ],

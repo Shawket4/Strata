@@ -4,7 +4,7 @@
 //! same stem, compared case-insensitively (`vault_format::filename::unique_name`): the first
 //! free one of `stem`, `stem 2`, `stem 3`, …
 
-use chrono::{DateTime, FixedOffset, NaiveDateTime};
+use chrono::{DateTime, Utc};
 use domain::NoteKind;
 use vault_format::filename::{sanitize_file_name, unique_name};
 
@@ -54,16 +54,16 @@ pub fn free_note_path<'a>(
     join(folder, &format!("{}.md", unique_name(stem, stems)))
 }
 
-/// The file stem of a capture made at `created` (`YYYY-MM-DD-HHmmss`, in the offset the
-/// time carries — the user's time zone).
-pub fn capture_stem(created: &DateTime<FixedOffset>) -> String {
+/// The file stem of a capture made at `created` (`YYYY-MM-DD-HHmmss`, UTC: the name is vault
+/// content every device and Obsidian share).
+pub fn capture_stem(created: &DateTime<Utc>) -> String {
     created.format("%Y-%m-%d-%H%M%S").to_string()
 }
 
 /// The inbox path of a capture made at `created`: `inbox/YYYY-MM-DD-HHmmss.md`, or
 /// `… 2.md`, `… 3.md` when taken (§6.9).
 pub fn capture_path<'a>(
-    created: &DateTime<FixedOffset>,
+    created: &DateTime<Utc>,
     taken: impl IntoIterator<Item = &'a str>,
 ) -> String {
     free_note_path(INBOX_DIR, &capture_stem(created), taken)
@@ -86,8 +86,9 @@ pub fn entity_path<'a>(
 
 /// The path of the `n`-th conflict copy of the note at `path` made at `at` (D19):
 /// `<stem> (conflict YYYY-MM-DD HHmmss).md`, and `<stem> (conflict YYYY-MM-DD HHmmss N).md`
-/// for `n >= 2`.
-pub fn conflict_copy_path(path: &str, at: NaiveDateTime, n: u32) -> String {
+/// for `n >= 2`. The time is UTC on every side (the server's copies and the device's
+/// fallback), because the name is vault content shared by all devices and Obsidian.
+pub fn conflict_copy_path(path: &str, at: &DateTime<Utc>, n: u32) -> String {
     let stem = path.strip_suffix(".md").unwrap_or(path);
     let stamp = at.format("%Y-%m-%d %H%M%S");
     if n <= 1 {

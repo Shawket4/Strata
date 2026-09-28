@@ -83,9 +83,10 @@ impl<T> From<T> for Open<T> {
     }
 }
 
-/// Formats a timestamp the way Strata writes `created`/`updated`.
+/// Formats a timestamp the way Strata writes `created`/`updated`: RFC 3339, with `Z` for UTC
+/// (Strata writes every time in UTC; a value read with another offset keeps it).
 pub fn format_timestamp(ts: &DateTime<FixedOffset>) -> String {
-    ts.to_rfc3339_opts(SecondsFormat::AutoSi, false)
+    ts.to_rfc3339_opts(SecondsFormat::AutoSi, true)
 }
 
 impl Frontmatter {
@@ -317,6 +318,16 @@ mod tests {
 
     fn fm(inner: &str) -> Frontmatter {
         Frontmatter::from_parts("---\n", inner, "---\n")
+    }
+
+    #[test]
+    fn timestamps_are_written_with_z_in_utc() {
+        let utc = DateTime::parse_from_rfc3339("2026-09-27T11:32:00+00:00").expect("ts");
+        assert_eq!(format_timestamp(&utc), "2026-09-27T11:32:00Z");
+        let cairo = DateTime::parse_from_rfc3339("2026-09-27T14:32:00+03:00").expect("ts");
+        assert_eq!(format_timestamp(&cairo), "2026-09-27T14:32:00+03:00");
+        let frac = DateTime::parse_from_rfc3339("2026-09-27T11:32:00.25Z").expect("ts");
+        assert_eq!(format_timestamp(&frac), "2026-09-27T11:32:00.250Z");
     }
 
     #[test]

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_maps/src/common/l10n.dart';
@@ -13,6 +14,9 @@ class MapFilters {
     this.hiddenEdges = const {},
     this.hiddenKinds = const {},
     this.focusCluster,
+    this.similarity = false,
+    this.includeTags = false,
+    this.lens = GraphLens.notes,
   });
 
   /// Edge classes switched off.
@@ -24,27 +28,59 @@ class MapFilters {
   /// Cluster in focus.
   final String? focusCluster;
 
+  /// Whether the AI similarity edges are shown.
+  final bool similarity;
+
+  /// Whether tags are shown as nodes.
+  final bool includeTags;
+
+  /// Notes, people or companies.
+  final GraphLens lens;
+
+  MapFilters _copy({
+    Set<EdgeClass>? hiddenEdges,
+    Set<NodeKind>? hiddenKinds,
+    String? Function()? focusCluster,
+    bool? similarity,
+    bool? includeTags,
+    GraphLens? lens,
+  }) => MapFilters(
+    hiddenEdges: hiddenEdges ?? this.hiddenEdges,
+    hiddenKinds: hiddenKinds ?? this.hiddenKinds,
+    focusCluster: focusCluster == null ? this.focusCluster : focusCluster(),
+    similarity: similarity ?? this.similarity,
+    includeTags: includeTags ?? this.includeTags,
+    lens: lens ?? this.lens,
+  );
+
   /// A copy with [edge] toggled.
-  MapFilters toggleEdge(EdgeClass edge) => MapFilters(
+  MapFilters toggleEdge(EdgeClass edge) => _copy(
     hiddenEdges: hiddenEdges.contains(edge)
         ? ({...hiddenEdges}..remove(edge))
         : {...hiddenEdges, edge},
-    hiddenKinds: hiddenKinds,
-    focusCluster: focusCluster,
   );
 
   /// A copy with [kind] toggled.
-  MapFilters toggleKind(NodeKind kind) => MapFilters(
-    hiddenEdges: hiddenEdges,
+  MapFilters toggleKind(NodeKind kind) => _copy(
     hiddenKinds: hiddenKinds.contains(kind)
         ? ({...hiddenKinds}..remove(kind))
         : {...hiddenKinds, kind},
-    focusCluster: focusCluster,
   );
 
+  /// A copy with the similarity edges on or off.
+  MapFilters withSimilarity({required bool on}) => _copy(similarity: on);
+
+  /// A copy with tag nodes on or off.
+  MapFilters withTags({required bool on}) => _copy(includeTags: on);
+
+  /// A copy through [value]'s lens.
+  MapFilters withLens(GraphLens value) => _copy(lens: value);
+
   /// The core's map query for these choices: the core drops the hidden edge
-  /// classes and node kinds (L15); the cluster focus only dims (painting).
-  GraphFilter toCore() => GraphFilter(
+  /// classes and node kinds (L15) and lists the neighbours of [focus] (the
+  /// selected node) for highlighting; the cluster focus only dims
+  /// (painting).
+  GraphFilter toCore({String? focus}) => GraphFilter(
     edgeKinds: selectedEdgeKinds(hiddenEdges),
     nodeKinds: hiddenKinds.isEmpty
         ? const []
@@ -52,16 +88,33 @@ class MapFilters {
             for (final kind in filterableNodeKinds)
               if (!hiddenKinds.contains(kind)) kind.name,
           ],
-    similarity: true,
-    lens: GraphLens.notes,
-    includeTags: false,
+    similarity: similarity,
+    lens: lens,
+    focus: focus,
+    includeTags: includeTags,
   );
 
   /// A copy focused on [cluster] (`null`: all clusters).
-  MapFilters focus(String? cluster) => MapFilters(
-    hiddenEdges: hiddenEdges,
-    hiddenKinds: hiddenKinds,
-    focusCluster: cluster,
+  MapFilters focus(String? cluster) => _copy(focusCluster: () => cluster);
+
+  @override
+  bool operator ==(Object other) =>
+      other is MapFilters &&
+      setEquals(other.hiddenEdges, hiddenEdges) &&
+      setEquals(other.hiddenKinds, hiddenKinds) &&
+      other.focusCluster == focusCluster &&
+      other.similarity == similarity &&
+      other.includeTags == includeTags &&
+      other.lens == lens;
+
+  @override
+  int get hashCode => Object.hash(
+    Object.hashAllUnordered(hiddenEdges),
+    Object.hashAllUnordered(hiddenKinds),
+    focusCluster,
+    similarity,
+    includeTags,
+    lens,
   );
 }
 
@@ -74,11 +127,27 @@ class MapFiltersPanel extends StatelessWidget {
     required this.filters,
     required this.onChanged,
     super.key,
+    this.edgeCounts = const [],
+    this.nodeCounts = const [],
+    this.similarity = Availability.available,
+    this.onShowSimilarity,
     this.onClose,
   });
 
   /// The core's clusters (by name).
   final List<ClusterLabel> clusters;
+
+  /// Edges per kind before filtering (the core's counts).
+  final List<KindCount> edgeCounts;
+
+  /// Nodes per kind before filtering.
+  final List<KindCount> nodeCounts;
+
+  /// Whether the server's similarity edges can be shown.
+  final Availability similarity;
+
+  /// Fetches the similarity edges before they are switched on.
+  final VoidCallback? onShowSimilarity;
 
   /// Current choices.
   final MapFilters filters;
@@ -115,6 +184,13 @@ class MapFiltersPanel extends StatelessWidget {
     String edgeLabel(EdgeClass edge) => edge == EdgeClass.bodyLink
         ? l10n.edgeBodyLinks
         : shared.relationTypeLabel(relationTypeOf(edge));
+    // The core's count of a kind (looked up, never computed here).
+    String? countOf(List<KindCount> counts, String kind) {
+      for (final count in counts) {
+        if (count.kind == kind) return '${count.count}';
+      }
+      return null;
+    }
     return Material(
       type: MaterialType.transparency,
       child: Column(
@@ -170,36 +246,49 @@ class MapFiltersPanel extends StatelessWidget {
                           width: 28,
                         ),
                         const SizedBox(width: StrataSpacing.s2),
-                        Flexible(child: Text(edgeLabel(edge))),
+                        Expanded(child: Text(edgeLabel(edge))),
+                        if (countOf(
+                              edgeCounts,
+                              coreEdgeKindsOf(edge).first,
+                            )
+                            case final count?)
+                          Text(
+                            count,
+                            style: text.caption.copyWith(color: colors.text2),
+                          ),
                       ],
                     ),
                   ),
                 const Divider(height: StrataSpacing.s4),
-                Tooltip(
-                  message: l10n.notAvailableYet,
-                  child: SwitchListTile(
-                    value: false,
-                    onChanged: null,
-                    title: Row(
-                      children: [
-                        const RelationLineSample(
-                          type: RelationType.similarity,
-                          width: 28,
-                        ),
-                        const SizedBox(width: StrataSpacing.s2),
-                        Flexible(
-                          child: Text(
-                            l10n.similarityTitle,
-                            style: TextStyle(color: colors.text2),
-                          ),
-                        ),
-                      ],
-                    ),
-                    subtitle: Text(
-                      l10n.similarityHelp,
-                      style: text.caption.copyWith(color: colors.text2),
-                    ),
+                SwitchListTile(
+                  value: filters.similarity,
+                  onChanged: similarity == Availability.available
+                      ? (on) {
+                          if (on) onShowSimilarity?.call();
+                          onChanged(filters.withSimilarity(on: on));
+                        }
+                      : null,
+                  title: Row(
+                    children: [
+                      const RelationLineSample(
+                        type: RelationType.similarity,
+                        width: 28,
+                      ),
+                      const SizedBox(width: StrataSpacing.s2),
+                      Flexible(child: Text(l10n.similarityTitle)),
+                    ],
                   ),
+                  subtitle: Text(
+                    similarity == Availability.offline
+                        ? l10n.similarityOffline
+                        : l10n.similarityHelp,
+                    style: text.caption.copyWith(color: colors.text2),
+                  ),
+                ),
+                SwitchListTile(
+                  value: filters.includeTags,
+                  onChanged: (on) => onChanged(filters.withTags(on: on)),
+                  title: Text(l10n.showTags),
                 ),
                 const Divider(height: StrataSpacing.s4),
                 heading(l10n.nodeKinds),
@@ -214,7 +303,15 @@ class MapFiltersPanel extends StatelessWidget {
                       for (final kind in filterableNodeKinds)
                         FilterChip(
                           avatar: NodeKindGlyph(kind: kind, decorative: true),
-                          label: Text(shared.nodeKindLabel(kind)),
+                          label: Text(
+                            switch (countOf(nodeCounts, kind.name)) {
+                              final count? => l10n.kindWithCount(
+                                kind: shared.nodeKindLabel(kind),
+                                count: count,
+                              ),
+                              null => shared.nodeKindLabel(kind),
+                            },
+                          ),
                           selected: !filters.hiddenKinds.contains(kind),
                           showCheckmark: false,
                           onSelected: (_) =>

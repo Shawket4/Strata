@@ -5,7 +5,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
 import '../helpers/fixtures.dart';
-import '../helpers/matrix.dart';
 
 /// Global map, local mind map and mini graph × size class × theme ×
 /// direction (1.0; compact also 2.0).
@@ -15,43 +14,54 @@ void main() {
   group('global map goldens', () {
     screenGoldens(
       'global_map',
-      () => const GlobalMapScreen(),
-      () =>
-          FakeCoreApi()
-            ..globalGraphFilteredAnswer.returns(MapFixtures.globalSmall),
+      (v) => goldenFrame(
+        v,
+        const GlobalMapScreen(),
+        fake: FakeCoreApi()
+          ..globalGraphFilteredAnswer.returns(MapFixtures.globalSmall),
+        scaffold: true,
+      ),
     );
   });
 
   group('mind map goldens', () {
     screenGoldens(
       'mind_map',
-      () => const MindMapScreen('n-pricing-experiments'),
-      () {
-        final fake = FakeCoreApi();
-        for (final depth in const [1, 2]) {
-          fake.localGraphFiltered[('n-pricing-experiments', depth, '')].add(
-            MapFixtures.pricingLocal,
-          );
-        }
-        return fake;
-      },
+      (v) => goldenFrame(
+        v,
+        const MindMapScreen('n-pricing-experiments'),
+        fake: (() {
+          final fake = FakeCoreApi();
+          for (final depth in const [1, 2]) {
+            fake.localGraphFiltered[('n-pricing-experiments', depth, '')].add(
+              MapFixtures.pricingLocal,
+            );
+          }
+          return fake;
+        })(),
+        scaffold: true,
+      ),
     );
   });
 
   group('mini graph goldens', () {
     screenGoldens(
       'mini_graph',
-      () => const Align(
-        alignment: Alignment.topCenter,
-        child: SizedBox(
-          width: 340,
-          child: MiniGraph('n-pricing-experiments', onOpenMindMap: _noop),
+      (v) => goldenFrame(
+        v,
+        const Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: 340,
+            child: MiniGraph('n-pricing-experiments', onOpenMindMap: _noop),
+          ),
         ),
+        fake: FakeCoreApi()
+          ..localGraph[('n-pricing-experiments', 1)].add(
+            MapFixtures.pricingLocal,
+          ),
+        scaffold: true,
       ),
-      () => FakeCoreApi()
-        ..localGraph[('n-pricing-experiments', 1)].add(
-          MapFixtures.pricingLocal,
-        ),
       cells: goldenVariants(wide: false),
     );
   });

@@ -1,7 +1,10 @@
 //! New entity, document, place (PLAN §6.7, §6.12) and concept (§6.6) notes.
 //!
-//! A user-created entity note is, in this order: `kind`; `title` when the file stem differs
-//! from the name (the name had characters a file name cannot hold); `aliases` and `tags`
+//! **Title rule** (user and AI creates alike): `title` is written whenever the note's file stem
+//! differs from the item's trimmed name — the name had characters a file name cannot hold, or
+//! the name was taken and the note is `Ahmed 2.md` (`title: Ahmed`).
+//!
+//! A user-created entity note is, in this order: `kind`; `title` (the title rule); `aliases` and `tags`
 //! (cleaned, [`clean_list`]); the user fields; `part-of` for a place inside another place;
 //! `id`, `created`, `updated`; then the user relations (`companies`, `people`, `copy-of`, …).
 //! The body is the user-owned `## Notes` section (the AI adds its sections above it later).
@@ -9,7 +12,7 @@
 
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, Utc};
 use domain::{NoteKind, RelationType};
 use sync_model::ops::{DocumentCreate, EntityCreate, PlaceCreate};
 use ulid::Ulid;
@@ -17,7 +20,7 @@ use vault_format::{Document, KnownKey, PropertyValue, RelationKey};
 
 use crate::RenderError;
 use crate::note::{clean_list, set_list_if_any, stamp};
-use crate::paths::entity_stem;
+use crate::paths::{entity_path, entity_stem, file_name};
 
 /// Body of a new entity, document or place note: the user-owned section only.
 pub const ENTITY_BODY: &str = "## Notes\n";
@@ -42,9 +45,16 @@ pub fn concept_body(summary: Option<&str>) -> String {
     }
 }
 
+/// The file stem of the note at `path` (`people/Ahmed 2.md` → `Ahmed 2`).
+pub fn path_stem(path: &str) -> &str {
+    let name = file_name(path);
+    name.strip_suffix(".md").unwrap_or(name)
+}
+
 /// The unstamped skeleton of a new note of `kind` named `name` stored under the file stem
-/// `stem`: `body`, `kind`, `title` (only when `stem` differs from the trimmed name) and
-/// `aliases` (as given; omitted when empty).
+/// `stem` (the stem of the path it is written at, [`path_stem`]): `body`, `kind`, `title`
+/// (only when `stem` differs from the trimmed name — the title rule) and `aliases` (as given;
+/// omitted when empty).
 pub fn skeleton(
     kind: NoteKind,
     name: &str,
@@ -131,22 +141,30 @@ impl EntitySpec {
         }
     }
 
-    /// The file stem of the note (see [`crate::paths::entity_path`] for its path).
+    /// The file stem of the note when its name is free (see [`Self::path`]).
     pub fn stem(&self) -> String {
         entity_stem(&self.name)
     }
 
-    /// The markdown of the note with `id`, stamped with `created` and `updated` when given.
+    /// The path of the note given the vault paths already `taken`
+    /// ([`crate::paths::entity_path`]).
+    pub fn path<'a>(&self, taken: impl IntoIterator<Item = &'a str>) -> String {
+        entity_path(self.kind, &self.name, taken)
+    }
+
+    /// The markdown of the note with `id` written at `path` ([`Self::path`]; its stem decides
+    /// `title`), created at `created` (the device's creation time): `created` and `updated`
+    /// are both that time, in UTC.
     pub fn render(
         &self,
         id: Ulid,
-        created: Option<&DateTime<FixedOffset>>,
-        updated: Option<&DateTime<FixedOffset>>,
+        path: &str,
+        created: &DateTime<Utc>,
     ) -> Result<String, RenderError> {
         let mut doc = skeleton(
             self.kind,
             &self.name,
-            &self.stem(),
+            path_stem(path),
             clean_list(&self.aliases),
             ENTITY_BODY,
         )?;
@@ -161,7 +179,7 @@ impl EntitySpec {
             fm.set_relation(key, vec![format!("[[{parent}]]")])
                 .map_err(RenderError::property(key.as_str()))?;
         }
-        stamp(&mut doc, id, created, updated)?;
+        stamp(&mut doc, id, Some(created), Some(created))?;
         let fm = doc.frontmatter_mut();
         for (rel, target) in &self.relations {
             fm.add_relation_link(*rel, target)

@@ -7,7 +7,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/strata_ui.dart';
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
 const _id = 'n-pricing-experiments';
 
@@ -31,7 +30,8 @@ void main() {
           tester,
           v,
           MindMapScreen(_id, onBack: () => back++),
-          fake,
+          fake: fake,
+          scaffold: true,
         );
         final l10n = lookupMapsLocalizations(v.locale);
         expectNoErrors(tester);
@@ -82,7 +82,13 @@ void main() {
   group('MindMapScreen states', () {
     for (final v in variants(scales: const [1])) {
       testWidgets('loading $v', (tester) async {
-        await pumpVariant(tester, v, const MindMapScreen(_id), FakeCoreApi());
+        await pumpVariant(
+          tester,
+          v,
+          const MindMapScreen(_id),
+          fake: FakeCoreApi(),
+          scaffold: true,
+        );
         expect(
           find.bySemanticsLabel(lookupMapsLocalizations(v.locale).loading),
           findsOneWidget,
@@ -94,7 +100,13 @@ void main() {
         fake.localGraphFiltered[('n-gone', _initialDepth(v), '')].add(
           MapFixtures.missingLocal,
         );
-        await pumpVariant(tester, v, const MindMapScreen('n-gone'), fake);
+        await pumpVariant(
+          tester,
+          v,
+          const MindMapScreen('n-gone'),
+          fake: fake,
+          scaffold: true,
+        );
         expect(
           find.text(lookupMapsLocalizations(v.locale).mindMapNotFound),
           findsOneWidget,
@@ -104,7 +116,13 @@ void main() {
 
       testWidgets('error $v', (tester) async {
         final fake = FakeCoreApi();
-        await pumpVariant(tester, v, const MindMapScreen(_id), fake);
+        await pumpVariant(
+          tester,
+          v,
+          const MindMapScreen(_id),
+          fake: fake,
+          scaffold: true,
+        );
         fake.localGraphFiltered[(_id, _initialDepth(v), '')].addError(
           const CoreFailure(code: 'store', messageKey: 'error.store'),
         );
@@ -131,7 +149,13 @@ void main() {
       tester,
     ) async {
       final fake = _fake();
-      await pumpVariant(tester, compact, const MindMapScreen(_id), fake);
+      await pumpVariant(
+        tester,
+        compact,
+        const MindMapScreen(_id),
+        fake: fake,
+        scaffold: true,
+      );
       await tester.tap(find.bySemanticsLabel('Depth 3'));
       await tester.pump();
       await tester.pump();
@@ -150,7 +174,13 @@ void main() {
       fake.localGraphFiltered[('n-discount-policy', 1, '')].add(
         MapFixtures.pricingLocal,
       );
-      await pumpVariant(tester, compact, const MindMapScreen(_id), fake);
+      await pumpVariant(
+        tester,
+        compact,
+        const MindMapScreen(_id),
+        fake: fake,
+        scaffold: true,
+      );
       await tester.tap(find.text('Discount policy'));
       await tester.pump();
       expect(
@@ -167,7 +197,13 @@ void main() {
       tester,
     ) async {
       final fake = _fake();
-      await pumpVariant(tester, compact, const MindMapScreen(_id), fake);
+      await pumpVariant(
+        tester,
+        compact,
+        const MindMapScreen(_id),
+        fake: fake,
+        scaffold: true,
+      );
       await tester.tap(
         find.bySemanticsLabel(
           'contradicts: Pricing experiments to Discount policy',
@@ -195,7 +231,13 @@ void main() {
 
     testWidgets('expanded: retype from the edge card', (tester) async {
       final fake = _fake();
-      await pumpVariant(tester, expanded, const MindMapScreen(_id), fake);
+      await pumpVariant(
+        tester,
+        expanded,
+        const MindMapScreen(_id),
+        fake: fake,
+        scaffold: true,
+      );
       await tester.tap(
         find.bySemanticsLabel('supports: Churn notes to Pricing experiments'),
       );
@@ -226,7 +268,8 @@ void main() {
         tester,
         expanded,
         MindMapScreen(_id, onOpenNote: opened.add),
-        fake,
+        fake: fake,
+        scaffold: true,
       );
       await tester.tap(find.text('Churn notes'));
       await tester.pump();
@@ -277,7 +320,13 @@ void main() {
           proposeRelation: local.proposeRelation,
         ),
       );
-      await pumpVariant(tester, expanded, const MindMapScreen(_id), fake);
+      await pumpVariant(
+        tester,
+        expanded,
+        const MindMapScreen(_id),
+        fake: fake,
+        scaffold: true,
+      );
       expect(
         find.bySemanticsLabel(
           'contradicts: Pricing experiments to Discount policy',

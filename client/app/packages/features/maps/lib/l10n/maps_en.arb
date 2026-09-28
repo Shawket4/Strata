@@ -63,10 +63,6 @@
   "@lensCompanies": {
     "description": "Lens: company-centred graph."
   },
-  "notAvailableYet": "Not available yet",
-  "@notAvailableYet": {
-    "description": "Tooltip / helper of a control that the core does not support yet."
-  },
   "searchToFocus": "Search to focus…",
   "@searchToFocus": {
     "description": "Placeholder of the map search field."
@@ -252,9 +248,9 @@
   "@saveLayoutTarget": {
     "description": "Hint next to Save layout."
   },
-  "saveLayoutUnavailable": "Saving layouts isn't available yet",
+  "saveLayoutUnavailable": "Saving layouts needs a connection to the server",
   "@saveLayoutUnavailable": {
-    "description": "Tooltip of the disabled Save layout button."
+    "description": "Tooltip of a disabled Save layout."
   },
   "dragHint": "Drop a note on another to create a relation",
   "@dragHint": {
@@ -419,5 +415,58 @@
   "mapBreadcrumb": "Map / Local map",
   "@mapBreadcrumb": {
     "description": "Mind map label."
+  },
+  "similarityOffline": "Similarity links need a connection to the server.",
+  "@similarityOffline": {
+    "description": "Similarity switch subtitle while offline."
+  },
+  "showTags": "Tags as nodes",
+  "@showTags": {
+    "description": "Switch that shows tags on the map."
+  },
+  "kindWithCount": "{kind} · {count}",
+  "@kindWithCount": {
+    "description": "Node-kind chip with the core's count.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "hoverLinksUpdated": "{links} · {updated}",
+  "@hoverLinksUpdated": {
+    "description": "Hover card: link count and the core's last-change label.",
+    "placeholders": {
+      "links": {
+        "type": "String"
+      },
+      "updated": {
+        "type": "String"
+      }
+    }
+  },
+  "saveLayoutHint": "Saves this map as a JSON Canvas file in your vault",
+  "@saveLayoutHint": {
+    "description": "Tooltip of Save layout."
+  },
+  "layoutName": "Map name",
+  "@layoutName": {
+    "description": "Name field of the saved layout."
+  },
+  "layoutSaved": "Saved to {path}",
+  "@layoutSaved": {
+    "description": "Snack bar after saving a layout.",
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancels a dialog."
   }
 }

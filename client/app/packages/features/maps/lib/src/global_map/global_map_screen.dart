@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -47,8 +49,13 @@ class _GlobalMap extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.mapsL10n;
     final filters = useState(const MapFilters());
-    // One query object per filter choice, so the provider keeps its key.
-    final query = useMemoized(() => filters.value.toCore(), [filters.value]);
+    // The selected node (by ID): the core lists its neighbours.
+    final selected = useState<String?>(null);
+    // One query object per choice, so the provider keeps its key.
+    final query = useMemoized(
+      () => filters.value.toCore(focus: selected.value),
+      [filters.value, selected.value],
+    );
     final shown = useRef<GlobalGraphView?>(null);
     if (SizeClass.of(context) == SizeClass.compact) {
       return StrataEmptyState(
@@ -76,6 +83,8 @@ class _GlobalMap extends HookConsumerWidget {
           view: view,
           filters: filters.value,
           onFiltersChanged: (value) => filters.value = value,
+          selectedId: selected.value,
+          onSelect: (id) => selected.value = id,
           onOpenNote: onOpenNote,
           onOpenMindMap: onOpenMindMap,
         ),
@@ -89,6 +98,8 @@ class _MapBody extends HookConsumerWidget {
     required this.view,
     required this.filters,
     required this.onFiltersChanged,
+    required this.selectedId,
+    required this.onSelect,
     required this.onOpenNote,
     required this.onOpenMindMap,
   });
@@ -96,6 +107,8 @@ class _MapBody extends HookConsumerWidget {
   final GlobalGraphView view;
   final MapFilters filters;
   final ValueChanged<MapFilters> onFiltersChanged;
+  final String? selectedId;
+  final ValueChanged<String?> onSelect;
   final ValueChanged<String>? onOpenNote;
   final ValueChanged<String>? onOpenMindMap;
 
@@ -103,13 +116,12 @@ class _MapBody extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.mapsL10n;
     final colors = context.strataColors;
-    final scene = useMemoized(() => GraphScene.from(view.nodes, view.edges), [
-      view,
-    ]);
+    final scene = useMemoized(
+      () => GraphScene.from(view.nodes, view.edges, clusters: view.clusters),
+      [view.nodes, view.edges, view.clusters],
+    );
     final camera = useMemoized(GraphViewController.new);
     useEffect(() => camera.dispose, [camera]);
-    // By node ID: a new filter choice rebuilds the scene (new indices).
-    final selected = useState<String?>(null);
     final hovered = useState<(int, Offset)?>(null);
     useValueChanged<GlobalGraphView, void>(
       view,
@@ -119,20 +131,18 @@ class _MapBody extends HookConsumerWidget {
     final searchFocus = useFocusNode();
     final expanded = SizeClass.of(context) == SizeClass.expanded;
 
-    final selectedId = selected.value;
     final selectedIndex = selectedId == null ? null : scene.index[selectedId];
     final selectedNode = selectedIndex == null
         ? null
         : scene.nodes[selectedIndex];
-    Set<int>? highlight;
-    if (selectedNode != null) {
-      final neighbourhood = ref.watch(localGraphProvider(selectedNode.id, 1));
-      final ids = neighbourhood.value?.nodes ?? const <GraphNode>[];
-      highlight = {
-        selectedIndex!,
-        for (final node in ids) ?scene.index[node.id],
-      };
-    }
+    // The core's neighbours of the selected node (`GraphFilter.focus`).
+    final highlight = selectedNode == null
+        ? null
+        : {
+            selectedIndex!,
+            if (view.filter.focus == selectedId)
+              for (final id in view.neighbours) ?scene.index[id],
+          };
     final options = GraphPaintOptions(
       focusCluster: filters.focusCluster,
       selected: selectedIndex,
@@ -141,13 +151,13 @@ class _MapBody extends HookConsumerWidget {
     );
 
     void select(int? index) {
-      selected.value = index == null ? null : scene.nodes[index].id;
+      onSelect(index == null ? null : scene.nodes[index].id);
     }
 
     void focusOn(String id) {
       final index = scene.index[id];
       if (index == null) return;
-      selected.value = id;
+      onSelect(id);
       camera.centreOn(scene.positionOf(index), minZoom: 1);
     }
 
@@ -174,6 +184,15 @@ class _MapBody extends HookConsumerWidget {
       clusters: view.clusters,
       filters: filters,
       onChanged: onFiltersChanged,
+      edgeCounts: view.edgeCounts,
+      nodeCounts: view.nodeCounts,
+      similarity: view.similarity,
+      onShowSimilarity: () => unawaited(
+        ref
+            .read(coreApiProvider)
+            .refreshSimilarity()
+            .catchError((Object _) {}),
+      ),
       onClose: expanded ? null : () => filtersOpen.value = false,
     );
 
@@ -279,6 +298,8 @@ class _MapBody extends HookConsumerWidget {
                   clusters: view.clusters.length,
                 ),
                 search: search,
+                lens: filters.lens,
+                onLens: (lens) => onFiltersChanged(filters.withLens(lens)),
               ),
               Divider(height: 1, color: colors.border),
               Expanded(child: stack),

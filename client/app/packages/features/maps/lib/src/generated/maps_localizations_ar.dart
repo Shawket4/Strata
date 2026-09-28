@@ -53,9 +53,6 @@ class MapsLocalizationsAr extends MapsLocalizations {
   String get lensCompanies => 'الشركات';
 
   @override
-  String get notAvailableYet => 'مش متاح لسه';
-
-  @override
   String get searchToFocus => 'ابحث للتركيز…';
 
   @override
@@ -186,7 +183,7 @@ class MapsLocalizationsAr extends MapsLocalizations {
   String get saveLayoutTarget => '← ‎.canvas';
 
   @override
-  String get saveLayoutUnavailable => 'حفظ الترتيب مش متاح لسه';
+  String get saveLayoutUnavailable => 'حفظ التخطيط يحتاج اتصالًا بالخادم';
 
   @override
   String get dragHint => 'اسحب ملاحظة فوق ملاحظة تانية لعمل علاقة';
@@ -298,4 +295,34 @@ class MapsLocalizationsAr extends MapsLocalizations {
 
   @override
   String get mapBreadcrumb => 'الخريطة / خريطة محلية';
+
+  @override
+  String get similarityOffline => 'روابط التشابه تحتاج اتصالًا بالخادم.';
+
+  @override
+  String get showTags => 'الوسوم كعُقد';
+
+  @override
+  String kindWithCount({required String kind, required String count}) {
+    return '$kind · $count';
+  }
+
+  @override
+  String hoverLinksUpdated({required String links, required String updated}) {
+    return '$links · $updated';
+  }
+
+  @override
+  String get saveLayoutHint => 'يحفظ هذه الخريطة كملف JSON Canvas في خزنتك';
+
+  @override
+  String get layoutName => 'اسم الخريطة';
+
+  @override
+  String layoutSaved({required String path}) {
+    return 'تم الحفظ في $path';
+  }
+
+  @override
+  String get cancel => 'إلغاء';
 }

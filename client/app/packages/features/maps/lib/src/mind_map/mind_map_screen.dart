@@ -178,6 +178,10 @@ class _MindMap extends HookConsumerWidget {
           onRecentre: focusNode == null
               ? null
               : () => center.value = focusNode!.id,
+          onSaveLayout:
+              graph == null || graph.saveLayout != Availability.available
+              ? null
+              : () => unawaited(_saveLayout(context, ref, graph)),
         ),
         Divider(height: 1, color: colors.border),
         _FilterRow(
@@ -537,16 +541,96 @@ class _CompactBar extends StatelessWidget {
   }
 }
 
+/// Saves the local map as shown (the core's positions) as
+/// `maps/<name>.canvas` (`save_layout`), after asking for the name.
+Future<void> _saveLayout(
+  BuildContext context,
+  WidgetRef ref,
+  LocalGraphView graph,
+) async {
+  final l10n = context.mapsL10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final name = await showDialog<String>(
+    context: context,
+    builder: (_) => MapsLocalizationScope(
+      child: _LayoutNameDialog(initial: graph.nodes.first.title),
+    ),
+  );
+  if (name == null || name.isEmpty) return;
+  try {
+    final path = await ref
+        .read(coreApiProvider)
+        .saveLayout(
+          centerId: graph.center,
+          name: name,
+          positions: [
+            for (final node in graph.nodes)
+              NodePosition(id: node.id, x: node.x, y: node.y),
+          ],
+        );
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l10n.layoutSaved(path: path))));
+  } on Object catch (error) {
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.errorMessage(
+              code: error is CoreFailure ? error.code : 'internal',
+            ),
+          ),
+        ),
+      );
+  }
+}
+
+class _LayoutNameDialog extends HookWidget {
+  const new({required this.initial});
+
+  final String initial;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.mapsL10n;
+    final name = useTextEditingController(text: initial);
+    return AlertDialog(
+      title: Text(l10n.saveLayout),
+      content: TextField(
+        controller: name,
+        autofocus: true,
+        decoration: InputDecoration(
+          labelText: l10n.layoutName,
+          suffixText: l10n.saveLayoutTarget,
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(name.text),
+          child: Text(l10n.saveLayout),
+        ),
+      ],
+    );
+  }
+}
+
 class _Toolbar extends StatelessWidget {
   const new({
     required this.title,
     required this.transform,
     required this.onRecentre,
+    required this.onSaveLayout,
   });
 
   final String title;
   final TransformationController transform;
   final VoidCallback? onRecentre;
+  final VoidCallback? onSaveLayout;
 
   @override
   Widget build(BuildContext context) {
@@ -603,9 +687,11 @@ class _Toolbar extends StatelessWidget {
                   ),
                   const SizedBox(width: StrataSpacing.s2),
                   Tooltip(
-                    message: l10n.saveLayoutUnavailable,
+                    message: onSaveLayout == null
+                        ? l10n.saveLayoutUnavailable
+                        : l10n.saveLayoutHint,
                     child: OutlinedButton(
-                      onPressed: null,
+                      onPressed: onSaveLayout,
                       style: OutlinedButton.styleFrom(
                         disabledForegroundColor: colors.text2,
                       ),
@@ -685,13 +771,27 @@ class _Counts extends StatelessWidget {
     ),
     child: Align(
       alignment: AlignmentDirectional.centerStart,
-      child: StatusPill(
-        icon: Icons.hub_outlined,
-        label: context.mapsL10n.mindMapCounts(
-          depth: graph.depth,
-          nodes: graph.nodes.length,
-          edges: graph.edges.length,
-        ),
+      child: Wrap(
+        spacing: StrataSpacing.s2,
+        runSpacing: StrataSpacing.s1,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          StatusPill(
+            icon: Icons.hub_outlined,
+            label: context.mapsL10n.mindMapCounts(
+              depth: graph.depth,
+              nodes: graph.nodes.length,
+              edges: graph.edges.length,
+            ),
+          ),
+          if (graph.relationLabel.isNotEmpty)
+            Text(
+              graph.relationLabel,
+              style: context.strataText.caption.copyWith(
+                color: context.strataColors.text2,
+              ),
+            ),
+        ],
       ),
     ),
   );

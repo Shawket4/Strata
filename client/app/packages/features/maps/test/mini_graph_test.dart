@@ -5,7 +5,6 @@ import 'package:strata_maps/strata_maps.dart';
 import 'package:strata_state/testing.dart';
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
 void main() {
   for (final v in variants()) {
@@ -28,7 +27,8 @@ void main() {
             ),
           ),
         ),
-        fake,
+        fake: fake,
+        scaffold: true,
       );
       final l10n = lookupMapsLocalizations(v.locale);
       expectNoErrors(tester);
@@ -60,7 +60,8 @@ void main() {
       tester,
       variants().first,
       const MiniGraph('n-pricing-experiments'),
-      FakeCoreApi(),
+      fake: FakeCoreApi(),
+      scaffold: true,
     );
     expect(find.text('Open in map'), findsNothing);
     expect(find.text('Graph'), findsOneWidget);

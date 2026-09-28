@@ -11,7 +11,6 @@
   "lensNotes": "الملاحظات",
   "lensPeople": "الأشخاص",
   "lensCompanies": "الشركات",
-  "notAvailableYet": "مش متاح لسه",
   "searchToFocus": "ابحث للتركيز…",
   "searchToFocusLabel": "ابحث للتركيز",
   "searchNoResults": "مفيش ملاحظات مطابقة",
@@ -47,7 +46,7 @@
   "centreMapOn": "توسيط الخريطة على {title}",
   "saveLayout": "حفظ الترتيب",
   "saveLayoutTarget": "← ‎.canvas",
-  "saveLayoutUnavailable": "حفظ الترتيب مش متاح لسه",
+  "saveLayoutUnavailable": "حفظ التخطيط يحتاج اتصالًا بالخادم",
   "dragHint": "اسحب ملاحظة فوق ملاحظة تانية لعمل علاقة",
   "dragHintMore": "· اسحب لإعادة الترتيب، وبعدين احفظ الترتيب",
   "mindMapCounts": "العمق {depth} · {nodes} عقدة · {edges} رابط",
@@ -74,5 +73,13 @@
   "errorTitle": "تعذّر التحميل",
   "errorMessage": "البيانات المحلية للتطبيق رجّعت خطأ ({code}).",
   "nodeSemantics": "{kind}: {title}",
-  "mapBreadcrumb": "الخريطة / خريطة محلية"
+  "mapBreadcrumb": "الخريطة / خريطة محلية",
+  "similarityOffline": "روابط التشابه تحتاج اتصالًا بالخادم.",
+  "showTags": "الوسوم كعُقد",
+  "kindWithCount": "{kind} · {count}",
+  "hoverLinksUpdated": "{links} · {updated}",
+  "saveLayoutHint": "يحفظ هذه الخريطة كملف JSON Canvas في خزنتك",
+  "layoutName": "اسم الخريطة",
+  "layoutSaved": "تم الحفظ في {path}",
+  "cancel": "إلغاء"
 }

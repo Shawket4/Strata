@@ -53,9 +53,6 @@ class MapsLocalizationsEn extends MapsLocalizations {
   String get lensCompanies => 'Companies';
 
   @override
-  String get notAvailableYet => 'Not available yet';
-
-  @override
   String get searchToFocus => 'Search to focus…';
 
   @override
@@ -186,7 +183,8 @@ class MapsLocalizationsEn extends MapsLocalizations {
   String get saveLayoutTarget => '→ .canvas';
 
   @override
-  String get saveLayoutUnavailable => 'Saving layouts isn\'t available yet';
+  String get saveLayoutUnavailable =>
+      'Saving layouts needs a connection to the server';
 
   @override
   String get dragHint => 'Drop a note on another to create a relation';
@@ -298,4 +296,36 @@ class MapsLocalizationsEn extends MapsLocalizations {
 
   @override
   String get mapBreadcrumb => 'Map / Local map';
+
+  @override
+  String get similarityOffline =>
+      'Similarity links need a connection to the server.';
+
+  @override
+  String get showTags => 'Tags as nodes';
+
+  @override
+  String kindWithCount({required String kind, required String count}) {
+    return '$kind · $count';
+  }
+
+  @override
+  String hoverLinksUpdated({required String links, required String updated}) {
+    return '$links · $updated';
+  }
+
+  @override
+  String get saveLayoutHint =>
+      'Saves this map as a JSON Canvas file in your vault';
+
+  @override
+  String get layoutName => 'Map name';
+
+  @override
+  String layoutSaved({required String path}) {
+    return 'Saved to $path';
+  }
+
+  @override
+  String get cancel => 'Cancel';
 }

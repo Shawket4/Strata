@@ -104,8 +104,12 @@ class EdgeDetails extends ConsumerWidget {
                       ),
                       const SizedBox(height: StrataSpacing.s1),
                       Text(
-                        l10n.reasonUnavailable,
-                        style: text.bodySmall.copyWith(color: colors.text2),
+                        edge.reason ?? l10n.reasonUnavailable,
+                        style: text.bodySmall.copyWith(
+                          color: edge.reason == null
+                              ? colors.text2
+                              : colors.text,
+                        ),
                       ),
                     ],
                   ),
