@@ -26,6 +26,7 @@ use strata_ai::BudgetLimits;
 use strata_ai::prompts::ids;
 use strata_jobs::link::{LinkInput, LinkNote};
 use strata_testkit::Fixture;
+use sync_model::suggestions::{DuplicateItem, DuplicatesPayload, kinds};
 use vault_format::RelationKey;
 
 fn input(
@@ -594,17 +595,16 @@ async fn accepting_an_entity_duplicates_pair_merges_the_entities() {
     let shady = entity("Shady", vec![]).await;
     advance(&w, 60);
     let other = entity("Shadi", vec!["شادي".into()]).await;
-    let item =
-        |id: strata_common::NoteId, title: &str| strata_vault::ops::notes::DuplicatePayloadItem {
-            id: id.to_string(),
-            item: id.to_string(),
-            snippet: None,
-            kind: "person".into(),
-            title: title.into(),
-            match_level: "semantic".into(),
-            score: 0.97,
-        };
-    let payload = strata_vault::ops::ai::DuplicatesPayload {
+    let item = |id: strata_common::NoteId, title: &str| DuplicateItem {
+        id: id.as_ulid(),
+        item: id.to_string(),
+        snippet: None,
+        kind: "person".into(),
+        title: title.into(),
+        match_level: dedupe::MatchLevel::Semantic,
+        score: 0.97,
+    };
+    let payload = DuplicatesPayload {
         a: item(other, "Shadi"),
         b: item(shady, "Shady"),
         reason: None,
@@ -615,7 +615,7 @@ async fn accepting_an_entity_duplicates_pair_merges_the_entities() {
             &sa,
             sid,
             Some(other),
-            "duplicates",
+            kinds::DUPLICATES,
             &rmp_serde::to_vec_named(&payload).expect("payload"),
         )
         .await

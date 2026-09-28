@@ -40,7 +40,6 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use dedupe::DuplicateCandidate;
 use domain::{DedupeKind, MatchLevel, NoteKind};
-use serde::{Deserialize, Serialize};
 use strata_common::{
     Clock, DeviceId, IdGenerator, JobId, NoteId, OpId, ReplyId, SuggestionId, UserId,
 };
@@ -54,6 +53,7 @@ use strata_vault::{
     AfterWrite, Candidate, MatchLevel as VMatch, OpReceipt, ResultHook, VaultError, VaultService,
 };
 use sync_model::ops::{self as sm_ops, Op};
+use sync_model::suggestions::{ConflictPayload, kinds};
 use sync_model::{
     ConflictResolution, OpResult, Problem as OpProblem, SyncOp, UpdateDecision, Version,
     decide_update,
@@ -92,23 +92,6 @@ impl std::fmt::Debug for PushContext<'_> {
             .field("merge_history", &self.merge_history)
             .finish_non_exhaustive()
     }
-}
-
-/// `MessagePack` of a `conflict` suggestion's payload.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ConflictPayload {
-    /// The op that conflicted.
-    pub op_id: String,
-    /// The conflict copy note.
-    pub copy_id: String,
-    /// Its path.
-    pub copy_path: String,
-    /// The version the device edited.
-    pub base_version: String,
-    /// The server's version that was kept.
-    pub server_version: String,
-    /// Number of conflicting hunks.
-    pub hunks: u32,
 }
 
 fn op_problem(p: &Problem) -> OpProblem {
@@ -821,8 +804,8 @@ async fn conflict_copy(
         return Ok(rejected(&Problem::new(ProblemType::PathTaken)));
     };
     let payload = crate::wire::encode(&ConflictPayload {
-        op_id: op_id.to_string(),
-        copy_id: copy_id.to_string(),
+        op_id,
+        copy_id: copy_id.as_ulid(),
         copy_path: copy.path.clone(),
         base_version: base.to_owned(),
         server_version: server_version.to_owned(),
@@ -847,7 +830,7 @@ async fn conflict_copy(
             ctx.scope,
             SuggestionId::from_ulid(op_id),
             Some(id),
-            "conflict",
+            kinds::CONFLICT,
             &payload,
         ),
     )

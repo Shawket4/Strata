@@ -7456,6 +7456,10 @@
             "format": "date-time",
             "type": "string"
           },
+          "author": {
+            "$ref": "#/components/schemas/ReplyAuthorDto",
+            "description": "Who wrote it (absent: the user)."
+          },
           "id": {
             "description": "Reply ID.",
             "format": "ulid",

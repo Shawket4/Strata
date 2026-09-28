@@ -16,7 +16,12 @@ EditorHint hintOf(
     start = content.indexOf(text, start + 1);
     if (start < 0) throw StateError('"$text" not found in fixture');
   }
-  return EditorHint(kind: kind, start: start, end: start + text.length);
+  return EditorHint(
+    kind: kind,
+    start: start,
+    end: start + text.length,
+    level: 0,
+  );
 }
 
 /// The frontmatter hint of [content] as the core emits it: from the opening
@@ -37,6 +42,7 @@ List<EditorHint> frontmatterHint(String content) {
           kind: HintKind.frontmatter,
           start: 0,
           end: eol < 0 ? content.length : eol + 1,
+          level: 0,
         ),
       ];
     }
@@ -55,6 +61,7 @@ List<EditorHint> shiftedHints(List<EditorHint> hints, int offset, int delta) =>
           kind: h.kind,
           start: h.start >= offset ? h.start + delta : h.start,
           end: h.end > offset ? h.end + delta : h.end,
+          level: 0,
         ),
     ];
 
@@ -119,6 +126,10 @@ abstract final class EditorFixtures {
     reminders: [],
     links: [],
     pendingSync: false,
+    descriptionDir: TextDir.ltr,
+    notePath: '',
+    lineNumber: 0,
+    isOverdue: false,
   );
 
   /// The done task.
@@ -134,12 +145,17 @@ abstract final class EditorFixtures {
     reminders: const [],
     links: const [],
     pendingSync: false,
+    descriptionDir: TextDir.ltr,
+    notePath: '',
+    lineNumber: 0,
+    isOverdue: false,
   );
 
   /// Synced.
   static const NoteSyncState synced = NoteSyncState(
     kind: NoteSyncKind.synced,
     pendingOps: 0,
+    label: '',
   );
 
   /// A conflict on op [conflictOpId].
@@ -147,6 +163,7 @@ abstract final class EditorFixtures {
     kind: NoteSyncKind.conflict,
     pendingOps: 1,
     conflictOpId: conflictOpId,
+    label: '',
   );
 
   /// The conflicting op.
@@ -176,6 +193,12 @@ abstract final class EditorFixtures {
     hints: hints ?? EditorFixtures.hints,
     sync_: sync,
     history: Availability.available,
+    titleDir: TextDir.ltr,
+    contentVersion: '',
+    wordCount: 0,
+    backlinkCount: 0,
+    historyEntries: [],
+    pinned: false,
   );
 
   /// The note screen of [note].
@@ -188,6 +211,16 @@ abstract final class EditorFixtures {
     title: 'Ahmed Samir',
     subtitle: 'Operations manager, Acme Logistics',
     aliases: ['أحمد سمير'],
+    kind: '',
+    titleDir: TextDir.ltr,
+    initials: '',
+    mentionCount: 0,
+    tags: [],
+    location: [],
+    expiringSoon: false,
+    breadcrumb: [],
+    documentCount: 0,
+    hasOpenItems: false,
   );
 
   /// Acme Logistics in the directory.
@@ -196,6 +229,16 @@ abstract final class EditorFixtures {
     title: 'Acme Logistics',
     subtitle: 'Client · logistics',
     aliases: ['أكمي'],
+    kind: '',
+    titleDir: TextDir.ltr,
+    initials: '',
+    mentionCount: 0,
+    tags: [],
+    location: [],
+    expiringSoon: false,
+    breadcrumb: [],
+    documentCount: 0,
+    hasOpenItems: false,
   );
 
   /// The people tab filtered by [query].
@@ -210,6 +253,16 @@ abstract final class EditorFixtures {
           documents: 4,
           places: 4,
         ),
+        filter: const DirectoryFilter(
+          tags: [],
+          expiring: false,
+          hasOpenItems: false,
+        ),
+        sort: DirectorySort.name,
+        filterOptions: [],
+        sections: [],
+        suggestions: [],
+        expiringCount: 0,
       );
 
   /// The companies tab filtered by [query].
@@ -224,5 +277,15 @@ abstract final class EditorFixtures {
           documents: 4,
           places: 4,
         ),
+        filter: const DirectoryFilter(
+          tags: [],
+          expiring: false,
+          hasOpenItems: false,
+        ),
+        sort: DirectorySort.name,
+        filterOptions: [],
+        sections: [],
+        suggestions: [],
+        expiringCount: 0,
       );
 }

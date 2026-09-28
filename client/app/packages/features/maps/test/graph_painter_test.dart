@@ -23,6 +23,8 @@ void main() {
           src: 'n-pricing-experiments',
           dst: 'n-unknown',
           kind: 'link',
+          id: '',
+          label: '',
         ),
       ]);
       expect(partial.nodeCount, 15);
@@ -71,11 +73,15 @@ void main() {
         const GraphNode(
           id: 'n-b',
           title: 'B',
-          kind: 'note',
+          kind: GraphNodeKind.note,
           depth: 0,
           degree: 0,
           x: 6,
           y: 0,
+          titleDir: TextDir.ltr,
+          updatedLabel: '',
+          labelRank: 0,
+          isHub: false,
         ),
       ], const []);
       expect(close.hitTest(const Offset(4, 0)), 1);

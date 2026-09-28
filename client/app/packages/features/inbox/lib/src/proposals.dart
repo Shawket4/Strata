@@ -238,8 +238,8 @@ class ProposalContent extends ConsumerWidget {
         );
       case SuggestionKind.entityLinkOrCreate:
       case SuggestionKind.custody:
-      case SuggestionKind.duplicate:
-      case SuggestionKind.unsupported:
+      case SuggestionKind.duplicate || SuggestionKind.duplicates:
+      case SuggestionKind.unsupported || SuggestionKind.conflict:
         return SuggestionCard(
           suggestion: suggestion,
           onOpenNote: onOpenNote,
@@ -316,7 +316,7 @@ class SuggestionCard extends HookConsumerWidget {
         StatusTone.warning,
         Icons.inventory_2_outlined,
       ),
-      SuggestionKind.duplicate => (
+      SuggestionKind.duplicate || SuggestionKind.duplicates => (
         l10n.inboxPossibleDuplicate,
         StatusTone.warning,
         Icons.content_copy_outlined,
@@ -336,7 +336,7 @@ class SuggestionCard extends HookConsumerWidget {
         StatusTone.info,
         Icons.drive_file_move_outline,
       ),
-      SuggestionKind.unsupported => (
+      SuggestionKind.unsupported || SuggestionKind.conflict => (
         l10n.inboxUnsupportedBadge,
         StatusTone.neutral,
         Icons.help_outline,
@@ -405,7 +405,7 @@ class SuggestionCard extends HookConsumerWidget {
                     ),
                   ),
               ];
-      case SuggestionKind.duplicate:
+      case SuggestionKind.duplicate || SuggestionKind.duplicates:
         body = DuplicateCandidatesView(
           kind: 'item',
           title: null,
@@ -443,7 +443,7 @@ class SuggestionCard extends HookConsumerWidget {
             ),
           ),
         ];
-      case SuggestionKind.unsupported:
+      case SuggestionKind.unsupported || SuggestionKind.conflict:
         body = Text(
           l10n.inboxUnsupported(kind: detail.serverKind),
           style: text.bodySmall.copyWith(color: colors.text2),

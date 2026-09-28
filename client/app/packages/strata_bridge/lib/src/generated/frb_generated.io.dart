@@ -443,6 +443,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   GraphPoint dco_decode_graph_point(dynamic raw);
 
   @protected
+  HighlightSpan dco_decode_highlight_span(dynamic raw);
+
+  @protected
   HintKind dco_decode_hint_kind(dynamic raw);
 
   @protected
@@ -596,6 +599,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<GraphPoint> dco_decode_list_graph_point(dynamic raw);
 
   @protected
+  List<HighlightSpan> dco_decode_list_highlight_span(dynamic raw);
+
+  @protected
   List<HistoryEntry> dco_decode_list_history_entry(dynamic raw);
 
   @protected
@@ -689,9 +695,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   List<TaskItem> dco_decode_list_task_item(dynamic raw);
-
-  @protected
-  List<TextSpan> dco_decode_list_text_span(dynamic raw);
 
   @protected
   List<ThreadMessage> dco_decode_list_thread_message(dynamic raw);
@@ -1013,9 +1016,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   TextDir dco_decode_text_dir(dynamic raw);
-
-  @protected
-  TextSpan dco_decode_text_span(dynamic raw);
 
   @protected
   ThreadMessage dco_decode_thread_message(dynamic raw);
@@ -1514,6 +1514,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   GraphPoint sse_decode_graph_point(SseDeserializer deserializer);
 
   @protected
+  HighlightSpan sse_decode_highlight_span(SseDeserializer deserializer);
+
+  @protected
   HintKind sse_decode_hint_kind(SseDeserializer deserializer);
 
   @protected
@@ -1701,6 +1704,11 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<GraphPoint> sse_decode_list_graph_point(SseDeserializer deserializer);
 
   @protected
+  List<HighlightSpan> sse_decode_list_highlight_span(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<HistoryEntry> sse_decode_list_history_entry(
     SseDeserializer deserializer,
   );
@@ -1822,9 +1830,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   List<TaskItem> sse_decode_list_task_item(SseDeserializer deserializer);
-
-  @protected
-  List<TextSpan> sse_decode_list_text_span(SseDeserializer deserializer);
 
   @protected
   List<ThreadMessage> sse_decode_list_thread_message(
@@ -2190,9 +2195,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   TextDir sse_decode_text_dir(SseDeserializer deserializer);
-
-  @protected
-  TextSpan sse_decode_text_span(SseDeserializer deserializer);
 
   @protected
   ThreadMessage sse_decode_thread_message(SseDeserializer deserializer);
@@ -2822,6 +2824,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_graph_point(GraphPoint self, SseSerializer serializer);
 
   @protected
+  void sse_encode_highlight_span(HighlightSpan self, SseSerializer serializer);
+
+  @protected
   void sse_encode_hint_kind(HintKind self, SseSerializer serializer);
 
   @protected
@@ -3074,6 +3079,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_highlight_span(
+    List<HighlightSpan> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_history_entry(
     List<HistoryEntry> self,
     SseSerializer serializer,
@@ -3246,9 +3257,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   void sse_encode_list_task_item(List<TaskItem> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_text_span(List<TextSpan> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_thread_message(
@@ -3708,9 +3716,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   void sse_encode_text_dir(TextDir self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_text_span(TextSpan self, SseSerializer serializer);
 
   @protected
   void sse_encode_thread_message(ThreadMessage self, SseSerializer serializer);

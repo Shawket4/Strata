@@ -3368,6 +3368,28 @@ class GraphPoint {
           y == other.y;
 }
 
+/// A span of a displayed text (UTF-16 offsets into that text, end exclusive).
+class HighlightSpan {
+  /// Start (inclusive).
+  final int start;
+
+  /// End (exclusive).
+  final int end;
+
+  const HighlightSpan({required this.start, required this.end});
+
+  @override
+  int get hashCode => start.hashCode ^ end.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HighlightSpan &&
+          runtimeType == other.runtimeType &&
+          start == other.start &&
+          end == other.end;
+}
+
 /// Editor highlight kind.
 enum HintKind {
   /// Frontmatter block.
@@ -4417,7 +4439,7 @@ class NoteListItem {
   final int linkCount;
 
   /// Matched spans in `snippet` (search hits, mentions of an entity).
-  final List<TextSpan> highlights;
+  final List<HighlightSpan> highlights;
 
   const NoteListItem({
     required this.id,
@@ -5844,7 +5866,7 @@ class SearchHit {
   final TextDir snippetDir;
 
   /// Matched terms in `snippet`.
-  final List<TextSpan> highlights;
+  final List<HighlightSpan> highlights;
 
   /// Relevance (higher is better; mode-specific scale).
   final double score;
@@ -7627,28 +7649,6 @@ enum TextDir {
 
   /// No strong character.
   neutral,
-}
-
-/// A span of a displayed text (UTF-16 offsets into that text, end exclusive).
-class TextSpan {
-  /// Start (inclusive).
-  final int start;
-
-  /// End (exclusive).
-  final int end;
-
-  const TextSpan({required this.start, required this.end});
-
-  @override
-  int get hashCode => start.hashCode ^ end.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is TextSpan &&
-          runtimeType == other.runtimeType &&
-          start == other.start &&
-          end == other.end;
 }
 
 /// A message of a suggestion's thread (§9.8 "threaded suggestions").

@@ -31,6 +31,7 @@ SuggestionDetail _detail({
   relType: relType,
   reason: reason,
   serverKind: serverKind,
+  documentChoices: [],
 );
 
 SuggestionItem _suggestion(
@@ -46,6 +47,12 @@ SuggestionItem _suggestion(
   detail: detail,
   created: DateTime.utc(2026, 9, 27, 8),
   pendingSync: pendingSync,
+  createdLabel: '',
+  sourceDir: TextDir.ltr,
+  autoApplied: false,
+  canAccept: false,
+  needsYou: false,
+  thread: [],
 );
 
 /// Inbox fixtures beyond `StrataFixtures` (SCREEN_SPEC sample content).
@@ -98,6 +105,11 @@ abstract final class InboxFixtures {
     created: DateTime.utc(2026, 9, 27, 7, 12),
     suggestions: [loyaltyFiling, contradicts, partOf],
     pendingSync: false,
+    textDir: TextDir.ltr,
+    createdLabel: '',
+    needsYou: false,
+    ready: false,
+    isDuplicate: false,
   );
 
   static final SuggestionItem custodyApplied = _suggestion(
@@ -158,25 +170,53 @@ abstract final class InboxFixtures {
       StrataFixtures.inboxItemEnglish,
     ],
     suggestions: [StrataFixtures.suggestionLinkOrCreate],
+    filter: InboxFilter.all,
+    readyCount: 0,
+    needsYouCount: 0,
+    conflictsCount: 0,
+    allCount: 0,
   );
 
   /// Custody items (CustodyInboxCompact).
   static final InboxView custody = InboxView(
     captures: const [],
     suggestions: [custodyApplied, custodyAmbiguous],
+    filter: InboxFilter.all,
+    readyCount: 0,
+    needsYouCount: 0,
+    conflictsCount: 0,
+    allCount: 0,
   );
 
   /// Link-or-create only.
   static final InboxView linkOrCreate = InboxView(
     captures: const [],
     suggestions: [StrataFixtures.suggestionLinkOrCreate],
+    filter: InboxFilter.all,
+    readyCount: 0,
+    needsYouCount: 0,
+    conflictsCount: 0,
+    allCount: 0,
   );
 
   /// Duplicate-flagged, task and unsupported suggestions.
   static final InboxView others = InboxView(
     captures: const [],
     suggestions: [duplicate, task, unsupported],
+    filter: InboxFilter.all,
+    readyCount: 0,
+    needsYouCount: 0,
+    conflictsCount: 0,
+    allCount: 0,
   );
 
-  static const InboxView empty = InboxView(captures: [], suggestions: []);
+  static const InboxView empty = InboxView(
+    captures: [],
+    suggestions: [],
+    filter: InboxFilter.all,
+    readyCount: 0,
+    needsYouCount: 0,
+    conflictsCount: 0,
+    allCount: 0,
+  );
 }

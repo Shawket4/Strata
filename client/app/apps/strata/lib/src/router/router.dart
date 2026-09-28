@@ -13,6 +13,14 @@ part 'router.g.dart';
 /// (1:1 on the core's session kind).
 ({List<String> allowed, String home}) sessionPlaces(SessionKind kind) =>
     switch (kind) {
+      SessionKind.pendingApproval || SessionKind.rejected => (
+        allowed: [
+          const ApprovalRoute().location,
+          const SignInRoute().location,
+          const SignUpRoute().location,
+        ],
+        home: const ApprovalRoute().location,
+      ),
       SessionKind.notInitialised || SessionKind.signedOut => (
         allowed: [
           const SignInRoute().location,

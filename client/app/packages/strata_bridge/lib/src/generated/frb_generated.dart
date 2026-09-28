@@ -6796,6 +6796,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  HighlightSpan dco_decode_highlight_span(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return HighlightSpan(
+      start: dco_decode_u_32(arr[0]),
+      end: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
   HintKind dco_decode_hint_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return HintKind.values[raw as int];
@@ -7218,6 +7230,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<HighlightSpan> dco_decode_list_highlight_span(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_highlight_span).toList();
+  }
+
+  @protected
   List<HistoryEntry> dco_decode_list_history_entry(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_history_entry).toList();
@@ -7408,12 +7426,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
-  List<TextSpan> dco_decode_list_text_span(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_text_span).toList();
-  }
-
-  @protected
   List<ThreadMessage> dco_decode_list_thread_message(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_thread_message).toList();
@@ -7556,7 +7568,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       snippetDir: dco_decode_text_dir(arr[9]),
       updatedLabel: dco_decode_String(arr[10]),
       linkCount: dco_decode_u_32(arr[11]),
-      highlights: dco_decode_list_text_span(arr[12]),
+      highlights: dco_decode_list_highlight_span(arr[12]),
     );
   }
 
@@ -8177,7 +8189,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       snippet: dco_decode_String(arr[4]),
       titleDir: dco_decode_text_dir(arr[5]),
       snippetDir: dco_decode_text_dir(arr[6]),
-      highlights: dco_decode_list_text_span(arr[7]),
+      highlights: dco_decode_list_highlight_span(arr[7]),
       score: dco_decode_f_64(arr[8]),
     );
   }
@@ -8683,18 +8695,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   TextDir dco_decode_text_dir(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return TextDir.values[raw as int];
-  }
-
-  @protected
-  TextSpan dco_decode_text_span(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-    return TextSpan(
-      start: dco_decode_u_32(arr[0]),
-      end: dco_decode_u_32(arr[1]),
-    );
   }
 
   @protected
@@ -10475,6 +10475,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  HighlightSpan sse_decode_highlight_span(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    return HighlightSpan(start: var_start, end: var_end);
+  }
+
+  @protected
   HintKind sse_decode_hint_kind(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
@@ -11164,6 +11172,20 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<HighlightSpan> sse_decode_list_highlight_span(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <HighlightSpan>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_highlight_span(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<HistoryEntry> sse_decode_list_history_entry(
     SseDeserializer deserializer,
   ) {
@@ -11558,18 +11580,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
-  List<TextSpan> sse_decode_list_text_span(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <TextSpan>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_text_span(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
   List<ThreadMessage> sse_decode_list_thread_message(
     SseDeserializer deserializer,
   ) {
@@ -11731,7 +11741,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_snippetDir = sse_decode_text_dir(deserializer);
     var var_updatedLabel = sse_decode_String(deserializer);
     var var_linkCount = sse_decode_u_32(deserializer);
-    var var_highlights = sse_decode_list_text_span(deserializer);
+    var var_highlights = sse_decode_list_highlight_span(deserializer);
     return NoteListItem(
       id: var_id,
       title: var_title,
@@ -12600,7 +12610,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_snippet = sse_decode_String(deserializer);
     var var_titleDir = sse_decode_text_dir(deserializer);
     var var_snippetDir = sse_decode_text_dir(deserializer);
-    var var_highlights = sse_decode_list_text_span(deserializer);
+    var var_highlights = sse_decode_list_highlight_span(deserializer);
     var var_score = sse_decode_f_64(deserializer);
     return SearchHit(
       noteId: var_noteId,
@@ -13243,14 +13253,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return TextDir.values[inner];
-  }
-
-  @protected
-  TextSpan sse_decode_text_span(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_start = sse_decode_u_32(deserializer);
-    var var_end = sse_decode_u_32(deserializer);
-    return TextSpan(start: var_start, end: var_end);
   }
 
   @protected
@@ -14839,6 +14841,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_highlight_span(HighlightSpan self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+  }
+
+  @protected
   void sse_encode_hint_kind(HintKind self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
@@ -15410,6 +15419,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_highlight_span(
+    List<HighlightSpan> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_highlight_span(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_history_entry(
     List<HistoryEntry> self,
     SseSerializer serializer,
@@ -15775,18 +15796,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
-  void sse_encode_list_text_span(
-    List<TextSpan> self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_text_span(item, serializer);
-    }
-  }
-
-  @protected
   void sse_encode_list_thread_message(
     List<ThreadMessage> self,
     SseSerializer serializer,
@@ -15908,7 +15917,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_text_dir(self.snippetDir, serializer);
     sse_encode_String(self.updatedLabel, serializer);
     sse_encode_u_32(self.linkCount, serializer);
-    sse_encode_list_text_span(self.highlights, serializer);
+    sse_encode_list_highlight_span(self.highlights, serializer);
   }
 
   @protected
@@ -16618,7 +16627,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.snippet, serializer);
     sse_encode_text_dir(self.titleDir, serializer);
     sse_encode_text_dir(self.snippetDir, serializer);
-    sse_encode_list_text_span(self.highlights, serializer);
+    sse_encode_list_highlight_span(self.highlights, serializer);
     sse_encode_f_64(self.score, serializer);
   }
 
@@ -17030,13 +17039,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   void sse_encode_text_dir(TextDir self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
-  }
-
-  @protected
-  void sse_encode_text_span(TextSpan self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_u_32(self.start, serializer);
-    sse_encode_u_32(self.end, serializer);
   }
 
   @protected

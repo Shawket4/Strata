@@ -26,8 +26,8 @@ use strata_jobs::semantic_dup::SemanticDupSource;
 use strata_jobs::{JobHandler, RunnerConfig};
 use strata_testkit::Fixture;
 use strata_vault::VaultError;
-use strata_vault::ops::ai::DuplicatesPayload;
 use strata_vault::ops::notes::CreateNote;
+use sync_model::suggestions::{DuplicatesPayload, kinds};
 
 /// Unit vectors `a = e[i]`, `b = c·e[i] + √(1−c²)·e[j]` (cosine `c`).
 fn pair(i: usize, j: usize, c: f32) -> (Vec<f32>, Vec<f32>) {
@@ -268,7 +268,7 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
         .expect("suggestions");
     let mut found: Vec<(String, String, String, String, String, Option<String>)> = suggestions
         .iter()
-        .filter(|s| s.suggestion.kind == "duplicates")
+        .filter(|s| s.suggestion.kind == kinds::DUPLICATES)
         .map(|s| {
             let p: DuplicatesPayload =
                 rmp_serde::from_slice(&s.suggestion.payload).expect("payload");
@@ -280,7 +280,7 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
             (
                 p.a.title,
                 p.b.title,
-                p.a.match_level,
+                p.a.match_level.to_string(),
                 format!("{:.2}", p.a.score),
                 p.a.kind,
                 p.reason,
@@ -330,7 +330,7 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
             .await
             .expect("suggestions")
             .iter()
-            .filter(|s| s.suggestion.kind == "duplicates")
+            .filter(|s| s.suggestion.kind == kinds::DUPLICATES)
             .count(),
         3
     );
@@ -347,7 +347,7 @@ async fn the_nightly_sweep_suggests_new_duplicate_pairs_once() {
     let car = suggestions
         .iter()
         .find(|s| {
-            s.suggestion.kind == "duplicates"
+            s.suggestion.kind == kinds::DUPLICATES
                 && rmp_serde::from_slice::<DuplicatesPayload>(&s.suggestion.payload)
                     .is_ok_and(|p| p.a.title == "Car insurance renewal")
         })

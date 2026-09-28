@@ -16,8 +16,8 @@ use strata_core::sync::engine::Trigger;
 use strata_core::view::build;
 use strata_core::view::model::{
     Availability, Citation, CustodyItem, DirectoryCounts, DirectoryItem, DirectoryTab,
-    DocumentBrief, DocumentView, EntityPageKind, EntityRef, FolderItem, PlaceNode, PlaceView,
-    SearchHit, SearchMode, TextDir, TextSpan,
+    DocumentBrief, DocumentView, EntityPageKind, EntityRef, FolderItem, HighlightSpan, PlaceNode,
+    PlaceView, SearchHit, SearchMode, TextDir,
 };
 
 const HOME: &str = "01J8ZK3M4X7Q9W2E5R6T8Y0V2A";
@@ -436,7 +436,10 @@ async fn person_page_shows_summary_timeline_mentions_and_documents() {
         e.mentions[0].snippet,
         "Put the car license in the drawer. [[Shady]] had it."
     );
-    assert_eq!(e.mentions[0].highlights, [TextSpan { start: 37, end: 42 }]);
+    assert_eq!(
+        e.mentions[0].highlights,
+        [HighlightSpan { start: 37, end: 42 }]
+    );
 
     let missing = s
         .read(|c, ctx| build::entity_screen(c, ctx, "01J8ZK3M4X7Q9W2E5R6T8Y0V9Z"))
@@ -501,7 +504,10 @@ async fn keyword_search_normalises_arabic_and_works_offline() {
         [CAPTURE]
     );
     assert_eq!(v.folder.as_deref(), Some("captures"));
-    assert_eq!(v.results[0].highlights, [TextSpan { start: 8, end: 11 }]);
+    assert_eq!(
+        v.results[0].highlights,
+        [HighlightSpan { start: 8, end: 11 }]
+    );
     let v = s
         .read(|c, ctx| search::search(c, ctx, "  ", SearchMode::Keyword, None))
         .expect("search");
@@ -928,6 +934,12 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
             .collect::<Vec<_>>(),
         [(LICENSE, DRAWER, "custody:location")]
     );
+    // A full kind selects just that kind within its family.
+    let exact = map(&GraphFilter {
+        edge_kinds: vec!["custody:location".into(), "relation:supports".into()],
+        ..all.clone()
+    });
+    assert_eq!(exact.edges, custody.edges);
 
     // The people lens shows people only.
     let people = map(&GraphFilter {

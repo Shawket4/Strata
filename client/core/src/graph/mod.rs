@@ -269,6 +269,16 @@ pub fn edge_family(kind: &str) -> &str {
     kind.split_once(':').map_or(kind, |(f, _)| f)
 }
 
+/// Whether `kind` is selected by `kinds` (a family or the full kind; empty selects all).
+pub fn edge_kind_selected(kinds: &[String], kind: &str) -> bool {
+    kinds.is_empty() || kinds.iter().any(|k| k == edge_family(kind) || k == kind)
+}
+
+/// Keeps the edges whose kind `kinds` selects (the maps' edge-type toggles).
+pub fn retain_edge_kinds(edges: &mut Vec<GraphEdge>, kinds: &[String]) {
+    edges.retain(|e| edge_kind_selected(kinds, &e.kind));
+}
+
 fn rel_type_of(kind: &str) -> Option<String> {
     match kind.split_once(':') {
         Some(("relation" | "entity" | "document", t)) => Some(t.to_owned()),
@@ -720,8 +730,7 @@ pub fn global_graph_filtered(
     all_edges.retain(|e| {
         kept.contains(&e.src)
             && kept.contains(&e.dst)
-            && (filter.edge_kinds.is_empty()
-                || filter.edge_kinds.iter().any(|k| k == edge_family(&e.kind)))
+            && edge_kind_selected(&filter.edge_kinds, &e.kind)
             && (filter.similarity || e.kind != "similarity")
     });
     let neighbours = match &filter.focus {

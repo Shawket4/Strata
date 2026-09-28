@@ -22,18 +22,18 @@ use strata_index::repo::jobs::NewJob;
 use strata_index::types::DecisionKind;
 use strata_index::{AppDb, UserScope};
 use strata_vault::VaultService;
-use strata_vault::ops::ai::DuplicatesPayload;
 use strata_vault::ops::ai_apply::{
     AiChangeSet, AiCustody, BlockIdRequest, Cite, EdgeAdd, EdgeRemove, NewConcept, NewDecision,
     NewSuggestion, REJECTED_MENTIONS_KEY, RejectedMention,
 };
-use strata_vault::ops::ai_decide::{
-    self as decide, CustodyDetail, CustodyPayload, CustodyTarget, EntityLinkPayload, TaskPayload,
-};
-use strata_vault::ops::notes::DuplicatePayloadItem;
+use strata_vault::ops::ai_decide::{self as decide, CustodyDetail};
 use strata_vault::ops::relations::AiEdge;
 use strata_vault::ops::suggestions::SuggestionView;
 use text_normalize::{normalize_for_search, transliteration_key, trigram_similarity};
+use sync_model::suggestions::{
+    CustodyPayload, CustodyTarget, DuplicateItem, DuplicatesPayload, EntityLinkPayload,
+    TaskPayload,
+};
 use vault_format::custody::CustodyEventType;
 use vault_format::sidecar::{By, NoteSidecar};
 use vault_format::{Document, RelationKey};
@@ -767,7 +767,7 @@ struct Role {
 
 impl Role {
     fn resolved(&self) -> Option<NoteId> {
-        self.target.id
+        self.target.id.map(NoteId::from_ulid)
     }
 }
 
@@ -1161,13 +1161,13 @@ impl<'a> Planner<'a> {
             }
             let decision_id = DecisionId::generate(self.ids);
             let payload = EntityLinkPayload {
-                decision_id,
+                decision_id: decision_id.as_ulid(),
                 mention: m.text.clone(),
                 kind: kind.as_str().to_owned(),
-                source_note: self.note.id,
+                source_note: self.note.id.as_ulid(),
                 block_id: m.evidence_block_id.clone(),
-                proposed,
-                candidates: candidates.clone(),
+                proposed: proposed.map(|n| n.as_ulid()),
+                candidates: candidates.iter().map(NoteId::as_ulid).collect(),
                 is_nickname: m.is_nickname,
                 confidence: m.confidence,
                 reason: reason.to_owned(),
@@ -1278,8 +1278,8 @@ impl<'a> Planner<'a> {
         Some(Role {
             target: CustodyTarget {
                 mention: mention.to_owned(),
-                id,
-                candidates,
+                id: id.map(|n| n.as_ulid()),
+                candidates: candidates.iter().map(NoteId::as_ulid).collect(),
             },
         })
     }
@@ -1422,8 +1422,8 @@ impl<'a> Planner<'a> {
                         continue;
                     }
                     let payload = CustodyPayload {
-                        decision_id,
-                        source_note: self.note.id,
+                        decision_id: decision_id.as_ulid(),
+                        source_note: self.note.id.as_ulid(),
                         block_id: block,
                         event: kind.as_str().to_owned(),
                         date,
@@ -1489,14 +1489,14 @@ impl<'a> Planner<'a> {
                 .collect();
             let decision_id = DecisionId::generate(self.ids);
             let payload = TaskPayload {
-                decision_id,
-                source_note: self.note.id,
+                decision_id: decision_id.as_ulid(),
+                source_note: self.note.id.as_ulid(),
                 block_id: t.evidence_block_id.clone(),
                 title: title.to_owned(),
                 due,
                 recurrence: t.recurrence.clone().filter(|r| !r.trim().is_empty()),
                 reminders,
-                entities,
+                entities: entities.iter().map(NoteId::as_ulid).collect(),
                 confidence: t.confidence,
             };
             let Ok(bytes) = rmp(&payload) else { continue };
@@ -1579,14 +1579,14 @@ fn map_custody(k: strata_ai::outputs::CustodyEventType) -> CustodyEventType {
     }
 }
 
-fn note_item(id: NoteId, title: &str, score: f64) -> DuplicatePayloadItem {
-    DuplicatePayloadItem {
-        id: id.to_string(),
+fn note_item(id: NoteId, title: &str, score: f64) -> DuplicateItem {
+    DuplicateItem {
+        id: id.as_ulid(),
         item: id.to_string(),
         snippet: None,
         kind: "note".to_owned(),
         title: title.to_owned(),
-        match_level: "semantic".to_owned(),
+        match_level: dedupe::MatchLevel::Semantic,
         score,
     }
 }

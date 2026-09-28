@@ -81,7 +81,13 @@ void main() {
       testWidgets('not found [$v]', (tester) async {
         final fake = FakeCoreApi()
           ..task['t-gone'].add(
-            const TaskScreen(id: 't-gone', line: '', history: []),
+            const TaskScreen(
+              id: 't-gone',
+              line: '',
+              history: [],
+              locationLabel: '',
+              recurrencePreview: [],
+            ),
           );
         await pumpVariant(
           tester,
@@ -104,6 +110,8 @@ void main() {
               task: StrataFixtures.taskWatanyaDoneSeptember,
               line: "- [x] Make Watanya's ETA invoice ✅ 2026-09-01",
               history: const [],
+              locationLabel: '',
+              recurrencePreview: [],
             ),
           );
         await pumpVariant(

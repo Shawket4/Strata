@@ -13,12 +13,18 @@ abstract final class SettingsFixtures {
       mode: NotificationMode.whileRunning,
       scheduled: 0,
       defaultTime: '09:00',
+      snoozeMinutes: 0,
+      quietEnabled: false,
+      quietFrom: '',
+      quietUntil: '',
     ),
     devices: Availability.offline,
     ai: Availability.offline,
     export_: Availability.offline,
     integrity: Availability.notAllowed,
     admin: Availability.notAllowed,
+    deviceList: [],
+    integrityWarnings: [],
   );
 
   /// Online member with reminders off.
@@ -32,6 +38,7 @@ abstract final class SettingsFixtures {
       serverUrl: StrataFixtures.serverUrl,
       timezone: 'Africa/Cairo',
       uiLanguage: 'ar',
+      initials: '',
     ),
     reminders: RemindersSetting(
       enabled: false,
@@ -39,11 +46,17 @@ abstract final class SettingsFixtures {
       mode: NotificationMode.osScheduled,
       scheduled: 1,
       defaultTime: '08:30',
+      snoozeMinutes: 0,
+      quietEnabled: false,
+      quietFrom: '',
+      quietUntil: '',
     ),
     devices: Availability.available,
     ai: Availability.available,
     export_: Availability.notYetAvailable,
     integrity: Availability.available,
     admin: Availability.notAllowed,
+    deviceList: [],
+    integrityWarnings: [],
   );
 }

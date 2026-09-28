@@ -142,7 +142,9 @@ void main() {
         tester,
         v,
         const AdminUsersScreen(),
-        overrides: [adminUsersProvider.overrideWith((ref) => completer.future)],
+        overrides: [
+          adminUsersProvider('').overrideWith((ref) => completer.future),
+        ],
       );
       expect(find.bySemanticsLabel('Loading users'), findsOneWidget);
       completer.complete(AdminFixtures.view);

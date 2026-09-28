@@ -46,7 +46,7 @@ pub enum TextDir {
 
 /// A span of a displayed text (UTF-16 offsets into that text, end exclusive).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TextSpan {
+pub struct HighlightSpan {
     /// Start (inclusive).
     pub start: u32,
     /// End (exclusive).
@@ -177,7 +177,7 @@ pub struct NoteListItem {
     /// Outgoing links and relations ("4 links").
     pub link_count: u32,
     /// Matched spans in `snippet` (search hits, mentions of an entity).
-    pub highlights: Vec<TextSpan>,
+    pub highlights: Vec<HighlightSpan>,
 }
 
 /// A reference to another note/entity (resolved when `id` is set).
@@ -2216,7 +2216,7 @@ pub struct SearchHit {
     /// Direction of the snippet.
     pub snippet_dir: TextDir,
     /// Matched terms in `snippet`.
-    pub highlights: Vec<TextSpan>,
+    pub highlights: Vec<HighlightSpan>,
     /// Relevance (higher is better; mode-specific scale).
     pub score: f64,
 }
@@ -2513,9 +2513,9 @@ pub enum GraphLens {
 /// Global map filters, applied in the core.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GraphFilter {
-    /// Edge kind families to keep (`link`, `embed`, `relation`, `mention`, `concept`,
-    /// `entity`, `custody`, `part-of-place`, `document`, `tag`, `similarity`, `co-mention`);
-    /// empty = all.
+    /// Edge kinds to keep, each a family (`link`, `embed`, `relation`, `mention`, `concept`,
+    /// `entity`, `custody`, `part-of-place`, `document`, `tag`, `similarity`, `co-mention`)
+    /// or a full kind (`relation:supports`); empty = all.
     pub edge_kinds: Vec<String>,
     /// Node kinds to keep (`note`, `person`, …); empty = all.
     pub node_kinds: Vec<String>,

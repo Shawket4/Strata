@@ -239,6 +239,27 @@ pub fn watch_local_graph(
     })
 }
 
+/// A note's local mind map with only the edges of `edge_kinds` (families such as `link`,
+/// or full kinds such as `relation:supports`; empty = all), filtered in the core.
+pub fn watch_local_graph_filtered(
+    id: String,
+    depth: u8,
+    edge_kinds: Vec<String>,
+    sink: StreamSink<LocalGraphView>,
+) -> Result<(), CoreFailure> {
+    lift(|| {
+        watch(
+            Topics::NOTES | Topics::ENTITIES | Topics::ACCOUNT,
+            move |c, ctx| {
+                let mut view = graph::local_graph(c, ctx, &id, depth)?;
+                graph::retain_edge_kinds(&mut view.edges, &edge_kinds);
+                Ok(view)
+            },
+            DartSink(sink),
+        )
+    })
+}
+
 /// The global map (positions from the cached, warm-started force layout).
 pub fn global_graph() -> Result<GlobalGraphView, CoreFailure> {
     lift(|| {

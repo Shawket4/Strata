@@ -25,8 +25,7 @@ use strata_ai::{AiCaller, AiError, AiService, Embedder};
 use strata_common::{IdGenerator, NoteId, SuggestionId};
 use strata_index::AppDb;
 use strata_vault::VaultService;
-use strata_vault::ops::ai::DuplicatesPayload;
-use strata_vault::ops::notes::DuplicatePayloadItem;
+use sync_model::suggestions::{DuplicateItem, DuplicatesPayload};
 
 use crate::handler::{JobClass, JobContext, JobError, JobHandler};
 use crate::vectors::{self, StoredItem};
@@ -35,7 +34,7 @@ use crate::vectors::{self, StoredItem};
 pub const DEDUPE: &str = "dedupe";
 
 /// Suggestion kind of a sweep result.
-pub const DUPLICATES: &str = "duplicates";
+pub use sync_model::suggestions::kinds::DUPLICATES;
 
 /// Neighbours compared per item.
 const NEIGHBOURS: i64 = 10;
@@ -461,36 +460,26 @@ async fn suggested_pairs(
 }
 
 /// The ULID an item is shown under: the note's own ID, or the task's.
-fn display_id(item: &StoredItem, note: Option<NoteId>) -> Option<String> {
+fn display_id(item: &StoredItem, note: Option<NoteId>) -> Option<ulid::Ulid> {
     if let Ok(n) = item.item_id.parse::<NoteId>() {
-        return Some(n.to_string());
+        return Some(n.as_ulid());
     }
-    strata_vault::prepare::task_ulid(&item.item_id)
-        .map(|u| u.to_string())
-        .or_else(|| note.map(|n| n.to_string()))
-}
-
-fn level_name(level: dedupe::MatchLevel) -> &'static str {
-    match level {
-        dedupe::MatchLevel::Exact => "exact",
-        dedupe::MatchLevel::Near => "near",
-        dedupe::MatchLevel::Semantic => "semantic",
-    }
+    strata_vault::prepare::task_ulid(&item.item_id).or_else(|| note.map(|n| n.as_ulid()))
 }
 
 fn payload_item(
     item: &StoredItem,
     note: Option<NoteId>,
-    level: &str,
+    level: dedupe::MatchLevel,
     score: f32,
-) -> Option<DuplicatePayloadItem> {
-    Some(DuplicatePayloadItem {
+) -> Option<DuplicateItem> {
+    Some(DuplicateItem {
         id: display_id(item, note)?,
         item: item.item_id.clone(),
         snippet: item.item.snippet.clone(),
         kind: item.kind.clone(),
         title: item.item.title.clone(),
-        match_level: level.to_owned(),
+        match_level: level,
         score: f64::from(score),
     })
 }
@@ -508,14 +497,14 @@ impl JobHandler for DedupeHandler {
     async fn run(&self, ctx: JobContext) -> Result<(), JobError> {
         let pairs = self.find_pairs(&ctx).await?;
         for p in pairs {
-            let level = level_name(p.level);
+            let level = p.level;
             let (Some(a), Some(b)) = (
                 payload_item(&p.a, p.a_note, level, p.score),
                 payload_item(&p.b, p.b_note, level, p.score),
             ) else {
                 continue;
             };
-            let note = p.a_note.or_else(|| a.id.parse().ok());
+            let note = p.a_note.or(Some(NoteId::from_ulid(a.id)));
             let payload = rmp_serde::to_vec_named(&DuplicatesPayload {
                 a,
                 b,

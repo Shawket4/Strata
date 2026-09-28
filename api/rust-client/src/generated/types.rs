@@ -4364,6 +4364,9 @@ pub struct SyncSuggestionReply {
 pub struct SyncSuggestionReplyRecord {
     ///When.
     pub at: ::chrono::DateTime<::chrono::offset::Utc>,
+    ///Who wrote it (absent: the user).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub author: ::std::option::Option<ReplyAuthorDto>,
     ///Reply ID.
     pub id: ::ulid::Ulid,
     ///Text.

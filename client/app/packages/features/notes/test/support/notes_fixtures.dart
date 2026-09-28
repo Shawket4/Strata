@@ -8,13 +8,19 @@ EditorHint _hint(String content, HintKind kind, String text) {
   // Search the body only (after the frontmatter).
   final start = content.indexOf(text, content.indexOf('---\n', 4) + 4);
   if (start < 0) throw StateError('"$text" not in fixture');
-  return EditorHint(kind: kind, start: start, end: start + text.length);
+  return EditorHint(
+    kind: kind,
+    start: start,
+    end: start + text.length,
+    level: 0,
+  );
 }
 
 EditorHint _frontmatter(String content) => EditorHint(
   kind: HintKind.frontmatter,
   start: 0,
   end: content.indexOf('---\n', 4) + 4,
+  level: 0,
 );
 
 abstract final class NotesFixtures {
@@ -33,6 +39,11 @@ abstract final class NotesFixtures {
     tags: const ['pricing', 'q4'],
     updatedAt: DateTime.utc(2026, 9, 27, 11, 31),
     pendingSync: false,
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
+    updatedLabel: '',
+    linkCount: 0,
+    highlights: [],
   );
 
   static final NoteListItem weekly = NoteListItem(
@@ -46,6 +57,11 @@ abstract final class NotesFixtures {
     tags: const ['invoicing'],
     updatedAt: DateTime.utc(2026, 9, 27, 10, 2),
     pendingSync: true,
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
+    updatedLabel: '',
+    linkCount: 0,
+    highlights: [],
   );
 
   static final NoteListItem arabic = NoteListItem(
@@ -57,6 +73,11 @@ abstract final class NotesFixtures {
     tags: const ['pricing'],
     updatedAt: DateTime.utc(2026, 9, 27, 9, 15),
     pendingSync: false,
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
+    updatedLabel: '',
+    linkCount: 0,
+    highlights: [],
   );
 
   static final NoteListItem churn = NoteListItem(
@@ -69,6 +90,11 @@ abstract final class NotesFixtures {
     tags: const ['churn'],
     updatedAt: DateTime.utc(2026, 9, 26, 8),
     pendingSync: false,
+    titleDir: TextDir.ltr,
+    snippetDir: TextDir.ltr,
+    updatedLabel: '',
+    linkCount: 0,
+    highlights: [],
   );
 
   static final NotesListView sales = NotesListView(
@@ -77,12 +103,16 @@ abstract final class NotesFixtures {
       FolderItem(path: 'notes/sales/archive', name: 'archive', noteCount: 12),
     ],
     notes: [pricing, weekly, arabic, churn],
+    breadcrumb: [],
+    noteCount: 0,
   );
 
   static const NotesListView emptyFolder = NotesListView(
     folder: 'notes/ops',
     folders: [],
     notes: [],
+    breadcrumb: [],
+    noteCount: 0,
   );
 
   static const RelationChip contradicts = RelationChip(
@@ -91,12 +121,16 @@ abstract final class NotesFixtures {
     by: 'ai',
     confidence: 0.72,
     reason: 'States a flat 10% discount, while target caps discounts at 3%.',
+    relLabel: '',
+    citations: [],
   );
 
   static const RelationChip partOf = RelationChip(
     relType: 'part-of',
     target: EntityRef(id: 'n-subscription-tiers', title: 'Subscription tiers'),
     by: 'user',
+    relLabel: '',
+    citations: [],
   );
 
   static const RelationChip related = RelationChip(
@@ -105,6 +139,8 @@ abstract final class NotesFixtures {
     by: 'ai',
     confidence: 0.81,
     reason: 'Both discuss retention of customers past 12 months.',
+    relLabel: '',
+    citations: [],
   );
 
   static const RelationChip concept = RelationChip(
@@ -112,6 +148,8 @@ abstract final class NotesFixtures {
     target: EntityRef(id: 'c-pricing', title: 'Pricing'),
     by: 'ai',
     confidence: 0.9,
+    relLabel: '',
+    citations: [],
   );
 
   static const List<BacklinkGroup> backlinks = [
@@ -121,12 +159,17 @@ abstract final class NotesFixtures {
         BacklinkItem(
           noteId: 'n-call-2026-09-12-acme',
           title: 'Call 2026-09-12 — Acme',
+          titleDir: TextDir.ltr,
+          snippetDir: TextDir.ltr,
         ),
         BacklinkItem(
           noteId: 'n-onboarding-v2',
           title: 'Onboarding checklist v2',
+          titleDir: TextDir.ltr,
+          snippetDir: TextDir.ltr,
         ),
       ],
+      label: '',
     ),
     BacklinkGroup(
       kind: 'follows-up',
@@ -134,12 +177,23 @@ abstract final class NotesFixtures {
         BacklinkItem(
           noteId: 'n-weekly-invoicing-proposal',
           title: 'Weekly invoicing proposal',
+          titleDir: TextDir.ltr,
+          snippetDir: TextDir.ltr,
         ),
       ],
+      label: '',
     ),
     BacklinkGroup(
       kind: 'link',
-      items: [BacklinkItem(noteId: 'n-q4-hiring', title: 'Q4 hiring plan')],
+      items: [
+        BacklinkItem(
+          noteId: 'n-q4-hiring',
+          title: 'Q4 hiring plan',
+          titleDir: TextDir.ltr,
+          snippetDir: TextDir.ltr,
+        ),
+      ],
+      label: '',
     ),
   ];
 
@@ -187,12 +241,17 @@ abstract final class NotesFixtures {
     reminders: [],
     links: [],
     pendingSync: false,
+    descriptionDir: TextDir.ltr,
+    notePath: '',
+    lineNumber: 0,
+    isOverdue: false,
   );
 
   static NoteView pricingNote({
     NoteSyncState sync = const NoteSyncState(
       kind: NoteSyncKind.synced,
       pendingOps: 0,
+      label: '',
     ),
     Availability history = Availability.available,
     List<RelationChip> relations = const [
@@ -219,6 +278,12 @@ abstract final class NotesFixtures {
     hints: pricingHints,
     sync_: sync,
     history: history,
+    titleDir: TextDir.ltr,
+    contentVersion: '',
+    wordCount: 0,
+    backlinkCount: 0,
+    historyEntries: [],
+    pinned: false,
   );
 
   static const String arabicContent =
@@ -261,6 +326,8 @@ abstract final class NotesFixtures {
         relType: 'follows-up',
         target: EntityRef(id: pricingId, title: 'Pricing experiments'),
         by: 'user',
+        relLabel: '',
+        citations: [],
       ),
       RelationChip(
         relType: 'related',
@@ -271,18 +338,38 @@ abstract final class NotesFixtures {
         by: 'ai',
         confidence: 0.81,
         reason: 'Both describe the loyalty tier.',
+        relLabel: '',
+        citations: [],
       ),
     ],
     backlinks: const [
       BacklinkGroup(
         kind: 'related',
-        items: [BacklinkItem(noteId: pricingId, title: 'Pricing experiments')],
+        items: [
+          BacklinkItem(
+            noteId: pricingId,
+            title: 'Pricing experiments',
+            titleDir: TextDir.ltr,
+            snippetDir: TextDir.ltr,
+          ),
+        ],
+        label: '',
       ),
     ],
     tags: const ['pricing'],
     tasks: const [],
     hints: arabicHints,
-    sync_: const NoteSyncState(kind: NoteSyncKind.synced, pendingOps: 0),
+    sync_: const NoteSyncState(
+      kind: NoteSyncKind.synced,
+      pendingOps: 0,
+      label: '',
+    ),
     history: Availability.available,
+    titleDir: TextDir.ltr,
+    contentVersion: '',
+    wordCount: 0,
+    backlinkCount: 0,
+    historyEntries: [],
+    pinned: false,
   );
 }

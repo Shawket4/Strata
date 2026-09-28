@@ -16,7 +16,8 @@ use strata_index::types::DecisionKind;
 use strata_index::{AppDb, UserScope};
 use strata_vault::model::TreeEntry;
 use strata_vault::ops::ai_apply::{AiApplied, Filing, NewDecision, NewSuggestion, SYSTEM_FOLDERS};
-use strata_vault::ops::ai_decide::{self as decide, FilingPayload};
+use strata_vault::ops::ai_decide as decide;
+use sync_model::suggestions::FilingPayload;
 
 use crate::correct::{self, CorrectParams};
 use crate::handler::{JobClass, JobContext, JobError, JobHandler};
@@ -263,7 +264,7 @@ impl JobHandler for FileInboxHandler {
                     note: Some(id),
                     kind: decide::KIND_FILING.to_owned(),
                     payload: pipeline::rmp(&FilingPayload {
-                        decision_id,
+                        decision_id: decision_id.as_ulid(),
                         title,
                         tags,
                         folder,

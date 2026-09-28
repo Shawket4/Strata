@@ -456,7 +456,8 @@ class _SuggestionRow extends StatelessWidget {
         mention: detail.mention,
       ),
       SuggestionKind.custody || SuggestionKind.task => detail.line,
-      SuggestionKind.duplicate => l10n.inboxPossibleDuplicate,
+      SuggestionKind.duplicate ||
+      SuggestionKind.duplicates => l10n.inboxPossibleDuplicate,
       SuggestionKind.relation => l10n.inboxRelationSummary(
         type: context.l10n.relationTypeLabel(
           CoreLabels.relationType(detail.relType),
@@ -464,18 +465,21 @@ class _SuggestionRow extends StatelessWidget {
         target: detail.target?.title ?? '',
       ),
       SuggestionKind.filing => detail.title,
-      SuggestionKind.unsupported => detail.serverKind,
+      SuggestionKind.unsupported ||
+      SuggestionKind.conflict => detail.serverKind,
     };
     final badge = switch (detail.kind) {
       SuggestionKind.entityLinkOrCreate => l10n.inboxNeedsYou,
       SuggestionKind.custody when suggestion.status == 'accepted' =>
         l10n.inboxAppliedAutomatically,
       SuggestionKind.custody => l10n.inboxCustodySuggestion,
-      SuggestionKind.duplicate => l10n.inboxPossibleDuplicate,
+      SuggestionKind.duplicate ||
+      SuggestionKind.duplicates => l10n.inboxPossibleDuplicate,
       SuggestionKind.relation => l10n.inboxRelationSuggestion,
       SuggestionKind.task => l10n.inboxTaskSuggestion,
       SuggestionKind.filing => l10n.inboxFilingProposal,
-      SuggestionKind.unsupported => l10n.inboxUnsupportedBadge,
+      SuggestionKind.unsupported ||
+      SuggestionKind.conflict => l10n.inboxUnsupportedBadge,
     };
     return Material(
       color: selected ? colors.accentTint : Colors.transparent,

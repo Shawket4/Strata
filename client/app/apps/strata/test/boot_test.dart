@@ -179,6 +179,7 @@ void main() {
               serverUrl: StrataFixtures.serverUrl,
               timezone: 'Africa/Cairo',
               uiLanguage: 'ar',
+              initials: '',
             ),
             knownAccounts: [],
             deviceName: 'd',

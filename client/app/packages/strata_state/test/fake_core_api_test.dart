@@ -64,6 +64,64 @@ void main() {
       answer: null,
     ),
     (
+      invoke: (api) => api.checkApproval(),
+      call: const CoreCall('checkApproval'),
+      answer: StrataFixtures.sessionActive,
+    ),
+    (
+      invoke: (api) => api.dismissPending(),
+      call: const CoreCall('dismissPending'),
+      answer: StrataFixtures.sessionActive,
+    ),
+    (
+      invoke: (api) => api.passwordStrength(password: 'password'),
+      call: const CoreCall('passwordStrength', {'password': 'password'}),
+      answer: StrataFixtures.passwordStrength,
+    ),
+    (
+      invoke: (api) => api.changePassword(current: 'current', new_: 'new_'),
+      call: const CoreCall('changePassword', {
+        'current': 'current',
+        'new_': 'new_',
+      }),
+      answer: StrataFixtures.sessionActive,
+    ),
+    (
+      invoke: (api) => api.setUiLanguage(code: 'code'),
+      call: const CoreCall('setUiLanguage', {'code': 'code'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.setTimezone(iana: 'iana'),
+      call: const CoreCall('setTimezone', {'iana': 'iana'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.setDisplayName(name: 'name'),
+      call: const CoreCall('setDisplayName', {'name': 'name'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.downloadExport(path: 'path'),
+      call: const CoreCall('downloadExport', {'path': 'path'}),
+      answer: StrataFixtures.exportSummary,
+    ),
+    (
+      invoke: (api) => api.deleteAccountNow(force: true),
+      call: const CoreCall('deleteAccountNow', {'force': true}),
+      answer: StrataFixtures.sessionActive,
+    ),
+    (
+      invoke: (api) => api.exportUnsynced(path: 'path'),
+      call: const CoreCall('exportUnsynced', {'path': 'path'}),
+      answer: 0,
+    ),
+    (
+      invoke: (api) => api.setSyncPaused(paused: true),
+      call: const CoreCall('setSyncPaused', {'paused': true}),
+      answer: null,
+    ),
+    (
       invoke: (api) => api.capture(
         text: 'كلمت أحمد النهارده، عايزين invoicing أسبوعي بدل شهري',
       ),
@@ -86,11 +144,15 @@ void main() {
       answer: StrataFixtures.createOutcomeCreated,
     ),
     (
-      invoke: (api) =>
-          api.updateNote(id: 'n-pricing-experiments', content: '# Pricing\n'),
+      invoke: (api) => api.updateNote(
+        id: 'id',
+        content: 'content',
+        baseVersion: 'baseVersion',
+      ),
       call: const CoreCall('updateNote', {
-        'id': 'n-pricing-experiments',
-        'content': '# Pricing\n',
+        'id': 'id',
+        'content': 'content',
+        'baseVersion': 'baseVersion',
       }),
       answer: StrataFixtures.opId,
     ),
@@ -217,6 +279,24 @@ void main() {
       answer: StrataFixtures.opId,
     ),
     (
+      invoke: (api) =>
+          api.addReminder(taskId: 'taskId', at: StrataFixtures.now),
+      call: CoreCall('addReminder', {
+        'taskId': 'taskId',
+        'at': StrataFixtures.now,
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) =>
+          api.removeReminder(taskId: 'taskId', at: StrataFixtures.now),
+      call: CoreCall('removeReminder', {
+        'taskId': 'taskId',
+        'at': StrataFixtures.now,
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
       invoke: (api) => api.resolveConflict(
         opId: '01J8ZQ2A7C4D6F8G0H2J4K6M8N',
         resolution: StrataFixtures.conflictResolution,
@@ -251,6 +331,381 @@ void main() {
       answer: null,
     ),
     (
+      invoke: (api) => api.insertMention(
+        noteId: 'noteId',
+        content: 'content',
+        start: 3,
+        end: 3,
+        entityId: 'entityId',
+      ),
+      call: const CoreCall('insertMention', {
+        'noteId': 'noteId',
+        'content': 'content',
+        'start': 3,
+        'end': 3,
+        'entityId': 'entityId',
+      }),
+      answer: StrataFixtures.mentionEdit,
+    ),
+    (
+      invoke: (api) => api.pinNote(id: 'id', pinned: true),
+      call: const CoreCall('pinNote', {'id': 'id', 'pinned': true}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.acceptCapture(noteId: 'noteId'),
+      call: const CoreCall('acceptCapture', {'noteId': 'noteId'}),
+      answer: const <String>[],
+    ),
+    (
+      invoke: (api) => api.rejectCapture(noteId: 'noteId'),
+      call: const CoreCall('rejectCapture', {'noteId': 'noteId'}),
+      answer: const <String>[],
+    ),
+    (
+      invoke: (api) => api.acceptCaptures(noteIds: const ['a']),
+      call: const CoreCall('acceptCaptures', {
+        'noteIds': ['a'],
+      }),
+      answer: const <String>[],
+    ),
+    (
+      invoke: (api) => api.acceptAllReady(),
+      call: const CoreCall('acceptAllReady'),
+      answer: const <String>[],
+    ),
+    (
+      invoke: (api) => api.acceptSuggestionWith(
+        id: 'id',
+        edits: StrataFixtures.suggestionEdits,
+      ),
+      call: const CoreCall('acceptSuggestionWith', {
+        'id': 'id',
+        'edits': StrataFixtures.suggestionEdits,
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.resolveLinkOrCreate(
+        id: 'id',
+        choice: StrataFixtures.linkOrCreateChoice,
+      ),
+      call: const CoreCall('resolveLinkOrCreate', {
+        'id': 'id',
+        'choice': StrataFixtures.linkOrCreateChoice,
+      }),
+      answer: StrataFixtures.createOutcomeCreated,
+    ),
+    (
+      invoke: (api) =>
+          api.acceptSuggestionChoice(id: 'id', documentId: 'documentId'),
+      call: const CoreCall('acceptSuggestionChoice', {
+        'id': 'id',
+        'documentId': 'documentId',
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.undoSuggestion(id: 'id'),
+      call: const CoreCall('undoSuggestion', {'id': 'id'}),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.acknowledgeSuggestion(id: 'id'),
+      call: const CoreCall('acknowledgeSuggestion', {'id': 'id'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.resolveCaptureDuplicate(
+        id: 'id',
+        choice: DuplicateChoice.createAnyway,
+      ),
+      call: const CoreCall('resolveCaptureDuplicate', {
+        'id': 'id',
+        'choice': DuplicateChoice.createAnyway,
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.replyToSuggestion(id: 'id', text: 'text'),
+      call: const CoreCall('replyToSuggestion', {'id': 'id', 'text': 'text'}),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) =>
+          api.createDocument(draft: StrataFixtures.documentDraft, force: true),
+      call: const CoreCall('createDocument', {
+        'draft': StrataFixtures.documentDraft,
+        'force': true,
+      }),
+      answer: StrataFixtures.createOutcomeCreated,
+    ),
+    (
+      invoke: (api) =>
+          api.createPlace(draft: StrataFixtures.placeDraft, force: true),
+      call: const CoreCall('createPlace', {
+        'draft': StrataFixtures.placeDraft,
+        'force': true,
+      }),
+      answer: StrataFixtures.createOutcomeCreated,
+    ),
+    (
+      invoke: (api) =>
+          api.mergeEntities(sourceId: 'sourceId', intoId: 'intoId'),
+      call: const CoreCall('mergeEntities', {
+        'sourceId': 'sourceId',
+        'intoId': 'intoId',
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.repointRelation(
+        srcId: 'srcId',
+        dstId: 'dstId',
+        relType: 'relType',
+        newDstId: 'newDstId',
+      ),
+      call: const CoreCall('repointRelation', {
+        'srcId': 'srcId',
+        'dstId': 'dstId',
+        'relType': 'relType',
+        'newDstId': 'newDstId',
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.rejectRelation(
+        srcId: 'srcId',
+        dstId: 'dstId',
+        relType: 'relType',
+      ),
+      call: const CoreCall('rejectRelation', {
+        'srcId': 'srcId',
+        'dstId': 'dstId',
+        'relType': 'relType',
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.updateUserNotes(id: 'id', text: 'text'),
+      call: const CoreCall('updateUserNotes', {'id': 'id', 'text': 'text'}),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.setProperty(id: 'id', key: 'key', value: 'value'),
+      call: const CoreCall('setProperty', {
+        'id': 'id',
+        'key': 'key',
+        'value': 'value',
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.removeProperty(id: 'id', key: 'key'),
+      call: const CoreCall('removeProperty', {'id': 'id', 'key': 'key'}),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.addAlias(id: 'id', alias: 'alias'),
+      call: const CoreCall('addAlias', {'id': 'id', 'alias': 'alias'}),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.removeAlias(id: 'id', alias: 'alias'),
+      call: const CoreCall('removeAlias', {'id': 'id', 'alias': 'alias'}),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.recordCustody(
+        documentId: 'documentId',
+        draft: StrataFixtures.custodyDraft,
+      ),
+      call: CoreCall('recordCustody', {
+        'documentId': 'documentId',
+        'draft': StrataFixtures.custodyDraft,
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.setDefaultReminderTime(time: 'time'),
+      call: const CoreCall('setDefaultReminderTime', {'time': 'time'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) =>
+          api.setQuietHours(enabled: true, from: 'from', until: 'until'),
+      call: const CoreCall('setQuietHours', {
+        'enabled': true,
+        'from': 'from',
+        'until': 'until',
+      }),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.setSnoozeMinutes(minutes: 3),
+      call: const CoreCall('setSnoozeMinutes', {'minutes': 3}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.refreshSettings(),
+      call: const CoreCall('refreshSettings'),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.renameDevice(id: 'id', name: 'name'),
+      call: const CoreCall('renameDevice', {'id': 'id', 'name': 'name'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.revokeDevice(id: 'id'),
+      call: const CoreCall('revokeDevice', {'id': 'id'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.setDeviceReminders(id: 'id', enabled: true),
+      call: const CoreCall('setDeviceReminders', {'id': 'id', 'enabled': true}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.refreshHistory(noteId: 'noteId'),
+      call: const CoreCall('refreshHistory', {'noteId': 'noteId'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.revertNote(noteId: 'noteId', commit: 'commit'),
+      call: const CoreCall('revertNote', {
+        'noteId': 'noteId',
+        'commit': 'commit',
+      }),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.exportVault(path: 'path'),
+      call: const CoreCall('exportVault', {'path': 'path'}),
+      answer: StrataFixtures.exportSummary,
+    ),
+    (
+      invoke: (api) => api.importVault(path: 'path'),
+      call: const CoreCall('importVault', {'path': 'path'}),
+      answer: StrataFixtures.importSummary,
+    ),
+    (
+      invoke: (api) => api.approveUser(id: 'id'),
+      call: const CoreCall('approveUser', {'id': 'id'}),
+      answer: StrataFixtures.adminUserItem,
+    ),
+    (
+      invoke: (api) => api.rejectUser(id: 'id'),
+      call: const CoreCall('rejectUser', {'id': 'id'}),
+      answer: StrataFixtures.adminUserItem,
+    ),
+    (
+      invoke: (api) => api.setUserRole(id: 'id', role: 'role'),
+      call: const CoreCall('setUserRole', {'id': 'id', 'role': 'role'}),
+      answer: StrataFixtures.adminUserItem,
+    ),
+    (
+      invoke: (api) => api.setUserEnabled(id: 'id', enabled: true),
+      call: const CoreCall('setUserEnabled', {'id': 'id', 'enabled': true}),
+      answer: StrataFixtures.adminUserItem,
+    ),
+    (
+      invoke: (api) => api.resetPassword(id: 'id'),
+      call: const CoreCall('resetPassword', {'id': 'id'}),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.scheduleDeletion(id: 'id'),
+      call: const CoreCall('scheduleDeletion', {'id': 'id'}),
+      answer: StrataFixtures.adminUserItem,
+    ),
+    (
+      invoke: (api) => api.cancelDeletion(id: 'id'),
+      call: const CoreCall('cancelDeletion', {'id': 'id'}),
+      answer: StrataFixtures.adminUserItem,
+    ),
+    (
+      invoke: (api) => api.createUser(request: StrataFixtures.newUserRequest),
+      call: const CoreCall('createUser', {
+        'request': StrataFixtures.newUserRequest,
+      }),
+      answer: StrataFixtures.adminUserItem,
+    ),
+    (
+      invoke: (api) =>
+          api.ask(question: 'question', scope: StrataFixtures.askScope),
+      call: const CoreCall('ask', {
+        'question': 'question',
+        'scope': StrataFixtures.askScope,
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.stopAsk(),
+      call: const CoreCall('stopAsk'),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.newConversation(),
+      call: const CoreCall('newConversation'),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.saveAnswerAsNote(messageId: 'messageId'),
+      call: const CoreCall('saveAnswerAsNote', {'messageId': 'messageId'}),
+      answer: StrataFixtures.opId,
+    ),
+    (
+      invoke: (api) => api.refreshAiActivity(),
+      call: const CoreCall('refreshAiActivity'),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.rejectAiDecision(decisionId: 'decisionId'),
+      call: const CoreCall('rejectAiDecision', {'decisionId': 'decisionId'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.repointAiDecision(
+        decisionId: 'decisionId',
+        targetId: 'targetId',
+        hint: 'hint',
+      ),
+      call: const CoreCall('repointAiDecision', {
+        'decisionId': 'decisionId',
+        'targetId': 'targetId',
+        'hint': 'hint',
+      }),
+      answer: null,
+    ),
+    (
+      invoke: (api) =>
+          api.retypeAiDecision(decisionId: 'decisionId', relType: 'relType'),
+      call: const CoreCall('retypeAiDecision', {
+        'decisionId': 'decisionId',
+        'relType': 'relType',
+      }),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.refreshSimilarity(),
+      call: const CoreCall('refreshSimilarity'),
+      answer: null,
+    ),
+    (
+      invoke: (api) => api.saveLayout(
+        centerId: 'centerId',
+        name: 'name',
+        positions: const [StrataFixtures.nodePosition],
+      ),
+      call: const CoreCall('saveLayout', {
+        'centerId': 'centerId',
+        'name': 'name',
+        'positions': [StrataFixtures.nodePosition],
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
       invoke: (api) => api.reportNotificationResult(
         id: 4211,
         result: NotificationResult.permissionDenied,
@@ -278,10 +733,31 @@ void main() {
       answer: StrataFixtures.globalGraphView,
     ),
     (
+      invoke: (api) =>
+          api.globalGraphFiltered(filter: StrataFixtures.graphFilter),
+      call: const CoreCall('globalGraphFiltered', {
+        'filter': StrataFixtures.graphFilter,
+      }),
+      answer: StrataFixtures.globalGraphView,
+    ),
+    (
       invoke: (api) => api.search(query: 'pricing', mode: SearchMode.keyword),
       call: const CoreCall('search', {
         'query': 'pricing',
         'mode': SearchMode.keyword,
+      }),
+      answer: StrataFixtures.searchView,
+    ),
+    (
+      invoke: (api) => api.searchInFolder(
+        query: 'query',
+        mode: SearchMode.keyword,
+        folder: 'folder',
+      ),
+      call: const CoreCall('searchInFolder', {
+        'query': 'query',
+        'mode': SearchMode.keyword,
+        'folder': 'folder',
       }),
       answer: StrataFixtures.searchView,
     ),
@@ -296,16 +772,104 @@ void main() {
       answer: StrataFixtures.editorHints,
     ),
     (
-      invoke: (api) => api.loadAdminUsers(),
-      call: const CoreCall('loadAdminUsers'),
+      invoke: (api) => api.editorCompletions(
+        noteId: 'noteId',
+        content: 'content',
+        cursor: 3,
+      ),
+      call: const CoreCall('editorCompletions', {
+        'noteId': 'noteId',
+        'content': 'content',
+        'cursor': 3,
+      }),
+      answer: StrataFixtures.completions,
+    ),
+    (
+      invoke: (api) => api.tags(prefix: 'prefix'),
+      call: const CoreCall('tags', {'prefix': 'prefix'}),
+      answer: const <TagItem>[],
+    ),
+    (
+      invoke: (api) => api.noteBlocks(noteId: 'noteId'),
+      call: const CoreCall('noteBlocks', {'noteId': 'noteId'}),
+      answer: const <BlockItem>[],
+    ),
+    (
+      invoke: (api) => api.relationTypes(),
+      call: const CoreCall('relationTypes'),
+      answer: const <RelationTypeItem>[],
+    ),
+    (
+      invoke: (api) => api.recurrenceForm(phrase: 'phrase'),
+      call: const CoreCall('recurrenceForm', {'phrase': 'phrase'}),
+      answer: null,
+    ),
+    (
+      invoke: (api) =>
+          api.composeRecurrence(form: StrataFixtures.recurrenceForm),
+      call: CoreCall('composeRecurrence', {
+        'form': StrataFixtures.recurrenceForm,
+      }),
+      answer: StrataFixtures.recurrenceCompose,
+    ),
+    (
+      invoke: (api) => api.recurrencePreview(
+        phrase: 'phrase',
+        from: StrataFixtures.now,
+        count: 3,
+      ),
+      call: CoreCall('recurrencePreview', {
+        'phrase': 'phrase',
+        'from': StrataFixtures.now,
+        'count': 3,
+      }),
+      answer: const <RecurrencePreviewItem>[],
+    ),
+    (
+      invoke: (api) => api.parseTaskText(text: 'text'),
+      call: const CoreCall('parseTaskText', {'text': 'text'}),
+      answer: StrataFixtures.taskDraftPreview,
+    ),
+    (
+      invoke: (api) => api.placeOptions(documentId: 'documentId'),
+      call: const CoreCall('placeOptions', {'documentId': 'documentId'}),
+      answer: const <PlaceOption>[],
+    ),
+    (
+      invoke: (api) => api.mergePreview(sourceId: 'sourceId', intoId: 'intoId'),
+      call: const CoreCall('mergePreview', {
+        'sourceId': 'sourceId',
+        'intoId': 'intoId',
+      }),
+      answer: StrataFixtures.mergePreview,
+    ),
+    (
+      invoke: (api) => api.resolveCitation(noteId: 'noteId', anchor: 'anchor'),
+      call: const CoreCall('resolveCitation', {
+        'noteId': 'noteId',
+        'anchor': 'anchor',
+      }),
+      answer: StrataFixtures.citationPreview,
+    ),
+    (
+      invoke: (api) => api.noteRevisionDiff(noteId: 'noteId', commit: 'commit'),
+      call: const CoreCall('noteRevisionDiff', {
+        'noteId': 'noteId',
+        'commit': 'commit',
+      }),
+      answer: StrataFixtures.noteDiffView,
+    ),
+    (
+      invoke: (api) => api.loadAdminUsers(query: 'query'),
+      call: const CoreCall('loadAdminUsers', {'query': 'query'}),
       answer: StrataFixtures.adminUsersView,
     ),
   ];
 
   test('covers every Future-returning CoreApi method once', () {
-    // 53 facade functions - 15 streams.
-    expect(cases, hasLength(38));
-    expect(cases.map((c) => c.call.method).toSet(), hasLength(38));
+    // 139 facade functions - 21 streams.
+    expect(cases, hasLength(118));
+    expect(cases.map((c) => c.call.method).toSet(), hasLength(118));
   });
 
   for (final c in cases) {
@@ -358,6 +922,19 @@ void main() {
           inboxCount: 0,
           tasks: StrataFixtures.taskSections,
           sync_: StrataFixtures.syncPill,
+          todayLabel: '',
+          greeting: '',
+          displayName: '',
+          inboxPreview: [],
+          needsYouCount: 0,
+          contradictionsCount: 0,
+          inboxSummary: '',
+          aiActivity: Availability.available,
+          aiActivityItems: [],
+          aiActivityHeadline: '',
+          openItems: Availability.available,
+          openItemList: [],
+          pinned: [],
         );
         fake.home.add(empty);
         await Future<void>.delayed(Duration.zero);
@@ -394,6 +971,19 @@ void main() {
         inboxCount: 1,
         tasks: StrataFixtures.taskSections,
         sync_: StrataFixtures.syncPillOffline,
+        todayLabel: '',
+        greeting: '',
+        displayName: '',
+        inboxPreview: [],
+        needsYouCount: 0,
+        contradictionsCount: 0,
+        inboxSummary: '',
+        aiActivity: Availability.available,
+        aiActivityItems: [],
+        aiActivityHeadline: '',
+        openItems: Availability.available,
+        openItemList: [],
+        pinned: [],
       );
       fake.home.add(first);
       final seen = <HomeView>[];

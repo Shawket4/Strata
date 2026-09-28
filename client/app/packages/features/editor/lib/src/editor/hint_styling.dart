@@ -205,7 +205,14 @@ TextStyle hintTextStyle(
         color: colors.text,
         backgroundColor: colors.surface2,
       ),
-      HintKind.frontmatter || HintKind.taskLine => style,
+      HintKind.bold => style.copyWith(fontWeight: FontWeight.w700),
+      HintKind.italic => style.copyWith(fontStyle: FontStyle.italic),
+      HintKind.strike => style.copyWith(decoration: TextDecoration.lineThrough),
+      HintKind.mark => style.copyWith(backgroundColor: colors.warningTint),
+      HintKind.frontmatter ||
+      HintKind.taskLine ||
+      HintKind.rtlLine ||
+      HintKind.ltrLine => style,
     };
   }
   return style;

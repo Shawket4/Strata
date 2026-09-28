@@ -14,9 +14,11 @@ use strata_index::UserScope;
 use strata_index::repo::suggestions::{self as srepo, Reply, Suggestion};
 use strata_index::repo::sync::{self, NewChange};
 use strata_index::types::{ChangeOp, ReplyAuthor, SuggestionStatus};
+use sync_model::suggestions::{
+    DuplicatePayload, DuplicatesPayload, PayloadError, SuggestionPayload, kinds,
+};
 
 use crate::error::{Result, VaultError};
-use crate::ops::notes::DuplicatePayload;
 use crate::receipt::AfterWrite;
 use crate::store::{Author, VaultService};
 
@@ -29,31 +31,11 @@ pub struct SuggestionView {
     pub replies: Vec<Reply>,
 }
 
-/// The decoded payload of a suggestion.
-#[derive(Debug, Clone, PartialEq)]
-pub enum Payload {
-    /// `duplicate`.
-    Duplicate(DuplicatePayload),
-    /// `duplicates` (nightly semantic sweep, §9.7).
-    Duplicates(Box<crate::ops::ai::DuplicatesPayload>),
-    /// Any other kind (opaque `MessagePack`).
-    Opaque(Vec<u8>),
-}
-
 impl SuggestionView {
-    /// The payload, decoded when the kind is known.
-    pub fn payload(&self) -> Payload {
-        match self.suggestion.kind.as_str() {
-            "duplicate" => rmp_serde::from_slice(&self.suggestion.payload).map_or_else(
-                |_| Payload::Opaque(self.suggestion.payload.clone()),
-                Payload::Duplicate,
-            ),
-            "duplicates" => rmp_serde::from_slice(&self.suggestion.payload).map_or_else(
-                |_| Payload::Opaque(self.suggestion.payload.clone()),
-                |p| Payload::Duplicates(Box::new(p)),
-            ),
-            _ => Payload::Opaque(self.suggestion.payload.clone()),
-        }
+    /// The payload, decoded by the suggestion's kind (`sync_model::suggestions`); an unknown
+    /// kind or undecodable bytes are an error the caller shows as opaque.
+    pub fn payload(&self) -> std::result::Result<SuggestionPayload, PayloadError> {
+        SuggestionPayload::decode(&self.suggestion.kind, &self.suggestion.payload)
     }
 }
 
@@ -113,14 +95,14 @@ impl VaultService {
                 // keep-both writes before it (they are idempotent if the op is replayed).
                 let receipt = core.receipt.take();
                 if accept
-                    && s.kind == "duplicate"
+                    && s.kind == kinds::DUPLICATE
                     && let Some(note) = s.note_id
                     && let Ok(p) = rmp_serde::from_slice::<DuplicatePayload>(&s.payload)
                 {
                     let candidates: Vec<_> = p
                         .candidates
                         .iter()
-                        .filter_map(super::notes::DuplicatePayloadItem::candidate)
+                        .map(super::notes::item_candidate)
                         .collect();
                     if core.state()?.note(note).is_some() && !candidates.is_empty() {
                         core.keep_both_notes(scope, note, &candidates, Author::User)
@@ -129,10 +111,9 @@ impl VaultService {
                 }
                 // Rejecting "these are duplicates" means they are distinct: never again.
                 if !accept
-                    && s.kind == "duplicates"
+                    && s.kind == kinds::DUPLICATES
                     && let Some(note) = s.note_id
-                    && let Ok(p) =
-                        rmp_serde::from_slice::<crate::ops::ai::DuplicatesPayload>(&s.payload)
+                    && let Ok(p) = rmp_serde::from_slice::<DuplicatesPayload>(&s.payload)
                 {
                     core.reject_duplicates(scope, note, &p).await?;
                 }

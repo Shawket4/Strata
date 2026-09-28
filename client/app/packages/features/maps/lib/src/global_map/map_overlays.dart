@@ -349,7 +349,7 @@ class HoverCard extends StatelessWidget {
     final l10n = context.mapsL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final kind = nodeKindOf(node.kind);
+    final kind = nodeKindOf(node.kind.name);
     return Positioned(
       left: position.dx + 14,
       top: position.dy + 14,

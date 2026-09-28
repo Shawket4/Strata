@@ -14,7 +14,7 @@ use ulid::Ulid;
 use utoipa::ToSchema;
 
 use crate::routes::documents::{CopyKind, CustodyEventKind};
-use crate::routes::inbox::SuggestionStatus;
+use crate::routes::inbox::{ReplyAuthorDto, SuggestionStatus};
 use crate::routes::notes::NoteKind;
 use crate::wire::Binary;
 
@@ -701,6 +701,9 @@ pub struct SyncSuggestionReplyRecord {
     pub text: String,
     /// When.
     pub at: DateTime<FixedOffset>,
+    /// Who wrote it (absent: the user).
+    #[serde(default)]
+    pub author: ReplyAuthorDto,
 }
 
 /// A suggestion.

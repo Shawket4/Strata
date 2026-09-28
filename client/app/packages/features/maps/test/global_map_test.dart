@@ -94,7 +94,22 @@ void main() {
       testWidgets('empty $v', (tester) async {
         final fake = _fake()
           ..globalGraphAnswer.returns(
-            const GlobalGraphView(nodes: [], edges: [], clusters: []),
+            const GlobalGraphView(
+              nodes: [],
+              edges: [],
+              clusters: [],
+              filter: GraphFilter(
+                edgeKinds: [],
+                nodeKinds: [],
+                similarity: false,
+                lens: GraphLens.notes,
+                includeTags: false,
+              ),
+              edgeCounts: [],
+              nodeCounts: [],
+              neighbours: [],
+              similarity: Availability.available,
+            ),
           );
         await pumpVariant(tester, v, const GlobalMapScreen(), fake);
         expect(

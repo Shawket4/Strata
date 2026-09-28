@@ -13,15 +13,41 @@ abstract final class DirFixtures {
         title: 'Watanya contract',
         subtitle: 'Stored · Nasr City office › Safe',
         aliases: ['عقد وطنية'],
+        kind: '',
+        titleDir: TextDir.ltr,
+        initials: '',
+        mentionCount: 0,
+        tags: [],
+        location: [],
+        expiringSoon: false,
+        breadcrumb: [],
+        documentCount: 0,
+        hasOpenItems: false,
       ),
       DirectoryItem(
         id: 'd-car-licence',
         title: 'Car licence',
         subtitle: 'Checked out · with Shawket',
         aliases: ['رخصة العربية'],
+        kind: '',
+        titleDir: TextDir.ltr,
+        initials: '',
+        mentionCount: 0,
+        tags: [],
+        location: [],
+        expiringSoon: false,
+        breadcrumb: [],
+        documentCount: 0,
+        hasOpenItems: false,
       ),
     ],
     counts: StrataFixtures.directoryCounts,
+    filter: DirectoryFilter(tags: [], expiring: false, hasOpenItems: false),
+    sort: DirectorySort.name,
+    filterOptions: [],
+    sections: [],
+    suggestions: [],
+    expiringCount: 0,
   );
 
   /// The Companies tab.
@@ -34,9 +60,25 @@ abstract final class DirFixtures {
         title: 'Acme Logistics',
         subtitle: 'Client · logistics',
         aliases: ['أكمي'],
+        kind: '',
+        titleDir: TextDir.ltr,
+        initials: '',
+        mentionCount: 0,
+        tags: [],
+        location: [],
+        expiringSoon: false,
+        breadcrumb: [],
+        documentCount: 0,
+        hasOpenItems: false,
       ),
     ],
     counts: StrataFixtures.directoryCounts,
+    filter: DirectoryFilter(tags: [], expiring: false, hasOpenItems: false),
+    sort: DirectorySort.name,
+    filterOptions: [],
+    sections: [],
+    suggestions: [],
+    expiringCount: 0,
   );
 
   /// A search in both scripts ("أحمد").
@@ -45,6 +87,12 @@ abstract final class DirFixtures {
     query: 'أحمد',
     items: [StrataFixtures.directoryItem],
     counts: StrataFixtures.directoryCounts,
+    filter: DirectoryFilter(tags: [], expiring: false, hasOpenItems: false),
+    sort: DirectorySort.name,
+    filterOptions: [],
+    sections: [],
+    suggestions: [],
+    expiringCount: 0,
   );
 
   /// A search without results.
@@ -53,6 +101,12 @@ abstract final class DirFixtures {
     query: 'zz',
     items: [],
     counts: StrataFixtures.directoryCounts,
+    filter: DirectoryFilter(tags: [], expiring: false, hasOpenItems: false),
+    sort: DirectorySort.name,
+    filterOptions: [],
+    sections: [],
+    suggestions: [],
+    expiringCount: 0,
   );
 
   /// An empty directory.
@@ -61,6 +115,12 @@ abstract final class DirFixtures {
     query: '',
     items: [],
     counts: DirectoryCounts(people: 0, companies: 0, documents: 0, places: 0),
+    filter: DirectoryFilter(tags: [], expiring: false, hasOpenItems: false),
+    sort: DirectorySort.name,
+    filterOptions: [],
+    sections: [],
+    suggestions: [],
+    expiringCount: 0,
   );
 
   /// Ahmed Samir with unsynced changes (offline edits).
@@ -80,6 +140,16 @@ abstract final class DirFixtures {
       related: [],
       documents: [StrataFixtures.documentBrief],
       pendingSync: true,
+      titleDir: TextDir.ltr,
+      initials: '',
+      path: '',
+      tags: [],
+      userNotes: '',
+      summaryCitations: [],
+      openCount: 0,
+      doneCount: 0,
+      mentionCount: 0,
+      summaryDir: TextDir.ltr,
     ),
   );
 

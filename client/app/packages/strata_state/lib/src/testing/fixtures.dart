@@ -1740,8 +1740,8 @@ abstract final class StrataFixtures {
   /// A sample [TaskHomesView].
   static const TaskHomesView taskHomesView = TaskHomesView(homes: []);
 
-  /// A sample [TextSpan].
-  static const TextSpan textSpan = TextSpan(start: 0, end: 0);
+  /// A sample [HighlightSpan].
+  static const HighlightSpan highlightSpan = HighlightSpan(start: 0, end: 0);
 
   /// A sample [ThreadMessage].
   static const ThreadMessage threadMessage = ThreadMessage(

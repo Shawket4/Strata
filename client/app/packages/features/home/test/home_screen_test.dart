@@ -14,6 +14,19 @@ final _offline = HomeView(
   inboxCount: 3,
   tasks: StrataFixtures.taskSections,
   sync_: StrataFixtures.syncPillOffline,
+  todayLabel: '',
+  greeting: '',
+  displayName: '',
+  inboxPreview: [],
+  needsYouCount: 0,
+  contradictionsCount: 0,
+  inboxSummary: '',
+  aiActivity: Availability.available,
+  aiActivityItems: [],
+  aiActivityHeadline: '',
+  openItems: Availability.available,
+  openItemList: [],
+  pinned: [],
 );
 
 final _empty = HomeView(
@@ -25,8 +38,23 @@ final _empty = HomeView(
     upcoming: [],
     recurring: [],
     noDate: [],
+    upcomingGroups: [],
+    todayCount: 0,
   ),
   sync_: StrataFixtures.syncPill,
+  todayLabel: '',
+  greeting: '',
+  displayName: '',
+  inboxPreview: [],
+  needsYouCount: 0,
+  contradictionsCount: 0,
+  inboxSummary: '',
+  aiActivity: Availability.available,
+  aiActivityItems: [],
+  aiActivityHeadline: '',
+  openItems: Availability.available,
+  openItemList: [],
+  pinned: [],
 );
 
 Future<void> _reveal(WidgetTester tester, Finder finder) async {

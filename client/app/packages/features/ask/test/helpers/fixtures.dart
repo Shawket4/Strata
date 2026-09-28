@@ -11,6 +11,14 @@ abstract final class AskFixtures {
         role: 'user',
         text: 'What did Acme ask for on invoicing, and did we agree?',
         citations: [],
+        id: '',
+        streaming: false,
+        spans: [],
+        sources: [],
+        scopeLabel: '',
+        sourceCount: 0,
+        createdLabel: '',
+        dir: TextDir.ltr,
       ),
       AskMessage(
         role: 'assistant',
@@ -25,11 +33,27 @@ abstract final class AskFixtures {
             anchor: 'd2e5',
           ),
         ],
+        id: '',
+        streaming: false,
+        spans: [],
+        sources: [],
+        scopeLabel: '',
+        sourceCount: 0,
+        createdLabel: '',
+        dir: TextDir.ltr,
       ),
       AskMessage(
         role: 'user',
         text: 'ومنى قالت إيه عن أسعار Nile Freight؟',
         citations: [],
+        id: '',
+        streaming: false,
+        spans: [],
+        sources: [],
+        scopeLabel: '',
+        sourceCount: 0,
+        createdLabel: '',
+        dir: TextDir.ltr,
       ),
       AskMessage(
         role: 'assistant',
@@ -37,20 +61,34 @@ abstract final class AskFixtures {
         citations: [
           Citation(target: 'Nile Freight rate increase', anchor: 'r8p2'),
         ],
+        id: '',
+        streaming: false,
+        spans: [],
+        sources: [],
+        scopeLabel: '',
+        sourceCount: 0,
+        createdLabel: '',
+        dir: TextDir.ltr,
       ),
     ],
+    scopes: [],
+    streaming: false,
   );
 
   /// Offline: the conversation stays readable.
   static const AskView offline = AskView(
     availability: Availability.offline,
     messages: [],
+    scopes: [],
+    streaming: false,
   );
 
   /// Nothing asked yet.
   static const AskView empty = AskView(
     availability: Availability.available,
     messages: [],
+    scopes: [],
+    streaming: false,
   );
 
   /// Semantic search while offline.
@@ -59,6 +97,7 @@ abstract final class AskFixtures {
     mode: SearchMode.semantic,
     results: [],
     availability: Availability.offline,
+    availableModes: [],
   );
 
   /// No results.
@@ -67,5 +106,6 @@ abstract final class AskFixtures {
     mode: SearchMode.keyword,
     results: [],
     availability: Availability.available,
+    availableModes: [],
   );
 }

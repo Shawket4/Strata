@@ -173,6 +173,7 @@ void main() {
               kind: NoteSyncKind.conflict,
               pendingOps: 1,
               conflictOpId: NotesFixtures.conflictOpId,
+              label: '',
             ),
           ),
         );
@@ -265,9 +266,14 @@ void main() {
                 path: 'notes/sales/Churn notes.md',
                 kind: 'note',
                 snippet: 'Most exits happen at the first renewal.',
+                titleDir: TextDir.ltr,
+                snippetDir: TextDir.ltr,
+                highlights: [],
+                score: 0,
               ),
             ],
             availability: Availability.available,
+            availableModes: [],
           ),
         );
       final host = Host();
@@ -298,6 +304,7 @@ void main() {
             mode: SearchMode.keyword,
             results: [],
             availability: Availability.available,
+            availableModes: [],
           ),
         );
       await pumpNotes(tester, const NotesScreen(folder: _folder), fake: fake);
@@ -613,6 +620,7 @@ void main() {
               kind: NoteSyncKind.conflict,
               pendingOps: 1,
               conflictOpId: NotesFixtures.conflictOpId,
+              label: '',
             ),
           ),
         ),

@@ -7,20 +7,14 @@ import 'package:strata/src/reminders/local_notifications_platform.dart';
 import 'package:strata/src/reminders/notification_platform.dart';
 import 'package:strata_state/strata_state.dart';
 
-/// Snooze length sent with a Snooze action until the core provides one
-/// (docs/CORE_GAPS.md "Snooze length"). The copy in the design says 15 min.
-const int interimSnoozeMinutes = 15;
-
 /// The core's action for a tapped notification action, or `null` for a tap
 /// on the notification itself (1:1 on the action identifier).
 NotificationAction? actionOf(NotificationTap tap) => switch (tap.actionId) {
   ReminderActions.done => const NotificationAction(
     kind: NotificationActionKind.done,
-    minutes: 0,
   ),
   ReminderActions.snooze => const NotificationAction(
     kind: NotificationActionKind.snooze,
-    minutes: interimSnoozeMinutes,
   ),
   _ => null,
 };

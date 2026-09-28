@@ -28,7 +28,7 @@ class AdminUsersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.adminL10n;
-    final users = ref.watch(adminUsersProvider);
+    final users = ref.watch(adminUsersProvider(''));
     final compact = SizeClass.of(context) == SizeClass.compact;
     final body = switch (users) {
       AsyncData(:final value) => switch (value.availability) {
@@ -40,7 +40,7 @@ class AdminUsersScreen extends ConsumerWidget {
           action: StrataAction(
             label: l10n.retry,
             icon: Icons.refresh,
-            onPressed: () => ref.invalidate(adminUsersProvider),
+            onPressed: () => ref.invalidate(adminUsersProvider('')),
           ),
         ),
         Availability.notYetAvailable => StrataEmptyState(
@@ -61,7 +61,7 @@ class AdminUsersScreen extends ConsumerWidget {
         action: StrataAction(
           label: l10n.retry,
           icon: Icons.refresh,
-          onPressed: () => ref.invalidate(adminUsersProvider),
+          onPressed: () => ref.invalidate(adminUsersProvider('')),
         ),
       ),
       _ => Center(

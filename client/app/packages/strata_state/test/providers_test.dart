@@ -139,6 +139,8 @@ void main() {
             outbox: const [],
             conflicts: const [],
             rejections: const [],
+            paused: false,
+            log: [],
           ),
         ],
         call: const CoreCall('watchSyncStatus'),
@@ -180,6 +182,19 @@ void main() {
             inboxCount: 0,
             tasks: StrataFixtures.taskSections,
             sync_: StrataFixtures.syncPillOffline,
+            todayLabel: '',
+            greeting: '',
+            displayName: '',
+            inboxPreview: [],
+            needsYouCount: 0,
+            contradictionsCount: 0,
+            inboxSummary: '',
+            aiActivity: Availability.available,
+            aiActivityItems: [],
+            aiActivityHeadline: '',
+            openItems: Availability.available,
+            openItemList: [],
+            pinned: [],
           ),
         ],
         call: const CoreCall('watchHome'),
@@ -381,6 +396,7 @@ void main() {
         mode: SearchMode.hybrid,
         results: [],
         availability: Availability.offline,
+        availableModes: [],
       );
       fake.searchAnswer.returns(view);
       await expectOneShot(
@@ -415,9 +431,9 @@ void main() {
       final fake = FakeCoreApi();
       await expectOneShot(
         fake,
-        adminUsersProvider.future,
+        adminUsersProvider('').future,
         StrataFixtures.adminUsersView,
-        const CoreCall('loadAdminUsers'),
+        const CoreCall('loadAdminUsers', {'query': ''}),
       );
     });
 
@@ -431,7 +447,7 @@ void main() {
       fake.loadAdminUsersAnswer.throws(failure);
       final container = _container(fake);
       await expectLater(
-        container.read(adminUsersProvider.future),
+        container.read(adminUsersProvider('').future),
         throwsA(same(failure)),
       );
       expect(fake.calls, const [CoreCall('loadAdminUsers')]);

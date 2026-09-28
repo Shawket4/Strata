@@ -122,6 +122,7 @@ void main() {
                 kind: NoteSyncKind.conflict,
                 pendingOps: 1,
                 conflictOpId: NotesFixtures.conflictOpId,
+                label: '',
               ),
             ),
           ),

@@ -15,12 +15,16 @@ abstract final class MapFixtures {
   }) => GraphNode(
     id: id,
     title: title,
-    kind: kind,
+    kind: GraphNodeKind.values.byName(kind),
     depth: depth,
     clusterId: cluster,
     degree: degree,
     x: x,
     y: y,
+    titleDir: TextDir.ltr,
+    updatedLabel: '',
+    labelRank: 0,
+    isHub: false,
   );
 
   static GraphEdge _e(
@@ -34,6 +38,8 @@ abstract final class MapFixtures {
     kind: kind,
     by: confidence == null ? 'user' : 'ai',
     confidence: confidence,
+    id: '',
+    label: '',
   );
 
   /// "Pricing experiments" with its eight neighbours (MindMap artboards):
@@ -124,6 +130,11 @@ abstract final class MapFixtures {
       _e('n-pricing-experiments', 'p-ahmed-samir', 'mention'),
       _e('n-pricing-experiments', 'c-acme-logistics', 'mention'),
     ],
+    relationCount: 0,
+    aiRelationCount: 0,
+    relationLabel: '',
+    saveLayout: Availability.available,
+    proposeRelation: Availability.available,
   );
 
   /// A note that no longer exists.
@@ -133,6 +144,11 @@ abstract final class MapFixtures {
     depth: 1,
     nodes: [],
     edges: [],
+    relationCount: 0,
+    aiRelationCount: 0,
+    relationLabel: '',
+    saveLayout: Availability.available,
+    proposeRelation: Availability.available,
   );
 
   /// A small global map: three clusters, every node kind and edge style.
@@ -290,10 +306,45 @@ abstract final class MapFixtures {
       _e('pl-nasr-city-safe', 'pl-nasr-city-office', 'part-of-place'),
     ],
     clusters: const [
-      ClusterLabel(id: 'k-clients', name: 'Clients · Acme', size: 4),
-      ClusterLabel(id: 'k-docs', name: 'Documents & places', size: 4),
-      ClusterLabel(id: 'k-pricing', name: 'Pricing & plans', size: 6),
+      ClusterLabel(
+        id: 'k-clients',
+        name: 'Clients · Acme',
+        size: 4,
+        x: 0,
+        y: 0,
+        hull: [],
+        radius: 0,
+      ),
+      ClusterLabel(
+        id: 'k-docs',
+        name: 'Documents & places',
+        size: 4,
+        x: 0,
+        y: 0,
+        hull: [],
+        radius: 0,
+      ),
+      ClusterLabel(
+        id: 'k-pricing',
+        name: 'Pricing & plans',
+        size: 6,
+        x: 0,
+        y: 0,
+        hull: [],
+        radius: 0,
+      ),
     ],
+    filter: const GraphFilter(
+      edgeKinds: [],
+      nodeKinds: [],
+      similarity: false,
+      lens: GraphLens.notes,
+      includeTags: false,
+    ),
+    edgeCounts: [],
+    nodeCounts: [],
+    neighbours: [],
+    similarity: Availability.available,
   );
 
   /// The neighbourhood of Acme Logistics (selection highlight).
@@ -312,5 +363,10 @@ abstract final class MapFixtures {
       _e('p-ahmed-samir', 'c-acme-logistics', 'entity:works-at'),
       _e('n-weekly-invoicing', 'c-acme-logistics', 'relation:related'),
     ],
+    relationCount: 0,
+    aiRelationCount: 0,
+    relationLabel: '',
+    saveLayout: Availability.available,
+    proposeRelation: Availability.available,
   );
 }

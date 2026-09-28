@@ -833,7 +833,7 @@ async fn stale_updates_merge_cleanly_or_become_conflict_copies() {
         (s.id, s.kind.as_str(), s.note_id),
         (op_id(4), "conflict", Some(id(1)))
     );
-    let payload: strata_api::sync::push::ConflictPayload = match &s.payload {
+    let payload: sync_model::suggestions::ConflictPayload = match &s.payload {
         types::SuggestionPayload::Opaque { data } => {
             rmp_serde::from_slice(data).expect("conflict payload")
         }
@@ -841,9 +841,9 @@ async fn stale_updates_merge_cleanly_or_become_conflict_copies() {
     };
     assert_eq!(
         payload,
-        strata_api::sync::push::ConflictPayload {
-            op_id: op_id(4).to_string(),
-            copy_id: op_id(4).to_string(),
+        sync_model::suggestions::ConflictPayload {
+            op_id: op_id(4),
+            copy_id: op_id(4),
             copy_path: copy_path.into(),
             base_version: version(&v1).to_string(),
             server_version: version(&merged).to_string(),

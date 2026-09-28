@@ -48,7 +48,7 @@ class GraphScene {
       index[node.id] = i;
       xs[i] = node.x;
       ys[i] = node.y;
-      final kind = nodeKindOf(node.kind);
+      final kind = nodeKindOf(node.kind.name);
       kinds[i] = kind;
       radii[i] = radiusOf(kind, node.degree);
       minX = math.min(minX, node.x);

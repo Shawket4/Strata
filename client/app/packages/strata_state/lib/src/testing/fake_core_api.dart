@@ -3,28 +3,57 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:strata_bridge/strata_bridge.dart'
     show
+        AdminUserItem,
         AdminUsersView,
         AppLifecycle,
+        AskScope,
         AskView,
+        BlockItem,
+        CitationPreview,
+        Completions,
         ConflictResolution,
         ConflictScreen,
         CoreConfig,
         CreateOutcome,
+        CustodyDraft,
+        DirectoryFilter,
+        DirectorySort,
         DirectoryTab,
         DirectoryView,
+        DocumentDraft,
         DuplicateChoice,
         DuplicatePromptsView,
         EditorHint,
         EntityScreen,
+        ExportSummary,
         GlobalGraphView,
+        GraphFilter,
         HomeView,
+        ImportSummary,
+        InboxFilter,
         InboxView,
+        LinkOrCreateChoice,
         LocalGraphView,
+        MentionEdit,
+        MergePreview,
+        NavView,
+        NewUserRequest,
+        NodePosition,
+        NoteDiffView,
         NoteScreen,
         NotesListView,
         NotificationAction,
         NotificationOp,
         NotificationResult,
+        PasswordStrength,
+        PlaceDraft,
+        PlaceOption,
+        RecentFilter,
+        RecentNotesView,
+        RecurrenceCompose,
+        RecurrenceForm,
+        RecurrencePreviewItem,
+        RelationTypeItem,
         SearchMode,
         SearchView,
         SessionState,
@@ -33,8 +62,12 @@ import 'package:strata_bridge/strata_bridge.dart'
         SignOutOutcome,
         SignUpOutcome,
         SignUpRequest,
+        SuggestionEdits,
         SyncStatusView,
+        TagItem,
         TaskDraft,
+        TaskDraftPreview,
+        TaskHomesView,
         TaskPatch,
         TaskScreen,
         TasksView;
@@ -208,30 +241,17 @@ final class FakeCoreApi implements CoreApi {
   /// `watchInbox`.
   final FakeStream<InboxView> inbox = FakeStream();
 
-  /// `watchNote`, by note ID.
-  final FakeStreamFamily<String, NoteScreen> note = FakeStreamFamily();
-
-  /// `watchNotesList`, by folder.
-  final FakeStreamFamily<String, NotesListView> notesList = FakeStreamFamily();
-
-  /// `watchDirectory`, by `(tab, query)`.
-  final FakeStreamFamily<(DirectoryTab, String), DirectoryView> directory =
-      FakeStreamFamily();
-
-  /// `watchEntity`, by ID.
-  final FakeStreamFamily<String, EntityScreen> entity = FakeStreamFamily();
+  /// `watchNav`.
+  final FakeStream<NavView> nav = FakeStream();
 
   /// `watchTasks`.
   final FakeStream<TasksView> tasks = FakeStream();
 
-  /// `watchTask`, by task ID.
-  final FakeStreamFamily<String, TaskScreen> task = FakeStreamFamily();
+  /// `watchTaskHomes`.
+  final FakeStream<TaskHomesView> taskHomes = FakeStream();
 
   /// `watchSyncStatus`.
   final FakeStream<SyncStatusView> syncStatus = FakeStream();
-
-  /// `watchConflict`, by op ID.
-  final FakeStreamFamily<String, ConflictScreen> conflict = FakeStreamFamily();
 
   /// `watchDuplicatePrompts`.
   final FakeStream<DuplicatePromptsView> duplicatePrompts = FakeStream();
@@ -239,7 +259,44 @@ final class FakeCoreApi implements CoreApi {
   /// `watchSettings`.
   final FakeStream<SettingsView> settings = FakeStream();
 
-  /// `watchLocalGraph`, by `(id, depth)`.
+  /// `watchAsk`.
+  final FakeStream<AskView> askStream = FakeStream();
+
+  /// `watchInboxFiltered`, by `filter`.
+  final FakeStreamFamily<InboxFilter, InboxView> inboxFiltered =
+      FakeStreamFamily();
+
+  /// `watchRecent`, by `filter`.
+  final FakeStreamFamily<RecentFilter, RecentNotesView> recent =
+      FakeStreamFamily();
+
+  /// `watchNote`, by `id`.
+  final FakeStreamFamily<String, NoteScreen> note = FakeStreamFamily();
+
+  /// `watchNotesList`, by `folder`.
+  final FakeStreamFamily<String, NotesListView> notesList = FakeStreamFamily();
+
+  /// `watchDirectory`, by `tab, query`.
+  final FakeStreamFamily<(DirectoryTab, String), DirectoryView> directory =
+      FakeStreamFamily();
+
+  /// `watchDirectoryFiltered`, by `tab, query, filter, sort`.
+  final FakeStreamFamily<
+    (DirectoryTab, String, DirectoryFilter, DirectorySort),
+    DirectoryView
+  >
+  directoryFiltered = FakeStreamFamily();
+
+  /// `watchEntity`, by `id`.
+  final FakeStreamFamily<String, EntityScreen> entity = FakeStreamFamily();
+
+  /// `watchTask`, by `id`.
+  final FakeStreamFamily<String, TaskScreen> task = FakeStreamFamily();
+
+  /// `watchConflict`, by `opId`.
+  final FakeStreamFamily<String, ConflictScreen> conflict = FakeStreamFamily();
+
+  /// `watchLocalGraph`, by `id, depth`.
   final FakeStreamFamily<(String, int), LocalGraphView> localGraph =
       FakeStreamFamily();
 
@@ -284,7 +341,52 @@ final class FakeCoreApi implements CoreApi {
   /// `syncNow`.
   final FakeAnswer<void> syncNowAnswer = FakeAnswer(null);
 
-  /// `capture` (the new capture's note ID).
+  /// `checkApproval`.
+  final FakeAnswer<SessionState> checkApprovalAnswer = FakeAnswer(
+    StrataFixtures.sessionActive,
+  );
+
+  /// `dismissPending`.
+  final FakeAnswer<SessionState> dismissPendingAnswer = FakeAnswer(
+    StrataFixtures.sessionActive,
+  );
+
+  /// `passwordStrength`.
+  final FakeAnswer<PasswordStrength> passwordStrengthAnswer = FakeAnswer(
+    StrataFixtures.passwordStrength,
+  );
+
+  /// `changePassword`.
+  final FakeAnswer<SessionState> changePasswordAnswer = FakeAnswer(
+    StrataFixtures.sessionActive,
+  );
+
+  /// `setUiLanguage`.
+  final FakeAnswer<void> setUiLanguageAnswer = FakeAnswer(null);
+
+  /// `setTimezone`.
+  final FakeAnswer<void> setTimezoneAnswer = FakeAnswer(null);
+
+  /// `setDisplayName`.
+  final FakeAnswer<void> setDisplayNameAnswer = FakeAnswer(null);
+
+  /// `downloadExport`.
+  final FakeAnswer<ExportSummary> downloadExportAnswer = FakeAnswer(
+    StrataFixtures.exportSummary,
+  );
+
+  /// `deleteAccountNow`.
+  final FakeAnswer<SessionState> deleteAccountNowAnswer = FakeAnswer(
+    StrataFixtures.sessionActive,
+  );
+
+  /// `exportUnsynced`.
+  final FakeAnswer<int> exportUnsyncedAnswer = FakeAnswer(0);
+
+  /// `setSyncPaused`.
+  final FakeAnswer<void> setSyncPausedAnswer = FakeAnswer(null);
+
+  /// `capture`.
   final FakeAnswer<String> captureAnswer = FakeAnswer(StrataFixtures.opId);
 
   /// `createNote`.
@@ -354,6 +456,14 @@ final class FakeCoreApi implements CoreApi {
   /// `deleteTask`.
   final FakeAnswer<String> deleteTaskAnswer = FakeAnswer(StrataFixtures.opId);
 
+  /// `addReminder`.
+  final FakeAnswer<String> addReminderAnswer = FakeAnswer(StrataFixtures.opId);
+
+  /// `removeReminder`.
+  final FakeAnswer<String> removeReminderAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
   /// `resolveConflict`.
   final FakeAnswer<void> resolveConflictAnswer = FakeAnswer(null);
 
@@ -365,6 +475,217 @@ final class FakeCoreApi implements CoreApi {
 
   /// `setRemindersEnabled`.
   final FakeAnswer<void> setRemindersEnabledAnswer = FakeAnswer(null);
+
+  /// `insertMention`.
+  final FakeAnswer<MentionEdit> insertMentionAnswer = FakeAnswer(
+    StrataFixtures.mentionEdit,
+  );
+
+  /// `pinNote`.
+  final FakeAnswer<void> pinNoteAnswer = FakeAnswer(null);
+
+  /// `acceptCapture`.
+  final FakeAnswer<List<String>> acceptCaptureAnswer = FakeAnswer(const []);
+
+  /// `rejectCapture`.
+  final FakeAnswer<List<String>> rejectCaptureAnswer = FakeAnswer(const []);
+
+  /// `acceptCaptures`.
+  final FakeAnswer<List<String>> acceptCapturesAnswer = FakeAnswer(const []);
+
+  /// `acceptAllReady`.
+  final FakeAnswer<List<String>> acceptAllReadyAnswer = FakeAnswer(const []);
+
+  /// `acceptSuggestionWith`.
+  final FakeAnswer<String> acceptSuggestionWithAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `resolveLinkOrCreate`.
+  final FakeAnswer<CreateOutcome> resolveLinkOrCreateAnswer = FakeAnswer(
+    StrataFixtures.createOutcomeCreated,
+  );
+
+  /// `acceptSuggestionChoice`.
+  final FakeAnswer<String> acceptSuggestionChoiceAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `undoSuggestion`.
+  final FakeAnswer<String> undoSuggestionAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `acknowledgeSuggestion`.
+  final FakeAnswer<void> acknowledgeSuggestionAnswer = FakeAnswer(null);
+
+  /// `resolveCaptureDuplicate`.
+  final FakeAnswer<String> resolveCaptureDuplicateAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `replyToSuggestion`.
+  final FakeAnswer<String> replyToSuggestionAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `createDocument`.
+  final FakeAnswer<CreateOutcome> createDocumentAnswer = FakeAnswer(
+    StrataFixtures.createOutcomeCreated,
+  );
+
+  /// `createPlace`.
+  final FakeAnswer<CreateOutcome> createPlaceAnswer = FakeAnswer(
+    StrataFixtures.createOutcomeCreated,
+  );
+
+  /// `mergeEntities`.
+  final FakeAnswer<String> mergeEntitiesAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `repointRelation`.
+  final FakeAnswer<String> repointRelationAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `rejectRelation`.
+  final FakeAnswer<String> rejectRelationAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `updateUserNotes`.
+  final FakeAnswer<String> updateUserNotesAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `setProperty`.
+  final FakeAnswer<String> setPropertyAnswer = FakeAnswer(StrataFixtures.opId);
+
+  /// `removeProperty`.
+  final FakeAnswer<String> removePropertyAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `addAlias`.
+  final FakeAnswer<String> addAliasAnswer = FakeAnswer(StrataFixtures.opId);
+
+  /// `removeAlias`.
+  final FakeAnswer<String> removeAliasAnswer = FakeAnswer(StrataFixtures.opId);
+
+  /// `recordCustody`.
+  final FakeAnswer<String> recordCustodyAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `setDefaultReminderTime`.
+  final FakeAnswer<void> setDefaultReminderTimeAnswer = FakeAnswer(null);
+
+  /// `setQuietHours`.
+  final FakeAnswer<void> setQuietHoursAnswer = FakeAnswer(null);
+
+  /// `setSnoozeMinutes`.
+  final FakeAnswer<void> setSnoozeMinutesAnswer = FakeAnswer(null);
+
+  /// `refreshSettings`.
+  final FakeAnswer<void> refreshSettingsAnswer = FakeAnswer(null);
+
+  /// `renameDevice`.
+  final FakeAnswer<void> renameDeviceAnswer = FakeAnswer(null);
+
+  /// `revokeDevice`.
+  final FakeAnswer<void> revokeDeviceAnswer = FakeAnswer(null);
+
+  /// `setDeviceReminders`.
+  final FakeAnswer<void> setDeviceRemindersAnswer = FakeAnswer(null);
+
+  /// `refreshHistory`.
+  final FakeAnswer<void> refreshHistoryAnswer = FakeAnswer(null);
+
+  /// `revertNote`.
+  final FakeAnswer<void> revertNoteAnswer = FakeAnswer(null);
+
+  /// `exportVault`.
+  final FakeAnswer<ExportSummary> exportVaultAnswer = FakeAnswer(
+    StrataFixtures.exportSummary,
+  );
+
+  /// `importVault`.
+  final FakeAnswer<ImportSummary> importVaultAnswer = FakeAnswer(
+    StrataFixtures.importSummary,
+  );
+
+  /// `approveUser`.
+  final FakeAnswer<AdminUserItem> approveUserAnswer = FakeAnswer(
+    StrataFixtures.adminUserItem,
+  );
+
+  /// `rejectUser`.
+  final FakeAnswer<AdminUserItem> rejectUserAnswer = FakeAnswer(
+    StrataFixtures.adminUserItem,
+  );
+
+  /// `setUserRole`.
+  final FakeAnswer<AdminUserItem> setUserRoleAnswer = FakeAnswer(
+    StrataFixtures.adminUserItem,
+  );
+
+  /// `setUserEnabled`.
+  final FakeAnswer<AdminUserItem> setUserEnabledAnswer = FakeAnswer(
+    StrataFixtures.adminUserItem,
+  );
+
+  /// `resetPassword`.
+  final FakeAnswer<String> resetPasswordAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `scheduleDeletion`.
+  final FakeAnswer<AdminUserItem> scheduleDeletionAnswer = FakeAnswer(
+    StrataFixtures.adminUserItem,
+  );
+
+  /// `cancelDeletion`.
+  final FakeAnswer<AdminUserItem> cancelDeletionAnswer = FakeAnswer(
+    StrataFixtures.adminUserItem,
+  );
+
+  /// `createUser`.
+  final FakeAnswer<AdminUserItem> createUserAnswer = FakeAnswer(
+    StrataFixtures.adminUserItem,
+  );
+
+  /// `ask`.
+  final FakeAnswer<String> askAnswer = FakeAnswer(StrataFixtures.opId);
+
+  /// `stopAsk`.
+  final FakeAnswer<void> stopAskAnswer = FakeAnswer(null);
+
+  /// `newConversation`.
+  final FakeAnswer<void> newConversationAnswer = FakeAnswer(null);
+
+  /// `saveAnswerAsNote`.
+  final FakeAnswer<String> saveAnswerAsNoteAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
+  /// `refreshAiActivity`.
+  final FakeAnswer<void> refreshAiActivityAnswer = FakeAnswer(null);
+
+  /// `rejectAiDecision`.
+  final FakeAnswer<void> rejectAiDecisionAnswer = FakeAnswer(null);
+
+  /// `repointAiDecision`.
+  final FakeAnswer<void> repointAiDecisionAnswer = FakeAnswer(null);
+
+  /// `retypeAiDecision`.
+  final FakeAnswer<void> retypeAiDecisionAnswer = FakeAnswer(null);
+
+  /// `refreshSimilarity`.
+  final FakeAnswer<void> refreshSimilarityAnswer = FakeAnswer(null);
+
+  /// `saveLayout`.
+  final FakeAnswer<String> saveLayoutAnswer = FakeAnswer(StrataFixtures.opId);
 
   /// `reportNotificationResult`.
   final FakeAnswer<void> reportNotificationResultAnswer = FakeAnswer(null);
@@ -379,8 +700,18 @@ final class FakeCoreApi implements CoreApi {
     StrataFixtures.globalGraphView,
   );
 
+  /// `globalGraphFiltered`.
+  final FakeAnswer<GlobalGraphView> globalGraphFilteredAnswer = FakeAnswer(
+    StrataFixtures.globalGraphView,
+  );
+
   /// `search`.
   final FakeAnswer<SearchView> searchAnswer = FakeAnswer(
+    StrataFixtures.searchView,
+  );
+
+  /// `searchInFolder`.
+  final FakeAnswer<SearchView> searchInFolderAnswer = FakeAnswer(
     StrataFixtures.searchView,
   );
 
@@ -392,6 +723,57 @@ final class FakeCoreApi implements CoreApi {
     StrataFixtures.editorHints,
   );
 
+  /// `editorCompletions`.
+  final FakeAnswer<Completions> editorCompletionsAnswer = FakeAnswer(
+    StrataFixtures.completions,
+  );
+
+  /// `tags`.
+  final FakeAnswer<List<TagItem>> tagsAnswer = FakeAnswer(const []);
+
+  /// `noteBlocks`.
+  final FakeAnswer<List<BlockItem>> noteBlocksAnswer = FakeAnswer(const []);
+
+  /// `relationTypes`.
+  final FakeAnswer<List<RelationTypeItem>> relationTypesAnswer = FakeAnswer(
+    const [],
+  );
+
+  /// `recurrenceForm`.
+  final FakeAnswer<RecurrenceForm?> recurrenceFormAnswer = FakeAnswer(null);
+
+  /// `composeRecurrence`.
+  final FakeAnswer<RecurrenceCompose> composeRecurrenceAnswer = FakeAnswer(
+    StrataFixtures.recurrenceCompose,
+  );
+
+  /// `recurrencePreview`.
+  final FakeAnswer<List<RecurrencePreviewItem>> recurrencePreviewAnswer =
+      FakeAnswer(const []);
+
+  /// `parseTaskText`.
+  final FakeAnswer<TaskDraftPreview> parseTaskTextAnswer = FakeAnswer(
+    StrataFixtures.taskDraftPreview,
+  );
+
+  /// `placeOptions`.
+  final FakeAnswer<List<PlaceOption>> placeOptionsAnswer = FakeAnswer(const []);
+
+  /// `mergePreview`.
+  final FakeAnswer<MergePreview> mergePreviewAnswer = FakeAnswer(
+    StrataFixtures.mergePreview,
+  );
+
+  /// `resolveCitation`.
+  final FakeAnswer<CitationPreview> resolveCitationAnswer = FakeAnswer(
+    StrataFixtures.citationPreview,
+  );
+
+  /// `noteRevisionDiff`.
+  final FakeAnswer<NoteDiffView> noteRevisionDiffAnswer = FakeAnswer(
+    StrataFixtures.noteDiffView,
+  );
+
   /// `loadAdminUsers`.
   final FakeAnswer<AdminUsersView> loadAdminUsersAnswer = FakeAnswer(
     StrataFixtures.adminUsersView,
@@ -399,22 +781,28 @@ final class FakeCoreApi implements CoreApi {
 
   /// Closes every stream.
   void dispose() {
-    for (final stream in [
+    for (final stream in <FakeStream<Object?>>[
       session,
       notificationOps,
       home,
       inbox,
+      nav,
       tasks,
+      taskHomes,
       syncStatus,
       duplicatePrompts,
       settings,
+      askStream,
     ]) {
       stream.close();
     }
-    for (final family in [
+    for (final family in <FakeStreamFamily<Object?, Object?>>[
+      inboxFiltered,
+      recent,
       note,
       notesList,
       directory,
+      directoryFiltered,
       entity,
       task,
       conflict,
@@ -482,6 +870,55 @@ final class FakeCoreApi implements CoreApi {
   @override
   Future<void> syncNow() => _call(syncNowAnswer, 'syncNow');
 
+  @override
+  Future<SessionState> checkApproval() =>
+      _call(checkApprovalAnswer, 'checkApproval');
+
+  @override
+  Future<SessionState> dismissPending() =>
+      _call(dismissPendingAnswer, 'dismissPending');
+
+  @override
+  Future<PasswordStrength> passwordStrength({required String password}) =>
+      _call(passwordStrengthAnswer, 'passwordStrength', {'password': password});
+
+  @override
+  Future<SessionState> changePassword({
+    required String current,
+    required String new_,
+  }) => _call(changePasswordAnswer, 'changePassword', {
+    'current': current,
+    'new_': new_,
+  });
+
+  @override
+  Future<void> setUiLanguage({required String code}) =>
+      _call(setUiLanguageAnswer, 'setUiLanguage', {'code': code});
+
+  @override
+  Future<void> setTimezone({required String iana}) =>
+      _call(setTimezoneAnswer, 'setTimezone', {'iana': iana});
+
+  @override
+  Future<void> setDisplayName({required String name}) =>
+      _call(setDisplayNameAnswer, 'setDisplayName', {'name': name});
+
+  @override
+  Future<ExportSummary> downloadExport({required String path}) =>
+      _call(downloadExportAnswer, 'downloadExport', {'path': path});
+
+  @override
+  Future<SessionState> deleteAccountNow({required bool force}) =>
+      _call(deleteAccountNowAnswer, 'deleteAccountNow', {'force': force});
+
+  @override
+  Future<int> exportUnsynced({required String path}) =>
+      _call(exportUnsyncedAnswer, 'exportUnsynced', {'path': path});
+
+  @override
+  Future<void> setSyncPaused({required bool paused}) =>
+      _call(setSyncPausedAnswer, 'setSyncPaused', {'paused': paused});
+
   // Intents ------------------------------------------------------------------
 
   @override
@@ -500,8 +937,15 @@ final class FakeCoreApi implements CoreApi {
   });
 
   @override
-  Future<String> updateNote({required String id, required String content}) =>
-      _call(updateNoteAnswer, 'updateNote', {'id': id, 'content': content});
+  Future<String> updateNote({
+    required String id,
+    required String content,
+    String? baseVersion,
+  }) => _call(updateNoteAnswer, 'updateNote', {
+    'id': id,
+    'content': content,
+    'baseVersion': baseVersion,
+  });
 
   @override
   Future<String> moveNote({required String id, required String newPath}) =>
@@ -601,6 +1045,19 @@ final class FakeCoreApi implements CoreApi {
       _call(deleteTaskAnswer, 'deleteTask', {'taskId': taskId});
 
   @override
+  Future<String> addReminder({required String taskId, required DateTime at}) =>
+      _call(addReminderAnswer, 'addReminder', {'taskId': taskId, 'at': at});
+
+  @override
+  Future<String> removeReminder({
+    required String taskId,
+    required DateTime at,
+  }) => _call(removeReminderAnswer, 'removeReminder', {
+    'taskId': taskId,
+    'at': at,
+  });
+
+  @override
   Future<void> resolveConflict({
     required String opId,
     required ConflictResolution resolution,
@@ -628,6 +1085,344 @@ final class FakeCoreApi implements CoreApi {
     'setRemindersEnabled',
     {'enabled': enabled},
   );
+
+  @override
+  Future<MentionEdit> insertMention({
+    required String noteId,
+    required String content,
+    required int start,
+    required int end,
+    required String entityId,
+  }) => _call(insertMentionAnswer, 'insertMention', {
+    'noteId': noteId,
+    'content': content,
+    'start': start,
+    'end': end,
+    'entityId': entityId,
+  });
+
+  @override
+  Future<void> pinNote({required String id, required bool pinned}) =>
+      _call(pinNoteAnswer, 'pinNote', {'id': id, 'pinned': pinned});
+
+  @override
+  Future<List<String>> acceptCapture({required String noteId}) =>
+      _call(acceptCaptureAnswer, 'acceptCapture', {'noteId': noteId});
+
+  @override
+  Future<List<String>> rejectCapture({required String noteId}) =>
+      _call(rejectCaptureAnswer, 'rejectCapture', {'noteId': noteId});
+
+  @override
+  Future<List<String>> acceptCaptures({required List<String> noteIds}) =>
+      _call(acceptCapturesAnswer, 'acceptCaptures', {'noteIds': noteIds});
+
+  @override
+  Future<List<String>> acceptAllReady() =>
+      _call(acceptAllReadyAnswer, 'acceptAllReady');
+
+  @override
+  Future<String> acceptSuggestionWith({
+    required String id,
+    required SuggestionEdits edits,
+  }) => _call(acceptSuggestionWithAnswer, 'acceptSuggestionWith', {
+    'id': id,
+    'edits': edits,
+  });
+
+  @override
+  Future<CreateOutcome> resolveLinkOrCreate({
+    required String id,
+    required LinkOrCreateChoice choice,
+  }) => _call(resolveLinkOrCreateAnswer, 'resolveLinkOrCreate', {
+    'id': id,
+    'choice': choice,
+  });
+
+  @override
+  Future<String> acceptSuggestionChoice({
+    required String id,
+    required String documentId,
+  }) => _call(acceptSuggestionChoiceAnswer, 'acceptSuggestionChoice', {
+    'id': id,
+    'documentId': documentId,
+  });
+
+  @override
+  Future<String> undoSuggestion({required String id}) =>
+      _call(undoSuggestionAnswer, 'undoSuggestion', {'id': id});
+
+  @override
+  Future<void> acknowledgeSuggestion({required String id}) =>
+      _call(acknowledgeSuggestionAnswer, 'acknowledgeSuggestion', {'id': id});
+
+  @override
+  Future<String> resolveCaptureDuplicate({
+    required String id,
+    required DuplicateChoice choice,
+  }) => _call(resolveCaptureDuplicateAnswer, 'resolveCaptureDuplicate', {
+    'id': id,
+    'choice': choice,
+  });
+
+  @override
+  Future<String> replyToSuggestion({
+    required String id,
+    required String text,
+  }) => _call(replyToSuggestionAnswer, 'replyToSuggestion', {
+    'id': id,
+    'text': text,
+  });
+
+  @override
+  Future<CreateOutcome> createDocument({
+    required DocumentDraft draft,
+    required bool force,
+  }) => _call(createDocumentAnswer, 'createDocument', {
+    'draft': draft,
+    'force': force,
+  });
+
+  @override
+  Future<CreateOutcome> createPlace({
+    required PlaceDraft draft,
+    required bool force,
+  }) =>
+      _call(createPlaceAnswer, 'createPlace', {'draft': draft, 'force': force});
+
+  @override
+  Future<String> mergeEntities({
+    required String sourceId,
+    required String intoId,
+  }) => _call(mergeEntitiesAnswer, 'mergeEntities', {
+    'sourceId': sourceId,
+    'intoId': intoId,
+  });
+
+  @override
+  Future<String> repointRelation({
+    required String srcId,
+    required String dstId,
+    required String relType,
+    required String newDstId,
+  }) => _call(repointRelationAnswer, 'repointRelation', {
+    'srcId': srcId,
+    'dstId': dstId,
+    'relType': relType,
+    'newDstId': newDstId,
+  });
+
+  @override
+  Future<String> rejectRelation({
+    required String srcId,
+    required String dstId,
+    required String relType,
+  }) => _call(rejectRelationAnswer, 'rejectRelation', {
+    'srcId': srcId,
+    'dstId': dstId,
+    'relType': relType,
+  });
+
+  @override
+  Future<String> updateUserNotes({required String id, required String text}) =>
+      _call(updateUserNotesAnswer, 'updateUserNotes', {'id': id, 'text': text});
+
+  @override
+  Future<String> setProperty({
+    required String id,
+    required String key,
+    required String value,
+  }) => _call(setPropertyAnswer, 'setProperty', {
+    'id': id,
+    'key': key,
+    'value': value,
+  });
+
+  @override
+  Future<String> removeProperty({required String id, required String key}) =>
+      _call(removePropertyAnswer, 'removeProperty', {'id': id, 'key': key});
+
+  @override
+  Future<String> addAlias({required String id, required String alias}) =>
+      _call(addAliasAnswer, 'addAlias', {'id': id, 'alias': alias});
+
+  @override
+  Future<String> removeAlias({required String id, required String alias}) =>
+      _call(removeAliasAnswer, 'removeAlias', {'id': id, 'alias': alias});
+
+  @override
+  Future<String> recordCustody({
+    required String documentId,
+    required CustodyDraft draft,
+  }) => _call(recordCustodyAnswer, 'recordCustody', {
+    'documentId': documentId,
+    'draft': draft,
+  });
+
+  @override
+  Future<void> setDefaultReminderTime({required String time}) => _call(
+    setDefaultReminderTimeAnswer,
+    'setDefaultReminderTime',
+    {'time': time},
+  );
+
+  @override
+  Future<void> setQuietHours({
+    required bool enabled,
+    required String from,
+    required String until,
+  }) => _call(setQuietHoursAnswer, 'setQuietHours', {
+    'enabled': enabled,
+    'from': from,
+    'until': until,
+  });
+
+  @override
+  Future<void> setSnoozeMinutes({required int minutes}) =>
+      _call(setSnoozeMinutesAnswer, 'setSnoozeMinutes', {'minutes': minutes});
+
+  @override
+  Future<void> refreshSettings() =>
+      _call(refreshSettingsAnswer, 'refreshSettings');
+
+  @override
+  Future<void> renameDevice({required String id, required String name}) =>
+      _call(renameDeviceAnswer, 'renameDevice', {'id': id, 'name': name});
+
+  @override
+  Future<void> revokeDevice({required String id}) =>
+      _call(revokeDeviceAnswer, 'revokeDevice', {'id': id});
+
+  @override
+  Future<void> setDeviceReminders({
+    required String id,
+    required bool enabled,
+  }) => _call(setDeviceRemindersAnswer, 'setDeviceReminders', {
+    'id': id,
+    'enabled': enabled,
+  });
+
+  @override
+  Future<void> refreshHistory({required String noteId}) =>
+      _call(refreshHistoryAnswer, 'refreshHistory', {'noteId': noteId});
+
+  @override
+  Future<void> revertNote({required String noteId, required String commit}) =>
+      _call(revertNoteAnswer, 'revertNote', {
+        'noteId': noteId,
+        'commit': commit,
+      });
+
+  @override
+  Future<ExportSummary> exportVault({required String path}) =>
+      _call(exportVaultAnswer, 'exportVault', {'path': path});
+
+  @override
+  Future<ImportSummary> importVault({required String path}) =>
+      _call(importVaultAnswer, 'importVault', {'path': path});
+
+  @override
+  Future<AdminUserItem> approveUser({required String id}) =>
+      _call(approveUserAnswer, 'approveUser', {'id': id});
+
+  @override
+  Future<AdminUserItem> rejectUser({required String id}) =>
+      _call(rejectUserAnswer, 'rejectUser', {'id': id});
+
+  @override
+  Future<AdminUserItem> setUserRole({
+    required String id,
+    required String role,
+  }) => _call(setUserRoleAnswer, 'setUserRole', {'id': id, 'role': role});
+
+  @override
+  Future<AdminUserItem> setUserEnabled({
+    required String id,
+    required bool enabled,
+  }) => _call(setUserEnabledAnswer, 'setUserEnabled', {
+    'id': id,
+    'enabled': enabled,
+  });
+
+  @override
+  Future<String> resetPassword({required String id}) =>
+      _call(resetPasswordAnswer, 'resetPassword', {'id': id});
+
+  @override
+  Future<AdminUserItem> scheduleDeletion({required String id}) =>
+      _call(scheduleDeletionAnswer, 'scheduleDeletion', {'id': id});
+
+  @override
+  Future<AdminUserItem> cancelDeletion({required String id}) =>
+      _call(cancelDeletionAnswer, 'cancelDeletion', {'id': id});
+
+  @override
+  Future<AdminUserItem> createUser({required NewUserRequest request}) =>
+      _call(createUserAnswer, 'createUser', {'request': request});
+
+  @override
+  Future<String> ask({required String question, required AskScope scope}) =>
+      _call(askAnswer, 'ask', {'question': question, 'scope': scope});
+
+  @override
+  Future<void> stopAsk() => _call(stopAskAnswer, 'stopAsk');
+
+  @override
+  Future<void> newConversation() =>
+      _call(newConversationAnswer, 'newConversation');
+
+  @override
+  Future<String> saveAnswerAsNote({required String messageId}) => _call(
+    saveAnswerAsNoteAnswer,
+    'saveAnswerAsNote',
+    {'messageId': messageId},
+  );
+
+  @override
+  Future<void> refreshAiActivity() =>
+      _call(refreshAiActivityAnswer, 'refreshAiActivity');
+
+  @override
+  Future<void> rejectAiDecision({required String decisionId}) => _call(
+    rejectAiDecisionAnswer,
+    'rejectAiDecision',
+    {'decisionId': decisionId},
+  );
+
+  @override
+  Future<void> repointAiDecision({
+    required String decisionId,
+    required String targetId,
+    String? hint,
+  }) => _call(repointAiDecisionAnswer, 'repointAiDecision', {
+    'decisionId': decisionId,
+    'targetId': targetId,
+    'hint': hint,
+  });
+
+  @override
+  Future<void> retypeAiDecision({
+    required String decisionId,
+    required String relType,
+  }) => _call(retypeAiDecisionAnswer, 'retypeAiDecision', {
+    'decisionId': decisionId,
+    'relType': relType,
+  });
+
+  @override
+  Future<void> refreshSimilarity() =>
+      _call(refreshSimilarityAnswer, 'refreshSimilarity');
+
+  @override
+  Future<String> saveLayout({
+    required String centerId,
+    required String name,
+    required List<NodePosition> positions,
+  }) => _call(saveLayoutAnswer, 'saveLayout', {
+    'centerId': centerId,
+    'name': name,
+    'positions': positions,
+  });
 
   // Reminders ----------------------------------------------------------------
 
@@ -662,6 +1457,17 @@ final class FakeCoreApi implements CoreApi {
   Stream<InboxView> watchInbox() => _watch(inbox, 'watchInbox');
 
   @override
+  Stream<InboxView> watchInboxFiltered({required InboxFilter filter}) =>
+      _watch(inboxFiltered[filter], 'watchInboxFiltered', {'filter': filter});
+
+  @override
+  Stream<NavView> watchNav() => _watch(nav, 'watchNav');
+
+  @override
+  Stream<RecentNotesView> watchRecent({required RecentFilter filter}) =>
+      _watch(recent[filter], 'watchRecent', {'filter': filter});
+
+  @override
   Stream<NoteScreen> watchNote({required String id}) =>
       _watch(note[id], 'watchNote', {'id': id});
 
@@ -679,6 +1485,18 @@ final class FakeCoreApi implements CoreApi {
   });
 
   @override
+  Stream<DirectoryView> watchDirectoryFiltered({
+    required DirectoryTab tab,
+    required String query,
+    required DirectoryFilter filter,
+    required DirectorySort sort,
+  }) => _watch(
+    directoryFiltered[(tab, query, filter, sort)],
+    'watchDirectoryFiltered',
+    {'tab': tab, 'query': query, 'filter': filter, 'sort': sort},
+  );
+
+  @override
   Stream<EntityScreen> watchEntity({required String id}) =>
       _watch(entity[id], 'watchEntity', {'id': id});
 
@@ -688,6 +1506,9 @@ final class FakeCoreApi implements CoreApi {
   @override
   Stream<TaskScreen> watchTask({required String id}) =>
       _watch(task[id], 'watchTask', {'id': id});
+
+  @override
+  Stream<TaskHomesView> watchTaskHomes() => _watch(taskHomes, 'watchTaskHomes');
 
   @override
   Stream<SyncStatusView> watchSyncStatus() =>
@@ -718,19 +1539,116 @@ final class FakeCoreApi implements CoreApi {
       _call(globalGraphAnswer, 'globalGraph');
 
   @override
+  Future<GlobalGraphView> globalGraphFiltered({required GraphFilter filter}) =>
+      _call(globalGraphFilteredAnswer, 'globalGraphFiltered', {
+        'filter': filter,
+      });
+
+  @override
   Future<SearchView> search({
     required String query,
     required SearchMode mode,
   }) => _call(searchAnswer, 'search', {'query': query, 'mode': mode});
 
   @override
+  Future<SearchView> searchInFolder({
+    required String query,
+    required SearchMode mode,
+    String? folder,
+  }) => _call(searchInFolderAnswer, 'searchInFolder', {
+    'query': query,
+    'mode': mode,
+    'folder': folder,
+  });
+
+  @override
   Future<AskView> askView() => _call(askViewAnswer, 'askView');
+
+  @override
+  Stream<AskView> watchAsk() => _watch(askStream, 'watchAsk');
 
   @override
   Future<List<EditorHint>> editorHints({required String content}) =>
       _call(editorHintsAnswer, 'editorHints', {'content': content});
 
   @override
-  Future<AdminUsersView> loadAdminUsers() =>
-      _call(loadAdminUsersAnswer, 'loadAdminUsers');
+  Future<Completions> editorCompletions({
+    required String noteId,
+    required String content,
+    required int cursor,
+  }) => _call(editorCompletionsAnswer, 'editorCompletions', {
+    'noteId': noteId,
+    'content': content,
+    'cursor': cursor,
+  });
+
+  @override
+  Future<List<TagItem>> tags({required String prefix}) =>
+      _call(tagsAnswer, 'tags', {'prefix': prefix});
+
+  @override
+  Future<List<BlockItem>> noteBlocks({required String noteId}) =>
+      _call(noteBlocksAnswer, 'noteBlocks', {'noteId': noteId});
+
+  @override
+  Future<List<RelationTypeItem>> relationTypes() =>
+      _call(relationTypesAnswer, 'relationTypes');
+
+  @override
+  Future<RecurrenceForm?> recurrenceForm({required String phrase}) =>
+      _call(recurrenceFormAnswer, 'recurrenceForm', {'phrase': phrase});
+
+  @override
+  Future<RecurrenceCompose> composeRecurrence({required RecurrenceForm form}) =>
+      _call(composeRecurrenceAnswer, 'composeRecurrence', {'form': form});
+
+  @override
+  Future<List<RecurrencePreviewItem>> recurrencePreview({
+    required String phrase,
+    required DateTime from,
+    required int count,
+  }) => _call(recurrencePreviewAnswer, 'recurrencePreview', {
+    'phrase': phrase,
+    'from': from,
+    'count': count,
+  });
+
+  @override
+  Future<TaskDraftPreview> parseTaskText({required String text}) =>
+      _call(parseTaskTextAnswer, 'parseTaskText', {'text': text});
+
+  @override
+  Future<List<PlaceOption>> placeOptions({String? documentId}) =>
+      _call(placeOptionsAnswer, 'placeOptions', {'documentId': documentId});
+
+  @override
+  Future<MergePreview> mergePreview({
+    required String sourceId,
+    required String intoId,
+  }) => _call(mergePreviewAnswer, 'mergePreview', {
+    'sourceId': sourceId,
+    'intoId': intoId,
+  });
+
+  @override
+  Future<CitationPreview> resolveCitation({
+    required String noteId,
+    String? anchor,
+  }) => _call(resolveCitationAnswer, 'resolveCitation', {
+    'noteId': noteId,
+    'anchor': anchor,
+  });
+
+  @override
+  Future<NoteDiffView> noteRevisionDiff({
+    required String noteId,
+    required String commit,
+  }) => _call(noteRevisionDiffAnswer, 'noteRevisionDiff', {
+    'noteId': noteId,
+    'commit': commit,
+  });
+
+  @override
+  Future<AdminUsersView> loadAdminUsers({required String query}) =>
+      _call(loadAdminUsersAnswer, 'loadAdminUsers', {'query': query});
 }

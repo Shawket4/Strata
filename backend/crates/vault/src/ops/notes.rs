@@ -5,7 +5,9 @@ use std::collections::BTreeSet;
 
 use strata_common::{NoteId, SuggestionId};
 use strata_index::repo::suggestions;
+use domain::MatchLevel as WireLevel;
 use strata_index::{ScopedTx, UserScope};
+use sync_model::suggestions::{DuplicateItem, DuplicatePayload, kinds};
 use vault_format::canvas::Canvas;
 use vault_format::filename::unique_name;
 use vault_format::sidecar::{KeepBoth, NoteSidecar};
@@ -34,73 +36,46 @@ pub struct CreateNote {
     pub force: bool,
 }
 
-/// Payload of a `duplicate` suggestion (`MessagePack` in `suggestions.payload`).
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct DuplicatePayload {
-    /// The candidates found when the item was saved.
-    pub candidates: Vec<DuplicatePayloadItem>,
-}
-
-/// One candidate in a [`DuplicatePayload`].
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct DuplicatePayloadItem {
-    /// Existing item ID (note ULID, or the ULID of a task).
-    pub id: String,
-    /// Stored item ID (note ULID or task block ID).
-    pub item: String,
-    /// Snippet.
-    pub snippet: Option<String>,
-    /// Kind.
-    pub kind: String,
-    /// Title.
-    pub title: String,
-    /// `exact` / `near` / `semantic`.
-    pub match_level: String,
-    /// Score.
-    pub score: f64,
-}
-
-impl DuplicatePayloadItem {
-    /// Back to a candidate.
-    pub fn candidate(&self) -> Option<Candidate> {
-        Some(Candidate {
-            item: self.item.clone(),
-            id: self.id.parse().ok()?,
-            kind: self.kind.clone(),
-            title: self.title.clone(),
-            snippet: self.snippet.clone(),
-            level: if self.match_level == "exact" {
-                crate::error::MatchLevel::Exact
-            } else {
-                crate::error::MatchLevel::Near
-            },
-            score: self.score,
-            semantic: self.match_level == "semantic",
-        })
+/// A duplicate candidate as an item of a `duplicate`/`duplicates` suggestion payload
+/// (`sync_model::suggestions`, L16).
+pub fn payload_item(c: &Candidate) -> DuplicateItem {
+    DuplicateItem {
+        id: c.id,
+        item: c.item.clone(),
+        snippet: c.snippet.clone(),
+        kind: c.kind.clone(),
+        title: c.title.clone(),
+        match_level: match c.level {
+            crate::error::MatchLevel::Exact => WireLevel::Exact,
+            crate::error::MatchLevel::Near if c.semantic => WireLevel::Semantic,
+            crate::error::MatchLevel::Near => WireLevel::Near,
+        },
+        score: c.score,
     }
 }
 
-impl DuplicatePayload {
-    /// From candidates.
-    pub fn from_candidates(c: &[Candidate]) -> Self {
-        Self {
-            candidates: c
-                .iter()
-                .map(|c| DuplicatePayloadItem {
-                    id: c.id.to_string(),
-                    item: c.item.clone(),
-                    snippet: c.snippet.clone(),
-                    kind: c.kind.clone(),
-                    title: c.title.clone(),
-                    match_level: match c.level {
-                        crate::error::MatchLevel::Exact => "exact".into(),
-                        crate::error::MatchLevel::Near if c.semantic => "semantic".into(),
-                        crate::error::MatchLevel::Near => "near".into(),
-                    },
-                    score: c.score,
-                })
-                .collect(),
-        }
+/// A payload item back as a candidate (see [`payload_item`]).
+pub fn item_candidate(i: &DuplicateItem) -> Candidate {
+    Candidate {
+        item: i.item.clone(),
+        id: i.id,
+        kind: i.kind.clone(),
+        title: i.title.clone(),
+        snippet: i.snippet.clone(),
+        level: if i.match_level == WireLevel::Exact {
+            crate::error::MatchLevel::Exact
+        } else {
+            crate::error::MatchLevel::Near
+        },
+        score: i.score,
+        semantic: i.match_level == WireLevel::Semantic,
+    }
+}
+
+/// The payload of a `duplicate` suggestion for `candidates`.
+pub fn duplicate_payload(candidates: &[Candidate]) -> DuplicatePayload {
+    DuplicatePayload {
+        candidates: candidates.iter().map(payload_item).collect(),
     }
 }
 
@@ -776,14 +751,14 @@ impl Core {
         let mut suggestion = None;
         let mut extra: Option<InTx> = None;
         if !candidates.is_empty() {
-            let payload = rmp_serde::to_vec_named(&DuplicatePayload::from_candidates(&candidates))
+            let payload = rmp_serde::to_vec_named(&duplicate_payload(&candidates))
                 .map_err(|e| VaultError::Internal(e.to_string()))?;
             let sid = SuggestionId::generate(self.ids());
             let now = self.now();
             suggestion = Some(sid);
             extra = Some(Box::new(move |tx: &mut ScopedTx| {
                 Box::pin(async move {
-                    suggestions::create_suggestion(tx, sid, Some(id), "duplicate", &payload, now)
+                    suggestions::create_suggestion(tx, sid, Some(id), kinds::DUPLICATE, &payload, now)
                         .await?;
                     let sid_text = sid.to_string();
                     strata_index::repo::sync::append_change(
@@ -816,7 +791,7 @@ impl Core {
                     suggestions: vec![crate::events::SuggestionEvent {
                         id: sid,
                         note_id: Some(id),
-                        kind: "duplicate".to_owned(),
+                        kind: kinds::DUPLICATE.to_owned(),
                         status: "pending".to_owned(),
                         created: true,
                     }],

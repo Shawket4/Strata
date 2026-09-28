@@ -10,11 +10,13 @@ use serde::{Deserialize, Serialize};
 use strata_common::SuggestionId;
 use strata_index::types::{ReplyAuthor, SuggestionStatus as Status};
 use strata_vault::VaultService;
-use strata_vault::ops::suggestions::{Payload, SuggestionView};
+use strata_vault::ops::suggestions::SuggestionView;
+use sync_model::suggestions as shared;
 use ulid::Ulid;
 use utoipa::ToSchema;
 
 use crate::auth::{AuthState, Authenticated};
+use crate::routes::ai_pipelines::{CorrectionFixDto, CustodyTargetDto, HintDto};
 use crate::routes::notes::Note;
 use crate::vault::{OrProblem, candidate};
 use crate::wire::{Binary, DuplicateCandidate, MatchLevel, MsgPack, MsgPackConfig, Problem};
@@ -155,19 +157,19 @@ pub enum SuggestionPayload {
         /// Date (resolved).
         date: chrono::NaiveDate,
         /// The document.
-        document: Box<crate::routes::ai_pipelines::CustodyTargetDto>,
+        document: Box<CustodyTargetDto>,
         /// The place.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        place: Option<Box<crate::routes::ai_pipelines::CustodyTargetDto>>,
+        place: Option<Box<CustodyTargetDto>>,
         /// The enclosing place mention.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         place_part_of: Option<String>,
         /// The person.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        person: Option<Box<crate::routes::ai_pipelines::CustodyTargetDto>>,
+        person: Option<Box<CustodyTargetDto>>,
         /// The third party.
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        counterparty: Option<Box<crate::routes::ai_pipelines::CustodyTargetDto>>,
+        counterparty: Option<Box<CustodyTargetDto>>,
         /// Model confidence.
         confidence: f64,
         /// `low_confidence`, `ambiguous`, `unknown`, `conflict`, `reply`.
@@ -211,9 +213,9 @@ pub enum SuggestionPayload {
         /// The user's words.
         message: String,
         /// Proposed fixes.
-        fixes: Vec<crate::routes::ai_pipelines::CorrectionFixDto>,
+        fixes: Vec<CorrectionFixDto>,
         /// Hints to remember.
-        hints: Vec<crate::routes::ai_pipelines::HintDto>,
+        hints: Vec<HintDto>,
         /// The model's question when ambiguous.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         question: Option<String>,
@@ -226,10 +228,11 @@ pub enum SuggestionPayload {
 }
 
 /// Who wrote a reply.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ReplyAuthorDto {
     /// The user.
+    #[default]
     User,
     /// The AI.
     Ai,
@@ -276,59 +279,136 @@ pub struct Suggestion {
     pub decided_at: Option<DateTime<Utc>>,
 }
 
-fn level_of(level: &str) -> MatchLevel {
+const fn level_of(level: dedupe::MatchLevel) -> MatchLevel {
     match level {
-        "exact" => MatchLevel::Exact,
-        "semantic" => MatchLevel::Semantic,
-        _ => MatchLevel::Near,
+        dedupe::MatchLevel::Exact => MatchLevel::Exact,
+        dedupe::MatchLevel::Near => MatchLevel::Near,
+        dedupe::MatchLevel::Semantic => MatchLevel::Semantic,
     }
 }
 
-fn pair_item(c: &strata_vault::ops::notes::DuplicatePayloadItem) -> Option<DuplicateCandidate> {
-    Some(DuplicateCandidate {
-        id: c.id.parse().ok()?,
-        kind: c.kind.clone(),
-        title: c.title.clone(),
-        snippet: c.snippet.clone(),
-        match_level: level_of(&c.match_level),
+fn candidate_of(c: shared::DuplicateItem) -> DuplicateCandidate {
+    DuplicateCandidate {
+        id: c.id,
+        kind: c.kind,
+        title: c.title,
+        snippet: c.snippet,
+        match_level: level_of(c.match_level),
         score: c.score,
+    }
+}
+
+fn target_of(t: shared::CustodyTarget) -> Box<CustodyTargetDto> {
+    Box::new(CustodyTargetDto {
+        mention: t.mention,
+        id: t.id,
+        candidates: t.candidates,
     })
+}
+
+impl SuggestionPayload {
+    /// The contract's view of the stored payload of a suggestion of `kind` (the shared
+    /// `sync_model::suggestions` types, L16). Kinds the contract does not describe
+    /// (`conflict`, kinds from a newer server) and undecodable bytes are `opaque`.
+    pub fn from_stored(kind: &str, bytes: &[u8]) -> Self {
+        shared::SuggestionPayload::decode(kind, bytes)
+            .ok()
+            .and_then(Self::from_shared)
+            .unwrap_or_else(|| Self::Opaque {
+                data: Binary(bytes.to_vec()),
+            })
+    }
+
+    /// The contract's view of a shared payload (`None`: shown as `opaque`).
+    fn from_shared(p: shared::SuggestionPayload) -> Option<Self> {
+        use shared::SuggestionPayload as P;
+        Some(match p {
+            P::Duplicate(p) => Self::Duplicate {
+                candidates: p.candidates.into_iter().map(candidate_of).collect(),
+            },
+            P::Duplicates(p) => Self::Duplicates {
+                a: Box::new(candidate_of(p.a)),
+                b: Box::new(candidate_of(p.b)),
+                reason: p.reason,
+            },
+            P::Filing(p) => Self::Filing {
+                decision_id: p.decision_id,
+                title: p.title,
+                tags: p.tags,
+                folder: p.folder,
+            },
+            P::EntityLink(p) => Self::EntityLink {
+                decision_id: p.decision_id,
+                mention: p.mention,
+                entity_kind: p.kind,
+                source_note: p.source_note,
+                block_id: p.block_id,
+                proposed: p.proposed,
+                candidates: p.candidates,
+                is_nickname: p.is_nickname,
+                confidence: p.confidence,
+                reason: p.reason,
+            },
+            P::Custody(p) => Self::Custody {
+                decision_id: p.decision_id,
+                source_note: p.source_note,
+                block_id: p.block_id,
+                event: p.event,
+                date: p.date,
+                document: target_of(p.document),
+                place: p.place.map(target_of),
+                place_part_of: p.place_part_of,
+                person: p.person.map(target_of),
+                counterparty: p.counterparty.map(target_of),
+                confidence: p.confidence,
+                reason: p.reason,
+                quote: p.quote,
+            },
+            P::Task(p) => Self::Task {
+                decision_id: p.decision_id,
+                source_note: p.source_note,
+                block_id: p.block_id,
+                title: p.title,
+                due: p.due,
+                recurrence: p.recurrence,
+                reminders: p.reminders,
+                entities: p.entities,
+                confidence: p.confidence,
+            },
+            P::Correction(p) => Self::Correction {
+                decision_id: p.decision_id,
+                message: p.message,
+                fixes: p
+                    .fixes
+                    .into_iter()
+                    .map(|f| CorrectionFixDto {
+                        decision_id: f.decision_id,
+                        action: f.action,
+                        new_target: f.new_target,
+                        new_type: f.new_type,
+                        confidence: f.confidence,
+                        reason: f.reason,
+                    })
+                    .collect(),
+                hints: p
+                    .hints
+                    .into_iter()
+                    .map(|h| HintDto {
+                        entity: h.entity,
+                        text: h.text,
+                    })
+                    .collect(),
+                question: p.question,
+            },
+            // The conflict copy is a note of its own; the contract shows the payload opaque.
+            P::Conflict(_) => return None,
+        })
+    }
 }
 
 impl From<SuggestionView> for Suggestion {
     fn from(v: SuggestionView) -> Self {
-        let payload = match v.payload() {
-            Payload::Duplicate(d) => SuggestionPayload::Duplicate {
-                candidates: d
-                    .candidates
-                    .iter()
-                    .filter_map(|c| {
-                        Some(DuplicateCandidate {
-                            id: c.id.parse().ok()?,
-                            kind: c.kind.clone(),
-                            title: c.title.clone(),
-                            snippet: c.snippet.clone(),
-                            match_level: level_of(&c.match_level),
-                            score: c.score,
-                        })
-                    })
-                    .collect(),
-            },
-            Payload::Duplicates(p) => match (pair_item(&p.a), pair_item(&p.b)) {
-                (Some(a), Some(b)) => SuggestionPayload::Duplicates {
-                    a: Box::new(a),
-                    b: Box::new(b),
-                    reason: p.reason.clone(),
-                },
-                _ => SuggestionPayload::Opaque {
-                    data: Binary(v.suggestion.payload.clone()),
-                },
-            },
-            Payload::Opaque(data) => {
-                crate::routes::ai_pipelines::ai_payload(&v.suggestion.kind, &data)
-                    .unwrap_or(SuggestionPayload::Opaque { data: Binary(data) })
-            }
-        };
+        let payload = SuggestionPayload::from_stored(&v.suggestion.kind, &v.suggestion.payload);
         let s = v.suggestion;
         Self {
             id: s.id.as_ulid(),

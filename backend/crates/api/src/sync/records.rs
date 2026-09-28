@@ -27,12 +27,12 @@ use domain::{DedupeKind, NoteKind as DNoteKind, RelationOrigin};
 use strata_common::{NoteId, SuggestionId};
 use strata_index::repo::suggestions::{self as srepo, Suggestion};
 use strata_index::repo::sync as log;
-use strata_index::types::{By, SuggestionStatus as IStatus};
+use strata_index::types::{By, ReplyAuthor as IReplyAuthor, SuggestionStatus as IStatus};
 use strata_index::{AppDb, IndexError, ScopedTx, UserScope};
 use strata_vault::{VaultError, VaultService, fsio};
 use sync_model::changes::{
     ClusterAssignmentRecord, ClusterNameRecord, DeviceSettingRecord, NoteRecord, RejectedRecord,
-    RelationRecord, SuggestionRecord, SuggestionReplyRecord, SuggestionStatus,
+    RelationRecord, ReplyAuthor, SuggestionRecord, SuggestionReplyRecord, SuggestionStatus,
 };
 use sync_model::settings::{self, SettingValue};
 use sync_model::{BootstrapPage, ChangeRecord, ChangesPage, EntityType, Record, Version};
@@ -145,6 +145,10 @@ async fn suggestion_record(tx: &mut ScopedTx, s: Suggestion) -> Result<Record, P
                 id: r.id.as_ulid(),
                 text: r.body,
                 at: fixed(r.created),
+                author: match r.author {
+                    IReplyAuthor::User => ReplyAuthor::User,
+                    IReplyAuthor::Ai => ReplyAuthor::Ai,
+                },
             })
             .collect(),
     }))

@@ -66,12 +66,16 @@ GlobalGraphView syntheticGraph({int nodes = 10000, int edges = 40000}) {
       GraphNode(
         id: 'n$i',
         title: 'Note $i',
-        kind: pick(kinds),
+        kind: GraphNodeKind.values.byName(pick(kinds)),
         depth: 0,
         clusterId: 'k${(i % side) ~/ 10}-${(i ~/ side) ~/ 10}',
         degree: random.nextInt(12),
         x: (i % side) * 60 + random.nextDouble() * 30,
         y: (i ~/ side) * 60 + random.nextDouble() * 30,
+        titleDir: TextDir.ltr,
+        updatedLabel: '',
+        labelRank: 0,
+        isHub: false,
       ),
   ];
   final graphEdges = [
@@ -89,10 +93,27 @@ GlobalGraphView syntheticGraph({int nodes = 10000, int edges = 40000}) {
           kind: kind,
           by: kind.startsWith('relation') ? 'ai' : null,
           confidence: kind.startsWith('relation') ? 0.8 : null,
+          id: '',
+          label: '',
         );
       }(),
   ];
-  return GlobalGraphView(nodes: graphNodes, edges: graphEdges, clusters: []);
+  return GlobalGraphView(
+    nodes: graphNodes,
+    edges: graphEdges,
+    clusters: [],
+    filter: const GraphFilter(
+      edgeKinds: [],
+      nodeKinds: [],
+      similarity: false,
+      lens: GraphLens.notes,
+      includeTags: false,
+    ),
+    edgeCounts: [],
+    nodeCounts: [],
+    neighbours: [],
+    similarity: Availability.available,
+  );
 }
 
 double median(List<double> values) {

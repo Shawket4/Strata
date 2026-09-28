@@ -7033,6 +7033,18 @@ impl SseDecode for crate::view::model::GraphPoint {
     }
 }
 
+impl SseDecode for crate::view::model::HighlightSpan {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_start = <u32>::sse_decode(deserializer);
+        let mut var_end = <u32>::sse_decode(deserializer);
+        return crate::view::model::HighlightSpan {
+            start: var_start,
+            end: var_end,
+        };
+    }
+}
+
 impl SseDecode for crate::view::model::HintKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -7781,6 +7793,20 @@ impl SseDecode for Vec<crate::view::model::GraphPoint> {
     }
 }
 
+impl SseDecode for Vec<crate::view::model::HighlightSpan> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::view::model::HighlightSpan>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::view::model::HistoryEntry> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8169,18 +8195,6 @@ impl SseDecode for Vec<crate::view::model::TaskItem> {
     }
 }
 
-impl SseDecode for Vec<crate::view::model::TextSpan> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = Vec::with_capacity(len_ as usize);
-        for idx_ in 0..len_ {
-            ans_.push(<crate::view::model::TextSpan>::sse_decode(deserializer));
-        }
-        return ans_;
-    }
-}
-
 impl SseDecode for Vec<crate::view::model::ThreadMessage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8364,7 +8378,7 @@ impl SseDecode for crate::view::model::NoteListItem {
         let mut var_snippetDir = <crate::view::model::TextDir>::sse_decode(deserializer);
         let mut var_updatedLabel = <String>::sse_decode(deserializer);
         let mut var_linkCount = <u32>::sse_decode(deserializer);
-        let mut var_highlights = <Vec<crate::view::model::TextSpan>>::sse_decode(deserializer);
+        let mut var_highlights = <Vec<crate::view::model::HighlightSpan>>::sse_decode(deserializer);
         return crate::view::model::NoteListItem {
             id: var_id,
             title: var_title,
@@ -9318,7 +9332,7 @@ impl SseDecode for crate::view::model::SearchHit {
         let mut var_snippet = <String>::sse_decode(deserializer);
         let mut var_titleDir = <crate::view::model::TextDir>::sse_decode(deserializer);
         let mut var_snippetDir = <crate::view::model::TextDir>::sse_decode(deserializer);
-        let mut var_highlights = <Vec<crate::view::model::TextSpan>>::sse_decode(deserializer);
+        let mut var_highlights = <Vec<crate::view::model::HighlightSpan>>::sse_decode(deserializer);
         let mut var_score = <f64>::sse_decode(deserializer);
         return crate::view::model::SearchHit {
             note_id: var_noteId,
@@ -10065,18 +10079,6 @@ impl SseDecode for crate::view::model::TextDir {
             1 => crate::view::model::TextDir::Rtl,
             2 => crate::view::model::TextDir::Neutral,
             _ => unreachable!("Invalid variant for TextDir: {}", inner),
-        };
-    }
-}
-
-impl SseDecode for crate::view::model::TextSpan {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_start = <u32>::sse_decode(deserializer);
-        let mut var_end = <u32>::sse_decode(deserializer);
-        return crate::view::model::TextSpan {
-            start: var_start,
-            end: var_end,
         };
     }
 }
@@ -12120,6 +12122,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::GraphPoint>
     for crate::view::model::GraphPoint
 {
     fn into_into_dart(self) -> crate::view::model::GraphPoint {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::view::model::HighlightSpan {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.start.into_into_dart().into_dart(),
+            self.end.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::view::model::HighlightSpan
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::view::model::HighlightSpan>
+    for crate::view::model::HighlightSpan
+{
+    fn into_into_dart(self) -> crate::view::model::HighlightSpan {
         self
     }
 }
@@ -14461,24 +14484,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::TextDir>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::view::model::TextSpan {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.start.into_into_dart().into_dart(),
-            self.end.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::view::model::TextSpan {}
-impl flutter_rust_bridge::IntoIntoDart<crate::view::model::TextSpan>
-    for crate::view::model::TextSpan
-{
-    fn into_into_dart(self) -> crate::view::model::TextSpan {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::view::model::ThreadMessage {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -15728,6 +15733,14 @@ impl SseEncode for crate::view::model::GraphPoint {
     }
 }
 
+impl SseEncode for crate::view::model::HighlightSpan {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.start, serializer);
+        <u32>::sse_encode(self.end, serializer);
+    }
+}
+
 impl SseEncode for crate::view::model::HintKind {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -16310,6 +16323,16 @@ impl SseEncode for Vec<crate::view::model::GraphPoint> {
     }
 }
 
+impl SseEncode for Vec<crate::view::model::HighlightSpan> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::view::model::HighlightSpan>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::view::model::HistoryEntry> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -16620,16 +16643,6 @@ impl SseEncode for Vec<crate::view::model::TaskItem> {
     }
 }
 
-impl SseEncode for Vec<crate::view::model::TextSpan> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <crate::view::model::TextSpan>::sse_encode(item, serializer);
-        }
-    }
-}
-
 impl SseEncode for Vec<crate::view::model::ThreadMessage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -16761,7 +16774,7 @@ impl SseEncode for crate::view::model::NoteListItem {
         <crate::view::model::TextDir>::sse_encode(self.snippet_dir, serializer);
         <String>::sse_encode(self.updated_label, serializer);
         <u32>::sse_encode(self.link_count, serializer);
-        <Vec<crate::view::model::TextSpan>>::sse_encode(self.highlights, serializer);
+        <Vec<crate::view::model::HighlightSpan>>::sse_encode(self.highlights, serializer);
     }
 }
 
@@ -17522,7 +17535,7 @@ impl SseEncode for crate::view::model::SearchHit {
         <String>::sse_encode(self.snippet, serializer);
         <crate::view::model::TextDir>::sse_encode(self.title_dir, serializer);
         <crate::view::model::TextDir>::sse_encode(self.snippet_dir, serializer);
-        <Vec<crate::view::model::TextSpan>>::sse_encode(self.highlights, serializer);
+        <Vec<crate::view::model::HighlightSpan>>::sse_encode(self.highlights, serializer);
         <f64>::sse_encode(self.score, serializer);
     }
 }
@@ -18037,14 +18050,6 @@ impl SseEncode for crate::view::model::TextDir {
             },
             serializer,
         );
-    }
-}
-
-impl SseEncode for crate::view::model::TextSpan {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <u32>::sse_encode(self.start, serializer);
-        <u32>::sse_encode(self.end, serializer);
     }
 }
 

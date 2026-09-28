@@ -14,12 +14,13 @@ use std::collections::BTreeMap;
 
 use strata_common::NoteId;
 use strata_index::UserScope;
+use sync_model::suggestions::DuplicatesPayload;
 use vault_format::Document;
 use vault_format::body::{self, BlockKind};
 use vault_format::sidecar::NoteSidecar;
 
 use crate::error::{Candidate, Result, VaultError};
-use crate::ops::notes::DuplicatePayloadItem;
+use crate::ops::notes::item_candidate;
 use crate::store::{Author, Core, VaultService};
 
 /// What [`VaultService::ai_set_summary`] did.
@@ -57,19 +58,6 @@ pub enum CiteOutcome {
     Existing(String),
     /// The block is gone, is a heading, or the ID is taken: cite the note without a block.
     Missing,
-}
-
-/// Payload of a `duplicates` suggestion (`MessagePack`): two stored items the nightly sweep
-/// found to be duplicates (PLAN §9.2 `dedupe`, §9.7). Never merged automatically; rejecting
-/// the suggestion records keep-both for the pair.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct DuplicatesPayload {
-    /// The first item (its note is the suggestion's note).
-    pub a: DuplicatePayloadItem,
-    /// The second item.
-    pub b: DuplicatePayloadItem,
-    /// The LLM's one-sentence reason when a borderline score was confirmed.
-    pub reason: Option<String>,
 }
 
 impl Core {
@@ -211,9 +199,7 @@ impl Core {
         let Ok((path, _)) = self.live(note) else {
             return Ok(());
         };
-        let (Some(a), Some(b)) = (payload.a.candidate(), payload.b.candidate()) else {
-            return Ok(());
-        };
+        let (a, b) = (item_candidate(&payload.a), item_candidate(&payload.b));
         let mut tx = self.begin(&scope).await?;
         let item: Option<Vec<u8>> = sqlx::query_scalar(
             "SELECT item FROM dedupe_keys WHERE kind = $1 AND item_id = $2 AND item IS NOT NULL \

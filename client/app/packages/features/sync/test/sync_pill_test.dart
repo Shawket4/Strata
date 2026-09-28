@@ -13,10 +13,21 @@ SyncPill _pill({
   SyncPhase phase = SyncPhase.idle,
 }) => SyncPill(
   connectivity: connectivity,
-  activity: SyncActivity(phase: phase, pagesDone: 0, ops: 0),
+  activity: SyncActivity(
+    phase: phase,
+    pagesDone: 0,
+    ops: 0,
+    opsDone: 0,
+    opsTotal: 0,
+    pulled: 0,
+  ),
   pendingOps: pending,
   conflicts: conflicts,
   duplicates: 0,
+  display: SyncPillKind.synced,
+  progressDone: 0,
+  progressTotal: 0,
+  label: '',
 );
 
 Future<void> _pump(

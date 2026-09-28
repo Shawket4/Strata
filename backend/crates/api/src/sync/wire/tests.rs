@@ -330,11 +330,20 @@ fn every_record() -> Vec<Record> {
             status: SuggestionStatus::Pending,
             payload: vec![0x80],
             created: at,
-            replies: vec![SuggestionReplyRecord {
-                id: u(4),
-                text: "no".into(),
-                at,
-            }],
+            replies: vec![
+                SuggestionReplyRecord {
+                    id: u(4),
+                    text: "no".into(),
+                    at,
+                    author: sync_model::changes::ReplyAuthor::User,
+                },
+                SuggestionReplyRecord {
+                    id: u(5),
+                    text: "Re-proposed.".into(),
+                    at,
+                    author: sync_model::changes::ReplyAuthor::Ai,
+                },
+            ],
         }),
         Record::ClusterAssignment(ClusterAssignmentRecord {
             note_id: u(1),

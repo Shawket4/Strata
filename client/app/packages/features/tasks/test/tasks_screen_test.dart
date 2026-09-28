@@ -14,6 +14,8 @@ final _petrolScreen = TaskScreen(
   task: StrataFixtures.taskPetrolArrowsInvoice,
   line: '- [ ] Petrol Arrows invoice 🔁 every week on Sunday',
   history: const [],
+  locationLabel: '',
+  recurrencePreview: [],
 );
 
 const _empty = TasksView(
@@ -23,8 +25,14 @@ const _empty = TasksView(
     upcoming: [],
     recurring: [],
     noDate: [],
+    upcomingGroups: [],
+    todayCount: 0,
   ),
   done: [],
+  openCount: 0,
+  doneThisWeek: 0,
+  doneThisWeekLabel: '',
+  notesWithTasks: 0,
 );
 
 Finder _semantics(String label) => find.bySemanticsLabel(label);

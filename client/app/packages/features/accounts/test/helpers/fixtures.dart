@@ -15,6 +15,7 @@ abstract final class AccountFixtures {
       serverUrl: StrataFixtures.serverUrl,
       timezone: 'Africa/Cairo',
       uiLanguage: 'en',
+      initials: '',
     ),
     knownAccounts: [],
     deviceName: "Mona's Pixel",
@@ -42,6 +43,9 @@ abstract final class AccountFixtures {
         status: OutboxStatus.pending,
         attempts: 1,
         created: DateTime.utc(2026, 9, 27, 9, 5),
+        detail: '',
+        detailDir: TextDir.ltr,
+        createdLabel: '',
       ),
       OutboxItem(
         opId: 'op-2',
@@ -50,10 +54,15 @@ abstract final class AccountFixtures {
         status: OutboxStatus.pending,
         attempts: 0,
         created: DateTime.utc(2026, 9, 27, 10, 40),
+        detail: '',
+        detailDir: TextDir.ltr,
+        createdLabel: '',
       ),
     ],
     conflicts: const [],
     rejections: const [],
+    paused: false,
+    log: [],
   );
 
   /// `invalid_credentials`.

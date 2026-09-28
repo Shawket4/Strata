@@ -19,6 +19,10 @@ abstract final class AdminFixtures {
     created: DateTime.utc(2026, 9, 12, 9),
     deletionAt: deletionAt,
     exportDownloadedAt: exportDownloadedAt,
+    initials: '',
+    isSelf: false,
+    createdLabel: '',
+    passwordChangeRequired: false,
   );
 
   /// Two pending approvals and five accounts.
@@ -48,6 +52,7 @@ abstract final class AdminFixtures {
         exportDownloadedAt: DateTime.utc(2026, 9, 26, 9),
       ),
     ],
+    query: '',
   );
 
   /// No pending approvals.
@@ -55,6 +60,7 @@ abstract final class AdminFixtures {
     availability: Availability.available,
     pending: const [],
     users: view.users,
+    query: '',
   );
 
   /// Availability only.
@@ -63,5 +69,6 @@ abstract final class AdminFixtures {
         availability: availability,
         pending: const [],
         users: const [],
+        query: '',
       );
 }

@@ -15,6 +15,9 @@ abstract final class SyncFixtures {
       status: OutboxStatus.pending,
       attempts: 2,
       created: _t,
+      detail: '',
+      detailDir: TextDir.ltr,
+      createdLabel: '',
     ),
     OutboxItem(
       opId: '01J8ZQ5B',
@@ -23,6 +26,9 @@ abstract final class SyncFixtures {
       status: OutboxStatus.pending,
       attempts: 0,
       created: _t.add(const Duration(minutes: 3)),
+      detail: '',
+      detailDir: TextDir.ltr,
+      createdLabel: '',
     ),
     OutboxItem(
       opId: '01J8ZQ5C',
@@ -31,6 +37,9 @@ abstract final class SyncFixtures {
       status: OutboxStatus.inflight,
       attempts: 1,
       created: _t.add(const Duration(minutes: 5)),
+      detail: '',
+      detailDir: TextDir.ltr,
+      createdLabel: '',
     ),
   ];
 
@@ -40,6 +49,7 @@ abstract final class SyncFixtures {
     noteId: 'n-weekly',
     title: 'Weekly invoicing proposal',
     created: _t,
+    createdLabel: '',
   );
 
   /// Offline · 3 queued, 1 conflict, one rejected op.
@@ -51,11 +61,17 @@ abstract final class SyncFixtures {
       conflicts: 1,
       duplicates: 0,
       lastSyncAt: DateTime.utc(2026, 9, 27, 11, 32),
+      display: SyncPillKind.synced,
+      progressDone: 0,
+      progressTotal: 0,
+      label: '',
     ),
     bootstrapComplete: true,
     outbox: outbox,
     conflicts: [conflict],
     rejections: const [StrataFixtures.rejectionItem],
+    paused: false,
+    log: [],
   );
 
   /// Syncing: bootstrap page 12 of 40.
@@ -67,17 +83,26 @@ abstract final class SyncFixtures {
         pagesDone: 12,
         pagesTotal: 40,
         ops: 0,
+        opsDone: 0,
+        opsTotal: 0,
+        pulled: 0,
       ),
       pendingOps: 3,
       conflicts: 0,
       duplicates: 0,
       lastSyncAt: DateTime.utc(2026, 9, 27, 11, 32),
+      display: SyncPillKind.synced,
+      progressDone: 0,
+      progressTotal: 0,
+      label: '',
     ),
     bootstrapComplete: false,
     outbox: outbox,
     conflicts: const [],
     rejections: const [],
     lastError: 'error.server',
+    paused: false,
+    log: [],
   );
 
   /// Everything synced.
@@ -87,6 +112,8 @@ abstract final class SyncFixtures {
     outbox: const [],
     conflicts: const [],
     rejections: const [],
+    paused: false,
+    log: [],
   );
 
   /// The ConflictExpanded note.
@@ -117,6 +144,8 @@ abstract final class SyncFixtures {
         base: '- Payment terms: net 30.\n',
         ours: '- Payment terms: net 14, with a 2-day grace period.\n',
         theirs: '- Payment terms: net 7.\n',
+        locationLabel: '',
+        allowedChoices: [],
       ),
       ConflictHunkView(
         id: 1,
@@ -125,8 +154,16 @@ abstract final class SyncFixtures {
         base: 'draft',
         ours: 'review',
         theirs: 'final',
+        locationLabel: '',
+        allowedChoices: [],
       ),
     ],
+    path: '',
+    localOriginLabel: '',
+    serverOriginLabel: '',
+    baseLines: [],
+    localLines: [],
+    serverLines: [],
   );
 
   /// A cleanly merged conflict (no hunks).
@@ -141,5 +178,11 @@ abstract final class SyncFixtures {
         'Loyalty: 5% after 12 months.\n',
     mergeClean: true,
     hunks: [],
+    path: '',
+    localOriginLabel: '',
+    serverOriginLabel: '',
+    baseLines: [],
+    localLines: [],
+    serverLines: [],
   );
 }

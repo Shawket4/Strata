@@ -126,7 +126,11 @@ void main() {
       await pumpEditor(
         tester,
         note: EditorFixtures.noteWith(
-          sync: const NoteSyncState(kind: NoteSyncKind.pending, pendingOps: 2),
+          sync: const NoteSyncState(
+            kind: NoteSyncKind.pending,
+            pendingOps: 2,
+            label: '',
+          ),
         ),
       );
       expect(
@@ -291,6 +295,7 @@ void main() {
                   kind: h.kind,
                   start: h.kind == HintKind.frontmatter ? 0 : h.start + shift,
                   end: h.end + shift,
+                  level: 0,
                 ),
             ],
           ),
@@ -497,9 +502,14 @@ void main() {
                 path: 'notes/sales/Churn notes.md',
                 kind: 'note',
                 snippet: 'Customers past 12 months churn 40% less.',
+                titleDir: TextDir.ltr,
+                snippetDir: TextDir.ltr,
+                highlights: [],
+                score: 0,
               ),
             ],
             availability: Availability.available,
+            availableModes: [],
           ),
         );
       await pumpEditor(tester, fake: fake);

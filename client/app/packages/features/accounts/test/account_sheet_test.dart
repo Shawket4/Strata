@@ -97,6 +97,8 @@ void main() {
               export_: Availability.available,
               integrity: Availability.notYetAvailable,
               admin: Availability.notAllowed,
+              deviceList: [],
+              integrityWarnings: [],
             ),
           ),
       );

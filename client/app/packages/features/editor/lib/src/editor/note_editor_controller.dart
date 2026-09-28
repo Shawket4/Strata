@@ -152,7 +152,7 @@ final class NoteEditorController extends ChangeNotifier {
     if (isDirty) return NoteEditStatus.unsaved;
     return switch (note.sync_.kind) {
       NoteSyncKind.synced => NoteEditStatus.saved,
-      NoteSyncKind.pending => NoteEditStatus.pending,
+      NoteSyncKind.pending || NoteSyncKind.duplicate => NoteEditStatus.pending,
       NoteSyncKind.conflict => NoteEditStatus.conflict,
     };
   }

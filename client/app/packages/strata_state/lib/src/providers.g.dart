@@ -916,6 +916,397 @@ final class SettingsProvider
 
 String _$settingsHash() => r'9ab23b7968c08a7fc5ce1c2db2db62c0fce203da';
 
+/// Inbox with a filter tab (`CoreApi.watchInboxFiltered`).
+
+@ProviderFor(inboxFiltered)
+final inboxFilteredProvider = InboxFilteredFamily._();
+
+/// Inbox with a filter tab (`CoreApi.watchInboxFiltered`).
+
+final class InboxFilteredProvider
+    extends
+        $FunctionalProvider<AsyncValue<InboxView>, InboxView, Stream<InboxView>>
+    with $FutureModifier<InboxView>, $StreamProvider<InboxView> {
+  /// Inbox with a filter tab (`CoreApi.watchInboxFiltered`).
+  InboxFilteredProvider._({
+    required InboxFilteredFamily super.from,
+    required InboxFilter super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'inboxFilteredProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$inboxFilteredHash();
+
+  @override
+  String toString() {
+    return r'inboxFilteredProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<InboxView> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<InboxView> create(Ref ref) {
+    final argument = this.argument as InboxFilter;
+    return inboxFiltered(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is InboxFilteredProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$inboxFilteredHash() => r'92ff85a26f1a263989b761cb9bc46bbac5d919a0';
+
+/// Inbox with a filter tab (`CoreApi.watchInboxFiltered`).
+
+final class InboxFilteredFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<InboxView>, InboxFilter> {
+  InboxFilteredFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'inboxFilteredProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Inbox with a filter tab (`CoreApi.watchInboxFiltered`).
+
+  InboxFilteredProvider call(InboxFilter filter) =>
+      InboxFilteredProvider._(argument: filter, from: this);
+
+  @override
+  String toString() => r'inboxFilteredProvider';
+}
+
+/// Navigation counts and pinned notes (`CoreApi.watchNav`).
+
+@ProviderFor(nav)
+final navProvider = NavProvider._();
+
+/// Navigation counts and pinned notes (`CoreApi.watchNav`).
+
+final class NavProvider
+    extends $FunctionalProvider<AsyncValue<NavView>, NavView, Stream<NavView>>
+    with $FutureModifier<NavView>, $StreamProvider<NavView> {
+  /// Navigation counts and pinned notes (`CoreApi.watchNav`).
+  NavProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: noCoreRetry,
+        name: r'navProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$navHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<NavView> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<NavView> create(Ref ref) {
+    return nav(ref);
+  }
+}
+
+String _$navHash() => r'5514eecb6a42abec55f023db7bd58075b6fad37d';
+
+/// The "Recent" block with a filter (`CoreApi.watchRecent`).
+
+@ProviderFor(recent)
+final recentProvider = RecentFamily._();
+
+/// The "Recent" block with a filter (`CoreApi.watchRecent`).
+
+final class RecentProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RecentNotesView>,
+          RecentNotesView,
+          Stream<RecentNotesView>
+        >
+    with $FutureModifier<RecentNotesView>, $StreamProvider<RecentNotesView> {
+  /// The "Recent" block with a filter (`CoreApi.watchRecent`).
+  RecentProvider._({
+    required RecentFamily super.from,
+    required RecentFilter super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'recentProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$recentHash();
+
+  @override
+  String toString() {
+    return r'recentProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<RecentNotesView> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<RecentNotesView> create(Ref ref) {
+    final argument = this.argument as RecentFilter;
+    return recent(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RecentProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$recentHash() => r'55db316c6151ce93c474a359679241aae84eb011';
+
+/// The "Recent" block with a filter (`CoreApi.watchRecent`).
+
+final class RecentFamily extends $Family
+    with $FunctionalFamilyOverride<Stream<RecentNotesView>, RecentFilter> {
+  RecentFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'recentProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The "Recent" block with a filter (`CoreApi.watchRecent`).
+
+  RecentProvider call(RecentFilter filter) =>
+      RecentProvider._(argument: filter, from: this);
+
+  @override
+  String toString() => r'recentProvider';
+}
+
+/// A directory tab with filters and sort applied in the core
+/// (`CoreApi.watchDirectoryFiltered`).
+
+@ProviderFor(directoryFiltered)
+final directoryFilteredProvider = DirectoryFilteredFamily._();
+
+/// A directory tab with filters and sort applied in the core
+/// (`CoreApi.watchDirectoryFiltered`).
+
+final class DirectoryFilteredProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<DirectoryView>,
+          DirectoryView,
+          Stream<DirectoryView>
+        >
+    with $FutureModifier<DirectoryView>, $StreamProvider<DirectoryView> {
+  /// A directory tab with filters and sort applied in the core
+  /// (`CoreApi.watchDirectoryFiltered`).
+  DirectoryFilteredProvider._({
+    required DirectoryFilteredFamily super.from,
+    required (DirectoryTab, String, DirectoryFilter, DirectorySort)
+    super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'directoryFilteredProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$directoryFilteredHash();
+
+  @override
+  String toString() {
+    return r'directoryFilteredProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $StreamProviderElement<DirectoryView> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<DirectoryView> create(Ref ref) {
+    final argument =
+        this.argument as (DirectoryTab, String, DirectoryFilter, DirectorySort);
+    return directoryFiltered(
+      ref,
+      argument.$1,
+      argument.$2,
+      argument.$3,
+      argument.$4,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is DirectoryFilteredProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$directoryFilteredHash() => r'87b5bfd3e4fd03e70f55b89b97ebbb7c6c22cb4b';
+
+/// A directory tab with filters and sort applied in the core
+/// (`CoreApi.watchDirectoryFiltered`).
+
+final class DirectoryFilteredFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          Stream<DirectoryView>,
+          (DirectoryTab, String, DirectoryFilter, DirectorySort)
+        > {
+  DirectoryFilteredFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'directoryFilteredProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A directory tab with filters and sort applied in the core
+  /// (`CoreApi.watchDirectoryFiltered`).
+
+  DirectoryFilteredProvider call(
+    DirectoryTab tab,
+    String query,
+    DirectoryFilter filter,
+    DirectorySort sort,
+  ) => DirectoryFilteredProvider._(
+    argument: (tab, query, filter, sort),
+    from: this,
+  );
+
+  @override
+  String toString() => r'directoryFilteredProvider';
+}
+
+/// The home-note picker of the new-task sheet (`CoreApi.watchTaskHomes`).
+
+@ProviderFor(taskHomes)
+final taskHomesProvider = TaskHomesProvider._();
+
+/// The home-note picker of the new-task sheet (`CoreApi.watchTaskHomes`).
+
+final class TaskHomesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<TaskHomesView>,
+          TaskHomesView,
+          Stream<TaskHomesView>
+        >
+    with $FutureModifier<TaskHomesView>, $StreamProvider<TaskHomesView> {
+  /// The home-note picker of the new-task sheet (`CoreApi.watchTaskHomes`).
+  TaskHomesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: noCoreRetry,
+        name: r'taskHomesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$taskHomesHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<TaskHomesView> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<TaskHomesView> create(Ref ref) {
+    return taskHomes(ref);
+  }
+}
+
+String _$taskHomesHash() => r'921b37bb2bcb2fe91f2f1c742eb2fce7a59f46cd';
+
+/// The Ask conversation, streamed (`CoreApi.watchAsk`).
+
+@ProviderFor(askConversation)
+final askConversationProvider = AskConversationProvider._();
+
+/// The Ask conversation, streamed (`CoreApi.watchAsk`).
+
+final class AskConversationProvider
+    extends $FunctionalProvider<AsyncValue<AskView>, AskView, Stream<AskView>>
+    with $FutureModifier<AskView>, $StreamProvider<AskView> {
+  /// The Ask conversation, streamed (`CoreApi.watchAsk`).
+  AskConversationProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: noCoreRetry,
+        name: r'askConversationProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$askConversationHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<AskView> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<AskView> create(Ref ref) {
+    return askConversation(ref);
+  }
+}
+
+String _$askConversationHash() => r'3287ef6363445af2b1074cbebd4f2796e1a38032';
+
 /// A note's local mind map at [depth] (`CoreApi.watchLocalGraph`).
 
 @ProviderFor(localGraph)
@@ -1249,12 +1640,12 @@ final class EditorHintsFamily extends $Family
   String toString() => r'editorHintsProvider';
 }
 
-/// Admin → Users (`CoreApi.loadAdminUsers`).
+/// Admin → Users filtered by [query] (`CoreApi.loadAdminUsers`).
 
 @ProviderFor(adminUsers)
-final adminUsersProvider = AdminUsersProvider._();
+final adminUsersProvider = AdminUsersFamily._();
 
-/// Admin → Users (`CoreApi.loadAdminUsers`).
+/// Admin → Users filtered by [query] (`CoreApi.loadAdminUsers`).
 
 final class AdminUsersProvider
     extends
@@ -1264,20 +1655,27 @@ final class AdminUsersProvider
           FutureOr<AdminUsersView>
         >
     with $FutureModifier<AdminUsersView>, $FutureProvider<AdminUsersView> {
-  /// Admin → Users (`CoreApi.loadAdminUsers`).
-  AdminUsersProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: noCoreRetry,
-        name: r'adminUsersProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
+  /// Admin → Users filtered by [query] (`CoreApi.loadAdminUsers`).
+  AdminUsersProvider._({
+    required AdminUsersFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'adminUsersProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$adminUsersHash();
+
+  @override
+  String toString() {
+    return r'adminUsersProvider'
+        ''
+        '($argument)';
+  }
 
   @$internal
   @override
@@ -1287,8 +1685,1299 @@ final class AdminUsersProvider
 
   @override
   FutureOr<AdminUsersView> create(Ref ref) {
-    return adminUsers(ref);
+    final argument = this.argument as String;
+    return adminUsers(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AdminUsersProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
   }
 }
 
-String _$adminUsersHash() => r'4104e0050658e5a91b0623257ec4a515e8a36206';
+String _$adminUsersHash() => r'806c1b3b740933454df7e96475876be9130ce255';
+
+/// Admin → Users filtered by [query] (`CoreApi.loadAdminUsers`).
+
+final class AdminUsersFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<AdminUsersView>, String> {
+  AdminUsersFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'adminUsersProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Admin → Users filtered by [query] (`CoreApi.loadAdminUsers`).
+
+  AdminUsersProvider call(String query) =>
+      AdminUsersProvider._(argument: query, from: this);
+
+  @override
+  String toString() => r'adminUsersProvider';
+}
+
+/// The global map with filters and lens applied in the core
+/// (`CoreApi.globalGraphFiltered`).
+
+@ProviderFor(globalGraphFiltered)
+final globalGraphFilteredProvider = GlobalGraphFilteredFamily._();
+
+/// The global map with filters and lens applied in the core
+/// (`CoreApi.globalGraphFiltered`).
+
+final class GlobalGraphFilteredProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<GlobalGraphView>,
+          GlobalGraphView,
+          FutureOr<GlobalGraphView>
+        >
+    with $FutureModifier<GlobalGraphView>, $FutureProvider<GlobalGraphView> {
+  /// The global map with filters and lens applied in the core
+  /// (`CoreApi.globalGraphFiltered`).
+  GlobalGraphFilteredProvider._({
+    required GlobalGraphFilteredFamily super.from,
+    required GraphFilter super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'globalGraphFilteredProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$globalGraphFilteredHash();
+
+  @override
+  String toString() {
+    return r'globalGraphFilteredProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<GlobalGraphView> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<GlobalGraphView> create(Ref ref) {
+    final argument = this.argument as GraphFilter;
+    return globalGraphFiltered(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is GlobalGraphFilteredProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$globalGraphFilteredHash() =>
+    r'de6ffbd86383c94aa588ca3b635a0c0abc60f8e1';
+
+/// The global map with filters and lens applied in the core
+/// (`CoreApi.globalGraphFiltered`).
+
+final class GlobalGraphFilteredFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<GlobalGraphView>, GraphFilter> {
+  GlobalGraphFilteredFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'globalGraphFilteredProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The global map with filters and lens applied in the core
+  /// (`CoreApi.globalGraphFiltered`).
+
+  GlobalGraphFilteredProvider call(GraphFilter filter) =>
+      GlobalGraphFilteredProvider._(argument: filter, from: this);
+
+  @override
+  String toString() => r'globalGraphFilteredProvider';
+}
+
+/// Search limited to a folder (`CoreApi.searchInFolder`).
+
+@ProviderFor(searchInFolder)
+final searchInFolderProvider = SearchInFolderFamily._();
+
+/// Search limited to a folder (`CoreApi.searchInFolder`).
+
+final class SearchInFolderProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SearchView>,
+          SearchView,
+          FutureOr<SearchView>
+        >
+    with $FutureModifier<SearchView>, $FutureProvider<SearchView> {
+  /// Search limited to a folder (`CoreApi.searchInFolder`).
+  SearchInFolderProvider._({
+    required SearchInFolderFamily super.from,
+    required (String, SearchMode, String?) super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'searchInFolderProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$searchInFolderHash();
+
+  @override
+  String toString() {
+    return r'searchInFolderProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<SearchView> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SearchView> create(Ref ref) {
+    final argument = this.argument as (String, SearchMode, String?);
+    return searchInFolder(ref, argument.$1, argument.$2, argument.$3);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SearchInFolderProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$searchInFolderHash() => r'af6fa18109c348704866e59365c17087e5ed461f';
+
+/// Search limited to a folder (`CoreApi.searchInFolder`).
+
+final class SearchInFolderFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<SearchView>,
+          (String, SearchMode, String?)
+        > {
+  SearchInFolderFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'searchInFolderProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Search limited to a folder (`CoreApi.searchInFolder`).
+
+  SearchInFolderProvider call(String query, SearchMode mode, String? folder) =>
+      SearchInFolderProvider._(argument: (query, mode, folder), from: this);
+
+  @override
+  String toString() => r'searchInFolderProvider';
+}
+
+/// Editor completions at [cursor] (`CoreApi.editorCompletions`).
+
+@ProviderFor(editorCompletions)
+final editorCompletionsProvider = EditorCompletionsFamily._();
+
+/// Editor completions at [cursor] (`CoreApi.editorCompletions`).
+
+final class EditorCompletionsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Completions>,
+          Completions,
+          FutureOr<Completions>
+        >
+    with $FutureModifier<Completions>, $FutureProvider<Completions> {
+  /// Editor completions at [cursor] (`CoreApi.editorCompletions`).
+  EditorCompletionsProvider._({
+    required EditorCompletionsFamily super.from,
+    required (String, String, int) super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'editorCompletionsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$editorCompletionsHash();
+
+  @override
+  String toString() {
+    return r'editorCompletionsProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Completions> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Completions> create(Ref ref) {
+    final argument = this.argument as (String, String, int);
+    return editorCompletions(ref, argument.$1, argument.$2, argument.$3);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is EditorCompletionsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$editorCompletionsHash() => r'8d703c203293e4622fd81297de304f5299c0a31b';
+
+/// Editor completions at [cursor] (`CoreApi.editorCompletions`).
+
+final class EditorCompletionsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<Completions>,
+          (String, String, int)
+        > {
+  EditorCompletionsFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'editorCompletionsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Editor completions at [cursor] (`CoreApi.editorCompletions`).
+
+  EditorCompletionsProvider call(String noteId, String content, int cursor) =>
+      EditorCompletionsProvider._(
+        argument: (noteId, content, cursor),
+        from: this,
+      );
+
+  @override
+  String toString() => r'editorCompletionsProvider';
+}
+
+/// Vault tags starting with [prefix] (`CoreApi.tags`).
+
+@ProviderFor(tags)
+final tagsProvider = TagsFamily._();
+
+/// Vault tags starting with [prefix] (`CoreApi.tags`).
+
+final class TagsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<TagItem>>,
+          List<TagItem>,
+          FutureOr<List<TagItem>>
+        >
+    with $FutureModifier<List<TagItem>>, $FutureProvider<List<TagItem>> {
+  /// Vault tags starting with [prefix] (`CoreApi.tags`).
+  TagsProvider._({
+    required TagsFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'tagsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$tagsHash();
+
+  @override
+  String toString() {
+    return r'tagsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<TagItem>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<TagItem>> create(Ref ref) {
+    final argument = this.argument as String;
+    return tags(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is TagsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$tagsHash() => r'9c62f5997eab9b110cad1e67ea17191f2ca6b877';
+
+/// Vault tags starting with [prefix] (`CoreApi.tags`).
+
+final class TagsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<TagItem>>, String> {
+  TagsFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'tagsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Vault tags starting with [prefix] (`CoreApi.tags`).
+
+  TagsProvider call(String prefix) =>
+      TagsProvider._(argument: prefix, from: this);
+
+  @override
+  String toString() => r'tagsProvider';
+}
+
+/// The blocks of a note (`CoreApi.noteBlocks`).
+
+@ProviderFor(noteBlocks)
+final noteBlocksProvider = NoteBlocksFamily._();
+
+/// The blocks of a note (`CoreApi.noteBlocks`).
+
+final class NoteBlocksProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<BlockItem>>,
+          List<BlockItem>,
+          FutureOr<List<BlockItem>>
+        >
+    with $FutureModifier<List<BlockItem>>, $FutureProvider<List<BlockItem>> {
+  /// The blocks of a note (`CoreApi.noteBlocks`).
+  NoteBlocksProvider._({
+    required NoteBlocksFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'noteBlocksProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$noteBlocksHash();
+
+  @override
+  String toString() {
+    return r'noteBlocksProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<BlockItem>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<BlockItem>> create(Ref ref) {
+    final argument = this.argument as String;
+    return noteBlocks(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is NoteBlocksProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$noteBlocksHash() => r'dd6d2c1e2dfc201cbc6d8cc4caa4b09adb8e3b22';
+
+/// The blocks of a note (`CoreApi.noteBlocks`).
+
+final class NoteBlocksFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<BlockItem>>, String> {
+  NoteBlocksFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'noteBlocksProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The blocks of a note (`CoreApi.noteBlocks`).
+
+  NoteBlocksProvider call(String noteId) =>
+      NoteBlocksProvider._(argument: noteId, from: this);
+
+  @override
+  String toString() => r'noteBlocksProvider';
+}
+
+/// Relation types with labels (`CoreApi.relationTypes`).
+
+@ProviderFor(relationTypes)
+final relationTypesProvider = RelationTypesProvider._();
+
+/// Relation types with labels (`CoreApi.relationTypes`).
+
+final class RelationTypesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<RelationTypeItem>>,
+          List<RelationTypeItem>,
+          FutureOr<List<RelationTypeItem>>
+        >
+    with
+        $FutureModifier<List<RelationTypeItem>>,
+        $FutureProvider<List<RelationTypeItem>> {
+  /// Relation types with labels (`CoreApi.relationTypes`).
+  RelationTypesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: noCoreRetry,
+        name: r'relationTypesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relationTypesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<RelationTypeItem>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<RelationTypeItem>> create(Ref ref) {
+    return relationTypes(ref);
+  }
+}
+
+String _$relationTypesHash() => r'44ffb88248640d8b725a1477746706db68063e5e';
+
+/// The recurrence form of a phrase (`CoreApi.recurrenceForm`).
+
+@ProviderFor(recurrenceForm)
+final recurrenceFormProvider = RecurrenceFormFamily._();
+
+/// The recurrence form of a phrase (`CoreApi.recurrenceForm`).
+
+final class RecurrenceFormProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RecurrenceForm?>,
+          RecurrenceForm?,
+          FutureOr<RecurrenceForm?>
+        >
+    with $FutureModifier<RecurrenceForm?>, $FutureProvider<RecurrenceForm?> {
+  /// The recurrence form of a phrase (`CoreApi.recurrenceForm`).
+  RecurrenceFormProvider._({
+    required RecurrenceFormFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'recurrenceFormProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$recurrenceFormHash();
+
+  @override
+  String toString() {
+    return r'recurrenceFormProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<RecurrenceForm?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RecurrenceForm?> create(Ref ref) {
+    final argument = this.argument as String;
+    return recurrenceForm(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RecurrenceFormProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$recurrenceFormHash() => r'309ce51730286521c1e310cafc6dfe27abf6e2f2';
+
+/// The recurrence form of a phrase (`CoreApi.recurrenceForm`).
+
+final class RecurrenceFormFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<RecurrenceForm?>, String> {
+  RecurrenceFormFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'recurrenceFormProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The recurrence form of a phrase (`CoreApi.recurrenceForm`).
+
+  RecurrenceFormProvider call(String phrase) =>
+      RecurrenceFormProvider._(argument: phrase, from: this);
+
+  @override
+  String toString() => r'recurrenceFormProvider';
+}
+
+/// A recurrence form compiled to its phrase and summary
+/// (`CoreApi.composeRecurrence`).
+
+@ProviderFor(composeRecurrence)
+final composeRecurrenceProvider = ComposeRecurrenceFamily._();
+
+/// A recurrence form compiled to its phrase and summary
+/// (`CoreApi.composeRecurrence`).
+
+final class ComposeRecurrenceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<RecurrenceCompose>,
+          RecurrenceCompose,
+          FutureOr<RecurrenceCompose>
+        >
+    with
+        $FutureModifier<RecurrenceCompose>,
+        $FutureProvider<RecurrenceCompose> {
+  /// A recurrence form compiled to its phrase and summary
+  /// (`CoreApi.composeRecurrence`).
+  ComposeRecurrenceProvider._({
+    required ComposeRecurrenceFamily super.from,
+    required RecurrenceForm super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'composeRecurrenceProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$composeRecurrenceHash();
+
+  @override
+  String toString() {
+    return r'composeRecurrenceProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<RecurrenceCompose> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<RecurrenceCompose> create(Ref ref) {
+    final argument = this.argument as RecurrenceForm;
+    return composeRecurrence(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ComposeRecurrenceProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$composeRecurrenceHash() => r'452a67b222b5c41f4af7c74a901c37f3f96179c7';
+
+/// A recurrence form compiled to its phrase and summary
+/// (`CoreApi.composeRecurrence`).
+
+final class ComposeRecurrenceFamily extends $Family
+    with
+        $FunctionalFamilyOverride<FutureOr<RecurrenceCompose>, RecurrenceForm> {
+  ComposeRecurrenceFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'composeRecurrenceProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A recurrence form compiled to its phrase and summary
+  /// (`CoreApi.composeRecurrence`).
+
+  ComposeRecurrenceProvider call(RecurrenceForm form) =>
+      ComposeRecurrenceProvider._(argument: form, from: this);
+
+  @override
+  String toString() => r'composeRecurrenceProvider';
+}
+
+/// The next dates of a recurrence (`CoreApi.recurrencePreview`).
+
+@ProviderFor(recurrencePreview)
+final recurrencePreviewProvider = RecurrencePreviewFamily._();
+
+/// The next dates of a recurrence (`CoreApi.recurrencePreview`).
+
+final class RecurrencePreviewProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<RecurrencePreviewItem>>,
+          List<RecurrencePreviewItem>,
+          FutureOr<List<RecurrencePreviewItem>>
+        >
+    with
+        $FutureModifier<List<RecurrencePreviewItem>>,
+        $FutureProvider<List<RecurrencePreviewItem>> {
+  /// The next dates of a recurrence (`CoreApi.recurrencePreview`).
+  RecurrencePreviewProvider._({
+    required RecurrencePreviewFamily super.from,
+    required (String, DateTime, int) super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'recurrencePreviewProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$recurrencePreviewHash();
+
+  @override
+  String toString() {
+    return r'recurrencePreviewProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<RecurrencePreviewItem>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<RecurrencePreviewItem>> create(Ref ref) {
+    final argument = this.argument as (String, DateTime, int);
+    return recurrencePreview(ref, argument.$1, argument.$2, argument.$3);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RecurrencePreviewProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$recurrencePreviewHash() => r'0b5769ef59bf35582ddd9d9b2961c95fb4066fab';
+
+/// The next dates of a recurrence (`CoreApi.recurrencePreview`).
+
+final class RecurrencePreviewFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<List<RecurrencePreviewItem>>,
+          (String, DateTime, int)
+        > {
+  RecurrencePreviewFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'recurrencePreviewProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The next dates of a recurrence (`CoreApi.recurrencePreview`).
+
+  RecurrencePreviewProvider call(String phrase, DateTime from, int count) =>
+      RecurrencePreviewProvider._(argument: (phrase, from, count), from: this);
+
+  @override
+  String toString() => r'recurrencePreviewProvider';
+}
+
+/// A new task's text as the core understands it (`CoreApi.parseTaskText`).
+
+@ProviderFor(parseTaskText)
+final parseTaskTextProvider = ParseTaskTextFamily._();
+
+/// A new task's text as the core understands it (`CoreApi.parseTaskText`).
+
+final class ParseTaskTextProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<TaskDraftPreview>,
+          TaskDraftPreview,
+          FutureOr<TaskDraftPreview>
+        >
+    with $FutureModifier<TaskDraftPreview>, $FutureProvider<TaskDraftPreview> {
+  /// A new task's text as the core understands it (`CoreApi.parseTaskText`).
+  ParseTaskTextProvider._({
+    required ParseTaskTextFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'parseTaskTextProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$parseTaskTextHash();
+
+  @override
+  String toString() {
+    return r'parseTaskTextProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<TaskDraftPreview> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<TaskDraftPreview> create(Ref ref) {
+    final argument = this.argument as String;
+    return parseTaskText(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ParseTaskTextProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$parseTaskTextHash() => r'1067c8fde05ef905d6fb26af2b6ef6a6c0c95b6e';
+
+/// A new task's text as the core understands it (`CoreApi.parseTaskText`).
+
+final class ParseTaskTextFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<TaskDraftPreview>, String> {
+  ParseTaskTextFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'parseTaskTextProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A new task's text as the core understands it (`CoreApi.parseTaskText`).
+
+  ParseTaskTextProvider call(String text) =>
+      ParseTaskTextProvider._(argument: text, from: this);
+
+  @override
+  String toString() => r'parseTaskTextProvider';
+}
+
+/// Places for the location picker (`CoreApi.placeOptions`).
+
+@ProviderFor(placeOptions)
+final placeOptionsProvider = PlaceOptionsFamily._();
+
+/// Places for the location picker (`CoreApi.placeOptions`).
+
+final class PlaceOptionsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<PlaceOption>>,
+          List<PlaceOption>,
+          FutureOr<List<PlaceOption>>
+        >
+    with
+        $FutureModifier<List<PlaceOption>>,
+        $FutureProvider<List<PlaceOption>> {
+  /// Places for the location picker (`CoreApi.placeOptions`).
+  PlaceOptionsProvider._({
+    required PlaceOptionsFamily super.from,
+    required String? super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'placeOptionsProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$placeOptionsHash();
+
+  @override
+  String toString() {
+    return r'placeOptionsProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<PlaceOption>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<PlaceOption>> create(Ref ref) {
+    final argument = this.argument as String?;
+    return placeOptions(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PlaceOptionsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$placeOptionsHash() => r'7355d49c376b29cb80a8e2fb6c5fc69a8de1930c';
+
+/// Places for the location picker (`CoreApi.placeOptions`).
+
+final class PlaceOptionsFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<PlaceOption>>, String?> {
+  PlaceOptionsFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'placeOptionsProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// Places for the location picker (`CoreApi.placeOptions`).
+
+  PlaceOptionsProvider call(String? documentId) =>
+      PlaceOptionsProvider._(argument: documentId, from: this);
+
+  @override
+  String toString() => r'placeOptionsProvider';
+}
+
+/// What merging two entities does (`CoreApi.mergePreview`).
+
+@ProviderFor(mergePreview)
+final mergePreviewProvider = MergePreviewFamily._();
+
+/// What merging two entities does (`CoreApi.mergePreview`).
+
+final class MergePreviewProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<MergePreview>,
+          MergePreview,
+          FutureOr<MergePreview>
+        >
+    with $FutureModifier<MergePreview>, $FutureProvider<MergePreview> {
+  /// What merging two entities does (`CoreApi.mergePreview`).
+  MergePreviewProvider._({
+    required MergePreviewFamily super.from,
+    required (String, String) super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'mergePreviewProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$mergePreviewHash();
+
+  @override
+  String toString() {
+    return r'mergePreviewProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<MergePreview> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<MergePreview> create(Ref ref) {
+    final argument = this.argument as (String, String);
+    return mergePreview(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MergePreviewProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$mergePreviewHash() => r'79ba55c15d446e9251220aae495cd8fa8087dd5b';
+
+/// What merging two entities does (`CoreApi.mergePreview`).
+
+final class MergePreviewFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<MergePreview>, (String, String)> {
+  MergePreviewFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'mergePreviewProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// What merging two entities does (`CoreApi.mergePreview`).
+
+  MergePreviewProvider call(String sourceId, String intoId) =>
+      MergePreviewProvider._(argument: (sourceId, intoId), from: this);
+
+  @override
+  String toString() => r'mergePreviewProvider';
+}
+
+/// The block a citation points to (`CoreApi.resolveCitation`).
+
+@ProviderFor(resolveCitation)
+final resolveCitationProvider = ResolveCitationFamily._();
+
+/// The block a citation points to (`CoreApi.resolveCitation`).
+
+final class ResolveCitationProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<CitationPreview>,
+          CitationPreview,
+          FutureOr<CitationPreview>
+        >
+    with $FutureModifier<CitationPreview>, $FutureProvider<CitationPreview> {
+  /// The block a citation points to (`CoreApi.resolveCitation`).
+  ResolveCitationProvider._({
+    required ResolveCitationFamily super.from,
+    required (String, String?) super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'resolveCitationProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$resolveCitationHash();
+
+  @override
+  String toString() {
+    return r'resolveCitationProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<CitationPreview> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<CitationPreview> create(Ref ref) {
+    final argument = this.argument as (String, String?);
+    return resolveCitation(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ResolveCitationProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$resolveCitationHash() => r'a4f004aeafef6dc76c15e0c5e5c9b5d60123a9a6';
+
+/// The block a citation points to (`CoreApi.resolveCitation`).
+
+final class ResolveCitationFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<CitationPreview>,
+          (String, String?)
+        > {
+  ResolveCitationFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'resolveCitationProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The block a citation points to (`CoreApi.resolveCitation`).
+
+  ResolveCitationProvider call(String noteId, String? anchor) =>
+      ResolveCitationProvider._(argument: (noteId, anchor), from: this);
+
+  @override
+  String toString() => r'resolveCitationProvider';
+}
+
+/// A revision compared with the current note (`CoreApi.noteRevisionDiff`).
+
+@ProviderFor(noteRevisionDiff)
+final noteRevisionDiffProvider = NoteRevisionDiffFamily._();
+
+/// A revision compared with the current note (`CoreApi.noteRevisionDiff`).
+
+final class NoteRevisionDiffProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<NoteDiffView>,
+          NoteDiffView,
+          FutureOr<NoteDiffView>
+        >
+    with $FutureModifier<NoteDiffView>, $FutureProvider<NoteDiffView> {
+  /// A revision compared with the current note (`CoreApi.noteRevisionDiff`).
+  NoteRevisionDiffProvider._({
+    required NoteRevisionDiffFamily super.from,
+    required (String, String) super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'noteRevisionDiffProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$noteRevisionDiffHash();
+
+  @override
+  String toString() {
+    return r'noteRevisionDiffProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<NoteDiffView> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<NoteDiffView> create(Ref ref) {
+    final argument = this.argument as (String, String);
+    return noteRevisionDiff(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is NoteRevisionDiffProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$noteRevisionDiffHash() => r'91ca73f1735534f53769e02940155afeb7e9d609';
+
+/// A revision compared with the current note (`CoreApi.noteRevisionDiff`).
+
+final class NoteRevisionDiffFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<NoteDiffView>, (String, String)> {
+  NoteRevisionDiffFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'noteRevisionDiffProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// A revision compared with the current note (`CoreApi.noteRevisionDiff`).
+
+  NoteRevisionDiffProvider call(String noteId, String commit) =>
+      NoteRevisionDiffProvider._(argument: (noteId, commit), from: this);
+
+  @override
+  String toString() => r'noteRevisionDiffProvider';
+}
+
+/// The sign-up password meter (`CoreApi.passwordStrength`).
+
+@ProviderFor(passwordStrength)
+final passwordStrengthProvider = PasswordStrengthFamily._();
+
+/// The sign-up password meter (`CoreApi.passwordStrength`).
+
+final class PasswordStrengthProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<PasswordStrength>,
+          PasswordStrength,
+          FutureOr<PasswordStrength>
+        >
+    with $FutureModifier<PasswordStrength>, $FutureProvider<PasswordStrength> {
+  /// The sign-up password meter (`CoreApi.passwordStrength`).
+  PasswordStrengthProvider._({
+    required PasswordStrengthFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'passwordStrengthProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$passwordStrengthHash();
+
+  @override
+  String toString() {
+    return r'passwordStrengthProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<PasswordStrength> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<PasswordStrength> create(Ref ref) {
+    final argument = this.argument as String;
+    return passwordStrength(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is PasswordStrengthProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$passwordStrengthHash() => r'6b877ebe7d47800f1a809bf0444ebd1c2229e9e2';
+
+/// The sign-up password meter (`CoreApi.passwordStrength`).
+
+final class PasswordStrengthFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<PasswordStrength>, String> {
+  PasswordStrengthFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'passwordStrengthProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The sign-up password meter (`CoreApi.passwordStrength`).
+
+  PasswordStrengthProvider call(String password) =>
+      PasswordStrengthProvider._(argument: password, from: this);
+
+  @override
+  String toString() => r'passwordStrengthProvider';
+}

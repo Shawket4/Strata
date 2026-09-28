@@ -29,9 +29,9 @@ use strata_vault::ops::ai_apply::{
     AiApplied, AiChangeSet, DecideSuggestion, NewDecision, NewHint, NewSuggestion,
     SuggestionDecision,
 };
-use strata_vault::ops::ai_decide::{
-    self as decide, CorrectionPayload, CustodyPayload, DecisionFix, DecisionView,
-    EntityLinkPayload, FixAction, FixPayload, HintPayload,
+use strata_vault::ops::ai_decide::{self as decide, DecisionFix, DecisionView, FixAction};
+use sync_model::suggestions::{
+    CorrectionFix, CorrectionHint, CorrectionPayload, CustodyPayload, EntityLinkPayload,
 };
 use text_normalize::normalize_for_search;
 use vault_format::RelationKey;
@@ -320,16 +320,16 @@ fn valid_fixes(
     Some(fixes)
 }
 
-fn fix_payload(f: &DecisionFix, confidence: f64, reason: &str) -> FixPayload {
+fn fix_payload(f: &DecisionFix, confidence: f64, reason: &str) -> CorrectionFix {
     let (action, new_target, new_type) = match &f.action {
         FixAction::Repoint(t) => ("repoint", Some(*t), None),
         FixAction::Retype(k) => ("retype", None, Some(k.as_str().to_owned())),
         FixAction::Reject => ("reject", None, None),
     };
-    FixPayload {
-        decision_id: f.decision,
+    CorrectionFix {
+        decision_id: f.decision.as_ulid(),
         action: action.to_owned(),
-        new_target,
+        new_target: new_target.map(|n| n.as_ulid()),
         new_type,
         confidence,
         reason: reason.to_owned(),
@@ -462,14 +462,17 @@ impl JobHandler for CorrectHandler {
             }
         }
         let payload = CorrectionPayload {
-            decision_id,
+            decision_id: decision_id.as_ulid(),
             message: params.message.clone(),
             fixes: fixes
                 .map(|f| f.iter().map(|(fx, c, r)| fix_payload(fx, *c, r)).collect())
                 .unwrap_or_default(),
             hints: hints
                 .into_iter()
-                .map(|(entity, text)| HintPayload { entity, text })
+                .map(|(entity, text)| CorrectionHint {
+                    entity: entity.as_ulid(),
+                    text,
+                })
                 .collect(),
             question: out.clarification_question.clone(),
         };
@@ -538,8 +541,8 @@ impl JobHandler for ReplyHandler {
         match s.kind.as_str() {
             decide::KIND_ENTITY_LINK => {
                 if let Ok(p) = rmp_serde::from_slice::<EntityLinkPayload>(&s.payload) {
-                    extra.extend(p.candidates.iter().copied());
-                    extra.extend(p.proposed);
+                    extra.extend(p.candidates.iter().copied().map(NoteId::from_ulid));
+                    extra.extend(p.proposed.map(NoteId::from_ulid));
                     mention = Some(p.mention);
                 }
             }
@@ -554,8 +557,8 @@ impl JobHandler for ReplyHandler {
                     .into_iter()
                     .flatten()
                     {
-                        extra.extend(t.candidates.iter().copied());
-                        extra.extend(t.id);
+                        extra.extend(t.candidates.iter().copied().map(NoteId::from_ulid));
+                        extra.extend(t.id.map(NoteId::from_ulid));
                     }
                 }
             }
@@ -623,7 +626,7 @@ impl JobHandler for ReplyHandler {
                     && let Ok(p) = rmp_serde::from_slice::<EntityLinkPayload>(&s.payload)
                 {
                     set.rejected_mentions
-                        .push((p.source_note, p.mention.clone(), p.kind.clone()));
+                        .push((NoteId::from_ulid(p.source_note), p.mention.clone(), p.kind.clone()));
                 }
                 supersede(&mut set, SuggestionDecision::Rejected);
                 set.ai_replies.push((
@@ -637,9 +640,9 @@ impl JobHandler for ReplyHandler {
                     .map_err(|_| JobError::Fatal("unreadable suggestion payload".into()))?;
                 if p.kind == kind.as_str() {
                     let new_decision = DecisionId::generate(d.ids.as_ref());
-                    p.decision_id = new_decision;
-                    p.proposed = Some(t);
-                    p.candidates = vec![t];
+                    p.decision_id = new_decision.as_ulid();
+                    p.proposed = Some(t.as_ulid());
+                    p.candidates = vec![t.as_ulid()];
                     "reply".clone_into(&mut p.reason);
                     let new_sid = SuggestionId::generate(d.ids.as_ref());
                     set.suggestions.push(NewSuggestion {
@@ -651,7 +654,7 @@ impl JobHandler for ReplyHandler {
                     set.decisions.push(NewDecision {
                         id: new_decision,
                         kind: DecisionKind::EntityMention,
-                        source_note: Some(p.source_note),
+                        source_note: Some(NoteId::from_ulid(p.source_note)),
                         source_block: p.block_id.clone(),
                         target_type: "entity".into(),
                         target_id: t.to_string(),
@@ -692,9 +695,9 @@ impl JobHandler for ReplyHandler {
                 for (k, role) in roles {
                     if let Some(r) = role
                         && k == kind
-                        && (r.id.is_none() || r.candidates.contains(&t))
+                        && (r.id.is_none() || r.candidates.contains(&t.as_ulid()))
                     {
-                        r.id = Some(t);
+                        r.id = Some(t.as_ulid());
                         r.candidates = Vec::new();
                         done = true;
                         break;
@@ -702,7 +705,7 @@ impl JobHandler for ReplyHandler {
                 }
                 if done {
                     let new_decision = DecisionId::generate(d.ids.as_ref());
-                    p.decision_id = new_decision;
+                    p.decision_id = new_decision.as_ulid();
                     "reply".clone_into(&mut p.reason);
                     let new_sid = SuggestionId::generate(d.ids.as_ref());
                     set.suggestions.push(NewSuggestion {

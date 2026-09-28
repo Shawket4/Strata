@@ -6,24 +6,45 @@ import 'package:strata_bridge/strata_bridge.dart'
     show
         AdminUsersView,
         AskView,
+        BlockItem,
+        CitationPreview,
+        Completions,
         ConflictScreen,
+        DirectoryFilter,
+        DirectorySort,
         DirectoryTab,
         DirectoryView,
         DuplicatePromptsView,
         EditorHint,
         EntityScreen,
         GlobalGraphView,
+        GraphFilter,
         HomeView,
+        InboxFilter,
         InboxView,
         LocalGraphView,
+        MergePreview,
+        NavView,
+        NoteDiffView,
         NoteScreen,
         NotesListView,
         NotificationOp,
+        PasswordStrength,
+        PlaceOption,
+        RecentFilter,
+        RecentNotesView,
+        RecurrenceCompose,
+        RecurrenceForm,
+        RecurrencePreviewItem,
+        RelationTypeItem,
         SearchMode,
         SearchView,
         SessionState,
         SettingsView,
         SyncStatusView,
+        TagItem,
+        TaskDraftPreview,
+        TaskHomesView,
         TaskScreen,
         TasksView;
 import 'package:strata_state/src/core_api.dart';
@@ -124,6 +145,43 @@ Stream<DuplicatePromptsView> duplicatePrompts(Ref ref) =>
 Stream<SettingsView> settings(Ref ref) =>
     ref.watch(coreApiProvider).watchSettings();
 
+/// Inbox with a filter tab (`CoreApi.watchInboxFiltered`).
+@Riverpod(retry: noCoreRetry)
+Stream<InboxView> inboxFiltered(Ref ref, InboxFilter filter) =>
+    ref.watch(coreApiProvider).watchInboxFiltered(filter: filter);
+
+/// Navigation counts and pinned notes (`CoreApi.watchNav`).
+@Riverpod(retry: noCoreRetry)
+Stream<NavView> nav(Ref ref) => ref.watch(coreApiProvider).watchNav();
+
+/// The "Recent" block with a filter (`CoreApi.watchRecent`).
+@Riverpod(retry: noCoreRetry)
+Stream<RecentNotesView> recent(Ref ref, RecentFilter filter) =>
+    ref.watch(coreApiProvider).watchRecent(filter: filter);
+
+/// A directory tab with filters and sort applied in the core
+/// (`CoreApi.watchDirectoryFiltered`).
+@Riverpod(retry: noCoreRetry)
+Stream<DirectoryView> directoryFiltered(
+  Ref ref,
+  DirectoryTab tab,
+  String query,
+  DirectoryFilter filter,
+  DirectorySort sort,
+) => ref
+    .watch(coreApiProvider)
+    .watchDirectoryFiltered(tab: tab, query: query, filter: filter, sort: sort);
+
+/// The home-note picker of the new-task sheet (`CoreApi.watchTaskHomes`).
+@Riverpod(retry: noCoreRetry)
+Stream<TaskHomesView> taskHomes(Ref ref) =>
+    ref.watch(coreApiProvider).watchTaskHomes();
+
+/// The Ask conversation, streamed (`CoreApi.watchAsk`).
+@Riverpod(retry: noCoreRetry)
+Stream<AskView> askConversation(Ref ref) =>
+    ref.watch(coreApiProvider).watchAsk();
+
 /// A note's local mind map at [depth] (`CoreApi.watchLocalGraph`).
 @Riverpod(retry: noCoreRetry)
 Stream<LocalGraphView> localGraph(Ref ref, String id, int depth) =>
@@ -152,7 +210,105 @@ Future<AskView> askView(Ref ref) => ref.watch(coreApiProvider).askView();
 Future<List<EditorHint>> editorHints(Ref ref, String content) =>
     ref.watch(coreApiProvider).editorHints(content: content);
 
-/// Admin → Users (`CoreApi.loadAdminUsers`).
+/// Admin → Users filtered by [query] (`CoreApi.loadAdminUsers`).
 @Riverpod(retry: noCoreRetry)
-Future<AdminUsersView> adminUsers(Ref ref) =>
-    ref.watch(coreApiProvider).loadAdminUsers();
+Future<AdminUsersView> adminUsers(Ref ref, String query) =>
+    ref.watch(coreApiProvider).loadAdminUsers(query: query);
+
+/// The global map with filters and lens applied in the core
+/// (`CoreApi.globalGraphFiltered`).
+@Riverpod(retry: noCoreRetry)
+Future<GlobalGraphView> globalGraphFiltered(Ref ref, GraphFilter filter) =>
+    ref.watch(coreApiProvider).globalGraphFiltered(filter: filter);
+
+/// Search limited to a folder (`CoreApi.searchInFolder`).
+@Riverpod(retry: noCoreRetry)
+Future<SearchView> searchInFolder(
+  Ref ref,
+  String query,
+  SearchMode mode,
+  String? folder,
+) => ref
+    .watch(coreApiProvider)
+    .searchInFolder(query: query, mode: mode, folder: folder);
+
+/// Editor completions at [cursor] (`CoreApi.editorCompletions`).
+@Riverpod(retry: noCoreRetry)
+Future<Completions> editorCompletions(
+  Ref ref,
+  String noteId,
+  String content,
+  int cursor,
+) => ref
+    .watch(coreApiProvider)
+    .editorCompletions(noteId: noteId, content: content, cursor: cursor);
+
+/// Vault tags starting with [prefix] (`CoreApi.tags`).
+@Riverpod(retry: noCoreRetry)
+Future<List<TagItem>> tags(Ref ref, String prefix) =>
+    ref.watch(coreApiProvider).tags(prefix: prefix);
+
+/// The blocks of a note (`CoreApi.noteBlocks`).
+@Riverpod(retry: noCoreRetry)
+Future<List<BlockItem>> noteBlocks(Ref ref, String noteId) =>
+    ref.watch(coreApiProvider).noteBlocks(noteId: noteId);
+
+/// Relation types with labels (`CoreApi.relationTypes`).
+@Riverpod(retry: noCoreRetry)
+Future<List<RelationTypeItem>> relationTypes(Ref ref) =>
+    ref.watch(coreApiProvider).relationTypes();
+
+/// The recurrence form of a phrase (`CoreApi.recurrenceForm`).
+@Riverpod(retry: noCoreRetry)
+Future<RecurrenceForm?> recurrenceForm(Ref ref, String phrase) =>
+    ref.watch(coreApiProvider).recurrenceForm(phrase: phrase);
+
+/// A recurrence form compiled to its phrase and summary
+/// (`CoreApi.composeRecurrence`).
+@Riverpod(retry: noCoreRetry)
+Future<RecurrenceCompose> composeRecurrence(Ref ref, RecurrenceForm form) =>
+    ref.watch(coreApiProvider).composeRecurrence(form: form);
+
+/// The next dates of a recurrence (`CoreApi.recurrencePreview`).
+@Riverpod(retry: noCoreRetry)
+Future<List<RecurrencePreviewItem>> recurrencePreview(
+  Ref ref,
+  String phrase,
+  DateTime from,
+  int count,
+) => ref
+    .watch(coreApiProvider)
+    .recurrencePreview(phrase: phrase, from: from, count: count);
+
+/// A new task's text as the core understands it (`CoreApi.parseTaskText`).
+@Riverpod(retry: noCoreRetry)
+Future<TaskDraftPreview> parseTaskText(Ref ref, String text) =>
+    ref.watch(coreApiProvider).parseTaskText(text: text);
+
+/// Places for the location picker (`CoreApi.placeOptions`).
+@Riverpod(retry: noCoreRetry)
+Future<List<PlaceOption>> placeOptions(Ref ref, String? documentId) =>
+    ref.watch(coreApiProvider).placeOptions(documentId: documentId);
+
+/// What merging two entities does (`CoreApi.mergePreview`).
+@Riverpod(retry: noCoreRetry)
+Future<MergePreview> mergePreview(Ref ref, String sourceId, String intoId) =>
+    ref.watch(coreApiProvider).mergePreview(sourceId: sourceId, intoId: intoId);
+
+/// The block a citation points to (`CoreApi.resolveCitation`).
+@Riverpod(retry: noCoreRetry)
+Future<CitationPreview> resolveCitation(
+  Ref ref,
+  String noteId,
+  String? anchor,
+) => ref.watch(coreApiProvider).resolveCitation(noteId: noteId, anchor: anchor);
+
+/// A revision compared with the current note (`CoreApi.noteRevisionDiff`).
+@Riverpod(retry: noCoreRetry)
+Future<NoteDiffView> noteRevisionDiff(Ref ref, String noteId, String commit) =>
+    ref.watch(coreApiProvider).noteRevisionDiff(noteId: noteId, commit: commit);
+
+/// The sign-up password meter (`CoreApi.passwordStrength`).
+@Riverpod(retry: noCoreRetry)
+Future<PasswordStrength> passwordStrength(Ref ref, String password) =>
+    ref.watch(coreApiProvider).passwordStrength(password: password);

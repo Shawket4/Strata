@@ -129,17 +129,11 @@ void main() {
       expect(core.calls, [
         const CoreCall('notificationAction', {
           'id': 4211,
-          'action': NotificationAction(
-            kind: NotificationActionKind.done,
-            minutes: 0,
-          ),
+          'action': NotificationAction(kind: NotificationActionKind.done),
         }),
         const CoreCall('notificationAction', {
           'id': 4211,
-          'action': NotificationAction(
-            kind: NotificationActionKind.snooze,
-            minutes: interimSnoozeMinutes,
-          ),
+          'action': NotificationAction(kind: NotificationActionKind.snooze),
         }),
       ]);
       expect(opened, isEmpty);
@@ -170,10 +164,7 @@ void main() {
         const CoreCall('initCore', {'config': StrataFixtures.coreConfig}),
         const CoreCall('notificationAction', {
           'id': 7,
-          'action': NotificationAction(
-            kind: NotificationActionKind.done,
-            minutes: 0,
-          ),
+          'action': NotificationAction(kind: NotificationActionKind.done),
         }),
       ]);
     });
@@ -273,8 +264,7 @@ void main() {
     });
   });
 
-  test('interim snooze length matches the design copy', () {
-    expect(interimSnoozeMinutes, 15);
+  test('other action identifiers are not forwarded', () {
     expect(actionOf(const NotificationTap(id: 1, actionId: 'other')), isNull);
   });
 }

@@ -209,8 +209,8 @@ pub(crate) fn note_items(
 }
 
 /// UTF-16 spans of `needles` (normalised, case-insensitive) in `text`.
-pub(crate) fn highlight_spans(text: &str, needles: &[String]) -> Vec<TextSpan> {
-    let mut out: Vec<TextSpan> = Vec::new();
+pub(crate) fn highlight_spans(text: &str, needles: &[String]) -> Vec<HighlightSpan> {
+    let mut out: Vec<HighlightSpan> = Vec::new();
     let lower: Vec<(usize, char)> = text.char_indices().collect();
     let folded: String = text.chars().flat_map(char::to_lowercase).collect();
     if folded.chars().count() != lower.len() {
@@ -229,7 +229,7 @@ pub(crate) fn highlight_spans(text: &str, needles: &[String]) -> Vec<TextSpan> {
             if chars[i..i + n.len()] == n[..] {
                 let start = lower[i].0;
                 let end = lower.get(i + n.len()).map_or(text.len(), |c| c.0);
-                out.push(TextSpan {
+                out.push(HighlightSpan {
                     start: map.at(start),
                     end: map.at(end),
                 });
