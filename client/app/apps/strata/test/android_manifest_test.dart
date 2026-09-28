@@ -9,9 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 /// setup). Without `SCHEDULE_EXACT_ALARM` Android greys out the app's
 /// "Alarms & reminders" switch, so the exact-alarm request cannot be granted.
 void main() {
-  final manifest = File(
-    'android/app/src/main/AndroidManifest.xml',
-  ).readAsStringSync();
+  final manifest = File('android/app/src/main/AndroidManifest.xml')
+      .readAsStringSync();
 
   test('declares the reminder permissions', () {
     for (final permission in [
