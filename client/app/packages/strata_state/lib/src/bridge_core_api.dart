@@ -52,6 +52,7 @@ import 'package:strata_bridge/strata_bridge.dart'
         RecurrenceForm,
         RecurrencePreviewItem,
         RelationTypeItem,
+        RepointChoice,
         SearchMode,
         SearchView,
         SessionState,
@@ -68,7 +69,8 @@ import 'package:strata_bridge/strata_bridge.dart'
         TaskHomesView,
         TaskPatch,
         TaskScreen,
-        TasksView;
+        TasksView,
+        TimeZoneItem;
 import 'package:strata_state/src/core_api.dart';
 
 /// The production [CoreApi]: every method forwards to the generated
@@ -415,6 +417,13 @@ final class BridgeCoreApi implements CoreApi {
     required String key,
     required String value,
   }) => bridge.setProperty(id: id, key: key, value: value);
+
+  @override
+  Future<String> setPropertyValues({
+    required String id,
+    required String key,
+    required List<String> values,
+  }) => bridge.setPropertyValues(id: id, key: key, values: values);
 
   @override
   Future<String> removeProperty({required String id, required String key}) =>
@@ -765,6 +774,16 @@ final class BridgeCoreApi implements CoreApi {
     required String noteId,
     required String commit,
   }) => bridge.noteRevisionDiff(noteId: noteId, commit: commit);
+
+  @override
+  Future<List<TimeZoneItem>> timezones({required String query}) =>
+      bridge.timezones(query: query);
+
+  @override
+  Future<List<RepointChoice>> repointChoices({
+    required String decisionId,
+    required String query,
+  }) => bridge.repointChoices(decisionId: decisionId, query: query);
 
   @override
   Future<AdminUsersView> loadAdminUsers({required String query}) =>

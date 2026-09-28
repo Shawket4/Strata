@@ -626,6 +626,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<KnownAccountItem> dco_decode_list_known_account_item(dynamic raw);
 
   @protected
+  List<MarkerRange> dco_decode_list_marker_range(dynamic raw);
+
+  @protected
   List<NodePosition> dco_decode_list_node_position(dynamic raw);
 
   @protected
@@ -700,9 +703,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<TaskItem> dco_decode_list_task_item(dynamic raw);
 
   @protected
-  List<TextRange> dco_decode_list_text_range(dynamic raw);
-
-  @protected
   List<ThreadMessage> dco_decode_list_thread_message(dynamic raw);
 
   @protected
@@ -713,6 +713,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   LocalGraphView dco_decode_local_graph_view(dynamic raw);
+
+  @protected
+  MarkerRange dco_decode_marker_range(dynamic raw);
 
   @protected
   MentionEdit dco_decode_mention_edit(dynamic raw);
@@ -1028,9 +1031,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   TextDir dco_decode_text_dir(dynamic raw);
-
-  @protected
-  TextRange dco_decode_text_range(dynamic raw);
 
   @protected
   ThreadMessage dco_decode_thread_message(dynamic raw);
@@ -1761,6 +1761,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  List<MarkerRange> sse_decode_list_marker_range(SseDeserializer deserializer);
+
+  @protected
   List<NodePosition> sse_decode_list_node_position(
     SseDeserializer deserializer,
   );
@@ -1855,9 +1858,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   List<TaskItem> sse_decode_list_task_item(SseDeserializer deserializer);
 
   @protected
-  List<TextRange> sse_decode_list_text_range(SseDeserializer deserializer);
-
-  @protected
   List<ThreadMessage> sse_decode_list_thread_message(
     SseDeserializer deserializer,
   );
@@ -1872,6 +1872,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   LocalGraphView sse_decode_local_graph_view(SseDeserializer deserializer);
+
+  @protected
+  MarkerRange sse_decode_marker_range(SseDeserializer deserializer);
 
   @protected
   MentionEdit sse_decode_mention_edit(SseDeserializer deserializer);
@@ -2229,9 +2232,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   TextDir sse_decode_text_dir(SseDeserializer deserializer);
-
-  @protected
-  TextRange sse_decode_text_range(SseDeserializer deserializer);
 
   @protected
   ThreadMessage sse_decode_thread_message(SseDeserializer deserializer);
@@ -3173,6 +3173,12 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   );
 
   @protected
+  void sse_encode_list_marker_range(
+    List<MarkerRange> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_node_position(
     List<NodePosition> self,
     SseSerializer serializer,
@@ -3305,12 +3311,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   void sse_encode_list_task_item(List<TaskItem> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_text_range(
-    List<TextRange> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_list_thread_message(
     List<ThreadMessage> self,
     SseSerializer serializer,
@@ -3333,6 +3333,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
     LocalGraphView self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_marker_range(MarkerRange self, SseSerializer serializer);
 
   @protected
   void sse_encode_mention_edit(MentionEdit self, SseSerializer serializer);
@@ -3777,9 +3780,6 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   void sse_encode_text_dir(TextDir self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_text_range(TextRange self, SseSerializer serializer);
 
   @protected
   void sse_encode_thread_message(ThreadMessage self, SseSerializer serializer);

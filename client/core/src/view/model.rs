@@ -1490,12 +1490,12 @@ pub struct EditorHint {
     /// around a strong run, each with its own markers), a heading's `#`s with the spaces
     /// around them (and closing `#`s), a link's `[[`/`![[` (with `path|` when aliased) and
     /// `]]`. Live preview hides exactly these.
-    pub markers: Vec<TextRange>,
+    pub markers: Vec<MarkerRange>,
 }
 
-/// A range of text (UTF-16 units; end exclusive).
+/// A markdown marker's range in a note's content (UTF-16 units; end exclusive).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct TextRange {
+pub struct MarkerRange {
     /// Start (inclusive).
     pub start: u32,
     /// End (exclusive).

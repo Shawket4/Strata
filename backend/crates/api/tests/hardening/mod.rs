@@ -686,6 +686,7 @@ pub async fn populate(h: &H, u: &User, secret: &str) -> Fixtures {
         &types::CustodyEventRequest {
             at: chrono::NaiveDate::from_ymd_opt(2026, 9, 1).expect("date"),
             counterparty_id: None,
+            note: None,
             person_id: None,
             place_id: Some(place),
             source_note_id: None,

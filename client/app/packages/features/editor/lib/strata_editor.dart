@@ -18,8 +18,7 @@ export 'src/editor/editor_chrome.dart'
         LivePreviewToggle,
         NoteConflictBanner,
         NoteStatusLabel;
-export 'src/editor/hint_styling.dart'
-    show hiddenMarkerAttribution, markerRanges;
+export 'src/editor/hint_styling.dart' show hiddenMarkerAttribution;
 export 'src/editor/note_editor_controller.dart'
     show NoteEditStatus, NoteEditorController;
 export 'src/editor/strata_note_editor.dart' show StrataNoteEditor;

@@ -236,25 +236,49 @@ void main() {
       expect(find.byTooltip('Hide markdown'), findsOneWidget);
     });
 
-    test('marker ranges come from the span bounds and its kind', () {
-      expect(markerRanges(const LineSpan(HintKind.bold, 4, 12)), [
-        (4, 6),
-        (10, 12),
+    test("markers are the core's exact ranges, placed on their lines", () {
+      // `***both***` (an emphasis around a strong run), a heading with extra
+      // spaces and closing hashes, and a setext heading whose underline is on
+      // its second line: no width is derived from the kind.
+      const content = '***both***\n###   Three ##\nSetext\n===\n';
+      final source = MarkdownSource.parse(content, const []);
+      final document = documentOf(source);
+      EditorHint hint(HintKind kind, int start, int end, List<(int, int)> m) =>
+          EditorHint(
+            kind: kind,
+            start: start,
+            end: end,
+            level: 0,
+            markers: [for (final (s, e) in m) MarkerRange(start: s, end: e)],
+          );
+      final hints = LineHints.place(
+        document: document,
+        lines: linesOf(document),
+        newline: '\n',
+        bodyOffset: 0,
+        hints: [
+          hint(HintKind.italic, 0, 10, [(0, 1), (9, 10)]),
+          hint(HintKind.bold, 1, 9, [(1, 3), (7, 9)]),
+          hint(HintKind.heading, 11, 25, [(11, 17), (22, 25)]),
+          hint(HintKind.heading, 26, 36, [(33, 36)]),
+        ],
+      );
+      final ids = [for (final node in document) node.id];
+      List<List<(int, int)>> markersOf(int line) => [
+        for (final span in hints.of(ids[line])) span.markers,
+      ];
+      expect(markersOf(0), [
+        [(0, 1), (9, 10)],
+        [(1, 3), (7, 9)],
       ]);
-      expect(markerRanges(const LineSpan(HintKind.italic, 0, 5)), [
-        (0, 1),
-        (4, 5),
+      expect(markersOf(1), [
+        [(0, 6), (11, 14)],
       ]);
-      expect(markerRanges(const LineSpan(HintKind.embed, 0, 9)), [
-        (0, 3),
-        (7, 9),
+      // The setext heading spans two lines; only the second has a marker.
+      expect(markersOf(2), [<(int, int)>[]]);
+      expect(markersOf(3), [
+        [(0, 3)],
       ]);
-      expect(markerRanges(const LineSpan(HintKind.heading, 0, 9, level: 3)), [
-        (0, 4),
-      ]);
-      expect(markerRanges(const LineSpan(HintKind.heading, 0, 9)), isEmpty);
-      expect(markerRanges(const LineSpan(HintKind.bold, 0, 4)), isEmpty);
-      expect(markerRanges(const LineSpan(HintKind.tag, 0, 4)), isEmpty);
     });
 
     testWidgets('renders task lines with checkboxes in their state', (

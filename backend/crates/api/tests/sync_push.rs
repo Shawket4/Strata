@@ -266,6 +266,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             10,
             Some(version(&sam)),
             Op::EntityPatch(o::EntityPatch {
+                set_lists: Default::default(),
                 id: id(4),
                 set: [("phone".to_owned(), "0100".to_owned())].into(),
                 unset: vec!["role".into()],
@@ -411,6 +412,7 @@ async fn every_op_kind_applies_with_exact_results_one_commit_each() {
             17,
             None,
             Op::DocumentCustody(o::DocumentCustody {
+                note: None,
                 document_id: id(7),
                 event: CustodyEventType::StoredAt,
                 at: d(2026, 9, 20),
@@ -1245,6 +1247,7 @@ async fn another_users_ids_are_rejected_as_not_found_and_never_applied() {
             18,
             None,
             Op::DocumentCustody(o::DocumentCustody {
+                note: None,
                 document_id: id(2),
                 event: CustodyEventType::Lost,
                 at: d(2026, 9, 1),

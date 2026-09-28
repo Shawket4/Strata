@@ -25,11 +25,11 @@ use strata_core::api::{app, intents, views};
 use strata_core::view::model::{
     AdminUserItem, AppLifecycle, AskScope, AskScopeKind, Availability, ConflictResolution,
     CoreConfig, CoreFailure, CustodyDraft, DocumentDraft, DuplicateChoice, EditorHint, GraphFilter,
-    GraphLens, HintKind, ImportSummary, LinkOrCreateChoice, LinkOrCreateKind, MentionEdit,
-    NewUserRequest, NodePosition, NotificationAction, NotificationActionKind, NotificationResult,
-    PasswordLevel, PlaceDraft, Platform, RecurrenceCompose, RecurrenceFrequency,
-    RecurrencePreviewItem, ResolutionKind, SearchMode, SessionKind, SignInRequest, SignUpRequest,
-    SuggestionEdits, TagItem, TaskDraft, TaskPatch, TextRange,
+    GraphLens, HintKind, ImportSummary, LinkOrCreateChoice, LinkOrCreateKind, MarkerRange,
+    MentionEdit, NewUserRequest, NodePosition, NotificationAction, NotificationActionKind,
+    NotificationResult, PasswordLevel, PlaceDraft, Platform, RecurrenceCompose,
+    RecurrenceFrequency, RecurrencePreviewItem, ResolutionKind, SearchMode, SessionKind,
+    SignInRequest, SignUpRequest, SuggestionEdits, TagItem, TaskDraft, TaskPatch,
 };
 use strata_index::types::UserRole;
 use world::World;
@@ -87,8 +87,8 @@ fn the_facade_drives_the_core_end_to_end() {
             hint(HintKind::LtrLine, 0, 20),
             EditorHint {
                 markers: vec![
-                    TextRange { start: 4, end: 6 },
-                    TextRange { start: 10, end: 12 },
+                    MarkerRange { start: 4, end: 6 },
+                    MarkerRange { start: 10, end: 12 },
                 ],
                 ..hint(HintKind::WikiLink, 4, 12)
             },

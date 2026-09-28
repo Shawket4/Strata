@@ -279,12 +279,22 @@ abstract final class StrataFixtures {
     start: 0,
     end: 24,
     level: 0,
+    markers: [],
   );
 
   /// The hints of [noteView]'s content.
   static const List<EditorHint> editorHints = [
     editorHint,
-    EditorHint(kind: HintKind.wikiLink, start: 26, end: 41, level: 0),
+    EditorHint(
+      kind: HintKind.wikiLink,
+      start: 26,
+      end: 41,
+      level: 0,
+      markers: [
+        MarkerRange(start: 26, end: 28),
+        MarkerRange(start: 39, end: 41),
+      ],
+    ),
   ];
 
   /// A note with local changes waiting to sync.
@@ -930,7 +940,7 @@ abstract final class StrataFixtures {
             'كلمت أحمد النهارده، عايزين invoicing أسبوعي بدل شهري ابتداءً من '
             'أكتوبر',
         textDir: TextDir.rtl,
-        summary: '→ Weekly invoicing request — Acme',
+        summary: 'File as Weekly invoicing request — Acme',
         needsYou: false,
       ),
       InboxPreviewItem(
@@ -956,6 +966,7 @@ abstract final class StrataFixtures {
         confidence: 0.94,
         decisionId: 'dec-works-at',
         reverted: false,
+        canRepoint: true,
       ),
       AiActivityItem(
         atLabel: 'Yesterday',
@@ -963,6 +974,7 @@ abstract final class StrataFixtures {
         summary: 'Watanya contract returned to the Safe',
         decisionId: 'dec-custody',
         reverted: true,
+        canRepoint: false,
       ),
     ],
     aiActivityHeadline: '2 AI changes since yesterday',
@@ -1609,9 +1621,11 @@ abstract final class StrataFixtures {
         isSelf: false,
         createdLabel: '',
         passwordChangeRequired: false,
+        exportDownloadedLabel: 'Export downloaded 12 Sep 14:31',
       ),
     ],
     query: '',
+    deletionPreviewLabel: 'Deleted on 11 Oct 2026',
   );
 
   /// "Petrol Arrows invoice · due today 10:00".
@@ -1640,7 +1654,57 @@ abstract final class StrataFixtures {
     summary: '',
     decisionId: '',
     reverted: false,
+    canRepoint: false,
   );
+
+  /// Time zones of the Settings picker (`timezones`), by offset.
+  static const List<TimeZoneItem> timezones = [
+    TimeZoneItem(
+      id: 'Europe/London',
+      name: 'London',
+      region: 'Europe',
+      offsetMinutes: 60,
+      offsetLabel: 'UTC+1',
+      isCurrent: false,
+      nameDir: TextDir.ltr,
+    ),
+    TimeZoneItem(
+      id: 'Africa/Cairo',
+      name: 'Cairo',
+      region: 'Africa',
+      offsetMinutes: 180,
+      offsetLabel: 'UTC+3',
+      isCurrent: true,
+      nameDir: TextDir.ltr,
+    ),
+    TimeZoneItem(
+      id: 'Asia/Riyadh',
+      name: 'Riyadh',
+      region: 'Asia',
+      offsetMinutes: 180,
+      offsetLabel: 'UTC+3',
+      isCurrent: false,
+      nameDir: TextDir.ltr,
+    ),
+  ];
+
+  /// People a mention decision can be repointed to (`repointChoices`).
+  static const List<RepointChoice> repointChoices = [
+    RepointChoice(
+      id: 'p-ahmed-fathy',
+      title: 'Ahmed Fathy',
+      titleDir: TextDir.ltr,
+      kind: 'person',
+      folder: 'people',
+    ),
+    RepointChoice(
+      id: 'p-mona',
+      title: 'منى',
+      titleDir: TextDir.rtl,
+      kind: 'person',
+      folder: 'people',
+    ),
+  ];
 
   /// A sample [AiStatusView].
   static const AiStatusView aiStatusView = AiStatusView(

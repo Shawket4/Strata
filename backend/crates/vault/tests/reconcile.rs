@@ -343,6 +343,7 @@ async fn a_full_reindex_equals_the_incremental_state() {
             &s,
             contract.id,
             NewCustodyEvent {
+                note: None,
                 kind,
                 date: NaiveDate::from_ymd_opt(2026, 9, day).expect("date"),
                 place,

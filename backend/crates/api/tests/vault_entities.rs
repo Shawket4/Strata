@@ -339,6 +339,7 @@ async fn custody_sequences_nested_places_and_document_duplicates() {
         types::CustodyEventRequest {
             at,
             counterparty_id: cp,
+            note: None,
             person_id: person,
             place_id: place,
             source_note_id: None,

@@ -273,7 +273,11 @@ async fn custody_drafts_take_a_note_and_default_to_today_in_the_account_zone() {
     assert_eq!(report.pushed, 4);
     s.sync(Trigger::Manual).await.expect("pull");
     let (_, content, base) = note(&s, &doc);
-    assert_eq!(base.as_deref(), Some(content.as_str()), "server bytes = device bytes");
+    assert_eq!(
+        base.as_deref(),
+        Some(content.as_str()),
+        "server bytes = device bytes"
+    );
     assert!(
         content.contains(
             "## Custody\n- 2026-09-30 — moved-to [[Safe]]\n- 2026-09-29 — stored-at [[Safe]] — for the audit\n"
@@ -322,7 +326,12 @@ async fn list_properties_are_set_as_lists() {
     let d = w.device("Africa/Cairo");
     let s = d.sign_in("alice").await;
     let ahmed = s
-        .create_entity(domain::NoteKind::Person, "Ahmed", &["Ahmed S.".into()], false)
+        .create_entity(
+            domain::NoteKind::Person,
+            "Ahmed",
+            &["Ahmed S.".into()],
+            false,
+        )
         .expect("person")
         .id
         .expect("id");
@@ -335,9 +344,8 @@ async fn list_properties_are_set_as_lists() {
         .expect("tags");
     let (_, local, _) = note(&s, &ahmed);
     assert!(
-        local.contains(
-            "aliases: [أحمد سمير, Ahmed S.]\ntags: [client, vip]\n"
-        ) && local.contains("phone: [+20 100, +20 101]\n"),
+        local.contains("aliases: [أحمد سمير, Ahmed S.]\ntags: [client, vip]\n")
+            && local.contains("phone: [+20 100, +20 101]\n"),
         "{local}"
     );
     assert!(
@@ -369,7 +377,10 @@ async fn a_taken_note_path_keeps_its_name_as_the_title() {
     w.account("alice", UserRole::Member).await;
     w.server_at("2026-09-28T07:00:00Z");
     let phone = w.device("Africa/Cairo");
+    // Another ULID base, so the two devices never mint the same IDs.
+    w.server_at("2026-09-28T07:00:00.500Z");
     let laptop = w.device("Africa/Cairo");
+    w.server_at("2026-09-28T07:00:00Z");
     let s = phone.sign_in("alice").await;
     let l = laptop.sign_in("alice").await;
 

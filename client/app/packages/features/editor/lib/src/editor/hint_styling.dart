@@ -41,26 +41,6 @@ const NamedAttribution hiddenMarkerAttribution = NamedAttribution(
   'strata.marker.hidden',
 );
 
-/// The marker ranges of [span] (line offsets), from the core's span bounds
-/// and the fixed marker width of its kind: `**`/`__`, `~~`, `==` (2), `*`/`_`
-/// (1), `[[`…`]]`, `![[`…`]]`, and a heading's `#`s and space (its level
-/// plus one). Nothing is parsed: a span too short for its markers has none.
-List<(int, int)> markerRanges(LineSpan span) {
-  final (open, close) = switch (span.kind) {
-    HintKind.bold || HintKind.strike || HintKind.mark => (2, 2),
-    HintKind.italic => (1, 1),
-    HintKind.wikiLink => (2, 2),
-    HintKind.embed => (3, 2),
-    HintKind.heading when span.level > 0 => (span.level + 1, 0),
-    _ => (0, 0),
-  };
-  if (open + close == 0 || span.end - span.start <= open + close) return [];
-  return [
-    (span.start, span.start + open),
-    if (close > 0) (span.end - close, span.end),
-  ];
-}
-
 /// Adds the core's hints (and task states) of each line to the laid-out
 /// text: the line's direction (`RtlLine` / `LtrLine`), the styled spans and,
 /// in live preview, the hidden markers of every line but the caret's.
@@ -134,7 +114,7 @@ final class HintStylePhase extends SingleColumnLayoutStylePhase {
         overwriteConflictingSpans: true,
       );
       if (!hideMarkers) continue;
-      for (final (from, to) in markerRanges(span)) {
+      for (final (from, to) in span.markers) {
         if (to > length || from >= to) continue;
         text.addAttribution(
           hiddenMarkerAttribution,

@@ -311,6 +311,14 @@ abstract interface class CoreApi {
     required String value,
   });
 
+  /// Sets a property to a list of values (several phone numbers, aliases,
+  /// tags); the list replaces the whole value, an empty list removes it.
+  Future<String> setPropertyValues({
+    required String id,
+    required String key,
+    required List<String> values,
+  });
+
   /// Removes a property.
   Future<String> removeProperty({required String id, required String key});
 
@@ -610,6 +618,16 @@ abstract interface class CoreApi {
   Future<NoteDiffView> noteRevisionDiff({
     required String noteId,
     required String commit,
+  });
+
+  /// The time zones of the Settings picker matching `query`, in the UI
+  /// language, sorted by offset (`setTimezone(iana: item.id)` applies one).
+  Future<List<TimeZoneItem>> timezones({required String query});
+
+  /// New targets for an AI decision of Home's activity feed (Repoint).
+  Future<List<RepointChoice>> repointChoices({
+    required String decisionId,
+    required String query,
   });
 
   /// Admin → Users (online, admins only), filtered by `query`.

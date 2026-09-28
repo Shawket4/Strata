@@ -437,9 +437,14 @@ async fn server_and_device_render_new_items_identically() {
     );
 
     // Custody events: the device's apply is the server's, byte for byte.
-    for (kind, place, person_id) in [
-        (CustodyEventType::StoredAt, Some(ulid(0x301)), None),
-        (CustodyEventType::HandedTo, None, Some(person.id)),
+    for (kind, place, person_id, note) in [
+        (CustodyEventType::StoredAt, Some(ulid(0x301)), None, None),
+        (
+            CustodyEventType::HandedTo,
+            None,
+            Some(person.id),
+            Some("for the audit".to_owned()),
+        ),
     ] {
         let op = ops::DocumentCustody {
             document_id: original.id,
@@ -448,6 +453,7 @@ async fn server_and_device_render_new_items_identically() {
             place_id: place,
             person_id,
             counterparty_id: None,
+            note: note.clone(),
         };
         let before = s.state(original.id);
         s.vault
@@ -461,6 +467,7 @@ async fn server_and_device_render_new_items_identically() {
                     person: person_id.map(NoteId::from_ulid),
                     counterparty: None,
                     source: None,
+                    note,
                 },
             )
             .await

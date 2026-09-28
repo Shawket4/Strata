@@ -6744,7 +6744,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       targetAnchor: dco_decode_opt_String(arr[4]),
       taskId: dco_decode_opt_String(arr[5]),
       level: dco_decode_u_8(arr[6]),
-      markers: dco_decode_list_text_range(arr[7]),
+      markers: dco_decode_list_marker_range(arr[7]),
     );
   }
 
@@ -7453,6 +7453,12 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<MarkerRange> dco_decode_list_marker_range(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_marker_range).toList();
+  }
+
+  @protected
   List<NodePosition> dco_decode_list_node_position(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_node_position).toList();
@@ -7601,12 +7607,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
-  List<TextRange> dco_decode_list_text_range(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    return (raw as List<dynamic>).map(dco_decode_text_range).toList();
-  }
-
-  @protected
   List<ThreadMessage> dco_decode_list_thread_message(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_thread_message).toList();
@@ -7642,6 +7642,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       summary: dco_decode_opt_String(arr[8]),
       saveLayout: dco_decode_availability(arr[9]),
       proposeRelation: dco_decode_availability(arr[10]),
+    );
+  }
+
+  @protected
+  MarkerRange dco_decode_marker_range(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return MarkerRange(
+      start: dco_decode_u_32(arr[0]),
+      end: dco_decode_u_32(arr[1]),
     );
   }
 
@@ -8911,18 +8923,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   TextDir dco_decode_text_dir(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return TextDir.values[raw as int];
-  }
-
-  @protected
-  TextRange dco_decode_text_range(dynamic raw) {
-    // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-    return TextRange(
-      start: dco_decode_u_32(arr[0]),
-      end: dco_decode_u_32(arr[1]),
-    );
   }
 
   @protected
@@ -10459,7 +10459,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_targetAnchor = sse_decode_opt_String(deserializer);
     var var_taskId = sse_decode_opt_String(deserializer);
     var var_level = sse_decode_u_8(deserializer);
-    var var_markers = sse_decode_list_text_range(deserializer);
+    var var_markers = sse_decode_list_marker_range(deserializer);
     return EditorHint(
       kind: var_kind,
       start: var_start,
@@ -11553,6 +11553,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  List<MarkerRange> sse_decode_list_marker_range(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <MarkerRange>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_marker_range(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<NodePosition> sse_decode_list_node_position(
     SseDeserializer deserializer,
   ) {
@@ -11855,18 +11867,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
-  List<TextRange> sse_decode_list_text_range(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-
-    var len_ = sse_decode_i_32(deserializer);
-    var ans_ = <TextRange>[];
-    for (var idx_ = 0; idx_ < len_; ++idx_) {
-      ans_.add(sse_decode_text_range(deserializer));
-    }
-    return ans_;
-  }
-
-  @protected
   List<ThreadMessage> sse_decode_list_thread_message(
     SseDeserializer deserializer,
   ) {
@@ -11933,6 +11933,14 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       saveLayout: var_saveLayout,
       proposeRelation: var_proposeRelation,
     );
+  }
+
+  @protected
+  MarkerRange sse_decode_marker_range(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    return MarkerRange(start: var_start, end: var_end);
   }
 
   @protected
@@ -13602,14 +13610,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
-  TextRange sse_decode_text_range(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_start = sse_decode_u_32(deserializer);
-    var var_end = sse_decode_u_32(deserializer);
-    return TextRange(start: var_start, end: var_end);
-  }
-
-  @protected
   ThreadMessage sse_decode_thread_message(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_String(deserializer);
@@ -15047,7 +15047,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.targetAnchor, serializer);
     sse_encode_opt_String(self.taskId, serializer);
     sse_encode_u_8(self.level, serializer);
-    sse_encode_list_text_range(self.markers, serializer);
+    sse_encode_list_marker_range(self.markers, serializer);
   }
 
   @protected
@@ -15910,6 +15910,18 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
+  void sse_encode_list_marker_range(
+    List<MarkerRange> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_marker_range(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_node_position(
     List<NodePosition> self,
     SseSerializer serializer,
@@ -16191,18 +16203,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   }
 
   @protected
-  void sse_encode_list_text_range(
-    List<TextRange> self,
-    SseSerializer serializer,
-  ) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_i_32(self.length, serializer);
-    for (final item in self) {
-      sse_encode_text_range(item, serializer);
-    }
-  }
-
-  @protected
   void sse_encode_list_thread_message(
     List<ThreadMessage> self,
     SseSerializer serializer,
@@ -16255,6 +16255,13 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_opt_String(self.summary, serializer);
     sse_encode_availability(self.saveLayout, serializer);
     sse_encode_availability(self.proposeRelation, serializer);
+  }
+
+  @protected
+  void sse_encode_marker_range(MarkerRange self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
   }
 
   @protected
@@ -17482,13 +17489,6 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   void sse_encode_text_dir(TextDir self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.index, serializer);
-  }
-
-  @protected
-  void sse_encode_text_range(TextRange self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_u_32(self.start, serializer);
-    sse_encode_u_32(self.end, serializer);
   }
 
   @protected

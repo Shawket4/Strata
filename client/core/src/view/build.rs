@@ -2388,7 +2388,7 @@ fn hint_of(h: hints::Span) -> EditorHint {
         markers: h
             .markers
             .into_iter()
-            .map(|(start, end)| TextRange { start, end })
+            .map(|(start, end)| MarkerRange { start, end })
             .collect(),
     }
 }
@@ -4239,7 +4239,12 @@ mod followup_tests {
         }
     }
 
-    fn duplicates(a: DuplicateItem, b: DuplicateItem, lang: Lang, conn: &Connection) -> (Option<String>, Option<String>) {
+    fn duplicates(
+        a: DuplicateItem,
+        b: DuplicateItem,
+        lang: Lang,
+        conn: &Connection,
+    ) -> (Option<String>, Option<String>) {
         let d = suggestion_detail(
             conn,
             &ctx(lang),

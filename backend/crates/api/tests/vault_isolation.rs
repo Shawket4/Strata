@@ -123,6 +123,7 @@ async fn populate(u: &User, only_path: &str) -> Owned {
         &types::CustodyEventRequest {
             at: chrono::NaiveDate::from_ymd_opt(2026, 9, 1).expect("date"),
             counterparty_id: None,
+            note: None,
             person_id: None,
             place_id: Some(place.place.id),
             source_note_id: None,
@@ -429,6 +430,7 @@ async fn a_second_user_sees_nothing_and_foreign_ids_are_not_found() {
     let custody = |place: ulid::Ulid| types::CustodyEventRequest {
         at: chrono::NaiveDate::from_ymd_opt(2026, 9, 2).expect("date"),
         counterparty_id: None,
+        note: None,
         person_id: None,
         place_id: Some(place),
         source_note_id: None,

@@ -6875,7 +6875,7 @@ impl SseDecode for crate::view::model::EditorHint {
         let mut var_targetAnchor = <Option<String>>::sse_decode(deserializer);
         let mut var_taskId = <Option<String>>::sse_decode(deserializer);
         let mut var_level = <u8>::sse_decode(deserializer);
-        let mut var_markers = <Vec<crate::view::model::TextRange>>::sse_decode(deserializer);
+        let mut var_markers = <Vec<crate::view::model::MarkerRange>>::sse_decode(deserializer);
         return crate::view::model::EditorHint {
             kind: var_kind,
             start: var_start,
@@ -8074,6 +8074,18 @@ impl SseDecode for Vec<crate::view::model::KnownAccountItem> {
     }
 }
 
+impl SseDecode for Vec<crate::view::model::MarkerRange> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::view::model::MarkerRange>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::view::model::NodePosition> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8372,18 +8384,6 @@ impl SseDecode for Vec<crate::view::model::TaskItem> {
     }
 }
 
-impl SseDecode for Vec<crate::view::model::TextRange> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut len_ = <i32>::sse_decode(deserializer);
-        let mut ans_ = Vec::with_capacity(len_ as usize);
-        for idx_ in 0..len_ {
-            ans_.push(<crate::view::model::TextRange>::sse_decode(deserializer));
-        }
-        return ans_;
-    }
-}
-
 impl SseDecode for Vec<crate::view::model::ThreadMessage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8448,6 +8448,18 @@ impl SseDecode for crate::view::model::LocalGraphView {
             summary: var_summary,
             save_layout: var_saveLayout,
             propose_relation: var_proposeRelation,
+        };
+    }
+}
+
+impl SseDecode for crate::view::model::MarkerRange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_start = <u32>::sse_decode(deserializer);
+        let mut var_end = <u32>::sse_decode(deserializer);
+        return crate::view::model::MarkerRange {
+            start: var_start,
+            end: var_end,
         };
     }
 }
@@ -10326,18 +10338,6 @@ impl SseDecode for crate::view::model::TextDir {
             1 => crate::view::model::TextDir::Rtl,
             2 => crate::view::model::TextDir::Neutral,
             _ => unreachable!("Invalid variant for TextDir: {}", inner),
-        };
-    }
-}
-
-impl SseDecode for crate::view::model::TextRange {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_start = <u32>::sse_decode(deserializer);
-        let mut var_end = <u32>::sse_decode(deserializer);
-        return crate::view::model::TextRange {
-            start: var_start,
-            end: var_end,
         };
     }
 }
@@ -12868,6 +12868,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::LocalGraphView>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::view::model::MarkerRange {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.start.into_into_dart().into_dart(),
+            self.end.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::view::model::MarkerRange
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::view::model::MarkerRange>
+    for crate::view::model::MarkerRange
+{
+    fn into_into_dart(self) -> crate::view::model::MarkerRange {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::view::model::MentionEdit {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -14822,24 +14843,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::view::model::TextDir>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::view::model::TextRange {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.start.into_into_dart().into_dart(),
-            self.end.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::view::model::TextRange {}
-impl flutter_rust_bridge::IntoIntoDart<crate::view::model::TextRange>
-    for crate::view::model::TextRange
-{
-    fn into_into_dart(self) -> crate::view::model::TextRange {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::view::model::ThreadMessage {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -15905,7 +15908,7 @@ impl SseEncode for crate::view::model::EditorHint {
         <Option<String>>::sse_encode(self.target_anchor, serializer);
         <Option<String>>::sse_encode(self.task_id, serializer);
         <u8>::sse_encode(self.level, serializer);
-        <Vec<crate::view::model::TextRange>>::sse_encode(self.markers, serializer);
+        <Vec<crate::view::model::MarkerRange>>::sse_encode(self.markers, serializer);
     }
 }
 
@@ -16803,6 +16806,16 @@ impl SseEncode for Vec<crate::view::model::KnownAccountItem> {
     }
 }
 
+impl SseEncode for Vec<crate::view::model::MarkerRange> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::view::model::MarkerRange>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::view::model::NodePosition> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -17043,16 +17056,6 @@ impl SseEncode for Vec<crate::view::model::TaskItem> {
     }
 }
 
-impl SseEncode for Vec<crate::view::model::TextRange> {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <i32>::sse_encode(self.len() as _, serializer);
-        for item in self {
-            <crate::view::model::TextRange>::sse_encode(item, serializer);
-        }
-    }
-}
-
 impl SseEncode for Vec<crate::view::model::ThreadMessage> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -17097,6 +17100,14 @@ impl SseEncode for crate::view::model::LocalGraphView {
         <Option<String>>::sse_encode(self.summary, serializer);
         <crate::view::model::Availability>::sse_encode(self.save_layout, serializer);
         <crate::view::model::Availability>::sse_encode(self.propose_relation, serializer);
+    }
+}
+
+impl SseEncode for crate::view::model::MarkerRange {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.start, serializer);
+        <u32>::sse_encode(self.end, serializer);
     }
 }
 
@@ -18495,14 +18506,6 @@ impl SseEncode for crate::view::model::TextDir {
             },
             serializer,
         );
-    }
-}
-
-impl SseEncode for crate::view::model::TextRange {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <u32>::sse_encode(self.start, serializer);
-        <u32>::sse_encode(self.end, serializer);
     }
 }
 

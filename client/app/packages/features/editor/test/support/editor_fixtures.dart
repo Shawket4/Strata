@@ -4,7 +4,8 @@
 import 'package:strata_state/strata_state.dart';
 
 /// The hint of [kind] covering the [occurrence]-th match of [text] in
-/// [content].
+/// [content], with the markers the core's parser reports: the first [open]
+/// and the last [close] UTF-16 units of the match (`**`, `## `, `[[`…).
 EditorHint hintOf(
   String content,
   HintKind kind,
@@ -14,6 +15,8 @@ EditorHint hintOf(
   String? targetAnchor,
   String? taskId,
   int level = 0,
+  int open = 0,
+  int close = 0,
 }) {
   var start = -1;
   for (var i = 0; i <= occurrence; i++) {
@@ -28,8 +31,21 @@ EditorHint hintOf(
     targetAnchor: targetAnchor,
     taskId: taskId,
     level: level,
+    markers: markersOf(start, start + text.length, open: open, close: close),
   );
 }
+
+/// Marker ranges of a span from [start] to [end]: its first [open] and last
+/// [close] units.
+List<MarkerRange> markersOf(
+  int start,
+  int end, {
+  required int open,
+  required int close,
+}) => [
+  if (open > 0) MarkerRange(start: start, end: start + open),
+  if (close > 0) MarkerRange(start: end - close, end: end),
+];
 
 /// The core's per-line direction hints for the lines of [content] listed in
 /// [directions] (the line's text → its direction).
@@ -64,6 +80,7 @@ List<EditorHint> frontmatterHint(String content) {
           start: 0,
           end: eol < 0 ? content.length : eol + 1,
           level: 0,
+          markers: const [],
         ),
       ];
     }
@@ -86,6 +103,13 @@ List<EditorHint> shiftedHints(List<EditorHint> hints, int offset, int delta) =>
           targetAnchor: h.targetAnchor,
           taskId: h.taskId,
           level: h.level,
+          markers: [
+            for (final m in h.markers)
+              MarkerRange(
+                start: m.start >= offset ? m.start + delta : m.start,
+                end: m.end > offset ? m.end + delta : m.end,
+              ),
+          ],
         ),
     ];
 
@@ -125,15 +149,31 @@ abstract final class EditorFixtures {
       HintKind.wikiLink,
       '[[Subscription tiers]]',
       targetId: 'n-subscription-tiers',
+      open: 2,
+      close: 2,
     ),
     hintOf(
       content,
       HintKind.wikiLink,
       '[[Ahmed Samir]]',
       targetId: 'p-ahmed-samir',
+      open: 2,
+      close: 2,
     ),
-    hintOf(content, HintKind.heading, '## Hypotheses', level: 2),
-    hintOf(content, HintKind.bold, '**flat 10% discount**'),
+    hintOf(
+      content,
+      HintKind.heading,
+      '## Hypotheses',
+      level: 2,
+      open: 3,
+    ),
+    hintOf(
+      content,
+      HintKind.bold,
+      '**flat 10% discount**',
+      open: 2,
+      close: 2,
+    ),
     hintOf(content, HintKind.blockId, '^a1b2'),
     hintOf(
       content,
@@ -141,8 +181,16 @@ abstract final class EditorFixtures {
       '[[Churn notes]]',
       occurrence: 1,
       targetId: 'n-churn-notes',
+      open: 2,
+      close: 2,
     ),
-    hintOf(content, HintKind.heading, '## Next steps', level: 2),
+    hintOf(
+      content,
+      HintKind.heading,
+      '## Next steps',
+      level: 2,
+      open: 3,
+    ),
     hintOf(
       content,
       HintKind.taskLine,

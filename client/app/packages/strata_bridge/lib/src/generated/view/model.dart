@@ -2672,7 +2672,7 @@ class EditorHint {
   /// around a strong run, each with its own markers), a heading's `#`s with the spaces
   /// around them (and closing `#`s), a link's `[[`/`![[` (with `path|` when aliased) and
   /// `]]`. Live preview hides exactly these.
-  final List<TextRange> markers;
+  final List<MarkerRange> markers;
 
   const EditorHint({
     required this.kind,
@@ -4216,6 +4216,28 @@ class LocalGraphView {
           summary == other.summary &&
           saveLayout == other.saveLayout &&
           proposeRelation == other.proposeRelation;
+}
+
+/// A markdown marker's range in a note's content (UTF-16 units; end exclusive).
+class MarkerRange {
+  /// Start (inclusive).
+  final int start;
+
+  /// End (exclusive).
+  final int end;
+
+  const MarkerRange({required this.start, required this.end});
+
+  @override
+  int get hashCode => start.hashCode ^ end.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MarkerRange &&
+          runtimeType == other.runtimeType &&
+          start == other.start &&
+          end == other.end;
 }
 
 /// Result of `insert_mention`: the new content and caret.
@@ -7845,28 +7867,6 @@ enum TextDir {
 
   /// No strong character.
   neutral,
-}
-
-/// A range of text (UTF-16 units; end exclusive).
-class TextRange {
-  /// Start (inclusive).
-  final int start;
-
-  /// End (exclusive).
-  final int end;
-
-  const TextRange({required this.start, required this.end});
-
-  @override
-  int get hashCode => start.hashCode ^ end.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is TextRange &&
-          runtimeType == other.runtimeType &&
-          start == other.start &&
-          end == other.end;
 }
 
 /// A message of a suggestion's thread (§9.8 "threaded suggestions").

@@ -54,6 +54,7 @@ import 'package:strata_bridge/strata_bridge.dart'
         RecurrenceForm,
         RecurrencePreviewItem,
         RelationTypeItem,
+        RepointChoice,
         SearchMode,
         SearchView,
         SessionState,
@@ -70,7 +71,8 @@ import 'package:strata_bridge/strata_bridge.dart'
         TaskHomesView,
         TaskPatch,
         TaskScreen,
-        TasksView;
+        TasksView,
+        TimeZoneItem;
 import 'package:strata_state/src/core_api.dart';
 import 'package:strata_state/src/testing/fixtures.dart';
 
@@ -566,6 +568,11 @@ final class FakeCoreApi implements CoreApi {
   /// `setProperty`.
   final FakeAnswer<String> setPropertyAnswer = FakeAnswer(StrataFixtures.opId);
 
+  /// `setPropertyValues`.
+  final FakeAnswer<String> setPropertyValuesAnswer = FakeAnswer(
+    StrataFixtures.opId,
+  );
+
   /// `removeProperty`.
   final FakeAnswer<String> removePropertyAnswer = FakeAnswer(
     StrataFixtures.opId,
@@ -781,6 +788,16 @@ final class FakeCoreApi implements CoreApi {
   /// `loadAdminUsers`.
   final FakeAnswer<AdminUsersView> loadAdminUsersAnswer = FakeAnswer(
     StrataFixtures.adminUsersView,
+  );
+
+  /// `timezones`.
+  final FakeAnswer<List<TimeZoneItem>> timezonesAnswer = FakeAnswer(
+    StrataFixtures.timezones,
+  );
+
+  /// `repointChoices`.
+  final FakeAnswer<List<RepointChoice>> repointChoicesAnswer = FakeAnswer(
+    StrataFixtures.repointChoices,
   );
 
   /// Closes every stream.
@@ -1244,6 +1261,17 @@ final class FakeCoreApi implements CoreApi {
   });
 
   @override
+  Future<String> setPropertyValues({
+    required String id,
+    required String key,
+    required List<String> values,
+  }) => _call(setPropertyValuesAnswer, 'setPropertyValues', {
+    'id': id,
+    'key': key,
+    'values': values,
+  });
+
+  @override
   Future<String> removeProperty({required String id, required String key}) =>
       _call(removePropertyAnswer, 'removeProperty', {'id': id, 'key': key});
 
@@ -1662,6 +1690,19 @@ final class FakeCoreApi implements CoreApi {
   }) => _call(noteRevisionDiffAnswer, 'noteRevisionDiff', {
     'noteId': noteId,
     'commit': commit,
+  });
+
+  @override
+  Future<List<TimeZoneItem>> timezones({required String query}) =>
+      _call(timezonesAnswer, 'timezones', {'query': query});
+
+  @override
+  Future<List<RepointChoice>> repointChoices({
+    required String decisionId,
+    required String query,
+  }) => _call(repointChoicesAnswer, 'repointChoices', {
+    'decisionId': decisionId,
+    'query': query,
   });
 
   @override

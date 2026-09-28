@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show immutable;
+import 'package:flutter/foundation.dart' show immutable, listEquals;
 import 'package:flutter/painting.dart' show TextDirection;
 import 'package:strata_editor/src/source/markdown_source.dart';
 import 'package:strata_state/strata_state.dart' show EditorHint, HintKind;
@@ -72,7 +72,8 @@ List<int> lineStartsOf(
 }
 
 /// A hint span inside one line (UTF-16 offsets relative to the line), with
-/// what the core attached to it (link target, heading level).
+/// what the core attached to it (link target, heading level, the exact
+/// markdown markers its parser matched).
 @immutable
 final class LineSpan {
   /// Creates a span of [kind] from [start] to [end].
@@ -83,6 +84,7 @@ final class LineSpan {
     this.targetId,
     this.targetAnchor,
     this.level = 0,
+    this.markers = const [],
   });
 
   /// What the span is.
@@ -103,6 +105,11 @@ final class LineSpan {
   /// Headings: level 1–6.
   final int level;
 
+  /// The span's markdown markers on this line (`**`, `## `, `[[`…), line
+  /// offsets `(start, end)`, as the core's parser matched them
+  /// (`EditorHint.markers`). Live preview hides exactly these.
+  final List<(int, int)> markers;
+
   @override
   bool operator ==(Object other) =>
       other is LineSpan &&
@@ -111,11 +118,19 @@ final class LineSpan {
       other.end == end &&
       other.targetId == targetId &&
       other.targetAnchor == targetAnchor &&
-      other.level == level;
+      other.level == level &&
+      listEquals(other.markers, markers);
 
   @override
-  int get hashCode =>
-      Object.hash(kind, start, end, targetId, targetAnchor, level);
+  int get hashCode => Object.hash(
+    kind,
+    start,
+    end,
+    targetId,
+    targetAnchor,
+    level,
+    Object.hashAll(markers),
+  );
 
   @override
   String toString() => 'LineSpan($kind, $start, $end)';
@@ -184,6 +199,13 @@ final class LineHints {
             targetId: hint.targetId,
             targetAnchor: hint.targetAnchor,
             level: hint.level,
+            // The markers on this line (a setext heading's underline is on
+            // its second line), relative to the line.
+            markers: [
+              for (final m in hint.markers)
+                if (m.start >= lineStart && m.end <= lineEnd && m.end > m.start)
+                  (m.start - lineStart, m.end - lineStart),
+            ],
           ),
         );
       }
