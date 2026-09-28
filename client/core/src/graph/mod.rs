@@ -10,8 +10,8 @@
 use std::collections::HashMap;
 
 use domain::{
-    CustodyEdge, EntityRelationType, GraphEdgeKind, GraphNodeKind, MentionType, RelationOrigin,
-    RelationType,
+    CustodyEdge, DocumentRelationType, GraphEdgeKind, GraphNodeKind as DKind, NoteKind,
+    RelationOrigin,
 };
 use graph_algo::layout::{ForceConfig, ForceLayout, Point, RadialConfig, radial_layout};
 use graph_algo::neighbourhood::{Filter, neighbourhood};
@@ -25,7 +25,7 @@ use crate::format::labels::{self, Lang};
 use crate::view::ViewCtx;
 use crate::view::model::{
     Availability, ClusterLabel, GlobalGraphView, GraphEdge, GraphFilter, GraphLens, GraphNode,
-    GraphPoint, KindCount, LocalGraphView,
+    GraphNodeKind, GraphPoint, KindCount, LocalGraphView,
 };
 
 /// Steps of the force layout per global-map build (warm starts converge in few steps).
@@ -34,6 +34,7 @@ pub const FORCE_STEPS: usize = 300;
 struct Loaded {
     graph: Graph,
     titles: HashMap<String, String>,
+    paths: HashMap<String, String>,
     summaries: HashMap<String, String>,
     updated: HashMap<String, String>,
     reasons: HashMap<(String, String, String), String>,
@@ -52,51 +53,67 @@ pub fn label_rank(degree: u32) -> u32 {
     }
 }
 
-fn edge_kind(rel: &str) -> Option<GraphEdgeKind> {
-    if let Ok(t) = rel.parse::<RelationType>() {
-        return Some(GraphEdgeKind::Relation(t));
-    }
-    if let Ok(m) = rel.parse::<MentionType>() {
-        return Some(match m {
-            MentionType::Concepts => GraphEdgeKind::Concept,
-            _ => GraphEdgeKind::Mention,
-        });
-    }
-    rel.parse::<EntityRelationType>()
-        .ok()
-        .map(GraphEdgeKind::Entity)
-}
-
 fn gb_err(e: &graph_algo::GraphError) -> CoreError {
     CoreError::Internal(format!("graph: {e}"))
 }
 
-/// Builds the typed graph of every live note.
+/// The view kind of a graph node kind.
+fn view_kind(k: DKind) -> GraphNodeKind {
+    match k {
+        DKind::Concept => GraphNodeKind::Concept,
+        DKind::Person => GraphNodeKind::Person,
+        DKind::Company => GraphNodeKind::Company,
+        DKind::Document => GraphNodeKind::Document,
+        DKind::Place => GraphNodeKind::Place,
+        DKind::Tag => GraphNodeKind::Tag,
+        DKind::Note | DKind::Attachment | DKind::Cluster => GraphNodeKind::Note,
+    }
+}
+
+/// The ID of a tag node (as the server's graph: the tag in lowercase).
+pub fn tag_node_id(tag: &str) -> String {
+    format!("tag:{}", tag.trim_start_matches('#').to_lowercase())
+}
+
+/// Builds the typed graph of every live note — the same nodes and edge kinds as the server's
+/// graph (`domain::GraphEdgeKind::of_relation` maps stored relations, L16): body links and
+/// embeds, relations, mentions, concepts, entity relations, custody fields, place nesting,
+/// document copies, and, with `include_tags`, tag nodes.
 #[allow(clippy::too_many_lines)] // one query per source table
-fn load(conn: &Connection) -> CoreResult<Loaded> {
+fn load(conn: &Connection, include_tags: bool) -> CoreResult<Loaded> {
     let mut b = GraphBuilder::new();
     let mut titles = HashMap::new();
+    let mut paths = HashMap::new();
     let mut summaries = HashMap::new();
     let mut updated = HashMap::new();
     let mut reasons = HashMap::new();
+    let mut kinds: HashMap<String, NoteKind> = HashMap::new();
     {
         let mut st = conn.prepare(
-            "SELECT id, title, kind, summary, local_updated_at FROM notes WHERE deleted = 0 ORDER BY id",
+            "SELECT id, title, kind, summary, local_updated_at, path FROM notes
+             WHERE deleted = 0 ORDER BY id",
         )?;
-        let rows: Vec<(String, String, String, Option<String>, String)> = st
+        let rows: Vec<(String, String, String, Option<String>, String, String)> = st
             .query_map([], |r| {
-                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+                Ok((
+                    r.get(0)?,
+                    r.get(1)?,
+                    r.get(2)?,
+                    r.get(3)?,
+                    r.get(4)?,
+                    r.get(5)?,
+                ))
             })?
             .collect::<Result<_, _>>()?;
-        for (id, title, kind, summary, at) in rows {
-            let kind = kind
-                .parse::<domain::NoteKind>()
-                .map_or(GraphNodeKind::Note, GraphNodeKind::from);
-            b.add_node(&id, kind).map_err(|e| gb_err(&e))?;
+        for (id, title, kind, summary, at, path) in rows {
+            let kind = kind.parse::<NoteKind>().unwrap_or(NoteKind::Note);
+            b.add_node(&id, DKind::from(kind)).map_err(|e| gb_err(&e))?;
+            kinds.insert(id.clone(), kind);
             if let Some(s) = summary {
                 summaries.insert(id.clone(), s);
             }
             updated.insert(id.clone(), at);
+            paths.insert(id.clone(), path);
             titles.insert(id, title);
         }
     }
@@ -145,7 +162,10 @@ fn load(conn: &Connection) -> CoreResult<Loaded> {
             })?
             .collect::<Result<_, _>>()?;
         for (src, dst, rel, by, confidence, reason) in rows {
-            let Some(kind) = edge_kind(&rel) else {
+            let (Some(sk), Some(dk)) = (kinds.get(&src), kinds.get(&dst)) else {
+                continue;
+            };
+            let Some(kind) = GraphEdgeKind::of_relation(&rel, *sk, *dk) else {
                 continue;
             };
             if let Some(reason) = reason {
@@ -166,19 +186,32 @@ fn load(conn: &Connection) -> CoreResult<Loaded> {
     }
     {
         let mut st = conn.prepare(
-            "SELECT note_id, location_id, holder_id, last_holder_id FROM documents ORDER BY note_id",
+            "SELECT note_id, location_id, holder_id, last_holder_id, copy_of_id FROM documents
+             ORDER BY note_id",
         )?;
-        let rows: Vec<(String, Option<String>, Option<String>, Option<String>)> = st
-            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))?
+        let rows: Vec<(
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+        )> = st
+            .query_map([], |r| {
+                Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+            })?
             .collect::<Result<_, _>>()?;
-        for (doc, loc, holder, last) in rows {
+        for (doc, loc, holder, last, copy_of) in rows {
             for (target, edge) in [
-                (loc, CustodyEdge::Location),
-                (holder, CustodyEdge::Holder),
-                (last, CustodyEdge::LastHolder),
+                (loc, GraphEdgeKind::Custody(CustodyEdge::Location)),
+                (holder, GraphEdgeKind::Custody(CustodyEdge::Holder)),
+                (last, GraphEdgeKind::Custody(CustodyEdge::LastHolder)),
+                (
+                    copy_of,
+                    GraphEdgeKind::Document(DocumentRelationType::CopyOf),
+                ),
             ] {
                 if let Some(t) = target {
-                    edges.push(EdgeInput::user(&doc, &t, GraphEdgeKind::Custody(edge)));
+                    edges.push(EdgeInput::user(&doc, &t, edge));
                 }
             }
         }
@@ -192,15 +225,39 @@ fn load(conn: &Connection) -> CoreResult<Loaded> {
             edges.push(EdgeInput::user(&place, &parent, GraphEdgeKind::PartOfPlace));
         }
     }
+    if include_tags {
+        let mut st = conn.prepare(
+            "SELECT DISTINCT t.note_id, t.tag FROM tags t JOIN notes n ON n.id = t.note_id
+             WHERE n.deleted = 0 ORDER BY 2, 1",
+        )?;
+        let rows: Vec<(String, String)> = st
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .collect::<Result<_, _>>()?;
+        for (note, tag) in rows {
+            let id = tag_node_id(&tag);
+            if !titles.contains_key(&id) {
+                b.add_node(&id, DKind::Tag).map_err(|e| gb_err(&e))?;
+                titles.insert(id.clone(), tag.trim_start_matches('#').to_lowercase());
+            }
+            edges.push(EdgeInput::user(&note, &id, GraphEdgeKind::Tag));
+        }
+    }
+    // One edge per (source, target, kind): place nesting is both a `part-of` relation and
+    // the places index, and must appear once.
+    let mut seen = std::collections::HashSet::new();
     for e in &edges {
         // Links to notes deleted locally but still cached are skipped.
-        if titles.contains_key(&e.source) && titles.contains_key(&e.target) {
+        if titles.contains_key(&e.source)
+            && titles.contains_key(&e.target)
+            && seen.insert((e.source.clone(), e.target.clone(), e.kind))
+        {
             b.add_edge(e).map_err(|e| gb_err(&e))?;
         }
     }
     Ok(Loaded {
         graph: b.build(),
         titles,
+        paths,
         summaries,
         updated,
         reasons,
@@ -214,7 +271,7 @@ pub fn edge_family(kind: &str) -> &str {
 
 fn rel_type_of(kind: &str) -> Option<String> {
     match kind.split_once(':') {
-        Some(("relation" | "entity", t)) => Some(t.to_owned()),
+        Some(("relation" | "entity" | "document", t)) => Some(t.to_owned()),
         _ => None,
     }
 }
@@ -260,21 +317,24 @@ fn node_view(
     let title = loaded.titles.get(&n.key).cloned().unwrap_or_default();
     let d = degree(g, ix);
     let labels = ctx.labels();
+    let updated = loaded
+        .updated
+        .get(&n.key)
+        .map(|u| crate::view::build::ts(u));
     GraphNode {
         id: n.key.clone(),
         title_dir: dir_of(&title),
         title,
-        kind: n.kind.as_str().to_owned(),
+        kind: view_kind(n.kind),
+        path: loaded.paths.get(&n.key).cloned(),
+        updated,
         depth,
         cluster_id,
         degree: d,
         x,
         y,
         summary: loaded.summaries.get(&n.key).cloned(),
-        updated_label: loaded
-            .updated
-            .get(&n.key)
-            .map(|u| crate::view::build::ts(u))
+        updated_label: updated
             .map(|t| labels.date_in_list(labels.local(t).date()))
             .unwrap_or_default(),
         label_rank: label_rank(d),
@@ -289,7 +349,7 @@ pub fn local_graph(
     id: &str,
     depth: u8,
 ) -> CoreResult<LocalGraphView> {
-    let loaded = load(conn)?;
+    let loaded = load(conn, false)?;
     let g = &loaded.graph;
     let lang = ctx.lang;
     let Some(focus) = g.index_of(id) else {
@@ -504,6 +564,7 @@ pub fn global_graph(conn: &Connection, ctx: &ViewCtx) -> CoreResult<GlobalGraphV
             cluster: None,
             lens: GraphLens::Notes,
             focus: None,
+            include_tags: false,
         },
     )
 }
@@ -535,7 +596,7 @@ pub fn global_graph_filtered(
     ctx: &ViewCtx,
     filter: &GraphFilter,
 ) -> CoreResult<GlobalGraphView> {
-    let loaded = load(conn)?;
+    let loaded = load(conn, filter.include_tags)?;
     let g = &loaded.graph;
     let lang = ctx.lang;
     let cached: HashMap<String, Point> = {
@@ -570,8 +631,8 @@ pub fn global_graph_filtered(
     // Lens: which nodes and edges exist before filtering.
     let lens_kind = match filter.lens {
         GraphLens::Notes => None,
-        GraphLens::People => Some(GraphNodeKind::Person),
-        GraphLens::Companies => Some(GraphNodeKind::Company),
+        GraphLens::People => Some(DKind::Person),
+        GraphLens::Companies => Some(DKind::Company),
     };
     let in_lens = |ix: u32| lens_kind.is_none_or(|k| g.node(ix).kind == k);
     let mut all_nodes: Vec<GraphNode> = (0..u32::try_from(g.node_count()).unwrap_or(0))
@@ -649,7 +710,7 @@ pub fn global_graph_filtered(
     let edge_counts = kind_counts(all_edges.iter().map(|e| edge_family(&e.kind)), lang, false);
     // Filters.
     all_nodes.retain(|n| {
-        (filter.node_kinds.is_empty() || filter.node_kinds.contains(&n.kind))
+        (filter.node_kinds.is_empty() || filter.node_kinds.iter().any(|k| k == n.kind.as_str()))
             && filter
                 .cluster
                 .as_ref()

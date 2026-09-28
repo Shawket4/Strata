@@ -2373,12 +2373,16 @@ pub struct CitationPreview {
 /// A node of a graph view, with its position.
 #[derive(Debug, Clone, PartialEq)]
 pub struct GraphNode {
-    /// Note ID.
+    /// Note ID (ULID), or `tag:<tag>` for a tag node (as the server's graph).
     pub id: String,
-    /// Title.
+    /// Title (a tag node's is the tag, without `#`).
     pub title: String,
-    /// Kind (`note`, `person`, …).
-    pub kind: String,
+    /// Kind.
+    pub kind: GraphNodeKind,
+    /// Vault path (absent on tag nodes).
+    pub path: Option<String>,
+    /// Last update (absent on tag nodes).
+    pub updated: Option<DateTime<Utc>>,
     /// Ring (local graph: 0 = the focused note) or 0.
     pub depth: u8,
     /// Cluster (global map).
@@ -2399,6 +2403,40 @@ pub struct GraphNode {
     pub label_rank: u32,
     /// A hub (label always shown).
     pub is_hub: bool,
+}
+
+/// Kind of a graph node (the server's `GraphNodeKind`, §10): a note kind, or a tag node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GraphNodeKind {
+    /// Plain note (captures included).
+    Note,
+    /// Concept.
+    Concept,
+    /// Person.
+    Person,
+    /// Company.
+    Company,
+    /// Document.
+    Document,
+    /// Place.
+    Place,
+    /// Tag node (the map's tag toggle).
+    Tag,
+}
+
+impl GraphNodeKind {
+    /// The wire name (`note`, `person`, `tag`, …), used by filters and counts.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Note => "note",
+            Self::Concept => "concept",
+            Self::Person => "person",
+            Self::Company => "company",
+            Self::Document => "document",
+            Self::Place => "place",
+            Self::Tag => "tag",
+        }
+    }
 }
 
 /// An edge of a local graph.
@@ -2475,8 +2513,9 @@ pub enum GraphLens {
 /// Global map filters, applied in the core.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GraphFilter {
-    /// Edge kinds to keep (`link`, `embed`, `relation`, `mention`, `concept`, `entity`,
-    /// `custody`, `part-of-place`, `similarity`); empty = all.
+    /// Edge kind families to keep (`link`, `embed`, `relation`, `mention`, `concept`,
+    /// `entity`, `custody`, `part-of-place`, `document`, `tag`, `similarity`, `co-mention`);
+    /// empty = all.
     pub edge_kinds: Vec<String>,
     /// Node kinds to keep (`note`, `person`, …); empty = all.
     pub node_kinds: Vec<String>,
@@ -2488,6 +2527,8 @@ pub struct GraphFilter {
     pub lens: GraphLens,
     /// Selected node: its neighbours are listed in `GlobalGraphView::neighbours`.
     pub focus: Option<String>,
+    /// Show tags as nodes (`tag:<tag>`, note → tag edges of kind `tag`).
+    pub include_tags: bool,
 }
 
 /// A kind with its count (filter panel).

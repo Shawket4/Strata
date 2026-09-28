@@ -114,7 +114,7 @@ fn validate_field(key: &str, value: &str) -> Result<()> {
     }
 }
 
-/// Names, aliases, tags and field values never contain NUL: PostgreSQL text cannot store it
+/// Names, aliases, tags and field values never contain NUL: `PostgreSQL` text cannot store it
 /// (the index and duplicate lookups would fail) and no vault text needs it.
 fn reject_nul<'a>(texts: impl IntoIterator<Item = &'a str>) -> Result<()> {
     if texts.into_iter().any(|t| t.contains('\0')) {

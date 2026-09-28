@@ -437,6 +437,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
   GraphNode dco_decode_graph_node(dynamic raw);
 
   @protected
+  GraphNodeKind dco_decode_graph_node_kind(dynamic raw);
+
+  @protected
   GraphPoint dco_decode_graph_point(dynamic raw);
 
   @protected
@@ -1503,6 +1506,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   GraphNode sse_decode_graph_node(SseDeserializer deserializer);
+
+  @protected
+  GraphNodeKind sse_decode_graph_node_kind(SseDeserializer deserializer);
 
   @protected
   GraphPoint sse_decode_graph_point(SseDeserializer deserializer);
@@ -2808,6 +2814,9 @@ abstract class StrataCoreApiImplPlatform extends BaseApiImpl<StrataCoreWire> {
 
   @protected
   void sse_encode_graph_node(GraphNode self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_graph_node_kind(GraphNodeKind self, SseSerializer serializer);
 
   @protected
   void sse_encode_graph_point(GraphPoint self, SseSerializer serializer);

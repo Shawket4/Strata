@@ -849,6 +849,7 @@ async fn global_map_filters_lens_counts_and_focus_are_computed_in_the_core() {
         cluster: None,
         lens: GraphLens::Notes,
         focus: None,
+        include_tags: false,
     };
     let map = |f: &GraphFilter| {
         s.read(|c, ctx| graph::global_graph_filtered(c, ctx, f))

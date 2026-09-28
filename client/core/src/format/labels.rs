@@ -645,6 +645,7 @@ pub fn relation_label(rel: &str, lang: Lang) -> String {
         "similarity" => ("similar", "مشابه"),
         "part-of-place" => ("inside", "داخل"),
         "custody" => ("custody", "العهدة"),
+        "tag" => ("tagged", "موسوم"),
         "entity" => ("entity relation", "علاقة كيان"),
         "relation" => ("relation", "علاقة"),
         other => return other.replace('-', " "),
@@ -664,6 +665,9 @@ pub fn edge_kind_label(kind: &str, lang: Lang) -> String {
         "custody" => ("Custody", "العهدة"),
         "part-of-place" => ("Inside", "داخل"),
         "similarity" => ("Similar", "متشابهة"),
+        "document" => ("Copies", "النسخ"),
+        "tag" => ("Tags", "الوسوم"),
+        "co-mention" => ("Mentioned together", "ذُكرا معًا"),
         other => return relation_label(other, lang),
     };
     tr(lang, en, ar)
