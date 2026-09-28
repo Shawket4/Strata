@@ -456,6 +456,7 @@ pub async fn list_entities(
     responses(
         (status = 201, description = "Created; one `user: create <path>` commit.", body = Entity),
         (status = 409, description = "`duplicate_candidates` (resend with `force`).", body = Problem),
+        (status = 422, description = "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock).", body = Problem),
     ),
 )]
 pub async fn create_entity(

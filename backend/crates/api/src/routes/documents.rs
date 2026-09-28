@@ -620,6 +620,7 @@ pub async fn list_documents(
     responses(
         (status = 201, description = "Created.", body = Document),
         (status = 409, description = "`duplicate_candidates`.", body = Problem),
+        (status = 422, description = "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock).", body = Problem),
     ),
 )]
 pub async fn create_document(
@@ -810,6 +811,7 @@ pub async fn list_places(
     responses(
         (status = 201, description = "Created.", body = Place),
         (status = 409, description = "`duplicate_candidates`.", body = Problem),
+        (status = 422, description = "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock).", body = Problem),
     ),
 )]
 pub async fn create_place(

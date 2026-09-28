@@ -299,5 +299,27 @@ pub fn property_display(v: &PropertyValue) -> Vec<String> {
     }
 }
 
+/// The properties panel's values of property `key`: `created` and `updated` (written in UTC)
+/// as a date and time in the account's time zone (`labels`: "27 Sep 2026 14:32"); any other
+/// property, or a value that is not an RFC 3339 time, as [`property_display`].
+pub fn property_display_in(key: &str, v: &PropertyValue, labels: &labels::Labels) -> Vec<String> {
+    match (key, v) {
+        ("created" | "updated", PropertyValue::Text(s)) => {
+            match chrono::DateTime::parse_from_rfc3339(s.trim()) {
+                Ok(t) => {
+                    let t = t.to_utc();
+                    vec![format!(
+                        "{} {}",
+                        labels.date_long(labels.local(t).date()),
+                        labels.hm(t)
+                    )]
+                }
+                Err(_) => property_display(v),
+            }
+        }
+        _ => property_display(v),
+    }
+}
+
 #[cfg(test)]
 mod tests;

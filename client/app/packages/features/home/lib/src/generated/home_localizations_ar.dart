@@ -90,14 +90,6 @@ class HomeLocalizationsAr extends HomeLocalizations {
   String get homeColumnEdited => 'آخر تعديل';
 
   @override
-  String homeEdited({required DateTime date}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat('d MMM', localeName);
-    final String dateString = dateDateFormat.format(date);
-
-    return '$dateString';
-  }
-
-  @override
   String get homeSecondaryLabel => 'اليوم والوارد ونشاط الذكاء الاصطناعي';
 
   @override
@@ -105,7 +97,7 @@ class HomeLocalizationsAr extends HomeLocalizations {
 
   @override
   String get homeAiActivityUnavailable =>
-      'ستظهر هنا العلاقات التي يضيفها الذكاء الاصطناعي والتناقضات التي يجدها والتغييرات التلقائية التي يمكنك التراجع عنها.';
+      'العلاقات التي يضيفها الذكاء الاصطناعي والتناقضات التي يجدها والتغييرات التلقائية التي يمكنك التراجع عنها تظهر هنا عند الاتصال بالخادم.';
 
   @override
   String get homeOpenItems => 'بنود مفتوحة';
@@ -116,4 +108,92 @@ class HomeLocalizationsAr extends HomeLocalizations {
 
   @override
   String get homeNotYetAvailable => 'غير متاح بعد';
+
+  @override
+  String homeNeedsYou({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count تحتاجك',
+      many: '$count تحتاجك',
+      few: '$count تحتاجك',
+      two: 'اثنتان تحتاجانك',
+      one: 'واحدة تحتاجك',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeContradictions({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count تناقض',
+      many: '$count تناقضًا',
+      few: '$count تناقضات',
+      two: 'تناقضان',
+      one: 'تناقض واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeLinks({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count رابط',
+      many: '$count رابطًا',
+      few: '$count روابط',
+      two: 'رابطان',
+      one: 'رابط واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeRecentFilter => 'عرض';
+
+  @override
+  String get homeRecentEdited => 'المعدّلة';
+
+  @override
+  String get homeRecentCreated => 'الجديدة';
+
+  @override
+  String get homeRecentFiledByAi => 'صنّفها الذكاء الاصطناعي';
+
+  @override
+  String homeActionFailed({required String code}) {
+    return 'لم يتم ذلك ($code).';
+  }
+
+  @override
+  String get homeOffline => 'غير متصل';
+
+  @override
+  String get homeNotAllowed => 'غير متاح لهذا الحساب';
+
+  @override
+  String get homeRetypeTitle => 'تغيير نوع العلاقة';
+
+  @override
+  String homeAiConfidence({required String value}) {
+    return 'ذكاء اصطناعي · $value';
+  }
+
+  @override
+  String get homeAiUndone => 'تم التراجع';
+
+  @override
+  String get homeAiRetype => 'غيّر النوع';
+
+  @override
+  String get homeAiUndo => 'تراجع';
+
+  @override
+  String get homeAiActivityEmpty => 'لا جديد من الذكاء الاصطناعي.';
+
+  @override
+  String get homeOpenItemsEmpty => 'لا توجد بنود مفتوحة.';
 }

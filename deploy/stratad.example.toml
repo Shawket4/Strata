@@ -11,8 +11,12 @@
 data_root = "/srv/strata"
 # Address the API listens on (nginx proxies to it).
 bind = "127.0.0.1:8080"
-# IANA timezone for users who have not set one (tasks, reminders, digests, timestamps).
+# IANA timezone for users who have not set one (task month headings, reminders, digests,
+# display). Times are always stored and written in UTC.
 default_timezone = "UTC"
+# Seconds a device's creation time on a create may be ahead of the server's clock before the
+# create is refused with 422 created_in_future (a wrong device clock).
+max_future_skew_secs = 300
 
 [database]
 # One URL per role (PLAN §5.2). Put the passwords here or in the environment.

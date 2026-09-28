@@ -81,6 +81,27 @@ impl Core {
         .await
     }
 
+    /// Makes the device's time zone the account's when the account has none of its own: once
+    /// the first bootstrap is complete and no `timezone` setting has synced (the user never
+    /// chose one; the server's default applies), `PATCH /me` sets the device's zone, which
+    /// then syncs to every device. A zone the user chose is never replaced. Returns whether
+    /// it was set. Called after each sync cycle; offline it waits for the next one.
+    pub async fn adopt_device_timezone(&self) -> CoreResult<bool> {
+        let Some(zone) = self.env().device_timezone.clone() else {
+            return Ok(false);
+        };
+        let session = self.session()?;
+        let unset = session.read(|c, _| {
+            Ok(crate::store::sync_state::get(c)?.bootstrap_complete
+                && crate::store::settings::user_setting(c, "timezone")?.is_none())
+        })?;
+        if !unset {
+            return Ok(false);
+        }
+        self.set_timezone(&zone).await?;
+        Ok(true)
+    }
+
     /// Sets the display name.
     pub async fn set_display_name(&self, name: &str) -> CoreResult<()> {
         if name.trim().is_empty() {

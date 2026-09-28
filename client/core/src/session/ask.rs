@@ -262,6 +262,7 @@ impl Session {
                 self.tokens(),
                 message_id.to_owned(),
                 None,
+                self.env.clock.now(),
             )
             .await?;
         self.ask_update(|a| {

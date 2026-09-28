@@ -512,6 +512,10 @@ pub struct Capture {
 ///`POST /capture`.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CaptureRequest {
+    /**When it was captured on the device (UTC; required): names the inbox file
+    (`inbox/YYYY-MM-DD-HHmmss.md`, UTC) and is its `created`. More than
+    `max_future_skew_secs` ahead of the server's clock is `422 created_in_future`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///The captured text (saved verbatim as the note body).
     pub text: ::std::string::String,
 }
@@ -734,6 +738,10 @@ pub struct CreateDocumentRequest {
     pub aliases: ::std::vec::Vec<::std::string::String>,
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub copy: ::std::option::Option<CopyKind>,
+    /**When the item was created on the device (UTC; required, never the time the server
+    receives it). More than `max_future_skew_secs` ahead of the server's clock is
+    `422 created_in_future`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///`doc-type`.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub doc_type: ::std::option::Option<::std::string::String>,
@@ -758,6 +766,10 @@ pub struct CreateEntityRequest {
     ///Aliases (both scripts).
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub aliases: ::std::vec::Vec<::std::string::String>,
+    /**When the item was created on the device (UTC; required, never the time the server
+    receives it). More than `max_future_skew_secs` ahead of the server's clock is
+    `422 created_in_future`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     /**User fields: person `role`, `phone`, `email`; company `industry`, `website`;
     document `doc-type`, `copy`, `expires`; place `address`.*/
     #[serde(
@@ -785,8 +797,13 @@ pub struct CreateEntityRequest {
 ///`POST /notes`.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CreateNoteRequest {
-    ///Full content; `id`, `created` and `updated` are set by the server.
+    /**Full content; `id` is set by the server, and `created` (unless the content has one)
+    and `updated` to `created` below.*/
     pub content: ::std::string::String,
+    /**When the item was created on the device (UTC; required, never the time the server
+    receives it). More than `max_future_skew_secs` ahead of the server's clock is
+    `422 created_in_future`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///Create even if it looks like a duplicate (records keep-both).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub force: ::std::option::Option<bool>,
@@ -805,6 +822,10 @@ pub struct CreatePlaceRequest {
     ///Aliases.
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub aliases: ::std::vec::Vec<::std::string::String>,
+    /**When the item was created on the device (UTC; required, never the time the server
+    receives it). More than `max_future_skew_secs` ahead of the server's clock is
+    `422 created_in_future`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///Create even if it looks like a duplicate.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub force: ::std::option::Option<bool>,
@@ -823,12 +844,21 @@ pub struct CreatePlaceRequest {
 ///`POST /tasks`.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CreateTaskRequest {
+    /**When the task was created on the device (UTC; required): its date in the user's time
+    zone picks the month heading of `tasks/Tasks.md`, and a `tasks/Tasks.md` this create
+    makes gets it as `created`/`updated`. More than `max_future_skew_secs` ahead of the
+    server's clock is `422 created_in_future`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///📅
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub due: ::std::option::Option<::chrono::naive::NaiveDate>,
     ///Create even if it looks like a duplicate (records keep-both).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub force: ::std::option::Option<bool>,
+    /**The ID a `tasks/Tasks.md` this create makes gets (the device's ID for it); ignored
+    when the note exists or `note_id` is given.*/
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub home_id: ::std::option::Option<::ulid::Ulid>,
     ///Client-generated block ID (`t-<ulid>`).
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub id: ::std::option::Option<::std::string::String>,
@@ -2814,8 +2844,12 @@ impl ::std::convert::TryFrom<::std::string::String> for Role {
     }
 }
 ///`POST /ask/{id}/save`.
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, Default, PartialEq)]
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SaveAskRequest {
+    /**When the user saved it on the device (UTC; required): the note's `created` and
+    `updated`. More than `max_future_skew_secs` ahead of the server's clock is
+    `422 created_in_future`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///Create even if it looks like a duplicate.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub force: ::std::option::Option<bool>,
@@ -3371,7 +3405,7 @@ pub struct SyncBootstrapPage {
 ///`capture`.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SyncCapture {
-    ///Capture time on the device (names the inbox file).
+    ///Capture time on the device (UTC; names the inbox file).
     pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///Client-generated ID of the inbox note.
     pub id: ::ulid::Ulid,
@@ -3493,6 +3527,9 @@ pub struct SyncDocumentCreate {
     ///`copy-of`.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub copy_of: ::std::option::Option<::ulid::Ulid>,
+    /**When it was created on the device (UTC; required): the new note's `created` and
+    `updated`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///`doc-type`.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub doc_type: ::std::option::Option<::std::string::String>,
@@ -3553,6 +3590,9 @@ pub struct SyncEntityCreate {
     ///Aliases.
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub aliases: ::std::vec::Vec<::std::string::String>,
+    /**When it was created on the device (UTC; required): the new note's `created` and
+    `updated`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///User fields.
     #[serde(
         default,
@@ -3692,6 +3732,9 @@ pub struct SyncKeepBoth {
 pub struct SyncNoteCreate {
     ///Full file content.
     pub content: ::std::string::String,
+    /**When it was created on the device (UTC; required): the new note's `created` and
+    `updated`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///Create even if duplicates exist.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub force: ::std::option::Option<bool>,
@@ -3982,6 +4025,9 @@ pub struct SyncPlaceCreate {
     ///Aliases.
     #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
     pub aliases: ::std::vec::Vec<::std::string::String>,
+    /**When it was created on the device (UTC; required): the new note's `created` and
+    `updated`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///Create even if duplicates exist.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub force: ::std::option::Option<bool>,
@@ -4284,6 +4330,9 @@ pub struct SyncSettingRecord {
 ///`suggestion.accept`.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SyncSuggestionAccept {
+    /**When the user accepted on the device (UTC): `created`/`updated` of notes the
+    acceptance creates.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub edits: ::std::option::Option<SyncSuggestionEdits>,
     ///Suggestion ID.
@@ -4394,12 +4443,19 @@ pub struct SyncTaskComplete {
 ///`task.create`.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct SyncTaskCreate {
+    /**When it was created on the device (UTC; required): its date in the user's time zone
+    picks the month heading of `tasks/Tasks.md`; a `tasks/Tasks.md` it makes gets it as
+    `created`/`updated`.*/
+    pub created: ::chrono::DateTime<::chrono::offset::Utc>,
     ///📅
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub due: ::std::option::Option<::chrono::naive::NaiveDate>,
     ///Create even if duplicates exist.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub force: ::std::option::Option<bool>,
+    ///The ID a `tasks/Tasks.md` this create makes gets (the device's ID for it).
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub home_id: ::std::option::Option<::ulid::Ulid>,
     ///Client-generated block ID (`t-<ulid>`).
     pub id: ::std::string::String,
     ///Home note (`tasks/Tasks.md` when absent).

@@ -88,14 +88,6 @@ class HomeLocalizationsEn extends HomeLocalizations {
   String get homeColumnEdited => 'EDITED';
 
   @override
-  String homeEdited({required DateTime date}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat('d MMM', localeName);
-    final String dateString = dateDateFormat.format(date);
-
-    return '$dateString';
-  }
-
-  @override
   String get homeSecondaryLabel => 'Today, inbox and AI activity';
 
   @override
@@ -103,7 +95,7 @@ class HomeLocalizationsEn extends HomeLocalizations {
 
   @override
   String get homeAiActivityUnavailable =>
-      'Relations the AI adds, contradictions it finds and automatic changes you can undo will show here.';
+      'Relations the AI adds, contradictions it finds and automatic changes you can undo show here when the server is reachable.';
 
   @override
   String get homeOpenItems => 'Open items';
@@ -114,4 +106,83 @@ class HomeLocalizationsEn extends HomeLocalizations {
 
   @override
   String get homeNotYetAvailable => 'Not available yet';
+
+  @override
+  String homeNeedsYou({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count need you',
+      one: '1 needs you',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeContradictions({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count contradictions',
+      one: '1 contradiction',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String homeLinks({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count links',
+      one: '1 link',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get homeRecentFilter => 'Show';
+
+  @override
+  String get homeRecentEdited => 'Edited';
+
+  @override
+  String get homeRecentCreated => 'Created';
+
+  @override
+  String get homeRecentFiledByAi => 'Filed by AI';
+
+  @override
+  String homeActionFailed({required String code}) {
+    return 'That didn\'t work ($code).';
+  }
+
+  @override
+  String get homeOffline => 'Offline';
+
+  @override
+  String get homeNotAllowed => 'Not available for this account';
+
+  @override
+  String get homeRetypeTitle => 'Change relation type';
+
+  @override
+  String homeAiConfidence({required String value}) {
+    return 'AI · $value';
+  }
+
+  @override
+  String get homeAiUndone => 'Undone';
+
+  @override
+  String get homeAiRetype => 'Change type';
+
+  @override
+  String get homeAiUndo => 'Undo';
+
+  @override
+  String get homeAiActivityEmpty => 'Nothing new from the AI.';
+
+  @override
+  String get homeOpenItemsEmpty => 'No open items.';
 }

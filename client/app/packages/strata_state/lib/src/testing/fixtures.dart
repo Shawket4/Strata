@@ -367,8 +367,8 @@ abstract final class StrataFixtures {
     local: '2026-10-01 09:00',
     at: DateTime.utc(2026, 10, 1, 6),
     localAt: StrataFixtures.now,
-    timeLabel: '',
-    offsetLabel: '',
+    timeLabel: 'Thu 1 Oct, 09:00',
+    offsetLabel: 'on the due date',
   );
 
   /// "Make Watanya's ETA invoice" — monthly on the 1st, due Thu 1 Oct.
@@ -386,8 +386,11 @@ abstract final class StrataFixtures {
     links: const [watanyaRef],
     pendingSync: false,
     descriptionDir: TextDir.ltr,
-    notePath: '',
-    lineNumber: 0,
+    notePath: 'notes/Tasks.md',
+    lineNumber: 12,
+    dueLabel: 'Thu 1 Oct',
+    nextInLabel: 'in 4 days',
+    originLabel: 'Tasks · line 12',
     isOverdue: false,
   );
 
@@ -407,15 +410,17 @@ abstract final class StrataFixtures {
         local: '2026-09-27 10:00',
         at: DateTime.utc(2026, 9, 27, 7),
         localAt: StrataFixtures.now,
-        timeLabel: '',
-        offsetLabel: '',
+        timeLabel: 'Today, 10:00',
+        offsetLabel: 'on the due date',
       ),
     ],
     links: const [EntityRef(id: 'c-petrol-arrows', title: 'Petrol Arrows')],
     pendingSync: false,
     descriptionDir: TextDir.ltr,
-    notePath: '',
-    lineNumber: 0,
+    notePath: 'notes/Tasks.md',
+    lineNumber: 14,
+    dueLabel: 'Today',
+    originLabel: 'Tasks · line 14',
     isOverdue: false,
   );
 
@@ -433,8 +438,11 @@ abstract final class StrataFixtures {
     links: const [ahmedSamirRef, acmeLogisticsRef],
     pendingSync: true,
     descriptionDir: TextDir.ltr,
-    notePath: '',
-    lineNumber: 0,
+    notePath: 'notes/clients/acme/Call 2026-09-12 — Acme.md',
+    lineNumber: 9,
+    dueLabel: 'Tue 29 Sep',
+    nextInLabel: 'in 2 days',
+    originLabel: 'from Call 2026-09-12 — Acme',
     isOverdue: false,
   );
 
@@ -452,9 +460,12 @@ abstract final class StrataFixtures {
     links: const [EntityRef(id: 'c-nile-freight', title: 'Nile Freight')],
     pendingSync: false,
     descriptionDir: TextDir.ltr,
-    notePath: '',
-    lineNumber: 0,
-    isOverdue: false,
+    notePath: 'notes/Tasks.md',
+    lineNumber: 8,
+    dueLabel: 'Thu 24 Sep',
+    latenessLabel: '3 days late',
+    originLabel: 'Tasks · line 8',
+    isOverdue: true,
   );
 
   /// "Make Watanya's ETA invoice" done on 1 Sep (history).
@@ -475,6 +486,7 @@ abstract final class StrataFixtures {
     descriptionDir: TextDir.ltr,
     notePath: '',
     lineNumber: 0,
+    completionLabel: 'Done Tue 1 Sep',
     isOverdue: false,
   );
 
@@ -485,18 +497,29 @@ abstract final class StrataFixtures {
     upcoming: [taskAhmedProposal, taskWatanyaEtaInvoice],
     recurring: [taskPetrolArrowsInvoice, taskWatanyaEtaInvoice],
     noDate: const [],
-    upcomingGroups: [],
-    todayCount: 0,
+    upcomingGroups: [
+      TaskGroup(
+        label: 'Tue 29 Sep',
+        date: DateTime.utc(2026, 9, 29),
+        tasks: [taskAhmedProposal],
+      ),
+      TaskGroup(
+        label: 'Thu 1 Oct',
+        date: DateTime.utc(2026, 10),
+        tasks: [taskWatanyaEtaInvoice],
+      ),
+    ],
+    todayCount: 1,
   );
 
   /// The Tasks destination.
   static final TasksView tasksView = TasksView(
     sections: taskSections,
     done: [taskWatanyaDoneSeptember],
-    openCount: 0,
-    doneThisWeek: 0,
-    doneThisWeekLabel: '',
-    notesWithTasks: 0,
+    openCount: 4,
+    doneThisWeek: 1,
+    doneThisWeekLabel: '1 done this week',
+    notesWithTasks: 2,
   );
 
   /// Task detail of the Watanya ETA invoice.
@@ -507,8 +530,36 @@ abstract final class StrataFixtures {
         "- [ ] Make Watanya's ETA invoice [[Watanya]] 🔁 every month on the "
         '1st 📅 2026-10-01 ⏰ 2026-10-01 09:00 ^t-watanya-eta',
     history: [taskWatanyaDoneSeptember],
-    locationLabel: '',
-    recurrencePreview: [],
+    locationLabel: 'Tasks.md · line 12',
+    deliveryLabel: 'to Pixel 9, MacBook Pro',
+    nextOccurrenceLabel: 'Next: Sun 1 Nov',
+    recurrenceForm: RecurrenceForm(
+      frequency: RecurrenceFrequency.monthly,
+      interval: 1,
+      weekdays: const [],
+      monthDayMode: MonthDayMode.days,
+      monthDays: Uint32List.fromList([1]),
+      nth: 0,
+      months: Uint32List(0),
+      whenDone: false,
+    ),
+    recurrencePreview: [
+      RecurrencePreviewItem(
+        date: DateTime.utc(2026, 10),
+        label: 'Thu 1 Oct',
+        isDue: true,
+      ),
+      RecurrencePreviewItem(
+        date: DateTime.utc(2026, 11),
+        label: 'Sun 1 Nov',
+        isDue: false,
+      ),
+      RecurrencePreviewItem(
+        date: DateTime.utc(2026, 12),
+        label: 'Tue 1 Dec',
+        isDue: false,
+      ),
+    ],
   );
 
   /// A new task as drafted in the task editor.
@@ -866,19 +917,64 @@ abstract final class StrataFixtures {
     inboxCount: 2,
     tasks: taskSections,
     sync_: syncPill,
-    todayLabel: '',
-    greeting: '',
-    displayName: '',
-    inboxPreview: [],
-    needsYouCount: 0,
+    todayLabel: 'Sunday, 27 September',
+    greeting: 'Good morning, Shawket',
+    displayName: 'Shawket',
+    inboxPreview: const [
+      InboxPreviewItem(
+        noteId: 'n-capture-acme',
+        text:
+            'كلمت أحمد النهارده، عايزين invoicing أسبوعي بدل شهري ابتداءً من '
+            'أكتوبر',
+        textDir: TextDir.rtl,
+        summary: '→ Weekly invoicing request — Acme',
+        needsYou: false,
+      ),
+      InboxPreviewItem(
+        noteId: 'n-capture-baba',
+        text: 'بابا عايز يشوف الأرقام بكرة',
+        textDir: TextDir.rtl,
+        summary: 'Who is “بابا”?',
+        needsYou: true,
+      ),
+    ],
+    needsYouCount: 1,
     contradictionsCount: 0,
-    inboxSummary: '',
+    inboxSummary: '1 ready to accept · 1 needs you',
     aiActivity: Availability.available,
-    aiActivityItems: [],
-    aiActivityHeadline: '',
+    aiActivityItems: const [
+      AiActivityItem(
+        atLabel: '14:05',
+        kind: 'relation_added',
+        summary: 'Ahmed Samir works at Acme Logistics',
+        source: ahmedSamirRef,
+        target: acmeLogisticsRef,
+        relType: 'works-at',
+        confidence: 0.94,
+        decisionId: 'dec-works-at',
+        reverted: false,
+      ),
+      AiActivityItem(
+        atLabel: 'Yesterday',
+        kind: 'custody_applied',
+        summary: 'Watanya contract returned to the Safe',
+        decisionId: 'dec-custody',
+        reverted: true,
+      ),
+    ],
+    aiActivityHeadline: '2 AI changes since yesterday',
     openItems: Availability.available,
-    openItemList: [],
-    pinned: [],
+    openItemList: const [
+      OpenItem(
+        id: 'oi-proposal',
+        text: 'Send the weekly invoicing proposal',
+        textDir: TextDir.ltr,
+        person: ahmedSamirRef,
+        citation: citation,
+        done: false,
+      ),
+    ],
+    pinned: const [],
   );
 
   // ---------------------------------------------------------------------------

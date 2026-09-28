@@ -134,6 +134,7 @@ impl Session {
             Op::SuggestionAccept(sm::SuggestionAccept {
                 id: ulid_of(id, "id")?,
                 edits,
+                created: self.env.clock.now(),
             }),
         )
     }
@@ -421,6 +422,7 @@ impl Session {
                 companies: self.ids_of(&d.companies, "companies")?,
                 people: self.ids_of(&d.people, "people")?,
                 expires: d.expires,
+                created: self.env.clock.now(),
                 force,
             }),
         )
@@ -455,6 +457,7 @@ impl Session {
                 aliases: p.aliases.clone(),
                 parent_id,
                 address: p.address.clone().filter(|a| !a.trim().is_empty()),
+                created: self.env.clock.now(),
                 force,
             }),
         )

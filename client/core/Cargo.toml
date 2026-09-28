@@ -32,6 +32,8 @@ futures = { workspace = true }
 ulid = { workspace = true }
 chrono = { workspace = true }
 chrono-tz = { workspace = true }
+# The device's IANA time zone (the default of an account without one), on every platform.
+iana-time-zone = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 tracing = { workspace = true }

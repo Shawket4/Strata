@@ -125,7 +125,8 @@ pub async fn prepare_all(config: &Config) -> Result<Prepared, StartupError> {
     })
 }
 
-/// The vault store for `config` (data root, default time zone, near-duplicate thresholds).
+/// The vault store for `config` (data root, default time zone, creation-time skew,
+/// near-duplicate thresholds).
 pub fn vault_service(
     config: &Config,
     db: AppDb,
@@ -134,6 +135,7 @@ pub fn vault_service(
 ) -> VaultService {
     let mut vc = VaultConfig::new(&config.data_root);
     vc.default_timezone.clone_from(&config.default_timezone);
+    vc.max_future_skew_secs = config.max_future_skew_secs;
     // Near-duplicate levels of the create check (§9.7); the defaults are the domain's.
     vc.near_thresholds = strata_jobs::thresholds::near_thresholds(&config.thresholds.dedupe);
     VaultService::new(vc, db, clock, ids)

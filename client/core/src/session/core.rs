@@ -110,6 +110,9 @@ pub struct CoreEnv {
     pub default_device_name: String,
     /// Default server URL for the login form.
     pub default_server_url: Option<String>,
+    /// The device's IANA time zone (`None` when unknown): the time zone of an account that
+    /// has not chosen one ([`Core::adopt_device_timezone`]).
+    pub device_timezone: Option<String>,
 }
 
 impl std::fmt::Debug for CoreEnv {
@@ -141,8 +144,17 @@ impl CoreEnv {
             }),
             default_device_name: config.default_device_name.clone(),
             default_server_url: config.default_server_url.clone(),
+            device_timezone: device_timezone(),
         }
     }
+}
+
+/// The device's IANA time zone, read from the operating system (Android, iOS, macOS, Windows
+/// and Linux alike), when it names a zone the core knows.
+pub fn device_timezone() -> Option<String> {
+    iana_time_zone::get_timezone()
+        .ok()
+        .filter(|z| z.parse::<chrono_tz::Tz>().is_ok())
 }
 
 /// The core: active session, registry, session-state stream.
@@ -457,9 +469,16 @@ impl Core {
                         "active".to_owned()
                     },
                     server_url: server_url.clone(),
-                    timezone: existing
-                        .as_ref()
-                        .map_or_else(|| "UTC".to_owned(), |a| a.timezone.clone()),
+                    // Until `/me` answers: the device's zone (the default of a new account).
+                    timezone: existing.as_ref().map_or_else(
+                        || {
+                            self.env
+                                .device_timezone
+                                .clone()
+                                .unwrap_or_else(|| "UTC".to_owned())
+                        },
+                        |a| a.timezone.clone(),
+                    ),
                     ui_language: existing
                         .as_ref()
                         .map_or_else(|| "en".to_owned(), |a| a.ui_language.clone()),

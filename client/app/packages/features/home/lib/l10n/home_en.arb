@@ -94,17 +94,6 @@
   "@homeColumnEdited": {
     "description": "Recent notes column."
   },
-  "homeEdited": "{date}",
-  "@homeEdited": {
-    "description": "Last change of a note.",
-    "placeholders": {
-      "date": {
-        "type": "DateTime",
-        "format": "d MMM",
-        "isCustomDateFormat": "true"
-      }
-    }
-  },
   "homeSecondaryLabel": "Today, inbox and AI activity",
   "@homeSecondaryLabel": {
     "description": "Semantics label of the secondary column."
@@ -113,9 +102,9 @@
   "@homeAiActivity": {
     "description": "AI activity feed title."
   },
-  "homeAiActivityUnavailable": "Relations the AI adds, contradictions it finds and automatic changes you can undo will show here.",
+  "homeAiActivityUnavailable": "Relations the AI adds, contradictions it finds and automatic changes you can undo show here when the server is reachable.",
   "@homeAiActivityUnavailable": {
-    "description": "AI activity feed not provided yet."
+    "description": "AI activity unavailable."
   },
   "homeOpenItems": "Open items",
   "@homeOpenItems": {
@@ -128,5 +117,98 @@
   "homeNotYetAvailable": "Not available yet",
   "@homeNotYetAvailable": {
     "description": "State of a block the core does not provide yet."
+  },
+  "homeNeedsYou": "{count, plural, =1{1 needs you} other{{count} need you}}",
+  "@homeNeedsYou": {
+    "description": "Inbox captures that need a decision.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeContradictions": "{count, plural, =1{1 contradiction} other{{count} contradictions}}",
+  "@homeContradictions": {
+    "description": "Contradictions the AI found.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeLinks": "{count, plural, =1{1 link} other{{count} links}}",
+  "@homeLinks": {
+    "description": "Links of a recent note.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "homeRecentFilter": "Show",
+  "@homeRecentFilter": {
+    "description": "Label of the recent-notes filter."
+  },
+  "homeRecentEdited": "Edited",
+  "@homeRecentEdited": {
+    "description": "Recent notes: most recently edited."
+  },
+  "homeRecentCreated": "Created",
+  "@homeRecentCreated": {
+    "description": "Recent notes: most recently created."
+  },
+  "homeRecentFiledByAi": "Filed by AI",
+  "@homeRecentFiledByAi": {
+    "description": "Recent notes: filed by the AI."
+  },
+  "homeActionFailed": "That didn't work ({code}).",
+  "@homeActionFailed": {
+    "description": "Snack bar for a failed Home action.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "homeOffline": "Offline",
+  "@homeOffline": {
+    "description": "A Home block that needs the server while offline."
+  },
+  "homeNotAllowed": "Not available for this account",
+  "@homeNotAllowed": {
+    "description": "A Home block this account cannot use."
+  },
+  "homeRetypeTitle": "Change relation type",
+  "@homeRetypeTitle": {
+    "description": "Title of the relation type picker."
+  },
+  "homeAiConfidence": "AI · {value}",
+  "@homeAiConfidence": {
+    "description": "AI confidence.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "homeAiUndone": "Undone",
+  "@homeAiUndone": {
+    "description": "An AI decision already undone."
+  },
+  "homeAiRetype": "Change type",
+  "@homeAiRetype": {
+    "description": "Retypes an AI relation."
+  },
+  "homeAiUndo": "Undo",
+  "@homeAiUndo": {
+    "description": "Undoes an AI decision."
+  },
+  "homeAiActivityEmpty": "Nothing new from the AI.",
+  "@homeAiActivityEmpty": {
+    "description": "Empty AI activity feed."
+  },
+  "homeOpenItemsEmpty": "No open items.",
+  "@homeOpenItemsEmpty": {
+    "description": "Empty open items."
   }
 }

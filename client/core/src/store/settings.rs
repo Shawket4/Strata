@@ -51,6 +51,18 @@ pub fn get(conn: &Connection, key: &str) -> CoreResult<Option<String>> {
         .optional()?)
 }
 
+/// Reads a synced user setting (`user_settings`, from the server's `setting` records;
+/// `None` when the user never set it).
+pub fn user_setting(conn: &Connection, key: &str) -> CoreResult<Option<String>> {
+    Ok(conn
+        .query_row(
+            "SELECT value FROM user_settings WHERE key = ?1",
+            [key],
+            |r| r.get(0),
+        )
+        .optional()?)
+}
+
 /// Writes a setting. Returns whether it changed.
 pub fn set(conn: &Connection, key: &str, value: &str) -> CoreResult<bool> {
     if get(conn, key)?.as_deref() == Some(value) {

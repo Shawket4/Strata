@@ -1,7 +1,9 @@
 //! Intents (§12.3): each user action becomes one `sync-model` op with client-generated IDs and
-//! dates, is applied optimistically and queued. IDs come from the injected generator and dates
-//! from the injected clock in the user's timezone, so the op carries everything the server
-//! needs to apply it identically. Creates first run the offline duplicate check (§9.7).
+//! dates, is applied optimistically and queued. IDs come from the injected generator; creation
+//! times are the injected clock's instant (UTC; the server writes them as `created`/`updated`
+//! however late the op arrives) and dates are in the user's timezone, so the op carries
+//! everything the server needs to apply it identically. Creates first run the offline
+//! duplicate check (§9.7).
 
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use sync_model::ops as sm;
@@ -11,7 +13,7 @@ use vault_format::RelationKey;
 use super::Session;
 use crate::error::{CoreError, CoreResult};
 use crate::ids::task_block_id;
-use crate::store::write::{Intent, LocalEntity, TASK_HOME, capture_created, note_of_task};
+use crate::store::write::{Intent, LocalEntity, TASK_HOME, note_of_task};
 use crate::store::{conflicts, notes, settings};
 use crate::sync::apply;
 use crate::sync::model::Op;
@@ -127,13 +129,12 @@ impl Session {
             return Err(CoreError::invalid("text", "empty"));
         }
         let id = self.new_ulid();
-        let ctx = self.ctx();
         self.run(
             LocalEntity::Note(id.to_string()),
             Op::Capture(sm::Capture {
                 id,
                 text: text.to_owned(),
-                created: capture_created(ctx.now, ctx.tz),
+                created: self.env.clock.now(),
             }),
         )?;
         Ok(id.to_string())
@@ -152,6 +153,7 @@ impl Session {
                 id,
                 path: path.to_owned(),
                 content: content.to_owned(),
+                created: self.env.clock.now(),
                 force,
             }),
         )
@@ -223,6 +225,7 @@ impl Session {
                 name: name.to_owned(),
                 aliases: aliases.to_vec(),
                 fields: std::collections::BTreeMap::new(),
+                created: self.env.clock.now(),
                 force,
             }),
         )
@@ -293,6 +296,7 @@ impl Session {
             Op::SuggestionAccept(sm::SuggestionAccept {
                 id: ulid_of(id)?,
                 edits: None,
+                created: self.env.clock.now(),
             }),
         )
     }
@@ -335,18 +339,24 @@ impl Session {
             None => None,
         };
         let task_id = task_block_id(self.new_ulid());
-        let (local_note, note_id) = match &t.note_id {
+        let (local_note, note_id, home_id) = match &t.note_id {
             Some(n) => {
                 if !self.note_exists(n)? {
                     return Err(CoreError::not_found("note"));
                 }
-                (n.clone(), Some(ulid_of(n)?))
+                (n.clone(), Some(ulid_of(n)?), None)
             }
             None => match self.read(|c, _| notes::id_by_path(c, TASK_HOME))? {
-                Some(home) => (home, None),
-                // No task home yet: a local placeholder shows the line until the server's
-                // `tasks/Tasks.md` arrives by pull.
-                None => (self.new_ulid().to_string(), None),
+                Some(home) => {
+                    let home_id = ulid_of(&home).ok();
+                    (home, None, home_id)
+                }
+                // No task home yet: the device makes `tasks/Tasks.md` with its own ID, which
+                // the server gives the note too (both write the same bytes).
+                None => {
+                    let home = self.new_ulid();
+                    (home.to_string(), None, Some(home))
+                }
             },
         };
         let links: Vec<String> = vault_format::wikilink::find_all(&t.description)
@@ -374,6 +384,8 @@ impl Session {
                 recurrence: t.recurrence.clone(),
                 reminders: t.reminders.clone(),
                 priority: t.priority,
+                created: self.env.clock.now(),
+                home_id,
                 force,
             }),
         )
@@ -529,8 +541,13 @@ impl Session {
                     let path = self
                         .read(|c, _| notes::current(c, &conflict.entity_id))?
                         .map_or_else(|| "notes/Conflict.md".to_owned(), |n| n.path);
-                    let stamp = self.ctx().labels().local(self.env.clock.now());
-                    let copy_path = item_render::paths::conflict_copy_path(&path, stamp, 1);
+                    // Named in UTC, like the server's copies (vault content every device and
+                    // Obsidian share).
+                    let copy_path = item_render::paths::conflict_copy_path(
+                        &path,
+                        &self.env.clock.now(),
+                        1,
+                    );
                     let body = vault_format::Document::parse(&local).body().to_owned();
                     self.create_note(&copy_path, &body, true)?;
                 }

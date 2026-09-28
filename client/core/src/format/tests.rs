@@ -113,3 +113,32 @@ fn place_parent_and_property_display() {
     );
     assert!(property_display(&PropertyValue::Null).is_empty());
 }
+
+/// Times are written in UTC; the properties panel shows them in the account's time zone.
+#[test]
+fn created_and_updated_display_in_the_account_time_zone() {
+    let now = chrono::DateTime::parse_from_rfc3339("2026-09-28T09:00:00Z")
+        .expect("ts")
+        .to_utc();
+    let cairo = labels::Labels::new(now, chrono_tz::Africa::Cairo, labels::Lang::En);
+    let utc = PropertyValue::Text("2026-09-27T22:30:00Z".into());
+    assert_eq!(
+        property_display_in("created", &utc, &cairo),
+        vec!["28 Sep 2026 01:30".to_owned()]
+    );
+    let offset = PropertyValue::Text("2026-09-27T14:32:00+03:00".into());
+    assert_eq!(
+        property_display_in("updated", &offset, &cairo),
+        vec!["27 Sep 2026 14:32".to_owned()]
+    );
+    // Other keys, and values that are not times, are shown as written.
+    assert_eq!(
+        property_display_in("expires", &utc, &cairo),
+        vec!["2026-09-27T22:30:00Z".to_owned()]
+    );
+    let odd = PropertyValue::Text("yesterday".into());
+    assert_eq!(
+        property_display_in("created", &odd, &cairo),
+        vec!["yesterday".to_owned()]
+    );
+}

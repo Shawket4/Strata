@@ -61,6 +61,7 @@ pub fn env(
         }),
         default_device_name: "Shawket's laptop".to_owned(),
         default_server_url: Some(SERVER.to_owned()),
+        device_timezone: None,
     }
 }
 

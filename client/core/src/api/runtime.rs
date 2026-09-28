@@ -87,6 +87,10 @@ async fn background(core: Arc<Core>, mut rx: mpsc::UnboundedReceiver<Trigger>) {
             if let Err(e) = session.recompute_notifications() {
                 tracing::warn!("reminder plan failed: {e}");
             }
+            // An account without a time zone of its own takes the device's.
+            if let Err(e) = core.adopt_device_timezone().await {
+                tracing::warn!("adopting the device time zone failed: {e}");
+            }
         }
         if let Err(e) = core.publish_state() {
             tracing::warn!("session state failed: {e}");

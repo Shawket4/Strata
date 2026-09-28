@@ -765,6 +765,7 @@ impl AccountApi for ClientAccountApi {
         tokens: Tokens,
         ask_id: String,
         title: Option<String>,
+        created: chrono::DateTime<chrono::Utc>,
     ) -> BoxFuture<'_, Result<String, NetError>> {
         Box::pin(async move {
             let c = client(&server_url, Some(tokens))?;
@@ -772,6 +773,7 @@ impl AccountApi for ClientAccountApi {
                 &c,
                 ulid(&ask_id, "ask")?,
                 &types::SaveAskRequest {
+                    created,
                     force: Some(true),
                     title,
                 },

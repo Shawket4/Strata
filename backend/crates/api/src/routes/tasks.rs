@@ -358,6 +358,7 @@ pub async fn list_tasks(
         (status = 201, description = "Created; one `user: task create <path>` commit.", body = Task),
         (status = 404, description = "`not_found`: `note_id` names no note of the caller.", body = Problem),
         (status = 409, description = "`duplicate_candidates`.", body = Problem),
+        (status = 422, description = "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock).", body = Problem),
     ),
 )]
 pub async fn create_task(

@@ -984,13 +984,19 @@
       "CaptureRequest": {
         "description": "`POST /capture`.",
         "properties": {
+          "created": {
+            "description": "When it was captured on the device (UTC; required): names the inbox file\n(`inbox/YYYY-MM-DD-HHmmss.md`, UTC) and is its `created`. More than\n`max_future_skew_secs` ahead of the server's clock is `422 created_in_future`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "text": {
             "description": "The captured text (saved verbatim as the note body).",
             "type": "string"
           }
         },
         "required": [
-          "text"
+          "text",
+          "created"
         ],
         "type": "object"
       },
@@ -1157,6 +1163,11 @@
               }
             ]
           },
+          "created": {
+            "description": "When the item was created on the device (UTC; required, never the time the server\nreceives it). More than `max_future_skew_secs` ahead of the server's clock is\n`422 created_in_future`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "doc_type": {
             "description": "`doc-type`.",
             "type": [
@@ -1197,7 +1208,8 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "created"
         ],
         "type": "object"
       },
@@ -1210,6 +1222,11 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "created": {
+            "description": "When the item was created on the device (UTC; required, never the time the server\nreceives it). More than `max_future_skew_secs` ahead of the server's clock is\n`422 created_in_future`.",
+            "format": "date-time",
+            "type": "string"
           },
           "fields": {
             "additionalProperties": {
@@ -1259,7 +1276,8 @@
         },
         "required": [
           "kind",
-          "name"
+          "name",
+          "created"
         ],
         "type": "object"
       },
@@ -1267,7 +1285,12 @@
         "description": "`POST /notes`.",
         "properties": {
           "content": {
-            "description": "Full content; `id`, `created` and `updated` are set by the server.",
+            "description": "Full content; `id` is set by the server, and `created` (unless the content has one)\nand `updated` to `created` below.",
+            "type": "string"
+          },
+          "created": {
+            "description": "When the item was created on the device (UTC; required, never the time the server\nreceives it). More than `max_future_skew_secs` ahead of the server's clock is\n`422 created_in_future`.",
+            "format": "date-time",
             "type": "string"
           },
           "force": {
@@ -1289,7 +1312,8 @@
         },
         "required": [
           "path",
-          "content"
+          "content",
+          "created"
         ],
         "type": "object"
       },
@@ -1309,6 +1333,11 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "created": {
+            "description": "When the item was created on the device (UTC; required, never the time the server\nreceives it). More than `max_future_skew_secs` ahead of the server's clock is\n`422 created_in_future`.",
+            "format": "date-time",
+            "type": "string"
           },
           "force": {
             "description": "Create even if it looks like a duplicate.",
@@ -1343,13 +1372,19 @@
           }
         },
         "required": [
-          "name"
+          "name",
+          "created"
         ],
         "type": "object"
       },
       "CreateTaskRequest": {
         "description": "`POST /tasks`.",
         "properties": {
+          "created": {
+            "description": "When the task was created on the device (UTC; required): its date in the user's time\nzone picks the month heading of `tasks/Tasks.md`, and a `tasks/Tasks.md` this create\nmakes gets it as `created`/`updated`. More than `max_future_skew_secs` ahead of the\nserver's clock is `422 created_in_future`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "due": {
             "description": "📅",
             "format": "date",
@@ -1361,6 +1396,14 @@
           "force": {
             "description": "Create even if it looks like a duplicate (records keep-both).",
             "type": "boolean"
+          },
+          "home_id": {
+            "description": "The ID a `tasks/Tasks.md` this create makes gets (the device's ID for it); ignored\nwhen the note exists or `note_id` is given.",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "id": {
             "description": "Client-generated block ID (`t-<ulid>`).",
@@ -1424,7 +1467,8 @@
           }
         },
         "required": [
-          "text"
+          "text",
+          "created"
         ],
         "type": "object"
       },
@@ -4547,6 +4591,11 @@
       "SaveAskRequest": {
         "description": "`POST /ask/{id}/save`.",
         "properties": {
+          "created": {
+            "description": "When the user saved it on the device (UTC; required): the note's `created` and\n`updated`. More than `max_future_skew_secs` ahead of the server's clock is\n`422 created_in_future`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "force": {
             "description": "Create even if it looks like a duplicate.",
             "type": "boolean"
@@ -4559,6 +4608,9 @@
             ]
           }
         },
+        "required": [
+          "created"
+        ],
         "type": "object"
       },
       "SearchHit": {
@@ -5350,7 +5402,7 @@
         "description": "`capture`.",
         "properties": {
           "created": {
-            "description": "Capture time on the device (names the inbox file).",
+            "description": "Capture time on the device (UTC; names the inbox file).",
             "format": "date-time",
             "type": "string"
           },
@@ -5670,6 +5722,11 @@
               "null"
             ]
           },
+          "created": {
+            "description": "When it was created on the device (UTC; required): the new note's `created` and\n`updated`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "doc_type": {
             "description": "`doc-type`.",
             "type": [
@@ -5708,7 +5765,8 @@
         },
         "required": [
           "id",
-          "name"
+          "name",
+          "created"
         ],
         "type": "object"
       },
@@ -5812,6 +5870,11 @@
             },
             "type": "array"
           },
+          "created": {
+            "description": "When it was created on the device (UTC; required): the new note's `created` and\n`updated`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "fields": {
             "additionalProperties": {
               "type": "string"
@@ -5843,7 +5906,8 @@
         "required": [
           "id",
           "kind",
-          "name"
+          "name",
+          "created"
         ],
         "type": "object"
       },
@@ -5957,6 +6021,11 @@
             "description": "Full file content.",
             "type": "string"
           },
+          "created": {
+            "description": "When it was created on the device (UTC; required): the new note's `created` and\n`updated`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "force": {
             "description": "Create even if duplicates exist.",
             "type": "boolean"
@@ -5974,7 +6043,8 @@
         "required": [
           "id",
           "path",
-          "content"
+          "content",
+          "created"
         ],
         "type": "object"
       },
@@ -6790,6 +6860,11 @@
             },
             "type": "array"
           },
+          "created": {
+            "description": "When it was created on the device (UTC; required): the new note's `created` and\n`updated`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "force": {
             "description": "Create even if duplicates exist.",
             "type": "boolean"
@@ -6814,7 +6889,8 @@
         },
         "required": [
           "id",
-          "name"
+          "name",
+          "created"
         ],
         "type": "object"
       },
@@ -7250,6 +7326,11 @@
       "SyncSuggestionAccept": {
         "description": "`suggestion.accept`.",
         "properties": {
+          "created": {
+            "description": "When the user accepted on the device (UTC): `created`/`updated` of notes the\nacceptance creates.",
+            "format": "date-time",
+            "type": "string"
+          },
           "edits": {
             "oneOf": [
               {
@@ -7268,7 +7349,8 @@
           }
         },
         "required": [
-          "id"
+          "id",
+          "created"
         ],
         "type": "object"
       },
@@ -7525,6 +7607,11 @@
       "SyncTaskCreate": {
         "description": "`task.create`.",
         "properties": {
+          "created": {
+            "description": "When it was created on the device (UTC; required): its date in the user's time zone\npicks the month heading of `tasks/Tasks.md`; a `tasks/Tasks.md` it makes gets it as\n`created`/`updated`.",
+            "format": "date-time",
+            "type": "string"
+          },
           "due": {
             "description": "📅",
             "format": "date",
@@ -7536,6 +7623,14 @@
           "force": {
             "description": "Create even if duplicates exist.",
             "type": "boolean"
+          },
+          "home_id": {
+            "description": "The ID a `tasks/Tasks.md` this create makes gets (the device's ID for it).",
+            "format": "ulid",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "id": {
             "description": "Client-generated block ID (`t-<ulid>`).",
@@ -7597,7 +7692,8 @@
         },
         "required": [
           "id",
-          "text"
+          "text",
+          "created"
         ],
         "type": "object"
       },
@@ -9254,7 +9350,7 @@
                 }
               }
             },
-            "description": "`invalid_name` (title) or `invalid_body`."
+            "description": "`invalid_name` (title), `invalid_body` or `created_in_future`."
           },
           "500": {
             "$ref": "#/components/responses/Internal"
@@ -9553,7 +9649,14 @@
             "$ref": "#/components/responses/UnsupportedMediaType"
           },
           "422": {
-            "$ref": "#/components/responses/InvalidBody"
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock)."
           },
           "429": {
             "content": {
@@ -9915,7 +10018,14 @@
             "$ref": "#/components/responses/UnsupportedMediaType"
           },
           "422": {
-            "$ref": "#/components/responses/InvalidBody"
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock)."
           },
           "500": {
             "$ref": "#/components/responses/Internal"
@@ -10251,7 +10361,14 @@
             "$ref": "#/components/responses/UnsupportedMediaType"
           },
           "422": {
-            "$ref": "#/components/responses/InvalidBody"
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock)."
           },
           "500": {
             "$ref": "#/components/responses/Internal"
@@ -11562,7 +11679,7 @@
                 }
               }
             },
-            "description": "`invalid_name` (path) or `invalid_body`."
+            "description": "`invalid_name` (path), `invalid_body` or `created_in_future`."
           },
           "500": {
             "$ref": "#/components/responses/Internal"
@@ -12275,7 +12392,14 @@
             "$ref": "#/components/responses/UnsupportedMediaType"
           },
           "422": {
-            "$ref": "#/components/responses/InvalidBody"
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock)."
           },
           "500": {
             "$ref": "#/components/responses/Internal"
@@ -13328,7 +13452,14 @@
             "$ref": "#/components/responses/UnsupportedMediaType"
           },
           "422": {
-            "$ref": "#/components/responses/InvalidBody"
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock)."
           },
           "500": {
             "$ref": "#/components/responses/Internal"

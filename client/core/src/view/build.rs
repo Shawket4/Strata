@@ -2251,7 +2251,7 @@ pub fn note_screen(conn: &Connection, ctx: &ViewCtx, id: &str) -> CoreResult<Not
                 .filter(|(k, _)| !is_relation_key(k))
                 .map(|(k, v)| PropertyItem {
                     key: k.clone(),
-                    values: format::property_display(v),
+                    values: format::property_display_in(k, v, &labels),
                 })
                 .collect(),
             relations: relation_chips(conn, ctx, OUTGOING_RELATIONS, id)?,
@@ -3435,7 +3435,7 @@ fn entity_view(
             })
             .map(|(k, v)| PropertyItem {
                 key: k.clone(),
-                values: format::property_display(v),
+                values: format::property_display_in(k, v, &labels),
             })
             .collect(),
         summary_dir: summary.as_deref().map_or(TextDir::Neutral, dir_of),

@@ -30,8 +30,12 @@ pub struct Config {
     pub data_root: PathBuf,
     /// Address the API listens on (behind nginx).
     pub bind: SocketAddr,
-    /// IANA timezone used for users who have not set one (tasks, reminders, digests).
+    /// IANA timezone used for users who have not set one (tasks, reminders, digests). Times
+    /// are stored and written in UTC; this only anchors dates and display.
     pub default_timezone: String,
+    /// How far (seconds) a device's `created` time on a create may be ahead of the server's
+    /// clock before the create is refused (`422 created_in_future`).
+    pub max_future_skew_secs: u32,
     /// Postgres connection settings, one URL per role (§5.2).
     pub database: DatabaseConfig,
     /// AI provider settings (§9.1, D20, D23).
@@ -459,6 +463,7 @@ impl Default for Config {
             data_root: PathBuf::from("/srv/strata"),
             bind: SocketAddr::from(([127, 0, 0, 1], 8080)),
             default_timezone: "UTC".to_owned(),
+            max_future_skew_secs: 300,
             database: DatabaseConfig {
                 owner_url: "postgres://strata_owner@localhost/strata".to_owned(),
                 app_url: "postgres://strata_app@localhost/strata".to_owned(),

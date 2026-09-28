@@ -361,7 +361,7 @@ pub async fn ask_stream(
     responses(
         (status = 201, description = "Created (waits for the answer to finish); one `user: create <path>` commit.", body = Note),
         (status = 409, description = "`duplicate_candidates` (resend with `force`) or `path_taken`.", body = Problem),
-        (status = 422, description = "`invalid_name` (title) or `invalid_body`.", body = Problem),
+        (status = 422, description = "`invalid_name` (title), `invalid_body` or `created_in_future`.", body = Problem),
     ),
 )]
 pub async fn save_ask(

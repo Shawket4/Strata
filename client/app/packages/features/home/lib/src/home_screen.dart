@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -8,12 +10,13 @@ import 'package:strata_state/strata_state.dart';
 import 'package:strata_tasks/strata_tasks.dart';
 import 'package:strata_ui/strata_ui.dart';
 
-/// Home / Capture (PLAN §11 screens 2 and 12): the capture composer, the
-/// inbox count, the core's task sections (compact shows Overdue / Today /
-/// Upcoming / Recurring here, D28; medium and expanded show a Today block in
-/// the secondary column), recent notes, and the AI activity feed and
-/// open-items roll-up (rendered as not yet available until the core streams
-/// them). Ctrl/⌘+N focuses the composer.
+/// Home / Capture (PLAN §11 screens 2 and 12): the core's date and greeting,
+/// the capture composer, the inbox with its newest captures, the core's task
+/// sections (compact shows Overdue / Today / Upcoming / Recurring here, D28;
+/// medium and expanded show a Today block in the secondary column), recent
+/// notes with their filter, the AI activity feed (undo or retype a
+/// decision, D13) and the open-items roll-up. Ctrl/⌘+N focuses the
+/// composer.
 class HomeScreen extends HookConsumerWidget {
   /// Creates Home.
   const new({
@@ -28,8 +31,8 @@ class HomeScreen extends HookConsumerWidget {
   /// The icon that represents this feature.
   static const IconData icon = Icons.home_outlined;
 
-  /// Opens a note by id.
-  final ValueChanged<String>? onOpenNote;
+  /// Opens a note (at a block for citations).
+  final OpenNoteAt? onOpenNote;
 
   /// Opens the notes list ("All notes").
   final VoidCallback? onOpenNotes;
@@ -47,6 +50,13 @@ class HomeScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final value = ref.watch(homeProvider);
     final composerFocus = useFocusNode();
+    // The AI activity feed is read from the server once per visit.
+    useEffect(() {
+      unawaited(
+        ref.read(coreApiProvider).refreshAiActivity().catchError((Object _) {}),
+      );
+      return null;
+    }, const []);
     final sizeClass = SizeClass.of(context);
     void focusComposer() => composerFocus.requestFocus();
     return HomeL10nScope(
@@ -132,12 +142,13 @@ class _CompactHome extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(StrataSpacing.s4),
       children: [
+        if (view != null) _Header(view: view, compact: true),
         composer,
         const SizedBox(height: StrataSpacing.s3),
         if (view == null)
           _dataOr(value, content, const SizedBox.shrink())
         else ...[
-          _InboxCountCard(count: view.inboxCount, onOpen: screen.onOpenInbox),
+          _InboxCard(view: view, onOpen: screen.onOpenInbox),
           _TaskSections(
             sections: view.tasks,
             onOpenTask: screen.onOpenTask,
@@ -149,6 +160,8 @@ class _CompactHome extends StatelessWidget {
             onOpenNote: screen.onOpenNote,
             onOpenNotes: screen.onOpenNotes,
           ),
+          _AiActivityCard(view: view),
+          _OpenItemsCard(view: view, onOpenNote: screen.onOpenNote),
         ],
       ],
     );
@@ -170,16 +183,11 @@ class _MediumHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.homeL10n;
     final view = value.value;
     return ListView(
       padding: const EdgeInsets.all(StrataSpacing.s6),
       children: [
-        Semantics(
-          header: true,
-          container: true,
-          child: Text(l10n.homeTitle, style: context.strataText.display),
-        ),
+        _Header(view: view),
         const SizedBox(height: StrataSpacing.s4),
         composer,
         const SizedBox(height: StrataSpacing.s5),
@@ -202,17 +210,15 @@ class _MediumHome extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _InboxCountCard(
-                      count: view.inboxCount,
-                      onOpen: screen.onOpenInbox,
-                    ),
+                    _InboxCard(view: view, onOpen: screen.onOpenInbox),
                     _TodayBlock(
                       sections: view.tasks,
                       onOpenTask: screen.onOpenTask,
                       onOpenTasks: screen.onOpenTasks,
                     ),
                     const SizedBox(height: StrataSpacing.s3),
-                    const _NotYetAvailableCard(kind: _Pending.aiActivity),
+                    _AiActivityCard(view: view),
+                    _OpenItemsCard(view: view, onOpenNote: screen.onOpenNote),
                   ],
                 ),
               ),
@@ -248,11 +254,7 @@ class _ExpandedHome extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.all(StrataSpacing.s8),
             children: [
-              Semantics(
-                header: true,
-                container: true,
-                child: Text(l10n.homeTitle, style: context.strataText.display),
-              ),
+              _Header(view: view),
               const SizedBox(height: StrataSpacing.s4),
               composer,
               const SizedBox(height: StrataSpacing.s6),
@@ -286,14 +288,10 @@ class _ExpandedHome extends StatelessWidget {
                       onOpenTasks: screen.onOpenTasks,
                     ),
                     const SizedBox(height: StrataSpacing.s3),
-                    _InboxCountCard(
-                      count: view.inboxCount,
-                      onOpen: screen.onOpenInbox,
-                    ),
+                    _InboxCard(view: view, onOpen: screen.onOpenInbox),
+                    _AiActivityCard(view: view),
+                    _OpenItemsCard(view: view, onOpenNote: screen.onOpenNote),
                   ],
-                  const _NotYetAvailableCard(kind: _Pending.aiActivity),
-                  const SizedBox(height: StrataSpacing.s3),
-                  const _NotYetAvailableCard(kind: _Pending.openItems),
                 ],
               ),
             ),
@@ -304,10 +302,51 @@ class _ExpandedHome extends StatelessWidget {
   }
 }
 
-class _InboxCountCard extends StatelessWidget {
-  const new({required this.count, required this.onOpen});
+/// The core's date and greeting ("Good morning, Shawket").
+class _Header extends StatelessWidget {
+  const new({required this.view, this.compact = false});
 
-  final int count;
+  final HomeView? view;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.homeL10n;
+    final text = context.strataText;
+    final colors = context.strataColors;
+    final shown = view;
+    return Padding(
+      padding: EdgeInsets.only(bottom: compact ? StrataSpacing.s3 : 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (shown != null && shown.todayLabel.isNotEmpty)
+            Text(
+              shown.todayLabel,
+              style: text.caption.copyWith(color: colors.text2),
+            ),
+          Semantics(
+            header: true,
+            container: true,
+            child: Text(
+              shown == null || shown.greeting.isEmpty
+                  ? l10n.homeTitle
+                  : shown.greeting,
+              style: compact ? text.title : text.display,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The inbox: the count, the core's summary, who needs you, and the newest
+/// captures with what the AI proposes.
+class _InboxCard extends StatelessWidget {
+  const new({required this.view, required this.onOpen});
+
+  final HomeView view;
   final VoidCallback? onOpen;
 
   @override
@@ -315,34 +354,114 @@ class _InboxCountCard extends StatelessWidget {
     final l10n = context.homeL10n;
     final colors = context.strataColors;
     final text = context.strataText;
+    final count = view.inboxCount;
     return Padding(
       padding: const EdgeInsets.only(bottom: StrataSpacing.s3),
       child: Card(
         margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
         color: count == 0 ? null : colors.accentTint,
         child: InkWell(
-          borderRadius: StrataRadii.cardRadius,
           onTap: onOpen,
           child: Padding(
             padding: const EdgeInsets.all(StrataSpacing.s4),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(Icons.move_to_inbox_outlined, color: colors.accentText),
-                const SizedBox(width: StrataSpacing.s3),
-                Expanded(
-                  child: Text(
-                    l10n.homeInboxWaiting(count: count),
-                    style: text.bodySmall
-                        .withWeight(FontWeight.w600)
-                        .copyWith(color: colors.accentText),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.move_to_inbox_outlined,
+                      color: colors.accentText,
+                    ),
+                    const SizedBox(width: StrataSpacing.s3),
+                    Expanded(
+                      child: Text(
+                        l10n.homeInboxWaiting(count: count),
+                        style: text.bodySmall
+                            .withWeight(FontWeight.w600)
+                            .copyWith(color: colors.accentText),
+                      ),
+                    ),
+                    Icon(
+                      Directionality.of(context) == TextDirection.rtl
+                          ? Icons.chevron_left
+                          : Icons.chevron_right,
+                      color: colors.accentText,
+                    ),
+                  ],
+                ),
+                if (view.inboxSummary.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: StrataSpacing.s1),
+                    child: Text(
+                      view.inboxSummary,
+                      style: text.caption.copyWith(color: colors.text),
+                    ),
                   ),
-                ),
-                Icon(
-                  Directionality.of(context) == TextDirection.rtl
-                      ? Icons.chevron_left
-                      : Icons.chevron_right,
-                  color: colors.accentText,
-                ),
+                if (view.needsYouCount > 0 || view.contradictionsCount > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: StrataSpacing.s2),
+                    child: Wrap(
+                      spacing: StrataSpacing.s2,
+                      runSpacing: StrataSpacing.s1,
+                      children: [
+                        if (view.needsYouCount > 0)
+                          StatusPill(
+                            label: l10n.homeNeedsYou(count: view.needsYouCount),
+                            tone: StatusTone.warning,
+                            icon: Icons.front_hand_outlined,
+                          ),
+                        if (view.contradictionsCount > 0)
+                          StatusPill(
+                            label: l10n.homeContradictions(
+                              count: view.contradictionsCount,
+                            ),
+                            tone: StatusTone.danger,
+                            icon: Icons.report_problem_outlined,
+                          ),
+                      ],
+                    ),
+                  ),
+                for (final item in view.inboxPreview)
+                  Padding(
+                    padding: const EdgeInsets.only(top: StrataSpacing.s3),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          item.text,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textDirection: textDirectionOf(item.textDir),
+                          textAlign: TextAlign.start,
+                          style: text.bodySmall.copyWith(color: colors.text),
+                        ),
+                        Row(
+                          children: [
+                            Icon(
+                              item.needsYou
+                                  ? Icons.front_hand_outlined
+                                  : Icons.auto_awesome_outlined,
+                              size: 14,
+                              color: colors.text2,
+                            ),
+                            const SizedBox(width: StrataSpacing.s1),
+                            Expanded(
+                              child: Text(
+                                item.summary,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: text.caption.copyWith(
+                                  color: colors.text2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -405,7 +524,7 @@ class _TaskSections extends StatelessWidget {
         if (sections.today.isNotEmpty)
           _SectionCard(
             title: tasks.tasksTabToday,
-            count: sections.today.length,
+            count: sections.todayCount,
             children: [
               for (final task in sections.today)
                 TaskRow(task: task, onOpen: onOpenTask),
@@ -558,7 +677,9 @@ class _SectionCard extends StatelessWidget {
   }
 }
 
-class _RecentNotes extends StatelessWidget {
+/// Recent notes: edited (the Home view's list), created or filed by the AI
+/// (`watch_recent`).
+class _RecentNotes extends HookConsumerWidget {
   const new({
     required this.notes,
     required this.onOpenNote,
@@ -567,15 +688,19 @@ class _RecentNotes extends StatelessWidget {
   });
 
   final List<NoteListItem> notes;
-  final ValueChanged<String>? onOpenNote;
+  final OpenNoteAt? onOpenNote;
   final VoidCallback? onOpenNotes;
   final bool table;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.homeL10n;
     final colors = context.strataColors;
     final text = context.strataText;
+    final filter = useState(RecentFilter.edited);
+    final shown = filter.value == RecentFilter.edited
+        ? notes
+        : ref.watch(recentProvider(filter.value)).value?.notes;
     final header = text.caption
         .withWeight(FontWeight.w700)
         .copyWith(color: colors.text2, letterSpacing: 0.4);
@@ -592,7 +717,36 @@ class _RecentNotes extends StatelessWidget {
               ),
             ),
       children: [
-        if (notes.isEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s4),
+          child: Semantics(
+            label: l10n.homeRecentFilter,
+            container: true,
+            explicitChildNodes: true,
+            child: Wrap(
+              spacing: StrataSpacing.s2,
+              runSpacing: StrataSpacing.s1,
+              children: [
+                for (final value in RecentFilter.values)
+                  ChoiceChip(
+                    label: Text(switch (value) {
+                      RecentFilter.edited => l10n.homeRecentEdited,
+                      RecentFilter.created => l10n.homeRecentCreated,
+                      RecentFilter.filedByAi => l10n.homeRecentFiledByAi,
+                    }),
+                    selected: filter.value == value,
+                    onSelected: (_) => filter.value = value,
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (shown == null)
+          const Padding(
+            padding: EdgeInsets.all(StrataSpacing.s4),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 3)),
+          )
+        else if (shown.isEmpty)
           Padding(
             padding: const EdgeInsets.all(StrataSpacing.s4),
             child: Text(
@@ -600,7 +754,7 @@ class _RecentNotes extends StatelessWidget {
               style: text.bodySmall.copyWith(color: colors.text2),
             ),
           ),
-        if (table && notes.isNotEmpty)
+        if (table && shown != null && shown.isNotEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: StrataSpacing.s4,
@@ -620,7 +774,7 @@ class _RecentNotes extends StatelessWidget {
               ],
             ),
           ),
-        for (final note in notes)
+        for (final note in shown ?? const <NoteListItem>[])
           _NoteRow(note: note, table: table, onOpen: onOpenNote),
       ],
     );
@@ -632,7 +786,7 @@ class _NoteRow extends StatelessWidget {
 
   final NoteListItem note;
   final bool table;
-  final ValueChanged<String>? onOpen;
+  final OpenNoteAt? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -647,16 +801,15 @@ class _NoteRow extends StatelessWidget {
       textAlign: TextAlign.start,
       style: text.monoSmall.copyWith(color: colors.text2),
     );
-    final edited = Row(
-      mainAxisSize: MainAxisSize.min,
+    final edited = Wrap(
+      spacing: StrataSpacing.s2,
+      runSpacing: 2,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Flexible(
-          child: Text(l10n.homeEdited(date: note.updatedAt), style: meta),
-        ),
-        if (note.pendingSync) ...[
-          const SizedBox(width: StrataSpacing.s1),
-          const NotSyncedMarker(),
-        ],
+        Text(note.updatedLabel, style: meta),
+        if (note.linkCount > 0)
+          Text(l10n.homeLinks(count: note.linkCount), style: meta),
+        if (note.pendingSync) const NotSyncedMarker(),
       ],
     );
     final title = Column(
@@ -664,6 +817,7 @@ class _NoteRow extends StatelessWidget {
       children: [
         Text(
           note.title,
+          textDirection: textDirectionOf(note.titleDir),
           textAlign: TextAlign.start,
           style: text.body.withWeight(FontWeight.w600),
         ),
@@ -672,13 +826,14 @@ class _NoteRow extends StatelessWidget {
             note.snippet,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            textDirection: textDirectionOf(note.snippetDir),
             textAlign: TextAlign.start,
             style: text.bodySmall.copyWith(color: colors.text2),
           ),
       ],
     );
     return InkWell(
-      onTap: open == null ? null : () => open(note.id),
+      onTap: open == null ? null : () => open(note.id, null),
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: StrataSpacing.s4,
@@ -713,58 +868,315 @@ class _NoteRow extends StatelessWidget {
   }
 }
 
-enum _Pending { aiActivity, openItems }
+/// Runs a Home intent and reports a failure in a snack bar.
+Future<void> _run(BuildContext context, Future<void> Function() intent) async {
+  final l10n = context.homeL10n;
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  try {
+    await intent();
+  } on Object catch (error) {
+    messenger
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            l10n.homeActionFailed(
+              code: error is CoreFailure ? error.code : 'internal',
+            ),
+          ),
+        ),
+      );
+  }
+}
 
-/// A block the core does not stream yet (AI activity feed, open-items
-/// roll-up): its title and the "not yet available" state.
-class _NotYetAvailableCard extends StatelessWidget {
-  const new({required this.kind});
+/// A block the core cannot fill now: offline, not yet available or not
+/// allowed.
+class _Unavailable extends StatelessWidget {
+  const new({required this.availability, required this.message});
 
-  final _Pending kind;
+  final Availability availability;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.homeL10n;
     final text = context.strataText;
     final colors = context.strataColors;
-    final (title, message, icon) = switch (kind) {
-      _Pending.aiActivity => (
-        l10n.homeAiActivity,
-        l10n.homeAiActivityUnavailable,
-        Icons.auto_awesome_outlined,
+    return Padding(
+      padding: const EdgeInsetsDirectional.fromSTEB(
+        StrataSpacing.s4,
+        0,
+        StrataSpacing.s4,
+        StrataSpacing.s4,
       ),
-      _Pending.openItems => (
-        l10n.homeOpenItems,
-        l10n.homeOpenItemsUnavailable,
-        Icons.checklist,
-      ),
-    };
-    return _SectionCard(
-      title: title,
-      icon: icon,
-      children: [
-        Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(
-            StrataSpacing.s4,
-            0,
-            StrataSpacing.s4,
-            StrataSpacing.s4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StatusPill(
+            label: switch (availability) {
+              Availability.offline => l10n.homeOffline,
+              Availability.notAllowed => l10n.homeNotAllowed,
+              _ => l10n.homeNotYetAvailable,
+            },
+            icon: availability == Availability.offline
+                ? Icons.cloud_off_outlined
+                : Icons.hourglass_empty,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              StatusPill(
-                label: l10n.homeNotYetAvailable,
-                icon: Icons.hourglass_empty,
+          const SizedBox(height: StrataSpacing.s2),
+          Text(message, style: text.bodySmall.copyWith(color: colors.text2)),
+        ],
+      ),
+    );
+  }
+}
+
+/// The AI activity feed (the server's AI decisions): what the AI added or
+/// found, with Undo (`reject_ai_decision`) and, for relations, a new type
+/// (`retype_ai_decision`), D13.
+class _AiActivityCard extends ConsumerWidget {
+  const new({required this.view});
+
+  final HomeView view;
+
+  Future<void> _retype(
+    BuildContext context,
+    WidgetRef ref,
+    AiActivityItem item,
+  ) async {
+    final l10n = context.homeL10n;
+    final core = ref.read(coreApiProvider);
+    final types = await core.relationTypes();
+    if (!context.mounted) return;
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (dialog) => SimpleDialog(
+        title: Text(l10n.homeRetypeTitle),
+        children: [
+          for (final type in types)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialog).pop(type.key),
+              child: Row(
+                children: [
+                  Expanded(child: Text(type.label)),
+                  if (type.key == item.relType)
+                    const Icon(Icons.check, size: 18),
+                ],
               ),
-              const SizedBox(height: StrataSpacing.s2),
-              Text(
-                message,
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || chosen == item.relType || !context.mounted) return;
+    await _run(
+      context,
+      () => core.retypeAiDecision(decisionId: item.decisionId, relType: chosen),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.homeL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final core = ref.read(coreApiProvider);
+    return _SectionCard(
+      title: l10n.homeAiActivity,
+      icon: Icons.auto_awesome_outlined,
+      children: [
+        if (view.aiActivity != Availability.available)
+          _Unavailable(
+            availability: view.aiActivity,
+            message: l10n.homeAiActivityUnavailable,
+          )
+        else ...[
+          if (view.aiActivityHeadline.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: StrataSpacing.s4),
+              child: Text(
+                view.aiActivityHeadline,
+                style: text.caption.copyWith(color: colors.text2),
+              ),
+            ),
+          if (view.aiActivityItems.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(StrataSpacing.s4),
+              child: Text(
+                l10n.homeAiActivityEmpty,
                 style: text.bodySmall.copyWith(color: colors.text2),
               ),
-            ],
-          ),
-        ),
+            ),
+          for (final item in view.aiActivityItems)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                StrataSpacing.s4,
+                StrataSpacing.s2,
+                StrataSpacing.s4,
+                0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    spacing: StrataSpacing.s2,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        item.atLabel,
+                        style: text.caption.copyWith(color: colors.text2),
+                      ),
+                      if (item.confidence case final confidence?)
+                        Text(
+                          l10n.homeAiConfidence(
+                            value: confidence.toStringAsFixed(2),
+                          ),
+                          style: text.caption.copyWith(color: colors.infoText),
+                        ),
+                    ],
+                  ),
+                  Text(
+                    item.summary,
+                    style: text.bodySmall.copyWith(
+                      color: item.reverted ? colors.text2 : colors.text,
+                      decoration: item.reverted
+                          ? TextDecoration.lineThrough
+                          : null,
+                    ),
+                  ),
+                  if (item.reverted)
+                    Text(
+                      l10n.homeAiUndone,
+                      style: text.caption.copyWith(color: colors.text2),
+                    )
+                  else
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: StrataSpacing.s1,
+                      children: [
+                        if (item.relType != null)
+                          TextButton(
+                            onPressed: () =>
+                                unawaited(_retype(context, ref, item)),
+                            child: Text(l10n.homeAiRetype),
+                          ),
+                        TextButton(
+                          onPressed: () => unawaited(
+                            _run(
+                              context,
+                              () => core.rejectAiDecision(
+                                decisionId: item.decisionId,
+                              ),
+                            ),
+                          ),
+                          child: Text(l10n.homeAiUndo),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          const SizedBox(height: StrataSpacing.s2),
+        ],
+      ],
+    );
+  }
+}
+
+/// Open items rolled up from people and company pages (`## Open items`),
+/// each with its person and source. The check stays read-only: open items
+/// are AI-maintained bullets without a done marker (CORE_GAPS).
+class _OpenItemsCard extends StatelessWidget {
+  const new({required this.view, required this.onOpenNote});
+
+  final HomeView view;
+  final OpenNoteAt? onOpenNote;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.homeL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final open = onOpenNote;
+    return _SectionCard(
+      title: l10n.homeOpenItems,
+      icon: Icons.checklist,
+      count: view.openItemList.isEmpty ? null : view.openItemList.length,
+      children: [
+        if (view.openItems != Availability.available)
+          _Unavailable(
+            availability: view.openItems,
+            message: l10n.homeOpenItemsUnavailable,
+          )
+        else if (view.openItemList.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(StrataSpacing.s4),
+            child: Text(
+              l10n.homeOpenItemsEmpty,
+              style: text.bodySmall.copyWith(color: colors.text2),
+            ),
+          )
+        else
+          for (final item in view.openItemList)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                StrataSpacing.s2,
+                0,
+                StrataSpacing.s4,
+                StrataSpacing.s2,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: Checkbox(value: item.done, onChanged: null),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.text,
+                          textDirection: textDirectionOf(item.textDir),
+                          textAlign: TextAlign.start,
+                          style: text.bodySmall,
+                        ),
+                        Wrap(
+                          spacing: StrataSpacing.s2,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            if (item.person.id case final personId?)
+                              TextButton(
+                                onPressed: open == null
+                                    ? null
+                                    : () => open(personId, null),
+                                child: Text(item.person.title),
+                              )
+                            else
+                              Text(
+                                item.person.title,
+                                style: text.caption.copyWith(
+                                  color: colors.text2,
+                                ),
+                              ),
+                            if (item.citation case final citation?)
+                              CitationChip(
+                                label: citation.target,
+                                blockRef: citation.anchor,
+                                onPressed:
+                                    citation.noteId == null || open == null
+                                    ? null
+                                    : () => open(
+                                        citation.noteId!,
+                                        citation.anchor,
+                                      ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
       ],
     );
   }

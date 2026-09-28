@@ -489,6 +489,7 @@ pub struct ReplyRequest {
     request_body = CaptureRequest,
     responses(
         (status = 201, description = "Saved; one `user: capture <path>` commit.", body = Capture),
+        (status = 422, description = "`invalid_body` or `created_in_future` (`created` more than `max_future_skew_secs` ahead of the server's clock).", body = Problem),
         (status = 429, description = "`rate_limited`: too many captures from this user (`auth.rate_limits.capture_per_user`). See `Retry-After`.", body = Problem),
     ),
 )]

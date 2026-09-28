@@ -76,7 +76,10 @@ async fn capture_queues_one_op_and_updates_home() {
     let id = s.capture("كلمت أحمد النهارده").expect("capture");
 
     assert_eq!(id, seq_id(1));
-    let created = DateTime::parse_from_rfc3339("2026-09-27T13:00:00+03:00").expect("ts");
+    // The capture time is UTC (13:00 in Cairo), in the op and in the file.
+    let created = DateTime::parse_from_rfc3339("2026-09-27T10:00:00Z")
+        .expect("ts")
+        .to_utc();
     assert_eq!(
         outbox(&s),
         vec![OutboxOp {
@@ -99,7 +102,7 @@ async fn capture_queues_one_op_and_updates_home() {
     assert_eq!(
         content(&s, &id),
         format!(
-            "---\nid: {}\ncreated: 2026-09-27T13:00:00+03:00\n---\nكلمت أحمد النهارده\n",
+            "---\nid: {}\ncreated: 2026-09-27T10:00:00Z\n---\nكلمت أحمد النهارده\n",
             seq_id(1)
         )
     );
@@ -211,6 +214,9 @@ async fn note_create_update_move_delete_ops_and_note_view() {
                     id: ulid(&id),
                     path: "notes/sales/Pricing experiments.md".into(),
                     content: "# Pricing\nTry 5% off #pricing [[Churn notes]]\n".into(),
+                    created: DateTime::parse_from_rfc3339("2026-09-27T10:00:00Z")
+                        .expect("ts")
+                        .to_utc(),
                     force: false,
                 })
             ),
@@ -382,10 +388,18 @@ async fn tasks_create_complete_recurring_and_sections() {
         .expect("create");
     let t2 = format!("t-{}", seq_id(4).to_ascii_lowercase());
     assert_eq!(petrol.id.as_deref(), Some(t2.as_str()));
+    // The device makes `tasks/Tasks.md` with its own ID and the creation time, as the
+    // server does.
+    let now = DateTime::parse_from_rfc3339("2026-09-27T10:00:00Z")
+        .expect("ts")
+        .to_utc();
+    let stamp = format!(
+        "---\nid: {home_id}\ncreated: 2026-09-27T10:00:00Z\nupdated: 2026-09-27T10:00:00Z\n---\n"
+    );
     assert_eq!(
         content(&s, &home_id),
         format!(
-            "## September 2026\n\
+            "{stamp}## September 2026\n\
              - [ ] Send weekly invoicing proposal to Ahmed 📅 2026-09-29 ^{t1}\n\
              - [ ] Petrol Arrows invoice (@2026-09-27 10:00) 🔁 every week on Sunday 📅 2026-09-27 ^{t2}\n"
         )
@@ -396,7 +410,7 @@ async fn tasks_create_complete_recurring_and_sections() {
     assert_eq!(
         content(&s, &home_id),
         format!(
-            "## September 2026\n\
+            "{stamp}## September 2026\n\
              - [ ] Send weekly invoicing proposal to Ahmed 📅 2026-09-29 ^{t1}\n\
              - [ ] Petrol Arrows invoice (@2026-10-04 10:00) 🔁 every week on Sunday 📅 2026-10-04 ^{t3}\n\
              - [x] Petrol Arrows invoice (@2026-09-27 10:00) 🔁 every week on Sunday 📅 2026-09-27 ✅ 2026-09-27 ^{t2}\n"
@@ -426,6 +440,8 @@ async fn tasks_create_complete_recurring_and_sections() {
                     recurrence: None,
                     reminders: Vec::new(),
                     priority: None,
+                    created: now,
+                    home_id: Some(ulid(&home_id)),
                     force: false,
                 })
             ),
@@ -445,6 +461,8 @@ async fn tasks_create_complete_recurring_and_sections() {
                             .expect("dt")
                     ],
                     priority: None,
+                    created: now,
+                    home_id: Some(ulid(&home_id)),
                     force: false,
                 })
             ),
@@ -633,6 +651,9 @@ async fn offline_duplicate_check_prompts_before_queuing_a_create() {
             id: ulid(&seq_id(4)),
             path: "notes/Pricing experiment.md".into(),
             content: "y\n".into(),
+            created: DateTime::parse_from_rfc3339("2026-09-27T10:00:00Z")
+                .expect("ts")
+                .to_utc(),
             force: true,
         })
     );

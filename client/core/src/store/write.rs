@@ -19,7 +19,6 @@
 //! (`sync_model::Version`), the device can verify that: a server `applied{new_version}` whose
 //! version equals the hash of the locally applied content becomes the new base immediately.
 
-use chrono::{DateTime, FixedOffset, NaiveDate, Utc};
 use chrono_tz::Tz;
 use item_render::entity::{EntitySpec, document_relations};
 use rusqlite::Connection;
@@ -89,6 +88,13 @@ pub trait Links {
     fn time_zone(&self) -> Tz {
         chrono_tz::UTC
     }
+
+    /// The paths of the live notes other than `except` (a new entity takes the first free
+    /// name among them, ` 2`, ` 3`, … as the server does).
+    fn taken_paths(&self, except: Ulid) -> Vec<String> {
+        let _ = except;
+        Vec::new()
+    }
 }
 
 /// [`Links`] over the local database.
@@ -121,6 +127,15 @@ impl Links for DbLinks {
 
     fn time_zone(&self) -> Tz {
         self.tz
+    }
+
+    fn taken_paths(&self, except: Ulid) -> Vec<String> {
+        let except = except.to_string();
+        self.paths
+            .iter()
+            .filter(|(id, _)| **id != except)
+            .map(|(_, p)| p.clone())
+            .collect()
     }
 }
 
@@ -208,36 +223,32 @@ fn with_body(
     }))
 }
 
-/// A new entity, document or place note (the shared `item-render` skeleton). The server
-/// also stamps `created`/`updated` with its clock; the device leaves them to the next pull.
-fn new_entity(id: Ulid, spec: &EntitySpec) -> CoreResult<Option<NoteState>> {
+/// A new entity, document or place note (the shared `item-render` skeleton) at the first free
+/// name among the local notes, stamped with the op's creation time, as the server writes it.
+fn new_entity(
+    id: Ulid,
+    spec: &EntitySpec,
+    created: &chrono::DateTime<chrono::Utc>,
+    links: &dyn Links,
+) -> CoreResult<Option<NoteState>> {
+    let taken = links.taken_paths(id);
+    let path = spec.path(taken.iter().map(String::as_str));
     Ok(Some(NoteState {
-        path: item_render::paths::entity_path(spec.kind, &spec.name, std::iter::empty()),
         content: spec
-            .render(id, None, None)
+            .render(id, &path, created)
             .map_err(|e| edit::render_error(&e))?,
+        path,
     }))
-}
-
-/// The creation date of task `block_id` (`t-<ulid>`) in `tz`: the month heading it goes
-/// under in `tasks/Tasks.md`.
-fn task_created_on(block_id: &str, tz: Tz) -> CoreResult<NaiveDate> {
-    item_render::task::task_block_ulid(block_id)
-        .and_then(|u| i64::try_from(u.timestamp_ms()).ok())
-        .and_then(DateTime::<Utc>::from_timestamp_millis)
-        .map(|t| t.with_timezone(&tz).date_naive())
-        .ok_or_else(|| CoreError::invalid("id", "not_a_task_id"))
 }
 
 /// What `op` does to the note whose current state is `state`. Pure.
 ///
 /// Creates are rendered with the shared `item-render` / `sync-model` code the server runs
-/// (L16), so for the same input the device writes the server's bytes. What the device cannot
-/// know makes the difference until the next pull replaces the base: the server's clock
-/// (`created`/`updated` of new entity notes), names taken only on the server (` 2` suffixes),
-/// and the ID the server gives a new `tasks/Tasks.md`. Ops the device cannot apply locally
-/// (`entity.merge`, and the rewriting of inbound links on `note.move`) leave the state as is
-/// and arrive by pull.
+/// (L16), from the op alone — its IDs (a new `tasks/Tasks.md` included) and the device's
+/// creation time — so for the same input the device writes the server's bytes. Only names
+/// taken on the server but not yet known here (` 2` suffixes) differ until the next pull
+/// replaces the base. Ops the device cannot apply locally (`entity.merge`, and the rewriting
+/// of inbound links on `note.move`) leave the state as is and arrive by pull.
 #[allow(clippy::too_many_lines)] // one arm per op kind
 pub fn apply_to_note(
     state: Option<NoteState>,
@@ -249,7 +260,7 @@ pub fn apply_to_note(
             validate_note_path(&p.path)?;
             Ok(Some(NoteState {
                 path: p.path.clone(),
-                content: item_render::note::with_id(&p.content, p.id)
+                content: item_render::note::new_note(&p.content, p.id, &p.created)
                     .map_err(|e| edit::render_error(&e))?,
             }))
         }
@@ -262,21 +273,31 @@ pub fn apply_to_note(
             if !p.kind.is_entity() && p.kind != domain::NoteKind::Concept {
                 return Err(CoreError::invalid("kind", "not_an_entity"));
             }
-            new_entity(p.id, &EntitySpec::from_entity_create(p))
+            new_entity(p.id, &EntitySpec::from_entity_create(p), &p.created, links)
         }
         Op::DocumentCreate(p) => {
             let relations = document_relations(p)
                 .into_iter()
                 .map(|(rel, id)| Ok((rel, link_or_missing(links, id)?)))
                 .collect::<CoreResult<Vec<_>>>()?;
-            new_entity(p.id, &EntitySpec::from_document_create(p, relations))
+            new_entity(
+                p.id,
+                &EntitySpec::from_document_create(p, relations),
+                &p.created,
+                links,
+            )
         }
         Op::PlaceCreate(p) => {
             let part_of = p
                 .parent_id
                 .map(|parent| link_or_missing(links, parent))
                 .transpose()?;
-            new_entity(p.id, &EntitySpec::from_place_create(p, part_of))
+            new_entity(
+                p.id,
+                &EntitySpec::from_place_create(p, part_of),
+                &p.created,
+                links,
+            )
         }
         Op::NoteUpdate(p) => {
             let s = require(state)?;
@@ -319,21 +340,23 @@ pub fn apply_to_note(
             edit_fm(require(state)?, |fm| rules::entity_patch(fm, p))
         }
         Op::TaskCreate(p) => {
-            let created = task_created_on(&p.id, links.time_zone())?;
-            let create = |body: &str, eol| {
-                rules::apply_task_create(body, p, created, eol).map_err(|e| apply_err(&e))
+            let heading = item_render::task::heading_date(&p.created, links.time_zone());
+            // The task home does not exist locally yet (§6.11 `tasks/Tasks.md`): made here
+            // with the op's `home_id`, as the server makes it.
+            let (path, content, new_id) = match state {
+                Some(s) => (s.path, s.content, None),
+                None => (TASK_HOME.to_owned(), String::new(), p.home_id),
             };
-            match state {
-                Some(s) => {
-                    let eol = Document::parse(&s.content).line_ending();
-                    with_body(s, |body| create(body, eol))
-                }
-                // The task home does not exist locally yet (§6.11 `tasks/Tasks.md`).
-                None => Ok(Some(NoteState {
-                    path: TASK_HOME.to_owned(),
-                    content: create("", vault_format::LineEnding::Lf)?,
-                })),
-            }
+            let mut doc = Document::parse(&content);
+            let body = rules::apply_task_create(doc.body(), p, heading, doc.line_ending())
+                .map_err(|e| apply_err(&e))?;
+            doc.set_body(body);
+            item_render::task::stamp_home(&mut doc, new_id, &p.created)
+                .map_err(|e| edit::render_error(&e))?;
+            Ok(Some(NoteState {
+                path,
+                content: doc.render(),
+            }))
         }
         Op::TaskUpdate(_)
         | Op::TaskComplete(_)
@@ -582,9 +605,3 @@ pub fn describe_create(op: &Op) -> (String, String) {
     }
 }
 
-/// The local creation time of a capture, in whole seconds (the inbox file name has second
-/// precision, §6.9).
-pub fn capture_created(now: DateTime<chrono::Utc>, tz: chrono_tz::Tz) -> DateTime<FixedOffset> {
-    let local = now.with_timezone(&tz).fixed_offset();
-    local - chrono::Duration::nanoseconds(i64::from(local.timestamp_subsec_nanos()))
-}

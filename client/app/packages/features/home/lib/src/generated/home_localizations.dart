@@ -224,12 +224,6 @@ abstract class HomeLocalizations {
   /// **'EDITED'**
   String get homeColumnEdited;
 
-  /// Last change of a note.
-  ///
-  /// In en, this message translates to:
-  /// **'{date}'**
-  String homeEdited({required DateTime date});
-
   /// Semantics label of the secondary column.
   ///
   /// In en, this message translates to:
@@ -242,10 +236,10 @@ abstract class HomeLocalizations {
   /// **'AI activity'**
   String get homeAiActivity;
 
-  /// AI activity feed not provided yet.
+  /// AI activity unavailable.
   ///
   /// In en, this message translates to:
-  /// **'Relations the AI adds, contradictions it finds and automatic changes you can undo will show here.'**
+  /// **'Relations the AI adds, contradictions it finds and automatic changes you can undo show here when the server is reachable.'**
   String get homeAiActivityUnavailable;
 
   /// Open items roll-up title.
@@ -265,6 +259,108 @@ abstract class HomeLocalizations {
   /// In en, this message translates to:
   /// **'Not available yet'**
   String get homeNotYetAvailable;
+
+  /// Inbox captures that need a decision.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 needs you} other{{count} need you}}'**
+  String homeNeedsYou({required int count});
+
+  /// Contradictions the AI found.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 contradiction} other{{count} contradictions}}'**
+  String homeContradictions({required int count});
+
+  /// Links of a recent note.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 link} other{{count} links}}'**
+  String homeLinks({required int count});
+
+  /// Label of the recent-notes filter.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get homeRecentFilter;
+
+  /// Recent notes: most recently edited.
+  ///
+  /// In en, this message translates to:
+  /// **'Edited'**
+  String get homeRecentEdited;
+
+  /// Recent notes: most recently created.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get homeRecentCreated;
+
+  /// Recent notes: filed by the AI.
+  ///
+  /// In en, this message translates to:
+  /// **'Filed by AI'**
+  String get homeRecentFiledByAi;
+
+  /// Snack bar for a failed Home action.
+  ///
+  /// In en, this message translates to:
+  /// **'That didn\'t work ({code}).'**
+  String homeActionFailed({required String code});
+
+  /// A Home block that needs the server while offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get homeOffline;
+
+  /// A Home block this account cannot use.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available for this account'**
+  String get homeNotAllowed;
+
+  /// Title of the relation type picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Change relation type'**
+  String get homeRetypeTitle;
+
+  /// AI confidence.
+  ///
+  /// In en, this message translates to:
+  /// **'AI · {value}'**
+  String homeAiConfidence({required String value});
+
+  /// An AI decision already undone.
+  ///
+  /// In en, this message translates to:
+  /// **'Undone'**
+  String get homeAiUndone;
+
+  /// Retypes an AI relation.
+  ///
+  /// In en, this message translates to:
+  /// **'Change type'**
+  String get homeAiRetype;
+
+  /// Undoes an AI decision.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get homeAiUndo;
+
+  /// Empty AI activity feed.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing new from the AI.'**
+  String get homeAiActivityEmpty;
+
+  /// Empty open items.
+  ///
+  /// In en, this message translates to:
+  /// **'No open items.'**
+  String get homeOpenItemsEmpty;
 }
 
 class _HomeLocalizationsDelegate

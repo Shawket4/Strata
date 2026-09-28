@@ -709,6 +709,7 @@ pub trait AccountApi: Send + Sync + fmt::Debug {
         tokens: Tokens,
         ask_id: String,
         title: Option<String>,
+        created: chrono::DateTime<chrono::Utc>,
     ) -> BoxFuture<'_, Result<String, NetError>> {
         not_available("save_ask")
     }
