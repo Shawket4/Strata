@@ -1383,16 +1383,40 @@ async fn document_create_writes_its_links_in_the_same_single_commit() {
     let h = H::new().await;
     let alice = h.user("alice").await;
     let uid = alice.id;
-    one(&h, &alice, op(1, None, entity(1, NoteKind::Person, "Sam Hany"))).await;
-    one(&h, &alice, op(2, None, entity(2, NoteKind::Company, "Watanya"))).await;
-    one(&h, &alice, op(3, None, entity(3, NoteKind::Person, "Mona Adel"))).await;
-    one(&h, &alice, op(4, None, document(4, "Lease original", None, &[], &[]))).await;
+    one(
+        &h,
+        &alice,
+        op(1, None, entity(1, NoteKind::Person, "Sam Hany")),
+    )
+    .await;
+    one(
+        &h,
+        &alice,
+        op(2, None, entity(2, NoteKind::Company, "Watanya")),
+    )
+    .await;
+    one(
+        &h,
+        &alice,
+        op(3, None, entity(3, NoteKind::Person, "Mona Adel")),
+    )
+    .await;
+    one(
+        &h,
+        &alice,
+        op(4, None, document(4, "Lease original", None, &[], &[])),
+    )
+    .await;
     let commits = h.log(uid).len();
 
     let r = one(
         &h,
         &alice,
-        op(5, None, document(5, "Lease copy", Some(id(4)), &[2], &[1, 3])),
+        op(
+            5,
+            None,
+            document(5, "Lease copy", Some(id(4)), &[2], &[1, 3]),
+        ),
     )
     .await;
     let copy = h.read(uid, "documents/Lease copy.md");
@@ -1404,19 +1428,30 @@ async fn document_create_writes_its_links_in_the_same_single_commit() {
         )
     );
     assert_eq!(r, applied(&copy));
-    assert_eq!(h.log(uid).len(), commits + 1, "one commit for the create and its links");
+    assert_eq!(
+        h.log(uid).len(),
+        commits + 1,
+        "one commit for the create and its links"
+    );
     assert_eq!(h.log(uid)[0], "user: create documents/Lease copy.md");
     let mut paths = strata_vault::git::changed_paths(
         &h.dir(uid),
-        &strata_vault::git::head(&h.dir(uid)).expect("head").expect("commit").id,
+        &strata_vault::git::head(&h.dir(uid))
+            .expect("head")
+            .expect("commit")
+            .id,
     )
     .expect("paths");
     paths.sort();
     assert_eq!(paths, vec!["documents/Lease copy.md".to_owned()]);
     // The links are indexed as relations of the new document.
-    let related = ops::get_document(&alice.client, id(5)).await.expect("document");
+    let related = ops::get_document(&alice.client, id(5))
+        .await
+        .expect("document");
     assert_eq!(related.document.copy_of, Some(id(4)));
-    let original = ops::get_document(&alice.client, id(4)).await.expect("document");
+    let original = ops::get_document(&alice.client, id(4))
+        .await
+        .expect("document");
     assert_eq!(original.copies, vec![id(5).to_string()]);
 
     // A link to a missing note refuses the whole create: nothing is written.
@@ -1458,7 +1493,11 @@ async fn semantic_duplicates_are_answered_with_the_semantic_level() {
     one(
         &h,
         &alice,
-        op(1, None, create(1, "notes/Quarterly budget review.md", "Numbers for Q3\n")),
+        op(
+            1,
+            None,
+            create(1, "notes/Quarterly budget review.md", "Numbers for Q3\n"),
+        ),
     )
     .await;
     let text = h.read(uid, "notes/Quarterly budget review.md");
@@ -1467,12 +1506,17 @@ async fn semantic_duplicates_are_answered_with_the_semantic_level() {
         Some(strata_common::NoteId::from_ulid(id(1))),
         &vault_format::Document::parse(&text),
     );
-    h.vault.set_semantic(std::sync::Arc::new(Paraphrase(stored)));
+    h.vault
+        .set_semantic(std::sync::Arc::new(Paraphrase(stored)));
     let commits = h.log(uid).len();
     let r = one(
         &h,
         &alice,
-        op(2, None, create(2, "notes/Money planning.md", "Spending plan\n")),
+        op(
+            2,
+            None,
+            create(2, "notes/Money planning.md", "Spending plan\n"),
+        ),
     )
     .await;
     let OpResult::Duplicate { candidates } = &r else {

@@ -248,10 +248,9 @@ pub async fn push(
                 let result = outcome?;
                 let bytes = crate::wire::encode(&result).map_err(|e| Problem::internal(&e))?;
                 let mut tx = ctx.db.begin(ctx.scope).await.map_err(|e| index(&e))?;
-                let rec =
-                    log::idempotency_put(&mut tx, op_id, ctx.device, &bytes, ctx.clock.now())
-                        .await
-                        .map_err(|e| index(&e))?;
+                let rec = log::idempotency_put(&mut tx, op_id, ctx.device, &bytes, ctx.clock.now())
+                    .await
+                    .map_err(|e| index(&e))?;
                 tx.commit().await.map_err(|e| index(&e))?;
                 rec.result
             }
@@ -631,7 +630,10 @@ async fn note_create(
             force: p.force,
         };
         match rc
-            .armed(applied_note(id, false), ctx.vault.create_note(ctx.scope, req))
+            .armed(
+                applied_note(id, false),
+                ctx.vault.create_note(ctx.scope, req),
+            )
             .await
         {
             Ok(view) => {
@@ -867,10 +869,9 @@ async fn decide(
         .await
     {
         Ok(_) => Ok(applied(None, false)),
-        Err(VaultError::Invalid(r)) if r.contains("already decided") => Ok(server_kept(
-            None,
-            "the suggestion was already decided",
-        )),
+        Err(VaultError::Invalid(r)) if r.contains("already decided") => {
+            Ok(server_kept(None, "the suggestion was already decided"))
+        }
         Err(e) => from_vault(&e),
     }
 }
@@ -1032,11 +1033,13 @@ async fn task_edit(
                 .await
                 .ok()
                 .map(|(_, _, l)| l);
-            Ok(if line.as_deref().is_some_and(|l| already_in_effect(op, l)) {
-                applied(Some(current), false)
-            } else {
-                server_kept(Some(current), "the task line changed on the server")
-            })
+            Ok(
+                if line.as_deref().is_some_and(|l| already_in_effect(op, l)) {
+                    applied(Some(current), false)
+                } else {
+                    server_kept(Some(current), "the task line changed on the server")
+                },
+            )
         }
         Err(e) => from_vault(&e),
     }

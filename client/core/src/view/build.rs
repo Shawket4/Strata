@@ -11,8 +11,10 @@ use rusqlite::{Connection, OptionalExtension, params};
 use vault_format::wikilink::{self, WikiLink};
 
 use crate::error::CoreResult;
+use crate::format::direction::dir_of;
+use crate::format::labels::{self, Labels, Lang, NOTES, tr};
 use crate::format::{self, hints};
-use crate::store::{account, conflicts, from_msgpack, outbox, settings, sync_state};
+use crate::store::{account, cache, conflicts, from_msgpack, outbox, settings, sync_state};
 use crate::sync::model::SuggestionPayload;
 use crate::view::ViewCtx;
 #[allow(clippy::wildcard_imports)] // the builders construct every view-model type
@@ -70,43 +72,65 @@ fn note_pending(pending: &HashMap<String, u32>, id: &str) -> bool {
 }
 
 /// Resolves a link target for display: unique case-insensitive title, else exact path.
-fn resolve_display(conn: &Connection, target: &str) -> CoreResult<EntityRef> {
+pub(crate) fn resolve_display(conn: &Connection, target: &str) -> CoreResult<EntityRef> {
     let title = vault_format::resolve::link_name(target).to_owned();
-    let ids: Vec<String> = {
+    let ids: Vec<(String, String)> = {
         let mut st = conn.prepare_cached(
-            "SELECT id FROM notes WHERE deleted = 0 AND (title = ?1 COLLATE NOCASE OR path = ?2)
+            "SELECT id, kind FROM notes WHERE deleted = 0 AND (title = ?1 COLLATE NOCASE OR path = ?2)
              ORDER BY id LIMIT 2",
         )?;
-        st.query_map(params![title, format!("{target}.md")], |r| r.get(0))?
-            .collect::<Result<_, _>>()?
+        st.query_map(params![title, format!("{target}.md")], |r| {
+            Ok((r.get(0)?, r.get(1)?))
+        })?
+        .collect::<Result<_, _>>()?
     };
+    let one = (ids.len() == 1).then(|| ids[0].clone());
     Ok(EntityRef {
-        id: (ids.len() == 1).then(|| ids[0].clone()),
+        id: one.as_ref().map(|o| o.0.clone()),
+        kind: one.map(|o| o.1),
         title,
     })
 }
 
-fn entity_ref(
+/// A reference to note `id` (title and kind from the cache), or to an unresolved link `raw`.
+pub(crate) fn entity_ref(
     conn: &Connection,
     id: Option<String>,
     raw: Option<String>,
 ) -> CoreResult<Option<EntityRef>> {
     match (id, raw) {
         (Some(id), raw) => {
-            let title: Option<String> = conn
-                .query_row("SELECT title FROM notes WHERE id = ?1", [&id], |r| r.get(0))
+            let row: Option<(String, String)> = conn
+                .query_row("SELECT title, kind FROM notes WHERE id = ?1", [&id], |r| {
+                    Ok((r.get(0)?, r.get(1)?))
+                })
                 .optional()?;
             Ok(Some(EntityRef {
-                title: title.or(raw).unwrap_or_default(),
+                title: row
+                    .as_ref()
+                    .map(|r| r.0.clone())
+                    .or(raw.map(|r| vault_format::resolve::link_name(&r).to_owned()))
+                    .unwrap_or_default(),
+                kind: row.map(|r| r.1),
                 id: Some(id),
             }))
         }
         (None, Some(raw)) => Ok(Some(EntityRef {
             id: None,
             title: vault_format::resolve::link_name(&raw).to_owned(),
+            kind: None,
         })),
         (None, None) => Ok(None),
     }
+}
+
+/// A reference to an existing note by ID.
+pub(crate) fn note_ref(conn: &Connection, id: &str) -> CoreResult<EntityRef> {
+    Ok(entity_ref(conn, Some(id.to_owned()), None)?.unwrap_or(EntityRef {
+        id: Some(id.to_owned()),
+        title: String::new(),
+        kind: None,
+    }))
 }
 
 fn citation(conn: &Connection, link: &WikiLink) -> CoreResult<Citation> {
@@ -124,18 +148,28 @@ fn citation(conn: &Connection, link: &WikiLink) -> CoreResult<Citation> {
 fn note_list_item(
     r: &rusqlite::Row<'_>,
     pending: &HashMap<String, u32>,
+    labels: &Labels,
 ) -> rusqlite::Result<NoteListItem> {
     let id: String = r.get(0)?;
+    let title: String = r.get(1)?;
     let content: String = r.get(4)?;
     let updated: String = r.get(5)?;
+    let links: i64 = r.get(6)?;
+    let snippet = snippet(&content, 160);
+    let updated_at = ts(&updated);
     Ok(NoteListItem {
         pending_sync: note_pending(pending, &id),
-        title: r.get(1)?,
+        title_dir: dir_of(&title),
+        snippet_dir: dir_of(&snippet),
+        title,
         path: r.get(2)?,
         kind: r.get(3)?,
-        snippet: snippet(&content, 160),
+        snippet,
         tags: Vec::new(),
-        updated_at: ts(&updated),
+        updated_label: labels.list_label(updated_at),
+        updated_at,
+        link_count: u32_of(links),
+        highlights: Vec::new(),
         id,
     })
 }
@@ -150,22 +184,62 @@ fn fill_tags(conn: &Connection, items: &mut [NoteListItem]) -> CoreResult<()> {
     Ok(())
 }
 
-const NOTE_ITEM_COLUMNS: &str = "n.id, n.title, n.path, n.kind, n.content, n.local_updated_at";
+const NOTE_ITEM_COLUMNS: &str = "n.id, n.title, n.path, n.kind, n.content, n.local_updated_at, \
+     (SELECT COUNT(*) FROM links l WHERE l.note_id = n.id) \
+     + (SELECT COUNT(*) FROM relations r WHERE r.src_id = n.id)";
 
-fn note_items(
+pub(crate) fn note_items(
     conn: &Connection,
+    ctx: &ViewCtx,
     sql_tail: &str,
     p: impl rusqlite::Params,
 ) -> CoreResult<Vec<NoteListItem>> {
     let pending = pending_entities(conn)?;
+    let labels = ctx.labels();
     let mut st = conn.prepare(&format!(
         "SELECT {NOTE_ITEM_COLUMNS} FROM notes n {sql_tail}"
     ))?;
     let mut items: Vec<NoteListItem> = st
-        .query_map(p, |r| note_list_item(r, &pending))?
+        .query_map(p, |r| note_list_item(r, &pending, &labels))?
         .collect::<Result<_, _>>()?;
     fill_tags(conn, &mut items)?;
     Ok(items)
+}
+
+/// UTF-16 spans of `needles` (normalised, case-insensitive) in `text`.
+pub(crate) fn highlight_spans(text: &str, needles: &[String]) -> Vec<TextSpan> {
+    let mut out: Vec<TextSpan> = Vec::new();
+    let lower: Vec<(usize, char)> = text.char_indices().collect();
+    let folded: String = text.chars().flat_map(char::to_lowercase).collect();
+    if folded.chars().count() != lower.len() {
+        // Case folding changed the length (rare scripts): no highlights rather than wrong ones.
+        return out;
+    }
+    let chars: Vec<char> = folded.chars().collect();
+    let map = hints::Utf16Map::new(text);
+    for needle in needles {
+        let n: Vec<char> = needle.chars().flat_map(char::to_lowercase).collect();
+        if n.is_empty() || n.len() > chars.len() {
+            continue;
+        }
+        let mut i = 0;
+        while i + n.len() <= chars.len() {
+            if chars[i..i + n.len()] == n[..] {
+                let start = lower[i].0;
+                let end = lower.get(i + n.len()).map_or(text.len(), |c| c.0);
+                out.push(TextSpan {
+                    start: map.at(start),
+                    end: map.at(end),
+                });
+                i += n.len();
+            } else {
+                i += 1;
+            }
+        }
+    }
+    out.sort_by_key(|s| (s.start, s.end));
+    out.dedup();
+    out
 }
 
 // ---------------------------------------------------------------------------------------------

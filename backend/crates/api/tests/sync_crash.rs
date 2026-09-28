@@ -149,12 +149,11 @@ async fn crashed_push(h: &H, user: &User, ops: Vec<SyncOp>) -> (u16, String) {
 /// Change-log rows as (type, entity, op, version), in seq order.
 async fn change_log(h: &H, user: UserId) -> Vec<(String, String, String, Option<String>)> {
     let mut tx = h.db.begin(user).await.expect("tx");
-    let rows = sqlx::query_as(
-        "SELECT entity_type, entity_id, op, version FROM change_log ORDER BY seq",
-    )
-    .fetch_all(tx.conn())
-    .await
-    .expect("rows");
+    let rows =
+        sqlx::query_as("SELECT entity_type, entity_id, op, version FROM change_log ORDER BY seq")
+            .fetch_all(tx.conn())
+            .await
+            .expect("rows");
     tx.commit().await.expect("commit");
     rows
 }
@@ -188,7 +187,9 @@ fn added<T: Clone + Ord>(before: &[T], after: &[T]) -> Vec<T> {
 
 fn head_paths(h: &H, user: UserId) -> Vec<String> {
     let dir = h.dir(user);
-    let head = strata_vault::git::head(&dir).expect("head").expect("commit");
+    let head = strata_vault::git::head(&dir)
+        .expect("head")
+        .expect("commit");
     let mut paths = strata_vault::git::changed_paths(&dir, &head.id).expect("paths");
     paths.sort();
     paths
@@ -241,9 +242,16 @@ async fn crash_every_op_at(point: CrashPoint) {
         assert_eq!(first, control, "{label}: same result as without a crash");
         assert_eq!(first_bytes, control_bytes, "{label}");
         let result = rmp_serde::to_vec_named(&first.results[0].result).expect("encode");
-        assert_eq!(stored(&h, a, op.op_id).await, Some(result.clone()), "{label}");
+        assert_eq!(
+            stored(&h, a, op.op_id).await,
+            Some(result.clone()),
+            "{label}"
+        );
         assert!(
-            matches!(first.results[0].result, sync_model::OpResult::Applied { .. }),
+            matches!(
+                first.results[0].result,
+                sync_model::OpResult::Applied { .. }
+            ),
             "{label}: {first:?}"
         );
 
@@ -301,7 +309,10 @@ async fn crash_every_op_at(point: CrashPoint) {
     }
 
     // A fresh device of each sees the same state.
-    let (da, db) = (h.bootstrap(&alice, None).await, h.bootstrap(&bob, None).await);
+    let (da, db) = (
+        h.bootstrap(&alice, None).await,
+        h.bootstrap(&bob, None).await,
+    );
     assert_eq!(da.notes(), db.notes());
     assert_eq!(da.notes().len(), db.notes().len());
     assert!(da.notes().contains_key("documents/Lease contract.md"));

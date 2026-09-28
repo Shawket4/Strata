@@ -41,7 +41,8 @@ use crate::error::{Result, VaultError};
 use crate::state::VaultState;
 
 /// Builds an op's encoded result from the vault as the write left it.
-pub type ResultHook = Box<dyn FnOnce(&AfterWrite<'_>) -> std::result::Result<Vec<u8>, String> + Send>;
+pub type ResultHook =
+    Box<dyn FnOnce(&AfterWrite<'_>) -> std::result::Result<Vec<u8>, String> + Send>;
 
 tokio::task_local! {
     static RECEIPT: Arc<Slot>;
@@ -224,9 +225,7 @@ impl<'a> AfterWrite<'a> {
 
     /// Path and version of the live note `id`.
     pub fn note(&self, id: NoteId) -> Option<(&'a str, &'a str)> {
-        self.state?
-            .note(id)
-            .map(|(p, m)| (p, m.version.as_str()))
+        self.state?.note(id).map(|(p, m)| (p, m.version.as_str()))
     }
 
     /// Version of the live note `id`.
@@ -316,7 +315,10 @@ mod tests {
 
     #[test]
     fn trailers_round_trip_and_strip() {
-        let message = format!("user: create notes/A.md{}", pending(&[0x81, 0xa1, 0x61, 0xc3]).trailers());
+        let message = format!(
+            "user: create notes/A.md{}",
+            pending(&[0x81, 0xa1, 0x61, 0xc3]).trailers()
+        );
         assert_eq!(
             message,
             "user: create notes/A.md\n\nStrata-Op: 01J9ZZZZZZZZZZZZZZZZZZZZZ1\n\
@@ -336,7 +338,10 @@ mod tests {
     #[test]
     fn messages_without_trailers_are_left_alone() {
         assert_eq!(parse_trailers("user: create notes/A.md"), None);
-        assert_eq!(strip_trailers("user: create notes/A.md"), "user: create notes/A.md");
+        assert_eq!(
+            strip_trailers("user: create notes/A.md"),
+            "user: create notes/A.md"
+        );
         let body = "system: recovered changes\n\nfree text";
         assert_eq!(parse_trailers(body), None);
         assert_eq!(strip_trailers(body), body);
@@ -369,7 +374,10 @@ mod tests {
             Some(expected)
         );
         assert_eq!(after.task_line_version("t-missing"), None);
-        assert_eq!(after.note_version(NoteId::from_ulid(ulid::Ulid::nil())), None);
+        assert_eq!(
+            after.note_version(NoteId::from_ulid(ulid::Ulid::nil())),
+            None
+        );
         assert_eq!(AfterWrite::database_only().task_line_version("t-x"), None);
     }
 }

@@ -153,11 +153,17 @@ mod tests {
     #[test]
     fn scalars_are_one_record_with_their_text() {
         let cases = [
-            (SettingValue::Text("Africa/Cairo".into()), Some("Africa/Cairo")),
+            (
+                SettingValue::Text("Africa/Cairo".into()),
+                Some("Africa/Cairo"),
+            ),
             (SettingValue::Bool(true), Some("true")),
             (SettingValue::Bool(false), Some("false")),
             (SettingValue::Integer(-42), Some("-42")),
-            (SettingValue::Integer(i128::from(u64::MAX)), Some("18446744073709551615")),
+            (
+                SettingValue::Integer(i128::from(u64::MAX)),
+                Some("18446744073709551615"),
+            ),
             (SettingValue::Float(0.7), Some("0.7")),
             (SettingValue::Float(12.5), Some("12.5")),
             (SettingValue::Float(f64::NAN), None),
@@ -183,7 +189,9 @@ mod tests {
             ("list", SettingValue::Other),
         ]);
         assert_eq!(
-            records("preferences", &prefs).into_values().collect::<Vec<_>>(),
+            records("preferences", &prefs)
+                .into_values()
+                .collect::<Vec<_>>(),
             vec![
                 rec("preferences.compact", "true"),
                 rec("preferences.font_scale", "1.25"),

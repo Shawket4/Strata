@@ -298,7 +298,10 @@ async fn vault_head_is_per_user_and_leaves_the_sync_position_alone() {
     assert_eq!(sync::vault_head(&mut tx).await.expect("head"), None);
     // Before any change: the row is created at epoch 1, seq 0.
     sync::set_vault_head(&mut tx, &h1, t).await.expect("set");
-    assert_eq!(sync::vault_head(&mut tx).await.expect("head"), Some(h1.clone()));
+    assert_eq!(
+        sync::vault_head(&mut tx).await.expect("head"),
+        Some(h1.clone())
+    );
     assert_eq!(
         sync::sync_position(&mut tx).await.expect("pos"),
         SyncPosition {
@@ -311,7 +314,10 @@ async fn vault_head_is_per_user_and_leaves_the_sync_position_alone() {
         .expect("append");
     assert_eq!(first.seq, 1);
     sync::set_vault_head(&mut tx, &h2, t).await.expect("set");
-    assert_eq!(sync::vault_head(&mut tx).await.expect("head"), Some(h2.clone()));
+    assert_eq!(
+        sync::vault_head(&mut tx).await.expect("head"),
+        Some(h2.clone())
+    );
     assert_eq!(
         sync::sync_position(&mut tx).await.expect("pos"),
         SyncPosition {

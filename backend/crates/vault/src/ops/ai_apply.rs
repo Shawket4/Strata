@@ -522,12 +522,7 @@ impl Core {
 
     /// Moves `id` to `new_path` in the overlay, rewriting every link to it (in live notes,
     /// in overlay files and in canvases) — the overlay form of [`Core::plan_move`].
-    pub(crate) async fn ov_move(
-        &self,
-        ov: &mut Overlay,
-        id: NoteId,
-        new_path: &str,
-    ) -> Result<()> {
+    pub(crate) async fn ov_move(&self, ov: &mut Overlay, id: NoteId, new_path: &str) -> Result<()> {
         let old = self.ov_path(ov, id).ok_or(VaultError::NotFound)?;
         if old == new_path {
             return Ok(());
@@ -597,7 +592,13 @@ impl Core {
     }
 
     /// A free path `<folder>/<name>.md` in the overlay.
-    fn ov_free_path(&self, ov: &Overlay, folder: &str, name: &str, own: Option<&str>) -> Result<String> {
+    fn ov_free_path(
+        &self,
+        ov: &Overlay,
+        folder: &str,
+        name: &str,
+        own: Option<&str>,
+    ) -> Result<String> {
         let stem = sanitize_file_name(name);
         let state = self.state()?;
         let mut taken: BTreeSet<String> = state
@@ -728,9 +729,9 @@ impl Core {
         let at = self.now().fixed_offset();
         let is_ai = {
             let sc = self.ov_sidecar(ov, rm.src).await?;
-            sc.relations.iter().any(|r| {
-                r.kind == rm.rel && r.target_id == rm.dst.as_ulid() && r.by == By::Ai
-            })
+            sc.relations
+                .iter()
+                .any(|r| r.kind == rm.rel && r.target_id == rm.dst.as_ulid() && r.by == By::Ai)
         };
         if !is_ai && !rm.reject {
             return Ok(false);
@@ -1025,8 +1026,7 @@ impl Core {
                 });
                 sc.extra.insert(
                     REJECTED_MENTIONS_KEY.to_owned(),
-                    serde_json::to_value(&list)
-                        .map_err(|e| VaultError::Internal(e.to_string()))?,
+                    serde_json::to_value(&list).map_err(|e| VaultError::Internal(e.to_string()))?,
                 );
             }
         }
@@ -1048,8 +1048,7 @@ impl Core {
                 });
                 sc.extra.insert(
                     HINTS_KEY.to_owned(),
-                    serde_json::to_value(&list)
-                        .map_err(|e| VaultError::Internal(e.to_string()))?,
+                    serde_json::to_value(&list).map_err(|e| VaultError::Internal(e.to_string()))?,
                 );
             }
         }
@@ -1223,7 +1222,8 @@ impl Core {
                 fm.remove_key(KnownKey::Title).map_err(frontmatter_err)?;
             }
         } else {
-            fm.set_text(KnownKey::Title, title).map_err(frontmatter_err)?;
+            fm.set_text(KnownKey::Title, title)
+                .map_err(frontmatter_err)?;
         }
         Self::ov_put(ov, &path, doc.render());
         self.ov_move(ov, id, &new_path).await
@@ -1350,9 +1350,7 @@ impl RowWork {
             let status = match d.decision {
                 SuggestionDecision::Accepted => strata_index::types::SuggestionStatus::Accepted,
                 SuggestionDecision::Rejected => strata_index::types::SuggestionStatus::Rejected,
-                SuggestionDecision::Superseded => {
-                    strata_index::types::SuggestionStatus::Superseded
-                }
+                SuggestionDecision::Superseded => strata_index::types::SuggestionStatus::Superseded,
             };
             srepo::decide_suggestion(tx, d.id, status, now)
                 .await?

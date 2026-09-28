@@ -217,14 +217,12 @@ pub async fn put_setting_logged(
 
 /// The record `record_key` of the user's settings: a setting's own record, or an entry of a
 /// map setting (`<setting>.<entry>`).
-async fn setting_record(
-    tx: &mut ScopedTx,
-    record_key: &str,
-) -> Result<Option<Record>, Problem> {
+async fn setting_record(tx: &mut ScopedTx, record_key: &str) -> Result<Option<Record>, Problem> {
     let get = strata_index::repo::settings::get_setting;
     if let Some(bytes) = get(tx, record_key).await.map_err(index_problem)? {
-        return Ok(settings::record(record_key, &setting_value(&bytes), record_key)
-            .map(Record::Setting));
+        return Ok(
+            settings::record(record_key, &setting_value(&bytes), record_key).map(Record::Setting),
+        );
     }
     let Some((setting, _)) = settings::split_entry_key(record_key) else {
         return Ok(None);

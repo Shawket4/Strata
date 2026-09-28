@@ -192,7 +192,11 @@ pub fn log(dir: &Path) -> Result<Vec<CommitInfo>> {
 /// The commits after `stop` up to `HEAD` along first parents, oldest first, as (ID, full raw
 /// message). With `stop` absent or not found, at most `limit` commits are walked (the newest
 /// ones).
-pub fn commits_since(dir: &Path, stop: Option<&str>, limit: usize) -> Result<Vec<(String, String)>> {
+pub fn commits_since(
+    dir: &Path,
+    stop: Option<&str>,
+    limit: usize,
+) -> Result<Vec<(String, String)>> {
     let repo = open(dir)?;
     if head_commit(&repo).is_none() {
         return Ok(Vec::new());

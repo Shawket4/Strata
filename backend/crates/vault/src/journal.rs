@@ -95,9 +95,17 @@ mod tests {
         let tmp = tempfile::tempdir().expect("tempdir");
         git::init(tmp.path()).expect("init");
         fsio::atomic_write(tmp.path(), "notes/a.md", b"one").expect("write");
-        let at = Utc.with_ymd_and_hms(2026, 9, 27, 12, 0, 0).single().expect("ts");
-        git::commit_paths(tmp.path(), &["notes/a.md".into()], "user: create notes/a.md", at)
-            .expect("commit");
+        let at = Utc
+            .with_ymd_and_hms(2026, 9, 27, 12, 0, 0)
+            .single()
+            .expect("ts");
+        git::commit_paths(
+            tmp.path(),
+            &["notes/a.md".into()],
+            "user: create notes/a.md",
+            at,
+        )
+        .expect("commit");
         tmp
     }
 
@@ -105,7 +113,11 @@ mod tests {
     fn an_uncommitted_write_is_rolled_back() {
         let tmp = repo();
         let dir = tmp.path();
-        let paths = vec!["notes/a.md".to_owned(), "notes/b.md".to_owned(), "notes/c.md".to_owned()];
+        let paths = vec![
+            "notes/a.md".to_owned(),
+            "notes/b.md".to_owned(),
+            "notes/c.md".to_owned(),
+        ];
         begin(dir, &paths).expect("journal");
         fsio::atomic_write(dir, "notes/a.md", b"two").expect("write");
         fsio::atomic_write(dir, "notes/b.md", b"new").expect("write");
@@ -114,7 +126,10 @@ mod tests {
             recover(dir).expect("recover"),
             vec!["notes/a.md".to_owned(), "notes/b.md".to_owned()]
         );
-        assert_eq!(fsio::read(dir, "notes/a.md").expect("read"), Some(b"one".to_vec()));
+        assert_eq!(
+            fsio::read(dir, "notes/a.md").expect("read"),
+            Some(b"one".to_vec())
+        );
         assert_eq!(fsio::read(dir, "notes/b.md").expect("read"), None);
         assert_eq!(fsio::read(dir, JOURNAL).expect("read"), None);
         assert_eq!(git::dirty_paths(dir).expect("dirty"), Vec::<String>::new());
@@ -126,11 +141,17 @@ mod tests {
         let dir = tmp.path();
         begin(dir, &["notes/a.md".to_owned()]).expect("journal");
         fsio::atomic_write(dir, "notes/a.md", b"two").expect("write");
-        let at = Utc.with_ymd_and_hms(2026, 9, 27, 12, 1, 0).single().expect("ts");
+        let at = Utc
+            .with_ymd_and_hms(2026, 9, 27, 12, 1, 0)
+            .single()
+            .expect("ts");
         git::commit_paths(dir, &["notes/a.md".into()], "user: update notes/a.md", at)
             .expect("commit");
         assert_eq!(recover(dir).expect("recover"), Vec::<String>::new());
-        assert_eq!(fsio::read(dir, "notes/a.md").expect("read"), Some(b"two".to_vec()));
+        assert_eq!(
+            fsio::read(dir, "notes/a.md").expect("read"),
+            Some(b"two".to_vec())
+        );
         assert_eq!(fsio::read(dir, JOURNAL).expect("read"), None);
     }
 

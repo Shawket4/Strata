@@ -308,7 +308,8 @@ pub fn encode<T: Serialize>(value: &T) -> Result<Vec<u8>> {
 }
 
 fn decode<T: for<'de> Deserialize<'de>>(bytes: &[u8]) -> Result<T> {
-    rmp_serde::from_slice(bytes).map_err(|_| VaultError::invalid("the suggestion payload is unreadable"))
+    rmp_serde::from_slice(bytes)
+        .map_err(|_| VaultError::invalid("the suggestion payload is unreadable"))
 }
 
 fn parse_rel(s: Option<&str>) -> Option<RelationKey> {
@@ -346,15 +347,15 @@ impl Core {
     fn title_of_id(&self, id: NoteId) -> Option<String> {
         let state = self.state().ok()?;
         let (path, _) = state.note(id)?;
-        Some(
-            paths::file_name(path)
-                .trim_end_matches(".md")
-                .to_owned(),
-        )
+        Some(paths::file_name(path).trim_end_matches(".md").to_owned())
     }
 
     /// The decision row `id` (scoped).
-    pub(crate) async fn decision_row(&self, scope: &UserScope, id: DecisionId) -> Result<DecisionRow> {
+    pub(crate) async fn decision_row(
+        &self,
+        scope: &UserScope,
+        id: DecisionId,
+    ) -> Result<DecisionRow> {
         let mut tx = self.begin(scope).await?;
         let row: Option<DecisionRow> = sqlx::query_as(sqlx::AssertSqlSafe(format!(
             "SELECT {DECISION_COLS} FROM ai_decisions WHERE id = $1"
@@ -650,18 +651,24 @@ impl Core {
             .parse()
             .map_err(|_| VaultError::invalid("unknown custody event type"))?;
         let mut edit = edits.target_id.map(NoteId::from_ulid);
-        let document = self.resolve_custody_target(&p.document, NoteKind::Document, &mut edit, set, true)?;
+        let document =
+            self.resolve_custody_target(&p.document, NoteKind::Document, &mut edit, set, true)?;
         let place = match &p.place {
-            Some(t) => Some(self.resolve_custody_target(t, NoteKind::Place, &mut edit, set, true)?),
+            Some(t) => {
+                Some(self.resolve_custody_target(t, NoteKind::Place, &mut edit, set, true)?)
+            }
             None => None,
         };
         let person = match &p.person {
-            Some(t) => Some(self.resolve_custody_target(t, NoteKind::Person, &mut edit, set, true)?),
+            Some(t) => {
+                Some(self.resolve_custody_target(t, NoteKind::Person, &mut edit, set, true)?)
+            }
             None => None,
         };
         let counterparty = match &p.counterparty {
             Some(t) => {
-                let as_person = self.resolve_custody_target(t, NoteKind::Person, &mut edit, set, false);
+                let as_person =
+                    self.resolve_custody_target(t, NoteKind::Person, &mut edit, set, false);
                 match as_person {
                     Ok(i) => Some(i),
                     Err(_) => Some(self.resolve_custody_target(
@@ -708,12 +715,13 @@ impl Core {
     ) -> Result<SuggestionView> {
         let edits = edits.unwrap_or_default();
         let id = s.id;
-        let subject = s
-            .note_id
-            .filter(|n| self.live_kind(*n).is_some());
+        let subject = s.note_id.filter(|n| self.live_kind(*n).is_some());
         let op = if accept { "accept" } else { "reject" };
-        let mut set = AiChangeSet::new("suggestion", subject.unwrap_or(NoteId::from_ulid(ulid::Ulid::nil())))
-            .by_user(&format!("{op} {}", s.kind));
+        let mut set = AiChangeSet::new(
+            "suggestion",
+            subject.unwrap_or(NoteId::from_ulid(ulid::Ulid::nil())),
+        )
+        .by_user(&format!("{op} {}", s.kind));
         if !accept {
             self.plan_reject(&mut set, &s)?;
             return self.finish_decision(scope, set, subject, id).await;
@@ -927,7 +935,9 @@ impl Core {
         let (survivor, loser) = self.older_first(a, b).await?;
         match self.live_kind(survivor) {
             Some(NoteKind::Person | NoteKind::Company | NoteKind::Document | NoteKind::Place) => {
-                self.merge_entities(scope, loser, survivor).await.map(|_| ())
+                self.merge_entities(scope, loser, survivor)
+                    .await
+                    .map(|_| ())
             }
             Some(_) => self.merge_notes(scope, loser, survivor).await,
             None => Err(VaultError::NotFound),
@@ -992,13 +1002,16 @@ impl Core {
             let lfm = ldoc.frontmatter();
             let fm = sdoc.frontmatter_mut();
             if fm.error().is_some() {
-                return Err(VaultError::invalid("the survivor's frontmatter cannot be edited"));
+                return Err(VaultError::invalid(
+                    "the survivor's frontmatter cannot be edited",
+                ));
             }
             let err = |_| VaultError::invalid("the survivor's frontmatter cannot be edited");
             let mut aliases = fm.aliases();
-            for a in std::iter::once(ltitle.clone())
-                .chain(lfm.map(vault_format::Frontmatter::aliases).unwrap_or_default())
-            {
+            for a in std::iter::once(ltitle.clone()).chain(
+                lfm.map(vault_format::Frontmatter::aliases)
+                    .unwrap_or_default(),
+            ) {
                 if a != stitle && !aliases.contains(&a) {
                     aliases.push(a);
                 }
@@ -1058,8 +1071,14 @@ impl Core {
                 _ => self.read_text(&p).await?.unwrap_or_default(),
             };
             let mut d = Document::parse(&text);
-            if crate::ops::entities::retarget_links(&mut d, &p, &lpath, &spath, &survivor_link, &index)
-            {
+            if crate::ops::entities::retarget_links(
+                &mut d,
+                &p,
+                &lpath,
+                &spath,
+                &survivor_link,
+                &index,
+            ) {
                 changes.insert(p, Some(d.render().into_bytes()));
             }
         }
@@ -1174,7 +1193,9 @@ impl VaultService {
     ) -> Result<AiApplied> {
         self.exec(scope, move |core, scope| {
             Box::pin(async move {
-                let first = fixes.first().ok_or_else(|| VaultError::invalid("nothing to correct"))?;
+                let first = fixes
+                    .first()
+                    .ok_or_else(|| VaultError::invalid("nothing to correct"))?;
                 let d = core.decision_row(&scope, first.decision).await?;
                 let subject = d
                     .source_note_id

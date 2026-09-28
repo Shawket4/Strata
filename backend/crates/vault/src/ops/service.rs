@@ -274,9 +274,8 @@ impl VaultService {
         req: NewEntity,
         links: Vec<(RelationKey, NoteId)>,
     ) -> Result<NoteView> {
-        on_actor!(self, scope, |core, s| core.create_entity_linked(
-            s, req, &links
-        ))
+        on_actor!(self, scope, |core, s| core
+            .create_entity_linked(s, req, &links))
     }
 
     /// `PATCH /entities/{id}` (and documents/places).
