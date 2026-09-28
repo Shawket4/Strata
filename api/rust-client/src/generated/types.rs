@@ -717,21 +717,6 @@ pub struct CorrectionFixDto {
     ///One sentence.
     pub reason: ::std::string::String,
 }
-///A correction in words that was not applied automatically (`correction`).
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
-pub struct CorrectionProposal {
-    ///The correction decision.
-    pub decision_id: ::ulid::Ulid,
-    ///Proposed fixes.
-    pub fixes: ::std::vec::Vec<CorrectionFixDto>,
-    ///Hints to remember.
-    pub hints: ::std::vec::Vec<HintDto>,
-    ///The user's words.
-    pub message: ::std::string::String,
-    ///The model's question when ambiguous.
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub question: ::std::option::Option<::std::string::String>,
-}
 ///The corrected decision.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
 pub struct CorrectionResult {
@@ -1006,38 +991,6 @@ pub struct CustodyEventRequest {
     ///Type.
     #[serde(rename = "type")]
     pub type_: CustodyEventKind,
-}
-///A custody event proposal (`custody`).
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
-pub struct CustodyProposal {
-    ///The block stating it.
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub block_id: ::std::option::Option<::std::string::String>,
-    ///Model confidence.
-    pub confidence: f64,
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub counterparty: ::std::option::Option<CustodyTargetDto>,
-    ///Date.
-    pub date: ::chrono::naive::NaiveDate,
-    ///The decision.
-    pub decision_id: ::ulid::Ulid,
-    ///Document.
-    pub document: CustodyTargetDto,
-    ///Event type (`stored-at`, …).
-    pub event: ::std::string::String,
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub person: ::std::option::Option<CustodyTargetDto>,
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub place: ::std::option::Option<CustodyTargetDto>,
-    ///Enclosing place mention.
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub place_part_of: ::std::option::Option<::std::string::String>,
-    ///The span stating it.
-    pub quote: ::std::string::String,
-    ///`low_confidence`, `ambiguous`, `unknown`, `conflict`, `reply`.
-    pub reason: ::std::string::String,
-    ///The note stating it.
-    pub source_note: ::ulid::Ulid,
 }
 ///A custody participant.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -1413,32 +1366,6 @@ impl ::std::convert::TryFrom<::std::string::String> for EntityKind {
     ) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
-}
-///A link-or-create proposal (`entity_link`).
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
-pub struct EntityLinkProposal {
-    ///The block stating it.
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub block_id: ::std::option::Option<::std::string::String>,
-    ///Entities that fit.
-    pub candidates: ::std::vec::Vec<::std::string::String>,
-    ///Model confidence.
-    pub confidence: f64,
-    ///The decision.
-    pub decision_id: ::ulid::Ulid,
-    ///`person`, `company`, `document`, `place`.
-    pub entity_kind: ::std::string::String,
-    ///A nickname or kinship term.
-    pub is_nickname: bool,
-    ///The mention as written.
-    pub mention: ::std::string::String,
-    ///The proposed entity (absent: create a new one).
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub proposed: ::std::option::Option<::ulid::Ulid>,
-    ///`ambiguous`, `nickname`, `new`, `low_confidence`, `reply`.
-    pub reason: ::std::string::String,
-    ///The note mentioning it.
-    pub source_note: ::ulid::Ulid,
 }
 ///Entities.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -1884,18 +1811,6 @@ impl ::std::convert::TryFrom<::std::string::String> for FileChange {
     ) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
-}
-///A filing proposal (`filing`).
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
-pub struct FilingProposal {
-    ///The decision.
-    pub decision_id: ::ulid::Ulid,
-    ///Destination folder.
-    pub folder: ::std::string::String,
-    ///Tags.
-    pub tags: ::std::vec::Vec<::std::string::String>,
-    ///Title.
-    pub title: ::std::string::String,
 }
 ///A graph (no positions).
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -3144,15 +3059,18 @@ pub struct SuggestionEditsDto {
 }
 ///What a suggestion proposes.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
-#[serde(untagged)]
+#[serde(tag = "type")]
 pub enum SuggestionPayload {
-    Variant0 {
+    ///The note resembles existing items; accepting keeps both.
+    #[serde(rename = "duplicate")]
+    Duplicate {
         ///The items it resembles.
         candidates: ::std::vec::Vec<DuplicateCandidate>,
-        #[serde(rename = "type")]
-        type_: SuggestionPayloadVariant0Type,
     },
-    Variant1 {
+    /**Two stored items the nightly sweep found to be duplicates (`duplicates`, PLAN §9.7);
+    rejecting keeps both for good. Never merged automatically.*/
+    #[serde(rename = "duplicates")]
+    Duplicates {
         ///The first item.
         a: DuplicateCandidate,
         ///The second item.
@@ -3160,22 +3078,24 @@ pub enum SuggestionPayload {
         ///Why the model confirmed a borderline pair.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         reason: ::std::option::Option<::std::string::String>,
-        #[serde(rename = "type")]
-        type_: SuggestionPayloadVariant1Type,
     },
-    Variant2 {
-        ///The decision.
+    /**A filing proposal for an inbox capture (`filing`, §9.3): accepting (optionally with
+    edits) titles, tags and moves the capture in one commit.*/
+    #[serde(rename = "filing")]
+    Filing {
+        ///The AI decision.
         decision_id: ::ulid::Ulid,
         ///Destination folder.
         folder: ::std::string::String,
-        ///Tags.
+        ///Tags to add.
         tags: ::std::vec::Vec<::std::string::String>,
-        ///Title.
+        ///Title (file name).
         title: ::std::string::String,
-        #[serde(rename = "type")]
-        type_: SuggestionPayloadVariant2Type,
     },
-    Variant3 {
+    /**Link a mention to an entity, or create it (`entity_link`, §6.7, D13 = b): accepting
+    adds the mention to the entity's aliases.*/
+    #[serde(rename = "entity_link")]
+    EntityLink {
         ///The block stating it.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         block_id: ::std::option::Option<::std::string::String>,
@@ -3183,11 +3103,11 @@ pub enum SuggestionPayload {
         candidates: ::std::vec::Vec<::std::string::String>,
         ///Model confidence.
         confidence: f64,
-        ///The decision.
+        ///The AI decision.
         decision_id: ::ulid::Ulid,
         ///`person`, `company`, `document`, `place`.
         entity_kind: ::std::string::String,
-        ///A nickname or kinship term.
+        ///A nickname or kinship term (never created automatically).
         is_nickname: bool,
         ///The mention as written.
         mention: ::std::string::String,
@@ -3198,10 +3118,10 @@ pub enum SuggestionPayload {
         reason: ::std::string::String,
         ///The note mentioning it.
         source_note: ::ulid::Ulid,
-        #[serde(rename = "type")]
-        type_: SuggestionPayloadVariant3Type,
     },
-    Variant4 {
+    ///A custody event not applied automatically (`custody`, §6.12, D30).
+    #[serde(rename = "custody")]
+    Custody {
         ///The block stating it.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         block_id: ::std::option::Option<::std::string::String>,
@@ -3209,11 +3129,11 @@ pub enum SuggestionPayload {
         confidence: f64,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         counterparty: ::std::option::Option<CustodyTargetDto>,
-        ///Date.
+        ///Date (resolved).
         date: ::chrono::naive::NaiveDate,
-        ///The decision.
+        ///The AI decision.
         decision_id: ::ulid::Ulid,
-        ///Document.
+        ///The document.
         document: CustodyTargetDto,
         ///Event type (`stored-at`, …).
         event: ::std::string::String,
@@ -3221,7 +3141,7 @@ pub enum SuggestionPayload {
         person: ::std::option::Option<CustodyTargetDto>,
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         place: ::std::option::Option<CustodyTargetDto>,
-        ///Enclosing place mention.
+        ///The enclosing place mention.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         place_part_of: ::std::option::Option<::std::string::String>,
         ///The span stating it.
@@ -3230,23 +3150,23 @@ pub enum SuggestionPayload {
         reason: ::std::string::String,
         ///The note stating it.
         source_note: ::ulid::Ulid,
-        #[serde(rename = "type")]
-        type_: SuggestionPayloadVariant4Type,
     },
-    Variant5 {
+    ///A task proposed from a note (`task`, §6.11): accepting writes the line.
+    #[serde(rename = "task")]
+    Task {
         ///The block stating it.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         block_id: ::std::option::Option<::std::string::String>,
         ///Model confidence.
         confidence: f64,
-        ///The decision.
+        ///The AI decision.
         decision_id: ::ulid::Ulid,
         ///Due date.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         due: ::std::option::Option<::chrono::naive::NaiveDate>,
         ///Entities it concerns.
         entities: ::std::vec::Vec<::std::string::String>,
-        ///Recurrence phrase.
+        ///Recurrence phrase (Tasks plugin language).
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         recurrence: ::std::option::Option<::std::string::String>,
         ///Reminders (local times).
@@ -3255,10 +3175,10 @@ pub enum SuggestionPayload {
         source_note: ::ulid::Ulid,
         ///Title.
         title: ::std::string::String,
-        #[serde(rename = "type")]
-        type_: SuggestionPayloadVariant5Type,
     },
-    Variant6 {
+    ///A correction in words not applied automatically (`correction`, §9.8).
+    #[serde(rename = "correction")]
+    Correction {
         ///The correction decision.
         decision_id: ::ulid::Ulid,
         ///Proposed fixes.
@@ -3270,391 +3190,13 @@ pub enum SuggestionPayload {
         ///The model's question when ambiguous.
         #[serde(skip_serializing_if = "::std::option::Option::is_none")]
         question: ::std::option::Option<::std::string::String>,
-        #[serde(rename = "type")]
-        type_: SuggestionPayloadVariant6Type,
     },
-    Variant7 {
+    ///A kind this version does not describe (MessagePack as stored).
+    #[serde(rename = "opaque")]
+    Opaque {
         ///The raw payload.
         data: ::serde_bytes::ByteBuf,
-        #[serde(rename = "type")]
-        type_: SuggestionPayloadVariant7Type,
     },
-}
-///`SuggestionPayloadVariant0Type`
-#[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-)]
-pub enum SuggestionPayloadVariant0Type {
-    #[serde(rename = "duplicate")]
-    Duplicate,
-}
-impl ::std::fmt::Display for SuggestionPayloadVariant0Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
-            Self::Duplicate => f.write_str("duplicate"),
-        }
-    }
-}
-impl ::std::str::FromStr for SuggestionPayloadVariant0Type {
-    type Err = self::error::ConversionError;
-    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        match value {
-            "duplicate" => Ok(Self::Duplicate),
-            _ => Err("invalid value".into()),
-        }
-    }
-}
-impl ::std::convert::TryFrom<&str> for SuggestionPayloadVariant0Type {
-    type Error = self::error::ConversionError;
-    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-impl ::std::convert::TryFrom<::std::string::String> for SuggestionPayloadVariant0Type {
-    type Error = self::error::ConversionError;
-    fn try_from(
-        value: ::std::string::String,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-///`SuggestionPayloadVariant1Type`
-#[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-)]
-pub enum SuggestionPayloadVariant1Type {
-    #[serde(rename = "duplicates")]
-    Duplicates,
-}
-impl ::std::fmt::Display for SuggestionPayloadVariant1Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
-            Self::Duplicates => f.write_str("duplicates"),
-        }
-    }
-}
-impl ::std::str::FromStr for SuggestionPayloadVariant1Type {
-    type Err = self::error::ConversionError;
-    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        match value {
-            "duplicates" => Ok(Self::Duplicates),
-            _ => Err("invalid value".into()),
-        }
-    }
-}
-impl ::std::convert::TryFrom<&str> for SuggestionPayloadVariant1Type {
-    type Error = self::error::ConversionError;
-    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-impl ::std::convert::TryFrom<::std::string::String> for SuggestionPayloadVariant1Type {
-    type Error = self::error::ConversionError;
-    fn try_from(
-        value: ::std::string::String,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-///`SuggestionPayloadVariant2Type`
-#[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-)]
-pub enum SuggestionPayloadVariant2Type {
-    #[serde(rename = "filing")]
-    Filing,
-}
-impl ::std::fmt::Display for SuggestionPayloadVariant2Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
-            Self::Filing => f.write_str("filing"),
-        }
-    }
-}
-impl ::std::str::FromStr for SuggestionPayloadVariant2Type {
-    type Err = self::error::ConversionError;
-    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        match value {
-            "filing" => Ok(Self::Filing),
-            _ => Err("invalid value".into()),
-        }
-    }
-}
-impl ::std::convert::TryFrom<&str> for SuggestionPayloadVariant2Type {
-    type Error = self::error::ConversionError;
-    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-impl ::std::convert::TryFrom<::std::string::String> for SuggestionPayloadVariant2Type {
-    type Error = self::error::ConversionError;
-    fn try_from(
-        value: ::std::string::String,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-///`SuggestionPayloadVariant3Type`
-#[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-)]
-pub enum SuggestionPayloadVariant3Type {
-    #[serde(rename = "entity_link")]
-    EntityLink,
-}
-impl ::std::fmt::Display for SuggestionPayloadVariant3Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
-            Self::EntityLink => f.write_str("entity_link"),
-        }
-    }
-}
-impl ::std::str::FromStr for SuggestionPayloadVariant3Type {
-    type Err = self::error::ConversionError;
-    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        match value {
-            "entity_link" => Ok(Self::EntityLink),
-            _ => Err("invalid value".into()),
-        }
-    }
-}
-impl ::std::convert::TryFrom<&str> for SuggestionPayloadVariant3Type {
-    type Error = self::error::ConversionError;
-    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-impl ::std::convert::TryFrom<::std::string::String> for SuggestionPayloadVariant3Type {
-    type Error = self::error::ConversionError;
-    fn try_from(
-        value: ::std::string::String,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-///`SuggestionPayloadVariant4Type`
-#[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-)]
-pub enum SuggestionPayloadVariant4Type {
-    #[serde(rename = "custody")]
-    Custody,
-}
-impl ::std::fmt::Display for SuggestionPayloadVariant4Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
-            Self::Custody => f.write_str("custody"),
-        }
-    }
-}
-impl ::std::str::FromStr for SuggestionPayloadVariant4Type {
-    type Err = self::error::ConversionError;
-    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        match value {
-            "custody" => Ok(Self::Custody),
-            _ => Err("invalid value".into()),
-        }
-    }
-}
-impl ::std::convert::TryFrom<&str> for SuggestionPayloadVariant4Type {
-    type Error = self::error::ConversionError;
-    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-impl ::std::convert::TryFrom<::std::string::String> for SuggestionPayloadVariant4Type {
-    type Error = self::error::ConversionError;
-    fn try_from(
-        value: ::std::string::String,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-///`SuggestionPayloadVariant5Type`
-#[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-)]
-pub enum SuggestionPayloadVariant5Type {
-    #[serde(rename = "task")]
-    Task,
-}
-impl ::std::fmt::Display for SuggestionPayloadVariant5Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
-            Self::Task => f.write_str("task"),
-        }
-    }
-}
-impl ::std::str::FromStr for SuggestionPayloadVariant5Type {
-    type Err = self::error::ConversionError;
-    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        match value {
-            "task" => Ok(Self::Task),
-            _ => Err("invalid value".into()),
-        }
-    }
-}
-impl ::std::convert::TryFrom<&str> for SuggestionPayloadVariant5Type {
-    type Error = self::error::ConversionError;
-    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-impl ::std::convert::TryFrom<::std::string::String> for SuggestionPayloadVariant5Type {
-    type Error = self::error::ConversionError;
-    fn try_from(
-        value: ::std::string::String,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-///`SuggestionPayloadVariant6Type`
-#[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-)]
-pub enum SuggestionPayloadVariant6Type {
-    #[serde(rename = "correction")]
-    Correction,
-}
-impl ::std::fmt::Display for SuggestionPayloadVariant6Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
-            Self::Correction => f.write_str("correction"),
-        }
-    }
-}
-impl ::std::str::FromStr for SuggestionPayloadVariant6Type {
-    type Err = self::error::ConversionError;
-    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        match value {
-            "correction" => Ok(Self::Correction),
-            _ => Err("invalid value".into()),
-        }
-    }
-}
-impl ::std::convert::TryFrom<&str> for SuggestionPayloadVariant6Type {
-    type Error = self::error::ConversionError;
-    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-impl ::std::convert::TryFrom<::std::string::String> for SuggestionPayloadVariant6Type {
-    type Error = self::error::ConversionError;
-    fn try_from(
-        value: ::std::string::String,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-///`SuggestionPayloadVariant7Type`
-#[derive(
-    ::serde::Deserialize,
-    ::serde::Serialize,
-    Clone,
-    Copy,
-    Debug,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-)]
-pub enum SuggestionPayloadVariant7Type {
-    #[serde(rename = "opaque")]
-    Opaque,
-}
-impl ::std::fmt::Display for SuggestionPayloadVariant7Type {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
-            Self::Opaque => f.write_str("opaque"),
-        }
-    }
-}
-impl ::std::str::FromStr for SuggestionPayloadVariant7Type {
-    type Err = self::error::ConversionError;
-    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        match value {
-            "opaque" => Ok(Self::Opaque),
-            _ => Err("invalid value".into()),
-        }
-    }
-}
-impl ::std::convert::TryFrom<&str> for SuggestionPayloadVariant7Type {
-    type Error = self::error::ConversionError;
-    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
-}
-impl ::std::convert::TryFrom<::std::string::String> for SuggestionPayloadVariant7Type {
-    type Error = self::error::ConversionError;
-    fn try_from(
-        value: ::std::string::String,
-    ) -> ::std::result::Result<Self, self::error::ConversionError> {
-        value.parse()
-    }
 }
 ///One reply in a suggestion thread.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -5006,31 +4548,6 @@ impl ::std::convert::TryFrom<::std::string::String> for TaskPriority {
     ) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
-}
-///A task proposal (`task`).
-#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
-pub struct TaskProposal {
-    ///The block stating it.
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub block_id: ::std::option::Option<::std::string::String>,
-    ///Model confidence.
-    pub confidence: f64,
-    ///The decision.
-    pub decision_id: ::ulid::Ulid,
-    ///Due date.
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub due: ::std::option::Option<::chrono::naive::NaiveDate>,
-    ///Entities it concerns.
-    pub entities: ::std::vec::Vec<::std::string::String>,
-    ///Recurrence phrase.
-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
-    pub recurrence: ::std::option::Option<::std::string::String>,
-    ///Reminders (local times).
-    pub reminders: ::std::vec::Vec<::std::string::String>,
-    ///The note it came from.
-    pub source_note: ::ulid::Ulid,
-    ///Title.
-    pub title: ::std::string::String,
 }
 ///Task status.
 #[derive(

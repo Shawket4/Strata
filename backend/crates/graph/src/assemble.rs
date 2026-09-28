@@ -2,10 +2,17 @@
 //! graph with type filters and optional similarity edges, the entity lens, and local
 //! neighbourhoods. Positions are never computed here (D3: the client core lays out).
 //!
-//! Output order is canonical: nodes by ID, edges by (source, target, kind), clusters by
-//! numeric ID, so equal inputs give byte-identical responses.
+//! Tag nodes (§10 optional toggle, `include_tags`): one node per tag, compared without case
+//! (`#Pricing` and `#pricing` are one tag, titled by the smallest spelling), with ID
+//! `tag:<lowercase tag>`, and one `tag` edge from each note carrying it. Notes sharing a tag
+//! are therefore two hops apart in a local graph.
+//!
+//! Output order is canonical: nodes by ID (notes by ULID, then tags by key), edges by
+//! (source, target, kind), clusters by numeric ID, so equal inputs give byte-identical
+//! responses.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fmt;
 use std::hash::BuildHasher;
 
 use chrono::{DateTime, Utc};
@@ -14,28 +21,73 @@ use graph_algo::{EdgeInput, Filter, GraphBuilder, co_mentions, neighbourhood};
 use strata_common::NoteId;
 
 use crate::error::{GraphError, Result};
-use crate::load::{EdgeRow, GraphData};
+use crate::load::{EdgeRow, GraphData, NodeRow};
 use crate::query::{EdgeFilter, EdgeKind, GraphQuery, Lens, LocalQuery};
+
+/// The ID of a response node: a note, or a tag node.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum NodeId {
+    /// A note (its ULID on the wire).
+    Note(NoteId),
+    /// A tag, by its key ([`tag_key`]); `tag:<key>` on the wire.
+    Tag(String),
+}
+
+impl NodeId {
+    /// The note, if this is a note node.
+    pub fn note(&self) -> Option<NoteId> {
+        match self {
+            Self::Note(n) => Some(*n),
+            Self::Tag(_) => None,
+        }
+    }
+}
+
+impl fmt::Display for NodeId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Note(n) => n.fmt(f),
+            Self::Tag(k) => write!(f, "tag:{k}"),
+        }
+    }
+}
+
+impl From<NoteId> for NodeId {
+    fn from(n: NoteId) -> Self {
+        Self::Note(n)
+    }
+}
+
+impl PartialEq<NoteId> for NodeId {
+    fn eq(&self, other: &NoteId) -> bool {
+        matches!(self, Self::Note(n) if n == other)
+    }
+}
+
+/// The key of a tag node: tags compare without case (as in Obsidian).
+pub fn tag_key(tag: &str) -> String {
+    tag.to_lowercase()
+}
 
 /// A node of a graph response.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NodeView {
-    /// Note ID.
-    pub id: NoteId,
-    /// Title.
+    /// Note ID, or `tag:<key>`.
+    pub id: NodeId,
+    /// Title (a tag node's is the tag, without `#`).
     pub title: String,
-    /// Kind.
-    pub kind: NoteKind,
-    /// Vault path (what a saved map's file node references).
-    pub path: String,
+    /// Kind (a note kind, or `tag`).
+    pub kind: GraphNodeKind,
+    /// Vault path (what a saved map's file node references); `None` for tag nodes.
+    pub path: Option<String>,
     /// Stable cluster ID (`.meta/clusters.json`), if clustered.
     pub cluster_id: Option<String>,
     /// Edges of this response touching the node (in + out).
     pub degree: u32,
     /// Dominant language.
     pub lang: Option<String>,
-    /// Last update.
-    pub updated: DateTime<Utc>,
+    /// Last update (`None` for tag nodes).
+    pub updated: Option<DateTime<Utc>>,
     /// Short AI summary for hover.
     pub summary: Option<String>,
     /// BFS depth from the focus (local graphs only; the focus is 0).
@@ -45,10 +97,10 @@ pub struct NodeView {
 /// An edge of a graph response.
 #[derive(Debug, Clone, PartialEq)]
 pub struct EdgeView {
-    /// Source note.
-    pub source: NoteId,
-    /// Target note.
-    pub target: NoteId,
+    /// Source node.
+    pub source: NodeId,
+    /// Target node (a tag node for `tag` edges).
+    pub target: NodeId,
     /// Kind.
     pub kind: EdgeKind,
     /// Provenance (`None` for derived co-mention edges).
@@ -114,8 +166,8 @@ pub struct SimilarPair {
 
 fn typed_view(e: &EdgeRow) -> EdgeView {
     EdgeView {
-        source: e.source,
-        target: e.target,
+        source: e.source.into(),
+        target: e.target.into(),
         kind: EdgeKind::Typed(e.kind),
         by: Some(e.by),
         confidence: e.confidence,
@@ -127,8 +179,8 @@ fn typed_view(e: &EdgeRow) -> EdgeView {
 
 fn similarity_view(p: &SimilarPair) -> EdgeView {
     EdgeView {
-        source: p.source,
-        target: p.target,
+        source: p.source.into(),
+        target: p.target.into(),
         kind: EdgeKind::Typed(GraphEdgeKind::Similarity),
         by: Some(RelationOrigin::Ai),
         confidence: None,
@@ -139,43 +191,112 @@ fn similarity_view(p: &SimilarPair) -> EdgeView {
 }
 
 fn sort_edges(edges: &mut [EdgeView]) {
-    edges.sort_by(|a, b| (a.source, a.target, a.kind).cmp(&(b.source, b.target, b.kind)));
+    edges.sort_by(|a, b| (&a.source, &a.target, a.kind).cmp(&(&b.source, &b.target, b.kind)));
+}
+
+/// A node of the graph a request sees: a live note, or a tag node.
+#[derive(Debug, Clone)]
+struct Node<'a> {
+    id: NodeId,
+    kind: GraphNodeKind,
+    title: String,
+    row: Option<&'a NodeRow>,
+}
+
+/// Every node and typed edge a request may return: the notes and edges of `data`, plus tag
+/// nodes and note → tag edges from `data.tags` when `with_tags`. Nodes are in ID order
+/// (notes, then tags), which is also their index in a graph built from them.
+#[derive(Debug)]
+struct Universe<'a> {
+    nodes: Vec<Node<'a>>,
+    edges: Vec<EdgeView>,
+}
+
+impl<'a> Universe<'a> {
+    fn new(data: &'a GraphData, with_tags: bool) -> Self {
+        let mut nodes: Vec<Node<'a>> = data
+            .nodes
+            .iter()
+            .map(|n| Node {
+                id: n.id.into(),
+                kind: n.kind.into(),
+                title: n.title.clone(),
+                row: Some(n),
+            })
+            .collect();
+        let mut edges: Vec<EdgeView> = data.edges.iter().map(typed_view).collect();
+        if with_tags {
+            // key → spellings; (note, key) pairs once each.
+            let mut spellings: BTreeMap<String, BTreeSet<&str>> = BTreeMap::new();
+            let mut pairs: BTreeSet<(NoteId, String)> = BTreeSet::new();
+            for (note, tag) in &data.tags {
+                let key = tag_key(tag);
+                spellings.entry(key.clone()).or_default().insert(tag.as_str());
+                pairs.insert((*note, key));
+            }
+            nodes.extend(spellings.into_iter().map(|(key, names)| Node {
+                title: names.first().map_or_else(|| key.clone(), |t| (*t).to_owned()),
+                id: NodeId::Tag(key),
+                kind: GraphNodeKind::Tag,
+                row: None,
+            }));
+            edges.extend(pairs.into_iter().map(|(note, key)| EdgeView {
+                source: note.into(),
+                target: NodeId::Tag(key),
+                kind: EdgeKind::Typed(GraphEdgeKind::Tag),
+                by: Some(RelationOrigin::User),
+                confidence: None,
+                reason: None,
+                weight: None,
+                notes: None,
+            }));
+        }
+        Self { nodes, edges }
+    }
+
+    fn get(&self, id: &NodeId) -> Option<&Node<'a>> {
+        self.nodes
+            .binary_search_by(|n| n.id.cmp(id))
+            .ok()
+            .map(|i| &self.nodes[i])
+    }
 }
 
 /// Builds the node views of `ids` (in ID order) with degrees counted over `edges`.
 fn finish<S: BuildHasher>(
     data: &GraphData,
-    ids: &BTreeMap<NoteId, Option<u8>>,
+    universe: &Universe<'_>,
+    ids: &BTreeMap<NodeId, Option<u8>>,
     mut edges: Vec<EdgeView>,
     summaries: &HashMap<NoteId, String, S>,
     similarity: SimilarityStatus,
 ) -> GraphView {
     sort_edges(&mut edges);
-    let mut degree: HashMap<NoteId, u32> = HashMap::new();
+    let mut degree: HashMap<&NodeId, u32> = HashMap::new();
     for e in &edges {
-        *degree.entry(e.source).or_default() += 1;
-        *degree.entry(e.target).or_default() += 1;
+        *degree.entry(&e.source).or_default() += 1;
+        *degree.entry(&e.target).or_default() += 1;
     }
-    let pos = data.positions();
     let mut sizes: BTreeMap<i64, u32> = BTreeMap::new();
     let nodes: Vec<NodeView> = ids
         .iter()
-        .filter_map(|(id, depth)| pos.get(id).map(|&i| (&data.nodes[i], *depth)))
+        .filter_map(|(id, depth)| universe.get(id).map(|n| (n, *depth)))
         .map(|(n, depth)| {
-            let cluster = data.clusters.get(&n.id).copied();
+            let note = n.id.note();
+            let cluster = note.and_then(|id| data.clusters.get(&id).copied());
             if let Some(c) = cluster {
                 *sizes.entry(c).or_default() += 1;
             }
             NodeView {
-                id: n.id,
+                id: n.id.clone(),
                 title: n.title.clone(),
                 kind: n.kind,
-                path: n.path.clone(),
+                path: n.row.map(|r| r.path.clone()),
                 cluster_id: cluster.map(|c| c.to_string()),
                 degree: degree.get(&n.id).copied().unwrap_or(0),
-                lang: n.lang.clone(),
-                updated: n.updated,
-                summary: summaries.get(&n.id).cloned(),
+                lang: n.row.and_then(|r| r.lang.clone()),
+                updated: n.row.map(|r| r.updated),
+                summary: note.and_then(|id| summaries.get(&id).cloned()),
                 depth,
             }
         })
@@ -200,8 +321,8 @@ fn finish<S: BuildHasher>(
     }
 }
 
-/// `GET /graph` without a lens: every live note of an allowed kind, every allowed edge
-/// between them, similarity edges when given.
+/// `GET /graph` without a lens: every live note (and tag node, with `include_tags`) of an
+/// allowed kind, every allowed edge between them, similarity edges when given.
 pub fn global<S: BuildHasher>(
     data: &GraphData,
     query: &GraphQuery,
@@ -209,21 +330,20 @@ pub fn global<S: BuildHasher>(
     similarity: SimilarityStatus,
     summaries: &HashMap<NoteId, String, S>,
 ) -> GraphView {
-    let ids: BTreeMap<NoteId, Option<u8>> = data
+    let universe = Universe::new(data, query.include_tags);
+    let ids: BTreeMap<NodeId, Option<u8>> = universe
         .nodes
         .iter()
         .filter(|n| query.nodes.allows(n.kind))
-        .map(|n| (n.id, None))
+        .map(|n| (n.id.clone(), None))
         .collect();
-    let mut edges: Vec<EdgeView> = data
+    let mut edges: Vec<EdgeView> = universe
         .edges
         .iter()
         .filter(|e| {
-            query.edges.allows(EdgeKind::Typed(e.kind))
-                && ids.contains_key(&e.source)
-                && ids.contains_key(&e.target)
+            query.edges.allows(e.kind) && ids.contains_key(&e.source) && ids.contains_key(&e.target)
         })
-        .map(typed_view)
+        .cloned()
         .collect();
     if query.include_similarity
         && query
@@ -233,39 +353,40 @@ pub fn global<S: BuildHasher>(
         edges.extend(
             similar
                 .iter()
-                .filter(|p| ids.contains_key(&p.source) && ids.contains_key(&p.target))
-                .map(similarity_view),
+                .map(similarity_view)
+                .filter(|e| ids.contains_key(&e.source) && ids.contains_key(&e.target)),
         );
     }
-    finish(data, &ids, edges, summaries, similarity)
+    finish(data, &universe, &ids, edges, summaries, similarity)
 }
 
 /// `GET /graph?lens=people|companies`: the lens's entities as nodes; edges are entity
 /// relations between them and co-mention strength (`graph_algo::co_mentions`: per note
-/// mentioning `m` of them, each pair gains `1/(m−1)`).
+/// mentioning `m` of them, each pair gains `1/(m−1)`). Tag nodes are never part of a lens.
 pub fn lens<S: BuildHasher>(
     data: &GraphData,
     lens: Lens,
     edges_filter: &EdgeFilter,
     summaries: &HashMap<NoteId, String, S>,
 ) -> GraphView {
+    let universe = Universe::new(data, false);
     let kind = lens.kind();
-    let ids: BTreeMap<NoteId, Option<u8>> = data
+    let ids: BTreeMap<NodeId, Option<u8>> = data
         .nodes
         .iter()
         .filter(|n| n.kind == kind)
-        .map(|n| (n.id, None))
+        .map(|n| (n.id.into(), None))
         .collect();
-    let mut edges: Vec<EdgeView> = data
+    let mut edges: Vec<EdgeView> = universe
         .edges
         .iter()
         .filter(|e| {
-            matches!(e.kind, GraphEdgeKind::Entity(_))
-                && edges_filter.allows(EdgeKind::Typed(e.kind))
+            matches!(e.kind, EdgeKind::Typed(GraphEdgeKind::Entity(_)))
+                && edges_filter.allows(e.kind)
                 && ids.contains_key(&e.source)
                 && ids.contains_key(&e.target)
         })
-        .map(typed_view)
+        .cloned()
         .collect();
     if edges_filter.allows(EdgeKind::CoMention) {
         // Node indices follow ID order, so a co-mention's (a, b) is (smaller, larger) ID.
@@ -289,8 +410,8 @@ pub fn lens<S: BuildHasher>(
         for c in co_mentions(&g, &[lens_kind]) {
             let (a, b) = (data.nodes[c.a as usize].id, data.nodes[c.b as usize].id);
             edges.push(EdgeView {
-                source: a,
-                target: b,
+                source: a.into(),
+                target: b.into(),
                 kind: EdgeKind::CoMention,
                 by: None,
                 confidence: None,
@@ -300,12 +421,13 @@ pub fn lens<S: BuildHasher>(
             });
         }
     }
-    finish(data, &ids, edges, summaries, SimilarityStatus::Off)
+    finish(data, &universe, &ids, edges, summaries, SimilarityStatus::Off)
 }
 
 /// `GET /graph/local/{id}`: the focus and everything within `depth` hops over allowed edges
 /// (either direction) through allowed nodes, plus every allowed edge among them
-/// (`graph_algo::neighbourhood`). `similar` are the focus's similarity edges, if requested.
+/// (`graph_algo::neighbourhood`). With `include_tags`, tag nodes take part like any other
+/// node. `similar` are the focus's similarity edges, if requested.
 pub fn local<S: BuildHasher>(
     data: &GraphData,
     focus: NoteId,
@@ -314,35 +436,27 @@ pub fn local<S: BuildHasher>(
     similarity: SimilarityStatus,
     summaries: &HashMap<NoteId, String, S>,
 ) -> Result<GraphView> {
+    let universe = Universe::new(data, query.include_tags);
     let mut b = GraphBuilder::new();
-    for n in &data.nodes {
-        let _ = b.add_node(&n.id.to_string(), n.kind.into());
+    for n in &universe.nodes {
+        let _ = b.add_node(&n.id.to_string(), n.kind);
     }
     // Edge index in the graph → the view it came from.
-    let mut views: Vec<EdgeView> = Vec::with_capacity(data.edges.len() + similar.len());
-    for e in &data.edges {
+    let mut views: Vec<EdgeView> = Vec::with_capacity(universe.edges.len() + similar.len());
+    for e in universe.edges.iter().cloned().chain(similar.iter().map(similarity_view)) {
+        let EdgeKind::Typed(kind) = e.kind else {
+            continue;
+        };
         if b.add_edge(&EdgeInput {
             source: e.source.to_string(),
             target: e.target.to_string(),
-            kind: e.kind,
-            by: e.by,
+            kind,
+            by: e.by.unwrap_or(RelationOrigin::Ai),
             confidence: e.confidence,
         })
         .is_ok()
         {
-            views.push(typed_view(e));
-        }
-    }
-    for p in similar {
-        if b.add_edge(&EdgeInput::ai(
-            &p.source.to_string(),
-            &p.target.to_string(),
-            GraphEdgeKind::Similarity,
-            0.0,
-        ))
-        .is_ok()
-        {
-            views.push(similarity_view(p));
+            views.push(e);
         }
     }
     let g = b.build();
@@ -368,17 +482,17 @@ pub fn local<S: BuildHasher>(
             }
         })?
     };
-    let ids: BTreeMap<NoteId, Option<u8>> = hood
+    let ids: BTreeMap<NodeId, Option<u8>> = hood
         .nodes
         .iter()
-        .map(|&(ix, d)| (data.nodes[ix as usize].id, Some(d)))
+        .map(|&(ix, d)| (universe.nodes[ix as usize].id.clone(), Some(d)))
         .collect();
     let edges: Vec<EdgeView> = hood
         .edges
         .iter()
         .map(|&i| views[i as usize].clone())
         .collect();
-    Ok(finish(data, &ids, edges, summaries, similarity))
+    Ok(finish(data, &universe, &ids, edges, summaries, similarity))
 }
 
 /// The node IDs of `data` as a set.

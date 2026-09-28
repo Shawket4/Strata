@@ -425,6 +425,10 @@ pub async fn list_entities(
     vault: web::Data<VaultService>,
     q: web::Query<EntitiesQuery>,
 ) -> Result<MsgPack<EntityList>, Problem> {
+    if q.tag.as_deref().is_some_and(|t| t.contains('\0')) {
+        // No stored tag can contain NUL (PostgreSQL text cannot hold it).
+        return Ok(MsgPack(EntityList { items: Vec::new() }));
+    }
     let items = vault
         .list_entities(
             auth.scope(),

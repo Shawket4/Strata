@@ -405,7 +405,7 @@ pub fn layout_canvas(
             width: 250,
             height: 60,
             color: None,
-            extra: Default::default(),
+            extra: serde_json::Map::default(),
         });
         placed.insert(p.id.clone());
     }
@@ -425,7 +425,7 @@ pub fn layout_canvas(
             to_end: None,
             color: None,
             label: e.rel_type.clone(),
-            extra: Default::default(),
+            extra: serde_json::Map::default(),
         });
     }
     Ok(canvas.to_json())

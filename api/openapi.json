@@ -1116,48 +1116,6 @@
         ],
         "type": "object"
       },
-      "CorrectionProposal": {
-        "description": "A correction in words that was not applied automatically (`correction`).",
-        "properties": {
-          "decision_id": {
-            "description": "The correction decision.",
-            "format": "ulid",
-            "type": "string"
-          },
-          "fixes": {
-            "description": "Proposed fixes.",
-            "items": {
-              "$ref": "#/components/schemas/CorrectionFixDto"
-            },
-            "type": "array"
-          },
-          "hints": {
-            "description": "Hints to remember.",
-            "items": {
-              "$ref": "#/components/schemas/HintDto"
-            },
-            "type": "array"
-          },
-          "message": {
-            "description": "The user's words.",
-            "type": "string"
-          },
-          "question": {
-            "description": "The model's question when ambiguous.",
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "decision_id",
-          "message",
-          "fixes",
-          "hints"
-        ],
-        "type": "object"
-      },
       "CorrectionResult": {
         "description": "The corrected decision.",
         "properties": {
@@ -1633,105 +1591,6 @@
         ],
         "type": "object"
       },
-      "CustodyProposal": {
-        "description": "A custody event proposal (`custody`).",
-        "properties": {
-          "block_id": {
-            "description": "The block stating it.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "confidence": {
-            "description": "Model confidence.",
-            "format": "double",
-            "type": "number"
-          },
-          "counterparty": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/CustodyTargetDto",
-                "description": "Third party."
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "date": {
-            "description": "Date.",
-            "format": "date",
-            "type": "string"
-          },
-          "decision_id": {
-            "description": "The decision.",
-            "format": "ulid",
-            "type": "string"
-          },
-          "document": {
-            "$ref": "#/components/schemas/CustodyTargetDto",
-            "description": "Document."
-          },
-          "event": {
-            "description": "Event type (`stored-at`, …).",
-            "type": "string"
-          },
-          "person": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/CustodyTargetDto",
-                "description": "Person."
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "place": {
-            "oneOf": [
-              {
-                "$ref": "#/components/schemas/CustodyTargetDto",
-                "description": "Place."
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "place_part_of": {
-            "description": "Enclosing place mention.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "quote": {
-            "description": "The span stating it.",
-            "type": "string"
-          },
-          "reason": {
-            "description": "`low_confidence`, `ambiguous`, `unknown`, `conflict`, `reply`.",
-            "type": "string"
-          },
-          "source_note": {
-            "description": "The note stating it.",
-            "format": "ulid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "decision_id",
-          "source_note",
-          "event",
-          "date",
-          "document",
-          "confidence",
-          "reason",
-          "quote"
-        ],
-        "type": "object"
-      },
       "CustodyTargetDto": {
         "description": "A custody participant.",
         "properties": {
@@ -2161,75 +2020,6 @@
           "place"
         ],
         "type": "string"
-      },
-      "EntityLinkProposal": {
-        "description": "A link-or-create proposal (`entity_link`).",
-        "properties": {
-          "block_id": {
-            "description": "The block stating it.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "candidates": {
-            "description": "Entities that fit.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "confidence": {
-            "description": "Model confidence.",
-            "format": "double",
-            "type": "number"
-          },
-          "decision_id": {
-            "description": "The decision.",
-            "format": "ulid",
-            "type": "string"
-          },
-          "entity_kind": {
-            "description": "`person`, `company`, `document`, `place`.",
-            "type": "string"
-          },
-          "is_nickname": {
-            "description": "A nickname or kinship term.",
-            "type": "boolean"
-          },
-          "mention": {
-            "description": "The mention as written.",
-            "type": "string"
-          },
-          "proposed": {
-            "description": "The proposed entity (absent: create a new one).",
-            "format": "ulid",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "reason": {
-            "description": "`ambiguous`, `nickname`, `new`, `low_confidence`, `reply`.",
-            "type": "string"
-          },
-          "source_note": {
-            "description": "The note mentioning it.",
-            "format": "ulid",
-            "type": "string"
-          }
-        },
-        "required": [
-          "decision_id",
-          "mention",
-          "entity_kind",
-          "source_note",
-          "candidates",
-          "is_nickname",
-          "confidence",
-          "reason"
-        ],
-        "type": "object"
       },
       "EntityList": {
         "description": "Entities.",
@@ -3069,38 +2859,6 @@
           "deleted"
         ],
         "type": "string"
-      },
-      "FilingProposal": {
-        "description": "A filing proposal (`filing`).",
-        "properties": {
-          "decision_id": {
-            "description": "The decision.",
-            "format": "ulid",
-            "type": "string"
-          },
-          "folder": {
-            "description": "Destination folder.",
-            "type": "string"
-          },
-          "tags": {
-            "description": "Tags.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "title": {
-            "description": "Title.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "decision_id",
-          "title",
-          "tags",
-          "folder"
-        ],
-        "type": "object"
       },
       "Graph": {
         "description": "A graph (no positions).",
@@ -5041,6 +4799,9 @@
       },
       "SuggestionPayload": {
         "description": "What a suggestion proposes.",
+        "discriminator": {
+          "propertyName": "type"
+        },
         "oneOf": [
           {
             "description": "The note resembles existing items; accepting keeps both.",
@@ -5098,119 +4859,350 @@
             "type": "object"
           },
           {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/FilingProposal",
-                "description": "A filing proposal for an inbox capture (`filing`, §9.3)."
+            "description": "A filing proposal for an inbox capture (`filing`, §9.3): accepting (optionally with\nedits) titles, tags and moves the capture in one commit.",
+            "properties": {
+              "decision_id": {
+                "description": "The AI decision.",
+                "format": "ulid",
+                "type": "string"
               },
-              {
-                "properties": {
-                  "type": {
-                    "enum": [
-                      "filing"
-                    ],
-                    "type": "string"
-                  }
+              "folder": {
+                "description": "Destination folder.",
+                "type": "string"
+              },
+              "tags": {
+                "description": "Tags to add.",
+                "items": {
+                  "type": "string"
                 },
-                "required": [
-                  "type"
+                "type": "array"
+              },
+              "title": {
+                "description": "Title (file name).",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "filing"
                 ],
-                "type": "object"
+                "type": "string"
               }
+            },
+            "required": [
+              "decision_id",
+              "title",
+              "tags",
+              "folder",
+              "type"
             ],
-            "description": "A filing proposal for an inbox capture (`filing`, §9.3)."
+            "type": "object"
           },
           {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/EntityLinkProposal",
-                "description": "Link a mention to an entity or create it (`entity_link`, §6.7, D13 = b)."
+            "description": "Link a mention to an entity, or create it (`entity_link`, §6.7, D13 = b): accepting\nadds the mention to the entity's aliases.",
+            "properties": {
+              "block_id": {
+                "description": "The block stating it.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
-              {
-                "properties": {
-                  "type": {
-                    "enum": [
-                      "entity_link"
-                    ],
-                    "type": "string"
-                  }
+              "candidates": {
+                "description": "Entities that fit.",
+                "items": {
+                  "type": "string"
                 },
-                "required": [
-                  "type"
+                "type": "array"
+              },
+              "confidence": {
+                "description": "Model confidence.",
+                "format": "double",
+                "type": "number"
+              },
+              "decision_id": {
+                "description": "The AI decision.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "entity_kind": {
+                "description": "`person`, `company`, `document`, `place`.",
+                "type": "string"
+              },
+              "is_nickname": {
+                "description": "A nickname or kinship term (never created automatically).",
+                "type": "boolean"
+              },
+              "mention": {
+                "description": "The mention as written.",
+                "type": "string"
+              },
+              "proposed": {
+                "description": "The proposed entity (absent: create a new one).",
+                "format": "ulid",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "description": "`ambiguous`, `nickname`, `new`, `low_confidence`, `reply`.",
+                "type": "string"
+              },
+              "source_note": {
+                "description": "The note mentioning it.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "entity_link"
                 ],
-                "type": "object"
+                "type": "string"
               }
+            },
+            "required": [
+              "decision_id",
+              "mention",
+              "entity_kind",
+              "source_note",
+              "candidates",
+              "is_nickname",
+              "confidence",
+              "reason",
+              "type"
             ],
-            "description": "Link a mention to an entity or create it (`entity_link`, §6.7, D13 = b)."
+            "type": "object"
           },
           {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CustodyProposal",
-                "description": "A custody event not applied automatically (`custody`, §6.12, D30)."
+            "description": "A custody event not applied automatically (`custody`, §6.12, D30).",
+            "properties": {
+              "block_id": {
+                "description": "The block stating it.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
-              {
-                "properties": {
-                  "type": {
-                    "enum": [
-                      "custody"
-                    ],
-                    "type": "string"
+              "confidence": {
+                "description": "Model confidence.",
+                "format": "double",
+                "type": "number"
+              },
+              "counterparty": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CustodyTargetDto",
+                    "description": "The third party."
+                  },
+                  {
+                    "type": "null"
                   }
-                },
-                "required": [
-                  "type"
+                ]
+              },
+              "date": {
+                "description": "Date (resolved).",
+                "format": "date",
+                "type": "string"
+              },
+              "decision_id": {
+                "description": "The AI decision.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "document": {
+                "$ref": "#/components/schemas/CustodyTargetDto",
+                "description": "The document."
+              },
+              "event": {
+                "description": "Event type (`stored-at`, …).",
+                "type": "string"
+              },
+              "person": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CustodyTargetDto",
+                    "description": "The person."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "place": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/CustodyTargetDto",
+                    "description": "The place."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "place_part_of": {
+                "description": "The enclosing place mention.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "quote": {
+                "description": "The span stating it.",
+                "type": "string"
+              },
+              "reason": {
+                "description": "`low_confidence`, `ambiguous`, `unknown`, `conflict`, `reply`.",
+                "type": "string"
+              },
+              "source_note": {
+                "description": "The note stating it.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "custody"
                 ],
-                "type": "object"
+                "type": "string"
               }
+            },
+            "required": [
+              "decision_id",
+              "source_note",
+              "event",
+              "date",
+              "document",
+              "confidence",
+              "reason",
+              "quote",
+              "type"
             ],
-            "description": "A custody event not applied automatically (`custody`, §6.12, D30)."
+            "type": "object"
           },
           {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/TaskProposal",
-                "description": "A task proposed from a note (`task`, §6.11)."
+            "description": "A task proposed from a note (`task`, §6.11): accepting writes the line.",
+            "properties": {
+              "block_id": {
+                "description": "The block stating it.",
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
-              {
-                "properties": {
-                  "type": {
-                    "enum": [
-                      "task"
-                    ],
-                    "type": "string"
-                  }
+              "confidence": {
+                "description": "Model confidence.",
+                "format": "double",
+                "type": "number"
+              },
+              "decision_id": {
+                "description": "The AI decision.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "due": {
+                "description": "Due date.",
+                "format": "date",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "entities": {
+                "description": "Entities it concerns.",
+                "items": {
+                  "type": "string"
                 },
-                "required": [
-                  "type"
+                "type": "array"
+              },
+              "recurrence": {
+                "description": "Recurrence phrase (Tasks plugin language).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reminders": {
+                "description": "Reminders (local times).",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "source_note": {
+                "description": "The note it came from.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "title": {
+                "description": "Title.",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "task"
                 ],
-                "type": "object"
+                "type": "string"
               }
+            },
+            "required": [
+              "decision_id",
+              "source_note",
+              "title",
+              "reminders",
+              "entities",
+              "confidence",
+              "type"
             ],
-            "description": "A task proposed from a note (`task`, §6.11)."
+            "type": "object"
           },
           {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/CorrectionProposal",
-                "description": "A correction in words not applied automatically (`correction`, §9.8)."
+            "description": "A correction in words not applied automatically (`correction`, §9.8).",
+            "properties": {
+              "decision_id": {
+                "description": "The correction decision.",
+                "format": "ulid",
+                "type": "string"
               },
-              {
-                "properties": {
-                  "type": {
-                    "enum": [
-                      "correction"
-                    ],
-                    "type": "string"
-                  }
+              "fixes": {
+                "description": "Proposed fixes.",
+                "items": {
+                  "$ref": "#/components/schemas/CorrectionFixDto"
                 },
-                "required": [
-                  "type"
+                "type": "array"
+              },
+              "hints": {
+                "description": "Hints to remember.",
+                "items": {
+                  "$ref": "#/components/schemas/HintDto"
+                },
+                "type": "array"
+              },
+              "message": {
+                "description": "The user's words.",
+                "type": "string"
+              },
+              "question": {
+                "description": "The model's question when ambiguous.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "type": {
+                "enum": [
+                  "correction"
                 ],
-                "type": "object"
+                "type": "string"
               }
+            },
+            "required": [
+              "decision_id",
+              "message",
+              "fixes",
+              "hints",
+              "type"
             ],
-            "description": "A correction in words not applied automatically (`correction`, §9.8)."
+            "type": "object"
           },
           {
             "description": "A kind this version does not describe (MessagePack as stored).",
@@ -7816,75 +7808,6 @@
           "lowest"
         ],
         "type": "string"
-      },
-      "TaskProposal": {
-        "description": "A task proposal (`task`).",
-        "properties": {
-          "block_id": {
-            "description": "The block stating it.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "confidence": {
-            "description": "Model confidence.",
-            "format": "double",
-            "type": "number"
-          },
-          "decision_id": {
-            "description": "The decision.",
-            "format": "ulid",
-            "type": "string"
-          },
-          "due": {
-            "description": "Due date.",
-            "format": "date",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "entities": {
-            "description": "Entities it concerns.",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "recurrence": {
-            "description": "Recurrence phrase.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "reminders": {
-            "description": "Reminders (local times).",
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "source_note": {
-            "description": "The note it came from.",
-            "format": "ulid",
-            "type": "string"
-          },
-          "title": {
-            "description": "Title.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "decision_id",
-          "source_note",
-          "title",
-          "reminders",
-          "entities",
-          "confidence"
-        ],
-        "type": "object"
       },
       "TaskStatus": {
         "description": "Task status.",

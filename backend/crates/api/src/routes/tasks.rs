@@ -426,7 +426,7 @@ pub async fn patch_task(
             b.priority.map(|p| Some(p.into()))
         },
     };
-    let id = id.into_inner();
+    let id = task_id(id)?;
     vault
         .patch_task(auth.scope(), id.clone(), patch, if_match)
         .await
@@ -436,13 +436,25 @@ pub async fn patch_task(
     ))
 }
 
+/// A task ID is the line's block ID; anything else names no task. Checked before any lookup,
+/// so bytes the database cannot hold (NUL) never reach a query.
+fn task_id(id: web::Path<String>) -> Result<String, Problem> {
+    let id = id.into_inner();
+    if vault_format::blocks::is_valid_block_id(&id) {
+        Ok(id)
+    } else {
+        Err(Problem::new(ProblemType::NotFound))
+    }
+}
+
 async fn transition(
     auth: &Authenticated,
     vault: &VaultService,
     req: &HttpRequest,
-    id: String,
+    id: web::Path<String>,
     t: Transition,
 ) -> Result<MsgPack<TaskTransitioned>, Problem> {
+    let id = task_id(id)?;
     let if_match = crate::vault::if_match(req.headers())?;
     let next = vault
         .transition_task(auth.scope(), id.clone(), t, if_match)
@@ -474,7 +486,7 @@ pub async fn complete_task(
     req: HttpRequest,
     id: web::Path<String>,
 ) -> Result<MsgPack<TaskTransitioned>, Problem> {
-    transition(&auth, &vault, &req, id.into_inner(), Transition::Complete).await
+    transition(&auth, &vault, &req, id, Transition::Complete).await
 }
 
 /// Cancel a task.
@@ -495,7 +507,7 @@ pub async fn cancel_task(
     req: HttpRequest,
     id: web::Path<String>,
 ) -> Result<MsgPack<TaskTransitioned>, Problem> {
-    transition(&auth, &vault, &req, id.into_inner(), Transition::Cancel).await
+    transition(&auth, &vault, &req, id, Transition::Cancel).await
 }
 
 /// Reopen a done or cancelled task.
@@ -516,7 +528,7 @@ pub async fn reopen_task(
     req: HttpRequest,
     id: web::Path<String>,
 ) -> Result<MsgPack<TaskTransitioned>, Problem> {
-    transition(&auth, &vault, &req, id.into_inner(), Transition::Reopen).await
+    transition(&auth, &vault, &req, id, Transition::Reopen).await
 }
 
 /// Mounts the task routes.

@@ -4,15 +4,20 @@
 //! `types` selects **edge** kinds by their §10 names: `link`, `embed`, `relation` (every
 //! relation type) or `relation:<type>`, `similarity`, `concept`, `mention`, `entity` (every
 //! entity relation) or `entity:<type>`, `custody` (all three) or
-//! `custody:<location|holder|last-holder>`, `part-of-place`, and `co-mention` (entity lens
-//! only). `kinds` selects **node** kinds (`note`, `concept`, `person`, `company`,
-//! `document`, `place`); it is a separate parameter because `concept` names both a node and
-//! an edge kind. An absent or empty list allows everything.
+//! `custody:<location|holder|last-holder>`, `part-of-place`, `document` (every document
+//! relation) or `document:<type>` (`document:copy-of`), `tag` (note → tag, with
+//! `include_tags`), and `co-mention` (entity lens only). `kinds` selects **node** kinds
+//! (`note`, `concept`, `person`, `company`, `document`, `place`, and `tag` with
+//! `include_tags`); it is a separate parameter because `concept`, `document` and `tag` name
+//! both a node and an edge kind. An absent or empty list allows everything.
 
 use std::collections::BTreeSet;
 use std::fmt;
 
-use domain::{CustodyEdge, EntityRelationType, GraphEdgeKind, NoteKind, RelationType};
+use domain::{
+    CustodyEdge, DocumentRelationType, EntityRelationType, GraphEdgeKind, GraphNodeKind,
+    RelationType,
+};
 
 use crate::error::{GraphError, Result};
 
@@ -70,6 +75,10 @@ impl EdgeFilter {
                     .iter()
                     .map(|c| EdgeKind::Typed(GraphEdgeKind::Custody(*c)))
                     .collect(),
+                "document" => DocumentRelationType::ALL
+                    .iter()
+                    .map(|t| EdgeKind::Typed(GraphEdgeKind::Document(*t)))
+                    .collect(),
                 "co-mention" => vec![EdgeKind::CoMention],
                 other => match other.parse::<GraphEdgeKind>() {
                     Ok(k) => vec![EdgeKind::Typed(k)],
@@ -110,9 +119,21 @@ impl EdgeFilter {
     }
 }
 
+/// Node kinds the graph endpoints return: the note kinds and `tag` (with `include_tags`).
+/// `attachment` (deferred) and the virtual `cluster` are never nodes of a response.
+pub const NODE_KINDS: [GraphNodeKind; 7] = [
+    GraphNodeKind::Note,
+    GraphNodeKind::Concept,
+    GraphNodeKind::Person,
+    GraphNodeKind::Company,
+    GraphNodeKind::Document,
+    GraphNodeKind::Place,
+    GraphNodeKind::Tag,
+];
+
 /// Allowed node kinds (`None` = all).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct NodeFilter(Option<BTreeSet<NoteKind>>);
+pub struct NodeFilter(Option<BTreeSet<GraphNodeKind>>);
 
 impl NodeFilter {
     /// Everything.
@@ -128,8 +149,10 @@ impl NodeFilter {
         let mut out = BTreeSet::new();
         for item in list.split(',').map(str::trim) {
             let kind = item
-                .parse::<NoteKind>()
-                .map_err(|_| GraphError::InvalidParameter {
+                .parse::<GraphNodeKind>()
+                .ok()
+                .filter(|k| NODE_KINDS.contains(k))
+                .ok_or_else(|| GraphError::InvalidParameter {
                     name: "kinds",
                     code: "unknown_node_kind",
                     message: format!("unknown node kind `{item}`"),
@@ -140,13 +163,14 @@ impl NodeFilter {
     }
 
     /// Whether `kind` is allowed.
-    pub fn allows(&self, kind: NoteKind) -> bool {
+    pub fn allows(&self, kind: impl Into<GraphNodeKind>) -> bool {
+        let kind = kind.into();
         self.0.as_ref().is_none_or(|s| s.contains(&kind))
     }
 
     /// The kinds for `graph_algo::Filter` (empty = all).
-    pub fn graph_kinds(&self) -> Vec<domain::GraphNodeKind> {
-        self.0.iter().flatten().map(|k| (*k).into()).collect()
+    pub fn graph_kinds(&self) -> Vec<GraphNodeKind> {
+        self.0.iter().flatten().copied().collect()
     }
 }
 
@@ -175,10 +199,10 @@ impl Lens {
     }
 
     /// The entity kind at the centre of the lens.
-    pub fn kind(self) -> NoteKind {
+    pub fn kind(self) -> domain::NoteKind {
         match self {
-            Self::People => NoteKind::Person,
-            Self::Companies => NoteKind::Company,
+            Self::People => domain::NoteKind::Person,
+            Self::Companies => domain::NoteKind::Company,
         }
     }
 }
@@ -206,6 +230,8 @@ pub struct GraphQuery {
     pub include_similarity: bool,
     /// Entity lens.
     pub lens: Option<Lens>,
+    /// Add tag nodes and note → tag edges (§10 optional toggle; ignored with a lens).
+    pub include_tags: bool,
 }
 
 /// `GET /graph/local/{id}` parameters.
@@ -219,6 +245,8 @@ pub struct LocalQuery {
     pub nodes: NodeFilter,
     /// Add the focus's similarity edges.
     pub include_similarity: bool,
+    /// Add tag nodes and note → tag edges (notes sharing a tag are two hops apart).
+    pub include_tags: bool,
 }
 
 #[cfg(test)]
@@ -255,6 +283,25 @@ mod tests {
             EdgeFilter::parse(Some("entity")).expect("ok").typed().len(),
             10
         );
+        assert_eq!(
+            EdgeFilter::parse(Some("document,tag")).expect("ok"),
+            EdgeFilter::only([
+                EdgeKind::Typed(GraphEdgeKind::Document(DocumentRelationType::CopyOf)),
+                EdgeKind::Typed(GraphEdgeKind::Tag),
+            ])
+        );
+        assert_eq!(
+            EdgeFilter::parse(Some("document:copy-of")).expect("ok"),
+            EdgeFilter::only([EdgeKind::Typed(GraphEdgeKind::Document(
+                DocumentRelationType::CopyOf
+            ))])
+        );
+        assert_eq!(
+            EdgeFilter::parse(Some("copy-of"))
+                .expect_err("family prefix required")
+                .to_string(),
+            "invalid parameter types: unknown edge type `copy-of`"
+        );
         let err = EdgeFilter::parse(Some("link,relation:likes")).expect_err("unknown");
         assert_eq!(
             err.to_string(),
@@ -264,10 +311,23 @@ mod tests {
 
     #[test]
     fn kinds_lens_and_depth() {
+        use domain::NoteKind;
         let n = NodeFilter::parse(Some("person,place")).expect("ok");
         assert!(n.allows(NoteKind::Person) && n.allows(NoteKind::Place));
-        assert!(!n.allows(NoteKind::Note));
-        assert!(NodeFilter::parse(Some("tag")).is_err());
+        assert!(!n.allows(NoteKind::Note) && !n.allows(GraphNodeKind::Tag));
+        let t = NodeFilter::parse(Some("tag,note")).expect("ok");
+        assert_eq!(
+            t.graph_kinds(),
+            vec![GraphNodeKind::Note, GraphNodeKind::Tag]
+        );
+        for bad in ["cluster", "attachment", "tags"] {
+            assert_eq!(
+                NodeFilter::parse(Some(bad))
+                    .expect_err("not a response node kind")
+                    .to_string(),
+                format!("invalid parameter kinds: unknown node kind `{bad}`")
+            );
+        }
         assert_eq!(Lens::parse(Some("people")).expect("ok"), Some(Lens::People));
         assert_eq!(Lens::parse(None).expect("ok"), None);
         assert!(Lens::parse(Some("places")).is_err());

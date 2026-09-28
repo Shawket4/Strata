@@ -7,18 +7,19 @@
 //!   (source, target, kind);
 //! - `relations` (frontmatter keys with sidecar provenance): note relation types →
 //!   `relation:<type>` (`part-of` between two places → `part-of-place`), `concepts` →
-//!   `concept`, `people`/`companies` → `mention`, entity relation types → `entity:<type>`;
-//!   `copy-of` has no graph edge kind in §10 and is not returned;
+//!   `concept`, `people`/`companies` → `mention`, entity relation types → `entity:<type>`,
+//!   document relation types (`copy-of`) → `document:<type>`
+//!   (`domain::GraphEdgeKind::of_relation`);
 //! - `documents` (the state computed from the newest custody event) →
 //!   `custody:location|holder|last-holder`, with that event's provenance.
+//!
+//! Tags (the optional tag nodes of §10) are read separately by [`load_tags`], only when a
+//! request asks for them.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Utc};
-use domain::{
-    CustodyEdge, EntityRelationType, GraphEdgeKind, MentionType, NoteKind, RelationOrigin,
-    RelationType,
-};
+use domain::{CustodyEdge, GraphEdgeKind, NoteKind, RelationOrigin};
 use strata_common::NoteId;
 use strata_index::ScopedTx;
 use strata_index::types::{By, LinkKind};
@@ -70,6 +71,9 @@ pub struct GraphData {
     pub clusters: BTreeMap<NoteId, i64>,
     /// Cluster names.
     pub cluster_names: BTreeMap<i64, String>,
+    /// `(note, tag)` of every live note's tags, when the request asked for tag nodes
+    /// ([`load_tags`]); empty otherwise.
+    pub tags: Vec<(NoteId, String)>,
 }
 
 impl GraphData {
@@ -88,27 +92,6 @@ fn origin(by: By) -> RelationOrigin {
         By::User => RelationOrigin::User,
         By::Ai => RelationOrigin::Ai,
     }
-}
-
-/// The graph edge kind of a stored relation type between notes of the given kinds; `None`
-/// for types without a graph edge (`copy-of`) and unknown types.
-pub fn relation_edge_kind(rel_type: &str, src: NoteKind, dst: NoteKind) -> Option<GraphEdgeKind> {
-    if let Ok(t) = rel_type.parse::<RelationType>() {
-        if t == RelationType::PartOf && src == NoteKind::Place && dst == NoteKind::Place {
-            return Some(GraphEdgeKind::PartOfPlace);
-        }
-        return Some(GraphEdgeKind::Relation(t));
-    }
-    if let Ok(m) = rel_type.parse::<MentionType>() {
-        return Some(match m {
-            MentionType::Concepts => GraphEdgeKind::Concept,
-            MentionType::People | MentionType::Companies => GraphEdgeKind::Mention,
-        });
-    }
-    rel_type
-        .parse::<EntityRelationType>()
-        .ok()
-        .map(GraphEdgeKind::Entity)
 }
 
 type NoteTuple = (
@@ -199,7 +182,7 @@ pub async fn load(tx: &mut ScopedTx) -> Result<GraphData> {
             sk.parse().unwrap_or(NoteKind::Note),
             dk.parse().unwrap_or(NoteKind::Note),
         );
-        let Some(kind) = relation_edge_kind(&rel_type, sk, dk) else {
+        let Some(kind) = GraphEdgeKind::of_relation(&rel_type, sk, dk) else {
             continue;
         };
         put(EdgeRow {
@@ -259,7 +242,20 @@ pub async fn load(tx: &mut ScopedTx) -> Result<GraphData> {
         edges: edges.into_values().collect(),
         clusters: clusters.into_iter().collect(),
         cluster_names: cluster_names.into_iter().collect(),
+        tags: Vec::new(),
     })
+}
+
+/// The tags of every live note, as `(note, tag)` pairs sorted by note then tag (tags as
+/// stored: frontmatter `tags` and body `#tags`, without `#`).
+pub async fn load_tags(tx: &mut ScopedTx) -> Result<Vec<(NoteId, String)>> {
+    Ok(sqlx::query_as(
+        "SELECT t.note_id, t.tag FROM tags t \
+         JOIN notes n ON n.user_id = t.user_id AND n.id = t.note_id AND NOT n.trashed \
+         ORDER BY t.note_id, t.tag",
+    )
+    .fetch_all(tx.conn())
+    .await?)
 }
 
 /// A string setting of the scope's free-form preferences (`PATCH /me` `preferences`).
@@ -269,49 +265,4 @@ pub async fn preference(tx: &mut ScopedTx, key: &str) -> Result<Option<String>> 
         .and_then(|b| rmp_serde::from_slice(&b).ok())
         .unwrap_or_default();
     Ok(prefs.get(key).cloned())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn relation_types_map_to_the_edge_kinds_of_section_10() {
-        use NoteKind::{Company, Concept, Document, Note, Person, Place};
-        let cases = [
-            (
-                "related",
-                Note,
-                Note,
-                Some(GraphEdgeKind::Relation(RelationType::Related)),
-            ),
-            (
-                "part-of",
-                Note,
-                Note,
-                Some(GraphEdgeKind::Relation(RelationType::PartOf)),
-            ),
-            ("part-of", Place, Place, Some(GraphEdgeKind::PartOfPlace)),
-            (
-                "part-of",
-                Place,
-                Note,
-                Some(GraphEdgeKind::Relation(RelationType::PartOf)),
-            ),
-            ("concepts", Note, Concept, Some(GraphEdgeKind::Concept)),
-            ("people", Note, Person, Some(GraphEdgeKind::Mention)),
-            ("companies", Document, Company, Some(GraphEdgeKind::Mention)),
-            (
-                "works-at",
-                Person,
-                Company,
-                Some(GraphEdgeKind::Entity(EntityRelationType::WorksAt)),
-            ),
-            ("copy-of", Document, Document, None),
-            ("nonsense", Note, Note, None),
-        ];
-        for (t, s, d, want) in cases {
-            assert_eq!(relation_edge_kind(t, s, d), want, "{t}");
-        }
-    }
 }
