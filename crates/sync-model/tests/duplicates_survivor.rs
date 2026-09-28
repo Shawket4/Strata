@@ -47,7 +47,10 @@ fn the_note_created_first_survives() {
     // Equal times: the smaller ID.
     let same = at("2026-09-10T08:00:00Z");
     assert_eq!(p.survivor(same, same), DuplicatesSurvivor::A);
-    assert_eq!(pair(note(2), note(1)).survivor(same, same), DuplicatesSurvivor::B);
+    assert_eq!(
+        pair(note(2), note(1)).survivor(same, same),
+        DuplicatesSurvivor::B
+    );
     // A note without `created` counts as the oldest.
     assert_eq!(p.survivor(same, None), DuplicatesSurvivor::B);
     // Entities follow the same rule.

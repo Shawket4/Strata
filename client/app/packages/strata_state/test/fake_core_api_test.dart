@@ -501,6 +501,19 @@ void main() {
       answer: StrataFixtures.opId,
     ),
     (
+      invoke: (api) => api.setPropertyValues(
+        id: 'id',
+        key: 'phone',
+        values: const ['1', '2'],
+      ),
+      call: const CoreCall('setPropertyValues', {
+        'id': 'id',
+        'key': 'phone',
+        'values': ['1', '2'],
+      }),
+      answer: StrataFixtures.opId,
+    ),
+    (
       invoke: (api) => api.removeProperty(id: 'id', key: 'key'),
       call: const CoreCall('removeProperty', {'id': 'id', 'key': 'key'}),
       answer: StrataFixtures.opId,
@@ -860,6 +873,16 @@ void main() {
       answer: StrataFixtures.noteDiffView,
     ),
     (
+      invoke: (api) => api.timezones(query: 'cairo'),
+      call: const CoreCall('timezones', {'query': 'cairo'}),
+      answer: StrataFixtures.timezones,
+    ),
+    (
+      invoke: (api) => api.repointChoices(decisionId: 'd', query: 'q'),
+      call: const CoreCall('repointChoices', {'decisionId': 'd', 'query': 'q'}),
+      answer: StrataFixtures.repointChoices,
+    ),
+    (
       invoke: (api) => api.loadAdminUsers(query: 'query'),
       call: const CoreCall('loadAdminUsers', {'query': 'query'}),
       answer: StrataFixtures.adminUsersView,
@@ -867,9 +890,9 @@ void main() {
   ];
 
   test('covers every Future-returning CoreApi method once', () {
-    // 140 facade functions - 22 streams.
-    expect(cases, hasLength(118));
-    expect(cases.map((c) => c.call.method).toSet(), hasLength(118));
+    // 143 facade functions - 22 streams.
+    expect(cases, hasLength(121));
+    expect(cases.map((c) => c.call.method).toSet(), hasLength(121));
   });
 
   for (final c in cases) {
@@ -880,6 +903,29 @@ void main() {
       expect(fake.calls, [c.call]);
     });
   }
+
+  group('FakeFilePicker', () {
+    test('records the dialogs in the fake core calls and answers', () async {
+      final fake = FakeCoreApi();
+      addTearDown(fake.dispose);
+      expect(
+        await fake.files.saveFile(
+          suggestedName: 'strata-vault.zip',
+          type: PickedFileType.zip,
+        ),
+        '/home/shawket/Downloads/strata-vault.zip',
+      );
+      fake.files.openFileAnswer.returns(null);
+      expect(await fake.files.openFile(type: PickedFileType.markdown), isNull);
+      expect(fake.calls, [
+        const CoreCall('saveFile', {
+          'suggestedName': 'strata-vault.zip',
+          'type': PickedFileType.zip,
+        }),
+        const CoreCall('openFile', {'type': PickedFileType.markdown}),
+      ]);
+    });
+  });
 
   group('FakeAnswer', () {
     test('returns a new value, then throws, then returns again', () async {

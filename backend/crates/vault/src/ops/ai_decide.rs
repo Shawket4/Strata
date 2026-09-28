@@ -27,8 +27,8 @@ use strata_index::repo::suggestions::{self as srepo, Suggestion};
 use strata_index::types::{DecisionKind, SuggestionStatus};
 use sync_model::ops::SuggestionEdits;
 use sync_model::suggestions::{
-    CorrectionPayload, CustodyPayload, CustodyTarget, DuplicatesPayload, DuplicatesSurvivor, EntityLinkPayload,
-    FilingPayload, TaskPayload,
+    CorrectionPayload, CustodyPayload, CustodyTarget, DuplicatesPayload, DuplicatesSurvivor,
+    EntityLinkPayload, FilingPayload, TaskPayload,
 };
 use vault_format::custody::CustodyEventType;
 use vault_format::frontmatter::KnownKey;
@@ -802,11 +802,11 @@ impl Core {
         }
         let a: NoteId = p.a.item.parse().map_err(|_| VaultError::NotFound)?;
         let b: NoteId = p.b.item.parse().map_err(|_| VaultError::NotFound)?;
-        let (survivor, loser) = match p.survivor(self.created_of(a).await?, self.created_of(b).await?)
-        {
-            DuplicatesSurvivor::A => (a, b),
-            DuplicatesSurvivor::B => (b, a),
-        };
+        let (survivor, loser) =
+            match p.survivor(self.created_of(a).await?, self.created_of(b).await?) {
+                DuplicatesSurvivor::A => (a, b),
+                DuplicatesSurvivor::B => (b, a),
+            };
         match self.live_kind(survivor) {
             Some(NoteKind::Person | NoteKind::Company | NoteKind::Document | NoteKind::Place) => {
                 self.merge_entities(scope, loser, survivor)

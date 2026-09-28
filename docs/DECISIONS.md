@@ -13,6 +13,11 @@ Gaps filled while implementing the owner decision below; the owner may revisit a
 - **Device time zone:** read from the operating system in the Rust core (`iana-time-zone`), not passed through the bridge; after the first bootstrap an account with no synced `timezone` setting gets the device's zone via `PATCH /me`.
 - **Title rule scope:** entity, document, place and concept notes (user and AI). A `note.create` whose path was taken meanwhile is still written at `<stem> 2.md` without a `title`.
 
+### Builds, deployment config and container plan (owner)
+- **CI builds artifacts:** the `stratad` Linux x86_64 release binary, the Flutter app for macOS (ad-hoc signed `.app`) and Android (APK). App icons and splash screens are set for every platform from the brand marks.
+- **Configuration via `.env`:** `stratad` reads its configuration from environment variables, loaded from a `.env` file (the owner places it on the VPS). The binary is deployed manually for now; automated deployment comes later.
+- **Docker later:** a future image contains only the backend. PostgreSQL runs on the host (shared with other containers), and the embedding model and ONNX Runtime stay on the host, mounted read-only; embeddings remain in-process (D9 unchanged).
+
 ### File picker and label separators (owner)
 - **File picker:** export/import paths come from the native OS picker (`file_selector`, allowed in the app shell only); it returns a path and the core does the rest.
 - **No arrow glyphs in core labels:** labels use words or `·` instead of `→` (e.g. "Moved from Safe to Office"). Cairo has no arrow, and a fixed arrow points the wrong way in RTL.

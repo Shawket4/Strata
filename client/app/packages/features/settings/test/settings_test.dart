@@ -299,13 +299,17 @@ void main() {
       await tester.enterText(find.byType(TextField).last, 'Shawket I.');
       await tester.tap(find.text('Save'));
       await settle(tester);
+      // The zone comes from the core's list: search, then pick.
       await tapVisible(tester, find.byTooltip('Time zone'));
-      await tester.enterText(find.byType(TextField).last, 'Europe/Berlin');
-      await tester.tap(find.text('Save'));
+      await tester.enterText(find.byType(TextField).last, 'riy');
+      await settle(tester);
+      await tester.tap(find.text('Riyadh'));
       await settle(tester);
       expect(_intents(fake), [
         const CoreCall('setDisplayName', {'name': 'Shawket I.'}),
-        const CoreCall('setTimezone', {'iana': 'Europe/Berlin'}),
+        const CoreCall('timezones', {'query': ''}),
+        const CoreCall('timezones', {'query': 'riy'}),
+        const CoreCall('setTimezone', {'iana': 'Asia/Riyadh'}),
       ]);
       expect(find.text('Saved'), findsWidgets);
     });
@@ -431,29 +435,50 @@ void main() {
       ]);
     });
 
-    testWidgets('export and import with a typed path', (tester) async {
+    testWidgets('export and import paths come from the file dialogs', (
+      tester,
+    ) async {
       final fake = _fake()
         ..importVaultAnswer.returns(
           const ImportSummary(imported: 12, skipped: 1),
         );
+      fake.files.saveFileAnswer.returns('/tmp/vault.zip');
+      fake.files.openFileAnswer.returns('/tmp/in.zip');
       await _pump(tester, expanded, section: SettingsSection.data, fake: fake);
       await tapVisible(tester, find.text('Export vault (.zip)'));
-      await tester.enterText(find.byType(TextField).last, '/tmp/vault.zip');
-      await tester.tap(find.text('Export'));
       await settle(tester);
       expect(
         find.text('Exported ${StrataFixtures.exportSummary.label}'),
         findsOneWidget,
       );
       await tapVisible(tester, find.text('Import markdown…'));
-      await tester.enterText(find.byType(TextField).last, '/tmp/in.zip');
-      await tester.tap(find.text('Import'));
       await settle(tester);
       expect(find.text('12 imported · 1 skipped'), findsOneWidget);
       expect(_intents(fake), [
+        const CoreCall('saveFile', {
+          'suggestedName': 'strata-vault.zip',
+          'type': PickedFileType.zip,
+        }),
         const CoreCall('exportVault', {'path': '/tmp/vault.zip'}),
+        const CoreCall('openFile', {'type': PickedFileType.zip}),
         const CoreCall('importVault', {'path': '/tmp/in.zip'}),
       ]);
+    });
+
+    testWidgets('a cancelled file dialog asks the core nothing', (
+      tester,
+    ) async {
+      final fake = _fake();
+      fake.files.saveFileAnswer.returns(null);
+      fake.files.openFileAnswer.returns(null);
+      await _pump(tester, expanded, section: SettingsSection.data, fake: fake);
+      await tapVisible(tester, find.text('Export vault (.zip)'));
+      await tapVisible(tester, find.text('Import markdown…'));
+      await settle(tester);
+      expect(
+        [for (final c in _intents(fake)) c.method],
+        ['saveFile', 'openFile'],
+      );
     });
 
     testWidgets('export and import wait for the server', (tester) async {

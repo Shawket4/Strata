@@ -6,7 +6,9 @@ use std::collections::BTreeMap;
 use chrono::NaiveDate;
 use domain::CustodyEventType;
 use pretty_assertions::assert_eq;
-use sync_model::apply::{ApplyError, clean_list_value, custody_event, entity_patch, record_custody};
+use sync_model::apply::{
+    ApplyError, clean_list_value, custody_event, entity_patch, record_custody,
+};
 use sync_model::ops::{DocumentCustody, EntityPatch};
 use ulid::Ulid;
 use vault_format::Document;
@@ -67,7 +69,11 @@ fn set_lists_refuses_relations_ids_and_custody_fields() {
     ] {
         let before = doc.render();
         let patch = lists(&[("tags", &["a"]), (key, &["[[x]]"])]);
-        assert_eq!(entity_patch(doc.frontmatter_mut(), &patch), Err(err), "{key}");
+        assert_eq!(
+            entity_patch(doc.frontmatter_mut(), &patch),
+            Err(err),
+            "{key}"
+        );
         assert_eq!(doc.render(), before, "nothing changes on error");
     }
 }
@@ -75,8 +81,14 @@ fn set_lists_refuses_relations_ids_and_custody_fields() {
 #[test]
 fn clean_list_value_trims_and_dedupes() {
     let v = |s: &[&str]| s.iter().map(|x| (*x).to_owned()).collect::<Vec<_>>();
-    assert_eq!(clean_list_value("tags", &v(&["#a", " a ", "#", "b"])), v(&["a", "b"]));
-    assert_eq!(clean_list_value("phone", &v(&["#1", " #1 ", ""])), v(&["#1"]));
+    assert_eq!(
+        clean_list_value("tags", &v(&["#a", " a ", "#", "b"])),
+        v(&["a", "b"])
+    );
+    assert_eq!(
+        clean_list_value("phone", &v(&["#1", " #1 ", ""])),
+        v(&["#1"])
+    );
 }
 
 fn custody(note: Option<&str>) -> DocumentCustody {
@@ -99,9 +111,15 @@ fn link(id: Ulid) -> Option<String> {
 fn custody_notes_are_written_last_on_one_line() {
     let e = custody_event(&custody(Some("  for the\n audit ")), link, vec![]).unwrap();
     assert_eq!(e.note.as_deref(), Some("for the audit"));
-    assert_eq!(e.to_line(), "- 2026-09-21 — handed-to [[Shady]] — for the audit");
+    assert_eq!(
+        e.to_line(),
+        "- 2026-09-21 — handed-to [[Shady]] — for the audit"
+    );
     let cited = custody_event(&custody(Some("x")), link, vec!["[[C]]".into()]).unwrap();
-    assert_eq!(cited.to_line(), "- 2026-09-21 — handed-to [[Shady]] — [[C]] — x");
+    assert_eq!(
+        cited.to_line(),
+        "- 2026-09-21 — handed-to [[Shady]] — [[C]] — x"
+    );
     // A blank note is no note.
     let e = custody_event(&custody(Some(" \n ")), link, vec![]).unwrap();
     assert_eq!(e.to_line(), "- 2026-09-21 — handed-to [[Shady]]");
@@ -122,10 +140,22 @@ fn custody_notes_are_written_last_on_one_line() {
 #[test]
 fn custody_note_is_omitted_from_the_wire_when_absent() {
     let value = serde_json::to_value(custody(None)).unwrap();
-    let keys: Vec<&str> = value.as_object().unwrap().keys().map(String::as_str).collect();
+    let keys: Vec<&str> = value
+        .as_object()
+        .unwrap()
+        .keys()
+        .map(String::as_str)
+        .collect();
     assert_eq!(
         keys,
-        ["at", "counterparty_id", "document_id", "person_id", "place_id", "type"]
+        [
+            "at",
+            "counterparty_id",
+            "document_id",
+            "person_id",
+            "place_id",
+            "type"
+        ]
     );
     let back: DocumentCustody = serde_json::from_value(value).unwrap();
     assert_eq!(back, custody(None));

@@ -3390,6 +3390,7 @@ fn custody_items(
             destination,
             sentence,
             here: here.is_some_and(|h| pid.as_deref() == Some(h)),
+            note_dir: note.as_deref().map_or(TextDir::Neutral, dir_of),
             note,
             kind,
             document: entity_ref(conn, Some(doc), None)?,

@@ -28,7 +28,9 @@ use strata_core::session::{Core, CoreEnv, NotifyHub, Session};
 use strata_core::store::{StorePaths, notes};
 use strata_core::sync::engine::Trigger;
 use strata_core::view::build;
-use strata_core::view::model::{CustodyDraft, DocumentDraft, PlaceDraft, Platform, SignInRequest};
+use strata_core::view::model::{
+    CustodyDraft, DocumentDraft, PlaceDraft, Platform, SignInRequest, TextDir,
+};
 use strata_index::types::UserRole;
 use strata_testkit::{TempDataRoot, TestDb};
 use strata_vault::{VaultConfig, VaultService};
@@ -292,11 +294,21 @@ async fn custody_drafts_take_a_note_and_default_to_today_in_the_account_zone() {
     assert_eq!(
         page.custody
             .iter()
-            .map(|c| (c.date.to_string(), c.kind.as_str(), c.note.as_deref()))
+            .map(|c| (
+                c.date.to_string(),
+                c.kind.as_str(),
+                c.note.as_deref(),
+                c.note_dir
+            ))
             .collect::<Vec<_>>(),
         vec![
-            ("2026-09-30".to_owned(), "moved-to", None),
-            ("2026-09-29".to_owned(), "stored-at", Some("for the audit")),
+            ("2026-09-30".to_owned(), "moved-to", None, TextDir::Neutral),
+            (
+                "2026-09-29".to_owned(),
+                "stored-at",
+                Some("for the audit"),
+                TextDir::Ltr
+            ),
         ]
     );
     // A note made of links only would read back as citations: refused, nothing queued.

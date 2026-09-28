@@ -253,6 +253,7 @@ class CustodyTile extends StatelessWidget {
                 if (item.note case final note?)
                   Text(
                     note,
+                    textDirection: textDirectionOf(item.noteDir),
                     textAlign: TextAlign.start,
                     style: text.caption.copyWith(
                       color: colors.text2,

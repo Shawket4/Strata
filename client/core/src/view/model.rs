@@ -2155,6 +2155,8 @@ pub struct CustodyItem {
     pub here: bool,
     /// The user's note on the event, as written on the custody line.
     pub note: Option<String>,
+    /// Direction of `note`.
+    pub note_dir: TextDir,
 }
 
 /// A document page.

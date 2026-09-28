@@ -81,6 +81,21 @@ void main() {
     );
   });
 
+  test('filePickerProvider has no default: the app shell provides it', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    expect(
+      () => container.read(filePickerProvider),
+      throwsA(
+        isA<Object>().having(
+          (e) => e.toString(),
+          'message',
+          contains('filePickerProvider must be overridden'),
+        ),
+      ),
+    );
+  });
+
   group('coreApiProvider', () {
     test('has no default: reading it unoverridden fails', () {
       final container = ProviderContainer();
@@ -448,6 +463,29 @@ void main() {
         adminUsersProvider('').future,
         StrataFixtures.adminUsersView,
         const CoreCall('loadAdminUsers', {'query': ''}),
+      );
+    });
+
+    test('timeZonesProvider(query)', () async {
+      final fake = FakeCoreApi();
+      await expectOneShot(
+        fake,
+        timeZonesProvider('cairo').future,
+        StrataFixtures.timezones,
+        const CoreCall('timezones', {'query': 'cairo'}),
+      );
+    });
+
+    test('repointChoicesProvider(decision, query)', () async {
+      final fake = FakeCoreApi();
+      await expectOneShot(
+        fake,
+        repointChoicesProvider('dec-works-at', 'ahm').future,
+        StrataFixtures.repointChoices,
+        const CoreCall('repointChoices', {
+          'decisionId': 'dec-works-at',
+          'query': 'ahm',
+        }),
       );
     });
 

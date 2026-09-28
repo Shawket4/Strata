@@ -212,14 +212,14 @@ fn scan_marks(body: &str, skip: &[Range<usize>]) -> Vec<InlineSpan> {
         let mut from = 0;
         while let Some(open) = line[from..].find("==").map(|i| from + i) {
             let content_start = open + 2;
-            let Some(close) = line[content_start..]
-                .find("==")
-                .map(|i| content_start + i)
-            else {
+            let Some(close) = line[content_start..].find("==").map(|i| content_start + i) else {
                 break;
             };
             let content = &line[content_start..close];
-            let (o, c) = (base + open..base + content_start, base + close..base + close + 2);
+            let (o, c) = (
+                base + open..base + content_start,
+                base + close..base + close + 2,
+            );
             let free = |r: &Range<usize>| !skip.iter().any(|k| r.start < k.end && k.start < r.end);
             if !content.is_empty()
                 && !content.starts_with(char::is_whitespace)
@@ -979,7 +979,12 @@ mod tests {
             analyze(body)
                 .headings
                 .iter()
-                .map(|h| h.markers.iter().map(|m| body[m.clone()].to_owned()).collect())
+                .map(|h| {
+                    h.markers
+                        .iter()
+                        .map(|m| body[m.clone()].to_owned())
+                        .collect()
+                })
                 .collect()
         };
         assert_eq!(markers("# One\n"), vec![vec!["# ".to_owned()]]);
@@ -989,10 +994,7 @@ mod tests {
             vec![vec!["## ".to_owned(), " ##".to_owned()]]
         );
         assert_eq!(markers("  ## Indented\n"), vec![vec!["## ".to_owned()]]);
-        assert_eq!(
-            markers("Setext\n===\n"),
-            vec![vec!["===".to_owned()]]
-        );
+        assert_eq!(markers("Setext\n===\n"), vec![vec!["===".to_owned()]]);
         assert_eq!(markers("#\n"), vec![vec!["#".to_owned()]]);
         let h = &analyze("x\n\n## عنوان\n").headings[0];
         assert_eq!((h.text.as_str(), h.markers.clone()), ("عنوان", vec![3..6]));

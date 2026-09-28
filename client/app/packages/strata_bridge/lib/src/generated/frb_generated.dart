@@ -6450,8 +6450,8 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
   CustodyItem dco_decode_custody_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 17)
-      throw Exception('unexpected arr length: expect 17 but see ${arr.length}');
+    if (arr.length != 18)
+      throw Exception('unexpected arr length: expect 18 but see ${arr.length}');
     return CustodyItem(
       date: dco_decode_Chrono_NaiveDate(arr[0]),
       kind: dco_decode_String(arr[1]),
@@ -6470,6 +6470,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       dateLabel: dco_decode_String(arr[14]),
       here: dco_decode_bool(arr[15]),
       note: dco_decode_opt_String(arr[16]),
+      noteDir: dco_decode_text_dir(arr[17]),
     );
   }
 
@@ -10093,6 +10094,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     var var_dateLabel = sse_decode_String(deserializer);
     var var_here = sse_decode_bool(deserializer);
     var var_note = sse_decode_opt_String(deserializer);
+    var var_noteDir = sse_decode_text_dir(deserializer);
     return CustodyItem(
       date: var_date,
       kind: var_kind,
@@ -10111,6 +10113,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
       dateLabel: var_dateLabel,
       here: var_here,
       note: var_note,
+      noteDir: var_noteDir,
     );
   }
 
@@ -14820,6 +14823,7 @@ class StrataCoreApiImpl extends StrataCoreApiImplPlatform
     sse_encode_String(self.dateLabel, serializer);
     sse_encode_bool(self.here, serializer);
     sse_encode_opt_String(self.note, serializer);
+    sse_encode_text_dir(self.noteDir, serializer);
   }
 
   @protected

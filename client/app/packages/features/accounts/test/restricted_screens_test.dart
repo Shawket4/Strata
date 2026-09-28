@@ -133,29 +133,40 @@ void main() {
       expect(find.text('Export them first'), findsNothing);
     });
 
-    testWidgets('export the unsynced changes to a typed path', (tester) async {
+    testWidgets('export the unsynced changes where the save dialog says', (
+      tester,
+    ) async {
       final fake = FakeCoreApi()
         ..session.add(AccountFixtures.disabled)
         ..exportUnsyncedAnswer.returns(2);
+      fake.files.saveFileAnswer.returns('/home/mona/unsynced.md');
       await pumpVariant(tester, v, const AccountDisabledScreen(), fake: fake);
       await tapVisible(tester, find.text('Export them first'));
-      await tester.enterText(find.byType(TextField), '/home/mona/unsynced.md');
-      await tester.tap(find.text('Save'));
       await settle(tester);
-      expect(
-        fake.calls.last,
+      expect(fake.calls.where((c) => !c.method.startsWith('watch')), [
+        const CoreCall('saveFile', {
+          'suggestedName': 'strata-unsynced.md',
+          'type': PickedFileType.markdown,
+        }),
         const CoreCall('exportUnsynced', {'path': '/home/mona/unsynced.md'}),
-      );
+      ]);
       expect(find.text('2 changes saved'), findsOneWidget);
     });
 
-    testWidgets('a cancelled path asks nothing', (tester) async {
+    testWidgets('a cancelled save dialog asks the core nothing', (
+      tester,
+    ) async {
       final fake = FakeCoreApi()..session.add(AccountFixtures.deletionPending);
+      fake.files.saveFileAnswer.returns(null);
       await pumpVariant(tester, v, const DeletionPendingScreen(), fake: fake);
       await tapVisible(tester, find.text('Download export (.zip)'));
-      await tester.tap(find.text('Cancel'));
       await settle(tester);
-      expect(fake.calls.where((c) => c.method == 'downloadExport'), isEmpty);
+      expect(fake.calls.where((c) => !c.method.startsWith('watch')), [
+        const CoreCall('saveFile', {
+          'suggestedName': 'strata-export.zip',
+          'type': PickedFileType.zip,
+        }),
+      ]);
     });
 
     testWidgets('download the export and save the unsynced changes', (
@@ -164,21 +175,27 @@ void main() {
       final fake = FakeCoreApi()
         ..session.add(AccountFixtures.deletionPending)
         ..exportUnsyncedAnswer.returns(2);
+      fake.files.saveFileAnswer.returns('/tmp/karim.zip');
       await pumpVariant(tester, v, const DeletionPendingScreen(), fake: fake);
       await tapVisible(tester, find.text('Download export (.zip)'));
-      await tester.enterText(find.byType(TextField), '/tmp/karim.zip');
-      await tester.tap(find.text('Save'));
       await settle(tester);
       expect(
         find.text('Saved ${StrataFixtures.exportSummary.label}'),
         findsOneWidget,
       );
+      fake.files.saveFileAnswer.returns('/tmp/karim.md');
       await tapVisible(tester, find.text('Save them as a file'));
-      await tester.enterText(find.byType(TextField), '/tmp/karim.md');
-      await tester.tap(find.text('Save'));
       await settle(tester);
       expect(fake.calls.where((c) => !c.method.startsWith('watch')), [
+        const CoreCall('saveFile', {
+          'suggestedName': 'strata-export.zip',
+          'type': PickedFileType.zip,
+        }),
         const CoreCall('downloadExport', {'path': '/tmp/karim.zip'}),
+        const CoreCall('saveFile', {
+          'suggestedName': 'strata-unsynced.md',
+          'type': PickedFileType.markdown,
+        }),
         const CoreCall('exportUnsynced', {'path': '/tmp/karim.md'}),
       ]);
     });

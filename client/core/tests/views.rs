@@ -115,6 +115,7 @@ fn custody(
         date_label: format!("{day} Sep"),
         here,
         note: None,
+        note_dir: TextDir::Neutral,
     }
 }
 

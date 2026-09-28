@@ -41,7 +41,7 @@ void main() {
         'reminders.dart',
         'views.dart',
       ]);
-      expect(facade, hasLength(140));
+      expect(facade, hasLength(143));
       expect(
         facade['watchDirectory']!.signature,
         'Stream<DirectoryView> watchDirectory({required DirectoryTab tab, '
@@ -81,7 +81,7 @@ void main() {
       final fixtureTypes = RegExp(
         r'static (?:const|final) (?:List<)?(\w+)>? \w+ =',
       ).allMatches(fixturesSource).map((m) => m.group(1)!).toSet();
-      expect(classes, hasLength(128));
+      expect(classes, hasLength(131));
       expect(classes.difference(fixtureTypes), isEmpty);
     });
   });

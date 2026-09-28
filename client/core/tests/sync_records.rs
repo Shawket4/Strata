@@ -17,9 +17,7 @@ use strata_core::session::Session;
 use strata_core::store::outbox::{self, OpStatus};
 use strata_core::store::settings;
 use strata_core::sync::engine::Trigger;
-use strata_core::sync::model::{
-    ConflictResolution, EntityType, Op, OpResult, Record, Version,
-};
+use strata_core::sync::model::{ConflictResolution, EntityType, Op, OpResult, Record, Version};
 use strata_core::view::build;
 use sync_model::changes::{
     ClusterAssignmentRecord, ClusterNameRecord, DeviceSettingRecord, RejectedRecord,
@@ -202,14 +200,25 @@ async fn server_only_records_arrive_and_their_tombstones_remove_them() {
         [(SUGGESTION, "Q4 pricing")]
     );
     assert_eq!(
-        table(&s, "SELECT kind || ' ' || a_id || ' ' || b_id FROM keep_both"),
+        table(
+            &s,
+            "SELECT kind || ' ' || a_id || ' ' || b_id FROM keep_both"
+        ),
         [format!("company {ACME} {OTHER}")]
     );
 
     // A change page carrying every kind of tombstone (and two that do not concern this
     // device or do not parse).
-    let relation_key = sync_model::changes::relation_key(ulid(NOTE), RelationKey::Note(domain::RelationType::Related), ulid(ACME));
-    let rejected_key = sync_model::changes::relation_key(ulid(NOTE), RelationKey::Note(domain::RelationType::Related), ulid(OTHER));
+    let relation_key = sync_model::changes::relation_key(
+        ulid(NOTE),
+        RelationKey::Note(domain::RelationType::Related),
+        ulid(ACME),
+    );
+    let rejected_key = sync_model::changes::relation_key(
+        ulid(NOTE),
+        RelationKey::Note(domain::RelationType::Related),
+        ulid(OTHER),
+    );
     for (t, id) in [
         (EntityType::Relation, relation_key.as_str()),
         (EntityType::Rejected, rejected_key.as_str()),
@@ -238,12 +247,21 @@ async fn server_only_records_arrive_and_their_tombstones_remove_them() {
             None
         )]
     );
-    assert_eq!(table(&s, "SELECT src_id FROM rejected"), Vec::<String>::new());
-    assert_eq!(table(&s, "SELECT note_id FROM clusters"), Vec::<String>::new());
+    assert_eq!(
+        table(&s, "SELECT src_id FROM rejected"),
+        Vec::<String>::new()
+    );
+    assert_eq!(
+        table(&s, "SELECT note_id FROM clusters"),
+        Vec::<String>::new()
+    );
     assert_eq!(s.read(build::nav).expect("nav").cluster_count, 0);
     assert_eq!(s.read(|c, _| settings::user_setting(c, "digest")), Ok(None));
     assert_eq!(reminders().snooze_minutes, 25, "another device's key");
-    assert_eq!(table(&s, "SELECT a_id FROM keep_both"), Vec::<String>::new());
+    assert_eq!(
+        table(&s, "SELECT a_id FROM keep_both"),
+        Vec::<String>::new()
+    );
     assert_eq!(
         s.read(|c, ctx| build::suggestion_items(c, ctx, false))
             .expect("items"),
@@ -257,7 +275,6 @@ async fn server_only_records_arrive_and_their_tombstones_remove_them() {
     );
     s.pull().await.expect("pull");
     assert_eq!(reminders().snooze_minutes, settings::DEFAULT_SNOOZE_MINUTES);
-
 }
 
 #[tokio::test]
@@ -391,11 +408,15 @@ async fn ops_waiting_for_the_user_are_replayed_before_the_pending_ones() {
     assert_eq!(before[1].status, OpStatus::Pending);
 
     // The server moves the note: same content, new path.
-    h.server.remote_upsert(NOTE, "notes/Archive/Pricing.md", BASE);
+    h.server
+        .remote_upsert(NOTE, "notes/Archive/Pricing.md", BASE);
     s.pull().await.expect("pull");
 
     let after = s.read(|c, _| outbox::all(c)).expect("outbox");
-    assert_eq!(after, before, "the pending edit was made against the replayed state");
+    assert_eq!(
+        after, before,
+        "the pending edit was made against the replayed state"
+    );
     let conflict = s
         .read(|c, ctx| build::conflict_screen(c, ctx, &conflict_op))
         .expect("conflict")

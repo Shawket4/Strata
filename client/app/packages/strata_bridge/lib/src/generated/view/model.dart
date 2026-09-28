@@ -1678,6 +1678,9 @@ class CustodyItem {
   /// The user's note on the event, as written on the custody line.
   final String? note;
 
+  /// Direction of `note`.
+  final TextDir noteDir;
+
   const CustodyItem({
     required this.date,
     required this.kind,
@@ -1696,6 +1699,7 @@ class CustodyItem {
     required this.dateLabel,
     required this.here,
     this.note,
+    required this.noteDir,
   });
 
   @override
@@ -1716,7 +1720,8 @@ class CustodyItem {
       sentence.hashCode ^
       dateLabel.hashCode ^
       here.hashCode ^
-      note.hashCode;
+      note.hashCode ^
+      noteDir.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1739,7 +1744,8 @@ class CustodyItem {
           sentence == other.sentence &&
           dateLabel == other.dateLabel &&
           here == other.here &&
-          note == other.note;
+          note == other.note &&
+          noteDir == other.noteDir;
 }
 
 /// A device signed in to the account (Settings → Devices, account sheet).

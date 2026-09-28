@@ -201,10 +201,7 @@ pub fn entity_patch(fm: &mut Frontmatter, patch: &EntityPatch) -> Result<(), App
             Some(k @ (KnownKey::Aliases | KnownKey::Tags)) => next.set_list(k, values)?,
             // A user field with one value stays a scalar (`phone: +20 100`).
             _ if values.len() == 1 => {
-                next.set(
-                    key,
-                    vault_format::PropertyValue::Text(values.concat()),
-                )?;
+                next.set(key, vault_format::PropertyValue::Text(values.concat()))?;
             }
             _ => next.set(key, vault_format::PropertyValue::List(values))?,
         }

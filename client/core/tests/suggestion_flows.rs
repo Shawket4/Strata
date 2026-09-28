@@ -120,10 +120,25 @@ fn invalid(field: &str, reason: &str) -> CoreError {
 #[tokio::test]
 async fn who_is_links_the_mention_or_creates_the_entity_with_it_as_an_alias() {
     let (_h, s) = world(vec![
-        suggestion(1, CAP1, SuggestionStatus::Pending, &link(1, "Mona", "person")),
-        suggestion(2, CAP1, SuggestionStatus::Pending, &link(2, "بابا", "company")),
+        suggestion(
+            1,
+            CAP1,
+            SuggestionStatus::Pending,
+            &link(1, "Mona", "person"),
+        ),
+        suggestion(
+            2,
+            CAP1,
+            SuggestionStatus::Pending,
+            &link(2, "بابا", "company"),
+        ),
         suggestion(3, CAP1, SuggestionStatus::Pending, &link(3, "Samir", "")),
-        suggestion(4, CAP1, SuggestionStatus::Pending, &link(4, "Mona Adel", "person")),
+        suggestion(
+            4,
+            CAP1,
+            SuggestionStatus::Pending,
+            &link(4, "Mona Adel", "person"),
+        ),
     ])
     .await;
     let choice = |kind, entity_id: Option<&str>, name: Option<&str>, entity_kind: Option<&str>| {
@@ -402,8 +417,18 @@ async fn which_contract_accepts_only_one_of_the_offered_documents() {
 #[tokio::test]
 async fn undo_rejects_a_pending_suggestion_and_looks_right_is_idempotent() {
     let (_h, s) = world(vec![
-        suggestion(1, CAP1, SuggestionStatus::Pending, &link(1, "Mona", "person")),
-        suggestion(2, CAP1, SuggestionStatus::Accepted, &link(2, "Samir", "person")),
+        suggestion(
+            1,
+            CAP1,
+            SuggestionStatus::Pending,
+            &link(1, "Mona", "person"),
+        ),
+        suggestion(
+            2,
+            CAP1,
+            SuggestionStatus::Accepted,
+            &link(2, "Samir", "person"),
+        ),
     ])
     .await;
     let op_id = s.undo_suggestion(&sid(1)).expect("undo");
@@ -413,9 +438,9 @@ async fn undo_rejects_a_pending_suggestion_and_looks_right_is_idempotent() {
     assert_eq!(
         queued[0].op,
         Op::SuggestionReject(sm::SuggestionReject {
-                    id: ulid(&sid(1)),
-                    reason: None,
-                })
+            id: ulid(&sid(1)),
+            reason: None,
+        })
     );
     // An accepted suggestion is undone through the AI decision (not in the contract yet).
     assert_eq!(
@@ -469,7 +494,12 @@ async fn a_duplicate_capture_is_kept_or_discarded() {
     let (h, s) = world(vec![
         suggestion(1, CAP1, SuggestionStatus::Pending, &dup),
         suggestion(2, CAP2, SuggestionStatus::Pending, &dup),
-        suggestion(3, CAP1, SuggestionStatus::Pending, &link(3, "Mona", "person")),
+        suggestion(
+            3,
+            CAP1,
+            SuggestionStatus::Pending,
+            &link(3, "Mona", "person"),
+        ),
     ])
     .await;
     h.server.remote_upsert(
@@ -592,12 +622,7 @@ async fn replies_join_the_thread_as_pending_until_synced() {
                 t.pending_sync
             ))
             .collect::<Vec<_>>(),
-        [(
-            reply.reply_id.to_string(),
-            "user",
-            "The one at Acme",
-            true
-        )]
+        [(reply.reply_id.to_string(), "user", "The one at Acme", true)]
     );
     assert!(item.pending_sync);
 }

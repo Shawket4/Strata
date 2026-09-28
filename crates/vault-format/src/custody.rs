@@ -529,7 +529,10 @@ mod tests {
             assert_eq!(CustodyEvent::parse(&line), Ok(e.clone()), "{line}");
             e.citations = vec!["[[C]]".into()];
             let line = e.to_line();
-            assert!(line.ends_with(" — [[C]] — for the audit — urgent"), "{line}");
+            assert!(
+                line.ends_with(" — [[C]] — for the audit — urgent"),
+                "{line}"
+            );
             assert_eq!(CustodyEvent::parse(&line), Ok(e), "{line}");
         }
     }
@@ -639,7 +642,10 @@ mod tests {
             Ok((vec![], note("[[a]] was here")))
         );
         // Links only after the event are citations, never a note.
-        assert_eq!(parse("- 2026-01-01 — lost — [[a]]"), Ok((vec!["[[a]]".to_owned()], None)));
+        assert_eq!(
+            parse("- 2026-01-01 — lost — [[a]]"),
+            Ok((vec!["[[a]]".to_owned()], None))
+        );
         assert_eq!(clean_note("  a\n  b\tc "), note("a b c"));
         assert_eq!(clean_note(" \n "), None);
     }

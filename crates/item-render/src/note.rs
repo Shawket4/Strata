@@ -70,7 +70,10 @@ pub fn titled_for_path(content: &str, requested: &str, path: &str) -> Result<Str
     if let Some(e) = fm.error() {
         return Err(RenderError::Unreadable(e.clone()));
     }
-    if fm.text(KnownKey::Title).is_some_and(|t| !t.trim().is_empty()) {
+    if fm
+        .text(KnownKey::Title)
+        .is_some_and(|t| !t.trim().is_empty())
+    {
         return Ok(content.to_owned());
     }
     fm.set_text(KnownKey::Title, name)

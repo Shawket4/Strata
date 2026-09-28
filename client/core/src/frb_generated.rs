@@ -6466,6 +6466,7 @@ impl SseDecode for crate::view::model::CustodyItem {
         let mut var_dateLabel = <String>::sse_decode(deserializer);
         let mut var_here = <bool>::sse_decode(deserializer);
         let mut var_note = <Option<String>>::sse_decode(deserializer);
+        let mut var_noteDir = <crate::view::model::TextDir>::sse_decode(deserializer);
         return crate::view::model::CustodyItem {
             date: var_date,
             kind: var_kind,
@@ -6484,6 +6485,7 @@ impl SseDecode for crate::view::model::CustodyItem {
             date_label: var_dateLabel,
             here: var_here,
             note: var_note,
+            note_dir: var_noteDir,
         };
     }
 }
@@ -11607,6 +11609,7 @@ impl flutter_rust_bridge::IntoDart for crate::view::model::CustodyItem {
             self.date_label.into_into_dart().into_dart(),
             self.here.into_into_dart().into_dart(),
             self.note.into_into_dart().into_dart(),
+            self.note_dir.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -15642,6 +15645,7 @@ impl SseEncode for crate::view::model::CustodyItem {
         <String>::sse_encode(self.date_label, serializer);
         <bool>::sse_encode(self.here, serializer);
         <Option<String>>::sse_encode(self.note, serializer);
+        <crate::view::model::TextDir>::sse_encode(self.note_dir, serializer);
     }
 }
 

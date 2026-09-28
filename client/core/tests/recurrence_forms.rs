@@ -149,8 +149,8 @@ fn every_shape_compiles_to_the_canonical_phrase_and_reads_in_both_languages() {
                 ..form(Yearly)
             },
             (
-                "every year in March, September on the 5th",
-                "Every year in March, September on the 5th",
+                "every March and September on the 5th",
+                "Every March and September on the 5th",
                 "كل سنة في يوم 5 من مارس وسبتمبر",
             ),
         ),
@@ -277,8 +277,5 @@ fn the_preview_lists_the_due_date_then_the_next_ones() {
         ]
     );
     assert_eq!(preview(&rule, d("2027-01-31"), 0, &labels(Lang::En)), []);
-    assert_eq!(
-        summary(&rule, &labels(Lang::Ar)),
-        "كل شهر في يوم الأخير"
-    );
+    assert_eq!(summary(&rule, &labels(Lang::Ar)), "كل شهر في يوم الأخير");
 }

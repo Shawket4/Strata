@@ -41,12 +41,7 @@ async fn members_are_forbidden() {
     let bob = h.login("bob", "bob-password-1").await;
     assert_problem(
         ops::admin_settings(&h.with_token(&bob.access_token)).await,
-        &plain(
-            "forbidden",
-            "Forbidden",
-            403,
-            None,
-        ),
+        &plain("forbidden", "Forbidden", 403, None),
     );
     // The default grace period is 14 days.
     let (_, admin) = h.admin().await;

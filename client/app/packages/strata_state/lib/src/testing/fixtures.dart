@@ -282,6 +282,9 @@ abstract final class StrataFixtures {
     markers: [],
   );
 
+  /// The `[[` of a wikilink at 26 (a hint's exact marker).
+  static const MarkerRange markerRange = MarkerRange(start: 26, end: 28);
+
   /// The hints of [noteView]'s content.
   static const List<EditorHint> editorHints = [
     editorHint,
@@ -290,10 +293,7 @@ abstract final class StrataFixtures {
       start: 26,
       end: 41,
       level: 0,
-      markers: [
-        MarkerRange(start: 26, end: 28),
-        MarkerRange(start: 39, end: 41),
-      ],
+      markers: [markerRange, MarkerRange(start: 39, end: 41)],
     ),
   ];
 
@@ -1133,6 +1133,7 @@ abstract final class StrataFixtures {
 
   /// "20 Sep 2026 — returned to the safe by Shady".
   static final CustodyItem custodyItem = CustodyItem(
+    noteDir: TextDir.neutral,
     date: DateTime.utc(2026, 9, 20),
     kind: 'stored-at',
     document: watanyaContractRef,
@@ -1169,6 +1170,7 @@ abstract final class StrataFixtures {
     custody: [
       custodyItem,
       CustodyItem(
+        noteDir: TextDir.neutral,
         date: DateTime.utc(2026, 9, 14),
         kind: 'handed-to',
         person: shadyRef,
@@ -1181,6 +1183,7 @@ abstract final class StrataFixtures {
         here: false,
       ),
       CustodyItem(
+        noteDir: TextDir.neutral,
         date: DateTime.utc(2026, 3, 2),
         kind: 'stored-at',
         place: safeRef,
