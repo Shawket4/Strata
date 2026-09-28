@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_accounts/strata_accounts.dart'
     show showAccountSheet, signOutFlow;
@@ -50,7 +51,10 @@ enum SettingsSection {
 /// Settings (§11 screen 13): on compact a list of sections, each opening
 /// full-screen; on medium and expanded the section navigation (224) next to
 /// the selected section (SCREEN_SPEC AdminUsersExpanded shows the frame).
-class SettingsScreen extends ConsumerWidget {
+///
+/// Opening the screen asks the core to re-read the server-side parts
+/// (devices, AI status, integrity warnings; `refresh_settings`).
+class SettingsScreen extends HookConsumerWidget {
   /// Creates the screen showing [section] (`null`: the compact list, or the
   /// account section on wider windows).
   const new({
@@ -79,6 +83,12 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.settingsL10n;
+    useEffect(() {
+      unawaited(
+        ref.read(coreApiProvider).refreshSettings().catchError((Object _) {}),
+      );
+      return null;
+    }, const []);
     final settings = ref.watch(settingsProvider);
     final compact = SizeClass.of(context) == SizeClass.compact;
     final current = section;
@@ -324,11 +334,7 @@ class _SettingsList extends ConsumerWidget {
       children: [
         ListTile(
           minTileHeight: 72,
-          leading: CircleAvatar(
-            backgroundColor: colors.accentTint,
-            foregroundColor: colors.accentText,
-            child: const Icon(Icons.person_outline),
-          ),
+          leading: StrataAvatar(initials: account.initials),
           title: Text(account.displayName, style: text.bodyStrong),
           subtitle: Text(
             l10n.atUsernameRole(

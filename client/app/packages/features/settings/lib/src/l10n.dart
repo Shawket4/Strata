@@ -34,6 +34,21 @@ extension SettingsLabels on SettingsLocalizations {
     Availability.notAllowed => unavailableNotAllowed,
   };
 
+  /// The message of an integrity warning (1:1 on the core's `message_key`).
+  String integrityMessage(IntegrityItem item) => switch (item.messageKey) {
+    'integrity.temp_file_removed' => integrityTempFile,
+    'integrity.uncommitted_changes' => integrityUncommitted,
+    'integrity.id_assigned' => integrityIdAssigned,
+    'integrity.out_of_band_edit' => integrityOutOfBand,
+    'integrity.missing_file' => integrityMissingFile,
+    'integrity.sidecar_repaired' => integritySidecar,
+    'integrity.orphan_sidecar_removed' => integrityOrphanSidecar,
+    'integrity.index_repaired' => integrityIndexRepaired,
+    'integrity.interrupted_write_rolled_back' => integrityRolledBack,
+    'integrity.op_result_recovered' => integrityRecovered,
+    _ => integrityOther(kind: item.kind),
+  };
+
   /// The localised message of a core failure.
   String failure(Object error) => switch (error) {
     CoreFailure(code: 'offline') => errorOffline,

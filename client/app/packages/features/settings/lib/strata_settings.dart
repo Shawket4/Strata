@@ -4,5 +4,14 @@
 library;
 
 export 'src/l10n.dart';
-export 'src/sections.dart' show RemindersSection, SectionContent;
+export 'src/sections.dart'
+    show
+        AccountSection,
+        AiSection,
+        DevicesSection,
+        IntegritySection,
+        RemindersSection,
+        SectionContent,
+        platformIcon,
+        snoozeChoices;
 export 'src/settings_screen.dart';

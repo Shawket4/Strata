@@ -124,10 +124,6 @@
   "@newPassword": {
     "description": "Field."
   },
-  "notAvailableYet": "Not available yet",
-  "@notAvailableYet": {
-    "description": "Tooltip / state for an action the app cannot perform yet."
-  },
   "signOut": "Sign out",
   "@signOut": {
     "description": "Sign out."
@@ -135,10 +131,6 @@
   "thisDevice": "This device",
   "@thisDevice": {
     "description": "Label."
-  },
-  "deviceListNote": "Renaming and revoking devices comes with the device list.",
-  "@deviceListNote": {
-    "description": "Explains the missing device list."
   },
   "rename": "Rename",
   "@rename": {
@@ -305,5 +297,279 @@
   "passwordGroup": "Password",
   "@passwordGroup": {
     "description": "Heading of the password change group."
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Edit button tooltip."
+  },
+  "editDisplayNameTitle": "Display name",
+  "@editDisplayNameTitle": {
+    "description": "Edit display name dialog title."
+  },
+  "editTimezoneTitle": "Time zone",
+  "@editTimezoneTitle": {
+    "description": "Edit time zone dialog title."
+  },
+  "timezoneHelp": "An IANA name such as Africa/Cairo. Dates and reminders follow it.",
+  "@timezoneHelp": {
+    "description": "Time zone field help."
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save button."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Cancel button."
+  },
+  "passwordChanged": "Password changed",
+  "@passwordChanged": {
+    "description": "Snack bar after changing the password."
+  },
+  "saved": "Saved",
+  "@saved": {
+    "description": "Snack bar after a setting is saved."
+  },
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "Refresh button tooltip."
+  },
+  "thisDeviceBadge": "This device",
+  "@thisDeviceBadge": {
+    "description": "Badge on the current device's row."
+  },
+  "deviceDetail": "Last seen {lastSeen} · signed in {signedIn}",
+  "@deviceDetail": {
+    "description": "Device row subtitle.",
+    "placeholders": {
+      "lastSeen": {
+        "type": "String"
+      },
+      "signedIn": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceReminders": "Reminders on {name}",
+  "@deviceReminders": {
+    "description": "Per-device reminders switch label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "renameDevice": "Rename {name}",
+  "@renameDevice": {
+    "description": "Rename device button label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "revokeDevice": "Sign out {name}",
+  "@revokeDevice": {
+    "description": "Revoke device button label.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "renameTitle": "Rename device",
+  "@renameTitle": {
+    "description": "Rename dialog title."
+  },
+  "revokeTitle": "Sign {name} out?",
+  "@revokeTitle": {
+    "description": "Revoke dialog title.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "revokeBody": "The device is signed out and its local copy of your notes is removed the next time it connects.",
+  "@revokeBody": {
+    "description": "Revoke dialog body."
+  },
+  "noDevices": "No devices yet.",
+  "@noDevices": {
+    "description": "Empty device list."
+  },
+  "snooze": "Snooze length",
+  "@snooze": {
+    "description": "Snooze setting title."
+  },
+  "snoozeMinutes": "{count, plural, =1{1 minute} other{{count} minutes}}",
+  "@snoozeMinutes": {
+    "description": "Snooze length option.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "quietHours": "Quiet hours",
+  "@quietHours": {
+    "description": "Quiet hours switch."
+  },
+  "quietHoursHelp": "No reminder rings between these times; they wait until the end.",
+  "@quietHoursHelp": {
+    "description": "Quiet hours help."
+  },
+  "quietFrom": "From (HH:MM)",
+  "@quietFrom": {
+    "description": "Quiet hours start field."
+  },
+  "quietUntil": "Until (HH:MM)",
+  "@quietUntil": {
+    "description": "Quiet hours end field."
+  },
+  "timeField": "Time (HH:MM)",
+  "@timeField": {
+    "description": "Default reminder time field."
+  },
+  "aiOn": "AI on · {provider}",
+  "@aiOn": {
+    "description": "AI status headline with the provider.",
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "aiOnNoProvider": "AI on",
+  "@aiOnNoProvider": {
+    "description": "AI status headline."
+  },
+  "aiOff": "AI off on this server",
+  "@aiOff": {
+    "description": "AI disabled."
+  },
+  "aiQueue": "{count, plural, =0{Nothing waiting for AI} =1{1 job waiting} other{{count} jobs waiting}}",
+  "@aiQueue": {
+    "description": "AI queue depth.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiBudget": "Daily budget",
+  "@aiBudget": {
+    "description": "AI budget meter title."
+  },
+  "aiEmbeddings": "Search index {percent}%",
+  "@aiEmbeddings": {
+    "description": "Embedding progress.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "aiThresholdsNote": "Thresholds and auto-filing are set on the server.",
+  "@aiThresholdsNote": {
+    "description": "AI thresholds read-only note."
+  },
+  "integrityEmpty": "No integrity warnings.",
+  "@integrityEmpty": {
+    "description": "Integrity list empty."
+  },
+  "integrityTempFile": "A leftover temporary file was removed",
+  "@integrityTempFile": {
+    "description": "Integrity: temp_file_removed."
+  },
+  "integrityUncommitted": "Uncommitted changes were found and saved",
+  "@integrityUncommitted": {
+    "description": "Integrity: uncommitted_changes."
+  },
+  "integrityIdAssigned": "A note without an ID got one",
+  "@integrityIdAssigned": {
+    "description": "Integrity: id_assigned."
+  },
+  "integrityOutOfBand": "A file was edited outside Strata and re-read",
+  "@integrityOutOfBand": {
+    "description": "Integrity: out_of_band_edit."
+  },
+  "integrityMissingFile": "A file is missing from the vault",
+  "@integrityMissingFile": {
+    "description": "Integrity: missing_file."
+  },
+  "integritySidecar": "A metadata file was repaired",
+  "@integritySidecar": {
+    "description": "Integrity: sidecar_repaired."
+  },
+  "integrityOrphanSidecar": "An orphaned metadata file was removed",
+  "@integrityOrphanSidecar": {
+    "description": "Integrity: orphan_sidecar_removed."
+  },
+  "integrityIndexRepaired": "The search index was repaired",
+  "@integrityIndexRepaired": {
+    "description": "Integrity: index_repaired."
+  },
+  "integrityRolledBack": "An interrupted write was rolled back",
+  "@integrityRolledBack": {
+    "description": "Integrity: interrupted_write_rolled_back."
+  },
+  "integrityRecovered": "A change's result was recovered",
+  "@integrityRecovered": {
+    "description": "Integrity: op_result_recovered."
+  },
+  "integrityOther": "Integrity warning: {kind}",
+  "@integrityOther": {
+    "description": "Integrity: unknown kind.",
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "exportTitle": "Export vault",
+  "@exportTitle": {
+    "description": "Export dialog title."
+  },
+  "importTitle": "Import markdown",
+  "@importTitle": {
+    "description": "Import dialog title."
+  },
+  "exportPath": "Save to (file path)",
+  "@exportPath": {
+    "description": "Export destination field."
+  },
+  "importPath": "Zip archive (file path)",
+  "@importPath": {
+    "description": "Import source field."
+  },
+  "exportDone": "Exported {label}",
+  "@exportDone": {
+    "description": "Snack bar after an export.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "importDone": "{imported} imported · {skipped} skipped",
+  "@importDone": {
+    "description": "Snack bar after an import.",
+    "placeholders": {
+      "imported": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "exportAction": "Export",
+  "@exportAction": {
+    "description": "Export confirm."
+  },
+  "importAction": "Import",
+  "@importAction": {
+    "description": "Import confirm."
   }
 }

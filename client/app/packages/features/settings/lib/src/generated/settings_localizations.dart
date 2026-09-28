@@ -275,12 +275,6 @@ abstract class SettingsLocalizations {
   /// **'New password'**
   String get newPassword;
 
-  /// Tooltip / state for an action the app cannot perform yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not available yet'**
-  String get notAvailableYet;
-
   /// Sign out.
   ///
   /// In en, this message translates to:
@@ -292,12 +286,6 @@ abstract class SettingsLocalizations {
   /// In en, this message translates to:
   /// **'This device'**
   String get thisDevice;
-
-  /// Explains the missing device list.
-  ///
-  /// In en, this message translates to:
-  /// **'Renaming and revoking devices comes with the device list.'**
-  String get deviceListNote;
 
   /// Renames a device.
   ///
@@ -532,6 +520,318 @@ abstract class SettingsLocalizations {
   /// In en, this message translates to:
   /// **'Password'**
   String get passwordGroup;
+
+  /// Edit button tooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// Edit display name dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get editDisplayNameTitle;
+
+  /// Edit time zone dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Time zone'**
+  String get editTimezoneTitle;
+
+  /// Time zone field help.
+  ///
+  /// In en, this message translates to:
+  /// **'An IANA name such as Africa/Cairo. Dates and reminders follow it.'**
+  String get timezoneHelp;
+
+  /// Save button.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// Cancel button.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// Snack bar after changing the password.
+  ///
+  /// In en, this message translates to:
+  /// **'Password changed'**
+  String get passwordChanged;
+
+  /// Snack bar after a setting is saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get saved;
+
+  /// Refresh button tooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// Badge on the current device's row.
+  ///
+  /// In en, this message translates to:
+  /// **'This device'**
+  String get thisDeviceBadge;
+
+  /// Device row subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Last seen {lastSeen} · signed in {signedIn}'**
+  String deviceDetail({required String lastSeen, required String signedIn});
+
+  /// Per-device reminders switch label.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminders on {name}'**
+  String deviceReminders({required String name});
+
+  /// Rename device button label.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename {name}'**
+  String renameDevice({required String name});
+
+  /// Revoke device button label.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out {name}'**
+  String revokeDevice({required String name});
+
+  /// Rename dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename device'**
+  String get renameTitle;
+
+  /// Revoke dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign {name} out?'**
+  String revokeTitle({required String name});
+
+  /// Revoke dialog body.
+  ///
+  /// In en, this message translates to:
+  /// **'The device is signed out and its local copy of your notes is removed the next time it connects.'**
+  String get revokeBody;
+
+  /// Empty device list.
+  ///
+  /// In en, this message translates to:
+  /// **'No devices yet.'**
+  String get noDevices;
+
+  /// Snooze setting title.
+  ///
+  /// In en, this message translates to:
+  /// **'Snooze length'**
+  String get snooze;
+
+  /// Snooze length option.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 minute} other{{count} minutes}}'**
+  String snoozeMinutes({required int count});
+
+  /// Quiet hours switch.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet hours'**
+  String get quietHours;
+
+  /// Quiet hours help.
+  ///
+  /// In en, this message translates to:
+  /// **'No reminder rings between these times; they wait until the end.'**
+  String get quietHoursHelp;
+
+  /// Quiet hours start field.
+  ///
+  /// In en, this message translates to:
+  /// **'From (HH:MM)'**
+  String get quietFrom;
+
+  /// Quiet hours end field.
+  ///
+  /// In en, this message translates to:
+  /// **'Until (HH:MM)'**
+  String get quietUntil;
+
+  /// Default reminder time field.
+  ///
+  /// In en, this message translates to:
+  /// **'Time (HH:MM)'**
+  String get timeField;
+
+  /// AI status headline with the provider.
+  ///
+  /// In en, this message translates to:
+  /// **'AI on · {provider}'**
+  String aiOn({required String provider});
+
+  /// AI status headline.
+  ///
+  /// In en, this message translates to:
+  /// **'AI on'**
+  String get aiOnNoProvider;
+
+  /// AI disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'AI off on this server'**
+  String get aiOff;
+
+  /// AI queue depth.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Nothing waiting for AI} =1{1 job waiting} other{{count} jobs waiting}}'**
+  String aiQueue({required int count});
+
+  /// AI budget meter title.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily budget'**
+  String get aiBudget;
+
+  /// Embedding progress.
+  ///
+  /// In en, this message translates to:
+  /// **'Search index {percent}%'**
+  String aiEmbeddings({required int percent});
+
+  /// AI thresholds read-only note.
+  ///
+  /// In en, this message translates to:
+  /// **'Thresholds and auto-filing are set on the server.'**
+  String get aiThresholdsNote;
+
+  /// Integrity list empty.
+  ///
+  /// In en, this message translates to:
+  /// **'No integrity warnings.'**
+  String get integrityEmpty;
+
+  /// Integrity: temp_file_removed.
+  ///
+  /// In en, this message translates to:
+  /// **'A leftover temporary file was removed'**
+  String get integrityTempFile;
+
+  /// Integrity: uncommitted_changes.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncommitted changes were found and saved'**
+  String get integrityUncommitted;
+
+  /// Integrity: id_assigned.
+  ///
+  /// In en, this message translates to:
+  /// **'A note without an ID got one'**
+  String get integrityIdAssigned;
+
+  /// Integrity: out_of_band_edit.
+  ///
+  /// In en, this message translates to:
+  /// **'A file was edited outside Strata and re-read'**
+  String get integrityOutOfBand;
+
+  /// Integrity: missing_file.
+  ///
+  /// In en, this message translates to:
+  /// **'A file is missing from the vault'**
+  String get integrityMissingFile;
+
+  /// Integrity: sidecar_repaired.
+  ///
+  /// In en, this message translates to:
+  /// **'A metadata file was repaired'**
+  String get integritySidecar;
+
+  /// Integrity: orphan_sidecar_removed.
+  ///
+  /// In en, this message translates to:
+  /// **'An orphaned metadata file was removed'**
+  String get integrityOrphanSidecar;
+
+  /// Integrity: index_repaired.
+  ///
+  /// In en, this message translates to:
+  /// **'The search index was repaired'**
+  String get integrityIndexRepaired;
+
+  /// Integrity: interrupted_write_rolled_back.
+  ///
+  /// In en, this message translates to:
+  /// **'An interrupted write was rolled back'**
+  String get integrityRolledBack;
+
+  /// Integrity: op_result_recovered.
+  ///
+  /// In en, this message translates to:
+  /// **'A change\'s result was recovered'**
+  String get integrityRecovered;
+
+  /// Integrity: unknown kind.
+  ///
+  /// In en, this message translates to:
+  /// **'Integrity warning: {kind}'**
+  String integrityOther({required String kind});
+
+  /// Export dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Export vault'**
+  String get exportTitle;
+
+  /// Import dialog title.
+  ///
+  /// In en, this message translates to:
+  /// **'Import markdown'**
+  String get importTitle;
+
+  /// Export destination field.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to (file path)'**
+  String get exportPath;
+
+  /// Import source field.
+  ///
+  /// In en, this message translates to:
+  /// **'Zip archive (file path)'**
+  String get importPath;
+
+  /// Snack bar after an export.
+  ///
+  /// In en, this message translates to:
+  /// **'Exported {label}'**
+  String exportDone({required String label});
+
+  /// Snack bar after an import.
+  ///
+  /// In en, this message translates to:
+  /// **'{imported} imported · {skipped} skipped'**
+  String importDone({required int imported, required int skipped});
+
+  /// Export confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get exportAction;
+
+  /// Import confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Import'**
+  String get importAction;
 }
 
 class _SettingsLocalizationsDelegate

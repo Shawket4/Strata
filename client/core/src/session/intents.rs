@@ -529,10 +529,8 @@ impl Session {
                     let path = self
                         .read(|c, _| notes::current(c, &conflict.entity_id))?
                         .map_or_else(|| "notes/Conflict.md".to_owned(), |n| n.path);
-                    let stem = path.strip_suffix(".md").unwrap_or(&path);
                     let stamp = self.ctx().labels().local(self.env.clock.now());
-                    let copy_path =
-                        format!("{stem} (conflict {}).md", stamp.format("%Y-%m-%d %H%M%S"));
+                    let copy_path = item_render::paths::conflict_copy_path(&path, stamp, 1);
                     let body = vault_format::Document::parse(&local).body().to_owned();
                     self.create_note(&copy_path, &body, true)?;
                 }

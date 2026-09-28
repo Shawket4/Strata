@@ -11,6 +11,7 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use sync_model::ops as sm;
 use ulid::Ulid;
 use vault_format::Document;
+use vault_format::custody::Role;
 
 use super::{Session, TaskEdit};
 use crate::error::{CoreError, CoreResult};
@@ -23,7 +24,6 @@ use crate::view::model::{
     CreateOutcome, CustodyDraft, DocumentDraft, DuplicateChoice, LinkOrCreateChoice,
     LinkOrCreateKind, PlaceDraft, SuggestionEdits, SuggestionItem, SuggestionKind,
 };
-use domain::CustodyEventType as E;
 
 fn ulid_of(id: &str, field: &str) -> CoreResult<Ulid> {
     Ulid::from_string(id).map_err(|_| CoreError::invalid(field, "not_a_ulid"))
@@ -623,11 +623,12 @@ impl Session {
         let place_id = opt(&d.place_id, "place_id")?;
         let person_id = opt(&d.person_id, "person_id")?;
         let counterparty_id = opt(&d.counterparty_id, "counterparty_id")?;
-        let missing = match event {
-            E::StoredAt | E::MovedTo => place_id.is_none().then_some("place_id"),
-            E::HandedTo | E::ReturnedBy => person_id.is_none().then_some("person_id"),
-            E::SentTo | E::ReceivedFrom => counterparty_id.is_none().then_some("counterparty_id"),
-            _ => None,
+        // The event type's primary argument is required (the shared custody grammar).
+        let missing = match vault_format::custody::primary(event) {
+            Some(Role::Place) => place_id.is_none().then_some("place_id"),
+            Some(Role::Person) => person_id.is_none().then_some("person_id"),
+            Some(Role::Counterparty) => counterparty_id.is_none().then_some("counterparty_id"),
+            None => None,
         };
         if let Some(field) = missing {
             return Err(CoreError::invalid(field, "missing"));

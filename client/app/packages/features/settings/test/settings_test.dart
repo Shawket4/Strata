@@ -8,13 +8,11 @@ import 'package:strata_sync/strata_sync.dart' show SyncStatusContent;
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
 
 import 'helpers/fixtures.dart';
-import 'helpers/matrix.dart';
 
-FakeCoreApi _fake([SettingsView view = StrataFixtures.settingsView]) =>
-    FakeCoreApi()
-      ..session.add(StrataFixtures.sessionActive)
-      ..settings.add(view)
-      ..syncStatus.add(StrataFixtures.syncStatusView);
+FakeCoreApi _fake([SettingsView? view]) => FakeCoreApi()
+  ..session.add(StrataFixtures.sessionActive)
+  ..settings.add(view ?? SettingsFixtures.full)
+  ..syncStatus.add(StrataFixtures.syncStatusView);
 
 /// A stand-in for Admin → Users in the wide content pane.
 class _AdminPane extends StatelessWidget {
@@ -33,27 +31,36 @@ Future<FakeCoreApi> _pump(
 }) => pumpVariant(
   tester,
   v,
-  Scaffold(
-    body: SettingsScreen(
-      section: section,
-      onSelectSection: onSelect ?? (_) {},
-      adminPane: const _AdminPane(),
-      onOpenConflict: (_) {},
-    ),
+  SettingsScreen(
+    section: section,
+    onSelectSection: onSelect ?? (_) {},
+    adminPane: const _AdminPane(),
+    onOpenConflict: (_) {},
   ),
   fake: fake ?? _fake(),
+  scaffold: true,
 );
+
+/// The intents after opening the screen (`refreshSettings` and the
+/// streams).
+List<CoreCall> _intents(FakeCoreApi fake) => [
+  for (final call in fake.calls)
+    if (!call.method.startsWith('watch') && call.method != 'refreshSettings')
+      call,
+];
 
 void main() {
   group('settings matrix', () {
-    for (final v in matrix()) {
+    for (final v in variants()) {
       testWidgets('home $v', (tester) async {
         final l10n = lookupSettingsLocalizations(v.locale);
         final fake = await _pump(tester, v);
         expect(fake.calls, contains(const CoreCall('watchSettings')));
+        expect(fake.calls.first, const CoreCall('refreshSettings'));
         if (v.sizeClass == SizeClass.compact) {
           // The list of sections; nothing selected.
           expect(find.text('Shawket'), findsOneWidget);
+          expect(find.text('S'), findsOneWidget);
           expect(find.text(l10n.sectionReminders), findsOneWidget);
           await tester.scrollUntilVisible(
             find.text(l10n.signOut),
@@ -66,8 +73,10 @@ void main() {
           // Navigation (224) + the account section.
           expect(find.bySemanticsLabel(l10n.settingsNav), findsOneWidget);
           expect(find.text(l10n.sectionAccount), findsNWidgets(2));
-          expect(find.text(l10n.changePasswordTitle), findsWidgets);
+          expect(find.text(l10n.changePasswordTitle), findsOneWidget);
           expect(find.text('Africa/Cairo'), findsOneWidget);
+          expect(find.text(l10n.languageEn), findsOneWidget);
+          expect(find.byTooltip(l10n.editTimezoneTitle), findsOneWidget);
         }
         expect(
           directionOf(tester, find.byType(SettingsScreen)),
@@ -82,8 +91,24 @@ void main() {
             (
               SettingsSection.devices,
               (l10n) {
+                expect(find.text('Updated 14:32'), findsOneWidget);
                 expect(find.text('shawket-laptop'), findsOneWidget);
-                expect(find.text(l10n.remindersOnDevice), findsOneWidget);
+                expect(find.text('Pixel 9'), findsOneWidget);
+                expect(find.text(l10n.thisDeviceBadge), findsOneWidget);
+                expect(
+                  find.text(
+                    l10n.deviceDetail(lastSeen: '2h ago', signedIn: '12 Mar'),
+                  ),
+                  findsOneWidget,
+                );
+                expect(
+                  find.byTooltip(l10n.revokeDevice(name: 'shawket-laptop')),
+                  findsNothing,
+                );
+                expect(
+                  find.byTooltip(l10n.revokeDevice(name: 'Pixel 9')),
+                  findsOneWidget,
+                );
               },
             ),
             (
@@ -99,19 +124,39 @@ void main() {
                   findsOneWidget,
                 );
                 expect(find.text('09:00'), findsOneWidget);
+                expect(
+                  find.text(l10n.snoozeMinutes(count: 10)),
+                  findsOneWidget,
+                );
               },
             ),
             (
               SettingsSection.ai,
               (l10n) {
-                expect(find.text(l10n.unavailableNotYet), findsOneWidget);
-                expect(find.text(l10n.aiBody), findsOneWidget);
+                expect(
+                  find.text('AI paused — daily budget reached'),
+                  findsOneWidget,
+                );
+                expect(
+                  find.text(l10n.aiOn(provider: 'Anthropic')),
+                  findsOneWidget,
+                );
+                expect(find.text(l10n.aiQueue(count: 3)), findsOneWidget);
+                expect(find.text(r'$2.00 of $2.00 today'), findsOneWidget);
               },
             ),
             (
               SettingsSection.integrity,
               (l10n) {
-                expect(find.text(l10n.integrityBody), findsOneWidget);
+                expect(find.text(l10n.integrityOutOfBand), findsOneWidget);
+                expect(
+                  find.text('notes/sales/Pricing experiments.md'),
+                  findsOneWidget,
+                );
+                expect(
+                  find.text(l10n.integrityOther(kind: 'disk_full')),
+                  findsOneWidget,
+                );
               },
             ),
             (
@@ -170,12 +215,26 @@ void main() {
         expectNoErrors(tester);
         await expectAccessible(tester, contrast: v.textScale == 1);
       });
+
+      testWidgets('server parts offline $v', (tester) async {
+        final l10n = lookupSettingsLocalizations(v.locale);
+        await _pump(
+          tester,
+          v,
+          section: SettingsSection.devices,
+          fake: _fake(SettingsFixtures.denied),
+        );
+        expect(find.text(l10n.unavailableOffline), findsOneWidget);
+        expect(find.text(l10n.offlineBody), findsOneWidget);
+        expectNoErrors(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
+      });
     }
   });
 
   group('settings', () {
-    final v = matrix().first;
-    final expanded = matrix().firstWhere((v) => v.sizeName == 'expanded');
+    final v = variants().first;
+    final expanded = variants().firstWhere((v) => v.sizeName == 'expanded');
 
     testWidgets('loading until the core emits', (tester) async {
       await _pump(tester, v, fake: FakeCoreApi());
@@ -232,15 +291,185 @@ void main() {
       expect(selected, [SettingsSection.sync, SettingsSection.about]);
     });
 
+    testWidgets('display name and time zone are saved by the core', (
+      tester,
+    ) async {
+      final fake = await _pump(tester, expanded);
+      await tapVisible(tester, find.byTooltip('Display name'));
+      await tester.enterText(find.byType(TextField).last, 'Shawket I.');
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      await tapVisible(tester, find.byTooltip('Time zone'));
+      await tester.enterText(find.byType(TextField).last, 'Europe/Berlin');
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      expect(_intents(fake), [
+        const CoreCall('setDisplayName', {'name': 'Shawket I.'}),
+        const CoreCall('setTimezone', {'iana': 'Europe/Berlin'}),
+      ]);
+      expect(find.text('Saved'), findsWidgets);
+    });
+
+    testWidgets('the language picker sets the UI language', (tester) async {
+      final fake = await _pump(tester, expanded);
+      await tapVisible(tester, find.text('English'));
+      await tester.tap(find.text('العربية').last);
+      await settle(tester);
+      expect(_intents(fake), [
+        const CoreCall('setUiLanguage', {'code': 'ar'}),
+      ]);
+    });
+
+    testWidgets('change password sends both passwords', (tester) async {
+      final fake = await _pump(tester, expanded);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Current password'),
+        'old-tide',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'New password'),
+        'new-sand-4821',
+      );
+      await tapVisible(tester, find.text('Change password'));
+      expect(_intents(fake), [
+        const CoreCall('changePassword', {
+          'current': 'old-tide',
+          'new_': 'new-sand-4821',
+        }),
+      ]);
+      expect(find.text('Password changed'), findsOneWidget);
+    });
+
+    testWidgets('a refused password change shows the failure', (tester) async {
+      final fake = _fake()
+        ..changePasswordAnswer.throws(
+          const CoreFailure(code: 'wrong_password', messageKey: 'e'),
+        );
+      await _pump(tester, expanded, fake: fake);
+      await tapVisible(tester, find.text('Change password'));
+      expect(
+        find.text('Something went wrong (wrong_password).'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('devices: rename, sign out, reminders, refresh', (
+      tester,
+    ) async {
+      final fake = await _pump(
+        tester,
+        expanded,
+        section: SettingsSection.devices,
+      );
+      await tapVisible(tester, find.byTooltip('Rename Pixel 9'));
+      await tester.enterText(find.byType(TextField).last, 'Pixel 9 Pro');
+      await tester.tap(find.text('Save'));
+      await settle(tester);
+      await tapVisible(tester, find.byTooltip('Sign out MacBook Pro'));
+      expect(find.text('Sign MacBook Pro out?'), findsOneWidget);
+      await tester.tap(find.text('Revoke'));
+      await settle(tester);
+      await tapVisible(tester, find.text('Reminders on MacBook Pro'));
+      await tapVisible(tester, find.byTooltip('Refresh'));
+      expect(fake.calls.where((c) => !c.method.startsWith('watch')), [
+        const CoreCall('refreshSettings'),
+        const CoreCall('renameDevice', {
+          'id': 'd-pixel',
+          'name': 'Pixel 9 Pro',
+        }),
+        const CoreCall('revokeDevice', {'id': 'd-mac'}),
+        const CoreCall('setDeviceReminders', {'id': 'd-mac', 'enabled': true}),
+        const CoreCall('refreshSettings'),
+      ]);
+    });
+
+    testWidgets('reminders: default time, snooze, quiet hours', (tester) async {
+      final fake = await _pump(
+        tester,
+        expanded,
+        section: SettingsSection.reminders,
+      );
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Time (HH:MM)'),
+        '08:30',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await settle(tester);
+      await tapVisible(tester, find.text('10 minutes'));
+      await tester.tap(find.text('30 minutes').last);
+      await settle(tester);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Until (HH:MM)'),
+        '06:30',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await settle(tester);
+      await tapVisible(tester, find.text('Quiet hours'));
+      expect(_intents(fake), [
+        const CoreCall('setDefaultReminderTime', {'time': '08:30'}),
+        const CoreCall('setSnoozeMinutes', {'minutes': 30}),
+        const CoreCall('setQuietHours', {
+          'enabled': true,
+          'from': '22:00',
+          'until': '06:30',
+        }),
+        const CoreCall('setQuietHours', {
+          'enabled': false,
+          'from': '22:00',
+          'until': '06:30',
+        }),
+      ]);
+    });
+
     testWidgets('the reminders switch forwards the device setting', (
       tester,
     ) async {
       final fake = await _pump(tester, v, section: SettingsSection.reminders);
       await tapVisible(tester, find.text('Reminders on this device'));
-      expect(
-        fake.calls.last,
+      expect(_intents(fake), [
         const CoreCall('setRemindersEnabled', {'enabled': false}),
+      ]);
+    });
+
+    testWidgets('export and import with a typed path', (tester) async {
+      final fake = _fake()
+        ..importVaultAnswer.returns(
+          const ImportSummary(imported: 12, skipped: 1),
+        );
+      await _pump(tester, expanded, section: SettingsSection.data, fake: fake);
+      await tapVisible(tester, find.text('Export vault (.zip)'));
+      await tester.enterText(find.byType(TextField).last, '/tmp/vault.zip');
+      await tester.tap(find.text('Export'));
+      await settle(tester);
+      expect(
+        find.text('Exported ${StrataFixtures.exportSummary.label}'),
+        findsOneWidget,
       );
+      await tapVisible(tester, find.text('Import markdown…'));
+      await tester.enterText(find.byType(TextField).last, '/tmp/in.zip');
+      await tester.tap(find.text('Import'));
+      await settle(tester);
+      expect(find.text('12 imported · 1 skipped'), findsOneWidget);
+      expect(_intents(fake), [
+        const CoreCall('exportVault', {'path': '/tmp/vault.zip'}),
+        const CoreCall('importVault', {'path': '/tmp/in.zip'}),
+      ]);
+    });
+
+    testWidgets('export and import wait for the server', (tester) async {
+      await _pump(
+        tester,
+        expanded,
+        section: SettingsSection.data,
+        fake: _fake(SettingsFixtures.denied),
+      );
+      final export = tester.widget<ButtonStyleButton>(
+        find.ancestor(
+          of: find.text('Export vault (.zip)'),
+          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
+        ),
+      );
+      expect(export.onPressed, isNull);
     });
 
     testWidgets('the account header opens the account sheet', (tester) async {
@@ -272,17 +501,6 @@ void main() {
       expect(find.byType(LicensePage), findsOneWidget);
     });
 
-    testWidgets('actions the core lacks are disabled', (tester) async {
-      await _pump(tester, expanded, section: SettingsSection.data);
-      final export = tester.widget<ButtonStyleButton>(
-        find.ancestor(
-          of: find.text('Export vault (.zip)'),
-          matching: find.byWidgetPredicate((w) => w is ButtonStyleButton),
-        ),
-      );
-      expect(export.onPressed, isNull);
-    });
-
     testWidgets('admin card opens Admin → Users without a pane', (
       tester,
     ) async {
@@ -290,13 +508,12 @@ void main() {
       await pumpVariant(
         tester,
         v,
-        Scaffold(
-          body: SettingsScreen(
-            section: SettingsSection.admin,
-            onSelectSection: selected.add,
-          ),
+        SettingsScreen(
+          section: SettingsSection.admin,
+          onSelectSection: selected.add,
         ),
         fake: _fake(),
+        scaffold: true,
       );
       await tapVisible(tester, find.text('Open Admin → Users'));
       expect(selected, [SettingsSection.admin]);
@@ -316,6 +533,9 @@ void main() {
         "You're offline.",
       );
       expect(SettingsScreen.icon, Icons.settings_outlined);
+      expect(platformIcon('android'), Icons.smartphone_outlined);
+      expect(platformIcon('linux'), Icons.laptop_outlined);
+      expect(platformIcon('web'), Icons.devices_other_outlined);
     });
   });
 }

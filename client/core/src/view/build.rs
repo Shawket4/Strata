@@ -1470,17 +1470,9 @@ fn custody_preview(
     }
 }
 
-/// The task line a suggestion proposes (Tasks format: recurrence, then due).
+/// The task line a suggestion proposes (the shared preview: recurrence, then due).
 fn task_line(p: &sync_model::suggestions::TaskPayload) -> String {
-    use std::fmt::Write as _;
-    let mut line = format!("- [ ] {}", p.title.trim());
-    if let Some(r) = &p.recurrence {
-        let _ = write!(line, " 🔁 {r}");
-    }
-    if let Some(d) = p.due {
-        let _ = write!(line, " 📅 {}", d.format("%Y-%m-%d"));
-    }
-    line
+    item_render::task::suggestion_preview_line(p)
 }
 
 #[allow(clippy::too_many_lines)] // one arm per suggestion kind

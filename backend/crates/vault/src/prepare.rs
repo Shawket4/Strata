@@ -12,15 +12,13 @@ use vault_format::{Document, PathIndex, RelationKey, Resolution};
 use crate::error::{Result, VaultError};
 use crate::state::VaultState;
 
-/// A new task block ID: `t-<lower-case ULID>`.
+/// A new task block ID: `t-<lower-case ULID>` (the shared rule).
 pub fn new_task_id(ids: &dyn IdGenerator) -> String {
-    format!("t-{}", ids.next_ulid().to_string().to_lowercase())
+    item_render::task::task_block_id(ids.next_ulid())
 }
 
 /// The ULID inside a task block ID `t-<ulid>`, if it has that form.
-pub fn task_ulid(task_id: &str) -> Option<ulid::Ulid> {
-    ulid::Ulid::from_string(&task_id.strip_prefix("t-")?.to_uppercase()).ok()
-}
+pub use item_render::task::task_block_ulid as task_ulid;
 
 /// Appends `^t-<ulid>` to every task line without a block ID, and replaces block IDs that
 /// repeat within the note or are in `taken` (IDs of tasks in other notes). Returns the new

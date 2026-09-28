@@ -6,7 +6,6 @@ import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
 import '../helpers/fixtures.dart';
-import '../helpers/matrix.dart';
 
 FakeCoreApi _fake(SettingsView view) => FakeCoreApi()
   ..session.add(StrataFixtures.sessionActive)
@@ -16,15 +15,15 @@ FakeCoreApi _fake(SettingsView view) => FakeCoreApi()
 void main() {
   setUpAll(loadStrataFonts);
 
-  goldens(
+  screenGoldens(
     'settings',
     (v) => goldenFrame(
       v,
       const Scaffold(body: SettingsScreen()),
-      fake: _fake(StrataFixtures.settingsView),
+      fake: _fake(SettingsFixtures.full),
     ),
   );
-  goldens(
+  screenGoldens(
     'settings_reminders',
     (v) => goldenFrame(
       v,
@@ -32,20 +31,28 @@ void main() {
       fake: _fake(SettingsFixtures.denied),
     ),
   );
-  goldens(
+  screenGoldens(
     'settings_ai',
     (v) => goldenFrame(
       v,
       const Scaffold(body: SettingsScreen(section: SettingsSection.ai)),
-      fake: _fake(StrataFixtures.settingsView),
+      fake: _fake(SettingsFixtures.full),
     ),
   );
-  goldens(
+  screenGoldens(
     'settings_devices',
     (v) => goldenFrame(
       v,
       const Scaffold(body: SettingsScreen(section: SettingsSection.devices)),
-      fake: _fake(SettingsFixtures.member),
+      fake: _fake(SettingsFixtures.full),
+    ),
+  );
+  screenGoldens(
+    'settings_integrity',
+    (v) => goldenFrame(
+      v,
+      const Scaffold(body: SettingsScreen(section: SettingsSection.integrity)),
+      fake: _fake(SettingsFixtures.full),
     ),
   );
 }

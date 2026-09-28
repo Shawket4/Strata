@@ -301,7 +301,7 @@ fn index_parsed(
             )?;
         }
     }
-    if path.starts_with("inbox/") {
+    if item_render::paths::is_inbox_path(path) {
         topics |= Topics::INBOX;
         conn.execute(
             "INSERT INTO inbox (note_id, created) VALUES (?1, ?2)",

@@ -134,11 +134,14 @@
   "@pendingTitle": {
     "description": "Waiting-for-approval title."
   },
-  "pendingBody": "Your request for @{username} was sent.",
+  "pendingBody": "Your request for @{username} was sent {requested}.",
   "@pendingBody": {
-    "description": "Waiting-for-approval text.",
+    "description": "Pending approval body with the core's request time label.",
     "placeholders": {
       "username": {
+        "type": "String"
+      },
+      "requested": {
         "type": "String"
       }
     }
@@ -150,10 +153,6 @@
   "checkAgain": "Check again",
   "@checkAgain": {
     "description": "Retries the sign-in to see if the account was approved."
-  },
-  "stillPending": "Still waiting for approval.",
-  "@stillPending": {
-    "description": "Snackbar after checking again."
   },
   "useAnotherAccount": "Use a different account",
   "@useAnotherAccount": {
@@ -286,7 +285,7 @@
   },
   "deletionBody": "An administrator scheduled @{username} for deletion on {date}. Download your notes before then.",
   "@deletionBody": {
-    "description": "Deletion pending explanation.",
+    "description": "Deletion pending body with the core's date label.",
     "placeholders": {
       "username": {
         "type": "String"
@@ -324,10 +323,6 @@
   "readOnlyNote": "Your notes are read-only until then.",
   "@readOnlyNote": {
     "description": "Deletion pending: read-only notice."
-  },
-  "notAvailableYet": "Not available yet",
-  "@notAvailableYet": {
-    "description": "Tooltip of an action the app cannot perform yet."
   },
   "passwordChangeTitle": "Choose a new password",
   "@passwordChangeTitle": {
@@ -415,5 +410,114 @@
         "type": "String"
       }
     }
+  },
+  "strengthWeak": "Weak",
+  "@strengthWeak": {
+    "description": "Password strength: weak."
+  },
+  "strengthFair": "Fair",
+  "@strengthFair": {
+    "description": "Password strength: fair."
+  },
+  "strengthStrong": "Strong",
+  "@strengthStrong": {
+    "description": "Password strength: strong."
+  },
+  "strengthDetail": "{length, plural, =1{1 character} other{{length} characters}} · at least {min}",
+  "@strengthDetail": {
+    "description": "Password length against the minimum.",
+    "placeholders": {
+      "length": {
+        "type": "int"
+      },
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "strengthSemantics": "Password strength: {level}",
+  "@strengthSemantics": {
+    "description": "Strength meter label.",
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "thisDeviceDetail": "{name} · signed in {signedIn}",
+  "@thisDeviceDetail": {
+    "description": "This device row in the account sheet.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "signedIn": {
+        "type": "String"
+      }
+    }
+  },
+  "pendingCount": "{count, plural, =1{1 pending} other{{count} pending}}",
+  "@pendingCount": {
+    "description": "Pending approvals next to Admin → Users.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "exportPathTitle": "Save to",
+  "@exportPathTitle": {
+    "description": "Path dialog title."
+  },
+  "exportPath": "File path",
+  "@exportPath": {
+    "description": "Path field label."
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Save."
+  },
+  "exportSaved": "Saved {label}",
+  "@exportSaved": {
+    "description": "After an export download.",
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "unsyncedSaved": "{count, plural, =1{1 change saved} other{{count} changes saved}}",
+  "@unsyncedSaved": {
+    "description": "After exporting unsynced changes.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteNowTitle": "Delete @{username} now?",
+  "@deleteNowTitle": {
+    "description": "Delete now confirmation title.",
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteNowBody": "The account and every note on the server are deleted now. This can't be undone.",
+  "@deleteNowBody": {
+    "description": "Delete now confirmation body."
+  },
+  "deleteAnyway": "Delete anyway",
+  "@deleteAnyway": {
+    "description": "Delete now while changes are unsynced."
+  },
+  "fieldTemporaryPassword": "Temporary password",
+  "@fieldTemporaryPassword": {
+    "description": "The one-time password field."
+  },
+  "passwordChanged": "Password changed",
+  "@passwordChanged": {
+    "description": "After changing the password."
   }
 }

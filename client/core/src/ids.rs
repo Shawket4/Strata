@@ -78,10 +78,8 @@ impl IdGenerator for SeqIds {
     }
 }
 
-/// A task block ID (`t-<ulid>` lower-case, §6.11) from a ULID.
-pub fn task_block_id(id: Ulid) -> String {
-    format!("t-{}", id.to_string().to_ascii_lowercase())
-}
+/// A task block ID (`t-<ulid>` lower-case, §6.11) from a ULID (the shared rule).
+pub use item_render::task::task_block_id;
 
 #[cfg(test)]
 mod tests {
