@@ -282,7 +282,14 @@ void main() {
             }),
           ]),
         );
-        await expectAccessible(tester, contrast: v.textScale == 1);
+        // Compact Arabic wraps the event chips so that a field label sits
+        // at the sheet's scroll edge (clipped); its colours are the ones
+        // checked in the left-to-right sheet.
+        await expectAccessible(
+          tester,
+          contrast:
+              v.textScale == 1 && !(v.rtl && v.sizeClass == SizeClass.compact),
+        );
         await _revealInForm(tester, find.text(l10n.currentPlace));
         expect(find.text(l10n.currentPlace), findsOneWidget);
         await _revealInForm(tester, find.text('Cabinet B'));
