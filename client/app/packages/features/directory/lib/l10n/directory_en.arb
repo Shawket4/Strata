@@ -363,10 +363,6 @@
   "@newestFirst": {
     "description": "Caption."
   },
-  "noMentions": "No notes mention this yet.",
-  "@noMentions": {
-    "description": "Empty mentions."
-  },
   "documentsSection": "Documents",
   "@documentsSection": {
     "description": "Section: documents held / owned."
@@ -710,5 +706,29 @@
   "createCompany": "Create company…",
   "@createCompany": {
     "description": "Who-is answer creating a company."
+  },
+  "newDocument": "New document",
+  "@newDocument": {
+    "description": "Creates a document."
+  },
+  "newPlace": "New place",
+  "@newPlace": {
+    "description": "Creates a place."
+  },
+  "typeField": "Type (optional)",
+  "@typeField": {
+    "description": "Document type field."
+  },
+  "parentField": "Inside",
+  "@parentField": {
+    "description": "Parent place picker."
+  },
+  "noParent": "Top level",
+  "@noParent": {
+    "description": "No parent place."
+  },
+  "addressField": "Address (optional)",
+  "@addressField": {
+    "description": "Place address field."
   }
 }

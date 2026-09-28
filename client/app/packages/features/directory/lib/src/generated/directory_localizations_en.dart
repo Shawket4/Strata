@@ -291,9 +291,6 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
   String get newestFirst => 'Newest first';
 
   @override
-  String get noMentions => 'No notes mention this yet.';
-
-  @override
   String get documentsSection => 'Documents';
 
   @override
@@ -540,4 +537,22 @@ class DirectoryLocalizationsEn extends DirectoryLocalizations {
 
   @override
   String get createCompany => 'Create company…';
+
+  @override
+  String get newDocument => 'New document';
+
+  @override
+  String get newPlace => 'New place';
+
+  @override
+  String get typeField => 'Type (optional)';
+
+  @override
+  String get parentField => 'Inside';
+
+  @override
+  String get noParent => 'Top level';
+
+  @override
+  String get addressField => 'Address (optional)';
 }

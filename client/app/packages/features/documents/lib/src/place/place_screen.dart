@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_documents/src/common/custody.dart';
 import 'package:strata_documents/src/common/l10n.dart';
 import 'package:strata_documents/src/common/record_move.dart';
+import 'package:strata_documents/src/common/user_notes.dart';
 import 'package:strata_documents/src/common/widgets.dart';
 import 'package:strata_maps/strata_maps.dart';
 import 'package:strata_state/strata_state.dart' hide RelationChip;
@@ -115,6 +116,7 @@ class PlacePage extends StatelessWidget {
                       header: true,
                       child: Text(
                         place.title,
+                        textDirection: textDirectionOf(place.titleDir),
                         style: compact ? text.title : text.display,
                       ),
                     ),
@@ -191,7 +193,7 @@ class PlacePage extends StatelessWidget {
                   ],
                 ),
               ),
-              if (place.subPlaces.isEmpty)
+              if (place.tree.isEmpty)
                 Padding(
                   padding: const EdgeInsetsDirectional.only(
                     start: StrataSpacing.s8,
@@ -202,10 +204,10 @@ class PlacePage extends StatelessWidget {
                     style: text.bodySmall.copyWith(color: colors.text2),
                   ),
                 ),
-              for (final sub in place.subPlaces)
+              for (final node in place.tree)
                 Padding(
-                  padding: const EdgeInsetsDirectional.only(
-                    start: StrataSpacing.s6,
+                  padding: EdgeInsetsDirectional.only(
+                    start: StrataSpacing.s6 * node.depth,
                   ),
                   child: Row(
                     children: [
@@ -215,7 +217,12 @@ class PlacePage extends StatelessWidget {
                         size: 14,
                       ),
                       const SizedBox(width: StrataSpacing.s1),
-                      Flexible(child: EntityLink(sub)),
+                      Flexible(child: EntityLink(node.place)),
+                      const SizedBox(width: StrataSpacing.s2),
+                      Text(
+                        l10n.placeDocuments(count: node.documentCount),
+                        style: text.caption.copyWith(color: colors.text2),
+                      ),
                     ],
                   ),
                 ),
@@ -251,6 +258,30 @@ class PlacePage extends StatelessWidget {
       ],
     );
 
+    final out = PageSection(
+      title: l10n.outWithPeople,
+      children: [
+        if (place.outWithPeople.isEmpty)
+          Text(
+            l10n.nobodyOut,
+            style: text.bodySmall.copyWith(color: colors.text2),
+          )
+        else
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (final (i, brief) in place.outWithPeople.indexed) ...[
+                  if (i > 0) Divider(height: 1, color: colors.border),
+                  DocumentBriefTile(brief, dense: true),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+    final notes = UserNotesSection(id: place.id, text: place.userNotes);
+
     final movements = PageSection(
       title: l10n.recentMovements,
       children: [
@@ -274,20 +305,21 @@ class PlacePage extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [everything, movements],
+                children: [everything, out, movements, notes],
               ),
             ),
           ],
         ),
       ];
     } else {
-      main = [header, everything, tree, movements];
+      main = [header, everything, out, tree, movements, notes];
     }
 
     return DetailLayout(
       sectionLabel: l10n.places,
       backLabel: l10n.backToPlaces,
       title: place.title,
+      subtitle: place.path.isEmpty ? null : place.path,
       actions: [
         if (!compact)
           FilledButton.tonal(
@@ -402,6 +434,7 @@ class _DocumentsTable extends StatelessWidget {
                 [
                   Text(
                     document.title,
+                    textDirection: textDirectionOf(document.titleDir),
                     style: text.bodySmall.withWeight(FontWeight.w600),
                   ),
                   Text(document.location?.title ?? '', style: text.bodySmall),

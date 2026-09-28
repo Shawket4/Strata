@@ -74,10 +74,11 @@ Future<void> showRecordMove(
   );
 }
 
-/// The "Record a move" form: what happened, to which place (nested places
-/// from the directory, with their parent), the holder after, the date and a
-/// note. Recording needs a custody intent in the core, which does not exist
-/// yet: the form is complete but its submit button is disabled with a notice.
+/// The "Record a move" form: what happened, where it went (the core's
+/// place list, nested under their parents, with the current place marked),
+/// who has it after, the third party (sent to), and the date. "Record move"
+/// writes the custody event through the core (`record_custody`); the core
+/// says which field an event needs.
 class RecordMoveForm extends HookConsumerWidget {
   /// Creates the form.
   const new({
@@ -104,19 +105,25 @@ class RecordMoveForm extends HookConsumerWidget {
     final event = useState(MoveEvent.movedTo);
     final place = useState<String?>(null);
     final holder = useState<String?>(null);
+    final thirdParty = useState<String?>(null);
     final chosenDocument = useState<String?>(document?.id);
     final date = useState<DateTime?>(null);
-    final placeQuery = useState('');
     final personQuery = useState('');
-    final note = useTextEditingController();
-    final places = ref
-        .watch(directoryProvider(DirectoryTab.places, placeQuery.value))
-        .value
-        ?.items;
+    final companyQuery = useState('');
+    final busy = useState(false);
+    final places = ref.watch(placeOptionsProvider(chosenDocument.value)).value;
     final people = ref
         .watch(directoryProvider(DirectoryTab.people, personQuery.value))
         .value
         ?.items;
+    final companies = event.value == MoveEvent.sentTo
+        ? ref
+              .watch(
+                directoryProvider(DirectoryTab.companies, companyQuery.value),
+              )
+              .value
+              ?.items
+        : null;
     final label = text.caption
         .withWeight(FontWeight.w700)
         .copyWith(color: colors.text2);
@@ -133,6 +140,53 @@ class RecordMoveForm extends HookConsumerWidget {
         ],
       ),
     );
+
+    Future<void> submit() async {
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      final documentId = chosenDocument.value;
+      if (documentId == null) {
+        messenger
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.chooseDocument)));
+        return;
+      }
+      busy.value = true;
+      // The picked calendar day (the core stores a date without a time).
+      final day = date.value ?? DateTime.now();
+      try {
+        await ref
+            .read(coreApiProvider)
+            .recordCustody(
+              documentId: documentId,
+              draft: CustodyDraft(
+                kind: event.value.wire,
+                placeId: place.value,
+                personId: holder.value,
+                counterpartyId: event.value == MoveEvent.sentTo
+                    ? thirdParty.value
+                    : null,
+                date: DateTime.utc(day.year, day.month, day.day),
+              ),
+            );
+        if (!context.mounted) return;
+        await Navigator.of(context).maybePop();
+        messenger
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(l10n.moveRecorded)));
+      } on CoreFailure catch (error) {
+        final message = switch ((error.code, error.field)) {
+          ('invalid_input', 'place_id') => l10n.choosePlace,
+          ('invalid_input', 'person_id') => l10n.choosePerson,
+          ('invalid_input', 'counterparty_id') => l10n.chooseThirdParty,
+          _ => l10n.moveFailed(code: error.code),
+        };
+        messenger
+          ?..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+      } finally {
+        if (context.mounted) busy.value = false;
+      }
+    }
 
     return Material(
       type: MaterialType.transparency,
@@ -224,13 +278,10 @@ class RecordMoveForm extends HookConsumerWidget {
                 ),
                 field(
                   l10n.toPlace,
-                  _Picker(
-                    searchLabel: l10n.searchPlaces,
-                    onQuery: (value) => placeQuery.value = value,
+                  _PlacePicker(
+                    options: places,
                     selected: place.value,
                     onSelected: (value) => place.value = value,
-                    items: places,
-                    icon: NodeKind.place,
                   ),
                 ),
                 field(
@@ -245,6 +296,18 @@ class RecordMoveForm extends HookConsumerWidget {
                     noneLabel: l10n.nobody,
                   ),
                 ),
+                if (event.value == MoveEvent.sentTo)
+                  field(
+                    l10n.thirdParty,
+                    _Picker(
+                      searchLabel: l10n.searchCompanies,
+                      onQuery: (value) => companyQuery.value = value,
+                      selected: thirdParty.value,
+                      onSelected: (value) => thirdParty.value = value,
+                      items: companies,
+                      icon: NodeKind.company,
+                    ),
+                  ),
                 field(
                   l10n.dateField,
                   Align(
@@ -268,10 +331,6 @@ class RecordMoveForm extends HookConsumerWidget {
                     ),
                   ),
                 ),
-                field(
-                  l10n.noteField,
-                  TextField(controller: note, minLines: 2, maxLines: 4),
-                ),
               ],
             ),
           ),
@@ -290,19 +349,6 @@ class RecordMoveForm extends HookConsumerWidget {
                   l10n.recordMoveFooter,
                   style: text.caption.copyWith(color: colors.text2),
                 ),
-                const SizedBox(height: StrataSpacing.s1),
-                Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 16, color: colors.infoText),
-                    const SizedBox(width: StrataSpacing.s1),
-                    Expanded(
-                      child: Text(
-                        l10n.recordMoveUnavailable,
-                        style: text.caption.copyWith(color: colors.infoText),
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: StrataSpacing.s2),
                 Wrap(
                   alignment: WrapAlignment.end,
@@ -317,11 +363,9 @@ class RecordMoveForm extends HookConsumerWidget {
                       child: Text(l10n.cancel),
                     ),
                     FilledButton(
-                      onPressed: null,
+                      onPressed: busy.value ? null : submit,
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(48, 48),
-                        disabledForegroundColor: colors.text2,
-                        disabledBackgroundColor: colors.surface2,
                       ),
                       child: Text(l10n.recordMoveSubmit),
                     ),
@@ -331,6 +375,64 @@ class RecordMoveForm extends HookConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The core's places (`place_options`), each indented by its depth with its
+/// breadcrumb; the document's current place is marked.
+class _PlacePicker extends StatelessWidget {
+  const new({
+    required this.options,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final List<PlaceOption>? options;
+  final String? selected;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.docsL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: colors.border),
+        borderRadius: StrataRadii.inputRadius,
+      ),
+      child: RadioGroup<String?>(
+        groupValue: selected,
+        onChanged: onSelected,
+        child: Column(
+          children: [
+            for (final option in options ?? const <PlaceOption>[])
+              Padding(
+                padding: EdgeInsetsDirectional.only(
+                  start: StrataSpacing.s4 * option.depth,
+                ),
+                child: RadioListTile<String?>(
+                  dense: true,
+                  value: option.id,
+                  secondary: option.isCurrent
+                      ? StatusPill(
+                          label: l10n.currentPlace,
+                          tone: StatusTone.info,
+                        )
+                      : null,
+                  title: Text(option.title),
+                  subtitle: option.breadcrumb.isEmpty
+                      ? null
+                      : Text(
+                          option.breadcrumb.last.title,
+                          style: text.caption.copyWith(color: colors.text2),
+                        ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

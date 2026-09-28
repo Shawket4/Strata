@@ -282,9 +282,8 @@ class _FieldsDialog extends HookWidget {
           child: Text(context.dirL10n.cancel),
         ),
         FilledButton(
-          onPressed: () => Navigator.of(
-            context,
-          ).pop([for (final c in controllers) c.text]),
+          onPressed: () =>
+              Navigator.of(context).pop([for (final c in controllers) c.text]),
           child: Text(confirm),
         ),
       ],
@@ -640,10 +639,7 @@ class EntityPageBody extends ConsumerWidget {
 
     final menu = <PopupMenuEntry<VoidCallback>>[
       PopupMenuItem(value: refresh, child: Text(l10n.refreshInsights)),
-      PopupMenuItem(
-        value: () => unawaited(merge()),
-        child: Text(l10n.merge),
-      ),
+      PopupMenuItem(value: () => unawaited(merge()), child: Text(l10n.merge)),
       if (openNote != null)
         PopupMenuItem(
           value: () => openNote(entity.id, null),

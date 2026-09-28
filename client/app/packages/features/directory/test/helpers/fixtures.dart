@@ -178,19 +178,19 @@ abstract final class DirFixtures {
   );
 
   /// The People tab filtered to the role "Operations manager".
-  static final DirectoryView peopleByRole = DirectoryView(
+  static const DirectoryView peopleByRole = DirectoryView(
     tab: DirectoryTab.people,
     query: '',
-    items: const [StrataFixtures.directoryItem],
+    items: [StrataFixtures.directoryItem],
     counts: StrataFixtures.directoryCounts,
-    filter: const DirectoryFilter(
+    filter: DirectoryFilter(
       tags: [],
       role: 'Operations manager',
       expiring: false,
       hasOpenItems: false,
     ),
     sort: DirectorySort.name,
-    filterOptions: const [
+    filterOptions: [
       FilterOption(
         facet: 'role',
         value: 'Operations manager',
@@ -199,13 +199,10 @@ abstract final class DirFixtures {
         selected: true,
       ),
     ],
-    sections: const [
-      DirectorySection(
-        label: 'Results',
-        items: [StrataFixtures.directoryItem],
-      ),
+    sections: [
+      DirectorySection(label: 'Results', items: [StrataFixtures.directoryItem]),
     ],
-    suggestions: const [],
+    suggestions: [],
     expiringCount: 0,
   );
 

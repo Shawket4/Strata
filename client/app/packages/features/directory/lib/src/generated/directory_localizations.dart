@@ -539,12 +539,6 @@ abstract class DirectoryLocalizations {
   /// **'Newest first'**
   String get newestFirst;
 
-  /// Empty mentions.
-  ///
-  /// In en, this message translates to:
-  /// **'No notes mention this yet.'**
-  String get noMentions;
-
   /// Section: documents held / owned.
   ///
   /// In en, this message translates to:
@@ -886,6 +880,42 @@ abstract class DirectoryLocalizations {
   /// In en, this message translates to:
   /// **'Create company…'**
   String get createCompany;
+
+  /// Creates a document.
+  ///
+  /// In en, this message translates to:
+  /// **'New document'**
+  String get newDocument;
+
+  /// Creates a place.
+  ///
+  /// In en, this message translates to:
+  /// **'New place'**
+  String get newPlace;
+
+  /// Document type field.
+  ///
+  /// In en, this message translates to:
+  /// **'Type (optional)'**
+  String get typeField;
+
+  /// Parent place picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Inside'**
+  String get parentField;
+
+  /// No parent place.
+  ///
+  /// In en, this message translates to:
+  /// **'Top level'**
+  String get noParent;
+
+  /// Place address field.
+  ///
+  /// In en, this message translates to:
+  /// **'Address (optional)'**
+  String get addressField;
 }
 
 class _DirectoryLocalizationsDelegate

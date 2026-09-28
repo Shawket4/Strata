@@ -253,56 +253,70 @@ class _Directory extends HookConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    StrataSpacing.s6,
-                    StrataSpacing.s4,
-                    StrataSpacing.s6,
-                    StrataSpacing.s2,
-                  ),
-                  child: Wrap(
-                    spacing: StrataSpacing.s4,
-                    runSpacing: StrataSpacing.s2,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    alignment: WrapAlignment.spaceBetween,
-                    children: [
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          context.dirL10n.directoryTitle,
-                          style: context.strataText.title,
-                        ),
-                      ),
-                      tabs,
-                      NewEntityButton(tab: tab.value),
-                    ],
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: StrataSpacing.s6,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      wideSuggestions,
-                      Wrap(
-                        spacing: StrataSpacing.s3,
-                        runSpacing: StrataSpacing.s2,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          SizedBox(width: 300, child: search),
-                          filters,
-                          if (view != null)
-                            Text(
-                              _count(context, tab.value, view.items.length),
-                              style: context.strataText.caption.copyWith(
-                                color: colors.text2,
+                // The header scrolls within at most half the height (large
+                // text), so the table always keeps the rest.
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            StrataSpacing.s6,
+                            StrataSpacing.s4,
+                            StrataSpacing.s6,
+                            StrataSpacing.s2,
+                          ),
+                          child: Wrap(
+                            spacing: StrataSpacing.s4,
+                            runSpacing: StrataSpacing.s2,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            alignment: WrapAlignment.spaceBetween,
+                            children: [
+                              Semantics(
+                                header: true,
+                                child: Text(
+                                  context.dirL10n.directoryTitle,
+                                  style: context.strataText.title,
+                                ),
                               ),
-                            ),
-                        ],
-                      ),
-                    ],
+                              tabs,
+                              NewEntityButton(tab: tab.value),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: StrataSpacing.s6,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              wideSuggestions,
+                              Wrap(
+                                spacing: StrataSpacing.s3,
+                                runSpacing: StrataSpacing.s2,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  SizedBox(width: 300, child: search),
+                                  filters,
+                                  if (view != null)
+                                    Text(
+                                      _count(
+                                        context,
+                                        tab.value,
+                                        view.items.length,
+                                      ),
+                                      style: context.strataText.caption
+                                          .copyWith(color: colors.text2),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: StrataSpacing.s2),
@@ -749,9 +763,7 @@ class DirectoryRow extends StatelessWidget {
                         ),
                       if (item.expiringSoon && expires != null)
                         Padding(
-                          padding: const EdgeInsets.only(
-                            top: StrataSpacing.s1,
-                          ),
+                          padding: const EdgeInsets.only(top: StrataSpacing.s1),
                           child: StatusPill(
                             label: expires,
                             tone: StatusTone.warning,

@@ -1,17 +1,29 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_directory/strata_directory.dart';
-import 'package:strata_state/strata_state.dart' hide EntityScreen;
+import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
 import '../helpers/fixtures.dart';
-import '../helpers/matrix.dart';
 
 FakeCoreApi _fake() {
   final fake = FakeCoreApi();
-  fake.directory[(DirectoryTab.people, '')].add(StrataFixtures.directoryView);
-  fake.directory[(DirectoryTab.documents, '')].add(DirFixtures.documents);
-  fake.inbox.add(StrataFixtures.inboxView);
+  fake
+      .directoryFiltered[(
+        DirectoryTab.people,
+        '',
+        emptyDirectoryFilter,
+        DirectorySort.name,
+      )]
+      .add(DirFixtures.people);
+  fake
+      .directoryFiltered[(
+        DirectoryTab.documents,
+        '',
+        emptyDirectoryFilter,
+        DirectorySort.name,
+      )]
+      .add(DirFixtures.documents);
   fake.entity['p-ahmed-samir'].add(StrataFixtures.entityScreen);
   fake.entity['d-watanya-contract'].add(StrataFixtures.entityScreenDocument);
   fake.localGraph[('p-ahmed-samir', 1)].add(StrataFixtures.localGraphView);
@@ -26,37 +38,53 @@ void main() {
   group('directory goldens', () {
     screenGoldens(
       'directory_people',
-      () => DirectoryScreen(selectedId: 'p-ahmed-samir', onOpenEntity: (_) {}),
-      _fake,
+      (v) => goldenFrame(
+        v,
+        DirectoryScreen(selectedId: 'p-ahmed-samir', onOpenEntity: (_) {}),
+        fake: _fake(),
+        scaffold: true,
+      ),
     );
     screenGoldens(
       'directory_documents',
-      () => DirectoryScreen(
-        initialTab: DirectoryTab.documents,
-        selectedId: 'd-watanya-contract',
-        onOpenEntity: (_) {},
+      (v) => goldenFrame(
+        v,
+        DirectoryScreen(
+          initialTab: DirectoryTab.documents,
+          selectedId: 'd-watanya-contract',
+          onOpenEntity: (_) {},
+        ),
+        fake: _fake(),
+        scaffold: true,
       ),
-      _fake,
     );
   });
 
   group('entity goldens', () {
     screenGoldens(
       'entity',
-      () => EntityScreen(
-        'p-ahmed-samir',
-        onBack: () {},
-        onOpenEntity: (_) {},
-        onOpenNote: (_, _) {},
-        onOpenMindMap: (_) {},
+      (v) => goldenFrame(
+        v,
+        EntityPage(
+          'p-ahmed-samir',
+          onBack: () {},
+          onOpenEntity: (_) {},
+          onOpenNote: (_, _) {},
+          onOpenMindMap: (_) {},
+        ),
+        fake: _fake(),
+        scaffold: true,
       ),
-      _fake,
     );
     screenGoldens(
       'entity_offline_edits',
-      () => const EntityScreen('p-ahmed-samir'),
-      () =>
-          FakeCoreApi()..entity['p-ahmed-samir'].add(DirFixtures.ahmedPending),
+      (v) => goldenFrame(
+        v,
+        const EntityPage('p-ahmed-samir'),
+        fake: FakeCoreApi()
+          ..entity['p-ahmed-samir'].add(DirFixtures.ahmedPending),
+        scaffold: true,
+      ),
       cells: goldenVariants(wide: false),
     );
   });

@@ -3,7 +3,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:strata_documents/src/common/custody.dart';
 import 'package:strata_documents/src/common/l10n.dart';
 import 'package:strata_documents/src/common/labels.dart';
+import 'package:strata_documents/src/common/mentions.dart';
 import 'package:strata_documents/src/common/record_move.dart';
+import 'package:strata_documents/src/common/user_notes.dart';
 import 'package:strata_documents/src/common/widgets.dart';
 import 'package:strata_maps/strata_maps.dart';
 import 'package:strata_state/strata_state.dart' hide RelationChip;
@@ -90,7 +92,7 @@ class DocumentPage extends StatelessWidget {
     final compact = SizeClass.of(context) == SizeClass.compact;
     final docType = document.docType;
     final copy = document.copy;
-    final expires = document.expires;
+    final expires = document.expiresLabel;
     final openNote = links.onOpenNote;
     void recordMove() => openRecordMove(
       context,
@@ -127,6 +129,7 @@ class DocumentPage extends StatelessWidget {
                       header: true,
                       child: Text(
                         document.title,
+                        textDirection: textDirectionOf(document.titleDir),
                         style: compact ? text.title : text.display,
                       ),
                     ),
@@ -151,8 +154,30 @@ class DocumentPage extends StatelessWidget {
                 ),
                 if (expires != null && compact)
                   Text(
-                    l10n.expiresOn(date: expires),
+                    expires,
                     style: text.bodySmall.copyWith(color: colors.text2),
+                  ),
+                if (document.expiringSoon || document.pendingSync)
+                  Padding(
+                    padding: const EdgeInsets.only(top: StrataSpacing.s1),
+                    child: Wrap(
+                      spacing: StrataSpacing.s2,
+                      runSpacing: StrataSpacing.s1,
+                      children: [
+                        if (document.expiringSoon)
+                          StatusPill(
+                            label: l10n.expiringSoon,
+                            tone: StatusTone.warning,
+                            icon: Icons.event_busy_outlined,
+                          ),
+                        if (document.pendingSync)
+                          StatusPill(
+                            label: l10n.pendingSync,
+                            tone: StatusTone.warning,
+                            icon: Icons.cloud_upload_outlined,
+                          ),
+                      ],
+                    ),
                   ),
               ],
             ),
@@ -186,20 +211,43 @@ class DocumentPage extends StatelessWidget {
                   value: Text(l10n.copiesCount(count: document.copies.length)),
                 ),
                 if (expires != null)
-                  _Property(
-                    label: l10n.expiresLabel,
-                    value: Text(l10n.dateShort(date: expires)),
-                  ),
+                  _Property(label: l10n.expiresLabel, value: Text(expires)),
                 _Property(
                   label: l10n.renewalLabel,
-                  value: Text(
-                    l10n.notAvailableYet,
-                    style: text.bodySmall.copyWith(color: colors.text2),
-                  ),
+                  value: switch (document.renewalTask) {
+                    final TaskItem task => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          task.description,
+                          textDirection: textDirectionOf(task.descriptionDir),
+                        ),
+                        if (task.dueLabel case final due?)
+                          Text(
+                            due,
+                            style: text.caption.copyWith(
+                              color: task.isOverdue
+                                  ? colors.dangerText
+                                  : colors.text2,
+                            ),
+                          ),
+                      ],
+                    ),
+                    null => Text(
+                      l10n.noRenewal,
+                      style: text.bodySmall.copyWith(color: colors.text2),
+                    ),
+                  },
                 ),
               ],
             ),
           );
+
+    final mentions = PageSection(
+      title: l10n.mentioningNotes,
+      caption: l10n.newestFirst,
+      children: [MentionsList(document.mentions)],
+    );
 
     final main = <Widget>[
       header,
@@ -215,36 +263,31 @@ class DocumentPage extends StatelessWidget {
       ),
       PageSection(
         title: l10n.copiesLabel,
-        caption: l10n.copiesCount(count: document.copies.length),
+        caption: l10n.copiesCount(count: document.copyBriefs.length),
         children: [
-          for (final copyRef in document.copies)
+          if (document.copyBriefs.isNotEmpty)
             Card(
-              child: Padding(
-                padding: const EdgeInsets.all(StrataSpacing.s3),
-                child: Row(
-                  children: [
-                    const KindAvatar(kind: NodeKind.document, size: 36),
-                    const SizedBox(width: StrataSpacing.s3),
-                    Expanded(child: EntityLink(copyRef)),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (final (i, brief) in document.copyBriefs.indexed) ...[
+                    if (i > 0) Divider(height: 1, color: colors.border),
+                    DocumentBriefTile(brief, dense: true),
                   ],
-                ),
+                ],
               ),
             ),
         ],
       ),
-      PageSection(
-        title: l10n.yourNotes,
-        caption: l10n.yourNotesHint,
-        children: [
-          Text(
-            l10n.yourNotesUnavailable,
-            style: text.bodySmall.copyWith(color: colors.text2),
-          ),
-        ],
-      ),
+      if (compact) mentions,
+      UserNotesSection(id: document.id, text: document.userNotes),
     ];
 
     final contextPanel = <Widget>[
+      Padding(
+        padding: const EdgeInsets.only(bottom: StrataSpacing.s2),
+        child: mentions,
+      ),
       MiniGraph(document.id, onOpenMindMap: links.onOpenMindMap),
       if (document.concerns.isNotEmpty)
         PageSection(
@@ -263,6 +306,7 @@ class DocumentPage extends StatelessWidget {
       sectionLabel: l10n.documents,
       backLabel: l10n.backToDocuments,
       title: document.title,
+      subtitle: document.path.isEmpty ? null : document.path,
       actions: [
         if (!compact)
           FilledButton.tonal(

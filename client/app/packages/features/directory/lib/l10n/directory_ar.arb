@@ -73,7 +73,6 @@
   "repointRelation": "تغيير {title}",
   "mentioningNotes": "ملاحظات بتذكره",
   "newestFirst": "الأحدث أولًا",
-  "noMentions": "مفيش ملاحظات بتذكره لسه.",
   "documentsSection": "المستندات",
   "entityGraph": "رسم الكيان",
   "yourNotes": "ملاحظاتك",
@@ -130,5 +129,11 @@
   "openDone": "{open} مفتوحة · {done} منجزة",
   "createExists": "موجود بالفعل: {title}",
   "linkTo": "إنه {title}",
-  "createCompany": "إنشاء شركة…"
+  "createCompany": "إنشاء شركة…",
+  "newDocument": "مستند جديد",
+  "newPlace": "مكان جديد",
+  "typeField": "النوع (اختياري)",
+  "parentField": "داخل",
+  "noParent": "المستوى الأعلى",
+  "addressField": "العنوان (اختياري)"
 }

@@ -291,9 +291,6 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
   String get newestFirst => 'الأحدث أولًا';
 
   @override
-  String get noMentions => 'مفيش ملاحظات بتذكره لسه.';
-
-  @override
   String get documentsSection => 'المستندات';
 
   @override
@@ -551,4 +548,22 @@ class DirectoryLocalizationsAr extends DirectoryLocalizations {
 
   @override
   String get createCompany => 'إنشاء شركة…';
+
+  @override
+  String get newDocument => 'مستند جديد';
+
+  @override
+  String get newPlace => 'مكان جديد';
+
+  @override
+  String get typeField => 'النوع (اختياري)';
+
+  @override
+  String get parentField => 'داخل';
+
+  @override
+  String get noParent => 'المستوى الأعلى';
+
+  @override
+  String get addressField => 'العنوان (اختياري)';
 }

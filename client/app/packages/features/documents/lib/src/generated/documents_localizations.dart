@@ -209,12 +209,6 @@ abstract class DocumentsLocalizations {
   /// **'{type} · {copy}'**
   String docSubtitle({required String type, required String copy});
 
-  /// Expiry.
-  ///
-  /// In en, this message translates to:
-  /// **'Expires {date}'**
-  String expiresOn({required DateTime date});
-
   /// Property label.
   ///
   /// In en, this message translates to:
@@ -257,12 +251,6 @@ abstract class DocumentsLocalizations {
   /// **'{count, plural, =0{No copies} =1{1 copy} other{{count} copies}}'**
   String copiesCount({required int count});
 
-  /// Placeholder for a value the app cannot show yet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not available yet'**
-  String get notAvailableYet;
-
   /// Where-it-is card title.
   ///
   /// In en, this message translates to:
@@ -298,12 +286,6 @@ abstract class DocumentsLocalizations {
   /// In en, this message translates to:
   /// **'With'**
   String get withLabel;
-
-  /// Custody event heading.
-  ///
-  /// In en, this message translates to:
-  /// **'{date} · {kind}'**
-  String custodyHeading({required DateTime date, required String kind});
 
   /// Record a move action.
   ///
@@ -496,12 +478,6 @@ abstract class DocumentsLocalizations {
   /// In en, this message translates to:
   /// **'Only you edit this'**
   String get yourNotesHint;
-
-  /// User notes placeholder until the core streams the section.
-  ///
-  /// In en, this message translates to:
-  /// **'Editing your notes here isn\'t available yet. Open the note to edit its ## Notes section.'**
-  String get yourNotesUnavailable;
 
   /// Opens the markdown note.
   ///
@@ -707,12 +683,6 @@ abstract class DocumentsLocalizations {
   /// **'Choose a date'**
   String get pickDate;
 
-  /// Note field.
-  ///
-  /// In en, this message translates to:
-  /// **'Note (optional)'**
-  String get noteField;
-
   /// Record-a-move footer.
   ///
   /// In en, this message translates to:
@@ -724,12 +694,6 @@ abstract class DocumentsLocalizations {
   /// In en, this message translates to:
   /// **'Record move'**
   String get recordMoveSubmit;
-
-  /// Shown until the core has a custody intent.
-  ///
-  /// In en, this message translates to:
-  /// **'Recording a move from the app isn\'t available yet.'**
-  String get recordMoveUnavailable;
 
   /// Cancel.
   ///
@@ -754,12 +718,6 @@ abstract class DocumentsLocalizations {
   /// In en, this message translates to:
   /// **'Search people'**
   String get searchPeople;
-
-  /// Placeholder until the core streams document mentions.
-  ///
-  /// In en, this message translates to:
-  /// **'Mentioning notes will appear here.'**
-  String get mentionsUnavailable;
 
   /// A custody date.
   ///
@@ -802,6 +760,132 @@ abstract class DocumentsLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t save your notes ({code}).'**
   String userNotesFailed({required String code});
+
+  /// Empty mentions list.
+  ///
+  /// In en, this message translates to:
+  /// **'No notes mention this yet.'**
+  String get noMentions;
+
+  /// Heading of the notes that mention a page.
+  ///
+  /// In en, this message translates to:
+  /// **'Mentioning notes'**
+  String get mentioningNotes;
+
+  /// Caption: list order.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest first'**
+  String get newestFirst;
+
+  /// Renewal property without a task.
+  ///
+  /// In en, this message translates to:
+  /// **'No renewal task'**
+  String get noRenewal;
+
+  /// Pill of a document that expires within 60 days.
+  ///
+  /// In en, this message translates to:
+  /// **'Expiring soon'**
+  String get expiringSoon;
+
+  /// A document nobody holds: its last holder.
+  ///
+  /// In en, this message translates to:
+  /// **'Last with {name}'**
+  String lastWithName({required String name});
+
+  /// AI tag with the model's confidence.
+  ///
+  /// In en, this message translates to:
+  /// **'AI · {value}'**
+  String aiConfidence({required String value});
+
+  /// AI tag without a confidence.
+  ///
+  /// In en, this message translates to:
+  /// **'AI'**
+  String get aiTag;
+
+  /// A place-page movement at a nested place.
+  ///
+  /// In en, this message translates to:
+  /// **'at {place}'**
+  String atPlace({required String place});
+
+  /// Record a move: a place is required for this event.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose where it went.'**
+  String get choosePlace;
+
+  /// Record a move: a person is required for this event.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose who has it.'**
+  String get choosePerson;
+
+  /// Record a move: a third party is required.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the third party.'**
+  String get chooseThirdParty;
+
+  /// Record a move from a place page without a document.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a document.'**
+  String get chooseDocument;
+
+  /// Record a move: third-party picker heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Third party'**
+  String get thirdParty;
+
+  /// Search field of the third-party picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Search companies'**
+  String get searchCompanies;
+
+  /// Marks the document's current place in the picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get currentPlace;
+
+  /// Snack bar after recording a move.
+  ///
+  /// In en, this message translates to:
+  /// **'Move recorded'**
+  String get moveRecorded;
+
+  /// Snack bar when recording a move fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t record the move ({code}).'**
+  String moveFailed({required String code});
+
+  /// Place page: documents from here that someone holds now.
+  ///
+  /// In en, this message translates to:
+  /// **'Out with people'**
+  String get outWithPeople;
+
+  /// Out with people: empty.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything from here is in place.'**
+  String get nobodyOut;
+
+  /// Document count of a place in the tree.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{empty} =1{1 document} other{{count} documents}}'**
+  String placeDocuments({required int count});
 }
 
 class _DocumentsLocalizationsDelegate

@@ -83,7 +83,7 @@ void main() {
         );
         expect(fake.calls.map((c) => c.method), isNot(contains('watchInbox')));
         expect(
-          directionOf(tester, find.byType(DirectoryRow)),
+          directionOf(tester, find.byType(DirectoryScreen)),
           v.rtl ? TextDirection.rtl : TextDirection.ltr,
         );
         expect(find.bySemanticsLabel(l10n.tabsLabel), findsOneWidget);
@@ -197,7 +197,8 @@ void main() {
       expect(filter.tags, isEmpty);
       expect(filter.companyId, isNull);
       expect(filter.hasOpenItems, isFalse);
-      fake.directoryFiltered[(
+      fake
+          .directoryFiltered[(
             DirectoryTab.people,
             '',
             filter,

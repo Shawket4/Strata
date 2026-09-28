@@ -309,9 +309,7 @@ class SuggestionCard extends ConsumerWidget {
                           if (item.createdLabel.isNotEmpty)
                             Text(
                               item.createdLabel,
-                              style: text.caption.copyWith(
-                                color: colors.text2,
-                              ),
+                              style: text.caption.copyWith(color: colors.text2),
                             ),
                         ],
                       ),

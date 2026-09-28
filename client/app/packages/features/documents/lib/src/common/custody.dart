@@ -57,16 +57,17 @@ class PlaceBreadcrumb extends StatelessWidget {
   }
 }
 
-/// Who holds a document: "With X", or "Nobody has it now · last with Y".
+/// Who holds a document: "With X" (a link), or "Nobody has it now" with
+/// the core's label of the last holder ("Last with Shady · 20 Sep").
 class HolderLine extends StatelessWidget {
   /// Creates the line.
-  const new({required this.holder, required this.lastHolder, super.key});
+  const new({required this.holder, super.key, this.label});
 
   /// Current holder.
   final EntityRef? holder;
 
-  /// Last holder.
-  final EntityRef? lastHolder;
+  /// The core's holder label (`holder_label`).
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +75,7 @@ class HolderLine extends StatelessWidget {
     final colors = context.strataColors;
     final style = context.strataText.bodySmall.copyWith(color: colors.text2);
     final now = holder;
-    final last = lastHolder;
+    final last = label;
     return Wrap(
       crossAxisAlignment: WrapCrossAlignment.center,
       spacing: StrataSpacing.s1,
@@ -90,8 +91,8 @@ class HolderLine extends StatelessWidget {
                 .copyWith(color: colors.text),
           ),
           if (last != null) ...[
-            Text(l10n.lastWith, style: style),
-            EntityLink(last),
+            ExcludeSemantics(child: Text('·', style: style)),
+            Text(last, style: style),
           ],
         ],
       ],
@@ -143,7 +144,7 @@ class WhereItIsCard extends StatelessWidget {
         else
           PlaceBreadcrumb(document.location, style: text.titleSmall),
         const SizedBox(height: StrataSpacing.s1),
-        HolderLine(holder: document.holder, lastHolder: document.lastHolder),
+        HolderLine(holder: document.holder, label: document.holderLabel),
       ],
     );
     final button = FilledButton.icon(
@@ -197,8 +198,9 @@ class WhereItIsCard extends StatelessWidget {
   }
 }
 
-/// One custody event: date · type, the document / place / people it moved
-/// between, and its citations.
+/// One custody event: the core's sentence ("Shady returned it to Safe")
+/// with its date label, the document (place pages) and, for an event at a
+/// nested place, that place; the AI tag and the citations.
 class CustodyTile extends StatelessWidget {
   /// Creates the tile for [item].
   const new(this.item, {super.key, this.showDocument = false});
@@ -218,21 +220,23 @@ class CustodyTile extends StatelessWidget {
     final palette = kind.tone.colorsIn(colors);
     final document = item.document;
     final place = item.place;
-    final person = item.person;
-    final counterparty = item.counterparty;
+    final confidence = item.confidence;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: StrataSpacing.s2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: palette.background,
-              shape: BoxShape.circle,
+          Tooltip(
+            message: kind.label,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: palette.background,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(kind.icon, size: 16, color: palette.foreground),
             ),
-            child: Icon(kind.icon, size: 16, color: palette.foreground),
           ),
           const SizedBox(width: StrataSpacing.s3),
           Expanded(
@@ -240,32 +244,45 @@ class CustodyTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  l10n.custodyHeading(date: item.date, kind: kind.label),
+                  item.dateLabel,
                   style: text.caption.copyWith(color: colors.text2),
                 ),
-                Wrap(
-                  spacing: StrataSpacing.s2,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    if (showDocument && document != null)
-                      EntityLink(document, style: text.bodySmall),
-                    if (place != null) ...[
-                      const Icon(Icons.place_outlined, size: 16),
-                      EntityLink(place),
+                if (showDocument && document != null)
+                  EntityLink(document, style: text.bodySmall),
+                Text(item.sentence, style: text.bodySmall),
+                if (showDocument && !item.here && place != null)
+                  Wrap(
+                    spacing: StrataSpacing.s1,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.subdirectory_arrow_right,
+                        size: 14,
+                        color: colors.text2,
+                      ),
+                      Text(
+                        l10n.atPlace(place: place.title),
+                        style: text.caption.copyWith(color: colors.text2),
+                      ),
                     ],
-                    if (person != null) ...[
-                      const Icon(Icons.person_outline, size: 16),
-                      EntityLink(person),
-                    ],
-                    if (counterparty != null) ...[
-                      const Icon(Icons.business_outlined, size: 16),
-                      EntityLink(counterparty),
-                    ],
-                  ],
-                ),
-                if (item.citations.isNotEmpty) ...[
+                  ),
+                if (item.citations.isNotEmpty || item.by == 'ai') ...[
                   const SizedBox(height: StrataSpacing.s1),
-                  CitationRow(item.citations),
+                  CitationRow(
+                    item.citations,
+                    trailing: [
+                      if (item.by == 'ai')
+                        StatusPill(
+                          label: confidence == null
+                              ? l10n.aiTag
+                              : l10n.aiConfidence(
+                                  value: confidence.toStringAsFixed(2),
+                                ),
+                          tone: StatusTone.info,
+                          icon: Icons.auto_awesome_outlined,
+                        ),
+                    ],
+                  ),
                 ],
               ],
             ),
@@ -318,8 +335,8 @@ class CustodyList extends StatelessWidget {
   }
 }
 
-/// A document row (place pages, directory lists): glyph, title, where and
-/// who, status.
+/// A document row (entity and place pages): glyph, title in its own
+/// direction, where (breadcrumb) and who, the expiry flag and the status.
 class DocumentBriefTile extends StatelessWidget {
   /// Creates the row for [document].
   const new(this.document, {super.key, this.dense = false});
@@ -338,7 +355,10 @@ class DocumentBriefTile extends StatelessWidget {
     final open = EntityLinks.of(context).onOpenEntity;
     final location = document.location;
     final holder = document.holder;
+    final last = document.lastHolder;
     final status = document.status;
+    final docType = document.docType;
+    final muted = text.bodySmall.copyWith(color: colors.text2);
     return Semantics(
       button: open != null,
       child: InkWell(
@@ -358,25 +378,48 @@ class DocumentBriefTile extends StatelessWidget {
                   children: [
                     Text(
                       document.title,
+                      textDirection: textDirectionOf(document.titleDir),
                       style: text.body.withWeight(FontWeight.w600),
                     ),
-                    if (location != null)
-                      Text(
-                        location.title,
-                        style: text.bodySmall.copyWith(color: colors.text2),
-                      ),
+                    if (docType != null)
+                      Text(documentTypeLabel(l10n, docType), style: muted),
+                    if (document.locationPath.isNotEmpty)
+                      Wrap(
+                        spacing: StrataSpacing.s1,
+                        children: [
+                          for (final (i, part)
+                              in document.locationPath.indexed) ...[
+                            if (i > 0)
+                              ExcludeSemantics(child: Text('›', style: muted)),
+                            Text(part.title, style: muted),
+                          ],
+                        ],
+                      )
+                    else if (location != null)
+                      Text(location.title, style: muted),
                     if (holder != null)
-                      Text(
-                        l10n.withHolder(name: holder.title),
-                        style: text.bodySmall.copyWith(color: colors.text2),
-                      ),
+                      Text(l10n.withHolder(name: holder.title), style: muted)
+                    else if (last != null)
+                      Text(l10n.lastWithName(name: last.title), style: muted),
                   ],
                 ),
               ),
-              if (status != null) ...[
-                const SizedBox(width: StrataSpacing.s2),
-                DocumentStatusPill(status),
-              ],
+              const SizedBox(width: StrataSpacing.s2),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (status != null) DocumentStatusPill(status),
+                  if (document.expiringSoon)
+                    Padding(
+                      padding: const EdgeInsets.only(top: StrataSpacing.s1),
+                      child: StatusPill(
+                        label: l10n.expiringSoon,
+                        tone: StatusTone.warning,
+                        icon: Icons.event_busy_outlined,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),

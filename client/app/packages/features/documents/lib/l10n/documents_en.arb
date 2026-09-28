@@ -85,17 +85,6 @@
       }
     }
   },
-  "expiresOn": "Expires {date}",
-  "@expiresOn": {
-    "description": "Expiry.",
-    "placeholders": {
-      "date": {
-        "type": "DateTime",
-        "format": "EEE d MMM y",
-        "isCustomDateFormat": "true"
-      }
-    }
-  },
   "expiresLabel": "Expires",
   "@expiresLabel": {
     "description": "Property label."
@@ -129,10 +118,6 @@
       }
     }
   },
-  "notAvailableYet": "Not available yet",
-  "@notAvailableYet": {
-    "description": "Placeholder for a value the app cannot show yet."
-  },
   "whereItIs": "Where it is",
   "@whereItIs": {
     "description": "Where-it-is card title."
@@ -161,20 +146,6 @@
   "withLabel": "With",
   "@withLabel": {
     "description": "Precedes the current holder link."
-  },
-  "custodyHeading": "{date} · {kind}",
-  "@custodyHeading": {
-    "description": "Custody event heading.",
-    "placeholders": {
-      "date": {
-        "type": "DateTime",
-        "format": "EEE d MMM y",
-        "isCustomDateFormat": "true"
-      },
-      "kind": {
-        "type": "String"
-      }
-    }
   },
   "recordMove": "Record a move",
   "@recordMove": {
@@ -308,10 +279,6 @@
   "yourNotesHint": "Only you edit this",
   "@yourNotesHint": {
     "description": "User notes helper."
-  },
-  "yourNotesUnavailable": "Editing your notes here isn't available yet. Open the note to edit its ## Notes section.",
-  "@yourNotesUnavailable": {
-    "description": "User notes placeholder until the core streams the section."
   },
   "openNote": "Open note",
   "@openNote": {
@@ -482,10 +449,6 @@
   "@pickDate": {
     "description": "Date picker button."
   },
-  "noteField": "Note (optional)",
-  "@noteField": {
-    "description": "Note field."
-  },
   "recordMoveFooter": "Adds a cited event to ## Custody",
   "@recordMoveFooter": {
     "description": "Record-a-move footer."
@@ -493,10 +456,6 @@
   "recordMoveSubmit": "Record move",
   "@recordMoveSubmit": {
     "description": "Submit."
-  },
-  "recordMoveUnavailable": "Recording a move from the app isn't available yet.",
-  "@recordMoveUnavailable": {
-    "description": "Shown until the core has a custody intent."
   },
   "cancel": "Cancel",
   "@cancel": {
@@ -513,10 +472,6 @@
   "searchPeople": "Search people",
   "@searchPeople": {
     "description": "Person picker search."
-  },
-  "mentionsUnavailable": "Mentioning notes will appear here.",
-  "@mentionsUnavailable": {
-    "description": "Placeholder until the core streams document mentions."
   },
   "dateShort": "{date}",
   "@dateShort": {
@@ -555,6 +510,115 @@
     "placeholders": {
       "code": {
         "type": "String"
+      }
+    }
+  },
+  "noMentions": "No notes mention this yet.",
+  "@noMentions": {
+    "description": "Empty mentions list."
+  },
+  "mentioningNotes": "Mentioning notes",
+  "@mentioningNotes": {
+    "description": "Heading of the notes that mention a page."
+  },
+  "newestFirst": "Newest first",
+  "@newestFirst": {
+    "description": "Caption: list order."
+  },
+  "noRenewal": "No renewal task",
+  "@noRenewal": {
+    "description": "Renewal property without a task."
+  },
+  "expiringSoon": "Expiring soon",
+  "@expiringSoon": {
+    "description": "Pill of a document that expires within 60 days."
+  },
+  "lastWithName": "Last with {name}",
+  "@lastWithName": {
+    "description": "A document nobody holds: its last holder.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "aiConfidence": "AI · {value}",
+  "@aiConfidence": {
+    "description": "AI tag with the model's confidence.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTag": "AI",
+  "@aiTag": {
+    "description": "AI tag without a confidence."
+  },
+  "atPlace": "at {place}",
+  "@atPlace": {
+    "description": "A place-page movement at a nested place.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "choosePlace": "Choose where it went.",
+  "@choosePlace": {
+    "description": "Record a move: a place is required for this event."
+  },
+  "choosePerson": "Choose who has it.",
+  "@choosePerson": {
+    "description": "Record a move: a person is required for this event."
+  },
+  "chooseThirdParty": "Choose the third party.",
+  "@chooseThirdParty": {
+    "description": "Record a move: a third party is required."
+  },
+  "chooseDocument": "Choose a document.",
+  "@chooseDocument": {
+    "description": "Record a move from a place page without a document."
+  },
+  "thirdParty": "Third party",
+  "@thirdParty": {
+    "description": "Record a move: third-party picker heading."
+  },
+  "searchCompanies": "Search companies",
+  "@searchCompanies": {
+    "description": "Search field of the third-party picker."
+  },
+  "currentPlace": "Current",
+  "@currentPlace": {
+    "description": "Marks the document's current place in the picker."
+  },
+  "moveRecorded": "Move recorded",
+  "@moveRecorded": {
+    "description": "Snack bar after recording a move."
+  },
+  "moveFailed": "Couldn't record the move ({code}).",
+  "@moveFailed": {
+    "description": "Snack bar when recording a move fails.",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "outWithPeople": "Out with people",
+  "@outWithPeople": {
+    "description": "Place page: documents from here that someone holds now."
+  },
+  "nobodyOut": "Everything from here is in place.",
+  "@nobodyOut": {
+    "description": "Out with people: empty."
+  },
+  "placeDocuments": "{count, plural, =0{empty} =1{1 document} other{{count} documents}}",
+  "@placeDocuments": {
+    "description": "Document count of a place in the tree.",
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   }

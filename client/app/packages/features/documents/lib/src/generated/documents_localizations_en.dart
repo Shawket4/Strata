@@ -69,17 +69,6 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
   }
 
   @override
-  String expiresOn({required DateTime date}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat(
-      'EEE d MMM y',
-      localeName,
-    );
-    final String dateString = dateDateFormat.format(date);
-
-    return 'Expires $dateString';
-  }
-
-  @override
   String get expiresLabel => 'Expires';
 
   @override
@@ -110,9 +99,6 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
   }
 
   @override
-  String get notAvailableYet => 'Not available yet';
-
-  @override
   String get whereItIs => 'Where it is';
 
   @override
@@ -131,17 +117,6 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
 
   @override
   String get withLabel => 'With';
-
-  @override
-  String custodyHeading({required DateTime date, required String kind}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat(
-      'EEE d MMM y',
-      localeName,
-    );
-    final String dateString = dateDateFormat.format(date);
-
-    return '$dateString · $kind';
-  }
 
   @override
   String get recordMove => 'Record a move';
@@ -248,10 +223,6 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
 
   @override
   String get yourNotesHint => 'Only you edit this';
-
-  @override
-  String get yourNotesUnavailable =>
-      'Editing your notes here isn\'t available yet. Open the note to edit its ## Notes section.';
 
   @override
   String get openNote => 'Open note';
@@ -375,17 +346,10 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
   String get pickDate => 'Choose a date';
 
   @override
-  String get noteField => 'Note (optional)';
-
-  @override
   String get recordMoveFooter => 'Adds a cited event to ## Custody';
 
   @override
   String get recordMoveSubmit => 'Record move';
-
-  @override
-  String get recordMoveUnavailable =>
-      'Recording a move from the app isn\'t available yet.';
 
   @override
   String get cancel => 'Cancel';
@@ -398,9 +362,6 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
 
   @override
   String get searchPeople => 'Search people';
-
-  @override
-  String get mentionsUnavailable => 'Mentioning notes will appear here.';
 
   @override
   String dateShort({required DateTime date}) {
@@ -431,5 +392,85 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
   @override
   String userNotesFailed({required String code}) {
     return 'Couldn\'t save your notes ($code).';
+  }
+
+  @override
+  String get noMentions => 'No notes mention this yet.';
+
+  @override
+  String get mentioningNotes => 'Mentioning notes';
+
+  @override
+  String get newestFirst => 'Newest first';
+
+  @override
+  String get noRenewal => 'No renewal task';
+
+  @override
+  String get expiringSoon => 'Expiring soon';
+
+  @override
+  String lastWithName({required String name}) {
+    return 'Last with $name';
+  }
+
+  @override
+  String aiConfidence({required String value}) {
+    return 'AI · $value';
+  }
+
+  @override
+  String get aiTag => 'AI';
+
+  @override
+  String atPlace({required String place}) {
+    return 'at $place';
+  }
+
+  @override
+  String get choosePlace => 'Choose where it went.';
+
+  @override
+  String get choosePerson => 'Choose who has it.';
+
+  @override
+  String get chooseThirdParty => 'Choose the third party.';
+
+  @override
+  String get chooseDocument => 'Choose a document.';
+
+  @override
+  String get thirdParty => 'Third party';
+
+  @override
+  String get searchCompanies => 'Search companies';
+
+  @override
+  String get currentPlace => 'Current';
+
+  @override
+  String get moveRecorded => 'Move recorded';
+
+  @override
+  String moveFailed({required String code}) {
+    return 'Couldn\'t record the move ($code).';
+  }
+
+  @override
+  String get outWithPeople => 'Out with people';
+
+  @override
+  String get nobodyOut => 'Everything from here is in place.';
+
+  @override
+  String placeDocuments({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count documents',
+      one: '1 document',
+      zero: 'empty',
+    );
+    return '$_temp0';
   }
 }

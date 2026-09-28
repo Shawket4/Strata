@@ -6,8 +6,7 @@ import 'package:strata_documents/strata_documents.dart';
 import 'package:strata_state/strata_state.dart' hide RelationChip;
 import 'package:strata_ui/strata_ui.dart';
 
-/// "New person" / "New company" (people and companies tabs only: the core
-/// creates persons, companies and concepts).
+/// "New person" / "New company" / "New document" / "New place" for the tab.
 class NewEntityButton extends StatelessWidget {
   /// Creates the button for [tab].
   const new({required this.tab, super.key, this.iconOnly = false});
@@ -21,18 +20,24 @@ class NewEntityButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.dirL10n;
-    final String kind;
-    final String label;
-    switch (tab) {
-      case DirectoryTab.people:
-        kind = 'person';
-        label = l10n.newPerson;
-      case DirectoryTab.companies:
-        kind = 'company';
-        label = l10n.newCompany;
-      case DirectoryTab.documents || DirectoryTab.places:
-        return const SizedBox();
-    }
+    final (kind, label, icon) = switch (tab) {
+      DirectoryTab.people => ('person', l10n.newPerson, Icons.person_add_alt),
+      DirectoryTab.companies => (
+        'company',
+        l10n.newCompany,
+        Icons.add_business_outlined,
+      ),
+      DirectoryTab.documents => (
+        'document',
+        l10n.newDocument,
+        Icons.note_add_outlined,
+      ),
+      DirectoryTab.places => (
+        'place',
+        l10n.newPlace,
+        Icons.add_location_alt_outlined,
+      ),
+    };
     final links = EntityLinks.of(context);
     Future<void> open() => showDialog<void>(
       context: context,
@@ -48,7 +53,7 @@ class NewEntityButton extends StatelessWidget {
       return IconButton(
         tooltip: label,
         onPressed: open,
-        icon: const Icon(Icons.person_add_alt),
+        icon: Icon(icon),
       );
     }
     return OutlinedButton.icon(
@@ -59,9 +64,11 @@ class NewEntityButton extends StatelessWidget {
   }
 }
 
-/// Creates a person or company through the core (`createEntity`); when the
-/// core's duplicate check finds candidates, shows them with "Open existing"
-/// and "Create anyway" (`force`).
+/// Creates a person or company (`create_entity`), a document
+/// (`create_document`, with its type) or a place (`create_place`, with its
+/// parent and address) through the core; when the core's duplicate check
+/// finds candidates, shows them with "Open existing" and "Create anyway"
+/// (`force`).
 class NewEntityDialog extends HookConsumerWidget {
   /// Creates the dialog.
   const new({
@@ -71,7 +78,7 @@ class NewEntityDialog extends HookConsumerWidget {
     this.onOpenEntity,
   });
 
-  /// `person` | `company`.
+  /// `person` | `company` | `document` | `place`.
   final String kind;
 
   /// Dialog title.
@@ -87,6 +94,12 @@ class NewEntityDialog extends HookConsumerWidget {
     final text = context.strataText;
     final name = useTextEditingController();
     final alias = useTextEditingController();
+    final docType = useTextEditingController();
+    final address = useTextEditingController();
+    final parent = useState<String?>(null);
+    final places = kind == 'place'
+        ? ref.watch(placeOptionsProvider(null)).value
+        : null;
     final candidates = useState<List<CandidateItem>?>(null);
     final busy = useState(false);
     final open = onOpenEntity;
@@ -94,14 +107,35 @@ class NewEntityDialog extends HookConsumerWidget {
     Future<void> submit({required bool force}) async {
       busy.value = true;
       final navigator = Navigator.of(context);
-      final outcome = await ref
-          .read(coreApiProvider)
-          .createEntity(
-            kind: kind,
+      final core = ref.read(coreApiProvider);
+      final aliases = [if (alias.text.isNotEmpty) alias.text];
+      final outcome = switch (kind) {
+        'document' => await core.createDocument(
+          draft: DocumentDraft(
             name: name.text,
-            aliases: [if (alias.text.isNotEmpty) alias.text],
-            force: force,
-          );
+            aliases: aliases,
+            docType: docType.text.isEmpty ? null : docType.text,
+            companies: const [],
+            people: const [],
+          ),
+          force: force,
+        ),
+        'place' => await core.createPlace(
+          draft: PlaceDraft(
+            name: name.text,
+            aliases: aliases,
+            parentId: parent.value,
+            address: address.text.isEmpty ? null : address.text,
+          ),
+          force: force,
+        ),
+        _ => await core.createEntity(
+          kind: kind,
+          name: name.text,
+          aliases: aliases,
+          force: force,
+        ),
+      };
       if (!context.mounted) return;
       busy.value = false;
       final id = outcome.id;
@@ -133,6 +167,43 @@ class NewEntityDialog extends HookConsumerWidget {
                 controller: alias,
                 decoration: InputDecoration(labelText: l10n.colAliases),
               ),
+              if (kind == 'document') ...[
+                const SizedBox(height: StrataSpacing.s3),
+                TextField(
+                  controller: docType,
+                  decoration: InputDecoration(labelText: l10n.typeField),
+                ),
+              ],
+              if (kind == 'place') ...[
+                const SizedBox(height: StrataSpacing.s3),
+                DropdownButtonFormField<String?>(
+                  initialValue: parent.value,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: l10n.parentField),
+                  items: [
+                    DropdownMenuItem(child: Text(l10n.noParent)),
+                    for (final option in places ?? const <PlaceOption>[])
+                      DropdownMenuItem(
+                        value: option.id,
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.only(
+                            start: StrataSpacing.s3 * option.depth,
+                          ),
+                          child: Text(
+                            option.title,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                  ],
+                  onChanged: (value) => parent.value = value,
+                ),
+                const SizedBox(height: StrataSpacing.s3),
+                TextField(
+                  controller: address,
+                  decoration: InputDecoration(labelText: l10n.addressField),
+                ),
+              ],
               if (found != null && found.isNotEmpty) ...[
                 const SizedBox(height: StrataSpacing.s4),
                 Text(

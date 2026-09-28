@@ -68,17 +68,6 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
   }
 
   @override
-  String expiresOn({required DateTime date}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat(
-      'EEE d MMM y',
-      localeName,
-    );
-    final String dateString = dateDateFormat.format(date);
-
-    return 'ينتهي $dateString';
-  }
-
-  @override
   String get expiresLabel => 'ينتهي';
 
   @override
@@ -109,9 +98,6 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
   }
 
   @override
-  String get notAvailableYet => 'مش متاح لسه';
-
-  @override
   String get whereItIs => 'مكانه فين';
 
   @override
@@ -130,17 +116,6 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
 
   @override
   String get withLabel => 'مع';
-
-  @override
-  String custodyHeading({required DateTime date, required String kind}) {
-    final intl.DateFormat dateDateFormat = intl.DateFormat(
-      'EEE d MMM y',
-      localeName,
-    );
-    final String dateString = dateDateFormat.format(date);
-
-    return '$dateString · $kind';
-  }
 
   @override
   String get recordMove => 'تسجيل نقل';
@@ -246,10 +221,6 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
 
   @override
   String get yourNotesHint => 'إنت بس اللي بتعدّل ده';
-
-  @override
-  String get yourNotesUnavailable =>
-      'تعديل ملاحظاتك من هنا مش متاح لسه. افتح الملاحظة وعدّل قسم ## Notes.';
 
   @override
   String get openNote => 'افتح الملاحظة';
@@ -373,16 +344,10 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
   String get pickDate => 'اختار تاريخ';
 
   @override
-  String get noteField => 'ملاحظة (اختياري)';
-
-  @override
   String get recordMoveFooter => 'بيضيف حدث موثّق لـ ## Custody';
 
   @override
   String get recordMoveSubmit => 'سجّل النقل';
-
-  @override
-  String get recordMoveUnavailable => 'تسجيل النقل من التطبيق مش متاح لسه.';
 
   @override
   String get cancel => 'إلغاء';
@@ -395,9 +360,6 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
 
   @override
   String get searchPeople => 'ابحث في الأشخاص';
-
-  @override
-  String get mentionsUnavailable => 'الملاحظات اللي بتذكره هتظهر هنا.';
 
   @override
   String dateShort({required DateTime date}) {
@@ -428,5 +390,88 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
   @override
   String userNotesFailed({required String code}) {
     return 'تعذّر حفظ ملاحظاتك ($code).';
+  }
+
+  @override
+  String get noMentions => 'لا توجد ملاحظات تذكره بعد.';
+
+  @override
+  String get mentioningNotes => 'ملاحظات تذكره';
+
+  @override
+  String get newestFirst => 'الأحدث أولًا';
+
+  @override
+  String get noRenewal => 'لا توجد مهمة تجديد';
+
+  @override
+  String get expiringSoon => 'ينتهي قريبًا';
+
+  @override
+  String lastWithName({required String name}) {
+    return 'آخر مرة مع $name';
+  }
+
+  @override
+  String aiConfidence({required String value}) {
+    return 'ذكاء اصطناعي · $value';
+  }
+
+  @override
+  String get aiTag => 'ذكاء اصطناعي';
+
+  @override
+  String atPlace({required String place}) {
+    return 'في $place';
+  }
+
+  @override
+  String get choosePlace => 'اختر أين ذهب.';
+
+  @override
+  String get choosePerson => 'اختر من معه.';
+
+  @override
+  String get chooseThirdParty => 'اختر الطرف الثالث.';
+
+  @override
+  String get chooseDocument => 'اختر مستندًا.';
+
+  @override
+  String get thirdParty => 'الطرف الثالث';
+
+  @override
+  String get searchCompanies => 'ابحث في الشركات';
+
+  @override
+  String get currentPlace => 'الحالي';
+
+  @override
+  String get moveRecorded => 'تم تسجيل النقل';
+
+  @override
+  String moveFailed({required String code}) {
+    return 'تعذّر تسجيل النقل ($code).';
+  }
+
+  @override
+  String get outWithPeople => 'مع أشخاص';
+
+  @override
+  String get nobodyOut => 'كل ما يخص هذا المكان في مكانه.';
+
+  @override
+  String placeDocuments({required int count}) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count مستند',
+      many: '$count مستندًا',
+      few: '$count مستندات',
+      two: 'مستندان',
+      one: 'مستند واحد',
+      zero: 'فارغ',
+    );
+    return '$_temp0';
   }
 }

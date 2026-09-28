@@ -17,12 +17,7 @@ export 'src/directory/directory_screen.dart'
 export 'src/directory/new_entity.dart';
 export 'src/directory/suggestions.dart';
 export 'src/entity/entity_page.dart'
-    show
-        EntityDetail,
-        EntityPage,
-        EntityPageBody,
-        MergeDialog,
-        mergeEntity;
+    show EntityDetail, EntityPage, EntityPageBody, MergeDialog, mergeEntity;
 export 'src/entity/entity_picker.dart';
 export 'src/entity/sections.dart';
 

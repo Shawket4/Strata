@@ -17,6 +17,7 @@ export 'src/common/custody.dart'
 export 'src/common/l10n.dart'
     show DocumentsLocalizationScope, DocumentsLocalizations;
 export 'src/common/labels.dart';
+export 'src/common/mentions.dart';
 export 'src/common/record_move.dart'
     show MoveEvent, RecordMoveForm, openRecordMove, showRecordMove;
 export 'src/common/user_notes.dart';

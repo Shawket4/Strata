@@ -976,10 +976,49 @@ abstract final class StrataFixtures {
     title: 'Watanya contract',
     status: 'stored',
     location: safeRef,
+    docType: 'contract',
+    lastHolder: shadyRef,
+    locationPath: [nasrCityOfficeRef, safeRef],
+    expiringSoon: false,
+    titleDir: TextDir.ltr,
+  );
+
+  /// The copy of the Watanya contract, with Shady.
+  static const DocumentBrief documentBriefCopy = DocumentBrief(
+    id: 'd-watanya-contract-copy',
+    title: 'Watanya contract — copy',
+    status: 'checked-out',
+    holder: shadyRef,
+    docType: 'contract',
     locationPath: [],
     expiringSoon: false,
     titleDir: TextDir.ltr,
   );
+
+  /// Places for the custody picker (the Safe is the current place).
+  static const List<PlaceOption> placeOptions = [
+    PlaceOption(
+      id: 'pl-nasr-city-office',
+      title: 'Nasr City office',
+      breadcrumb: [],
+      depth: 0,
+      isCurrent: false,
+    ),
+    PlaceOption(
+      id: 'pl-nasr-city-safe',
+      title: 'Safe — Nasr City office',
+      breadcrumb: [nasrCityOfficeRef],
+      depth: 1,
+      isCurrent: true,
+    ),
+    PlaceOption(
+      id: 'pl-nasr-city-cabinet-b',
+      title: 'Cabinet B',
+      breadcrumb: [nasrCityOfficeRef],
+      depth: 1,
+      isCurrent: false,
+    ),
+  ];
 
   /// "20 Sep 2026 — returned to the safe by Shady".
   static final CustodyItem custodyItem = CustodyItem(
@@ -995,10 +1034,13 @@ abstract final class StrataFixtures {
         anchor: 'c7d8',
       ),
     ],
-    by: '',
-    sentenceKey: '',
-    sentence: '',
-    dateLabel: '',
+    by: 'ai',
+    confidence: 0.91,
+    sentenceKey: 'custody.stored_at',
+    actor: shadyRef,
+    destination: safeRef,
+    sentence: 'Shady put it in Safe — Nasr City office',
+    dateLabel: '20 Sep',
     here: false,
   );
 
@@ -1020,10 +1062,11 @@ abstract final class StrataFixtures {
         kind: 'handed-to',
         person: shadyRef,
         citations: const [citation],
-        by: '',
-        sentenceKey: '',
-        sentence: '',
-        dateLabel: '',
+        by: 'user',
+        sentenceKey: 'custody.handed_to',
+        destination: shadyRef,
+        sentence: 'Handed to Shady',
+        dateLabel: '14 Sep',
         here: false,
       ),
       CustodyItem(
@@ -1031,10 +1074,11 @@ abstract final class StrataFixtures {
         kind: 'stored-at',
         place: safeRef,
         citations: const [citation],
-        by: '',
-        sentenceKey: '',
-        sentence: '',
-        dateLabel: '',
+        by: 'user',
+        sentenceKey: 'custody.stored_at',
+        destination: safeRef,
+        sentence: 'Stored in Safe — Nasr City office',
+        dateLabel: '2 Mar',
         here: false,
       ),
     ],
@@ -1046,12 +1090,32 @@ abstract final class StrataFixtures {
     ],
     concerns: const [watanyaRef],
     titleDir: TextDir.ltr,
-    path: '',
+    path: 'documents/Watanya contract.md',
     pendingSync: false,
+    expiresLabel: 'Expires 31 Mar 2027',
     expiringSoon: false,
-    mentions: [],
-    copyBriefs: [],
-    userNotes: '',
+    renewalTask: TaskItem(
+      id: 't-renew-watanya',
+      noteId: 'n-tasks',
+      noteTitle: 'Tasks',
+      description: 'Renew the Watanya contract',
+      state: TaskState.open,
+      priority: 'normal',
+      due: DateTime.utc(2027, 3),
+      recurrenceUnderstood: true,
+      reminders: const [],
+      links: const [watanyaContractRef],
+      pendingSync: false,
+      descriptionDir: TextDir.ltr,
+      notePath: '',
+      lineNumber: 0,
+      dueLabel: '1 Mar 2027',
+      isOverdue: false,
+    ),
+    mentions: [mentionItem],
+    copyBriefs: const [documentBriefCopy],
+    userNotes: 'The copy is for the accountant.',
+    holderLabel: 'Last with Shady · 20 Sep',
   );
 
   /// Nasr City office (مكتب مدينة نصر).
@@ -1078,10 +1142,29 @@ abstract final class StrataFixtures {
     ],
     recentMovements: [custodyItem],
     titleDir: TextDir.ltr,
-    tree: [],
-    outWithPeople: [],
+    tree: const [
+      PlaceNode(
+        place: safeRef,
+        depth: 1,
+        documentCount: 1,
+        parentId: 'pl-nasr-city-office',
+      ),
+      PlaceNode(
+        place: EntityRef(id: 'pl-nasr-city-cabinet-b', title: 'Cabinet B'),
+        depth: 1,
+        documentCount: 1,
+        parentId: 'pl-nasr-city-office',
+      ),
+      PlaceNode(
+        place: EntityRef(id: 'pl-cabinet-b-top', title: 'Top shelf'),
+        depth: 2,
+        documentCount: 0,
+        parentId: 'pl-nasr-city-cabinet-b',
+      ),
+    ],
+    outWithPeople: const [documentBriefCopy],
     userNotes: '',
-    path: '',
+    path: 'places/Nasr City office.md',
   );
 
   /// The call note as a mention of Ahmed (the mention highlighted).
