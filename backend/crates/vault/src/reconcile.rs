@@ -337,6 +337,12 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
 
     // Derive everything (sets link names), then compare with the index.
     let mut tx = core.begin(&scope).await?;
+    // Op results committed to git but not to the database: a write crashed after its commit,
+    // so what differs from the index is its unfinished update (reported as a repair).
+    if !dry {
+        report.ops_recovered = recover_op_results(core, &mut tx).await?;
+    }
+    let repair = repair || !report.ops_recovered.is_empty();
     let tz = core.tz(&mut tx).await?;
     let indexed: Vec<notes::Note> = notes::list_notes(&mut tx, true).await?;
     let db: HashMap<NoteId, (String, String)> = indexed
@@ -505,7 +511,6 @@ async fn run(core: &mut Core, scope: UserScope, repair: bool, dry: bool) -> Resu
         };
         core.log_changes(&mut tx, &synced).await?;
     }
-    report.ops_recovered = recover_op_results(core, &mut tx).await?;
     for op in &report.ops_recovered {
         let detail = format!("the result of op {op} was recovered from its commit");
         warn(core, &mut tx, kinds::OP_RESULT_RECOVERED, None, &detail).await?;
