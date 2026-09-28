@@ -65,6 +65,7 @@ pub fn plan(conn: &Connection, now: DateTime<Utc>, tz: Tz) -> CoreResult<Vec<Pla
         return Ok(Vec::new());
     }
     let default_time = crate::view::build::default_reminder_time(conn)?;
+    let quiet = quiet_window(conn)?;
     let rows: Vec<(String, String, String, String, String)> = {
         let mut st = conn.prepare(
             "SELECT t.id, t.description, n.title, r.remind_date, r.remind_time
@@ -84,8 +85,11 @@ pub fn plan(conn: &Connection, now: DateTime<Utc>, tz: Tz) -> CoreResult<Vec<Pla
             continue;
         };
         let time = NaiveTime::parse_from_str(&t, "%H:%M").ok();
-        let fire_at =
-            vault_format::tasks::reminder_instant(day, time, default_time, tz).with_timezone(&Utc);
+        let fire_at = deliver_at(
+            vault_format::tasks::reminder_instant(day, time, default_time, tz).with_timezone(&Utc),
+            quiet,
+            tz,
+        );
         if fire_at <= now {
             continue;
         }
@@ -105,6 +109,47 @@ pub fn plan(conn: &Connection, now: DateTime<Utc>, tz: Tz) -> CoreResult<Vec<Pla
     out.dedup_by_key(|p| p.id);
     out.truncate(WINDOW);
     Ok(out)
+}
+
+/// Quiet hours `(from, until)` when on.
+fn quiet_window(conn: &Connection) -> CoreResult<Option<(NaiveTime, NaiveTime)>> {
+    let (enabled, from, until) = settings::quiet_hours(conn)?;
+    Ok(match (
+        enabled,
+        NaiveTime::parse_from_str(&from, "%H:%M"),
+        NaiveTime::parse_from_str(&until, "%H:%M"),
+    ) {
+        (true, Ok(f), Ok(u)) if f != u => Some((f, u)),
+        _ => None,
+    })
+}
+
+/// The instant a reminder is delivered: inside quiet hours (which may span midnight) it
+/// moves to the end of them, in the user's timezone.
+pub fn deliver_at(
+    at: DateTime<Utc>,
+    quiet: Option<(NaiveTime, NaiveTime)>,
+    tz: Tz,
+) -> DateTime<Utc> {
+    let Some((from, until)) = quiet else {
+        return at;
+    };
+    let local = at.with_timezone(&tz).naive_local();
+    let t = local.time();
+    let inside = if from < until {
+        t >= from && t < until
+    } else {
+        t >= from || t < until
+    };
+    if !inside {
+        return at;
+    }
+    let day = if from > until && t >= from {
+        local.date() + chrono::Duration::days(1)
+    } else {
+        local.date()
+    };
+    vault_format::tasks::resolve_local(day.and_time(until), tz).with_timezone(&Utc)
 }
 
 fn row_of(p: &Planned) -> ScheduledRow {
@@ -213,12 +258,17 @@ pub fn record_result(
     now: DateTime<Utc>,
 ) -> CoreResult<bool> {
     let (state, text, permission) = match result {
-        NotificationResult::Ok => ("scheduled", "ok", "granted"),
-        NotificationResult::PermissionDenied => ("failed", "permission_denied", "denied"),
-        NotificationResult::PlatformLimit => ("failed", "platform_limit", "granted"),
+        NotificationResult::Ok => ("scheduled", "ok", Some("granted")),
+        NotificationResult::PermissionDenied => ("failed", "permission_denied", Some("denied")),
+        NotificationResult::PlatformLimit => ("failed", "platform_limit", Some("granted")),
+        // Another platform error says nothing about the permission.
+        NotificationResult::Failed => ("failed", "failed", None),
     };
     let row = notifications::set_result(conn, id, state, text, &now.to_rfc3339())?;
-    let perm = settings::set(conn, settings::NOTIFICATION_PERMISSION, permission)?;
+    let perm = match permission {
+        Some(p) => settings::set(conn, settings::NOTIFICATION_PERMISSION, p)?,
+        None => false,
+    };
     Ok(row || perm)
 }
 

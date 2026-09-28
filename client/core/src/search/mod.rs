@@ -8,6 +8,7 @@ pub mod duplicates;
 use rusqlite::{Connection, params};
 
 use crate::error::CoreResult;
+use crate::format::direction::dir_of;
 use crate::view::ViewCtx;
 use crate::view::model::{Availability, Connectivity, SearchHit, SearchMode, SearchView};
 
@@ -49,57 +50,149 @@ pub fn snippet_for(content: &str, query: &str) -> String {
     }
 }
 
-/// Runs a search. Keyword search is local and works offline; semantic and hybrid need the
-/// server (`GET /search`, not in the contract yet), so they fall back to keyword results
-/// and report their availability.
+/// Modes usable now: keyword always; semantic and hybrid when the server is reachable.
+pub fn available_modes(ctx: &ViewCtx) -> Vec<SearchMode> {
+    if ctx.connectivity == Connectivity::Offline {
+        vec![SearchMode::Keyword]
+    } else {
+        vec![SearchMode::Keyword, SearchMode::Semantic, SearchMode::Hybrid]
+    }
+}
+
+fn query_terms(query: &str) -> Vec<String> {
+    query
+        .split_whitespace()
+        .map(|t| t.trim_matches(|c: char| !c.is_alphanumeric()).to_owned())
+        .filter(|t| !t.is_empty())
+        .collect()
+}
+
+fn in_folder(path: &str, folder: Option<&str>) -> bool {
+    match folder.map(|f| f.trim_matches('/')).filter(|f| !f.is_empty()) {
+        None => true,
+        Some(f) => path.starts_with(&format!("{f}/")),
+    }
+}
+
+fn hit(
+    note_id: String,
+    title: String,
+    path: String,
+    kind: String,
+    snippet: String,
+    score: f64,
+    terms: &[String],
+) -> SearchHit {
+    SearchHit {
+        title_dir: dir_of(&title),
+        snippet_dir: dir_of(&snippet),
+        highlights: crate::view::build::highlight_spans(&snippet, terms),
+        score,
+        note_id,
+        title,
+        path,
+        kind,
+        snippet,
+    }
+}
+
+/// Runs a local keyword search (works offline), optionally limited to a folder (and its
+/// subfolders). Semantic and hybrid run on the server (`Session::search_remote`); asked here
+/// they report their availability with keyword results.
 pub fn search(
     conn: &Connection,
     ctx: &ViewCtx,
     query: &str,
     mode: SearchMode,
+    folder: Option<&str>,
 ) -> CoreResult<SearchView> {
     let availability = match mode {
         SearchMode::Keyword => Availability::Available,
         SearchMode::Semantic | SearchMode::Hybrid if ctx.connectivity == Connectivity::Offline => {
             Availability::Offline
         }
-        SearchMode::Semantic | SearchMode::Hybrid => Availability::NotYetAvailable,
+        SearchMode::Semantic | SearchMode::Hybrid => Availability::Available,
     };
+    let folder_owned = folder.map(str::to_owned).filter(|f| !f.trim_matches('/').is_empty());
     let Some(q) = fts_query(query) else {
         return Ok(SearchView {
             query: query.to_owned(),
             mode,
             results: Vec::new(),
             availability,
+            available_modes: available_modes(ctx),
+            folder: folder_owned,
         });
     };
-    let rows: Vec<(String, String, String, String, String)> = {
+    let rows: Vec<(String, String, String, String, String, f64)> = {
         let mut st = conn.prepare(
-            "SELECT n.id, n.title, n.path, n.kind, n.content
+            "SELECT n.id, n.title, n.path, n.kind, n.content,
+                    bm25(notes_fts, 0.0, 10.0, 1.0, 5.0)
              FROM notes_fts f JOIN notes n ON n.id = f.note_id
              WHERE notes_fts MATCH ?1 AND n.deleted = 0
-             ORDER BY bm25(notes_fts, 0.0, 10.0, 1.0, 5.0), n.title, n.id
-             LIMIT ?2",
+             ORDER BY bm25(notes_fts, 0.0, 10.0, 1.0, 5.0), n.title, n.id",
         )?;
-        st.query_map(params![q, i64::try_from(LIMIT).unwrap_or(50)], |r| {
-            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?))
+        st.query_map(params![q], |r| {
+            Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?))
         })?
         .collect::<Result<_, _>>()?
     };
+    let terms = query_terms(query);
     Ok(SearchView {
         query: query.to_owned(),
         mode,
         results: rows
             .into_iter()
-            .map(|(note_id, title, path, kind, content)| SearchHit {
-                snippet: snippet_for(&content, query),
-                note_id,
-                title,
-                path,
-                kind,
+            .filter(|r| in_folder(&r.2, folder))
+            .take(LIMIT)
+            .map(|(note_id, title, path, kind, content, rank)| {
+                hit(
+                    note_id,
+                    title,
+                    path,
+                    kind,
+                    snippet_for(&content, query),
+                    -rank,
+                    &terms,
+                )
             })
             .collect(),
         availability,
+        available_modes: available_modes(ctx),
+        folder: folder_owned,
+    })
+}
+
+/// A server result list as the search view (folder applied here).
+pub fn remote_view(
+    conn: &Connection,
+    ctx: &ViewCtx,
+    query: &str,
+    mode: SearchMode,
+    folder: Option<String>,
+    hits: Vec<crate::net::RemoteHit>,
+) -> CoreResult<SearchView> {
+    let terms = query_terms(query);
+    let mut results = Vec::new();
+    for h in hits {
+        if !in_folder(&h.path, folder.as_deref()) {
+            continue;
+        }
+        let snippet = match h.snippet {
+            Some(s) => s,
+            None => crate::store::notes::current(conn, &h.id)?
+                .map(|n| snippet_for(&n.content, query))
+                .unwrap_or_default(),
+        };
+        results.push(hit(h.id, h.title, h.path, h.kind, snippet, h.score, &terms));
+    }
+    Ok(SearchView {
+        query: query.to_owned(),
+        mode,
+        results,
+        availability: Availability::Available,
+        available_modes: available_modes(ctx),
+        folder,
     })
 }
 
