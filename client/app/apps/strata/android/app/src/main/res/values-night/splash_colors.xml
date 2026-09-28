@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app background token (StrataColors.background: mist light, abyss dark), used behind
+     the Flutter UI while it starts so the native splash, this window and the first Flutter
+     frame share one colour (test/brand_assets_test.dart checks it). -->
+<resources>
+    <color name="strata_background">#0F1B26</color>
+</resources>
