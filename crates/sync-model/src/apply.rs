@@ -175,7 +175,7 @@ pub fn clean_list_value(key: &str, values: &[String]) -> Vec<String> {
 
 /// `entity.patch` / `document.patch` / `place.patch`: sets and removes scalar user fields,
 /// sets list values (`set_lists`: each list replaces the key's value; an empty list removes
-/// it) and adds/removes aliases (kept in order, each once). `id` and `kind` are immutable;
+/// it; a user field with one value is written as a scalar) and adds/removes aliases (kept in order, each once). `id` and `kind` are immutable;
 /// relation lists change through relation ops and `location`/`holder`/`last-holder`/`status`
 /// only through custody events (§6.12). Nothing is changed when any key is refused.
 pub fn entity_patch(fm: &mut Frontmatter, patch: &EntityPatch) -> Result<(), ApplyError> {
@@ -199,6 +199,13 @@ pub fn entity_patch(fm: &mut Frontmatter, patch: &EntityPatch) -> Result<(), App
                 next.remove(key)?;
             }
             Some(k @ (KnownKey::Aliases | KnownKey::Tags)) => next.set_list(k, values)?,
+            // A user field with one value stays a scalar (`phone: +20 100`).
+            _ if values.len() == 1 => {
+                next.set(
+                    key,
+                    vault_format::PropertyValue::Text(values.concat()),
+                )?;
+            }
             _ => next.set(key, vault_format::PropertyValue::List(values))?,
         }
     }

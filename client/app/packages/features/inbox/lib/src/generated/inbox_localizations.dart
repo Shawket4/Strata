@@ -470,6 +470,12 @@ abstract class InboxLocalizations {
   /// **'Keep both'**
   String get inboxKeepBoth;
 
+  /// Accepts a duplicates suggestion: merges the pair.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge'**
+  String get inboxMerge;
+
   /// A correction in the user's words.
   ///
   /// In en, this message translates to:

@@ -479,15 +479,30 @@ class SuggestionCard extends HookConsumerWidget {
         );
         actions = const [];
       case SuggestionKind.duplicates:
-        body = DuplicateCandidatesView(
-          kind: 'item',
-          title: null,
-          candidates: detail.duplicates,
-          onOpenExisting: (candidate) => onOpenNote?.call(candidate.id),
-          onCreateAnyway: reject,
-          onCancel: accept,
-          createAnywayLabel: l10n.inboxKeepBoth,
-          cancelLabel: l10n.inboxAccept,
+        // Accepting merges the pair; the core says which item survives.
+        final merge = detail.mergeLabel;
+        body = Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (merge != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: StrataSpacing.s2),
+                child: Text(
+                  merge,
+                  style: text.bodySmall.copyWith(color: colors.text2),
+                ),
+              ),
+            DuplicateCandidatesView(
+              kind: 'item',
+              title: null,
+              candidates: detail.duplicates,
+              onOpenExisting: (candidate) => onOpenNote?.call(candidate.id),
+              onCreateAnyway: reject,
+              onCancel: accept,
+              createAnywayLabel: l10n.inboxKeepBoth,
+              cancelLabel: l10n.inboxMerge,
+            ),
+          ],
         );
         actions = const [];
       case SuggestionKind.correction:

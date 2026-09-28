@@ -81,8 +81,14 @@ VoidCallback? _duplicate(NoteView note, NoteActions actions) {
 }
 
 /// The banners above the note: the conflict hand-off, the "Already exists"
-/// prompt of a duplicate-flagged note, and the block a link pointed at.
-List<Widget> _banners(NoteView note, NoteActions actions, String? anchor) => [
+/// prompt of a duplicate-flagged note, and the block a link pointed at (the
+/// editor's caret is put on it).
+List<Widget> _banners(
+  NoteView note,
+  NoteActions actions,
+  String? anchor,
+  NoteEditorController controller,
+) => [
   if (note.sync_.kind == NoteSyncKind.conflict) ...[
     NoteConflictBanner(onResolve: _conflict(note, actions)),
     const SizedBox(height: StrataSpacing.s4),
@@ -92,7 +98,7 @@ List<Widget> _banners(NoteView note, NoteActions actions, String? anchor) => [
     const SizedBox(height: StrataSpacing.s4),
   ],
   if (anchor != null) ...[
-    LinkedBlockCard(noteId: note.id, anchor: anchor),
+    LinkedBlockCard(noteId: note.id, anchor: anchor, controller: controller),
     const SizedBox(height: StrataSpacing.s4),
   ],
 ];
@@ -161,10 +167,16 @@ class PinNoteButton extends ConsumerWidget {
 
 /// The block a link or citation pointed at (`#^id` or a heading), as the
 /// core resolves it (`resolve_citation`): its heading and text in its own
-/// direction, or that it is gone.
-class LinkedBlockCard extends ConsumerWidget {
+/// direction, or that it is gone. With a [controller], the editor's caret is
+/// put at the block (the core's `offset`) once it is resolved.
+class LinkedBlockCard extends ConsumerStatefulWidget {
   /// Creates the card for [anchor] in [noteId].
-  const new({required this.noteId, required this.anchor, super.key});
+  const new({
+    required this.noteId,
+    required this.anchor,
+    super.key,
+    this.controller,
+  });
 
   /// The note.
   final String noteId;
@@ -172,12 +184,33 @@ class LinkedBlockCard extends ConsumerWidget {
   /// The block ID (without `^`) or heading.
   final String anchor;
 
+  /// The note's editor, whose caret goes to the block.
+  final NoteEditorController? controller;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LinkedBlockCard> createState() => _LinkedBlockCardState();
+}
+
+class _LinkedBlockCardState extends ConsumerState<LinkedBlockCard> {
+  (String, int)? _revealed;
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = NotesLocalizations.of(context);
     final colors = context.strataColors;
     final text = context.strataText;
-    final preview = ref.watch(resolveCitationProvider(noteId, anchor)).value;
+    final anchor = widget.anchor;
+    final preview = ref
+        .watch(resolveCitationProvider(widget.noteId, anchor))
+        .value;
+    final offset = preview?.offset;
+    final controller = widget.controller;
+    if (controller != null && offset != null && _revealed != (anchor, offset)) {
+      _revealed = (anchor, offset);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) controller.revealOffset(offset);
+      });
+    }
     if (preview == null) return const SizedBox.shrink();
     final block = preview.blockText;
     final heading = preview.heading;
@@ -475,7 +508,7 @@ class _NoteDetailBody extends StatelessWidget {
                       const SizedBox(height: StrataSpacing.s1),
                       NoteMetaLine(note: note),
                       const SizedBox(height: StrataSpacing.s4),
-                      ..._banners(note, actions, anchor),
+                      ..._banners(note, actions, anchor, controller),
                       PropertiesPanel(
                         note: note,
                         onOpenNote: actions.onOpenNote,
@@ -623,7 +656,7 @@ class _CompactNotePageState extends State<CompactNotePage> {
                         ),
                         NoteMetaLine(note: note),
                         const SizedBox(height: StrataSpacing.s3),
-                        ..._banners(note, actions, widget.anchor),
+                        ..._banners(note, actions, widget.anchor, controller),
                       ],
                     ),
                   ),

@@ -232,6 +232,9 @@ class InboxLocalizationsEn extends InboxLocalizations {
   String get inboxKeepBoth => 'Keep both';
 
   @override
+  String get inboxMerge => 'Merge';
+
+  @override
   String inboxYouSaid({required String words}) {
     return 'You said: “$words”';
   }

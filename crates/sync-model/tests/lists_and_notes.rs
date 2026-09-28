@@ -38,6 +38,14 @@ fn set_lists_replaces_whole_lists_in_canonical_order() {
         doc.render(),
         "---\nid: 01J\nkind: person\naliases: [أحمد سمير, Ahmed S.]\ntags: [client, vip]\nphone: [+20 100, +20 101]\nlanguages: [ar, en]\n---\nx\n"
     );
+    // One value of a user field is a scalar; tags and aliases stay lists.
+    let mut single = Document::parse("---\nid: 01J\nkind: person\n---\nx\n");
+    let patch = lists(&[("phone", &[" +20 100 ", ""]), ("tags", &["vip"])]);
+    assert_eq!(entity_patch(single.frontmatter_mut(), &patch), Ok(()));
+    assert_eq!(
+        single.render(),
+        "---\nid: 01J\nkind: person\ntags: [vip]\nphone: +20 100\n---\nx\n"
+    );
     // An empty list (after cleaning) removes the key.
     let patch = lists(&[("tags", &[" ", "#"]), ("phone", &[])]);
     assert_eq!(entity_patch(doc.frontmatter_mut(), &patch), Ok(()));

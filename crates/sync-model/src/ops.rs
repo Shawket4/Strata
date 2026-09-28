@@ -519,7 +519,8 @@ pub struct EntityPatch {
     #[serde(default)]
     pub remove_aliases: Vec<String>,
     /// List values to set, each replacing the whole list (`tags`, `aliases`, several phone
-    /// numbers); an empty list removes the key. Relation keys change through relation ops.
+    /// numbers); an empty list removes the key, and a user field with one value is written
+    /// as a scalar. Relation keys change through relation ops.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub set_lists: BTreeMap<String, Vec<String>>,
 }

@@ -258,6 +258,28 @@ final class NoteEditorController extends ChangeNotifier {
     return null;
   }
 
+  /// Puts the caret at [offset] into [content] (a citation's block, from the
+  /// core's `CitationPreview.offset`) so the editor shows it. Returns whether
+  /// the offset is in the editable body.
+  bool revealOffset(int offset) {
+    final at = positionOf(offset);
+    final editor = _editor;
+    if (at == null || editor == null) return false;
+    editor.execute([
+      ChangeSelectionRequest(
+        DocumentSelection.collapsed(
+          position: DocumentPosition(
+            nodeId: at.$1,
+            nodePosition: TextNodePosition(offset: at.$2),
+          ),
+        ),
+        SelectionChangeType.placeCaret,
+        SelectionReason.userInteraction,
+      ),
+    ]);
+    return true;
+  }
+
   /// The hints the current line placement was computed from.
   @visibleForTesting
   List<EditorHint> get hints => _hints;

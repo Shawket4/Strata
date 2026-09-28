@@ -301,6 +301,10 @@
   "@inboxKeepBoth": {
     "description": "Keeps two items that look like duplicates."
   },
+  "inboxMerge": "Merge",
+  "@inboxMerge": {
+    "description": "Accepts a duplicates suggestion: merges the pair."
+  },
   "inboxYouSaid": "You said: “{words}”",
   "@inboxYouSaid": {
     "description": "A correction in the user's words.",

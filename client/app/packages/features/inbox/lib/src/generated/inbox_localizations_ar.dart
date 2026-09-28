@@ -239,6 +239,9 @@ class InboxLocalizationsAr extends InboxLocalizations {
   String get inboxKeepBoth => 'احتفظ بالاثنين';
 
   @override
+  String get inboxMerge => 'دمج';
+
+  @override
   String inboxYouSaid({required String words}) {
     return 'قلت: \"$words\"';
   }

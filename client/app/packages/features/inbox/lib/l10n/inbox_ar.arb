@@ -62,6 +62,7 @@
   "inboxReady": "جاهز",
   "inboxLooksRight": "يبدو صحيحًا",
   "inboxKeepBoth": "احتفظ بالاثنين",
+  "inboxMerge": "دمج",
   "inboxYouSaid": "قلت: \"{words}\"",
   "inboxNickname": "لقب",
   "inboxItIs": "إنه {title}",
