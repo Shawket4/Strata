@@ -675,3 +675,30 @@ them (see `docs/DECISIONS.md`).
 - Fuzz targets (`crates/vault-format/fuzz`: `document`, `frontmatter`, `task_line`, `body`)
   run with `cargo +nightly fuzz run <target>`; every crash they found is a regression test
   in `tests/fuzz_regressions.rs`.
+
+## 12. AI pipeline metadata (PLAN §6.5–§6.7, §9.3, §9.8)
+
+Written by the AI pipelines (`strata-vault` `ops::ai_apply`); unknown to older code, which keeps
+them (`NoteSidecar::extra`).
+
+| Sidecar key | On | Value |
+|---|---|---|
+| `hints` | an entity | `[{id, text, at}]` — disambiguation hints from corrections ("Ahmed at Acme = Ahmed Samir"); mirrored in `disambiguation_hints` |
+| `rejected_mentions` | a note | `[{text, kind, at}]` — mentions the user refused to link from this note; never proposed again |
+| `insights_hash` | an entity | `<prompt>.v<N>:<sha256 of the prompt input>` of the last insights run (unchanged input → no run) |
+| `filed` | an inbox capture | the version whose filing was proposed or applied |
+
+- **Generated block IDs.** A block the AI cites and that has no ID gets `^b-` + the first six hex
+  digits of the SHA-256 of its trimmed text (`-2`, `-3`, … on a collision within the note),
+  appended in the job's commit (§4.5); the ID is stable while the text is unchanged.
+- **Concept notes** created by the AI: `concepts/<Name>.md` with `kind: concept`, `title` when
+  the file name had to be sanitised, and one `## Summary` paragraph; the user may write below it.
+- **Weekly digest**: `_ai/digests/YYYY-Www.md` (ISO week of the period's last day) with
+  `title`, a one-line period, and `## Highlights`, `## Open questions`, `## Contradictions`
+  (only non-empty sections), every bullet ending in `[[Note#^block]]` citations (a
+  contradicting note may be cited whole). A rerun of the same week replaces the body.
+- **Merging duplicate notes** (accepting a `duplicates` suggestion): the note created first
+  survives with its path, ID, frontmatter and body; it gains the other's title and aliases as
+  `aliases`, its `tags` and relation lists (minus links to either note), and — unless the
+  bodies are equal — the other body under `## Merged from <title> (<YYYY-MM-DD>)`; every link to
+  the merged note points at the survivor, which goes to `.trash/`.

@@ -341,7 +341,7 @@ pub struct PendingApproval {
     pub requested_label: String,
     /// Last "Check again".
     pub last_checked_at: Option<DateTime<Utc>>,
-    /// "Last checked 14:32".
+    /// "Last checked 5 minutes ago".
     pub last_checked_label: Option<String>,
     /// Whether "Check again" can run without asking for the password again (the password
     /// is kept in memory only, never on disk).

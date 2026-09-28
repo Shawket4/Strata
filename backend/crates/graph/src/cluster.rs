@@ -18,6 +18,10 @@
 //!    unavailable (disabled, paused, failing), a cluster keeps its previous name, or gets
 //!    `Cluster <id>`, and is listed under `unnamed` in the file so a later run names it.
 //! 4. Nothing is written when the result equals the previous file (apart from `generated`).
+//!
+//! [`rename`] is the user's rename (`PATCH /graph/clusters/{id}`): `named_by: user` in one
+//! `user:` commit. The rows follow the file through `strata_vault::clusters`, which
+//! `stratad reindex` also uses to reload them.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -779,8 +783,7 @@ pub async fn rename(
             .find(|c| c.id == cluster_id)
             .ok_or(GraphError::NotFound)?;
         let size = u32::try_from(cluster.notes.len()).unwrap_or(u32::MAX);
-        if cluster.name == name && cluster.named_by == By::User && !unnamed.contains(&cluster_id)
-        {
+        if cluster.name == name && cluster.named_by == By::User && !unnamed.contains(&cluster_id) {
             return Ok(Renamed {
                 id: cluster_id.to_string(),
                 name,
@@ -797,9 +800,9 @@ pub async fn rename(
             file.extra
                 .insert(UNNAMED_KEY.into(), serde_json::json!(rest));
         }
-        let json = file
-            .to_json()
-            .map_err(|e| GraphError::Vault(VaultError::Internal(format!("clusters encoding: {e}"))))?;
+        let json = file.to_json().map_err(|e| {
+            GraphError::Vault(VaultError::Internal(format!("clusters encoding: {e}")))
+        })?;
         let rows = ClusterRows::of_file(&file);
         let written = vault
             .write_file(
@@ -826,7 +829,8 @@ pub async fn rename(
                     commit: w.commit,
                 });
             }
-            Err(VaultError::VersionConflict { .. } | VaultError::NotFound) if attempt < ATTEMPTS => {}
+            Err(VaultError::VersionConflict { .. } | VaultError::NotFound)
+                if attempt < ATTEMPTS => {}
             Err(VaultError::NotFound) => return Err(GraphError::NotFound),
             Err(e) => return Err(e.into()),
         }

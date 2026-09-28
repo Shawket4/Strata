@@ -54,7 +54,9 @@ impl GraphNodeKind {
             domain::GraphNodeKind::Place => Self::Place,
             domain::GraphNodeKind::Tag => Self::Tag,
             other @ (domain::GraphNodeKind::Attachment | domain::GraphNodeKind::Cluster) => {
-                return Err(Problem::internal(&format!("{other} nodes are never returned")));
+                return Err(Problem::internal(&format!(
+                    "{other} nodes are never returned"
+                )));
             }
         })
     }

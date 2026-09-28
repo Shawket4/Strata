@@ -4534,6 +4534,7 @@ dependencies = [
 name = "strata-core"
 version = "0.1.0"
 dependencies = [
+ "actix-web",
  "chrono",
  "chrono-tz",
  "dedupe",
@@ -4551,7 +4552,12 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "similar 3.2.0",
+ "strata-api",
  "strata-client",
+ "strata-common",
+ "strata-index",
+ "strata-testkit",
+ "strata-vault",
  "sync-model",
  "tempfile",
  "text-normalize",

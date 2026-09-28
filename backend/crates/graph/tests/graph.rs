@@ -508,7 +508,14 @@ async fn similarity_edges_are_computed_on_request_from_note_vectors() {
     let sims: Vec<(NoteId, NoteId, Option<f64>, Option<RelationOrigin>)> = g
         .edges
         .iter()
-        .map(|e| (e.source, e.target, e.weight, e.by))
+        .map(|e| {
+            (
+                e.source.note().expect("note"),
+                e.target.note().expect("note"),
+                e.weight,
+                e.by,
+            )
+        })
         .collect();
     assert_eq!(
         sims,
@@ -581,7 +588,7 @@ async fn a_graph_never_contains_another_users_notes() {
     let gb = svc.graph(&sb, &GraphQuery::default()).await.expect("bob");
     assert_eq!(
         gb.nodes.iter().map(|n| n.id.clone()).collect::<Vec<_>>(),
-        vec![bob_note.into(), bob_budget.into()]
+        vec![NodeId::Note(bob_note), NodeId::Note(bob_budget)]
     );
     assert_eq!(
         edge_triples(&gb),

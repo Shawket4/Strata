@@ -695,7 +695,10 @@ async fn a_user_rename_is_one_user_commit_and_the_job_never_replaces_it() {
             (2, "My hiring", vault_format::sidecar::By::User),
         ]
     );
-    assert_eq!(file.generated, generated, "the clustering itself is unchanged");
+    assert_eq!(
+        file.generated, generated,
+        "the clustering itself is unchanged"
+    );
     assert_eq!(file.extra.get("unnamed"), Some(&json!([1])));
     assert_eq!(
         rows(&w, alice).await.1,
@@ -709,9 +712,16 @@ async fn a_user_rename_is_one_user_commit_and_the_job_never_replaces_it() {
     assert_eq!(w.events.take(), vec![(alice, vec!["2".to_owned()])]);
 
     // The same name again writes nothing.
-    let again = cluster::rename(&w.vault, w.events.as_ref(), &s, "2", "My hiring", w.db.clock.now())
-        .await
-        .expect("again");
+    let again = cluster::rename(
+        &w.vault,
+        w.events.as_ref(),
+        &s,
+        "2",
+        "My hiring",
+        w.db.clock.now(),
+    )
+    .await
+    .expect("again");
     assert_eq!(again.commit, None);
     assert_eq!(w.log(alice).len(), commits + 1);
     assert_eq!(cluster_changes(&w, alice).await, now);

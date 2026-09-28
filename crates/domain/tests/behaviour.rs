@@ -2,8 +2,9 @@
 
 use domain::{
     AccountStatus, CUSTODY_CONFIDENCE_THRESHOLD, DedupeKind, DedupeThresholds,
-    DocumentRelationType, EntityRelationType, GraphEdgeKind, GraphNodeKind, MatchLevel, MentionType, NOTE_RELATION_KEYS, NoteKind, Priority,
-    RELATION_CONFIDENCE_THRESHOLD, RelationType, SemanticThresholds,
+    DocumentRelationType, EntityRelationType, GraphEdgeKind, GraphNodeKind, MatchLevel,
+    MentionType, NOTE_RELATION_KEYS, NoteKind, Priority, RELATION_CONFIDENCE_THRESHOLD,
+    RelationType, SemanticThresholds,
 };
 
 #[test]

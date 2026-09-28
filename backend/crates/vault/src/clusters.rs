@@ -77,7 +77,8 @@ pub async fn replace(
     sqlx::query("DELETE FROM clusters")
         .execute(tx.conn())
         .await?;
-    let (notes, ids): (Vec<NoteId>, Vec<i64>) = new.assignment.iter().map(|(n, c)| (*n, *c)).unzip();
+    let (notes, ids): (Vec<NoteId>, Vec<i64>) =
+        new.assignment.iter().map(|(n, c)| (*n, *c)).unzip();
     sqlx::query(
         "INSERT INTO clusters (user_id, note_id, cluster_id) \
          SELECT strata_current_user(), u.note_id, u.cluster_id \

@@ -206,6 +206,10 @@ impl VaultService {
         if text.is_empty() {
             return Err(VaultError::invalid("the reply is empty"));
         }
+        if text.contains('\0') {
+            // PostgreSQL text cannot store NUL.
+            return Err(VaultError::invalid("text must not contain NUL characters"));
+        }
         self.ready(scope).await?;
         let now = self.inner.clock.now();
         let mut tx = self.inner.db.begin(scope).await?;

@@ -444,5 +444,63 @@ async fn ambiguous_low_confidence_and_conflicting_statements_are_suggestions() {
         (s[1].0.clone(), s[1].2["reason"].clone()),
         ("custody".to_owned(), json!("low_confidence"))
     );
+
+    // Older than the newest recorded event (handed to Shady on 2026-09-27): a conflict,
+    // never applied, even when confident and resolved.
+    let text3 =
+        "On 2026-09-20 the Watanya contract was stored in the safe at the Nasr City office.";
+    let note3 = w.create(&sa, "notes/Old.md", &format!("{text3}\n")).await;
+    let mut safe3 = ent(v.safe, "place", "Safe — Nasr City office", &["الخزنة"], &[]);
+    safe3.part_of = Some(v.office.to_string());
+    let mut i3 = input(
+        note3,
+        "Old",
+        text3,
+        vec![
+            ent(v.doc, "document", "Watanya contract", &["عقد وطنية"], &[]),
+            ent(
+                v.office,
+                "place",
+                "Nasr City office",
+                &["مكتب مدينة نصر"],
+                &[],
+            ),
+            safe3,
+        ],
+    );
+    i3.candidates = vec![
+        pipeline_support::cand(note2, "Safe"),
+        pipeline_support::cand(note, "Handover"),
+    ];
+    let mut e3 = event(
+        "stored-at",
+        "the Watanya contract",
+        Some(v.doc),
+        Some(("the safe", v.safe)),
+        None,
+        None,
+        0.95,
+        text3,
+        text3,
+    );
+    e3["date"] = json!("2026-09-20");
+    e3["date_source"] = json!("explicit");
+    push(&w, ids::LINKING, &i3, out(vec![e3], vec![]));
+    enqueue(&w, a, "link", note3).await;
+    r.run_until_idle().await;
+    assert_input(&w, ids::LINKING, &i3);
+    let s = suggestions(&w, a).await;
+    assert_eq!(
+        (
+            s[2].0.clone(),
+            s[2].2["reason"].clone(),
+            s[2].2["date"].clone()
+        ),
+        ("custody".to_owned(), json!("conflict"), json!("2026-09-20"))
+    );
+    assert!(
+        !w.read(a, "documents/Watanya contract.md")
+            .contains("2026-09-20")
+    );
     w.finish().await;
 }

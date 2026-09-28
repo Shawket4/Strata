@@ -349,3 +349,58 @@ async fn every_operation_survives_schema_driven_fuzzing() {
     assert_eq!(stats.len(), all.len(), "every operation was fuzzed");
     h.finish().await;
 }
+
+/// Regression (found by this fuzzer, seed `0x5354524154410016`, case 1125): a NUL character
+/// in a name, alias, tag, field or reply reached PostgreSQL (which cannot store it) and
+/// answered `500`. Every such input is now `422 invalid_body`, and nothing is written.
+#[tokio::test]
+async fn regression_nul_characters_in_text_are_422_not_500() {
+    fn mp(v: &M) -> Vec<u8> {
+        let mut o = Vec::new();
+        rmpv::encode::write_value(&mut o, v).expect("encode");
+        o
+    }
+    fn map(e: &[(&str, M)]) -> M {
+        M::Map(e.iter().map(|(k, v)| (M::from(*k), v.clone())).collect())
+    }
+    let h = H::with(Options {
+        config: Box::new(hardening::generous_limits),
+        ..Options::default()
+    })
+    .await;
+    let u = h.user("alice").await;
+    let fx = populate(&h, &u, "alice text").await;
+    let z = "a\u{0}b";
+    let list = |v: &str| M::Array(vec![M::from(v)]);
+    let place = format!("/api/v1/places/{}", fx.place);
+    let person = format!("/api/v1/entities/{}", fx.person);
+    let reply = format!("/api/v1/suggestions/{}/reply", fx.suggestion);
+    let cases: Vec<(&str, &str, &str, M)> = vec![
+        ("create_place", "POST", "/api/v1/places", map(&[("name", M::from(z))])),
+        ("create_place", "POST", "/api/v1/places", map(&[("name", M::from("A")), ("aliases", list(z))])),
+        ("create_place", "POST", "/api/v1/places", map(&[("name", M::from("A")), ("tags", list(z))])),
+        ("create_entity", "POST", "/api/v1/entities", map(&[("kind", M::from("person")), ("name", M::from(z))])),
+        ("create_entity", "POST", "/api/v1/entities", map(&[("kind", M::from("person")), ("name", M::from("F")), ("fields", map(&[("role", M::from(z))]))])),
+        ("create_document", "POST", "/api/v1/documents", map(&[("name", M::from("G")), ("doc_type", M::from(z))])),
+        ("patch_place", "PATCH", &place, map(&[("name", M::from(z))])),
+        ("patch_entity", "PATCH", &person, map(&[("aliases", list(z))])),
+        ("patch_entity", "PATCH", &person, map(&[("tags", list(z))])),
+        ("patch_entity", "PATCH", &person, map(&[("set_fields", map(&[("role", M::from(z))]))])),
+        ("reply_suggestion", "POST", &reply, map(&[("body", M::from(z))])),
+    ];
+    let log = h.log(u.id);
+    let mut got = Vec::new();
+    for (op, method, path, body) in &cases {
+        let resp = h
+            .send(Some(op), &Req::new(method, *path).token(&u.token).msgpack(mp(body)))
+            .await;
+        got.push((*op, resp.status, resp.problem_type(), rmp_serde::from_slice::<strata_client::types::Problem>(&resp.body).ok().and_then(|p| p.detail)));
+    }
+    let expected: Vec<_> = cases
+        .iter()
+        .map(|(op, ..)| (*op, 422, Some("invalid_body".to_owned()), Some("text must not contain NUL characters".to_owned())))
+        .collect();
+    assert_eq!(got, expected);
+    assert_eq!(h.log(u.id), log, "nothing written");
+    h.finish().await;
+}

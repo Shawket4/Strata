@@ -114,6 +114,16 @@ fn validate_field(key: &str, value: &str) -> Result<()> {
     }
 }
 
+/// Names, aliases, tags and field values never contain NUL: PostgreSQL text cannot store it
+/// (the index and duplicate lookups would fail) and no vault text needs it.
+fn reject_nul<'a>(texts: impl IntoIterator<Item = &'a str>) -> Result<()> {
+    if texts.into_iter().any(|t| t.contains('\0')) {
+        Err(VaultError::invalid("text must not contain NUL characters"))
+    } else {
+        Ok(())
+    }
+}
+
 fn known(key: &str) -> Result<KnownKey> {
     KnownKey::from_name(key).ok_or(VaultError::invalid("unknown field"))
 }
@@ -204,6 +214,12 @@ impl Core {
         if name.is_empty() {
             return Err(VaultError::invalid("the name is empty"));
         }
+        reject_nul(
+            std::iter::once(name)
+                .chain(req.aliases.iter().map(String::as_str))
+                .chain(req.tags.iter().map(String::as_str))
+                .chain(req.fields.values().map(String::as_str)),
+        )?;
         for (k, v) in &req.fields {
             if !user_fields(req.kind).contains(&k.as_str()) {
                 return Err(VaultError::invalid("a field is not editable for this kind"));
@@ -314,6 +330,15 @@ impl Core {
         {
             return Err(VaultError::VersionConflict { current: version });
         }
+        reject_nul(
+            patch
+                .name
+                .iter()
+                .chain(patch.aliases.iter().flatten())
+                .chain(patch.tags.iter().flatten())
+                .chain(patch.fields.values().flatten())
+                .map(String::as_str),
+        )?;
         for (k, v) in &patch.fields {
             if !user_fields(kind).contains(&k.as_str()) {
                 return Err(VaultError::invalid("a field is not editable for this kind"));

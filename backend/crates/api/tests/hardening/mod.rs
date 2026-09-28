@@ -530,9 +530,12 @@ impl Fixtures {
             .unwrap_or_else(|| panic!("no fixture of kind {kind}"))
     }
 
-    /// Every ID and the secret text: none may appear in another user's responses.
+    /// Every vault ID and the secret text: none may appear in another user's responses. (The
+    /// account ID is not vault data: admins list accounts.)
     pub fn private_strings(&self) -> Vec<String> {
-        let mut out = self.pools().all();
+        let mut pools = self.pools();
+        pools.by_kind.remove("user");
+        let mut out = pools.all();
         out.push(self.secret.clone());
         out
     }

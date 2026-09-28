@@ -231,14 +231,21 @@ impl<'a> Universe<'a> {
             let mut pairs: BTreeSet<(NoteId, String)> = BTreeSet::new();
             for (note, tag) in &data.tags {
                 let key = tag_key(tag);
-                spellings.entry(key.clone()).or_default().insert(tag.as_str());
+                spellings
+                    .entry(key.clone())
+                    .or_default()
+                    .insert(tag.as_str());
                 pairs.insert((*note, key));
             }
-            nodes.extend(spellings.into_iter().map(|(key, names)| Node {
-                title: names.first().map_or_else(|| key.clone(), |t| (*t).to_owned()),
-                id: NodeId::Tag(key),
-                kind: GraphNodeKind::Tag,
-                row: None,
+            nodes.extend(spellings.into_iter().map(|(key, names)| {
+                Node {
+                    title: names
+                        .first()
+                        .map_or_else(|| key.clone(), |t| (*t).to_owned()),
+                    id: NodeId::Tag(key),
+                    kind: GraphNodeKind::Tag,
+                    row: None,
+                }
             }));
             edges.extend(pairs.into_iter().map(|(note, key)| EdgeView {
                 source: note.into(),
@@ -421,7 +428,14 @@ pub fn lens<S: BuildHasher>(
             });
         }
     }
-    finish(data, &universe, &ids, edges, summaries, SimilarityStatus::Off)
+    finish(
+        data,
+        &universe,
+        &ids,
+        edges,
+        summaries,
+        SimilarityStatus::Off,
+    )
 }
 
 /// `GET /graph/local/{id}`: the focus and everything within `depth` hops over allowed edges
@@ -443,7 +457,12 @@ pub fn local<S: BuildHasher>(
     }
     // Edge index in the graph → the view it came from.
     let mut views: Vec<EdgeView> = Vec::with_capacity(universe.edges.len() + similar.len());
-    for e in universe.edges.iter().cloned().chain(similar.iter().map(similarity_view)) {
+    for e in universe
+        .edges
+        .iter()
+        .cloned()
+        .chain(similar.iter().map(similarity_view))
+    {
         let EdgeKind::Typed(kind) = e.kind else {
             continue;
         };

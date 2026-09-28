@@ -89,7 +89,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     let c = &alice.client;
 
     let g = ops::get_graph(c, None, None, None, None, None)
-.await
+        .await
         .expect("graph");
     assert_eq!(
         g,
@@ -145,7 +145,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
 
     // Filters, and similarity without a model.
     let g = ops::get_graph(c, Some("link"), Some("note"), Some(true), None, None)
-.await
+        .await
         .expect("filtered");
     assert_eq!(
         (g.edges, g.nodes.len(), g.similarity),
@@ -158,7 +158,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
 
     // People lens: Call names both people, so they are tied with strength 1.
     let g = ops::get_graph(c, None, None, None, Some("people"), None)
-.await
+        .await
         .expect("lens");
     assert_eq!(
         g.edges,
@@ -211,9 +211,17 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
             ),
         ]
     );
-    let l = ops::get_local_graph(c, plan.as_ulid(), Some(2), Some("link,mention"), None, None, None)
-        .await
-        .expect("local");
+    let l = ops::get_local_graph(
+        c,
+        plan.as_ulid(),
+        Some(2),
+        Some("link,mention"),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("local");
     assert_eq!(
         l.nodes
             .iter()
@@ -246,8 +254,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
         },
     );
     assert_problem(
-        ops::get_graph(c, None, Some("cluster"), None, None, None)
-.await,
+        ops::get_graph(c, None, Some("cluster"), None, None, None).await,
         &types::Problem {
             errors: vec![field(
                 "unknown_node_kind",
@@ -263,8 +270,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
         },
     );
     assert_problem(
-        ops::get_graph(c, None, None, None, Some("places"), None)
-.await,
+        ops::get_graph(c, None, None, None, Some("places"), None).await,
         &types::Problem {
             errors: vec![field(
                 "unknown_lens",
@@ -295,7 +301,7 @@ async fn graph_payloads_filters_lens_and_local_neighbourhoods() {
     // Isolation: Bob sees none of Alice's graph; her note IDs are 404 for him.
     let bob = h.user("bob").await;
     let g = ops::get_graph(&bob.client, None, None, None, None, None)
-.await
+        .await
         .expect("bob");
     assert_eq!((g.nodes.len(), g.edges.len()), (0, 0));
     assert_problem(
@@ -559,4 +565,339 @@ fn cluster_updates_reach_the_users_event_stream_only() {
         }]
     );
     assert_eq!(bus.subscribe(bob, Some(0)).replay, vec![]);
+}
+
+/// The `cluster` job for `h`'s vault with the AI off (placeholder names), publishing on the
+/// app's bus.
+fn clusterer(h: &H) -> strata_graph::cluster::ClusterHandler {
+    use strata_ai::{AiService, BudgetGuard, BudgetLimits, MemoryUsageStore, ProviderRouter};
+    let router = ProviderRouter::new(
+        strata_common::config::AiProviderKind::Disabled,
+        std::collections::BTreeMap::new(),
+    );
+    let budget = BudgetGuard::new(
+        BudgetLimits::default(),
+        chrono_tz::UTC,
+        Arc::new(h.clock.clone()),
+        Arc::new(MemoryUsageStore::default()),
+    );
+    strata_graph::cluster::ClusterHandler::new(
+        h.db.app_db.clone(),
+        h.vault.clone(),
+        Arc::new(AiService::new(router, budget)),
+        Arc::new(BusClusterEvents(h.bus.clone())),
+        strata_graph::cluster::ClusterConfig::default(),
+    )
+}
+
+async fn cluster_changes(h: &H, user: strata_common::UserId) -> Vec<(String, String, String)> {
+    let mut tx = h.db.begin(user).await.expect("tx");
+    let r: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT entity_type, entity_id, op FROM change_log \
+         WHERE entity_type IN ('cluster_assignment', 'cluster_name') ORDER BY seq",
+    )
+    .fetch_all(tx.conn())
+    .await
+    .expect("log");
+    tx.commit().await.expect("commit");
+    r
+}
+
+fn cluster_events(h: &H, user: strata_common::UserId) -> Vec<Vec<String>> {
+    h.bus
+        .subscribe(user, Some(0))
+        .replay
+        .into_iter()
+        .filter_map(|f| match f {
+            Frame::Data {
+                payload: Event::ClusterUpdated { cluster_ids },
+                ..
+            } => Some(cluster_ids),
+            _ => None,
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn renaming_a_cluster_is_a_user_commit_that_re_clustering_keeps() {
+    let h = H::new(RECLUSTER_LIMIT).await;
+    let alice = h.user("alice").await;
+    let a = alice.id;
+    // Two groups of three related notes.
+    for group in [
+        ["Price list", "Quote", "Offer"],
+        ["Job ad", "Interview", "Hire"],
+    ] {
+        for (i, name) in group.iter().enumerate() {
+            let rel: Vec<String> = group[i + 1..]
+                .iter()
+                .map(|n| format!("\"[[{n}]]\""))
+                .collect();
+            h.note(
+                a,
+                &format!("notes/{name}.md"),
+                &format!("---\nrelated: [{}]\n---\n{name}.\n", rel.join(", ")),
+            )
+            .await;
+        }
+    }
+    let scope = h.db.scope(a);
+    clusterer(&h)
+        .run_for(&scope, "alice", h.now())
+        .await
+        .expect("cluster run");
+    let file = || -> serde_json::Value {
+        serde_json::from_str(&h.read(a, ".meta/clusters.json")).expect("clusters.json")
+    };
+    assert_eq!(
+        (
+            file()["clusters"][1]["name"].clone(),
+            file()["unnamed"].clone()
+        ),
+        (serde_json::json!("Cluster 2"), serde_json::json!([1, 2]))
+    );
+    let commits = h.log(a).len();
+    let log = cluster_changes(&h, a).await;
+    assert_eq!(
+        cluster_events(&h, a),
+        vec![vec!["1".to_owned(), "2".to_owned()]]
+    );
+    let c = &alice.client;
+
+    let renamed = ops::rename_cluster(
+        c,
+        "2",
+        &types::RenameClusterRequest {
+            name: " Hiring \n plans ".into(),
+        },
+    )
+    .await
+    .expect("rename");
+    assert_eq!(
+        renamed,
+        types::GraphCluster {
+            id: "2".into(),
+            name: "Hiring plans".into(),
+            size: 3,
+        }
+    );
+    assert_eq!(h.log(a).len(), commits + 1);
+    assert_eq!(h.log(a)[0], "user: rename cluster .meta/clusters.json");
+    let f = file();
+    assert_eq!(
+        (
+            f["clusters"][1]["name"].clone(),
+            f["clusters"][1]["named_by"].clone(),
+            f["clusters"][0]["named_by"].clone(),
+            f["unnamed"].clone()
+        ),
+        (
+            serde_json::json!("Hiring plans"),
+            serde_json::json!("user"),
+            serde_json::json!("ai"),
+            serde_json::json!([1])
+        )
+    );
+    assert_eq!(
+        cluster_changes(&h, a).await[log.len()..].to_vec(),
+        vec![("cluster_name".into(), "2".into(), "upsert".into())]
+    );
+    assert_eq!(
+        cluster_events(&h, a),
+        vec![vec!["1".to_owned(), "2".to_owned()], vec!["2".to_owned()]]
+    );
+    let g = ops::get_graph(c, None, None, None, None, None)
+        .await
+        .expect("graph");
+    assert_eq!(
+        g.clusters,
+        vec![
+            types::GraphCluster {
+                id: "1".into(),
+                name: "Cluster 1".into(),
+                size: 3,
+            },
+            types::GraphCluster {
+                id: "2".into(),
+                name: "Hiring plans".into(),
+                size: 3,
+            },
+        ]
+    );
+
+    // Problems: unknown cluster, empty and over-long names; nothing is written.
+    assert_problem(
+        ops::rename_cluster(c, "9", &types::RenameClusterRequest { name: "X".into() }).await,
+        &plain("not_found", "Not found", 404, None),
+    );
+    assert_problem(
+        ops::rename_cluster(c, "1", &types::RenameClusterRequest { name: " ".into() }).await,
+        &types::Problem {
+            errors: vec![field("empty_name", "/name", "the cluster name is empty")],
+            ..plain(
+                "invalid_body",
+                "Request body is invalid",
+                422,
+                Some("the cluster name is empty"),
+            )
+        },
+    );
+    assert_problem(
+        ops::rename_cluster(
+            c,
+            "1",
+            &types::RenameClusterRequest {
+                name: "é".repeat(101),
+            },
+        )
+        .await,
+        &types::Problem {
+            errors: vec![field(
+                "name_too_long",
+                "/name",
+                "the cluster name is longer than 100 characters",
+            )],
+            ..plain(
+                "invalid_body",
+                "Request body is invalid",
+                422,
+                Some("the cluster name is longer than 100 characters"),
+            )
+        },
+    );
+    // Isolation: Bob has no cluster 2.
+    let bob = h.user("bob").await;
+    assert_problem(
+        ops::rename_cluster(
+            &bob.client,
+            "2",
+            &types::RenameClusterRequest {
+                name: "Mine".into(),
+            },
+        )
+        .await,
+        &plain("not_found", "Not found", 404, None),
+    );
+    assert_eq!(h.log(a).len(), commits + 1);
+
+    // Cluster 2 gains a member; re-clustering keeps the user's name.
+    h.note(
+        a,
+        "notes/Onboarding.md",
+        "---\nrelated: [\"[[Job ad]]\", \"[[Interview]]\", \"[[Hire]]\"]\n---\nOnboarding.\n",
+    )
+    .await;
+    let out = clusterer(&h)
+        .run_for(&scope, "alice", h.now())
+        .await
+        .expect("re-cluster");
+    assert_eq!(out.changed, vec!["2".to_owned()]);
+    let f = file();
+    assert_eq!(
+        (
+            f["clusters"][1]["name"].clone(),
+            f["clusters"][1]["named_by"].clone(),
+            f["clusters"][1]["notes"].as_array().map(Vec::len)
+        ),
+        (
+            serde_json::json!("Hiring plans"),
+            serde_json::json!("user"),
+            Some(4)
+        )
+    );
+    h.finish().await;
+}
+
+#[tokio::test]
+async fn tag_nodes_and_copy_of_edges_on_the_wire() {
+    let h = H::new(RECLUSTER_LIMIT).await;
+    let alice = h.user("alice").await;
+    let a = alice.id;
+    let original = h
+        .note(a, "documents/Deed.md", "---\nkind: document\n---\n")
+        .await;
+    let copy = h
+        .note(
+            a,
+            "documents/Deed copy.md",
+            "---\nkind: document\ncopy-of: [\"[[Deed]]\"]\ntags: [Legal]\n---\n",
+        )
+        .await;
+    let t = h.now();
+    let c = &alice.client;
+    let tag_node = |degree: u32, depth: Option<i32>| types::GraphNode {
+        cluster_id: None,
+        degree,
+        depth,
+        id: "tag:legal".into(),
+        kind: types::GraphNodeKind::Tag,
+        lang: None,
+        path: None,
+        summary: None,
+        title: "Legal".into(),
+        updated: None,
+    };
+    let g = ops::get_graph(c, None, None, None, None, Some(true))
+        .await
+        .expect("graph");
+    assert_eq!(
+        g,
+        types::Graph {
+            clusters: vec![],
+            edges: vec![
+                user_edge(copy, original, "document:copy-of"),
+                types::GraphEdge {
+                    target: "tag:legal".into(),
+                    ..user_edge(copy, copy, "tag")
+                },
+            ],
+            nodes: vec![
+                node(
+                    original,
+                    "Deed",
+                    types::GraphNodeKind::Document,
+                    "documents/Deed.md",
+                    1,
+                    None,
+                    t
+                ),
+                node(
+                    copy,
+                    "Deed copy",
+                    types::GraphNodeKind::Document,
+                    "documents/Deed copy.md",
+                    2,
+                    None,
+                    t
+                ),
+                tag_node(1, None),
+            ],
+            similarity: types::SimilarityStatus::Off,
+        }
+    );
+    // Without the toggle: no tag node; `types=document` selects the copy edge.
+    let g = ops::get_graph(c, Some("document"), None, None, None, None)
+        .await
+        .expect("graph");
+    assert_eq!(
+        (g.edges, g.nodes.len()),
+        (vec![user_edge(copy, original, "document:copy-of")], 2)
+    );
+    // Local from the original over tags and copies reaches the tag at depth 2.
+    let l = ops::get_local_graph(c, original.as_ulid(), Some(2), None, None, None, Some(true))
+        .await
+        .expect("local");
+    assert_eq!(
+        l.nodes
+            .iter()
+            .map(|n| (n.id.clone(), n.depth))
+            .collect::<Vec<_>>(),
+        vec![
+            (original.to_string(), Some(0)),
+            (copy.to_string(), Some(1)),
+            ("tag:legal".to_owned(), Some(2)),
+        ]
+    );
+    assert_eq!(l.nodes[2], tag_node(1, Some(2)));
+    h.finish().await;
 }

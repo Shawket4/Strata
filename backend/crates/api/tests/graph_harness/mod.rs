@@ -12,6 +12,7 @@ use strata_api::auth::service::NewAccount;
 use strata_api::auth::tokens::generate_key_pem;
 use strata_api::auth::{AuthDeps, AuthState, SigningKeys};
 use strata_api::contract::Contract;
+use strata_api::events::{BusConfig, EventBus};
 use strata_api::graph::GraphApi;
 use strata_api::testing::TestServer;
 use strata_client::{
@@ -66,6 +67,8 @@ pub struct H {
     pub clock: FakeClock,
     pub vault: VaultService,
     pub state: web::Data<AuthState>,
+    /// The app's event bus (`cluster.updated` of the rename endpoint).
+    pub bus: Arc<EventBus>,
     server: TestServer,
     conformance: Arc<Conformance>,
 }
@@ -115,10 +118,13 @@ impl H {
         ));
         let for_server = state.clone();
         let vault_data = web::Data::new(vault.clone());
+        let bus = Arc::new(EventBus::new(BusConfig::default()));
+        let bus_data = web::Data::from(bus.clone());
         let server = TestServer::start(move |cfg| {
             cfg.app_data(for_server.clone());
             cfg.app_data(vault_data.clone());
             cfg.app_data(graph.clone());
+            cfg.app_data(bus_data.clone());
             strata_api::app::configure(cfg);
         })
         .expect("server");
@@ -128,6 +134,7 @@ impl H {
             clock,
             vault,
             state,
+            bus,
             server,
             conformance: Arc::new(Conformance {
                 contract: Contract::production(),

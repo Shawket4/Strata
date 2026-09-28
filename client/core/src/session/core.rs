@@ -239,7 +239,8 @@ impl Core {
         Ok(Some((
             PendingApproval {
                 requested_label: labels.ago(requested_at),
-                last_checked_label: checked.map(|c| labels.hm(c)),
+                // Relative, so no timezone is needed before the account's is known.
+                last_checked_label: checked.map(|c| format!("Last checked {}", labels.ago(c))),
                 last_checked_at: checked,
                 can_check: lock(&self.pending_request)
                     .as_ref()

@@ -372,9 +372,10 @@ Spec: PLAN §5.2 (fair scheduling), §7.4 (`jobs`, `chunks`), §7.5 Search/AI/Ev
 Spec: PLAN §6.5 (`.meta/clusters.json`), §6.8, §7.5 Graph, §9.2 `cluster`, §9.6, §10, D3, D10, principle 7. Code: `backend/crates/graph` (`strata-graph`: `load`, `assemble`, `query`, `similarity`, `summaries`, `maps`, `cluster`, `service`), `strata_api::graph` (`GraphApi`, problems, `BusClusterEvents`), `strata_api::routes::{graph, maps}`, the vault hook `strata_vault::ops::files`, wired by `stratad::jobs::{handlers, periodic, graph_api}`.
 
 ### Graph assembly
-- **One read per request.** `load::load` reads the caller's graph in one `ScopedTx` (RLS limits every row to the scope; nothing takes a user ID): live notes (id, title, kind, path, lang, updated) and every edge between live notes. Edge sources: resolved `links` → `link`/`embed` (one per source, target, kind); `relations` → `relation:<type>` for note relation types (`part-of` between two places → `part-of-place`), `concepts` → `concept`, `people`/`companies` → `mention`, entity relation types → `entity:<type>`; `documents` (state of the newest custody event) → `custody:location|holder|last-holder` with that event's `by`/confidence. `copy-of` has no §10 edge kind and is not returned. Cluster assignment and names come from `clusters`/`cluster_names`.
-- **Payloads** (`assemble`, pure, canonical order: nodes by ID, edges by source/target/kind, clusters by ID): node = id, title, kind, path, cluster_id, degree (edges of *this* response), lang, updated, short summary, depth (local only); edge = source, target, kind string, by, confidence, reason, weight (similarity cosine / co-mention strength), notes (co-mention count). No positions (D3: the client core lays out with `graph-algo`). Hover summaries are the sidecar `summary` (§6.5) collapsed and cut to 200 characters; the sidecar folder is listed once per request on the blocking pool.
-- **Filters.** `types` = edge kinds (`relation`, `entity`, `custody` expand to their families; `co-mention` is the lens kind); `kinds` = node kinds. They are separate parameters because `concept` names both a node and an edge kind (the plan lists only `types`; `kinds` is additive). Unknown values are `422 invalid_parameter` with a field error (`unknown_edge_type`, `unknown_node_kind`, `unknown_lens`, `invalid_depth`).
+- **One read per request.** `load::load` reads the caller's graph in one `ScopedTx` (RLS limits every row to the scope; nothing takes a user ID): live notes (id, title, kind, path, lang, updated) and every edge between live notes. Edge sources: resolved `links` → `link`/`embed` (one per source, target, kind); `relations` → `relation:<type>` for note relation types (`part-of` between two places → `part-of-place`), `concepts` → `concept`, `people`/`companies` → `mention`, entity relation types → `entity:<type>`; `documents` (state of the newest custody event) → `custody:location|holder|last-holder` with that event's `by`/confidence; document relation types (`copy-of`, §6.12) → `document:copy-of` (an additive edge kind; the mapping is `domain::GraphEdgeKind::of_relation`, shared with the client core). Cluster assignment and names come from `clusters`/`cluster_names`. Tags (`load::load_tags`) are read only when a request asks for tag nodes.
+- **Payloads** (`assemble`, pure, canonical order: nodes by ID — notes by ULID, then tag nodes by key —, edges by source/target/kind, clusters by ID): node = id, title, kind, path, cluster_id, degree (edges of *this* response), lang, updated, short summary, depth (local only); edge = source, target, kind string, by, confidence, reason, weight (similarity cosine / co-mention strength), notes (co-mention count). No positions (D3: the client core lays out with `graph-algo`). Hover summaries are the sidecar `summary` (§6.5) collapsed and cut to 200 characters; the sidecar folder is listed once per request on the blocking pool.
+- **Tag nodes** (§10 optional toggle, `include_tags=true` on `/graph` and `/graph/local/{id}`; ignored with a lens): one node per tag compared without case (as in Obsidian), ID `tag:<lowercase tag>`, titled by its smallest spelling, kind `tag`, no path/updated/cluster; one `tag` edge (by `user`) from every live note carrying it (frontmatter or body). In a local graph, notes sharing a tag are two hops apart. On the wire node/edge IDs are strings (a note's ULID, or `tag:…`); note payload bytes are unchanged.
+- **Filters.** `types` = edge kinds (`relation`, `entity`, `custody`, `document` expand to their families; `tag`; `co-mention` is the lens kind); `kinds` = node kinds (the note kinds and `tag`). They are separate parameters because `concept`, `document` and `tag` name both a node and an edge kind (the plan lists only `types`; `kinds` is additive). Unknown values are `422 invalid_parameter` with a field error (`unknown_edge_type`, `unknown_node_kind`, `unknown_lens`, `invalid_depth`).
 - **Entity lens** (`lens=people|companies`): the lens's entities as nodes, `entity:*` edges among them, and co-mention edges from `graph_algo::co_mentions` over the `mention` edges (per note naming `m` lens entities, each pair gains `1/(m−1)`; `weight` = strength, `notes` = count, no `by`).
 - **Local** (`/graph/local/{id}?depth=1..3`): `graph_algo::neighbourhood` over the typed graph (edges followed both ways, allowed edge/node kinds, the focus always kept, every allowed edge among the included nodes). A filter naming only `co-mention` leaves the focus alone. A foreign or trashed focus is `404`.
 - **Similarity** (§9.6, `include_similarity=true`): never stored. `SimilaritySource` is the seam; `NoteVectorSimilarity` reads the `embed` job's `note_vectors` for the configured model. Local graphs use the jobs crate's `retrieval::similar_notes` for the focus (its neighbours join at depth 1). The global graph needs top-n of every note: an exact all-pairs pass in Rust over the `max_notes` (default 2,000) most recently updated vectors (default top 5, floor 0.75), merged into unordered pairs; beyond the cap the response says `similarity: truncated`. Without an embedding model the graph still answers with `similarity: unavailable` (principle 6).
@@ -392,12 +393,185 @@ Spec: PLAN §6.5 (`.meta/clusters.json`), §6.8, §7.5 Graph, §9.2 `cluster`, �
 - **Stable IDs**: `graph_algo::match_clusters` against the previous `.meta/clusters.json` (Jaccard ≥ 0.25; splits keep the ID on the better match, merges retire the others). Fresh IDs come from `next_id` in the file (an unknown field kept by `vault_format::Clusters::extra`), so a retired ID is never reused.
 - **Names**: only new clusters, clusters whose members changed, and clusters listed under `unnamed` go to `cluster_naming` (≤ 40 per call; input = up to 10 member titles by weighted degree then title, up to 5 concepts by frequency, the previous name). A user-given name (`named_by: user`) is never replaced. When naming fails or AI is off/paused for the user, a cluster keeps its previous name or gets `Cluster <id>` and is listed in `unnamed`, so the next run names it; the clustering itself is still written.
 - **Write**: when the result differs from the previous file (ignoring `generated`), one `ai: cluster .meta/clusters.json` commit through `write_file` (expecting the version read at the start; a concurrent change retries the job), whose index hook replaces `clusters` and `cluster_names` (joined with `notes`, so a note purged meanwhile is skipped) and appends `change_log` rows `cluster_assignment` (per note) and `cluster_name` (per cluster), upsert or delete, for exactly the differences — `/sync/changes` then serves them as the existing `sync-model` cluster records. After the commit, `ClusterEvents::clusters_updated` publishes one `cluster.updated {cluster_ids}` (new, changed, renamed and retired IDs) through `EventBus::publish` (`strata_api::graph::BusClusterEvents`).
+- **User rename** (`PATCH /graph/clusters/{id}` {name}, `strata_graph::cluster::rename`): the name (whitespace collapsed, 1–100 characters, else `422 invalid_body` `empty_name`/`name_too_long`) is written to `.meta/clusters.json` with `named_by: user` (the cluster leaves `unnamed`; `generated` and members unchanged) in one `user: rename cluster .meta/clusters.json` commit through `write_file` (expecting the version read; a concurrent `cluster` run is retried on the new content), whose index hook updates the rows and logs the `cluster_name` upsert; then `cluster.updated {[id]}` on the caller's stream. The same user-given name again writes nothing. Unknown or foreign IDs are `404`. The job never re-names a `named_by: user` cluster.
+- **Rows ↔ file** (`strata_vault::clusters`): `snapshot` + `replace` write the rows of a file and log exactly the differences; used by the job, the rename and `stratad reindex`, which reloads the rows from `.meta/clusters.json` after rebuilding the notes (nothing logged when unchanged; a missing file clears them).
 - No migration was needed: `clusters` and `cluster_names` exist since `…004`.
 
 ### Tests
-`backend/crates/graph/tests/`: `graph.rs` (fixture vault with every node and edge kind: exact degrees, edge lists and provenance, one full node payload, type and kind filters, people/company lens with co-mention weights, local depths 1–3 with edge/node filters and the focus-only case, trashed notes, sidecar summaries, similarity edges exact/truncated/unavailable and local, isolation), `cluster.rs` (first run: exact prompt input, file, tables, change log, event, one commit touching only the file; rerun makes nothing; a changed cluster alone is renamed and keeps its ID; retirement and `next_id`; AI down → placeholders then named later, later outage keeps names; AI disabled; resolution preference; through the runner; isolation; deterministic planning and user names kept), `perf.rs` (10k gate). `backend/crates/api/tests/graph_api.rs`: every endpoint through the generated client with contract validation (exact graph payloads, lens, local, parameter problems, 404 across users, map CRUD/validation/409/rename rewrite, recluster reuse and `429` with `Retry-After`, `cluster.updated` on the bus). `stratad/tests/graph_wiring.rs`: handler and nightly registration, similarity follows the embedding configuration.
+`backend/crates/graph/tests/`: `graph.rs` (fixture vault with every node and edge kind: exact degrees, edge lists and provenance, one full node payload, type and kind filters, people/company lens with co-mention weights, local depths 1–3 with edge/node filters and the focus-only case, trashed notes, sidecar summaries, similarity edges exact/truncated/unavailable and local, isolation, `document:copy-of` edges and filters, tag nodes on/off with case folding, filters, local two-hop tags, lens and trash), `cluster.rs` (first run: exact prompt input, file, tables, change log, event, one commit touching only the file; rerun makes nothing; a changed cluster alone is renamed and keeps its ID; retirement and `next_id`; AI down → placeholders then named later, later outage keeps names; AI disabled; resolution preference; through the runner; isolation; deterministic planning and user names kept; reindex reloads the rows from the file and logs only differences; user rename: one `user:` commit, rows, change log, event, no-op repeat, problems, and the next run keeps the name and never asks the AI for it), `perf.rs` (10k gate). `backend/crates/api/tests/graph_api.rs`: every endpoint through the generated client with contract validation (exact graph payloads, lens, local, parameter problems, 404 across users, map CRUD/validation/409/rename rewrite, recluster reuse and `429` with `Retry-After`, `cluster.updated` on the bus, cluster rename end to end with re-clustering, tag nodes and `document:copy-of` on the wire). `stratad/tests/graph_wiring.rs`: handler and nightly registration, similarity follows the embedding configuration.
 
 ### Open
-- `stratad reindex` rebuilds derived rows from notes only; `clusters`/`cluster_names` return with the next `cluster` run (they could be reloaded from `.meta/clusters.json` during reindex).
-- `tag` and virtual `cluster` nodes (§10) are not emitted (clusters are a separate list for region labels); `copy-of` has no edge kind.
-- Renaming a cluster by the user needs an endpoint (the file format and the job already honour `named_by: user`).
+- Virtual `cluster` nodes (§10) are not emitted (clusters are a separate list for region labels).
+- The client core's offline graph (`client/core/src/graph`) still has its own relation → edge-kind mapping without `document:copy-of` and no tag nodes; it should use `domain::GraphEdgeKind::of_relation` (L16).
+
+## AI pipelines (linking, filing, entity insights, corrections, digest)
+
+Spec: PLAN §6.5–§6.7, §6.11, §6.12, §9.2–§9.4, §9.7, §9.8, D13 = b, D30. Code:
+`strata_jobs::{pipeline, link, file_inbox, insights, correct, digest, dates, thresholds}`,
+`strata_vault::ops::{ai_apply, ai_decide}`, `strata_api::routes::ai_pipelines`, prompts
+`linking.v2`, `inbox_filing.v2`, `entity_insights.v2` (v1 files stay registered for their
+fixtures; `prompts::latest` serves v2), wired by `stratad::jobs`. Migration `…014` adds
+`ai_decisions.rel_type`, `mention` and `detail`.
+
+### One job, one commit
+- A job decides *what* to write and hands the vault an `AiChangeSet`; `Core::ai_apply` writes
+  every file it touches (source note, sidecars, entity pages, documents, new concept notes,
+  `_ai/` notes, block IDs, a filing move with its link rewrites) as **one** `ai: <job> <path>`
+  commit, and inserts the job's AI decisions, suggestions, hints, AI thread replies and
+  follow-up jobs in the **same** transaction as the index update (`finish_then`). The
+  decisions applied by the commit get its ID afterwards; suggestion events follow the
+  commit's own notice (`relation.added|removed`, `entity.updated`, then
+  `suggestion.created|updated`).
+- `expect_version` makes a job whose note changed meanwhile write nothing (`Stale`): the new
+  version has its own job. `mark_linked` stores the version *after* the write as
+  `last_linked_hash` (the AI's own frontmatter edits and block IDs change the file), so the
+  follow-up `embed` → `link` makes no call.
+- User decisions on AI output (accepting a suggestion, repointing) use the same machinery
+  with `Author::User` (`user: accept <kind> <path>`, `user: repoint <path>`).
+
+### Triggers
+- `embed` (every content write) queues `link` 30 s after the run, debounced per note
+  (`EmbedHandler::with_link_delay`); `link` skips when `last_linked_hash` equals the version,
+  notes of other kinds than `note`, and inbox captures (their `file_inbox` job links them —
+  one call, not two). `POST /notes/{id}/relink` queues a forced run (inbox: `file_inbox`).
+- `file_inbox` (queued by the vault for every inbox write) skips a capture already filed at
+  its version (sidecar `filed`).
+- Linking and filing queue `entity_insights` for every entity they touch or that the note
+  mentions, 5 minutes later, debounced per entity; `entity_insights_sweep` (nightly) queues it
+  for every entity; each run skips when the SHA-256 of its prompt input equals the entity
+  sidecar's `insights_hash`. `POST /entities/{id}/refresh` forces one.
+- `digest` runs weekly (`jobs.digest_weekday`, default Monday, at `jobs.nightly_hour`).
+- `correct` is queued by filing when the filing call flags the capture as a correction
+  (`is_correction`) and by `POST /ask` when the question passes a cue pre-filter
+  (`correct::looks_like_correction`: "is not", "actually", "wrong", "=", "the X … is Y",
+  "مش", "غلط", "قصدي", "اللي … هو", …); the model decides.
+- `suggestion_reply` is queued by the vault in the transaction that stores a user reply to
+  an AI suggestion (REST and sync alike).
+
+### Linking and filing (`pipeline::Planner`)
+- **Prompt context.** The note's citable blocks (headings excluded; blocks without an ID get
+  `b-` + 6 hex of the text's SHA-256, appended only when a decision cites them); candidates =
+  most similar notes by note vector (with a model) ∪ keyword hits (up to 12 distinct
+  normalised words of 4+ characters, OR-ed), kind `note` only, minus the note and every
+  target it has a rejection for, at most 20, with sidecar summaries; every concept (name,
+  aliases); entities whose name or alias occurs in the text (normalised whole words, or the
+  `text-normalize` transliteration key of 1–3-word windows against names of as many words:
+  "Ahmad Sameer" finds "أحمد سمير"), entities linked from the note, entities similar by
+  embedding (≥ 0.6), places nested in or enclosing an offered place — each with its
+  disambiguation hints and `part_of`; the note's rejections and rejected mentions.
+- **Relations** to candidates at or above `thresholds.relation` are written with sidecar
+  provenance (`by: ai`, confidence, reason, `provider/model`, created); `duplicates` is never
+  applied: a `duplicates` suggestion (skipped when the pair was suggested before or kept both).
+  AI edges of the note (note relations and mention keys) that this run did not return are
+  removed; user edges are never touched; rejected edges are never re-added.
+- **Concepts** at or above the threshold link to an existing concept (by ID, or a name/alias
+  equal after normalisation or with trigram similarity ≥ 0.8) or create
+  `concepts/<Name>.md` (`kind: concept`, AI-owned `## Summary` from the model's one-sentence
+  definition).
+- **Entity mentions (§6.7, D13 = b).** Auto-linked (`people:`/`companies:` with provenance)
+  only when the model names exactly one offered entity of the right kind with confidence ≥
+  the threshold and no other candidate. Nicknames and kinship terms link only through an
+  existing alias (normalised equality), whatever the model says. Everything else is an
+  `entity_link` suggestion — `ambiguous` (candidates), `low_confidence` (a proposed entity),
+  `nickname`, or `new` (never created automatically) — unless the note's rejected mentions
+  or rejected links cover it or the same suggestion is pending. Accepting links the note,
+  adds the mention (and `aliases` edits, both scripts) to the entity, or creates it (name:
+  the `title` edit, else the mention). Rejecting records the mention (sidecar
+  `rejected_mentions`) and the proposed link (sidecar `rejected`).
+- **Entity relations** between resolved entities are written on the subject entity's page
+  (`works-at`, `client-of`, … with provenance in its sidecar).
+- **Custody (D30).** Every participant resolves by the model's ID (right kind), a mention
+  resolved in this run, a single alias match, or ambiguous mention candidates. Applied —
+  custody line citing `[[Note#^block]]` and the derived frontmatter (`sync-model`
+  `record_custody`) — only at or above `thresholds.custody` with every participant resolved,
+  nickname people only through an alias, and no recorded event newer than it; otherwise a
+  `custody` suggestion (`unknown`, `ambiguous`, `low_confidence`, `conflict`) whose cited
+  block gets its ID now. A repeated event (same date, type, citing this note) is skipped.
+- **Tasks** are always `task` suggestions (title, due, recurrence phrase, reminders, entity
+  IDs); accepting writes the Obsidian Tasks line to `tasks/Tasks.md` (`user: task create`).
+- **Dates** (custody, task due, timeline): an explicit `YYYY-MM-DD` in the cited text, else a
+  known relative phrase resolved against the note's `created` (`today`/`tomorrow`/`yesterday`,
+  `النهارده`/`بكرة`/`امبارح`, `بعد بكرة`, "next Sunday", "الخميس الجاي", …), else `created`
+  when the model says so, else the model's date (`jobs::dates`).
+- **Filing (§9.3).** `inbox_filing.v2` returns the filing (title, ≤ 5 tags, folder — only an
+  existing user folder or `notes`; never `inbox`, entity, concept or AI folders) plus the
+  linking extraction (people/companies as mentions). With the user setting `auto_file` (a
+  MessagePack boolean, `GET`/`PUT /ai/settings`, default off) title, tags and the move go into
+  the job's commit (`ai: file_inbox inbox/… -> notes/Clients/…`, every inbound link
+  rewritten); otherwise a `filing` suggestion, whose acceptance (optionally with `title`,
+  `tags`, `folder` edits via `POST /suggestions/{id}/accept-with-edits`) performs the same in
+  one `user:` commit.
+
+### Entity insights (§6.7)
+Input: the entity (name, aliases, descriptive properties — `role`, `industry`, `doc-type`,
+`copy`, `expires`; never contact fields — and hints) and up to 25 live `note` notes that
+relate or link to it, newest first, each flagged `one_line` when its body has one non-empty
+line. Validation before writing: bullets keep only citations of input blocks (none left →
+rejected as uncited); insights and open items citing only one-line captures are rejected
+(speculation); bullets and summary sentences with an e-mail address or a 7+-digit number are
+dropped (dates are not numbers); timeline dates follow the rules above, newest first. The
+sections are rendered with `[[Note#^block]]` citations and written by
+`sections::replace_ai_sections` (which validates them and keeps every user section byte for
+byte); persons, companies and places get Summary, Insights, Open items, Timeline, documents
+Summary only; frontmatter is never touched.
+
+### Corrections (§9.8)
+- Every AI decision is an `ai_decisions` row with its kind, source note and block, target,
+  relation key or custody type, mention, one-line summary, confidence, suggestion and commit.
+  `GET /ai-decisions` is the activity feed.
+- `POST /ai-decisions/{id}/repoint|retype|reject` (and accepting a `correction` suggestion,
+  and confident corrections in words) go through `Core::plan_fix`: the old link is removed and
+  recorded as rejected, a repointed link is added as a user edge, a rejected custody event's
+  line is removed (frontmatter recomputed), a pending suggestion is accepted with the new
+  target or rejected; the decision gets `reverted_at`. A repointed entity mention stores a
+  hint (`"Ahmed" in "Acme call" = Ahmed Fathy`, or the given text).
+- Corrections in words: the `correction` prompt gets the message, the last 50 open decisions
+  (newest first, with source titles and dates, targets and names) and the candidate entities.
+  Applied in one `ai: correct <path>` commit only when not ambiguous and every fix is valid and
+  at or above `thresholds.relation`; otherwise a `correction` suggestion with the model's
+  question.
+- Threads: the reply job sends the thread to the same prompt; a repoint re-proposes (the old
+  suggestion becomes `superseded`, the new one carries the target, an AI reply says so), a
+  reject withdraws it, anything else is answered in the thread.
+- Hints are stored in `disambiguation_hints` and mirrored in the entity's sidecar (`hints`);
+  every later linking, filing and insights prompt shows them.
+
+### Duplicates and thresholds (§9.7)
+- Accepting a `duplicates` suggestion merges the pair (the item created first survives):
+  entities through the entity merge; notes through `Core::merge_notes` — the survivor keeps its
+  path, ID, frontmatter and body, gains the loser's title and aliases as aliases, its tags and
+  relation lists (links to either note dropped), the loser's body under
+  `## Merged from <title> (<date>)` unless the bodies are equal, every link and sidecar
+  reference retargeted, the loser trashed — one `user: merge <loser> -> <survivor>` commit;
+  task pairs: the newer line is cancelled. Rejecting keeps both (unchanged).
+- `thresholds.dedupe.<kind>.semantic` is the semantic candidate threshold of the kind
+  (`jobs::thresholds::dedupe_thresholds`); the no-confirmation level stays the tested default
+  unless the configured value is higher. Near (trigram) thresholds keep the tuned defaults of
+  `domain` — the configuration's `near` values differ from them (e.g. person 0.7 vs 0.5) and
+  would stop `Shady`/`Shadi` from matching; changing that is an owner decision.
+
+### Tests
+`backend/crates/jobs/tests/`: `link.rs` (debounce, exact input, threshold and provenance,
+`duplicates` suggestion and merge on accept, rejected edges never re-added, stale AI edges
+removed with user edges kept, not-JSON replies retried then the job retried, budget pause to
+the next day, isolation), `entities.rs` (Arabic/Latin aliases and transliteration, entity
+relations, ambiguous mention → suggestion → reply re-proposes → accept, nickname →
+link-or-create → alias → next mention auto-linked), `custody.rs` (the Watanya example in
+English and Arabic, ambiguous "gave the contract to Shady" → accept with the chosen document,
+below threshold, conflict with a newer event), `insights.rs` (uncited, speculative and contact
+bullets rejected, "بكرة" resolved, user sections and contact fields untouched, no second call),
+`filing.rs` (auto-file off: suggestions and accept-with-edits; on: filed in the job's commit),
+`corrections.rs` (a capture repoints the decision, the hint changes the next resolution),
+`digest.rs` (exact input and note). `backend/crates/api/tests/ai_pipelines_api.rs`: the
+endpoints through the generated client with contract validation and isolation.
+
+### Open
+- The AI suggestion payloads (`ops::ai_decide::{FilingPayload, EntityLinkPayload,
+  CustodyPayload, TaskPayload, CorrectionPayload}`) belong in `sync-model` so the client core
+  decodes them from sync records (L16); `client/core/src/sync/model.rs` still guesses their
+  shapes.
+- The sync push refuses `suggestion.accept` with edits and does not force `relink.request`;
+  `VaultService::decide_suggestion_with` and `strata_jobs::link::enqueue_forced` are ready for
+  it.
+- Disambiguation hints are not rebuilt from the sidecars by `stratad reindex` (the table is
+  app state; the sidecar mirror keeps them in the vault).
