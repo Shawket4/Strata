@@ -119,8 +119,17 @@ syn = { version = "3", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
 regress = "0.12"
-reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2"] }
-tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
+# TLS: rustls with the ring provider only (no aws-lc). reqwest brings no provider of its own;
+# the apps' client (strata-client) hands reqwest and the WebSocket connector one rustls config
+# with the bundled Mozilla roots (webpki-roots), not the platform store; the process-wide
+# default provider is ring (see `ensure_crypto_provider` in strata-client and strata-ai).
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "http2"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+webpki-roots = "1"
+# `rustls-tls-webpki-roots` only enables the rustls connector: strata-client always passes its
+# own config, so the bundled roots of tokio-tungstenite are never used.
+tokio-tungstenite = { version = "0.30", features = ["rustls-tls-webpki-roots"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "logging", "tls12"] }
 # auth (strata-api, stratad): EdDSA JWTs (RustCrypto backend), the Ed25519 key file (PKCS#8
 # PEM), Argon2id, UTS #39 confusable skeletons + Unicode case folding for usernames, streamed
 # export zips, the stratad CLI

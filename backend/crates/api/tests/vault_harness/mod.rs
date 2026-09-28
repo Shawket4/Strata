@@ -211,6 +211,8 @@ impl H {
         headers: &[(&str, &str)],
         body: Option<(&str, Vec<u8>)>,
     ) -> (u16, Option<String>, Vec<u8>) {
+        // reqwest has no rustls provider of its own (ring is installed process-wide).
+        strata_client::ensure_crypto_provider();
         let client = reqwest::Client::new();
         let mut req = client
             .request(method, format!("{}{path_and_query}", self.base_url()))

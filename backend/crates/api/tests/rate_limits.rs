@@ -102,6 +102,8 @@ async fn rate_limited_responses_carry_retry_after() {
         platform: types::DevicePlatform::Android,
     })
     .expect("encode");
+    // reqwest has no rustls provider of its own (ring is installed process-wide).
+    strata_client::ensure_crypto_provider();
     let http = reqwest::Client::new();
     let send = || {
         http.post(format!("{}/api/v1/auth/login", h.base_url()))

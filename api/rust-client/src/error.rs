@@ -150,6 +150,9 @@ pub enum Error {
     /// The token provider failed.
     #[error("token provider: {0}")]
     Auth(String),
+    /// The TLS configuration could not be built (e.g. a malformed extra root certificate).
+    #[error("tls configuration: {0}")]
+    Tls(String),
     /// A stream ended because reconnecting was disabled or gave up.
     #[error("stream {operation} disconnected after {attempts} reconnect attempts")]
     StreamClosed {
@@ -168,6 +171,112 @@ impl Error {
             _ => None,
         }
     }
+
+    /// Why the server could not be reached, for [`Error::Transport`] and [`Error::WebSocket`]
+    /// failures that happened before a response (`None` for every other error, including
+    /// HTTP-level WebSocket handshake refusals).
+    pub fn transport_kind(&self) -> Option<TransportKind> {
+        match self {
+            Self::Transport(e) => {
+                if chain_has_tls(e) {
+                    Some(TransportKind::Tls)
+                } else if e.is_timeout() {
+                    Some(TransportKind::Timeout)
+                } else if chain_has_dns(e) {
+                    Some(TransportKind::Dns)
+                } else if e.is_connect() {
+                    Some(TransportKind::Connect)
+                } else if e.is_status() || e.is_decode() || e.is_builder() {
+                    None
+                } else {
+                    Some(TransportKind::Network)
+                }
+            }
+            Self::WebSocket(e) => {
+                use tokio_tungstenite::tungstenite::Error as Ws;
+                match e.as_ref() {
+                    Ws::Tls(_) => Some(TransportKind::Tls),
+                    Ws::Io(io) if io_is_tls(io) => Some(TransportKind::Tls),
+                    Ws::Io(io) => Some(match io.kind() {
+                        std::io::ErrorKind::TimedOut => TransportKind::Timeout,
+                        std::io::ErrorKind::ConnectionRefused
+                        | std::io::ErrorKind::ConnectionReset
+                        | std::io::ErrorKind::ConnectionAborted
+                        | std::io::ErrorKind::HostUnreachable
+                        | std::io::ErrorKind::NetworkUnreachable
+                        | std::io::ErrorKind::AddrNotAvailable => TransportKind::Connect,
+                        _ => TransportKind::Network,
+                    }),
+                    Ws::ConnectionClosed | Ws::AlreadyClosed => Some(TransportKind::Network),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
+/// Why a request or handshake never got a response.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TransportKind {
+    /// The TLS handshake failed (unknown issuer, expired or mismatched certificate, protocol).
+    Tls,
+    /// The host name did not resolve.
+    Dns,
+    /// The TCP connection was refused or the network is unreachable.
+    Connect,
+    /// The request or connection timed out.
+    Timeout,
+    /// Another I/O failure (connection dropped, …).
+    Network,
+}
+
+impl TransportKind {
+    /// Stable code (`tls`, `dns`, `connect`, `timeout`, `network`).
+    pub fn code(self) -> &'static str {
+        match self {
+            Self::Tls => "tls",
+            Self::Dns => "dns",
+            Self::Connect => "connect",
+            Self::Timeout => "timeout",
+            Self::Network => "network",
+        }
+    }
+}
+
+/// Whether `e` or one of its causes is a rustls error. `std::io::Error::source` skips the
+/// wrapped error, so an I/O node is looked into explicitly (tokio-rustls reports handshake
+/// failures as an I/O error wrapping the `rustls::Error`).
+fn chain_has_tls(e: &(dyn std::error::Error + 'static)) -> bool {
+    let mut node = Some(e);
+    while let Some(err) = node {
+        if err.is::<rustls::Error>() {
+            return true;
+        }
+        if let Some(io) = err.downcast_ref::<std::io::Error>()
+            && io_is_tls(io)
+        {
+            return true;
+        }
+        node = err.source();
+    }
+    false
+}
+
+fn io_is_tls(io: &std::io::Error) -> bool {
+    io.get_ref().is_some_and(|inner| chain_has_tls(inner))
+}
+
+/// Whether one of the causes is hyper-util's "dns error" (reqwest resolves through it).
+fn chain_has_dns(e: &(dyn std::error::Error + 'static)) -> bool {
+    let mut node = Some(e);
+    while let Some(err) = node {
+        if err.to_string() == "dns error" {
+            return true;
+        }
+        node = err.source();
+    }
+    false
 }
 
 impl From<ApiError> for Error {

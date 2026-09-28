@@ -38,6 +38,13 @@ Gaps filled while implementing the owner decision below; the owner may revisit a
 - **CI fails** the Android and macOS builds when `STRATA_DEFAULT_SERVER` is set but not `https://…`, warns when it is unset, and checks the APK package name and the macOS bundle identifier.
 - **Other IDs:** the Windows notification app user model ID is `com.shawket.strata`, the Windows version resource's company is `com.shawket`, the FFI plugin's Android namespace is `com.shawket.strata.bridge`; the Android notification channel stays `reminders` (not derived from the app ID).
 
+### Bands on phones without the sand seam (owner)
+- Owner, 2026-09-28: "bands on phones without the sand seam". Compact layouts (the signed-out screens' 72-high band, the splash) keep the strata bands but drop the sand seam (`StrataBands(showSeam: false)`); medium and expanded keep the seam. The compact and medium bottom bands run to the screen edge, under the system navigation/gesture inset, at full depth above it (`bleed` continues the last band).
+
+### Default device name and untyped errors (implementation)
+- **Default device name:** the app shell reads raw device facts with `device_info_plus` (allowed in the shell only) and passes them in `CoreConfig.device`; the core picks and cleans the name: Android the device-name setting (usually the marketing name), else manufacturer + model ("Samsung SM-S921B"); iOS the device name unless generic, else the commercial model ("iPhone 16 Pro"); macOS the computer name; Windows and Linux the host name. `localhost` and `.local`-style suffixes never count; the platform's generic name is the last fallback. The field stays editable.
+- **Untyped errors:** an error that is not a `CoreFailure` (an FRB-surfaced panic, an unmapped transport error) in the account screens is reported through `FlutterError.reportError` (no user data) and shown as "Couldn't reach the server. Check your connection and try again."; busy states reset.
+
 ### TLS in the apps (owner)
 - The apps trust the bundled Mozilla root certificates (webpki-roots) through one shared rustls configuration (ring provider) for HTTPS and WebSockets, not the platform trust store: Android needs JNI set-up for the platform verifier, and its store cannot be read for WebSockets. User-installed CAs are not trusted. Found in production 2026-09-28: sign-in on the Android release build never reached the server.
 

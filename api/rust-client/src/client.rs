@@ -33,6 +33,8 @@ pub trait ResponseObserver: Send + Sync + fmt::Debug {
 struct Inner {
     base_url: String,
     http: reqwest::Client,
+    /// TLS of WebSocket handshakes (same roots as `http`, ALPN `http/1.1`).
+    ws_tls: Arc<rustls::ClientConfig>,
     tokens: Option<Arc<dyn TokenProvider>>,
     observer: Option<Arc<dyn ResponseObserver>>,
 }
@@ -60,6 +62,7 @@ pub struct ClientBuilder {
     observer: Option<Arc<dyn ResponseObserver>>,
     timeout: Option<Duration>,
     connect_timeout: Duration,
+    extra_roots: Vec<rustls::pki_types::CertificateDer<'static>>,
 }
 
 impl ClientBuilder {
@@ -84,7 +87,16 @@ impl ClientBuilder {
         self
     }
 
-    /// Builds the client (rustls TLS).
+    /// Also trusts `root` (DER), in addition to the bundled Mozilla roots. For tests against a
+    /// local TLS server; the apps never call it.
+    #[must_use]
+    pub fn add_root_certificate(mut self, root: rustls::pki_types::CertificateDer<'static>) -> Self {
+        self.extra_roots.push(root);
+        self
+    }
+
+    /// Builds the client: rustls with ring, trusting the bundled Mozilla roots (plus any
+    /// [`Self::add_root_certificate`]), never the platform store.
     pub fn build(self) -> Result<Client, Error> {
         let base_url = self.base_url.trim_end_matches('/').to_owned();
         let parsed =
@@ -94,7 +106,10 @@ impl ClientBuilder {
                 "{base_url}: expected an http(s) URL without query"
             )));
         }
+        crate::tls::ensure_crypto_provider();
+        let tls = crate::tls::configs(&self.extra_roots)?;
         let mut http = reqwest::Client::builder()
+            .tls_backend_preconfigured(tls.http)
             .user_agent(concat!("strata-client/", env!("CARGO_PKG_VERSION")))
             .connect_timeout(self.connect_timeout);
         if let Some(timeout) = self.timeout {
@@ -104,6 +119,7 @@ impl ClientBuilder {
             inner: Arc::new(Inner {
                 base_url,
                 http: http.build()?,
+                ws_tls: tls.ws,
                 tokens: self.tokens,
                 observer: self.observer,
             }),
@@ -135,12 +151,18 @@ impl Client {
             observer: None,
             timeout: None,
             connect_timeout: Duration::from_secs(10),
+            extra_roots: Vec::new(),
         }
     }
 
     /// The base URL (no trailing slash).
     pub fn base_url(&self) -> &str {
         &self.inner.base_url
+    }
+
+    /// TLS configuration of WebSocket handshakes.
+    pub(crate) fn ws_tls(&self) -> Arc<rustls::ClientConfig> {
+        Arc::clone(&self.inner.ws_tls)
     }
 
     pub(crate) fn tokens(&self) -> Option<&Arc<dyn TokenProvider>> {

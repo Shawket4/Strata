@@ -8,6 +8,8 @@ description = "Strata API client: generated operations and types (D15) over a Me
 
 [dependencies]
 reqwest = { workspace = true }
+rustls = { workspace = true }
+webpki-roots = { workspace = true }
 rmp-serde = { workspace = true }
 rmpv = { workspace = true }
 serde = { workspace = true }
@@ -30,6 +32,8 @@ strata-codegen = { path = "../codegen" }
 actix-web = { workspace = true }
 pretty_assertions = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+# The local TLS server of tests/tls.rs.
+tokio-rustls = { workspace = true }
 
 [lints]
 workspace = true

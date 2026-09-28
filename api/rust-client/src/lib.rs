@@ -3,8 +3,9 @@
 //! - [`generated`]: produced by `strata-codegen` from `api/openapi.json` (never edit by hand):
 //!   [`types`] for every contract schema, [`operations`] with one `async fn` per endpoint and
 //!   [`streams`] with one constructor per WebSocket stream.
-//! - The hand-written core: [`Client`] (base URL, rustls HTTP client, bearer tokens from a
-//!   [`TokenProvider`] with one refresh-and-retry on `401`), MessagePack encode/decode in
+//! - The hand-written core: [`Client`] (base URL, rustls HTTP client trusting the bundled
+//!   Mozilla roots, bearer tokens from a [`TokenProvider`] with one refresh-and-retry on
+//!   `401`), MessagePack encode/decode in
 //!   [`Client::send`], problem details decoded into [`ApiError`], and [`streaming`] (WebSocket
 //!   frames with reconnect and resume-from-seq).
 //!
@@ -23,12 +24,14 @@ mod client;
 mod error;
 mod request;
 pub mod streaming;
+mod tls;
 
 pub mod generated;
 
 pub use auth::{StaticToken, TokenProvider};
 pub use client::{Client, ClientBuilder, ObservedResponse, ResponseObserver};
-pub use error::{ApiError, Error};
+pub use error::{ApiError, Error, TransportKind};
+pub use tls::ensure_crypto_provider;
 pub use generated::{operations, streams, types};
 pub use request::{Method, Request, encode_path_segment, param_string};
 

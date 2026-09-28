@@ -19,7 +19,7 @@ use tokio::net::TcpStream;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
-use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async_with_config};
+use tokio_tungstenite::{Connector, MaybeTlsStream, WebSocketStream, connect_async_tls_with_config};
 
 use crate::client::decode_exact;
 use crate::types::Problem;
@@ -355,7 +355,10 @@ impl<P: DeserializeOwned> Subscription<P> {
         let config = WebSocketConfig::default()
             .max_message_size(Some(self.options.max_frame_size))
             .max_frame_size(Some(self.options.max_frame_size));
-        let (socket, _) = connect_async_with_config(request, Some(config), true).await?;
+        // The client's own TLS configuration (bundled roots), never the platform store.
+        let connector = Connector::Rustls(self.client.ws_tls());
+        let (socket, _) =
+            connect_async_tls_with_config(request, Some(config), true, Some(connector)).await?;
         self.socket = Some(socket);
         self.connections += 1;
         Ok(())

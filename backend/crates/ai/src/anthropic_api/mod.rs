@@ -163,6 +163,13 @@ struct AttemptError {
     rate_limited: bool,
 }
 
+/// Installs ring as the process-wide rustls provider (reqwest is built without one).
+/// Idempotent: an installed provider stays.
+fn ensure_crypto_provider() {
+    // `Err` means a provider is already installed: nothing to do.
+    let _ = rustls::crypto::ring::default_provider().install_default();
+}
+
 impl AnthropicApiProvider {
     /// Builds the provider.
     pub fn new(
@@ -171,6 +178,7 @@ impl AnthropicApiProvider {
         clock: Arc<dyn Clock>,
         sleeper: Arc<dyn Sleeper>,
     ) -> Result<Self, AiError> {
+        ensure_crypto_provider();
         let http = reqwest::Client::builder()
             .connect_timeout(Duration::from_secs(10))
             .build()

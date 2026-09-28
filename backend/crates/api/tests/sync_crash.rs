@@ -138,6 +138,8 @@ fn crashing(a: &str) -> Vec<SyncOp> {
 /// `POST /sync/push` expected to fail (the injected crash): (status, problem type).
 async fn crashed_push(h: &H, user: &User, ops: Vec<SyncOp>) -> (u16, String) {
     let body = rmp_serde::to_vec_named(&sync_model::PushRequest { ops }).expect("encode");
+    // reqwest has no rustls provider of its own (ring is installed process-wide).
+    strata_client::ensure_crypto_provider();
     let resp = reqwest::Client::new()
         .post(format!("{}/api/v1/sync/push", h.base_url()))
         .header("Authorization", format!("Bearer {}", user.token))
