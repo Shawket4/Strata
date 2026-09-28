@@ -50,11 +50,7 @@ class NewEntityButton extends StatelessWidget {
       ),
     );
     if (iconOnly) {
-      return IconButton(
-        tooltip: label,
-        onPressed: open,
-        icon: Icon(icon),
-      );
+      return IconButton(tooltip: label, onPressed: open, icon: Icon(icon));
     }
     return OutlinedButton.icon(
       onPressed: open,

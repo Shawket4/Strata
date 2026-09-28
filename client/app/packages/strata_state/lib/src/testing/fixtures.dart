@@ -1881,11 +1881,21 @@ abstract final class StrataFixtures {
 
   /// A sample [PendingApproval].
   static final PendingApproval pendingApproval = PendingApproval(
-    username: '',
-    serverUrl: '',
+    username: 'shawket',
+    serverUrl: serverUrl,
     requestedAt: now,
-    requestedLabel: '',
-    canCheck: false,
+    requestedLabel: 'just now',
+    canCheck: true,
+  );
+
+  /// Signed up (or signed in) with an account waiting for approval.
+  static final SessionState sessionPendingApproval = SessionState(
+    kind: SessionKind.pendingApproval,
+    knownAccounts: const [],
+    serverUrl: serverUrl,
+    deviceName: 'shawket-laptop',
+    unsyncedOps: 0,
+    pending: pendingApproval,
   );
 
   /// A sample [PlaceDraft].

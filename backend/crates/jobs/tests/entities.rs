@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use common::World;
 use domain::NoteKind;
 use pipeline_support::{
-    CREATED, Row, assert_input, at, block, decisions, enqueue, ent, jobs_of, push, runner,
+    CREATED, Row, WRITTEN, assert_input, at, block, decisions, enqueue, ent, jobs_of, push, runner,
     suggestion_ids, suggestions,
 };
 use pretty_assertions::assert_eq;
@@ -133,7 +133,7 @@ async fn mentions_resolve_across_arabic_and_latin_aliases_with_entity_relations(
     assert_eq!(
         w.read(a, "notes/Call.md"),
         format!(
-            "---\nid: {note}\ncreated: {CREATED}\nupdated: {CREATED}\npeople: [\"[[Ahmed Samir]]\"]\ncompanies: [\"[[Acme Logistics]]\"]\n---\n{text}\n"
+            "---\nid: {note}\ncreated: {WRITTEN}\nupdated: {WRITTEN}\npeople: [\"[[Ahmed Samir]]\"]\ncompanies: [\"[[Acme Logistics]]\"]\n---\n{text}\n"
         )
     );
     assert!(

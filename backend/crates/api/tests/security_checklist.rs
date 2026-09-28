@@ -883,7 +883,10 @@ async fn rate_limit_signup() {
 fn capture_req(u: &User, text: &str) -> Req {
     Req::new("POST", "/api/v1/capture")
         .token(&u.token)
-        .msgpack(msgpack(&map(&[("text", M::from(text))])))
+        .msgpack(msgpack(&map(&[
+            ("text", M::from(text)),
+            ("created", M::from("2026-09-27T12:00:00Z")),
+        ])))
 }
 
 #[tokio::test]
@@ -1036,7 +1039,12 @@ async fn content_never_reaches_logs_or_error_messages() {
     .await;
     let alice = h.user("alice").await;
     let t = &alice.token;
-    let body = |entries: &[(&str, M)]| msgpack(&map(entries));
+    // Every body carries a creation time: creates require it, other bodies ignore it.
+    let body = |entries: &[(&str, M)]| {
+        let mut all = entries.to_vec();
+        all.push(("created", M::from("2026-09-27T12:00:00Z")));
+        msgpack(&map(&all))
+    };
     let mut problems = Vec::new();
     let run = |op: &'static str, req: Req| (op, req);
     let note_content = format!("Private {S} plans [[Watanya]]\n");

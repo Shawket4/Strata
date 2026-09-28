@@ -20,7 +20,7 @@ use std::collections::BTreeMap;
 use common::World;
 use domain::NoteKind;
 use pipeline_support::{
-    CREATED, assert_input, block, decisions, enqueue, ent, push, runner, suggestion_ids,
+    CREATED, WRITTEN, assert_input, block, decisions, enqueue, ent, push, runner, suggestion_ids,
     suggestions,
 };
 use pretty_assertions::assert_eq;
@@ -217,7 +217,7 @@ async fn run_example(
 
 fn expected_document(doc: NoteId, cite: &str) -> String {
     format!(
-        "---\nid: {doc}\nkind: document\naliases: [عقد وطنية]\ncreated: {CREATED}\nupdated: {CREATED}\nlocation: \"[[Safe — Nasr City office]]\"\nholder: \"\"\nlast-holder: \"[[Shady]]\"\nstatus: stored\n---\n## Custody\n- 2026-09-27 — stored-at [[Safe — Nasr City office]] — {cite}\n- 2026-09-27 — returned-by [[Shady]] — {cite}\n\n## Notes\n"
+        "---\nid: {doc}\nkind: document\naliases: [عقد وطنية]\ncreated: {WRITTEN}\nupdated: {WRITTEN}\nlocation: \"[[Safe — Nasr City office]]\"\nholder: \"\"\nlast-holder: \"[[Shady]]\"\nstatus: stored\n---\n## Custody\n- 2026-09-27 — stored-at [[Safe — Nasr City office]] — {cite}\n- 2026-09-27 — returned-by [[Shady]] — {cite}\n\n## Notes\n"
     )
 }
 
@@ -243,7 +243,7 @@ async fn the_watanya_example_in_english_is_applied_with_cited_events() {
     // The cited block got its ID (the one automated body edit); one `ai:` commit.
     assert_eq!(
         w.read(a, "notes/Contract.md"),
-        format!("---\nid: {note}\ncreated: {CREATED}\nupdated: {CREATED}\n---\n{text} ^{b}\n")
+        format!("---\nid: {note}\ncreated: {WRITTEN}\nupdated: {WRITTEN}\n---\n{text} ^{b}\n")
     );
     assert_eq!(
         w.read(a, "documents/Watanya contract.md"),
@@ -371,7 +371,7 @@ async fn ambiguous_low_confidence_and_conflicting_statements_are_suggestions() {
     // The block a suggestion cites is made citable already.
     assert_eq!(
         w.read(a, "notes/Handover.md"),
-        format!("---\nid: {note}\ncreated: {CREATED}\nupdated: {CREATED}\n---\n{text} ^{b}\n")
+        format!("---\nid: {note}\ncreated: {WRITTEN}\nupdated: {WRITTEN}\n---\n{text} ^{b}\n")
     );
     // Accepting with the chosen document records the event (one `user:` commit).
     let sid = suggestion_ids(&w, a).await[0];
@@ -391,7 +391,7 @@ async fn ambiguous_low_confidence_and_conflicting_statements_are_suggestions() {
     assert_eq!(
         w.read(a, "documents/Watanya contract.md"),
         format!(
-            "---\nid: {}\nkind: document\naliases: [عقد وطنية]\ncreated: {CREATED}\nupdated: {CREATED}\nlocation: \"\"\nholder: \"[[Shady]]\"\nlast-holder: \"[[Shady]]\"\nstatus: checked-out\n---\n## Custody\n- 2026-09-27 — handed-to [[Shady]] — [[Handover#^{b}]]\n\n## Notes\n",
+            "---\nid: {}\nkind: document\naliases: [عقد وطنية]\ncreated: {WRITTEN}\nupdated: {WRITTEN}\nlocation: \"\"\nholder: \"[[Shady]]\"\nlast-holder: \"[[Shady]]\"\nstatus: checked-out\n---\n## Custody\n- 2026-09-27 — handed-to [[Shady]] — [[Handover#^{b}]]\n\n## Notes\n",
             v.doc
         )
     );

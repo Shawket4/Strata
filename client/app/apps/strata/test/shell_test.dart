@@ -36,34 +36,48 @@ void main() {
           v.rtl ? TextDirection.rtl : TextDirection.ltr,
         );
         expect(find.byType(SettingsScreen), findsOneWidget);
+        // The core's pill (`NavView.sync_`) shown as the core labels it.
         final pill = tester.widget<SyncStatusPill>(find.byType(SyncStatusPill));
-        expect(pill.pill, StrataFixtures.syncStatusView.pill);
+        expect(pill.pill, StrataFixtures.navView.sync_);
         expect(pill.dense, v.sizeClass == SizeClass.medium);
-        final label = sync.pillWithConflicts(
-          status: sync.pillOnline(count: 1),
-          conflicts: sync.pillConflicts(count: 1),
-        );
+        const label = '1 conflict';
         expect(
           find.text(label),
           v.sizeClass == SizeClass.medium ? findsNothing : findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(RegExp(sync.pillSemantics(status: label))),
+          findsOneWidget,
         );
         switch (v.sizeClass) {
           case SizeClass.compact:
             expect(find.byType(NavigationDestination), findsNWidgets(5));
             expect(find.byTooltip(l10n.navSettings), findsOneWidget);
+            expect(find.byTooltip(l10n.actionSearch), findsOneWidget);
           case SizeClass.medium:
             final rail = tester.widget<NavigationRail>(
               find.byType(NavigationRail),
             );
             expect(rail.destinations, hasLength(7));
             expect(find.byType(RailFooterDestination), findsOneWidget);
+            expect(find.byTooltip(l10n.actionSearch), findsOneWidget);
           case SizeClass.expanded:
             expect(find.byType(SidebarItem), findsNWidgets(8));
-            final inbox = tester
-                .widgetList<SidebarItem>(find.byType(SidebarItem))
-                .firstWhere((i) => i.destination.label == l10n.navInbox);
-            expect(inbox.destination.count, StrataFixtures.homeView.inboxCount);
+            final counts = {
+              for (final item in tester.widgetList<SidebarItem>(
+                find.byType(SidebarItem),
+              ))
+                item.destination.label: item.destination.count,
+            };
+            expect(counts[l10n.navInbox], 4);
+            expect(counts[l10n.navTasks], 3);
+            expect(counts[l10n.navNotes], 214);
+            expect(counts[l10n.navDirectory], 23);
             expect(find.text(l10n.actionNewCapture), findsOneWidget);
+            // The pinned notes and the folder tree from the core.
+            expect(find.text('Pricing experiments'), findsWidgets);
+            expect(find.text('تجارب التسعير — ملخص'), findsWidgets);
+            expect(find.text('clients'), findsOneWidget);
         }
         expectNoErrors(tester);
         await expectAccessible(tester, contrast: v.textScale == 1);
@@ -367,11 +381,35 @@ void main() {
       );
     });
 
+    testWidgets('Ctrl+K and the search button open search', (tester) async {
+      final app = await boot(tester, size: StrataTestSizes.expanded);
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyK);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await settle(tester);
+      expect(app.router.state.uri.path, '/ask/search');
+      await go(tester, app, '/home');
+      await tapVisible(tester, find.text('Search').first);
+      expect(app.router.state.uri.path, '/ask/search');
+    });
+
+    testWidgets('sidebar pins and folders navigate', (tester) async {
+      final app = await boot(tester, size: StrataTestSizes.expanded);
+      await tapVisible(
+        tester,
+        find.bySemanticsLabel(RegExp('Pricing experiments')).first,
+      );
+      expect(app.router.state.uri.path, '/notes/n-pricing-experiments');
+      await tapVisible(tester, find.text('clients').first);
+      expect(app.router.state.uri.path, '/notes');
+      expect(app.router.state.uri.queryParameters['folder'], 'notes/clients');
+    });
+
     test('destinations mirror the navigation update', () async {
       final l10n = await StrataLocalizations.delegate.load(
         StrataLocales.english,
       );
-      final all = appDestinations(l10n, inboxCount: 4);
+      final all = appDestinations(l10n, nav: StrataFixtures.navView);
       expect(all.map((d) => d.label), [
         'Home',
         'Inbox',
@@ -382,7 +420,7 @@ void main() {
         'Ask',
         'Settings',
       ]);
-      expect(all[1].count, 4);
+      expect(all.map((d) => d.count), [null, 4, 3, 214, null, 23, null, null]);
       expect(
         all
             .where(
@@ -407,7 +445,7 @@ void main() {
       );
       expect(
         sessionRedirect(StrataFixtures.sessionSignedOut, u('/approval')),
-        isNull,
+        '/sign-in',
       );
       expect(isDetailLocation(u('/tasks/t-1')), isTrue);
       expect(isDetailLocation(u('/tasks')), isFalse);

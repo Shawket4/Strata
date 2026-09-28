@@ -16,7 +16,7 @@ mod pipeline_support;
 
 use common::World;
 use pipeline_support::{
-    CREATED, assert_input, block, decisions, push, runner, set_auto_file, suggestion_ids,
+    CREATED, WRITTEN, assert_input, block, decisions, push, runner, set_auto_file, suggestion_ids,
     suggestions,
 };
 use pretty_assertions::assert_eq;
@@ -99,13 +99,13 @@ async fn with_auto_file_off_filing_is_a_suggestion_and_accepting_files_in_one_co
     assert_eq!(
         concept,
         format!(
-            "---\nid: {concept_id}\nkind: concept\ncreated: {CREATED}\nupdated: {CREATED}\n---\n## Summary\nEgypt's electronic invoicing system for company invoices.\n"
+            "---\nid: {concept_id}\nkind: concept\ncreated: {WRITTEN}\nupdated: {WRITTEN}\n---\n## Summary\nEgypt's electronic invoicing system for company invoices.\n"
         )
     );
     assert_eq!(
         w.read(a, path),
         format!(
-            "---\nid: {capture}\ncreated: {CREATED}\nconcepts: [\"[[ETA e-invoicing]]\"]\n---\n{TEXT}\n"
+            "---\nid: {capture}\ncreated: {WRITTEN}\nconcepts: [\"[[ETA e-invoicing]]\"]\n---\n{TEXT}\n"
         )
     );
     let s = suggestions(&w, a).await;
@@ -178,7 +178,7 @@ async fn with_auto_file_off_filing_is_a_suggestion_and_accepting_files_in_one_co
     assert_eq!(
         w.read(a, "notes/Clients/Watanya ETA invoicing.md"),
         format!(
-            "---\nid: {capture}\ntags: [watanya, invoices]\ncreated: {CREATED}\nconcepts: [\"[[ETA e-invoicing]]\"]\n---\n{TEXT}\n"
+            "---\nid: {capture}\ntags: [watanya, invoices]\ncreated: {WRITTEN}\nconcepts: [\"[[ETA e-invoicing]]\"]\n---\n{TEXT}\n"
         )
     );
     // Accept the task: the line goes to tasks/Tasks.md.
@@ -216,7 +216,7 @@ async fn with_auto_file_on_the_capture_is_filed_in_the_jobs_commit() {
     assert_eq!(
         w.read(a, "notes/Clients/Watanya ETA invoice.md"),
         format!(
-            "---\nid: {capture}\ntags: [watanya, invoices]\ncreated: {CREATED}\nconcepts: [\"[[ETA e-invoicing]]\"]\n---\n{TEXT}\n"
+            "---\nid: {capture}\ntags: [watanya, invoices]\ncreated: {WRITTEN}\nconcepts: [\"[[ETA e-invoicing]]\"]\n---\n{TEXT}\n"
         )
     );
     assert_eq!(

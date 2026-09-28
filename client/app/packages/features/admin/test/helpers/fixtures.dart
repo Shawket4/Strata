@@ -108,10 +108,10 @@ abstract final class AdminFixtures {
   );
 
   /// The list for a search that matches nobody.
-  static final AdminUsersView noMatch = AdminUsersView(
+  static const AdminUsersView noMatch = AdminUsersView(
     availability: Availability.available,
-    pending: const [],
-    users: const [],
+    pending: [],
+    users: [],
     query: 'zed',
   );
 

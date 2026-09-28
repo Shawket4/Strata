@@ -188,10 +188,7 @@ class _MapBody extends HookConsumerWidget {
       nodeCounts: view.nodeCounts,
       similarity: view.similarity,
       onShowSimilarity: () => unawaited(
-        ref
-            .read(coreApiProvider)
-            .refreshSimilarity()
-            .catchError((Object _) {}),
+        ref.read(coreApiProvider).refreshSimilarity().catchError((Object _) {}),
       ),
       onClose: expanded ? null : () => filtersOpen.value = false,
     );

@@ -5,7 +5,6 @@ import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 import 'package:strata_ui/testing.dart';
 
-
 void main() {
   setUpAll(loadStrataFonts);
 

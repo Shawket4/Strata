@@ -670,7 +670,7 @@ async fn ai_activity_similarity_and_saved_layouts() {
     dbg_print("reject bad id", &e);
 
     assert_eq!(
-        s.save_layout(&a, " / ", &[]).await,
+        s.save_layout(&a, "   ", &[]).await,
         Err(CoreError::InvalidInput {
             field: "name".into(),
             reason: "empty".into()
@@ -726,6 +726,7 @@ async fn ask_streams_an_answer_into_the_conversation_and_saves_it() {
     dbg_print("entries after failure", &s.ask_entries());
 
     let call = w.llm.calls().last().cloned().expect("recorded call");
+    dbg_print("user", &call.user);
     w.llm.push(
         &call.prompt,
         &call.input_hash,
@@ -737,7 +738,8 @@ async fn ask_streams_an_answer_into_the_conversation_and_saves_it() {
         .await
         .expect("ask");
     dbg_print("entries", &s.ask_entries());
-    let view = s.read(|c, ctx| build::ask(c, ctx, &s.ask_entries())).expect("view");
+    let entries = s.ask_entries();
+    let view = s.read(|c, ctx| build::ask(c, ctx, &entries)).expect("view");
     dbg_print("view", &view);
     let note = s.save_answer_as_note(&id).await.expect("save");
     dbg_print("saved", &note);

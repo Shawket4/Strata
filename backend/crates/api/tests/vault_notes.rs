@@ -274,7 +274,8 @@ async fn notes_crud_move_trash_history_and_revert() {
                 kind: types::NoteKind::Note,
                 path: "notes/Refs.md".into(),
                 title: "Refs".into(),
-                updated: epoch() + chrono::Duration::minutes(10),
+                // Created with the request's time (the device's), not the server's clock.
+                updated: epoch(),
             }],
             tree_folders()[9..].to_vec(),
         ]

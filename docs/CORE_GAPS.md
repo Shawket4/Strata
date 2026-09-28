@@ -2,6 +2,8 @@
 
 View-model fields and intents the Flutter screens need from the Rust core (PLAN L15: the UI renders what the core provides and never computes it). Each entry names what was missing and its status after the core-gaps pass: **✅ resolved** (what the core now provides; the facade function or field to use) or **⏳ open** (why, and what the screen keeps rendering). Resolved entries are ready for the feature UIs to adopt; the pass itself changed only the call sites needed to keep the workspace compiling, plus the maps filtering (moved to the core).
 
+**UI adoption pass (done):** every feature package (`accounts`, `admin`, `settings`, `sync`, `notes`, `editor`, `home`, `inbox`, `tasks`, `directory`, `documents`, `maps`, `ask`), `strata_ui` and `apps/strata` now renders the ✅ fields above and calls the ✅ intents; the provisional inbox mappings are gone. What the UI still needs from the core is under **Still open** at the end.
+
 ## App shell, accounts, settings, admin, sync (Flutter pass: apps/strata, features/accounts|settings|admin|sync)
 
 ### Sync pill display state (`SyncPill`)
@@ -74,7 +76,7 @@ View-model fields and intents the Flutter screens need from the Rust core (PLAN 
 - **Breadcrumb.** ✅ resolved: `NotesListView.breadcrumb` and `note_count`.
 - **Folder-scoped filtering.** ✅ resolved: `search_in_folder(query, mode, folder)`.
 - **Relation chips.** ✅ resolved: `RelationChip.{rel_label, created_label, citations, decision_id}`; `relation_types()` lists the addable types with labels. ⏳ open: "+ Add relation" with an **AI-proposed type** — no AI endpoint proposes a type for a user-chosen pair (`LocalGraphView.propose_relation` stays `NotYetAvailable`); the user picks the type from `relation_types()`.
-- **Mini-graph slot (maps feature).** ⏳ open (UI wiring only): `strata_maps` exports `MiniGraph`; hosting it in `LocalGraphSlot` is a feature-UI change outside this pass.
+- **Mini-graph slot (maps feature).** ✅ resolved (UI): the note page hosts `strata_maps`' `MiniGraph` in its local-graph slot.
 
 ## Home, inbox, tasks, duplicate prompt (Flutter pass: features/home|inbox|tasks)
 
@@ -162,7 +164,21 @@ View-model fields and intents the Flutter screens need from the Rust core (PLAN 
 
 ## Coordinator notes (to resolve in the core-gaps pass)
 - **Maps filtering in the core.** ✅ resolved (see Maps): the global map and the mind map ask the core for filtered view-models; `GraphPaintOptions` / `MindMapCanvas` no longer hide anything.
-- **`EntityScreen` widget rename.** ⏳ open: a feature-UI rename; the widget still clashes with the view-model name (imports use `hide`/prefixes). Out of scope of this pass (no feature UI rewrites).
+- **`EntityScreen` widget rename.** ✅ resolved: the directory widget is `EntityPage` (`EntityPageBody` for the pane); routes, tests and goldens follow.
 - **Content direction everywhere.** ✅ resolved in the core (every text field above has a `*_dir`); adopting them is per feature UI.
-- **Shared test helpers.** ⏳ open: feature packages still carry their own `test/helpers`; `strata_state/testing.dart` now has a fixture for every view-model type (128) to build on.
-- **Explicit inbox intents.** ✅ resolved in the core: `resolve_capture_duplicate`, `undo_suggestion` / `reject_ai_decision`, `accept_capture`, `reject_capture`, `accept_suggestion_with`, `resolve_link_or_create`. The inbox UI still uses the provisional mappings until its next pass.
+- **Shared test helpers.** ✅ resolved: the size × theme × direction × scale matrix, pump/settle/accessibility helpers and golden cells live in `strata_state/testing.dart` (`matrix.dart`) next to the fixtures; every feature package and `apps/strata` use them. `strata_ui` keeps its own `test/helpers/harness.dart` because it cannot depend on `strata_state`.
+- **Explicit inbox intents.** ✅ resolved in the core: `resolve_capture_duplicate`, `undo_suggestion` / `reject_ai_decision`, `accept_capture`, `reject_capture`, `accept_suggestion_with`, `resolve_link_or_create`. The inbox UI now calls them directly (the provisional mappings are removed).
+
+## Still open (found in the UI adoption pass)
+Core changes the screens need; each screen renders the fallback noted until the core provides it. Earlier ⏳ items above (username availability, admin device/activity data, pull origin/ETA, `propose_relation`, `complete_open_item`, capturing device, timeline chip, recurrence "ends" rule, `ai_updated_label`, property provenance, `CustodyItem.decision_id`) are unchanged and not repeated here.
+- **Custody draft.** `CustodyDraft` has no `note`, and its `date` is required: the move sheet sends today's date at UTC midnight. The core should accept `date: None` (today in the user's zone) and a free-text note.
+- **Multi-value properties.** `set_property` takes one scalar; list-valued frontmatter (e.g. several phone numbers) can only be replaced as one string. Needs `set_property_values(key, Vec<String>)` or a typed value.
+- **Admin export label.** `AdminUserItem.export_downloaded_label` is missing; the export download time is formatted by the platform in the device zone.
+- **Purge date before deletion.** The delete-account confirm says "when the grace period ends"; the date is known only after `schedule_deletion`. Needs a `deletion_preview_label` (or the grace period) on the view.
+- **File paths for export/import.** No picker package is on the §11.1 allow-list; `export_vault` / `import_vault` / `download_export` / `export_unsynced` take a typed path. Owner decision: allow `file_selector` in the app shell, or let the core choose a default location (downloads folder).
+- **Time-zone choices.** `set_timezone` takes free text; a `timezones()` list from the core would allow a picker.
+- **Citation caret position.** `CitationPreview` has no line/offset, so opening a citation lands at the note top rather than at the block anchor.
+- **Exact live-preview markers.** `LineSpan` carries the styled range but not its marker ranges; the editor derives them from fixed marker widths per kind (`**` = 2, `#`s + space, `[[`/`]]`, …), which misses variants such as `***` or a heading with several spaces. A `markers: Vec<(u32, u32)>` on the span would remove that Dart-side rule.
+- **"→" glyph in Cairo.** The Arabic font lacks U+2192; labels built by the core with "→" (custody moves, relation reasons) fall back to another font. Either the core uses a word/localized separator or the font set changes (design decision).
+- **Nightly duplicate sweep.** Merge semantics for `duplicates` suggestions are undefined (accepting merges which way?); the inbox offers accept/reject and "keep both" only.
+- **Repoint from Home.** AI-activity items on Home can be undone or retyped but not repointed: `repoint_relation` needs a target picker the Home view does not provide (the directory entity page offers it).

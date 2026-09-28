@@ -334,10 +334,7 @@ class _SidebarRow extends StatelessWidget {
                   ),
                 ),
                 if (n != null)
-                  Text(
-                    '$n',
-                    style: text.caption.copyWith(color: colors.text2),
-                  ),
+                  Text('$n', style: text.caption.copyWith(color: colors.text2)),
               ],
             ),
           ),

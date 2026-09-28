@@ -65,7 +65,9 @@ Future<Booted> boot(
     core
       ..syncStatus.add(StrataFixtures.syncStatusView)
       ..home.add(StrataFixtures.homeView)
+      ..nav.add(StrataFixtures.navView)
       ..settings.add(StrataFixtures.settingsView);
+    core.notesList[''].add(StrataFixtures.notesListView);
   }
   final plugin = platform ?? FakeNotificationPlatform();
   final loader = bootstrap ?? FakeBootstrap();

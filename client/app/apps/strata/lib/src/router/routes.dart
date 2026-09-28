@@ -300,8 +300,7 @@ void _showDuplicate(BuildContext context) => unawaited(
     context,
     onOpenExisting: (candidate) => switch (candidate.kind) {
       'task' => TaskRoute(taskId: candidate.id).go(context),
-      'person' ||
-      'company' => EntityRoute(entityId: candidate.id).go(context),
+      'person' || 'company' => EntityRoute(entityId: candidate.id).go(context),
       'document' => DocumentRoute(documentId: candidate.id).go(context),
       'place' => PlaceRoute(placeId: candidate.id).go(context),
       _ => NoteEditorRoute(noteId: candidate.id).go(context),

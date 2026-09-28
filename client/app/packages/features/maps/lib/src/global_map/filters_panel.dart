@@ -191,6 +191,7 @@ class MapFiltersPanel extends StatelessWidget {
       }
       return null;
     }
+
     return Material(
       type: MaterialType.transparency,
       child: Column(
@@ -247,10 +248,7 @@ class MapFiltersPanel extends StatelessWidget {
                         ),
                         const SizedBox(width: StrataSpacing.s2),
                         Expanded(child: Text(edgeLabel(edge))),
-                        if (countOf(
-                              edgeCounts,
-                              coreEdgeKindsOf(edge).first,
-                            )
+                        if (countOf(edgeCounts, coreEdgeKindsOf(edge).first)
                             case final count?)
                           Text(
                             count,
@@ -303,15 +301,13 @@ class MapFiltersPanel extends StatelessWidget {
                       for (final kind in filterableNodeKinds)
                         FilterChip(
                           avatar: NodeKindGlyph(kind: kind, decorative: true),
-                          label: Text(
-                            switch (countOf(nodeCounts, kind.name)) {
-                              final count? => l10n.kindWithCount(
-                                kind: shared.nodeKindLabel(kind),
-                                count: count,
-                              ),
-                              null => shared.nodeKindLabel(kind),
-                            },
-                          ),
+                          label: Text(switch (countOf(nodeCounts, kind.name)) {
+                            final count? => l10n.kindWithCount(
+                              kind: shared.nodeKindLabel(kind),
+                              count: count,
+                            ),
+                            null => shared.nodeKindLabel(kind),
+                          }),
                           selected: !filters.hiddenKinds.contains(kind),
                           showCheckmark: false,
                           onSelected: (_) =>

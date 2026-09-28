@@ -121,7 +121,8 @@ impl World {
             .create_note(
                 scope,
                 CreateNote {
-                    created: strata_common::clock::default_test_epoch(),
+                    // Created on the device now.
+                    created: strata_common::Clock::now(&self.db.clock),
                     path: path.to_owned(),
                     content: content.to_owned(),
                     id: None,

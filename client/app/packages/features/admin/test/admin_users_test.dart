@@ -286,7 +286,10 @@ void main() {
 
     testWidgets('the role picker sets the role', (tester) async {
       final fake = await _pump(tester, expanded, AdminFixtures.view);
-      expect(find.bySemanticsLabel(RegExp('^Role of Ahmed Samir')), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(RegExp('^Role of Ahmed Samir')),
+        findsOneWidget,
+      );
       await tapVisible(tester, find.byType(DropdownButton<String>).first);
       await tester.tap(find.text('Admin').last);
       await settle(tester);

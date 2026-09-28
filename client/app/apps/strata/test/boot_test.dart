@@ -156,11 +156,18 @@ void main() {
         'shawket',
       );
       await tapVisible(tester, find.widgetWithText(FilledButton, 'Sign in'));
+      // The core keeps the pending request in the session; the router
+      // follows it to the approval screen.
+      app.fake.session.add(StrataFixtures.sessionPendingApproval);
+      await settle(tester);
       expect(find.byType(PendingApprovalScreen), findsOneWidget);
       expect(app.router.state.uri.path, '/approval');
       await tapVisible(tester, find.text('Check again'));
-      expect(app.fake.calls.last.method, 'signIn');
+      expect(app.fake.calls.last, const CoreCall('checkApproval'));
       await tapVisible(tester, find.text('Use a different account'));
+      expect(app.fake.calls.last, const CoreCall('dismissPending'));
+      app.fake.session.add(StrataFixtures.sessionSignedOut);
+      await settle(tester);
       expect(find.byType(SignInScreen), findsOneWidget);
     });
 

@@ -13,12 +13,10 @@ part 'router.g.dart';
 /// (1:1 on the core's session kind).
 ({List<String> allowed, String home}) sessionPlaces(SessionKind kind) =>
     switch (kind) {
+      // The pending request lives in the session: the approval screen until
+      // the core says otherwise (approved, or dismissed → signed out).
       SessionKind.pendingApproval || SessionKind.rejected => (
-        allowed: [
-          const ApprovalRoute().location,
-          const SignInRoute().location,
-          const SignUpRoute().location,
-        ],
+        allowed: [const ApprovalRoute().location],
         home: const ApprovalRoute().location,
       ),
       SessionKind.notInitialised || SessionKind.signedOut => (

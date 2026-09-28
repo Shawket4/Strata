@@ -461,10 +461,19 @@ async fn regression_nul_characters_in_text_are_422_not_500() {
     let log = h.log(u.id);
     let mut got = Vec::new();
     for (op, method, path, body) in &cases {
+        // Creates carry the device's creation time (required).
+        let body = match body {
+            M::Map(entries) if op.starts_with("create_") => {
+                let mut entries = entries.clone();
+                entries.push((M::from("created"), M::from("2026-09-27T12:00:00Z")));
+                M::Map(entries)
+            }
+            other => other.clone(),
+        };
         let resp = h
             .send(
                 Some(op),
-                &Req::new(method, *path).token(&u.token).msgpack(mp(body)),
+                &Req::new(method, *path).token(&u.token).msgpack(mp(&body)),
             )
             .await;
         got.push((
@@ -522,6 +531,7 @@ async fn regression_create_task_documents_404_for_an_unknown_note() {
             &M::Map(vec![
                 (M::from("text"), M::from("Pay the rent")),
                 (M::from("note_id"), M::from(generate::FALLBACK_ULID)),
+                (M::from("created"), M::from("2026-09-27T12:00:00Z")),
             ]),
         )
         .expect("encode");

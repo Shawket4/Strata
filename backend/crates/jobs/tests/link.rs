@@ -17,8 +17,8 @@ mod pipeline_support;
 
 use common::World;
 use pipeline_support::{
-    CREATED, MODEL, Row, advance, at, block, block_with, cand, decisions, enqueue, jobs_of, push,
-    push_fixture, runner, sidecar, suggestions, version_of,
+    CREATED, MODEL, Row, WRITTEN, advance, at, block, block_with, cand, decisions, enqueue,
+    jobs_of, push, push_fixture, runner, sidecar, suggestions, version_of,
 };
 use pretty_assertions::assert_eq;
 use serde_json::json;
@@ -144,7 +144,7 @@ async fn edits_are_linked_30_seconds_later_with_relations_at_or_above_the_thresh
     assert_eq!(
         text,
         format!(
-            "---\nid: {note}\ncreated: {CREATED}\nupdated: {CREATED}\ncontradicts: [\"[[Discount caps]]\"]\n---\nPricing tiers for next year.\n\nWe offer flat discounts of ten percent. ^d1\n"
+            "---\nid: {note}\ncreated: {WRITTEN}\nupdated: {WRITTEN}\ncontradicts: [\"[[Discount caps]]\"]\n---\nPricing tiers for next year.\n\nWe offer flat discounts of ten percent. ^d1\n"
         )
     );
     let version = version_of(&w, &sa, note).await;
@@ -275,7 +275,7 @@ async fn duplicates_become_a_suggestion_and_accepting_merges_the_notes() {
     assert_eq!(
         w.read(a, "notes/ETA invoices.md"),
         format!(
-            "---\nid: {old}\naliases: [Watanya ETA]\ntags: [watanya]\ncreated: {CREATED}\nupdated: {CREATED}\n---\nWatanya invoices go through ETA.\n\n## Merged from Watanya ETA (2026-09-27)\n\nWatanya invoices go through the ETA portal.\n"
+            "---\nid: {old}\naliases: [Watanya ETA]\ntags: [watanya]\ncreated: {WRITTEN}\nupdated: {WRITTEN}\n---\nWatanya invoices go through ETA.\n\n## Merged from Watanya ETA (2026-09-27)\n\nWatanya invoices go through the ETA portal.\n"
         )
     );
     assert!(w.dir(a).join(".trash/notes/Watanya ETA.md").exists());

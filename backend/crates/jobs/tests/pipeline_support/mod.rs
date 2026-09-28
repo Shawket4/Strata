@@ -21,6 +21,8 @@ use crate::common::{World, eager};
 
 /// `created` of notes written at the test epoch (UTC users).
 pub const CREATED: &str = "2026-09-27T12:00:00+00:00";
+/// [`CREATED`] as Strata writes it into a note (UTC with `Z`).
+pub const WRITTEN: &str = "2026-09-27T12:00:00Z";
 
 /// The provenance model of the fake provider.
 pub const MODEL: &str = "claude_cli/fake-model";
