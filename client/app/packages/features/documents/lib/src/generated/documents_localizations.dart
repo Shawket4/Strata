@@ -677,6 +677,18 @@ abstract class DocumentsLocalizations {
   /// **'Today'**
   String get dateToday;
 
+  /// Record a move: the optional note written on the custody line.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get noteField;
+
+  /// Record a move: hint of the note field.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional, e.g. for the audit'**
+  String get noteHint;
+
   /// Date picker button.
   ///
   /// In en, this message translates to:

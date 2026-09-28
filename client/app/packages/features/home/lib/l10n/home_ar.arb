@@ -41,6 +41,11 @@
   "homeAiConfidence": "ذكاء اصطناعي · {value}",
   "homeAiUndone": "تم التراجع",
   "homeAiRetype": "غيّر النوع",
+  "homeAiRepoint": "غيّر الهدف",
+  "homeRepointTitle": "بدلًا من «{title}»",
+  "homeRepointSearch": "بحث",
+  "homeRepointNone": "لا يوجد ما يطابق «{query}»",
+  "homeCancel": "إلغاء",
   "homeAiUndo": "تراجع",
   "homeAiActivityEmpty": "لا جديد من الذكاء الاصطناعي.",
   "homeOpenItemsEmpty": "لا توجد بنود مفتوحة."

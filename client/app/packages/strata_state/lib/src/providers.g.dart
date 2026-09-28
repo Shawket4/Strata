@@ -63,6 +63,61 @@ final class CoreApiProvider
 
 String _$coreApiHash() => r'f63a0489ec8b41ada476807c7523343d8e2b698f';
 
+/// The OS file dialogs (export and import paths).
+///
+/// Has no default: the app shell overrides it with its `file_selector`
+/// picker, tests with `FakeFilePicker` (`package:strata_state/testing.dart`).
+
+@ProviderFor(filePicker)
+final filePickerProvider = FilePickerProvider._();
+
+/// The OS file dialogs (export and import paths).
+///
+/// Has no default: the app shell overrides it with its `file_selector`
+/// picker, tests with `FakeFilePicker` (`package:strata_state/testing.dart`).
+
+final class FilePickerProvider
+    extends $FunctionalProvider<FilePicker, FilePicker, FilePicker>
+    with $Provider<FilePicker> {
+  /// The OS file dialogs (export and import paths).
+  ///
+  /// Has no default: the app shell overrides it with its `file_selector`
+  /// picker, tests with `FakeFilePicker` (`package:strata_state/testing.dart`).
+  FilePickerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: noCoreRetry,
+        name: r'filePickerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$filePickerHash();
+
+  @$internal
+  @override
+  $ProviderElement<FilePicker> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  FilePicker create(Ref ref) {
+    return filePicker(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(FilePicker value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<FilePicker>(value),
+    );
+  }
+}
+
+String _$filePickerHash() => r'3d02308213eabd105bed2cade90a5533f55b1835';
+
 /// The session state: login screen, main shell or a restricted screen
 /// (`CoreApi.watchSession`).
 
@@ -2659,6 +2714,187 @@ final class ParseTaskTextFamily extends $Family
 
   @override
   String toString() => r'parseTaskTextProvider';
+}
+
+/// The time zones of the Settings picker matching [query]
+/// (`CoreApi.timezones`).
+
+@ProviderFor(timeZones)
+final timeZonesProvider = TimeZonesFamily._();
+
+/// The time zones of the Settings picker matching [query]
+/// (`CoreApi.timezones`).
+
+final class TimeZonesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<TimeZoneItem>>,
+          List<TimeZoneItem>,
+          FutureOr<List<TimeZoneItem>>
+        >
+    with
+        $FutureModifier<List<TimeZoneItem>>,
+        $FutureProvider<List<TimeZoneItem>> {
+  /// The time zones of the Settings picker matching [query]
+  /// (`CoreApi.timezones`).
+  TimeZonesProvider._({
+    required TimeZonesFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'timeZonesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$timeZonesHash();
+
+  @override
+  String toString() {
+    return r'timeZonesProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<TimeZoneItem>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<TimeZoneItem>> create(Ref ref) {
+    final argument = this.argument as String;
+    return timeZones(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is TimeZonesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$timeZonesHash() => r'41f5b1846ab2d9886d527bf7b9bdec44baae2afe';
+
+/// The time zones of the Settings picker matching [query]
+/// (`CoreApi.timezones`).
+
+final class TimeZonesFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<List<TimeZoneItem>>, String> {
+  TimeZonesFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'timeZonesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// The time zones of the Settings picker matching [query]
+  /// (`CoreApi.timezones`).
+
+  TimeZonesProvider call(String query) =>
+      TimeZonesProvider._(argument: query, from: this);
+
+  @override
+  String toString() => r'timeZonesProvider';
+}
+
+/// New targets for an AI decision (`CoreApi.repointChoices`).
+
+@ProviderFor(repointChoices)
+final repointChoicesProvider = RepointChoicesFamily._();
+
+/// New targets for an AI decision (`CoreApi.repointChoices`).
+
+final class RepointChoicesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<RepointChoice>>,
+          List<RepointChoice>,
+          FutureOr<List<RepointChoice>>
+        >
+    with
+        $FutureModifier<List<RepointChoice>>,
+        $FutureProvider<List<RepointChoice>> {
+  /// New targets for an AI decision (`CoreApi.repointChoices`).
+  RepointChoicesProvider._({
+    required RepointChoicesFamily super.from,
+    required (String, String) super.argument,
+  }) : super(
+         retry: noCoreRetry,
+         name: r'repointChoicesProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$repointChoicesHash();
+
+  @override
+  String toString() {
+    return r'repointChoicesProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<RepointChoice>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<RepointChoice>> create(Ref ref) {
+    final argument = this.argument as (String, String);
+    return repointChoices(ref, argument.$1, argument.$2);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is RepointChoicesProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$repointChoicesHash() => r'2b19d98d18e604064dc950266085c6d5308d5f61';
+
+/// New targets for an AI decision (`CoreApi.repointChoices`).
+
+final class RepointChoicesFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+          FutureOr<List<RepointChoice>>,
+          (String, String)
+        > {
+  RepointChoicesFamily._()
+    : super(
+        retry: noCoreRetry,
+        name: r'repointChoicesProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  /// New targets for an AI decision (`CoreApi.repointChoices`).
+
+  RepointChoicesProvider call(String decisionId, String query) =>
+      RepointChoicesProvider._(argument: (decisionId, query), from: this);
+
+  @override
+  String toString() => r'repointChoicesProvider';
 }
 
 /// Places for the location picker (`CoreApi.placeOptions`).

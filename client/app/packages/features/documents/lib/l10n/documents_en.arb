@@ -445,6 +445,14 @@
   "@dateToday": {
     "description": "Date not chosen: today."
   },
+  "noteField": "Note",
+  "@noteField": {
+    "description": "Record a move: the optional note written on the custody line."
+  },
+  "noteHint": "Optional, e.g. for the audit",
+  "@noteHint": {
+    "description": "Record a move: hint of the note field."
+  },
   "pickDate": "Choose a date",
   "@pickDate": {
     "description": "Date picker button."

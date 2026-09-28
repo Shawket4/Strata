@@ -161,5 +161,6 @@ export 'package:strata_bridge/strata_bridge.dart'
 
 export 'src/bridge_core_api.dart';
 export 'src/core_api.dart';
+export 'src/file_picker.dart';
 export 'src/providers.dart';
 export 'src/text_dir.dart';

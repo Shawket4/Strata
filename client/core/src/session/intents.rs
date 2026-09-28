@@ -93,9 +93,15 @@ impl Session {
         Ok(op_id.to_string())
     }
 
+    /// The local look-alikes of `item`, completed like the other "Already exists" prompts
+    /// (path and match reason), which the prompt shows.
     fn duplicates(&self, item: &dedupe::Item) -> CoreResult<Vec<CandidateItem>> {
-        self.read(|c, _| crate::search::duplicates::check(c, item))
-            .map(|v| v.into_iter().map(candidate_item).collect())
+        self.read(|c, ctx| {
+            crate::search::duplicates::check(c, item)?
+                .into_iter()
+                .map(|d| crate::view::build::complete_candidate(c, candidate_item(d), ctx.lang))
+                .collect()
+        })
     }
 
     fn create(

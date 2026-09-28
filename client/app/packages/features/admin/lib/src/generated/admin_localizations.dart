@@ -236,12 +236,6 @@ abstract class AdminLocalizations {
   /// **'Export not downloaded yet'**
   String get exportNotDownloaded;
 
-  /// The user downloaded their export.
-  ///
-  /// In en, this message translates to:
-  /// **'Export downloaded {date}'**
-  String exportDownloaded({required String date});
-
   /// Table column.
   ///
   /// In en, this message translates to:
@@ -367,6 +361,12 @@ abstract class AdminLocalizations {
   /// In en, this message translates to:
   /// **'{name}\'s account is signed out everywhere and deleted when the grace period ends. Until then {name} can sign in only to download an export of their notes. You won\'t see the export.'**
   String scheduleBody({required String name});
+
+  /// Schedule deletion confirmation body with the purge date the core computed ("Deleted on 11 Oct 2026").
+  ///
+  /// In en, this message translates to:
+  /// **'{name}\'s account is signed out everywhere. {date}. Until then {name} can sign in only to download an export of their notes. You won\'t see the export.'**
+  String scheduleBodyDated({required String name, required String date});
 
   /// Cancels a dialog.
   ///

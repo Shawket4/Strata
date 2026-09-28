@@ -76,9 +76,10 @@ Future<void> showRecordMove(
 
 /// The "Record a move" form: what happened, where it went (the core's
 /// place list, nested under their parents, with the current place marked),
-/// who has it after, the third party (sent to), and the date. "Record move"
-/// writes the custody event through the core (`record_custody`); the core
-/// says which field an event needs.
+/// who has it after, the third party (sent to), the date and an optional
+/// note. "Record move" writes the custody event through the core
+/// (`record_custody`); the core says which field an event needs, and a date
+/// left at "Today" is today in the account's time zone (computed there).
 class RecordMoveForm extends HookConsumerWidget {
   /// Creates the form.
   const new({
@@ -108,6 +109,7 @@ class RecordMoveForm extends HookConsumerWidget {
     final thirdParty = useState<String?>(null);
     final chosenDocument = useState<String?>(document?.id);
     final date = useState<DateTime?>(null);
+    final note = useTextEditingController();
     final personQuery = useState('');
     final companyQuery = useState('');
     final busy = useState(false);
@@ -155,8 +157,9 @@ class RecordMoveForm extends HookConsumerWidget {
         return;
       }
       busy.value = true;
-      // The picked calendar day (the core stores a date without a time).
-      final day = date.value ?? DateTime.now();
+      // A picked calendar day travels as that day; none means today in the
+      // account's zone, which the core works out.
+      final day = date.value;
       try {
         await ref
             .read(coreApiProvider)
@@ -169,7 +172,10 @@ class RecordMoveForm extends HookConsumerWidget {
                 counterpartyId: event.value == MoveEvent.sentTo
                     ? thirdParty.value
                     : null,
-                date: DateTime.utc(day.year, day.month, day.day),
+                date: day == null
+                    ? null
+                    : DateTime.utc(day.year, day.month, day.day),
+                note: note.text,
               ),
             );
         if (!context.mounted) return;
@@ -332,6 +338,18 @@ class RecordMoveForm extends HookConsumerWidget {
                         );
                         if (picked != null) date.value = picked;
                       },
+                    ),
+                  ),
+                ),
+                field(
+                  l10n.noteField,
+                  TextField(
+                    controller: note,
+                    minLines: 1,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: l10n.noteHint,
                     ),
                   ),
                 ),

@@ -542,8 +542,26 @@ abstract class SettingsLocalizations {
   /// Time zone field help.
   ///
   /// In en, this message translates to:
-  /// **'An IANA name such as Africa/Cairo. Dates and reminders follow it.'**
+  /// **'Dates and reminders follow it.'**
   String get timezoneHelp;
+
+  /// Time zone picker: search field hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search a city, region or UTC offset'**
+  String get timezoneSearch;
+
+  /// Time zone picker: nothing found.
+  ///
+  /// In en, this message translates to:
+  /// **'No time zone matches “{query}”'**
+  String timezoneNoMatch({required String query});
+
+  /// Time zone picker: the account's zone.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get timezoneCurrent;
 
   /// Save button.
   ///
@@ -785,30 +803,6 @@ abstract class SettingsLocalizations {
   /// **'Integrity warning: {kind}'**
   String integrityOther({required String kind});
 
-  /// Export dialog title.
-  ///
-  /// In en, this message translates to:
-  /// **'Export vault'**
-  String get exportTitle;
-
-  /// Import dialog title.
-  ///
-  /// In en, this message translates to:
-  /// **'Import markdown'**
-  String get importTitle;
-
-  /// Export destination field.
-  ///
-  /// In en, this message translates to:
-  /// **'Save to (file path)'**
-  String get exportPath;
-
-  /// Import source field.
-  ///
-  /// In en, this message translates to:
-  /// **'Zip archive (file path)'**
-  String get importPath;
-
   /// Snack bar after an export.
   ///
   /// In en, this message translates to:
@@ -820,18 +814,6 @@ abstract class SettingsLocalizations {
   /// In en, this message translates to:
   /// **'{imported} imported · {skipped} skipped'**
   String importDone({required int imported, required int skipped});
-
-  /// Export confirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Export'**
-  String get exportAction;
-
-  /// Import confirm.
-  ///
-  /// In en, this message translates to:
-  /// **'Import'**
-  String get importAction;
 }
 
 class _SettingsLocalizationsDelegate

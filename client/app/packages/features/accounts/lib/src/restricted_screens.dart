@@ -176,51 +176,22 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-/// Asks where to save a file (no platform file picker is on the §11.1
-/// allow-list yet; docs/CORE_GAPS.md); `null` when cancelled.
-Future<String?> askSavePath(BuildContext context) =>
-    showDialog<String>(context: context, builder: (_) => const _PathDialog());
-
-class _PathDialog extends HookWidget {
-  const new();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.accountsL10n;
-    final path = useTextEditingController();
-    return AlertDialog(
-      title: Text(l10n.exportPathTitle),
-      content: TextField(
-        controller: path,
-        autofocus: true,
-        textDirection: TextDirection.ltr,
-        decoration: InputDecoration(labelText: l10n.exportPath),
-        onSubmitted: (value) => Navigator.of(context).pop(value),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.cancel),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(context).pop(path.text),
-          child: Text(l10n.save),
-        ),
-      ],
-    );
-  }
-}
-
-/// Asks for a path, runs [save] with it and shows what [done] says about the
-/// result (or the failure).
+/// Asks where to save (the native save dialog, proposing [name] of [type]),
+/// runs [save] with the path and shows what [done] says about the result
+/// (or the failure).
 Future<void> _saveTo<T>(
   BuildContext context,
-  Future<T> Function(String path) save,
-  String Function(T result) done,
-) async {
+  WidgetRef ref, {
+  required String name,
+  required PickedFileType type,
+  required Future<T> Function(String path) save,
+  required String Function(T result) done,
+}) async {
   final l10n = context.accountsL10n;
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final path = await askSavePath(context);
+  final path = await ref
+      .read(filePickerProvider)
+      .saveFile(suggestedName: name, type: type);
   if (path == null) return;
   try {
     final result = await save(path);
@@ -366,9 +337,12 @@ class AccountDisabledScreen extends HookConsumerWidget {
                 onPressed: () => unawaited(
                   _saveTo(
                     context,
-                    (path) =>
+                    ref,
+                    name: 'strata-unsynced.md',
+                    type: PickedFileType.markdown,
+                    save: (path) =>
                         ref.read(coreApiProvider).exportUnsynced(path: path),
-                    (count) => l10n.unsyncedSaved(count: count),
+                    done: (count) => l10n.unsyncedSaved(count: count),
                   ),
                 ),
               ),
@@ -455,8 +429,11 @@ class DeletionPendingScreen extends ConsumerWidget {
             onPressed: () => unawaited(
               _saveTo(
                 context,
-                (path) => core.downloadExport(path: path),
-                (summary) => l10n.exportSaved(label: summary.label),
+                ref,
+                name: 'strata-export.zip',
+                type: PickedFileType.zip,
+                save: (path) => core.downloadExport(path: path),
+                done: (summary) => l10n.exportSaved(label: summary.label),
               ),
             ),
           ),
@@ -500,8 +477,11 @@ class DeletionPendingScreen extends ConsumerWidget {
                     onPressed: () => unawaited(
                       _saveTo(
                         context,
-                        (path) => core.exportUnsynced(path: path),
-                        (count) => l10n.unsyncedSaved(count: count),
+                        ref,
+                        name: 'strata-unsynced.md',
+                        type: PickedFileType.markdown,
+                        save: (path) => core.exportUnsynced(path: path),
+                        done: (count) => l10n.unsyncedSaved(count: count),
                       ),
                     ),
                   ),

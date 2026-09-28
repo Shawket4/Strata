@@ -375,15 +375,6 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   }
 
   @override
-  String get exportPathTitle => 'احفظ في';
-
-  @override
-  String get exportPath => 'مسار الملف';
-
-  @override
-  String get save => 'حفظ';
-
-  @override
   String exportSaved({required String label}) {
     return 'اتحفظ $label';
   }

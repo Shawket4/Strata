@@ -178,6 +178,25 @@ class HomeLocalizationsEn extends HomeLocalizations {
   String get homeAiRetype => 'Change type';
 
   @override
+  String get homeAiRepoint => 'Change target';
+
+  @override
+  String homeRepointTitle({required String title}) {
+    return 'Instead of “$title”';
+  }
+
+  @override
+  String get homeRepointSearch => 'Search';
+
+  @override
+  String homeRepointNone({required String query}) {
+    return 'Nothing matches “$query”';
+  }
+
+  @override
+  String get homeCancel => 'Cancel';
+
+  @override
   String get homeAiUndo => 'Undo';
 
   @override

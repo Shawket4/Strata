@@ -37,6 +37,7 @@ import 'package:strata_bridge/strata_bridge.dart'
         RecurrenceForm,
         RecurrencePreviewItem,
         RelationTypeItem,
+        RepointChoice,
         SearchMode,
         SearchView,
         SessionState,
@@ -46,8 +47,10 @@ import 'package:strata_bridge/strata_bridge.dart'
         TaskDraftPreview,
         TaskHomesView,
         TaskScreen,
-        TasksView;
+        TasksView,
+        TimeZoneItem;
 import 'package:strata_state/src/core_api.dart';
+import 'package:strata_state/src/file_picker.dart';
 
 part 'providers.g.dart';
 
@@ -65,6 +68,16 @@ Duration? noCoreRetry(int retryCount, Object error) => null;
 CoreApi coreApi(Ref ref) => throw UnimplementedError(
   'coreApiProvider must be overridden (BridgeCoreApi in the app, '
   'FakeCoreApi in tests).',
+);
+
+/// The OS file dialogs (export and import paths).
+///
+/// Has no default: the app shell overrides it with its `file_selector`
+/// picker, tests with `FakeFilePicker` (`package:strata_state/testing.dart`).
+@Riverpod(keepAlive: true, retry: noCoreRetry)
+FilePicker filePicker(Ref ref) => throw UnimplementedError(
+  'filePickerProvider must be overridden (the app shell picker in the app, '
+  'FakeFilePicker in tests).',
 );
 
 // ---------------------------------------------------------------------------
@@ -297,6 +310,22 @@ Future<List<RecurrencePreviewItem>> recurrencePreview(
 @Riverpod(retry: noCoreRetry)
 Future<TaskDraftPreview> parseTaskText(Ref ref, String text) =>
     ref.watch(coreApiProvider).parseTaskText(text: text);
+
+/// The time zones of the Settings picker matching [query]
+/// (`CoreApi.timezones`).
+@Riverpod(retry: noCoreRetry)
+Future<List<TimeZoneItem>> timeZones(Ref ref, String query) =>
+    ref.watch(coreApiProvider).timezones(query: query);
+
+/// New targets for an AI decision (`CoreApi.repointChoices`).
+@Riverpod(retry: noCoreRetry)
+Future<List<RepointChoice>> repointChoices(
+  Ref ref,
+  String decisionId,
+  String query,
+) => ref
+    .watch(coreApiProvider)
+    .repointChoices(decisionId: decisionId, query: query);
 
 /// Places for the location picker (`CoreApi.placeOptions`).
 @Riverpod(retry: noCoreRetry)

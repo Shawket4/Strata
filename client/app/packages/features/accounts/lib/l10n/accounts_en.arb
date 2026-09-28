@@ -456,18 +456,6 @@
       }
     }
   },
-  "exportPathTitle": "Save to",
-  "@exportPathTitle": {
-    "description": "Path dialog title."
-  },
-  "exportPath": "File path",
-  "@exportPath": {
-    "description": "Path field label."
-  },
-  "save": "Save",
-  "@save": {
-    "description": "Save."
-  },
   "exportSaved": "Saved {label}",
   "@exportSaved": {
     "description": "After an export download.",

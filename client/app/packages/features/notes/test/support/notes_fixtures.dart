@@ -11,6 +11,8 @@ EditorHint _hint(
   String? targetId,
   String? taskId,
   int level = 0,
+  int open = 0,
+  int close = 0,
 }) {
   // Search the body only (after the frontmatter).
   final start = content.indexOf(text, content.indexOf('---\n', 4) + 4);
@@ -22,6 +24,13 @@ EditorHint _hint(
     targetId: targetId,
     taskId: taskId,
     level: level,
+    // The markers the core's parser reports: the first [open] and last
+    // [close] units of the span.
+    markers: [
+      if (open > 0) MarkerRange(start: start, end: start + open),
+      if (close > 0)
+        MarkerRange(start: start + text.length - close, end: start + text.length),
+    ],
   );
 }
 
@@ -30,6 +39,7 @@ EditorHint _frontmatter(String content) => EditorHint(
   start: 0,
   end: content.indexOf('---\n', 4) + 4,
   level: 0,
+  markers: const [],
 );
 
 abstract final class NotesFixtures {
@@ -251,17 +261,39 @@ abstract final class NotesFixtures {
       HintKind.wikiLink,
       '[[Subscription tiers]]',
       targetId: 'n-subscription-tiers',
+      open: 2,
+      close: 2,
     ),
     _hint(
       pricingContent,
       HintKind.wikiLink,
       '[[Ahmed Samir]]',
       targetId: 'p-ahmed-samir',
+      open: 2,
+      close: 2,
     ),
-    _hint(pricingContent, HintKind.heading, '## Hypotheses', level: 2),
-    _hint(pricingContent, HintKind.bold, '**flat 10% discount**'),
+    _hint(
+      pricingContent,
+      HintKind.heading,
+      '## Hypotheses',
+      level: 2,
+      open: 3,
+    ),
+    _hint(
+      pricingContent,
+      HintKind.bold,
+      '**flat 10% discount**',
+      open: 2,
+      close: 2,
+    ),
     _hint(pricingContent, HintKind.blockId, '^a1b2'),
-    _hint(pricingContent, HintKind.heading, '## Next steps', level: 2),
+    _hint(
+      pricingContent,
+      HintKind.heading,
+      '## Next steps',
+      level: 2,
+      open: 3,
+    ),
     _hint(
       pricingContent,
       HintKind.taskLine,

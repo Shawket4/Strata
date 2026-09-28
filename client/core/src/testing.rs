@@ -187,6 +187,17 @@ impl FakeServer {
         });
     }
 
+    /// A deletion of a non-note record (`entity_id` spelled as in the change log, e.g.
+    /// `<src>:<type>:<dst>` for a relation).
+    pub fn remote_tombstone(&self, entity_type: EntityType, entity_id: &str) {
+        let mut s = lock(&self.state);
+        s.extra
+            .remove(&format!("{}/{entity_id}", entity_type.as_str()));
+        Self::log(&mut s, |seq, epoch| {
+            ChangeRecord::delete(seq, epoch, entity_type, entity_id)
+        });
+    }
+
     /// The server rebuilt without preserving seqs: clients must re-bootstrap.
     pub fn bump_epoch(&self) {
         let mut s = lock(&self.state);

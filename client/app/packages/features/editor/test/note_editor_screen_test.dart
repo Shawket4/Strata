@@ -390,6 +390,10 @@ void main() {
                   start: h.kind == HintKind.frontmatter ? 0 : h.start + shift,
                   end: h.end + shift,
                   level: 0,
+                  markers: [
+                    for (final m in h.markers)
+                      MarkerRange(start: m.start + shift, end: m.end + shift),
+                  ],
                 ),
             ],
           ),

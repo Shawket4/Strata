@@ -931,8 +931,10 @@ class _Unavailable extends StatelessWidget {
 }
 
 /// The AI activity feed (the server's AI decisions): what the AI added or
-/// found, with Undo (`reject_ai_decision`) and, for relations, a new type
-/// (`retype_ai_decision`), D13.
+/// found, with Undo (`reject_ai_decision`), for relations a new type
+/// (`retype_ai_decision`) and, where the core allows it, a new target picked
+/// from the core's choices (`repoint_choices`, then `repoint_ai_decision`),
+/// D13.
 class _AiActivityCard extends ConsumerWidget {
   const new({required this.view});
 
@@ -970,6 +972,26 @@ class _AiActivityCard extends ConsumerWidget {
     await _run(
       context,
       () => core.retypeAiDecision(decisionId: item.decisionId, relType: chosen),
+    );
+  }
+
+  Future<void> _repoint(
+    BuildContext context,
+    WidgetRef ref,
+    AiActivityItem item,
+  ) async {
+    final core = ref.read(coreApiProvider);
+    final chosen = await showDialog<String>(
+      context: context,
+      builder: (_) => RepointPickerDialog(item: item),
+    );
+    if (chosen == null || !context.mounted) return;
+    await _run(
+      context,
+      () => core.repointAiDecision(
+        decisionId: item.decisionId,
+        targetId: chosen,
+      ),
     );
   }
 
@@ -1052,6 +1074,12 @@ class _AiActivityCard extends ConsumerWidget {
                       alignment: WrapAlignment.end,
                       spacing: StrataSpacing.s1,
                       children: [
+                        if (item.canRepoint)
+                          TextButton(
+                            onPressed: () =>
+                                unawaited(_repoint(context, ref, item)),
+                            child: Text(l10n.homeAiRepoint),
+                          ),
                         if (item.relType != null)
                           TextButton(
                             onPressed: () =>
@@ -1076,6 +1104,93 @@ class _AiActivityCard extends ConsumerWidget {
             ),
           const SizedBox(height: StrataSpacing.s2),
         ],
+      ],
+    );
+  }
+}
+
+/// Picks a new target for an AI decision: the core's choices
+/// (`repoint_choices`: notes of the current target's kind, matched by the
+/// core as the user types). Pops the chosen note's ID.
+class RepointPickerDialog extends HookConsumerWidget {
+  /// Creates the picker for [item].
+  const new({required this.item, super.key});
+
+  /// The decision being corrected.
+  final AiActivityItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.homeL10n;
+    final colors = context.strataColors;
+    final text = context.strataText;
+    final query = useState('');
+    final choices = ref
+        .watch(repointChoicesProvider(item.decisionId, query.value))
+        .value;
+    return AlertDialog(
+      title: Text(
+        l10n.homeRepointTitle(title: item.target?.title ?? item.summary),
+      ),
+      content: SizedBox(
+        width: 420,
+        height: 360,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              autofocus: true,
+              onChanged: (value) => query.value = value,
+              decoration: InputDecoration(
+                isDense: true,
+                hintText: l10n.homeRepointSearch,
+                prefixIcon: const Icon(Icons.search, size: 20),
+              ),
+            ),
+            const SizedBox(height: StrataSpacing.s2),
+            Expanded(
+              child: choices == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : choices.isEmpty
+                  ? Center(
+                      child: Text(
+                        l10n.homeRepointNone(query: query.value),
+                        textAlign: TextAlign.center,
+                        style: text.bodySmall.copyWith(color: colors.text2),
+                      ),
+                    )
+                  : ListView(
+                      children: [
+                        for (final choice in choices)
+                          ListTile(
+                            dense: true,
+                            title: Text(
+                              choice.title,
+                              textDirection: textDirectionOf(choice.titleDir),
+                              textAlign: TextAlign.start,
+                            ),
+                            subtitle: choice.folder.isEmpty
+                                ? null
+                                : Text(
+                                    choice.folder,
+                                    textDirection: TextDirection.ltr,
+                                    style: text.caption.copyWith(
+                                      color: colors.text2,
+                                    ),
+                                  ),
+                            onTap: () => Navigator.of(context).pop(choice.id),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.homeCancel),
+        ),
       ],
     );
   }

@@ -178,6 +178,34 @@ void main() {
       ]);
     });
 
+    test('file_selector is allowed in the app shell only', () {
+      final root = _workspace(
+        members: {
+          'apps/strata': _pubspec('strata', deps: '  file_selector: ^1.1.0\n'),
+          'packages/features/settings': _pubspec(
+            'strata_settings',
+            deps: '  file_selector: ^1.1.0\n',
+          ),
+          'packages/strata_state': _pubspec(
+            'strata_state',
+            deps: '  file_selector: ^1.1.0\n',
+          ),
+        },
+      );
+      expect(runGuard(root), [
+        const Violation(
+          'strata_settings',
+          'dependencies "file_selector" is not allowed: '
+              'file dialogs belong to the app shell (FilePicker seam)',
+        ),
+        const Violation(
+          'strata_state',
+          'dependencies "file_selector" is not allowed: '
+              'file dialogs belong to the app shell (FilePicker seam)',
+        ),
+      ]);
+    });
+
     test('timezone is not an allowed dev dependency', () {
       final root = _workspace(
         members: {

@@ -250,6 +250,15 @@ class CustodyTile extends StatelessWidget {
                 if (showDocument && document != null)
                   EntityLink(document, style: text.bodySmall),
                 Text(item.sentence, style: text.bodySmall),
+                if (item.note case final note?)
+                  Text(
+                    note,
+                    textAlign: TextAlign.start,
+                    style: text.caption.copyWith(
+                      color: colors.text2,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                 if (showDocument && !item.here && place != null)
                   Wrap(
                     spacing: StrataSpacing.s1,

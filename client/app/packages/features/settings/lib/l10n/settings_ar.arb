@@ -73,7 +73,10 @@
   "edit": "تعديل",
   "editDisplayNameTitle": "الاسم الظاهر",
   "editTimezoneTitle": "المنطقة الزمنية",
-  "timezoneHelp": "اسم IANA زي Africa/Cairo. التواريخ والتذكيرات بتمشي عليه.",
+  "timezoneHelp": "التواريخ والتذكيرات بتمشي عليها.",
+  "timezoneSearch": "دوّر على مدينة أو منطقة أو فرق توقيت UTC",
+  "timezoneNoMatch": "مفيش منطقة زمنية بتطابق «{query}»",
+  "timezoneCurrent": "الحالية",
   "save": "حفظ",
   "cancel": "إلغاء",
   "passwordChanged": "اتغيرت كلمة السر",
@@ -114,12 +117,6 @@
   "integrityRolledBack": "كتابة اتقطعت ورجعت",
   "integrityRecovered": "نتيجة تغيير اترجعت",
   "integrityOther": "تحذير: {kind}",
-  "exportTitle": "تصدير الخزنة",
-  "importTitle": "استيراد ماركداون",
-  "exportPath": "احفظ في (مسار الملف)",
-  "importPath": "ملف zip (المسار)",
   "exportDone": "اتصدّر {label}",
-  "importDone": "اتستورد {imported} · اتساب {skipped}",
-  "exportAction": "تصدير",
-  "importAction": "استيراد"
+  "importDone": "اتستورد {imported} · اتساب {skipped}"
 }

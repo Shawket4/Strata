@@ -189,6 +189,25 @@ class HomeLocalizationsAr extends HomeLocalizations {
   String get homeAiRetype => 'غيّر النوع';
 
   @override
+  String get homeAiRepoint => 'غيّر الهدف';
+
+  @override
+  String homeRepointTitle({required String title}) {
+    return 'بدلًا من «$title»';
+  }
+
+  @override
+  String get homeRepointSearch => 'بحث';
+
+  @override
+  String homeRepointNone({required String query}) {
+    return 'لا يوجد ما يطابق «$query»';
+  }
+
+  @override
+  String get homeCancel => 'إلغاء';
+
+  @override
   String get homeAiUndo => 'تراجع';
 
   @override

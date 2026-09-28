@@ -253,8 +253,18 @@ class SettingsLocalizationsEn extends SettingsLocalizations {
   String get editTimezoneTitle => 'Time zone';
 
   @override
-  String get timezoneHelp =>
-      'An IANA name such as Africa/Cairo. Dates and reminders follow it.';
+  String get timezoneHelp => 'Dates and reminders follow it.';
+
+  @override
+  String get timezoneSearch => 'Search a city, region or UTC offset';
+
+  @override
+  String timezoneNoMatch({required String query}) {
+    return 'No time zone matches “$query”';
+  }
+
+  @override
+  String get timezoneCurrent => 'Current';
 
   @override
   String get save => 'Save';
@@ -414,18 +424,6 @@ class SettingsLocalizationsEn extends SettingsLocalizations {
   }
 
   @override
-  String get exportTitle => 'Export vault';
-
-  @override
-  String get importTitle => 'Import markdown';
-
-  @override
-  String get exportPath => 'Save to (file path)';
-
-  @override
-  String get importPath => 'Zip archive (file path)';
-
-  @override
   String exportDone({required String label}) {
     return 'Exported $label';
   }
@@ -434,10 +432,4 @@ class SettingsLocalizationsEn extends SettingsLocalizations {
   String importDone({required int imported, required int skipped}) {
     return '$imported imported · $skipped skipped';
   }
-
-  @override
-  String get exportAction => 'Export';
-
-  @override
-  String get importAction => 'Import';
 }

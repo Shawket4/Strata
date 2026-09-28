@@ -7,6 +7,7 @@ import 'package:strata_accounts/strata_accounts.dart' show signOutFlow;
 import 'package:strata_l10n/strata_l10n.dart';
 import 'package:strata_settings/src/l10n.dart';
 import 'package:strata_settings/src/settings_screen.dart';
+import 'package:strata_settings/src/time_zone_picker.dart';
 import 'package:strata_state/strata_state.dart';
 import 'package:strata_sync/strata_sync.dart';
 import 'package:strata_ui/strata_ui.dart' hide SyncPill;
@@ -130,37 +131,17 @@ Future<String?> _askText(
   required String title,
   required String label,
   required String initial,
-  String? help,
-  String? confirm,
-  bool ltr = false,
 }) => showDialog<String>(
   context: context,
-  builder: (_) => _TextDialog(
-    title: title,
-    label: label,
-    initial: initial,
-    help: help,
-    confirm: confirm,
-    ltr: ltr,
-  ),
+  builder: (_) => _TextDialog(title: title, label: label, initial: initial),
 );
 
 class _TextDialog extends HookWidget {
-  const new({
-    required this.title,
-    required this.label,
-    required this.initial,
-    required this.help,
-    required this.confirm,
-    required this.ltr,
-  });
+  const new({required this.title, required this.label, required this.initial});
 
   final String title;
   final String label;
   final String initial;
-  final String? help;
-  final String? confirm;
-  final bool ltr;
 
   @override
   Widget build(BuildContext context) {
@@ -172,8 +153,7 @@ class _TextDialog extends HookWidget {
       content: TextField(
         controller: controller,
         autofocus: true,
-        textDirection: ltr ? TextDirection.ltr : null,
-        decoration: InputDecoration(labelText: label, helperText: help),
+        decoration: InputDecoration(labelText: label),
         onSubmitted: (value) => Navigator.of(context).pop(value),
       ),
       actions: [
@@ -183,7 +163,7 @@ class _TextDialog extends HookWidget {
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(controller.text),
-          child: Text(confirm ?? l10n.save),
+          child: Text(l10n.save),
         ),
       ],
     );
@@ -334,14 +314,7 @@ class AccountSection extends HookConsumerWidget {
     }
 
     Future<void> editZone() async {
-      final zone = await _askText(
-        context,
-        title: l10n.editTimezoneTitle,
-        label: l10n.timezone,
-        initial: account.timezone,
-        help: l10n.timezoneHelp,
-        ltr: true,
-      );
+      final zone = await showTimeZonePicker(context);
       if (zone == null || !context.mounted) return;
       await _run(
         context,
@@ -1258,8 +1231,8 @@ class _AvailabilityCard extends StatelessWidget {
 }
 
 /// Settings → Export & import: the vault as a zip (`export_vault`) and a
-/// zip of Markdown in (`import_vault`). The file path is typed (no platform
-/// file picker is on the §11.1 allow-list; docs/CORE_GAPS.md).
+/// zip of Markdown in (`import_vault`). The paths come from the native file
+/// dialogs (`filePickerProvider`); the core reads and writes the files.
 class _DataSection extends ConsumerWidget {
   const new({required this.availability});
 
@@ -1270,14 +1243,12 @@ class _DataSection extends ConsumerWidget {
     final l10n = context.settingsL10n;
     final enabled = availability == Availability.available;
     Future<void> export() async {
-      final path = await _askText(
-        context,
-        title: l10n.exportTitle,
-        label: l10n.exportPath,
-        initial: '',
-        confirm: l10n.exportAction,
-        ltr: true,
-      );
+      final path = await ref
+          .read(filePickerProvider)
+          .saveFile(
+            suggestedName: 'strata-vault.zip',
+            type: PickedFileType.zip,
+          );
       if (path == null || !context.mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
       try {
@@ -1295,14 +1266,9 @@ class _DataSection extends ConsumerWidget {
     }
 
     Future<void> import() async {
-      final path = await _askText(
-        context,
-        title: l10n.importTitle,
-        label: l10n.importPath,
-        initial: '',
-        confirm: l10n.importAction,
-        ltr: true,
-      );
+      final path = await ref
+          .read(filePickerProvider)
+          .openFile(type: PickedFileType.zip);
       if (path == null || !context.mounted) return;
       final messenger = ScaffoldMessenger.maybeOf(context);
       try {

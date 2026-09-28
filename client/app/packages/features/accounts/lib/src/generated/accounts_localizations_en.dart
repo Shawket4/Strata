@@ -364,15 +364,6 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   }
 
   @override
-  String get exportPathTitle => 'Save to';
-
-  @override
-  String get exportPath => 'File path';
-
-  @override
-  String get save => 'Save';
-
-  @override
   String exportSaved({required String label}) {
     return 'Saved $label';
   }

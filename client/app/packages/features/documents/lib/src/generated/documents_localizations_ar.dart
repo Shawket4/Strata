@@ -341,6 +341,12 @@ class DocumentsLocalizationsAr extends DocumentsLocalizations {
   String get dateToday => 'النهارده';
 
   @override
+  String get noteField => 'ملاحظة';
+
+  @override
+  String get noteHint => 'اختياري، مثلاً عشان المراجعة';
+
+  @override
   String get pickDate => 'اختار تاريخ';
 
   @override

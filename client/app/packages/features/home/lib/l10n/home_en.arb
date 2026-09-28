@@ -199,6 +199,36 @@
   "@homeAiRetype": {
     "description": "Retypes an AI relation."
   },
+  "homeAiRepoint": "Change target",
+  "@homeAiRepoint": {
+    "description": "Points an AI link or mention at another note."
+  },
+  "homeRepointTitle": "Instead of “{title}”",
+  "@homeRepointTitle": {
+    "description": "Title of the repoint picker.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "homeRepointSearch": "Search",
+  "@homeRepointSearch": {
+    "description": "Repoint picker search hint."
+  },
+  "homeRepointNone": "Nothing matches “{query}”",
+  "@homeRepointNone": {
+    "description": "Repoint picker: no match.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "homeCancel": "Cancel",
+  "@homeCancel": {
+    "description": "Closes a picker."
+  },
   "homeAiUndo": "Undo",
   "@homeAiUndo": {
     "description": "Undoes an AI decision."

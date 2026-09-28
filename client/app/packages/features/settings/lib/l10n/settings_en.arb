@@ -310,9 +310,26 @@
   "@editTimezoneTitle": {
     "description": "Edit time zone dialog title."
   },
-  "timezoneHelp": "An IANA name such as Africa/Cairo. Dates and reminders follow it.",
+  "timezoneHelp": "Dates and reminders follow it.",
   "@timezoneHelp": {
     "description": "Time zone field help."
+  },
+  "timezoneSearch": "Search a city, region or UTC offset",
+  "@timezoneSearch": {
+    "description": "Time zone picker: search field hint."
+  },
+  "timezoneNoMatch": "No time zone matches “{query}”",
+  "@timezoneNoMatch": {
+    "description": "Time zone picker: nothing found.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "timezoneCurrent": "Current",
+  "@timezoneCurrent": {
+    "description": "Time zone picker: the account's zone."
   },
   "save": "Save",
   "@save": {
@@ -527,22 +544,6 @@
       }
     }
   },
-  "exportTitle": "Export vault",
-  "@exportTitle": {
-    "description": "Export dialog title."
-  },
-  "importTitle": "Import markdown",
-  "@importTitle": {
-    "description": "Import dialog title."
-  },
-  "exportPath": "Save to (file path)",
-  "@exportPath": {
-    "description": "Export destination field."
-  },
-  "importPath": "Zip archive (file path)",
-  "@importPath": {
-    "description": "Import source field."
-  },
   "exportDone": "Exported {label}",
   "@exportDone": {
     "description": "Snack bar after an export.",
@@ -563,13 +564,5 @@
         "type": "int"
       }
     }
-  },
-  "exportAction": "Export",
-  "@exportAction": {
-    "description": "Export confirm."
-  },
-  "importAction": "Import",
-  "@importAction": {
-    "description": "Import confirm."
   }
 }

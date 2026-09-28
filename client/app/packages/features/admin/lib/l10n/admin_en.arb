@@ -128,15 +128,6 @@
   "@exportNotDownloaded": {
     "description": "The user has not downloaded their export."
   },
-  "exportDownloaded": "Export downloaded {date}",
-  "@exportDownloaded": {
-    "description": "The user downloaded their export.",
-    "placeholders": {
-      "date": {
-        "type": "String"
-      }
-    }
-  },
   "columnName": "Name",
   "@columnName": {
     "description": "Table column."
@@ -257,6 +248,18 @@
     "description": "Schedule deletion confirmation body (the purge date is known only once scheduled).",
     "placeholders": {
       "name": {
+        "type": "String"
+      }
+    }
+  },
+  "scheduleBodyDated": "{name}'s account is signed out everywhere. {date}. Until then {name} can sign in only to download an export of their notes. You won't see the export.",
+  "@scheduleBodyDated": {
+    "description": "Schedule deletion confirmation body with the purge date the core computed (\"Deleted on 11 Oct 2026\").",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "date": {
         "type": "String"
       }
     }

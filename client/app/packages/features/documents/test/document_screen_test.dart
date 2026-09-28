@@ -320,13 +320,30 @@ void main() {
       expect(draft.placeId, 'pl-nasr-city-cabinet-b');
       expect(draft.personId, 'p-mona-hassan');
       expect(draft.counterpartyId, isNull);
-      expect(draft.date.isUtc, isTrue);
-      expect(
-        [draft.date.hour, draft.date.minute, draft.date.second],
-        [0, 0, 0],
-      );
+      // "Today" is left to the core (today in the account's zone).
+      expect(draft.date, isNull);
+      expect(draft.note, '');
       expect(find.text('What happened'), findsNothing);
       expect(find.text('Move recorded'), findsOneWidget);
+    });
+
+    testWidgets('the note is sent as typed', (tester) async {
+      final fake = await _pump(tester, _compact, const DocumentScreen(_id));
+      await _openRecordMove(tester);
+      await tapVisible(tester, find.text('Handed to'));
+      await tapVisible(tester, find.text('Mona Hassan'));
+      await _revealInForm(tester, find.text('Note'));
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Optional, e.g. for the audit'),
+        'عشان المراجعة',
+      );
+      await tapVisible(tester, find.text('Record move'));
+      final draft = fake.calls.last.args['draft']! as CustodyDraft;
+      expect((draft.kind, draft.date, draft.note), (
+        'handed-to',
+        null,
+        'عشان المراجعة',
+      ));
     });
 
     testWidgets('sent to a third party picks the company', (tester) async {

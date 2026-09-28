@@ -74,6 +74,7 @@ Future<Booted> boot(
   final container = ProviderContainer.test(
     overrides: [
       coreApiProvider.overrideWithValue(core),
+      filePickerProvider.overrideWithValue(core.files),
       coreBootstrapProvider.overrideWithValue(loader),
       notificationPlatformProvider.overrideWithValue(plugin),
     ],

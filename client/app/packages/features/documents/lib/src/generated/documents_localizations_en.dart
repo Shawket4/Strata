@@ -343,6 +343,12 @@ class DocumentsLocalizationsEn extends DocumentsLocalizations {
   String get dateToday => 'Today';
 
   @override
+  String get noteField => 'Note';
+
+  @override
+  String get noteHint => 'Optional, e.g. for the audit';
+
+  @override
   String get pickDate => 'Choose a date';
 
   @override

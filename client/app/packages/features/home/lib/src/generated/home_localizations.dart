@@ -344,6 +344,36 @@ abstract class HomeLocalizations {
   /// **'Change type'**
   String get homeAiRetype;
 
+  /// Points an AI link or mention at another note.
+  ///
+  /// In en, this message translates to:
+  /// **'Change target'**
+  String get homeAiRepoint;
+
+  /// Title of the repoint picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Instead of “{title}”'**
+  String homeRepointTitle({required String title});
+
+  /// Repoint picker search hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get homeRepointSearch;
+
+  /// Repoint picker: no match.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing matches “{query}”'**
+  String homeRepointNone({required String query});
+
+  /// Closes a picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get homeCancel;
+
   /// Undoes an AI decision.
   ///
   /// In en, this message translates to:

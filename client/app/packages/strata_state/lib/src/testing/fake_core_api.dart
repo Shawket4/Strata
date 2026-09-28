@@ -74,6 +74,7 @@ import 'package:strata_bridge/strata_bridge.dart'
         TasksView,
         TimeZoneItem;
 import 'package:strata_state/src/core_api.dart';
+import 'package:strata_state/src/file_picker.dart';
 import 'package:strata_state/src/testing/fixtures.dart';
 
 /// One recorded [CoreApi] call: the method name and its named arguments,
@@ -213,6 +214,44 @@ final class FakeAnswer<T> {
   }
 }
 
+/// A scripted [FilePicker]: answers [saveFileAnswer] / [openFileAnswer]
+/// and records `saveFile(suggestedName, type)` / `openFile(type)` in
+/// [calls].
+final class FakeFilePicker implements FilePicker {
+  /// Creates a picker recording into [calls].
+  new(this.calls);
+
+  /// Where calls are recorded (the owning fake's `calls`).
+  final List<CoreCall> calls;
+
+  /// `saveFile`: the chosen path (`null`: cancelled).
+  final FakeAnswer<String?> saveFileAnswer = FakeAnswer(
+    '/home/shawket/Downloads/strata-vault.zip',
+  );
+
+  /// `openFile`: the chosen path (`null`: cancelled).
+  final FakeAnswer<String?> openFileAnswer = FakeAnswer(
+    '/home/shawket/Downloads/notes.zip',
+  );
+
+  @override
+  Future<String?> saveFile({
+    required String suggestedName,
+    required PickedFileType type,
+  }) {
+    calls.add(
+      CoreCall('saveFile', {'suggestedName': suggestedName, 'type': type}),
+    );
+    return saveFileAnswer._answer();
+  }
+
+  @override
+  Future<String?> openFile({required PickedFileType type}) {
+    calls.add(CoreCall('openFile', {'type': type}));
+    return openFileAnswer._answer();
+  }
+}
+
 /// A hand-written [CoreApi] test double for widget tests.
 ///
 /// - **Streams:** every `watch*` method returns a [FakeStream] the test
@@ -226,8 +265,12 @@ final class FakeCoreApi implements CoreApi {
   /// Creates a fake with empty streams and fixture answers.
   new();
 
-  /// Every call made, in order.
+  /// Every call made, in order (the file dialogs of [files] included).
   final List<CoreCall> calls = [];
+
+  /// The OS file dialogs the screens open (`filePickerProvider` in
+  /// `StrataTestFrame`); their calls land in [calls] too.
+  late final FakeFilePicker files = FakeFilePicker(calls);
 
   // Streams ------------------------------------------------------------------
 

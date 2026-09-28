@@ -445,7 +445,6 @@ class UserStatus extends StatelessWidget {
     final l10n = context.adminL10n;
     final colors = context.strataColors;
     final text = context.strataText;
-    final downloaded = user.exportDownloadedAt;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -454,9 +453,7 @@ class UserStatus extends StatelessWidget {
         if (user.status == 'deletion_pending') ...[
           const SizedBox(height: StrataSpacing.s1),
           Text(
-            downloaded == null
-                ? l10n.exportNotDownloaded
-                : l10n.exportDownloaded(date: _date(context, downloaded)),
+            user.exportDownloadedLabel ?? l10n.exportNotDownloaded,
             style: text.caption.copyWith(color: colors.text2),
           ),
         ],
@@ -474,9 +471,6 @@ class UserStatus extends StatelessWidget {
 
 /// The export download time has no core label yet (docs/CORE_GAPS.md, Still
 /// open): the instant is formatted by the platform's localisations.
-String _date(BuildContext context, DateTime at) =>
-    MaterialLocalizations.of(context).formatMediumDate(at.toLocal());
-
 /// The role of an account: a picker for other accounts, the role's name on
 /// the admin's own row.
 class UserRole extends ConsumerWidget {
@@ -566,7 +560,13 @@ class UserActions extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) => ScheduleDeletionDialog(user: user),
+      builder: (_) => ScheduleDeletionDialog(
+        user: user,
+        purgeLabel: ref
+            .read(adminUsersProvider(query))
+            .value
+            ?.deletionPreviewLabel,
+      ),
     );
     if (confirmed != true || !context.mounted) return;
     await runAdminIntent(
@@ -734,7 +734,6 @@ class UserTile extends ConsumerWidget {
     final colors = context.strataColors;
     final text = context.strataText;
     final deletion = user.status == 'deletion_pending';
-    final downloaded = user.exportDownloadedAt;
     return InkWell(
       onTap: () => _open(context, ref),
       child: ConstrainedBox(
@@ -752,11 +751,8 @@ class UserTile extends ConsumerWidget {
                     _UserName(user: user),
                     Text(
                       deletion
-                          ? (downloaded == null
-                                ? l10n.exportNotDownloaded
-                                : l10n.exportDownloaded(
-                                    date: _date(context, downloaded),
-                                  ))
+                          ? user.exportDownloadedLabel ??
+                                l10n.exportNotDownloaded
                           : l10n.userSubtitle(
                               username: user.username,
                               role: l10n.role(user.role),
@@ -900,14 +896,19 @@ class UsersTable extends StatelessWidget {
 }
 
 /// "Schedule deletion of @nour?" (SCREEN_SPEC AdminUsersExpanded popover).
-/// Returns `true` when confirmed. The purge date is known only once the
-/// deletion is scheduled (the row's status shows it then).
+/// Returns `true` when confirmed. Says when the account will be purged
+/// ([purgeLabel], the core's `deletion_preview_label`: now plus the server's
+/// grace period), or "when the grace period ends" when the server does not
+/// say.
 class ScheduleDeletionDialog extends StatelessWidget {
   /// Creates the dialog.
-  const new({required this.user, super.key});
+  const new({required this.user, super.key, this.purgeLabel});
 
   /// The account.
   final AdminUserItem user;
+
+  /// "Deleted on 11 Oct 2026".
+  final String? purgeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -916,7 +917,15 @@ class ScheduleDeletionDialog extends StatelessWidget {
     return AlertDialog(
       icon: Icon(Icons.auto_delete_outlined, color: colors.dangerText),
       title: Text(l10n.scheduleTitle(username: user.username)),
-      content: Text(l10n.scheduleBody(name: user.displayName)),
+      content: Text(
+        switch (purgeLabel) {
+          final date? => l10n.scheduleBodyDated(
+            name: user.displayName,
+            date: date,
+          ),
+          null => l10n.scheduleBody(name: user.displayName),
+        },
+      ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),

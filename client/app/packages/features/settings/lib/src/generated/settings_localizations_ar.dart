@@ -252,8 +252,18 @@ class SettingsLocalizationsAr extends SettingsLocalizations {
   String get editTimezoneTitle => 'المنطقة الزمنية';
 
   @override
-  String get timezoneHelp =>
-      'اسم IANA زي Africa/Cairo. التواريخ والتذكيرات بتمشي عليه.';
+  String get timezoneHelp => 'التواريخ والتذكيرات بتمشي عليها.';
+
+  @override
+  String get timezoneSearch => 'دوّر على مدينة أو منطقة أو فرق توقيت UTC';
+
+  @override
+  String timezoneNoMatch({required String query}) {
+    return 'مفيش منطقة زمنية بتطابق «$query»';
+  }
+
+  @override
+  String get timezoneCurrent => 'الحالية';
 
   @override
   String get save => 'حفظ';
@@ -416,18 +426,6 @@ class SettingsLocalizationsAr extends SettingsLocalizations {
   }
 
   @override
-  String get exportTitle => 'تصدير الخزنة';
-
-  @override
-  String get importTitle => 'استيراد ماركداون';
-
-  @override
-  String get exportPath => 'احفظ في (مسار الملف)';
-
-  @override
-  String get importPath => 'ملف zip (المسار)';
-
-  @override
   String exportDone({required String label}) {
     return 'اتصدّر $label';
   }
@@ -436,10 +434,4 @@ class SettingsLocalizationsAr extends SettingsLocalizations {
   String importDone({required int imported, required int skipped}) {
     return 'اتستورد $imported · اتساب $skipped';
   }
-
-  @override
-  String get exportAction => 'تصدير';
-
-  @override
-  String get importAction => 'استيراد';
 }

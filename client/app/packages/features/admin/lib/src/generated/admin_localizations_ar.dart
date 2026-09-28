@@ -92,11 +92,6 @@ class AdminLocalizationsAr extends AdminLocalizations {
   String get exportNotDownloaded => 'التصدير لسه ماتنزلش';
 
   @override
-  String exportDownloaded({required String date}) {
-    return 'التصدير اتنزل $date';
-  }
-
-  @override
   String get columnName => 'الاسم';
 
   @override
@@ -175,6 +170,11 @@ class AdminLocalizationsAr extends AdminLocalizations {
   @override
   String scheduleBody({required String name}) {
     return 'حساب $name هيتقفل من كل الأجهزة ويتمسح لما فترة السماح تخلص. لحد ساعتها $name يقدر يدخل بس عشان ينزّل نسخة من ملاحظاته. انت مش هتشوف النسخة دي.';
+  }
+
+  @override
+  String scheduleBodyDated({required String name, required String date}) {
+    return 'حساب $name هيتقفل من كل الأجهزة. $date. لحد ساعتها $name يقدر يدخل بس عشان ينزّل نسخة من ملاحظاته. انت مش هتشوف النسخة دي.';
   }
 
   @override

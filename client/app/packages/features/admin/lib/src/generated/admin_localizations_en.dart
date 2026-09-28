@@ -92,11 +92,6 @@ class AdminLocalizationsEn extends AdminLocalizations {
   String get exportNotDownloaded => 'Export not downloaded yet';
 
   @override
-  String exportDownloaded({required String date}) {
-    return 'Export downloaded $date';
-  }
-
-  @override
   String get columnName => 'Name';
 
   @override
@@ -175,6 +170,11 @@ class AdminLocalizationsEn extends AdminLocalizations {
   @override
   String scheduleBody({required String name}) {
     return '$name\'s account is signed out everywhere and deleted when the grace period ends. Until then $name can sign in only to download an export of their notes. You won\'t see the export.';
+  }
+
+  @override
+  String scheduleBodyDated({required String name, required String date}) {
+    return '$name\'s account is signed out everywhere. $date. Until then $name can sign in only to download an export of their notes. You won\'t see the export.';
   }
 
   @override

@@ -96,6 +96,8 @@
   "documentField": "المستند",
   "dateField": "التاريخ",
   "dateToday": "النهارده",
+  "noteField": "ملاحظة",
+  "noteHint": "اختياري، مثلاً عشان المراجعة",
   "pickDate": "اختار تاريخ",
   "recordMoveFooter": "بيضيف حدث موثّق لـ ## Custody",
   "recordMoveSubmit": "سجّل النقل",

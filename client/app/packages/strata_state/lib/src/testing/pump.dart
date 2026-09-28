@@ -56,6 +56,8 @@ class _StrataTestFrameState extends State<StrataTestFrame> {
   late final ProviderContainer _container = ProviderContainer(
     overrides: [
       coreApiProvider.overrideWithValue(widget.api),
+      if (widget.api case final FakeCoreApi fake)
+        filePickerProvider.overrideWithValue(fake.files),
       ...widget.overrides,
     ],
   );

@@ -635,24 +635,6 @@ abstract class AccountsLocalizations {
   /// **'{count, plural, =0{none pending} =1{1 pending} other{{count} pending}}'**
   String pendingCount({required int count});
 
-  /// Path dialog title.
-  ///
-  /// In en, this message translates to:
-  /// **'Save to'**
-  String get exportPathTitle;
-
-  /// Path field label.
-  ///
-  /// In en, this message translates to:
-  /// **'File path'**
-  String get exportPath;
-
-  /// Save.
-  ///
-  /// In en, this message translates to:
-  /// **'Save'**
-  String get save;
-
   /// After an export download.
   ///
   /// In en, this message translates to:
