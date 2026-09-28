@@ -103,17 +103,20 @@ abstract final class StrataFixtures {
   // Session and account
   // ---------------------------------------------------------------------------
 
+  /// The raw facts of a Linux desktop: only the host name is known.
+  static const DeviceFacts deviceFacts = DeviceFacts(
+    deviceName: '',
+    manufacturer: '',
+    model: '',
+    modelName: '',
+    hostName: 'shawket-laptop',
+  );
+
   /// The core configuration of a Linux desktop install.
   static const CoreConfig coreConfig = CoreConfig(
     appDataDir: '/home/shawket/.local/share/strata',
     platform: Platform.linux,
-    device: DeviceFacts(
-      deviceName: '',
-      manufacturer: '',
-      model: '',
-      modelName: '',
-      hostName: 'shawket-laptop',
-    ),
+    device: deviceFacts,
     serverUrl: serverUrl,
     releaseBuild: false,
   );
