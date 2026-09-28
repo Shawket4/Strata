@@ -42,6 +42,7 @@ dependencies:
 dev_dependencies:
   alchemist: ^0.14.0
   build_runner: ^2.16.1
+  flutter_native_splash: ^2.4.8
   flutter_test:
     sdk: flutter
   go_router_builder: ^4.5.0

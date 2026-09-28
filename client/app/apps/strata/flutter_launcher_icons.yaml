@@ -1,0 +1,30 @@
+# App icons from the brand marks (design/brand, rendered by tool/brand/render_brand.py).
+# Regenerate: tool/brand/generate.sh. flutter_launcher_icons is run as a pinned global tool
+# (`dart pub global activate flutter_launcher_icons 0.14.4`), not a dev dependency: its
+# cli_util ^0.4 constraint conflicts with melos 8 in the pub workspace.
+# Windows (.ico, 9 sizes) and Linux (256 px PNG) icons are written by render_brand.py itself:
+# flutter_launcher_icons writes a single-size .ico and has no Linux target.
+flutter_launcher_icons:
+  # Android: legacy mipmaps (badge), adaptive icon (abyss background + tide mark within the
+  # 66 dp safe zone of the 108 dp canvas; the art is already inset, so no extra inset) and
+  # the monochrome layer for Android 13 themed icons.
+  android: ic_launcher
+  image_path_android: assets/brand/icon-legacy.png
+  min_sdk_android: 21
+  adaptive_icon_background: "#0F1B26"
+  adaptive_icon_foreground: assets/brand/adaptive-foreground.png
+  adaptive_icon_foreground_inset: 0
+  adaptive_icon_monochrome: assets/brand/adaptive-monochrome.png
+  # iOS: full-bleed tile without alpha (the system applies the mask).
+  ios: true
+  image_path_ios: assets/brand/icon-ios.png
+  remove_alpha_ios: true
+  background_color_ios: "#0F1B26"
+  # macOS: rounded rectangle with the standard margin, every AppIcon.appiconset size.
+  macos:
+    generate: true
+    image_path: assets/brand/icon-macos.png
+  windows:
+    generate: false
+  web:
+    generate: false

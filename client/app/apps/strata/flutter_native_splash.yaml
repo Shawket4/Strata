@@ -1,0 +1,24 @@
+# Native launch screens (Android, iOS); regenerate with tool/brand/generate.sh
+# (`dart run flutter_native_splash:create`, a dev dependency of this package).
+# Colours are the StrataColors background tokens so the first Flutter frame (SplashScreen,
+# colors.background) continues the native splash without a flash: mist #F1F5F7 in light mode,
+# abyss #0F1B26 in dark mode, with the tide mark centred. test/brand_assets_test.dart keeps
+# them equal to the tokens. macOS has no launch screen; MainFlutterWindow paints the same
+# background until the first frame.
+flutter_native_splash:
+  color: "#F1F5F7"
+  image: assets/brand/splash-mark.png
+  color_dark: "#0F1B26"
+  image_dark: assets/brand/splash-mark.png
+  android_12:
+    # Android 12+ splash API: the mark inside the icon circle, on the same backgrounds.
+    image: assets/brand/splash-android12.png
+    color: "#F1F5F7"
+    image_dark: assets/brand/splash-android12.png
+    color_dark: "#0F1B26"
+  android: true
+  ios: true
+  web: false
+  android_gravity: center
+  ios_content_mode: center
+  fullscreen: false
