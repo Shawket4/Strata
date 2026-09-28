@@ -237,8 +237,13 @@ Run exactly one `stratad` (rate limits and revocations are in memory).
 
 ## 9. nginx and TLS
 
-Needs the domain (D7): point an `A` record at the VPS, then `apt install -y certbot
-python3-certbot-nginx`. `/etc/nginx/sites-available/strata`:
+Do this **before** building the apps people install: CI bakes the HTTPS address in as the
+default server.
+
+1. At your DNS provider, add an `A` record for the domain (e.g. `strata.example.com`) → `187.124.33.153`
+   (and an `AAAA` record if the VPS has IPv6). Check: `dig +short strata.example.com` prints the IP.
+2. `apt install -y certbot python3-certbot-nginx`, then create `/etc/nginx/sites-available/strata`
+   with your domain in place of `strata.example.com`:
 
 ```nginx
 map $http_upgrade $connection_upgrade { default upgrade; '' close; }
@@ -279,6 +284,11 @@ certbot --nginx -d strata.example.com     # issues the certificate and sets up r
 ```
 
 In the app, sign in with server `https://strata.example.com`.
+
+Then check from your machine: `curl -sI https://strata.example.com/api/v1/health` returns
+`200`, and set the GitHub repository variable `STRATA_DEFAULT_SERVER` to
+`https://strata.example.com` (Settings → Secrets and variables → Actions → Variables) before the
+next CI build.
 
 **Before the domain exists:** test from the macOS app through an SSH tunnel
 (`ssh -N -L 8080:127.0.0.1:8080 you@vps`, server `http://127.0.0.1:8080`). Android blocks

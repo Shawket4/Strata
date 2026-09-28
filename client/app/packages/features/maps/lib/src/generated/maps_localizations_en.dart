@@ -180,7 +180,7 @@ class MapsLocalizationsEn extends MapsLocalizations {
   String get saveLayout => 'Save layout';
 
   @override
-  String get saveLayoutTarget => '→ .canvas';
+  String get saveLayoutTarget => 'as .canvas';
 
   @override
   String get saveLayoutUnavailable =>
@@ -218,7 +218,7 @@ class MapsLocalizationsEn extends MapsLocalizations {
 
   @override
   String edgeFromTo({required String from, required String to}) {
-    return '$from → $to';
+    return '$from to $to';
   }
 
   @override

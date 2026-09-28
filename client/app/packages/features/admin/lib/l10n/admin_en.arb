@@ -2,7 +2,7 @@
   "@@locale": "en",
   "usersTitle": "Users",
   "@usersTitle": {
-    "description": "Admin → Users title."
+    "description": "User management screen title."
   },
   "breadcrumb": "Settings / Admin",
   "@breadcrumb": {
@@ -298,7 +298,7 @@
   "@done": {
     "description": "Closes the one-time password dialog."
   },
-  "offlineTitle": "Admin → Users needs a connection",
+  "offlineTitle": "Managing users needs a connection",
   "@offlineTitle": {
     "description": "Offline state title."
   },

@@ -154,7 +154,7 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   String get devices => 'Devices';
 
   @override
-  String get adminUsers => 'Admin → Users';
+  String get adminUsers => 'Manage users';
 
   @override
   String get signOut => 'Sign out';

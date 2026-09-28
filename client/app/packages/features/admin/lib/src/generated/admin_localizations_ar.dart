@@ -200,7 +200,7 @@ class AdminLocalizationsAr extends AdminLocalizations {
   String get done => 'تم';
 
   @override
-  String get offlineTitle => 'الإدارة ← المستخدمون محتاجة اتصال';
+  String get offlineTitle => 'إدارة المستخدمين محتاجة اتصال';
 
   @override
   String get offlineBody => 'إدارة الحسابات بتتم على الخادم. اتصل وحاول تاني.';

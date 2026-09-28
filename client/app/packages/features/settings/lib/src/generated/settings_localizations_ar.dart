@@ -209,7 +209,7 @@ class SettingsLocalizationsAr extends SettingsLocalizations {
       'وافق على الحسابات الجديدة، وأوقف مستخدمين، وأعد تعيين كلمات المرور، وحدد مواعيد المسح.';
 
   @override
-  String get openAdminUsers => 'افتح الإدارة ← المستخدمون';
+  String get openAdminUsers => 'إدارة المستخدمين';
 
   @override
   String get aboutBody =>

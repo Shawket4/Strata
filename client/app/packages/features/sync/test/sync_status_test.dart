@@ -54,7 +54,7 @@ void main() {
         expect(find.text('Pricing experiments'), findsOneWidget);
         expect(find.text('+2 lines, 1 changed'), findsOneWidget);
         expect(find.text('14:41'), findsOneWidget);
-        expect(find.text('contradicts → Discount policy'), findsOneWidget);
+        expect(find.text('contradicts · Discount policy'), findsOneWidget);
         expect(find.text('today 14:41'), findsOneWidget);
         expect(
           find.text('Retrying automatically every 30 s · next at 14:47:30'),

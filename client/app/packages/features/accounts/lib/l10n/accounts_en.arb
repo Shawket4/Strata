@@ -195,9 +195,9 @@
   "@devices": {
     "description": "Opens the devices settings."
   },
-  "adminUsers": "Admin → Users",
+  "adminUsers": "Manage users",
   "@adminUsers": {
-    "description": "Opens Admin → Users."
+    "description": "Opens the admin user list."
   },
   "signOut": "Sign out",
   "@signOut": {
@@ -449,7 +449,7 @@
   },
   "pendingCount": "{count, plural, =0{none pending} =1{1 pending} other{{count} pending}}",
   "@pendingCount": {
-    "description": "Pending approvals next to Admin → Users.",
+    "description": "Pending approvals next to Manage users.",
     "placeholders": {
       "count": {
         "type": "int"

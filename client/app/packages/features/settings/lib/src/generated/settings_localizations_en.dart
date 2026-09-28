@@ -210,7 +210,7 @@ class SettingsLocalizationsEn extends SettingsLocalizations {
       'Approve new accounts, disable users, reset passwords and schedule deletions.';
 
   @override
-  String get openAdminUsers => 'Open Admin → Users';
+  String get openAdminUsers => 'Manage users';
 
   @override
   String get aboutBody =>

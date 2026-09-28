@@ -200,7 +200,7 @@ class AdminLocalizationsEn extends AdminLocalizations {
   String get done => 'Done';
 
   @override
-  String get offlineTitle => 'Admin → Users needs a connection';
+  String get offlineTitle => 'Managing users needs a connection';
 
   @override
   String get offlineBody =>

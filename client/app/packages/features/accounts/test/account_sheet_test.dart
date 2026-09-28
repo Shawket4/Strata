@@ -93,7 +93,7 @@ void main() {
   group('account sheet intents', () {
     final v = variants().first;
 
-    testWidgets('a member sees no Admin → Users', (tester) async {
+    testWidgets('a member sees no Manage users', (tester) async {
       await _open(
         tester,
         v,
@@ -112,7 +112,7 @@ void main() {
             ),
           ),
       );
-      expect(find.text('Admin → Users'), findsNothing);
+      expect(find.text('Manage users'), findsNothing);
     });
 
     testWidgets('without device details: the device name only', (tester) async {
@@ -125,7 +125,7 @@ void main() {
       expect(find.byIcon(Icons.person_outline), findsOneWidget);
     });
 
-    testWidgets('Devices and Admin → Users close the sheet first', (
+    testWidgets('Devices and Manage users close the sheet first', (
       tester,
     ) async {
       final opened = <String>[];
@@ -140,7 +140,7 @@ void main() {
       expect(find.byType(AccountSheet), findsNothing);
       await tester.tap(find.text(AccountHost.openLabel));
       await settle(tester);
-      await tester.tap(find.text('Admin → Users'));
+      await tester.tap(find.text('Manage users'));
       await settle(tester);
       expect(opened, ['devices', 'admin']);
     });

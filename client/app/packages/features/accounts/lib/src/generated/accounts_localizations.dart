@@ -359,10 +359,10 @@ abstract class AccountsLocalizations {
   /// **'Devices'**
   String get devices;
 
-  /// Opens Admin → Users.
+  /// Opens the admin user list.
   ///
   /// In en, this message translates to:
-  /// **'Admin → Users'**
+  /// **'Manage users'**
   String get adminUsers;
 
   /// Sign-out action.
@@ -629,7 +629,7 @@ abstract class AccountsLocalizations {
   /// **'{name} · signed in {signedIn}'**
   String thisDeviceDetail({required String name, required String signedIn});
 
-  /// Pending approvals next to Admin → Users.
+  /// Pending approvals next to Manage users.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =0{none pending} =1{1 pending} other{{count} pending}}'**

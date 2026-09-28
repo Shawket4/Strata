@@ -244,7 +244,7 @@
   "@saveLayout": {
     "description": "Saves the mind map layout as a .canvas file."
   },
-  "saveLayoutTarget": "→ .canvas",
+  "saveLayoutTarget": "as .canvas",
   "@saveLayoutTarget": {
     "description": "Hint next to Save layout."
   },
@@ -296,7 +296,7 @@
   "@selectedRelation": {
     "description": "Edge sheet title (accessibility)."
   },
-  "edgeFromTo": "{from} → {to}",
+  "edgeFromTo": "{from} to {to}",
   "@edgeFromTo": {
     "description": "Edge sheet heading.",
     "placeholders": {

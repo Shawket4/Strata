@@ -180,7 +180,7 @@ class MapsLocalizationsAr extends MapsLocalizations {
   String get saveLayout => 'حفظ الترتيب';
 
   @override
-  String get saveLayoutTarget => '← ‎.canvas';
+  String get saveLayoutTarget => 'بصيغة ‎.canvas';
 
   @override
   String get saveLayoutUnavailable => 'حفظ التخطيط يحتاج اتصالًا بالخادم';
@@ -217,7 +217,7 @@ class MapsLocalizationsAr extends MapsLocalizations {
 
   @override
   String edgeFromTo({required String from, required String to}) {
-    return '$from ← $to';
+    return 'من $from إلى $to';
   }
 
   @override

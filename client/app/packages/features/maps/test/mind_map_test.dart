@@ -211,7 +211,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.text('Pricing experiments → Discount policy'),
+        find.text('Pricing experiments to Discount policy'),
         findsOneWidget,
       );
       expect(find.text('Why AI suggested this'), findsOneWidget);
@@ -242,7 +242,7 @@ void main() {
         find.bySemanticsLabel('supports: Churn notes to Pricing experiments'),
       );
       await tester.pump();
-      expect(find.text('Churn notes → Pricing experiments'), findsOneWidget);
+      expect(find.text('Churn notes to Pricing experiments'), findsOneWidget);
       await tester.tap(find.text('Retype'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('part of').last);

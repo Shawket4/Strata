@@ -152,7 +152,7 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   String get devices => 'الأجهزة';
 
   @override
-  String get adminUsers => 'الإدارة ← المستخدمون';
+  String get adminUsers => 'إدارة المستخدمين';
 
   @override
   String get signOut => 'تسجيل الخروج';

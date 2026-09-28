@@ -46,7 +46,7 @@
   },
   "sectionAdmin": "Users",
   "@sectionAdmin": {
-    "description": "Section: Admin → Users."
+    "description": "Section: user management (admin)."
   },
   "sectionAbout": "About",
   "@sectionAbout": {
@@ -253,9 +253,9 @@
   "@adminBody": {
     "description": "Admin section description."
   },
-  "openAdminUsers": "Open Admin → Users",
+  "openAdminUsers": "Manage users",
   "@openAdminUsers": {
-    "description": "Opens Admin → Users."
+    "description": "Opens the admin user list."
   },
   "aboutBody": "Strata keeps your notes as markdown on your own server, with a copy on each device.",
   "@aboutBody": {

@@ -37,7 +37,7 @@ abstract final class SyncFixtures {
       status: OutboxStatus.inflight,
       attempts: 1,
       created: _t.add(const Duration(minutes: 5)),
-      detail: 'contradicts → Discount policy',
+      detail: 'contradicts · Discount policy',
       detailDir: TextDir.ltr,
       createdLabel: '14:46',
     ),

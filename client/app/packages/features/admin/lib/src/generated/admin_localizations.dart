@@ -98,7 +98,7 @@ abstract class AdminLocalizations {
     Locale('en'),
   ];
 
-  /// Admin → Users title.
+  /// User management screen title.
   ///
   /// In en, this message translates to:
   /// **'Users'**
@@ -407,7 +407,7 @@ abstract class AdminLocalizations {
   /// Offline state title.
   ///
   /// In en, this message translates to:
-  /// **'Admin → Users needs a connection'**
+  /// **'Managing users needs a connection'**
   String get offlineTitle;
 
   /// Offline state body.

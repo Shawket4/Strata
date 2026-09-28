@@ -167,7 +167,7 @@ abstract class SettingsLocalizations {
   /// **'Sync'**
   String get sectionSync;
 
-  /// Section: Admin → Users.
+  /// Section: user management (admin).
   ///
   /// In en, this message translates to:
   /// **'Users'**
@@ -461,10 +461,10 @@ abstract class SettingsLocalizations {
   /// **'Approve new accounts, disable users, reset passwords and schedule deletions.'**
   String get adminBody;
 
-  /// Opens Admin → Users.
+  /// Opens the admin user list.
   ///
   /// In en, this message translates to:
-  /// **'Open Admin → Users'**
+  /// **'Manage users'**
   String get openAdminUsers;
 
   /// About text.

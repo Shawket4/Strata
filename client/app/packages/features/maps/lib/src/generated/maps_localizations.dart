@@ -375,7 +375,7 @@ abstract class MapsLocalizations {
   /// Hint next to Save layout.
   ///
   /// In en, this message translates to:
-  /// **'→ .canvas'**
+  /// **'as .canvas'**
   String get saveLayoutTarget;
 
   /// Tooltip of a disabled Save layout.
@@ -433,7 +433,7 @@ abstract class MapsLocalizations {
   /// Edge sheet heading.
   ///
   /// In en, this message translates to:
-  /// **'{from} → {to}'**
+  /// **'{from} to {to}'**
   String edgeFromTo({required String from, required String to});
 
   /// Accessibility label of an edge label.

@@ -60,7 +60,7 @@
   "syncBody": "حالة المزامنة، والتغييرات المنتظرة، والتعارضات.",
   "openSyncStatus": "افتح حالة المزامنة",
   "adminBody": "وافق على الحسابات الجديدة، وأوقف مستخدمين، وأعد تعيين كلمات المرور، وحدد مواعيد المسح.",
-  "openAdminUsers": "افتح الإدارة ← المستخدمون",
+  "openAdminUsers": "إدارة المستخدمين",
   "aboutBody": "Strata بيحفظ ملاحظاتك كـ markdown على خادمك، ومعاها نسخة على كل جهاز.",
   "licences": "التراخيص",
   "fontsNote": "خطوط Cairo وIBM Plex Mono وQuicksand مضمّنة بترخيص SIL Open Font License.",

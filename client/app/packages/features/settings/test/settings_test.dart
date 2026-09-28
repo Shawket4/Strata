@@ -526,9 +526,7 @@ void main() {
       expect(find.byType(LicensePage), findsOneWidget);
     });
 
-    testWidgets('admin card opens Admin → Users without a pane', (
-      tester,
-    ) async {
+    testWidgets('admin card opens Manage users without a pane', (tester) async {
       final selected = <SettingsSection?>[];
       await pumpVariant(
         tester,
@@ -540,7 +538,7 @@ void main() {
         fake: _fake(),
         scaffold: true,
       );
-      await tapVisible(tester, find.text('Open Admin → Users'));
+      await tapVisible(tester, find.text('Manage users'));
       expect(selected, [SettingsSection.admin]);
     });
 
