@@ -40,7 +40,6 @@ tempfile = { workspace = true }
 pretty_assertions = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 ulid = { workspace = true }
-toml = { workspace = true }
 serde_json = { workspace = true }
 
 [lints]

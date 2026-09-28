@@ -4,6 +4,17 @@ Records every locked decision, principle change, and owner pick. `PLAN.md` is th
 
 ## 2026-09-28
 
+### Implementation decisions (UI follow-ups)
+Gaps filled while closing the "Still open" core items of the UI adoption pass; the owner may revisit any of them.
+- **Title rule for plain notes (changes the scope entry below):** a `note.create` whose path was taken lands at `<stem> 2.md` (3, …) with `title: <stem>` unless its content has a title of its own. Shared in `item_render::note::{titled_for_path, new_note_at}`; the server applies it on push, the device when it already knows the path is taken, so both write the same bytes.
+- **Custody notes:** the optional note of "Record a move" is written last on the custody line (`— <note>`, one line). A note made only of wikilinks is refused (it would read back as citations). A draft without a date is today in the account's time zone, computed by the core. `document.custody` and `POST /documents/{id}/custody` carry `note`.
+- **List properties:** `entity/document/place.patch` gain `set_lists` (key → values, the whole value replaced; blanks and repeats dropped, tags lose `#`; an empty list removes the key). A user field with one value is written as a scalar; `aliases`/`tags` stay lists; relation keys, `id`/`kind` and the custody fields are refused.
+- **Accepting a nightly-sweep `duplicates` suggestion merges the pair.** PLAN §9.2 (jobs table) says the nightly sweep proposes "`duplicates` merges as suggestions (never auto-merge)"; the survivor rule (created first, ties by ID; task pairs keep the line whose block ID sorts first and cancel the other) was already the server's and is now shared (`DuplicatesPayload::survivor`), so the inbox says what accepting keeps before the user accepts.
+- **Purge date before deletion:** new `GET /admin/settings` → `{deletion_grace_secs}` (admins only), not in PLAN §7.5; the core shows "Deleted on <date>" (account zone) in the confirmation.
+- **Time-zone list:** canonical IANA region zones of `chrono-tz` plus `UTC` (legacy aliases left out), with the current offset. Arabic names cover the regions and a curated set of about 90 cities; other cities keep their Latin name (no CLDR data is bundled).
+- **File dialogs:** the app shell provides a `FilePicker` (`file_selector`) through `filePickerProvider`; features ask it for a path with a fixed suggested name (`strata-vault.zip`, `strata-export.zip`, `strata-unsynced.md`).
+- **Server AI summaries** use `·` instead of `→` (`"Ahmed" · Ahmed Samir`); summaries stored before this change keep their arrows.
+
 ### Implementation decisions (creation times, UTC)
 Gaps filled while implementing the owner decision below; the owner may revisit any of them.
 - **Which ops carry `created`:** `note.create`, `capture`, `entity/document/place.create`, `task.create` and `suggestion.accept` (an acceptance can create an entity note or `tasks/Tasks.md`), and the REST create bodies (`POST /notes`, `/capture`, `/entities`, `/documents`, `/places`, `/tasks`, `/ask/{id}/save`). `POST /suggestions/{id}/accept` and `accept-with-edits` stay without a body time: they are online-only, so the decision time is the server's clock. Conflict copies are made by the server when it finds the conflict and carry its clock.
@@ -11,7 +22,7 @@ Gaps filled while implementing the owner decision below; the owner may revisit a
 - **Capture file names are UTC:** PLAN §6.9 names `inbox/YYYY-MM-DD-HHmmss.md` without a zone; they follow the UTC rule for file names.
 - **`task.create` carries `home_id`,** the device's ID for a `tasks/Tasks.md` the create makes (ignored when the note exists), so both sides write identical bytes; the month heading is the creation time's date in the account's time zone.
 - **Device time zone:** read from the operating system in the Rust core (`iana-time-zone`), not passed through the bridge; after the first bootstrap an account with no synced `timezone` setting gets the device's zone via `PATCH /me`.
-- **Title rule scope:** entity, document, place and concept notes (user and AI). A `note.create` whose path was taken meanwhile is still written at `<stem> 2.md` without a `title`.
+- **Title rule scope:** entity, document, place and concept notes (user and AI). ~~A `note.create` whose path was taken meanwhile is still written at `<stem> 2.md` without a `title`.~~ Extended to `note.create` the same day (see "UI follow-ups" above).
 
 ### Builds, deployment config and container plan (owner)
 - **CI builds artifacts:** the `stratad` Linux x86_64 release binary, the Flutter app for macOS (ad-hoc signed `.app`) and Android (APK). App icons and splash screens are set for every platform from the brand marks.

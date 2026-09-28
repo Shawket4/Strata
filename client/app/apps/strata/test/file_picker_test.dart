@@ -32,12 +32,10 @@ void main() {
         '/home/shawket/vault.zip',
       );
       final (groups, name, create) = asked.single;
-      expect(
-        [for (final g in groups) (g.label, g.extensions, g.mimeTypes)],
-        [
-          ('Zip', ['zip'], ['application/zip']),
-        ],
-      );
+      final group = groups.single;
+      expect(group.label, 'Zip');
+      expect(group.extensions, ['zip']);
+      expect(group.mimeTypes, ['application/zip']);
       expect((name, create), ('strata-vault.zip', true));
     });
 

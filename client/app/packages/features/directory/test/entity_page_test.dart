@@ -390,6 +390,13 @@ void main() {
         await settle(tester);
       }
 
+      // Every value goes to the core as a list (one value stays a scalar
+      // there).
+      void expectValues(CoreCall call, String key, List<String> values) {
+        expect(call.method, 'setPropertyValues');
+        expect(call.args, {'id': _id, 'key': key, 'values': values});
+      }
+
       await menu('Edit');
       expect(find.text('Edit role'), findsOneWidget);
       final key = find.widgetWithText(TextField, 'Property');
@@ -402,27 +409,17 @@ void main() {
       await tester.enterText(value, 'COO');
       await tester.tap(find.text('Save'));
       await settle(tester);
-      expect(
-        fake.calls.last,
-        const CoreCall('setProperty', {
-          'id': _id,
-          'key': 'role',
-          'value': 'COO',
-        }),
-      );
+      expectValues(fake.calls.last, 'role', ['COO']);
 
       await menu('Edit');
       await tester.enterText(key, 'title');
       await tester.tap(find.text('Save'));
       await settle(tester);
-      expect(fake.calls.sublist(fake.calls.length - 2), const [
-        CoreCall('removeProperty', {'id': _id, 'key': 'role'}),
-        CoreCall('setProperty', {
-          'id': _id,
-          'key': 'title',
-          'value': 'Operations manager',
-        }),
-      ]);
+      expect(
+        fake.calls[fake.calls.length - 2],
+        const CoreCall('removeProperty', {'id': _id, 'key': 'role'}),
+      );
+      expectValues(fake.calls.last, 'title', ['Operations manager']);
 
       await menu('Remove');
       expect(
@@ -430,6 +427,8 @@ void main() {
         const CoreCall('removeProperty', {'id': _id, 'key': 'role'}),
       );
 
+      // Several phone numbers: "Add value" adds a field, the close button
+      // removes one.
       await tapVisible(tester, find.text('Add property'));
       await tester.enterText(
         find.widgetWithText(TextField, 'Property'),
@@ -439,16 +438,20 @@ void main() {
         find.widgetWithText(TextField, 'Value'),
         '+20 100',
       );
+      await tester.tap(find.text('Add value'));
+      await settle(tester);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Value').last,
+        '+20 101',
+      );
+      await tester.tap(find.text('Add value'));
+      await settle(tester);
+      expect(find.widgetWithText(TextField, 'Value'), findsNWidgets(3));
+      await tester.tap(find.byTooltip('Remove value').last);
+      await settle(tester);
       await tester.tap(find.text('Save'));
       await settle(tester);
-      expect(
-        fake.calls.last,
-        const CoreCall('setProperty', {
-          'id': _id,
-          'key': 'phone',
-          'value': '+20 100',
-        }),
-      );
+      expectValues(fake.calls.last, 'phone', ['+20 100', '+20 101']);
     });
 
     testWidgets('a failed edit is reported', (tester) async {

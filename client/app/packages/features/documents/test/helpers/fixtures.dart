@@ -21,7 +21,8 @@ abstract final class DocFixtures {
       holder: const EntityRef(id: 'p-shawket', title: 'Shawket'),
       custody: [
         CustodyItem(
-          noteDir: TextDir.neutral,
+          note: 'عشان التجديد',
+          noteDir: TextDir.rtl,
           date: DateTime.utc(2026, 9, 25),
           kind: 'handed-to',
           person: const EntityRef(id: 'p-shawket', title: 'Shawket'),

@@ -326,6 +326,11 @@ void main() {
       final fake = await _pump(tester, expanded, AdminFixtures.view);
       await tapVisible(tester, find.byTooltip('Delete Mona Hassan…'));
       expect(find.text('Schedule deletion of @mona.h?'), findsOneWidget);
+      // The purge date the core computed from the server's grace period.
+      expect(
+        find.textContaining('Deleted on 11 Oct 2026. Until then'),
+        findsOneWidget,
+      );
       await tester.tap(find.text('Cancel'));
       await settle(tester);
       expect(_intents(fake), isEmpty);
@@ -382,15 +387,46 @@ void main() {
       );
     });
 
-    testWidgets('a downloaded export shows its date', (tester) async {
+    testWidgets("a downloaded export shows the core's label", (tester) async {
       await _pump(tester, expanded, AdminFixtures.view);
-      expect(find.textContaining('Export downloaded'), findsOneWidget);
+      expect(find.text('Export downloaded Sat 12:00'), findsOneWidget);
     });
   });
 
   group('admin dialogs', () {
     final v = variants().first;
     final nour = AdminFixtures.view.users[4];
+
+    for (final dv in variants()) {
+      testWidgets('schedule deletion shows the purge date $dv', (tester) async {
+        final l10n = lookupAdminLocalizations(dv.locale);
+        await pumpVariant(
+          tester,
+          dv,
+          ScheduleDeletionDialog(
+            user: nour,
+            purgeLabel: dv.rtl
+                ? 'يُحذف في 11 أكتوبر 2026'
+                : 'Deleted on 11 Oct 2026',
+          ),
+          scaffold: true,
+        );
+        expect(
+          find.text(
+            l10n.scheduleBodyDated(
+              name: nour.displayName,
+              date: dv.rtl
+                  ? 'يُحذف في 11 أكتوبر 2026'
+                  : 'Deleted on 11 Oct 2026',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.scheduleDeletion), findsOneWidget);
+        expectNoErrors(tester);
+        await expectAccessible(tester, contrast: dv.textScale == 1);
+      });
+    }
 
     testWidgets('schedule deletion confirms with true', (tester) async {
       bool? result;

@@ -3897,7 +3897,13 @@ pub fn ask_spans(text: &str, citations: &[crate::session::ask::AskCitation]) -> 
     let mut out = Vec::new();
     let mut last = 0;
     for l in wikilink::find_all(text) {
-        let target = l.target();
+        // A citation's target is the link as the server writes it into the answer:
+        // `Note` or `Note#^block` (the anchor is part of it).
+        let target = match &l.anchor {
+            Some(wikilink::Anchor::Block(b)) => format!("{}#^{b}", l.target()),
+            Some(wikilink::Anchor::Heading(h)) => format!("{}#{h}", l.target()),
+            None => l.target().to_owned(),
+        };
         let hit = citations.iter().find(|c| c.target == target);
         if let Some(c) = hit {
             if l.span.start > last {

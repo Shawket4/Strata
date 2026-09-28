@@ -231,6 +231,12 @@ void main() {
         expect(find.text(l10n.expiringSoon), findsOneWidget);
         expect(find.text(l10n.pendingSync), findsOneWidget);
         expect(find.text('Handed to Shawket'), findsOneWidget);
+        // The user's note on the event, in its own direction.
+        await tester.ensureVisible(find.text('عشان التجديد'));
+        expect(
+          tester.widget<Text>(find.text('عشان التجديد')).textDirection,
+          TextDirection.rtl,
+        );
         await expectAccessible(tester);
       });
 

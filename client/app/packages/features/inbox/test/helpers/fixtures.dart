@@ -22,6 +22,8 @@ SuggestionDetail _detail({
   EntityRef? lastHolder,
   String quote = '',
   String? dateLabel,
+  String? mergeLabel,
+  String? survivorId,
 }) => SuggestionDetail(
   kind: kind,
   title: title,
@@ -46,6 +48,8 @@ SuggestionDetail _detail({
   quote: quote,
   dateLabel: dateLabel,
   entities: const [],
+  mergeLabel: mergeLabel,
+  survivorId: survivorId,
 );
 
 SuggestionItem _suggestion(
@@ -181,6 +185,50 @@ abstract final class InboxFixtures {
       duplicates: const [StrataFixtures.candidateItem],
     ),
     noteId: 'n-capture-watanya',
+  );
+
+  /// A nightly-sweep pair: accepting merges "ETA invoice for Watanya" into
+  /// the older "Watanya's ETA invoice".
+  static final SuggestionItem duplicatesPair = _suggestion(
+    's-duplicates-eta',
+    _detail(
+      kind: SuggestionKind.duplicates,
+      title: "Watanya's ETA invoice",
+      duplicates: const [
+        CandidateItem(
+          id: 'n-eta-1',
+          kind: 'note',
+          title: "Watanya's ETA invoice",
+          matchLevel: 'semantic',
+          score: 0.93,
+          reason: '',
+        ),
+        CandidateItem(
+          id: 'n-eta-2',
+          kind: 'note',
+          title: 'ETA invoice for Watanya',
+          matchLevel: 'semantic',
+          score: 0.93,
+          reason: '',
+        ),
+      ],
+      mergeLabel:
+          "Accepting keeps “Watanya's ETA invoice” and merges “ETA invoice "
+          'for Watanya” into it',
+      survivorId: 'n-eta-1',
+    ),
+    noteId: 'n-eta-1',
+  );
+
+  /// The duplicates pair alone.
+  static final InboxView duplicates = InboxView(
+    captures: const [],
+    suggestions: [duplicatesPair],
+    filter: InboxFilter.all,
+    readyCount: 0,
+    needsYouCount: 1,
+    conflictsCount: 0,
+    allCount: 1,
   );
 
   static final SuggestionItem task = _suggestion(

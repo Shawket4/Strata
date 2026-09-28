@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:strata_settings/strata_settings.dart';
-import 'package:strata_state/strata_state.dart';
 import 'package:strata_state/testing.dart';
 
 /// Opens the picker and shows what it returned.

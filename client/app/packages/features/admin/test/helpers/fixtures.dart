@@ -10,6 +10,7 @@ abstract final class AdminFixtures {
     String status = 'active',
     DateTime? deletionAt,
     DateTime? exportDownloadedAt,
+    String? exportDownloadedLabel,
     String initials = '',
     String created = '12 Sep',
     String? deletionLabel,
@@ -24,6 +25,7 @@ abstract final class AdminFixtures {
     created: DateTime.utc(2026, 9, 12, 9),
     deletionAt: deletionAt,
     exportDownloadedAt: exportDownloadedAt,
+    exportDownloadedLabel: exportDownloadedLabel,
     initials: initials,
     isSelf: isSelf,
     createdLabel: created,
@@ -92,11 +94,13 @@ abstract final class AdminFixtures {
         status: 'deletion_pending',
         deletionAt: DateTime.utc(2026, 10, 11, 9),
         exportDownloadedAt: DateTime.utc(2026, 9, 26, 9),
+        exportDownloadedLabel: 'Export downloaded Sat 12:00',
         deletionLabel: '11 Oct',
         initials: 'NA',
       ),
     ],
     query: '',
+    deletionPreviewLabel: 'Deleted on 11 Oct 2026',
   );
 
   /// No pending approvals.

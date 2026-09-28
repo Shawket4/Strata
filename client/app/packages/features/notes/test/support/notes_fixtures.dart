@@ -429,9 +429,11 @@ abstract final class NotesFixtures {
       HintKind.wikiLink,
       '[[Pricing experiments]]',
       targetId: pricingId,
+      open: 2,
+      close: 2,
     ),
-    _hint(arabicContent, HintKind.wikiLink, '[[أحمد سمير]]'),
-    _hint(arabicContent, HintKind.heading, '## الفرضيات', level: 2),
+    _hint(arabicContent, HintKind.wikiLink, '[[أحمد سمير]]', open: 2, close: 2),
+    _hint(arabicContent, HintKind.heading, '## الفرضيات', level: 2, open: 3),
     _hint(arabicContent, HintKind.blockId, '^c4d5'),
     for (final line in [
       'ملخص سريع لتجارب التسعير',

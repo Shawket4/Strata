@@ -386,12 +386,18 @@ move lists each file):
 One bullet per event in `## Custody`, newest first:
 
 ```text
-- <YYYY-MM-DD> — <type>[ <primary>][ at|to|in <place>][ by <person>][ with|from <party>][ — <citation> [<citation> …]]
+- <YYYY-MM-DD> — <type>[ <primary>][ at|to|in <place>][ by <person>][ with|from <party>][ — <citation> [<citation> …]][ — <note>]
 ```
 
 The citation part is optional only for events the user recorded (`by: user`, e.g. through the
 API without a source note): `- 2026-09-21 — handed-to [[Shady]]`. AI-written custody content must
 cite (`validate_content` reports an uncited event as `Uncited`; argument links do not count).
+
+The optional note is the user's own words from "Record a move" (`CustodyDraft.note`), written
+last on one line (whitespace runs, line breaks included, become one space: `clean_note`):
+`- 2026-09-21 — handed-to [[Shady]] — for the audit`. The part after the event that is only
+wikilinks is the citation part; any other last part is the note, so a note made of links only
+is refused (it would read back as citations).
 
 ```markdown
 - 2026-09-20 — returned-by [[Shady]] to [[Safe — Nasr City office]] — [[Capture 2026-09-20#^c1d2]]

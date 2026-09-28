@@ -309,6 +309,41 @@ void main() {
         }
       });
 
+      testWidgets('a duplicates pair says what Merge keeps [$v]', (
+        tester,
+      ) async {
+        final fake = FakeCoreApi()
+          ..inboxFiltered[InboxFilter.all].add(InboxFixtures.duplicates);
+        await pumpVariant(
+          tester,
+          v,
+          const InboxScreen(),
+          fake: fake,
+          scaffold: true,
+        );
+        final s = lookupInboxLocalizations(v.locale);
+        await _reveal(
+          tester,
+          find.text(InboxFixtures.duplicatesPair.detail.mergeLabel!),
+        );
+        expect(
+          find.text(InboxFixtures.duplicatesPair.detail.mergeLabel!),
+          findsOneWidget,
+        );
+        await expectAccessible(tester, contrast: v.textScale == 1);
+        expectNoErrors(tester);
+        await _tap(tester, find.text(s.inboxMerge));
+        expect(
+          fake.calls.last,
+          const CoreCall('acceptSuggestion', {'id': 's-duplicates-eta'}),
+        );
+        await _tap(tester, find.text(s.inboxKeepBoth));
+        expect(
+          fake.calls.last,
+          const CoreCall('rejectSuggestion', {'id': 's-duplicates-eta'}),
+        );
+      });
+
       testWidgets('empty, loading and error [$v]', (tester) async {
         final fake = FakeCoreApi();
         await pumpVariant(

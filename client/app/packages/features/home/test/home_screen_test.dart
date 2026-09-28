@@ -100,6 +100,52 @@ Future<FakeCoreApi> _pump(
 Finder _composer() => find.byType(TextField);
 
 void main() {
+  group('repoint picker matrix', () {
+    for (final v in variants()) {
+      testWidgets('lists the core choices $v', (tester) async {
+        final item = StrataFixtures.homeView.aiActivityItems.first;
+        final fake = await pumpVariant(
+          tester,
+          v,
+          RepointPickerDialog(item: item),
+          scaffold: true,
+        );
+        expect(fake.calls, [
+          const CoreCall('repointChoices', {
+            'decisionId': 'dec-works-at',
+            'query': '',
+          }),
+        ]);
+        expect(find.text('Ahmed Fathy'), findsOneWidget);
+        expect(find.text('منى'), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.text('منى')).textDirection,
+          TextDirection.rtl,
+          reason: "the core's direction of the title",
+        );
+        expect(find.text('people'), findsNWidgets(2));
+        expectNoErrors(tester);
+        await expectAccessible(tester, contrast: v.textScale == 1);
+      });
+    }
+
+    testWidgets('no match says so', (tester) async {
+      final fake = FakeCoreApi()..repointChoicesAnswer.returns(const []);
+      await pumpVariant(
+        tester,
+        variants().first,
+        RepointPickerDialog(
+          item: StrataFixtures.homeView.aiActivityItems.first,
+        ),
+        fake: fake,
+        scaffold: true,
+      );
+      await tester.enterText(find.byType(TextField), 'zz');
+      await settle(tester);
+      expect(find.text('Nothing matches “zz”'), findsOneWidget);
+    });
+  });
+
   group('HomeScreen content', () {
     for (final v in variants()) {
       testWidgets('structure, intents and accessibility [$v]', (tester) async {
@@ -310,6 +356,52 @@ void main() {
           'relType': 'related',
         }),
       );
+    });
+
+    testWidgets('an AI decision is repointed to a target the core offers', (
+      tester,
+    ) async {
+      final v = variants().firstWhere((v) => v.sizeName == 'expanded');
+      final fake = FakeCoreApi()..home.add(StrataFixtures.homeView);
+      await _pump(tester, v, const HomeScreen(), fake);
+      // Only the decision the core allows offers it (the undone custody
+      // event does not).
+      expect(find.text('Change target'), findsOneWidget);
+      await _tap(tester, find.text('Change target'));
+      expect(find.text('Instead of “Acme Logistics”'), findsOneWidget);
+      expect(
+        fake.calls.last,
+        const CoreCall('repointChoices', {
+          'decisionId': 'dec-works-at',
+          'query': '',
+        }),
+      );
+      await tester.enterText(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextField),
+        ),
+        'fat',
+      );
+      await settle(tester);
+      expect(
+        fake.calls.last,
+        const CoreCall('repointChoices', {
+          'decisionId': 'dec-works-at',
+          'query': 'fat',
+        }),
+      );
+      await tester.tap(find.text('Ahmed Fathy'));
+      await settle(tester);
+      expect(
+        fake.calls.last,
+        const CoreCall('repointAiDecision', {
+          'decisionId': 'dec-works-at',
+          'targetId': 'p-ahmed-fathy',
+          'hint': null,
+        }),
+      );
+      expect(find.byType(AlertDialog), findsNothing);
     });
 
     testWidgets('open items open their person and source', (tester) async {

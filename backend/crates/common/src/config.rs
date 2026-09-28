@@ -1,13 +1,13 @@
-//! `stratad.toml` configuration with environment overrides (PLAN §14 "Config").
+//! Server configuration from environment variables and a `.env` file (PLAN §14 "Config").
 //!
-//! Layering, lowest to highest precedence: built-in defaults → TOML file → environment.
-//! Environment variables named `STRATA__<SECTION>__<KEY>` (double underscores between path
-//! segments, case-insensitive) override the matching key, e.g.
-//! `STRATA__DATABASE__APP_URL=postgres://…` or `STRATA__THRESHOLDS__DEDUPE__TASK__NEAR=0.6`.
-//! The override value is parsed with the type of the key it replaces (string, integer, float,
-//! boolean, or a TOML array literal such as `["sudo", "-n"]`); keys that are unset by default are parsed as boolean/integer/float if possible and
-//! as a string otherwise. Unknown keys — in the file or the environment — are errors, so typos
-//! never pass silently.
+//! Every setting is one `STRATA_` variable: the key path in [`Config`] with its segments joined
+//! by double underscores, upper-cased (`bind` → `STRATA_BIND`, `database.app_url` →
+//! `STRATA_DATABASE__APP_URL`, `thresholds.dedupe.task.near` →
+//! `STRATA_THRESHOLDS__DEDUPE__TASK__NEAR`). Layering, lowest to highest precedence: built-in
+//! defaults → the env file → the process environment. Loading, value syntax and error rules
+//! are in [`env`]; `deploy/stratad.env.example` lists every variable with its default.
+
+pub mod env;
 
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
@@ -18,9 +18,6 @@ use chrono_tz::Tz;
 use serde::{Deserialize, Serialize};
 
 use crate::error::ConfigError;
-
-/// Prefix of configuration environment variables.
-pub const ENV_PREFIX: &str = "STRATA__";
 
 /// The complete server configuration.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -541,44 +538,19 @@ impl Default for Config {
 }
 
 impl Config {
-    /// Loads `path` (if given) and applies overrides from the process environment.
-    pub fn load(path: Option<&Path>) -> Result<Self, ConfigError> {
-        let text = match path {
-            Some(p) => std::fs::read_to_string(p).map_err(|e| ConfigError::Read {
-                path: p.to_path_buf(),
-                message: e.to_string(),
-            })?,
-            None => String::new(),
-        };
-        Self::from_sources(&text, std::env::vars())
+    /// Loads the configuration: `env_file` (else `.env` in the working directory, if present),
+    /// overridden by the process environment, then validated (see [`env`]).
+    pub fn load(env_file: Option<&Path>) -> Result<Self, ConfigError> {
+        env::load(env_file)
     }
 
-    /// Builds a config from TOML text and explicit `(name, value)` environment pairs. Pairs
-    /// whose name does not start with [`ENV_PREFIX`] are ignored.
-    pub fn from_sources(
-        toml_text: &str,
-        env: impl IntoIterator<Item = (String, String)>,
+    /// Builds a config from the variables of an env file and the process environment
+    /// (`(name, value)` pairs; the environment wins), then validates it (see [`env`]).
+    pub fn from_vars(
+        file: &env::EnvFile,
+        environment: impl IntoIterator<Item = (String, String)>,
     ) -> Result<Self, ConfigError> {
-        let mut merged = toml::Table::try_from(Self::default())
-            .map_err(|e| ConfigError::Invalid(format!("defaults do not serialise: {e}")))?;
-        let file: toml::Table =
-            toml::from_str(toml_text).map_err(|e| ConfigError::Parse(e.to_string()))?;
-        merge_tables(&mut merged, file);
-
-        let mut overrides: Vec<(String, String)> = env
-            .into_iter()
-            .filter(|(k, _)| k.starts_with(ENV_PREFIX))
-            .collect();
-        overrides.sort();
-        for (name, value) in overrides {
-            apply_env_override(&mut merged, &name, &value)?;
-        }
-
-        let config: Self = toml::Value::Table(merged)
-            .try_into()
-            .map_err(|e: toml::de::Error| ConfigError::Parse(e.to_string()))?;
-        config.validate()?;
-        Ok(config)
+        env::from_vars(file, environment)
     }
 
     /// Checks value ranges and cross-field rules.
@@ -593,25 +565,26 @@ impl Config {
                 )))
             }
         };
-        unit("thresholds.relation".into(), self.thresholds.relation)?;
-        unit("thresholds.custody".into(), self.thresholds.custody)?;
+        unit("STRATA_THRESHOLDS__RELATION".into(), self.thresholds.relation)?;
+        unit("STRATA_THRESHOLDS__CUSTODY".into(), self.thresholds.custody)?;
         for (kind, t) in &self.thresholds.dedupe {
-            unit(format!("thresholds.dedupe.{kind}.near"), t.near)?;
+            let kind = kind.to_ascii_uppercase();
+            unit(format!("STRATA_THRESHOLDS__DEDUPE__{kind}__NEAR"), t.near)?;
             if let Some(semantic) = t.semantic {
-                unit(format!("thresholds.dedupe.{kind}.semantic"), semantic)?;
+                unit(format!("STRATA_THRESHOLDS__DEDUPE__{kind}__SEMANTIC"), semantic)?;
             }
         }
         if self.database.max_connections == 0 {
             return Err(ConfigError::Invalid(
-                "database.max_connections must be at least 1".into(),
+                "STRATA_DATABASE__MAX_CONNECTIONS must be at least 1".into(),
             ));
         }
         self.validate_ai()?;
         self.validate_auth()?;
         for (name, url) in [
-            ("database.owner_url", &self.database.owner_url),
-            ("database.app_url", &self.database.app_url),
-            ("database.accounts_url", &self.database.accounts_url),
+            ("STRATA_DATABASE__OWNER_URL", &self.database.owner_url),
+            ("STRATA_DATABASE__APP_URL", &self.database.app_url),
+            ("STRATA_DATABASE__ACCOUNTS_URL", &self.database.accounts_url),
         ] {
             if !url.starts_with("postgres://") && !url.starts_with("postgresql://") {
                 return Err(ConfigError::Invalid(format!(
@@ -634,47 +607,47 @@ impl Config {
         let ai = &self.ai;
         let cli = &ai.claude_cli;
         if cli.command.first().is_none_or(|c| c.trim().is_empty()) {
-            return invalid("ai.claude_cli.command must name a program".into());
+            return invalid("STRATA_AI__CLAUDE_CLI__COMMAND must name a program".into());
         }
         if !cli.scratch_dir.is_absolute() {
-            return invalid("ai.claude_cli.scratch_dir must be an absolute path".into());
+            return invalid("STRATA_AI__CLAUDE_CLI__SCRATCH_DIR must be an absolute path".into());
         }
         positive(
-            "ai.claude_cli.max_concurrency",
+            "STRATA_AI__CLAUDE_CLI__MAX_CONCURRENCY",
             u64::from(cli.max_concurrency),
         )?;
-        positive("ai.claude_cli.timeout_secs", u64::from(cli.timeout_secs))?;
+        positive("STRATA_AI__CLAUDE_CLI__TIMEOUT_SECS", u64::from(cli.timeout_secs))?;
         positive(
-            "ai.claude_cli.usage_limit_pause_secs",
+            "STRATA_AI__CLAUDE_CLI__USAGE_LIMIT_PAUSE_SECS",
             u64::from(cli.usage_limit_pause_secs),
         )?;
         let api = &ai.anthropic_api;
         if api.model.trim().is_empty() {
-            return invalid("ai.anthropic_api.model must not be empty".into());
+            return invalid("STRATA_AI__ANTHROPIC_API__MODEL must not be empty".into());
         }
         if !api.base_url.starts_with("https://") && !api.base_url.starts_with("http://")
             || api.base_url.ends_with('/')
         {
             return invalid(
-                "ai.anthropic_api.base_url must be an http(s) URL without a trailing slash".into(),
+                "STRATA_AI__ANTHROPIC_API__BASE_URL must be an http(s) URL without a trailing slash".into(),
             );
         }
         if let Some(e) = &api.effort
             && !ANTHROPIC_EFFORTS.contains(&e.as_str())
         {
             return invalid(format!(
-                "ai.anthropic_api.effort must be one of {}, got `{e}`",
+                "STRATA_AI__ANTHROPIC_API__EFFORT must be one of {}, got `{e}`",
                 ANTHROPIC_EFFORTS.join(", ")
             ));
         }
         if api.max_retries > 10 {
-            return invalid("ai.anthropic_api.max_retries must be at most 10".into());
+            return invalid("STRATA_AI__ANTHROPIC_API__MAX_RETRIES must be at most 10".into());
         }
-        positive("ai.anthropic_api.timeout_secs", u64::from(api.timeout_secs))?;
+        positive("STRATA_AI__ANTHROPIC_API__TIMEOUT_SECS", u64::from(api.timeout_secs))?;
         if api.api_key_file.is_none() {
             if ai.default_provider == AiProviderKind::AnthropicApi {
                 return invalid(
-                    "ai.anthropic_api.api_key_file is required: ai.default_provider is anthropic_api"
+                    "STRATA_AI__ANTHROPIC_API__API_KEY_FILE is required: STRATA_AI__DEFAULT_PROVIDER is anthropic_api"
                         .into(),
                 );
             }
@@ -684,32 +657,32 @@ impl Config {
                 .find(|(_, k)| **k == AiProviderKind::AnthropicApi)
             {
                 return invalid(format!(
-                    "ai.anthropic_api.api_key_file is required: user `{user}` is routed to anthropic_api"
+                    "STRATA_AI__ANTHROPIC_API__API_KEY_FILE is required: user `{user}` is routed to anthropic_api"
                 ));
             }
         }
         if ai.user_providers.keys().any(|u| u.trim().is_empty()) {
-            return invalid("ai.user_providers keys must be usernames".into());
+            return invalid("STRATA_AI__USER_PROVIDERS names an empty username".into());
         }
         let emb = &ai.embedding;
         if emb.model_id.trim().is_empty() {
-            return invalid("ai.embedding.model_id must not be empty".into());
+            return invalid("STRATA_AI__EMBEDDING__MODEL_ID must not be empty".into());
         }
-        positive("ai.embedding.dims", u64::from(emb.dims))?;
-        positive("ai.embedding.max_tokens", u64::from(emb.max_tokens))?;
+        positive("STRATA_AI__EMBEDDING__DIMS", u64::from(emb.dims))?;
+        positive("STRATA_AI__EMBEDDING__MAX_TOKENS", u64::from(emb.max_tokens))?;
         if emb.max_batch_tokens < emb.max_tokens {
             return invalid(
-                "ai.embedding.max_batch_tokens must be at least ai.embedding.max_tokens".into(),
+                "STRATA_AI__EMBEDDING__MAX_BATCH_TOKENS must be at least STRATA_AI__EMBEDDING__MAX_TOKENS".into(),
             );
         }
         if !(0..=19).contains(&emb.nice) {
             return invalid(format!(
-                "ai.embedding.nice must be within 0..=19, got {}",
+                "STRATA_AI__EMBEDDING__NICE must be within 0..=19, got {}",
                 emb.nice
             ));
         }
         positive(
-            "ai.embedding.idle_unload_secs",
+            "STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS",
             u64::from(emb.idle_unload_secs),
         )?;
         self.budget_tz()?;
@@ -726,24 +699,24 @@ impl Config {
             }
         };
         let jobs = &self.jobs;
-        positive("jobs.max_concurrency", u64::from(jobs.max_concurrency))?;
+        positive("STRATA_JOBS__MAX_CONCURRENCY", u64::from(jobs.max_concurrency))?;
         positive(
-            "jobs.poll_interval_secs",
+            "STRATA_JOBS__POLL_INTERVAL_SECS",
             u64::from(jobs.poll_interval_secs),
         )?;
-        positive("jobs.backoff_base_secs", u64::from(jobs.backoff_base_secs))?;
+        positive("STRATA_JOBS__BACKOFF_BASE_SECS", u64::from(jobs.backoff_base_secs))?;
         if jobs.backoff_max_secs < jobs.backoff_base_secs {
-            return invalid("jobs.backoff_max_secs must be at least jobs.backoff_base_secs".into());
+            return invalid("STRATA_JOBS__BACKOFF_MAX_SECS must be at least STRATA_JOBS__BACKOFF_BASE_SECS".into());
         }
         if jobs.nightly_hour > 23 {
             return invalid(format!(
-                "jobs.nightly_hour must be within 0..=23, got {}",
+                "STRATA_JOBS__NIGHTLY_HOUR must be within 0..=23, got {}",
                 jobs.nightly_hour
             ));
         }
         if jobs.digest_weekday.parse::<chrono::Weekday>().is_err() {
             return invalid(format!(
-                "jobs.digest_weekday must be a weekday (mon … sun), got {:?}",
+                "STRATA_JOBS__DIGEST_WEEKDAY must be a weekday (mon … sun), got {:?}",
                 jobs.digest_weekday
             ));
         }
@@ -759,38 +732,38 @@ impl Config {
                 Ok(())
             }
         };
-        positive("auth.access_token_ttl_secs", auth.access_token_ttl_secs)?;
-        positive("auth.session_ttl_days", auth.session_ttl_days)?;
-        positive("auth.revocation_reload_secs", auth.revocation_reload_secs)?;
-        positive("auth.min_password_length", auth.min_password_length)?;
+        positive("STRATA_AUTH__ACCESS_TOKEN_TTL_SECS", auth.access_token_ttl_secs)?;
+        positive("STRATA_AUTH__SESSION_TTL_DAYS", auth.session_ttl_days)?;
+        positive("STRATA_AUTH__REVOCATION_RELOAD_SECS", auth.revocation_reload_secs)?;
+        positive("STRATA_AUTH__MIN_PASSWORD_LENGTH", auth.min_password_length)?;
         positive(
-            "accounts.purge_interval_secs",
+            "STRATA_ACCOUNTS__PURGE_INTERVAL_SECS",
             self.accounts.purge_interval_secs,
         )?;
-        positive("auth.argon2.iterations", auth.argon2.iterations)?;
-        positive("auth.argon2.parallelism", auth.argon2.parallelism)?;
+        positive("STRATA_AUTH__ARGON2__ITERATIONS", auth.argon2.iterations)?;
+        positive("STRATA_AUTH__ARGON2__PARALLELISM", auth.argon2.parallelism)?;
         if auth.argon2.memory_kib < 8 * auth.argon2.parallelism {
             return Err(ConfigError::Invalid(
-                "auth.argon2.memory_kib must be at least 8 × parallelism".into(),
+                "STRATA_AUTH__ARGON2__MEMORY_KIB must be at least 8 × STRATA_AUTH__ARGON2__PARALLELISM".into(),
             ));
         }
         for (name, limit) in [
-            ("login_per_ip", auth.rate_limits.login_per_ip),
-            ("login_per_username", auth.rate_limits.login_per_username),
-            ("signup_per_ip", auth.rate_limits.signup_per_ip),
-            ("signup_global", auth.rate_limits.signup_global),
-            ("capture_per_user", auth.rate_limits.capture_per_user),
-            ("ask_per_user", auth.rate_limits.ask_per_user),
+            ("LOGIN_PER_IP", auth.rate_limits.login_per_ip),
+            ("LOGIN_PER_USERNAME", auth.rate_limits.login_per_username),
+            ("SIGNUP_PER_IP", auth.rate_limits.signup_per_ip),
+            ("SIGNUP_GLOBAL", auth.rate_limits.signup_global),
+            ("CAPTURE_PER_USER", auth.rate_limits.capture_per_user),
+            ("ASK_PER_USER", auth.rate_limits.ask_per_user),
         ] {
-            positive(&format!("auth.rate_limits.{name}.max"), limit.max)?;
+            positive(&format!("STRATA_AUTH__RATE_LIMITS__{name}__MAX"), limit.max)?;
             positive(
-                &format!("auth.rate_limits.{name}.window_secs"),
+                &format!("STRATA_AUTH__RATE_LIMITS__{name}__WINDOW_SECS"),
                 limit.window_secs,
             )?;
         }
-        if auth.issuer.is_empty() || auth.audience.is_empty() {
+        if auth.issuer.trim().is_empty() || auth.audience.trim().is_empty() {
             return Err(ConfigError::Invalid(
-                "auth.issuer and auth.audience must not be empty".into(),
+                "STRATA_AUTH__ISSUER and STRATA_AUTH__AUDIENCE must not be empty".into(),
             ));
         }
         Ok(())
@@ -800,7 +773,7 @@ impl Config {
     pub fn default_tz(&self) -> Result<Tz, ConfigError> {
         Tz::from_str(&self.default_timezone).map_err(|_| {
             ConfigError::Invalid(format!(
-                "default_timezone `{}` is not an IANA timezone",
+                "STRATA_DEFAULT_TIMEZONE `{}` is not an IANA timezone",
                 self.default_timezone
             ))
         })
@@ -812,7 +785,7 @@ impl Config {
         match &self.budgets.timezone {
             None => self.default_tz(),
             Some(name) => Tz::from_str(name).map_err(|_| {
-                ConfigError::Invalid(format!("budgets.timezone `{name}` is not an IANA timezone"))
+                ConfigError::Invalid(format!("STRATA_BUDGETS__TIMEZONE `{name}` is not an IANA timezone"))
             }),
         }
     }
@@ -842,107 +815,25 @@ impl Config {
     }
 }
 
-fn merge_tables(base: &mut toml::Table, overlay: toml::Table) {
-    for (key, value) in overlay {
-        match (base.get_mut(&key), value) {
-            (Some(toml::Value::Table(existing)), toml::Value::Table(incoming)) => {
-                merge_tables(existing, incoming);
-            }
-            (_, value) => {
-                base.insert(key, value);
-            }
-        }
-    }
-}
-
-fn apply_env_override(root: &mut toml::Table, name: &str, raw: &str) -> Result<(), ConfigError> {
-    let path: Vec<String> = name[ENV_PREFIX.len()..]
-        .split("__")
-        .map(str::to_ascii_lowercase)
-        .collect();
-    if path.iter().any(String::is_empty) {
-        return Err(ConfigError::Env {
-            name: name.to_owned(),
-            message: "empty path segment".into(),
-        });
-    }
-    let (leaf, parents) = path.split_last().ok_or_else(|| ConfigError::Env {
-        name: name.to_owned(),
-        message: "no key".into(),
-    })?;
-    let mut table = root;
-    for segment in parents {
-        let entry = table
-            .entry(segment.clone())
-            .or_insert_with(|| toml::Value::Table(toml::Table::new()));
-        table = match entry {
-            toml::Value::Table(t) => t,
-            _ => {
-                return Err(ConfigError::Env {
-                    name: name.to_owned(),
-                    message: format!("`{segment}` is not a section"),
-                });
-            }
-        };
-    }
-    let bad = |what: &str| ConfigError::Env {
-        name: name.to_owned(),
-        message: format!("expected {what}"),
-    };
-    let value = match table.get(leaf.as_str()) {
-        Some(toml::Value::String(_)) => toml::Value::String(raw.to_owned()),
-        Some(toml::Value::Integer(_)) => {
-            toml::Value::Integer(raw.trim().parse().map_err(|_| bad("an integer"))?)
-        }
-        Some(toml::Value::Float(_)) => {
-            toml::Value::Float(raw.trim().parse().map_err(|_| bad("a number"))?)
-        }
-        Some(toml::Value::Boolean(_)) => {
-            toml::Value::Boolean(raw.trim().parse().map_err(|_| bad("true or false"))?)
-        }
-        Some(toml::Value::Array(_)) => {
-            let parsed: toml::Table = toml::from_str(&format!("v = {raw}"))
-                .map_err(|_| bad("a TOML array, e.g. [\"a\", \"b\"]"))?;
-            match parsed.get("v") {
-                Some(v @ toml::Value::Array(_)) => v.clone(),
-                _ => return Err(bad("a TOML array, e.g. [\"a\", \"b\"]")),
-            }
-        }
-        Some(toml::Value::Table(_)) => return Err(bad("a section path, not a value")),
-        Some(_) => return Err(bad("a scalar key")),
-        None => infer_scalar(raw),
-    };
-    table.insert(leaf.clone(), value);
-    Ok(())
-}
-
-fn infer_scalar(raw: &str) -> toml::Value {
-    if let Ok(b) = raw.parse::<bool>() {
-        toml::Value::Boolean(b)
-    } else if let Ok(i) = raw.parse::<i64>() {
-        toml::Value::Integer(i)
-    } else if let Ok(f) = raw.parse::<f64>() {
-        toml::Value::Float(f)
-    } else {
-        toml::Value::String(raw.to_owned())
-    }
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use pretty_assertions::assert_eq;
 
-    fn env(pairs: &[(&str, &str)]) -> Vec<(String, String)> {
-        pairs
-            .iter()
-            .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
-            .collect()
+    /// A config from environment pairs only (no file).
+    fn from(pairs: &[(&str, &str)]) -> Result<Config, ConfigError> {
+        Config::from_vars(
+            &env::EnvFile::none(),
+            pairs
+                .iter()
+                .map(|(k, v)| ((*k).to_owned(), (*v).to_owned())),
+        )
     }
 
     #[test]
-    fn empty_sources_yield_defaults() {
-        let config = Config::from_sources("", env(&[])).expect("defaults are valid");
+    fn no_variables_yield_the_defaults() {
+        let config = from(&[]).expect("defaults are valid");
         assert_eq!(config, Config::default());
         assert_eq!(config.deletion_grace_period(), chrono::Duration::days(14));
         assert_eq!(config.default_tz().expect("UTC"), Tz::UTC);
@@ -960,6 +851,7 @@ mod tests {
                 semantic: None
             })
         );
+        assert_eq!(config.dedupe_threshold("unknown"), None);
     }
 
     /// The default thresholds are the calibrated `domain` defaults, for every kind (near, and
@@ -991,103 +883,40 @@ mod tests {
     }
 
     #[test]
-    fn file_values_override_defaults_and_keep_the_rest() {
-        let text = r#"
-            data_root = "/data/strata"
-            default_timezone = "Africa/Cairo"
-            [database]
-            app_url = "postgres://strata_app:pw@db/strata"
-            [ai]
-            default_provider = "disabled"
-            user_providers = { owner = "claude_cli" }
-            [thresholds.dedupe.task]
-            near = 0.5
-            semantic = 0.8
-            [push]
-            apns_key_id = "ABC123"
-        "#;
-        let config = Config::from_sources(text, env(&[])).expect("valid");
-        let mut expected = Config::default();
-        expected.data_root = PathBuf::from("/data/strata");
-        expected.default_timezone = "Africa/Cairo".into();
-        expected.database.app_url = "postgres://strata_app:pw@db/strata".into();
-        expected.ai.default_provider = AiProviderKind::Disabled;
-        expected
-            .ai
-            .user_providers
-            .insert("owner".into(), AiProviderKind::ClaudeCli);
-        expected.thresholds.dedupe.insert(
-            "task".into(),
-            DedupeThreshold {
-                near: 0.5,
-                semantic: Some(0.8),
-            },
-        );
-        expected.push.apns_key_id = Some("ABC123".into());
-        assert_eq!(config, expected);
+    fn auth_settings_have_documented_defaults() {
+        let config = Config::default();
         assert_eq!(
-            config.default_tz().expect("valid tz"),
-            chrono_tz::Africa::Cairo
+            config.auth.signing_key_file,
+            PathBuf::from("/etc/strata/token-signing-key.pem")
         );
-        assert_eq!(config.ai_provider_for("owner"), AiProviderKind::ClaudeCli);
-        assert_eq!(config.ai_provider_for("guest"), AiProviderKind::Disabled);
-    }
-
-    #[test]
-    fn env_overrides_win_and_are_typed_by_the_replaced_key() {
-        let config = Config::from_sources(
-            "[accounts]\ndeletion_grace_days = 30\n",
-            env(&[
-                ("STRATA__ACCOUNTS__DELETION_GRACE_DAYS", "7"),
-                ("STRATA__DATABASE__MAX_CONNECTIONS", "3"),
-                ("STRATA__THRESHOLDS__RELATION", "0.75"),
-                ("STRATA__BIND", "0.0.0.0:9000"),
-                ("STRATA__THRESHOLDS__DEDUPE__NOTE__NEAR", "0.65"),
-                ("UNRELATED", "ignored"),
-                ("STRATA_TEST_DATABASE_URL", "ignored too"),
-            ]),
-        )
-        .expect("valid");
-        assert_eq!(config.accounts.deletion_grace_days, 7);
-        assert_eq!(config.database.max_connections, 3);
-        assert_eq!(config.thresholds.relation, 0.75);
+        assert_eq!(config.auth.access_token_ttl_secs, 900);
         assert_eq!(
-            config.bind,
-            "0.0.0.0:9000".parse::<SocketAddr>().expect("addr")
-        );
-        assert_eq!(config.thresholds.dedupe["note"].near, 0.65);
-        assert_eq!(config.thresholds.dedupe["note"].semantic, Some(0.9));
-    }
-
-    #[test]
-    fn auth_settings_have_documented_defaults_and_overrides() {
-        let config = Config::from_sources(
-            "[auth]\nsigning_key_file = \"/k.pem\"\n[auth.rate_limits.login_per_ip]\nmax = 3\nwindow_secs = 60\n",
-            env(&[("STRATA__AUTH__ACCESS_TOKEN_TTL_SECS", "600")]),
-        )
-        .expect("valid");
-        assert_eq!(config.auth.signing_key_file, PathBuf::from("/k.pem"));
-        assert_eq!(config.auth.access_token_ttl_secs, 600);
-        assert_eq!(
-            config.auth.rate_limits.login_per_ip,
-            RateLimit {
-                max: 3,
-                window_secs: 60
-            }
-        );
-        assert_eq!(config.auth.rate_limits.login_per_username.max, 10);
-        assert_eq!(
-            config.auth.rate_limits.capture_per_user,
-            RateLimit {
-                max: 60,
-                window_secs: 60
-            }
-        );
-        assert_eq!(
-            config.auth.rate_limits.ask_per_user,
-            RateLimit {
-                max: 20,
-                window_secs: 60
+            config.auth.rate_limits,
+            RateLimits {
+                login_per_ip: RateLimit {
+                    max: 30,
+                    window_secs: 900
+                },
+                login_per_username: RateLimit {
+                    max: 10,
+                    window_secs: 900
+                },
+                signup_per_ip: RateLimit {
+                    max: 5,
+                    window_secs: 3600
+                },
+                signup_global: RateLimit {
+                    max: 30,
+                    window_secs: 3600
+                },
+                capture_per_user: RateLimit {
+                    max: 60,
+                    window_secs: 60
+                },
+                ask_per_user: RateLimit {
+                    max: 20,
+                    window_secs: 60
+                },
             }
         );
         assert_eq!(
@@ -1101,83 +930,9 @@ mod tests {
         assert_eq!(config.accounts.purge_interval_secs, 300);
     }
 
-    /// Keys that are unset by default have no type to guide parsing, so a numeric-looking value
-    /// becomes an integer and fails to deserialise into `Option<String>`; such values belong in
-    /// the TOML file (quoted). The failure is loud, never a silent misconfiguration.
-    #[test]
-    fn numeric_env_value_for_unset_string_key_is_reported() {
-        let err = Config::from_sources("", env(&[("STRATA__PUSH__APNS_TEAM_ID", "1234567890")]))
-            .expect_err("integer into Option<String>");
-        assert!(matches!(err, ConfigError::Parse(_)), "{err:?}");
-        let ok = Config::from_sources("", env(&[("STRATA__PUSH__APNS_TEAM_ID", "TEAM42")]))
-            .expect("string");
-        assert_eq!(ok.push.apns_team_id.as_deref(), Some("TEAM42"));
-    }
-
-    #[test]
-    fn unknown_keys_and_bad_values_are_errors() {
-        assert!(matches!(
-            Config::from_sources("databse = 1", env(&[])),
-            Err(ConfigError::Parse(_))
-        ));
-        assert!(matches!(
-            Config::from_sources("", env(&[("STRATA__DATABASE__TYPO", "x")])),
-            Err(ConfigError::Parse(_))
-        ));
-        assert_eq!(
-            Config::from_sources("", env(&[("STRATA__DATABASE__MAX_CONNECTIONS", "many")])),
-            Err(ConfigError::Env {
-                name: "STRATA__DATABASE__MAX_CONNECTIONS".into(),
-                message: "expected an integer".into()
-            })
-        );
-        assert_eq!(
-            Config::from_sources("default_timezone = \"Mars/Base\"", env(&[])),
-            Err(ConfigError::Invalid(
-                "default_timezone `Mars/Base` is not an IANA timezone".into()
-            ))
-        );
-        assert_eq!(
-            Config::from_sources("[thresholds]\ncustody = 1.5", env(&[])),
-            Err(ConfigError::Invalid(
-                "thresholds.custody must be within 0..=1, got 1.5".into()
-            ))
-        );
-        assert_eq!(
-            Config::from_sources("[auth]\naccess_token_ttl_secs = 0", env(&[])),
-            Err(ConfigError::Invalid(
-                "auth.access_token_ttl_secs must be at least 1".into()
-            ))
-        );
-        assert_eq!(
-            Config::from_sources("[auth.rate_limits.signup_global]\nmax = 0", env(&[])),
-            Err(ConfigError::Invalid(
-                "auth.rate_limits.signup_global.max must be at least 1".into()
-            ))
-        );
-        assert_eq!(
-            Config::from_sources("[auth.argon2]\nmemory_kib = 7", env(&[])),
-            Err(ConfigError::Invalid(
-                "auth.argon2.memory_kib must be at least 8 × parallelism".into()
-            ))
-        );
-        assert_eq!(
-            Config::from_sources("[auth]\nissuer = \"\"", env(&[])),
-            Err(ConfigError::Invalid(
-                "auth.issuer and auth.audience must not be empty".into()
-            ))
-        );
-        assert_eq!(
-            Config::from_sources("[database]\napp_url = \"mysql://x\"", env(&[])),
-            Err(ConfigError::Invalid(
-                "database.app_url must be a postgres:// URL".into()
-            ))
-        );
-    }
-
     #[test]
     fn ai_settings_have_documented_defaults() {
-        let config = Config::from_sources("", env(&[])).expect("defaults");
+        let config = Config::default();
         let ai = &config.ai;
         assert_eq!(ai.default_provider, AiProviderKind::ClaudeCli);
         assert_eq!(ai.user_providers, BTreeMap::new());
@@ -1206,31 +961,23 @@ mod tests {
                 output_micros_per_mtok: 20_000_000,
             }
         );
-        assert_eq!(
-            (
-                ai.embedding.model_dir.as_ref(),
-                ai.embedding.onnxruntime_lib.as_ref(),
-                ai.embedding.pooling,
-                ai.embedding.max_tokens,
-                ai.embedding.dims,
-                ai.embedding.nice
-            ),
-            (None, None, EmbeddingPooling::Cls, 2048, 384, 19)
-        );
         // fp32 weights by default (owner decision 2026-09-27, PLAN §9.1b), unloaded after 5 min.
         assert_eq!(
-            (
-                ai.embedding.model_file.to_str(),
-                ai.embedding.model_id.as_str(),
-                ai.embedding.pad_batches,
-                ai.embedding.idle_unload_secs
-            ),
-            (
-                Some("onnx/model.onnx"),
-                "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model",
-                true,
-                300
-            )
+            ai.embedding,
+            EmbeddingSettings {
+                model_dir: None,
+                onnxruntime_lib: None,
+                model_file: PathBuf::from("onnx/model.onnx"),
+                tokenizer_file: PathBuf::from("tokenizer.json"),
+                model_id: "ibm-granite/granite-embedding-97m-multilingual-r2@onnx/model".into(),
+                dims: 384,
+                pooling: EmbeddingPooling::Cls,
+                max_tokens: 2048,
+                max_batch_tokens: 8192,
+                pad_batches: true,
+                nice: 19,
+                idle_unload_secs: 300,
+            }
         );
         assert_eq!(
             config.jobs,
@@ -1245,6 +992,7 @@ mod tests {
                 shutdown_grace_secs: 30,
             }
         );
+        assert_eq!(config.jobs.digest_day(), chrono::Weekday::Mon);
         assert_eq!(
             config.budgets,
             Budgets {
@@ -1263,189 +1011,246 @@ mod tests {
     }
 
     #[test]
-    fn ai_settings_from_file_and_environment() {
-        let text = r#"
-            default_timezone = "Africa/Cairo"
-            [ai]
-            user_providers = { guest = "anthropic_api", kid = "disabled" }
-            [ai.claude_cli]
-            command = ["sudo", "-n", "-u", "strata-ai", "/usr/local/lib/strata/claude-ai"]
-            model = "opus"
-            [ai.anthropic_api]
-            api_key_file = "/etc/strata/anthropic.key"
-            effort = "high"
-            [ai.embedding]
-            model_dir = "/opt/models/granite"
-            onnxruntime_lib = "/opt/onnxruntime/lib/libonnxruntime.so.1.30.0"
-            pooling = "mean"
-            [budgets]
-            timezone = "Europe/Berlin"
-            global_daily_cost_micros = 5000000
-        "#;
-        let config = Config::from_sources(
-            text,
-            env(&[
-                ("STRATA__AI__CLAUDE_CLI__COMMAND", r#"["/usr/bin/claude"]"#),
-                ("STRATA__AI__CLAUDE_CLI__TIMEOUT_SECS", "120"),
-                ("STRATA__AI__CLAUDE_CLI__SCRATCH_DIR", "/tmp/scratch"),
-                ("STRATA__AI__ANTHROPIC_API__MAX_RETRIES", "5"),
-                ("STRATA__AI__ANTHROPIC_API__MODEL", "claude-opus-5"),
-                ("STRATA__AI__USER_PROVIDERS__OWNER", "claude_cli"),
-                ("STRATA__AI__EMBEDDING__MAX_TOKENS", "1024"),
-                ("STRATA__BUDGETS__PER_USER_DAILY_COST_MICROS", "250000"),
-            ]),
-        )
+    fn provider_routing_and_timezones_follow_the_variables() {
+        let config = from(&[
+            ("STRATA_DEFAULT_TIMEZONE", "Africa/Cairo"),
+            ("STRATA_BUDGETS__TIMEZONE", "Europe/Berlin"),
+            ("STRATA_AI__DEFAULT_PROVIDER", "disabled"),
+            (
+                "STRATA_AI__USER_PROVIDERS",
+                "guest=anthropic_api, owner=claude_cli",
+            ),
+            (
+                "STRATA_AI__ANTHROPIC_API__API_KEY_FILE",
+                "/etc/strata/anthropic.key",
+            ),
+            ("STRATA_JOBS__DIGEST_WEEKDAY", "fri"),
+        ])
         .expect("valid");
-        let mut expected = Config::default();
-        expected.default_timezone = "Africa/Cairo".into();
-        expected.ai.user_providers = [
-            ("guest".to_owned(), AiProviderKind::AnthropicApi),
-            ("kid".to_owned(), AiProviderKind::Disabled),
-            ("owner".to_owned(), AiProviderKind::ClaudeCli),
-        ]
-        .into_iter()
-        .collect();
-        expected.ai.claude_cli.command = vec!["/usr/bin/claude".into()];
-        expected.ai.claude_cli.model = Some("opus".into());
-        expected.ai.claude_cli.timeout_secs = 120;
-        expected.ai.claude_cli.scratch_dir = PathBuf::from("/tmp/scratch");
-        expected.ai.anthropic_api.api_key_file = Some("/etc/strata/anthropic.key".into());
-        expected.ai.anthropic_api.effort = Some("high".into());
-        expected.ai.anthropic_api.max_retries = 5;
-        expected.ai.anthropic_api.model = "claude-opus-5".into();
-        expected.ai.embedding.model_dir = Some("/opt/models/granite".into());
-        expected.ai.embedding.onnxruntime_lib =
-            Some("/opt/onnxruntime/lib/libonnxruntime.so.1.30.0".into());
-        expected.ai.embedding.pooling = EmbeddingPooling::Mean;
-        expected.ai.embedding.max_tokens = 1024;
-        expected.budgets.timezone = Some("Europe/Berlin".into());
-        expected.budgets.global_daily_cost_micros = 5_000_000;
-        expected.budgets.per_user_daily_cost_micros = 250_000;
-        assert_eq!(config, expected);
+        assert_eq!(
+            config.default_tz().expect("tz"),
+            chrono_tz::Africa::Cairo
+        );
         assert_eq!(config.budget_tz().expect("tz"), chrono_tz::Europe::Berlin);
         assert_eq!(
             config.ai_provider_for("guest"),
             AiProviderKind::AnthropicApi
         );
-        assert_eq!(config.ai_provider_for("kid"), AiProviderKind::Disabled);
         assert_eq!(config.ai_provider_for("owner"), AiProviderKind::ClaudeCli);
-        assert_eq!(config.ai_provider_for("other"), AiProviderKind::ClaudeCli);
+        assert_eq!(config.ai_provider_for("other"), AiProviderKind::Disabled);
         assert!(config.ai_provider_in_use(AiProviderKind::AnthropicApi));
+        assert_eq!(config.jobs.digest_day(), chrono::Weekday::Fri);
     }
 
+    /// Every range and cross-field rule, with its exact message naming the variables.
     #[test]
     #[allow(clippy::too_many_lines)] // one assertion per rule
-    fn ai_settings_are_validated() {
-        let invalid = |text: &str, message: &str| {
+    fn values_are_validated_with_messages_naming_the_variables() {
+        let invalid = |pairs: &[(&str, &str)], message: &str| {
             assert_eq!(
-                Config::from_sources(text, env(&[])),
+                from(pairs),
                 Err(ConfigError::Invalid(message.into())),
-                "{text}"
+                "{pairs:?}"
             );
         };
         invalid(
-            "[ai.claude_cli]\ncommand = []",
-            "ai.claude_cli.command must name a program",
+            &[("STRATA_DEFAULT_TIMEZONE", "Mars/Base")],
+            "STRATA_DEFAULT_TIMEZONE `Mars/Base` is not an IANA timezone",
         );
         invalid(
-            "[ai.claude_cli]\ncommand = [\" \"]",
-            "ai.claude_cli.command must name a program",
+            &[("STRATA_BUDGETS__TIMEZONE", "Mars/Base")],
+            "STRATA_BUDGETS__TIMEZONE `Mars/Base` is not an IANA timezone",
         );
         invalid(
-            "[ai.claude_cli]\nscratch_dir = \"scratch\"",
-            "ai.claude_cli.scratch_dir must be an absolute path",
+            &[("STRATA_THRESHOLDS__RELATION", "1.01")],
+            "STRATA_THRESHOLDS__RELATION must be within 0..=1, got 1.01",
         );
         invalid(
-            "[ai.claude_cli]\nmax_concurrency = 0",
-            "ai.claude_cli.max_concurrency must be at least 1",
+            &[("STRATA_THRESHOLDS__CUSTODY", "1.5")],
+            "STRATA_THRESHOLDS__CUSTODY must be within 0..=1, got 1.5",
         );
         invalid(
-            "[ai.claude_cli]\ntimeout_secs = 0",
-            "ai.claude_cli.timeout_secs must be at least 1",
+            &[("STRATA_THRESHOLDS__DEDUPE__NOTE__NEAR", "-0.1")],
+            "STRATA_THRESHOLDS__DEDUPE__NOTE__NEAR must be within 0..=1, got -0.1",
         );
         invalid(
-            "[ai.anthropic_api]\nmodel = \"\"",
-            "ai.anthropic_api.model must not be empty",
+            &[("STRATA_THRESHOLDS__DEDUPE__TASK__SEMANTIC", "2")],
+            "STRATA_THRESHOLDS__DEDUPE__TASK__SEMANTIC must be within 0..=1, got 2",
         );
         invalid(
-            "[ai.anthropic_api]\nbase_url = \"https://api.anthropic.com/\"",
-            "ai.anthropic_api.base_url must be an http(s) URL without a trailing slash",
+            &[("STRATA_DATABASE__MAX_CONNECTIONS", "0")],
+            "STRATA_DATABASE__MAX_CONNECTIONS must be at least 1",
         );
         invalid(
-            "[ai.anthropic_api]\neffort = \"extreme\"",
-            "ai.anthropic_api.effort must be one of low, medium, high, xhigh, max, got `extreme`",
+            &[("STRATA_DATABASE__APP_URL", "mysql://app:hunter2@db/strata")],
+            "STRATA_DATABASE__APP_URL must be a postgres:// URL",
         );
         invalid(
-            "[ai.anthropic_api]\nmax_retries = 11",
-            "ai.anthropic_api.max_retries must be at most 10",
+            &[("STRATA_DATABASE__OWNER_URL", "localhost")],
+            "STRATA_DATABASE__OWNER_URL must be a postgres:// URL",
         );
         invalid(
-            "[ai]\ndefault_provider = \"anthropic_api\"",
-            "ai.anthropic_api.api_key_file is required: ai.default_provider is anthropic_api",
+            &[("STRATA_DATABASE__ACCOUNTS_URL", "x")],
+            "STRATA_DATABASE__ACCOUNTS_URL must be a postgres:// URL",
         );
         invalid(
-            "[ai.user_providers]\nguest = \"anthropic_api\"",
-            "ai.anthropic_api.api_key_file is required: user `guest` is routed to anthropic_api",
+            &[("STRATA_AI__CLAUDE_CLI__COMMAND", "   ")],
+            "STRATA_AI__CLAUDE_CLI__COMMAND must name a program",
         );
         invalid(
-            "[ai.embedding]\nmax_tokens = 9000",
-            "ai.embedding.max_batch_tokens must be at least ai.embedding.max_tokens",
+            &[("STRATA_AI__CLAUDE_CLI__SCRATCH_DIR", "scratch")],
+            "STRATA_AI__CLAUDE_CLI__SCRATCH_DIR must be an absolute path",
         );
         invalid(
-            "[ai.embedding]\nnice = 20",
-            "ai.embedding.nice must be within 0..=19, got 20",
+            &[("STRATA_AI__CLAUDE_CLI__MAX_CONCURRENCY", "0")],
+            "STRATA_AI__CLAUDE_CLI__MAX_CONCURRENCY must be at least 1",
         );
         invalid(
-            "[ai.embedding]\nidle_unload_secs = 0",
-            "ai.embedding.idle_unload_secs must be at least 1",
+            &[("STRATA_AI__CLAUDE_CLI__TIMEOUT_SECS", "0")],
+            "STRATA_AI__CLAUDE_CLI__TIMEOUT_SECS must be at least 1",
         );
         invalid(
-            "[jobs]\nnightly_hour = 24",
-            "jobs.nightly_hour must be within 0..=23, got 24",
+            &[("STRATA_AI__CLAUDE_CLI__USAGE_LIMIT_PAUSE_SECS", "0")],
+            "STRATA_AI__CLAUDE_CLI__USAGE_LIMIT_PAUSE_SECS must be at least 1",
         );
         invalid(
-            "[jobs]\nbackoff_base_secs = 60\nbackoff_max_secs = 30",
-            "jobs.backoff_max_secs must be at least jobs.backoff_base_secs",
+            &[("STRATA_AI__ANTHROPIC_API__MODEL", " ")],
+            "STRATA_AI__ANTHROPIC_API__MODEL must not be empty",
         );
         invalid(
-            "[ai.embedding]\ndims = 0",
-            "ai.embedding.dims must be at least 1",
+            &[(
+                "STRATA_AI__ANTHROPIC_API__BASE_URL",
+                "https://api.anthropic.com/",
+            )],
+            "STRATA_AI__ANTHROPIC_API__BASE_URL must be an http(s) URL without a trailing slash",
         );
         invalid(
-            "[budgets]\ntimezone = \"Mars/Base\"",
-            "budgets.timezone `Mars/Base` is not an IANA timezone",
+            &[("STRATA_AI__ANTHROPIC_API__BASE_URL", "ftp://x")],
+            "STRATA_AI__ANTHROPIC_API__BASE_URL must be an http(s) URL without a trailing slash",
         );
-        // Unknown keys and wrong types are rejected, in the file and the environment.
-        assert!(matches!(
-            Config::from_sources("[ai]\nclaude_bin = \"/usr/bin/claude\"", env(&[])),
-            Err(ConfigError::Parse(_))
-        ));
-        assert!(matches!(
-            Config::from_sources("[ai.embedding]\npooling = \"max\"", env(&[])),
-            Err(ConfigError::Parse(_))
-        ));
-        assert!(matches!(
-            Config::from_sources("", env(&[("STRATA__AI__CLAUDE_CLI__TYPO", "1")])),
-            Err(ConfigError::Parse(_))
-        ));
-        assert!(matches!(
-            Config::from_sources("", env(&[("STRATA__AI__USER_PROVIDERS__BOB", "gpt")])),
-            Err(ConfigError::Parse(_))
-        ));
-        for raw in ["/usr/bin/claude", "[1, 2", "\"x\""] {
-            assert_eq!(
-                Config::from_sources("", env(&[("STRATA__AI__CLAUDE_CLI__COMMAND", raw)])),
-                Err(ConfigError::Env {
-                    name: "STRATA__AI__CLAUDE_CLI__COMMAND".into(),
-                    message: "expected a TOML array, e.g. [\"a\", \"b\"]".into()
-                }),
-                "{raw}"
-            );
-        }
-        let with_key = Config::from_sources(
-            "[ai]\ndefault_provider = \"anthropic_api\"\n[ai.anthropic_api]\napi_key_file = \"/k\"",
-            env(&[]),
-        )
+        invalid(
+            &[("STRATA_AI__ANTHROPIC_API__EFFORT", "extreme")],
+            "STRATA_AI__ANTHROPIC_API__EFFORT must be one of low, medium, high, xhigh, max, got `extreme`",
+        );
+        invalid(
+            &[("STRATA_AI__ANTHROPIC_API__MAX_RETRIES", "11")],
+            "STRATA_AI__ANTHROPIC_API__MAX_RETRIES must be at most 10",
+        );
+        invalid(
+            &[("STRATA_AI__ANTHROPIC_API__TIMEOUT_SECS", "0")],
+            "STRATA_AI__ANTHROPIC_API__TIMEOUT_SECS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AI__DEFAULT_PROVIDER", "anthropic_api")],
+            "STRATA_AI__ANTHROPIC_API__API_KEY_FILE is required: STRATA_AI__DEFAULT_PROVIDER is anthropic_api",
+        );
+        invalid(
+            &[("STRATA_AI__USER_PROVIDERS", "guest=anthropic_api")],
+            "STRATA_AI__ANTHROPIC_API__API_KEY_FILE is required: user `guest` is routed to anthropic_api",
+        );
+        invalid(
+            &[("STRATA_AI__EMBEDDING__MODEL_ID", " ")],
+            "STRATA_AI__EMBEDDING__MODEL_ID must not be empty",
+        );
+        invalid(
+            &[("STRATA_AI__EMBEDDING__DIMS", "0")],
+            "STRATA_AI__EMBEDDING__DIMS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AI__EMBEDDING__MAX_TOKENS", "0")],
+            "STRATA_AI__EMBEDDING__MAX_TOKENS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AI__EMBEDDING__MAX_TOKENS", "9000")],
+            "STRATA_AI__EMBEDDING__MAX_BATCH_TOKENS must be at least STRATA_AI__EMBEDDING__MAX_TOKENS",
+        );
+        invalid(
+            &[("STRATA_AI__EMBEDDING__NICE", "20")],
+            "STRATA_AI__EMBEDDING__NICE must be within 0..=19, got 20",
+        );
+        invalid(
+            &[("STRATA_AI__EMBEDDING__NICE", "-1")],
+            "STRATA_AI__EMBEDDING__NICE must be within 0..=19, got -1",
+        );
+        invalid(
+            &[("STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS", "0")],
+            "STRATA_AI__EMBEDDING__IDLE_UNLOAD_SECS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_JOBS__MAX_CONCURRENCY", "0")],
+            "STRATA_JOBS__MAX_CONCURRENCY must be at least 1",
+        );
+        invalid(
+            &[("STRATA_JOBS__POLL_INTERVAL_SECS", "0")],
+            "STRATA_JOBS__POLL_INTERVAL_SECS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_JOBS__BACKOFF_BASE_SECS", "0")],
+            "STRATA_JOBS__BACKOFF_BASE_SECS must be at least 1",
+        );
+        invalid(
+            &[
+                ("STRATA_JOBS__BACKOFF_BASE_SECS", "60"),
+                ("STRATA_JOBS__BACKOFF_MAX_SECS", "30"),
+            ],
+            "STRATA_JOBS__BACKOFF_MAX_SECS must be at least STRATA_JOBS__BACKOFF_BASE_SECS",
+        );
+        invalid(
+            &[("STRATA_JOBS__NIGHTLY_HOUR", "24")],
+            "STRATA_JOBS__NIGHTLY_HOUR must be within 0..=23, got 24",
+        );
+        invalid(
+            &[("STRATA_JOBS__DIGEST_WEEKDAY", "someday")],
+            "STRATA_JOBS__DIGEST_WEEKDAY must be a weekday (mon … sun), got \"someday\"",
+        );
+        invalid(
+            &[("STRATA_AUTH__ACCESS_TOKEN_TTL_SECS", "0")],
+            "STRATA_AUTH__ACCESS_TOKEN_TTL_SECS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AUTH__SESSION_TTL_DAYS", "0")],
+            "STRATA_AUTH__SESSION_TTL_DAYS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AUTH__REVOCATION_RELOAD_SECS", "0")],
+            "STRATA_AUTH__REVOCATION_RELOAD_SECS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AUTH__MIN_PASSWORD_LENGTH", "0")],
+            "STRATA_AUTH__MIN_PASSWORD_LENGTH must be at least 1",
+        );
+        invalid(
+            &[("STRATA_ACCOUNTS__PURGE_INTERVAL_SECS", "0")],
+            "STRATA_ACCOUNTS__PURGE_INTERVAL_SECS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AUTH__ARGON2__ITERATIONS", "0")],
+            "STRATA_AUTH__ARGON2__ITERATIONS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AUTH__ARGON2__PARALLELISM", "0")],
+            "STRATA_AUTH__ARGON2__PARALLELISM must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AUTH__ARGON2__MEMORY_KIB", "7")],
+            "STRATA_AUTH__ARGON2__MEMORY_KIB must be at least 8 × STRATA_AUTH__ARGON2__PARALLELISM",
+        );
+        invalid(
+            &[("STRATA_AUTH__RATE_LIMITS__SIGNUP_GLOBAL__MAX", "0")],
+            "STRATA_AUTH__RATE_LIMITS__SIGNUP_GLOBAL__MAX must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AUTH__RATE_LIMITS__ASK_PER_USER__WINDOW_SECS", "0")],
+            "STRATA_AUTH__RATE_LIMITS__ASK_PER_USER__WINDOW_SECS must be at least 1",
+        );
+        invalid(
+            &[("STRATA_AUTH__ISSUER", " ")],
+            "STRATA_AUTH__ISSUER and STRATA_AUTH__AUDIENCE must not be empty",
+        );
+        let with_key = from(&[
+            ("STRATA_AI__DEFAULT_PROVIDER", "anthropic_api"),
+            ("STRATA_AI__ANTHROPIC_API__API_KEY_FILE", "/k"),
+        ])
         .expect("key given");
         assert_eq!(
             with_key.ai_provider_for("anyone"),
@@ -1453,85 +1258,11 @@ mod tests {
         );
     }
 
-    /// `deploy/stratad.example.toml` loads to the defaults and documents every key, set or
-    /// commented out, under its section.
+    /// A misconfigured database URL is reported without its password.
     #[test]
-    fn example_file_documents_every_key_with_its_default() {
-        fn leaves(prefix: &str, table: &toml::Table, out: &mut Vec<(String, String)>) {
-            for (key, value) in table {
-                match value {
-                    toml::Value::Table(t) => {
-                        let p = if prefix.is_empty() {
-                            key.clone()
-                        } else {
-                            format!("{prefix}.{key}")
-                        };
-                        leaves(&p, t, out);
-                    }
-                    _ => out.push((prefix.to_owned(), key.clone())),
-                }
-            }
-        }
-        let path = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../../deploy/stratad.example.toml"
-        );
-        let text = std::fs::read_to_string(path).expect("example file");
-        assert_eq!(
-            Config::from_sources(&text, env(&[])).expect("example is valid"),
-            Config::default()
-        );
-        // (section, key) of every line `key = …` or `# key = …`.
-        let mut documented = std::collections::BTreeSet::new();
-        let mut section = String::new();
-        for line in text.lines() {
-            let line = line.trim();
-            if let Some(name) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
-                section = name.to_owned();
-            } else if let Some((key, _)) = line.trim_start_matches("# ").split_once(" = ")
-                && !key.contains(' ')
-            {
-                documented.insert((section.clone(), key.to_owned()));
-            }
-        }
-        let mut expected = Vec::new();
-        leaves(
-            "",
-            &toml::Table::try_from(Config::default()).expect("serialise"),
-            &mut expected,
-        );
-        // Keys that are unset by default (not serialised).
-        for (section, key) in [
-            ("ai.claude_cli", "model"),
-            ("ai.anthropic_api", "api_key_file"),
-            ("ai.anthropic_api", "effort"),
-            ("ai.embedding", "model_dir"),
-            ("ai.embedding", "onnxruntime_lib"),
-            ("budgets", "timezone"),
-            ("push", "fcm_service_account_path"),
-            ("push", "apns_key_path"),
-            ("push", "apns_key_id"),
-            ("push", "apns_team_id"),
-            ("push", "apns_topic"),
-            ("push", "wns_credentials_path"),
-        ] {
-            expected.push((section.to_owned(), key.to_owned()));
-        }
-        let missing: Vec<_> = expected
-            .into_iter()
-            .filter(|k| !documented.contains(k))
-            .collect();
-        assert_eq!(missing, Vec::<(String, String)>::new());
-    }
-
-    #[test]
-    fn load_reads_a_file() {
-        let dir = tempfile::tempdir().expect("tempdir");
-        let path = dir.path().join("stratad.toml");
-        std::fs::write(&path, "bind = \"127.0.0.1:7000\"\n").expect("write");
-        let config = Config::load(Some(&path)).expect("valid");
-        assert_eq!(config.bind.port(), 7000);
-        let missing = Config::load(Some(&dir.path().join("missing.toml"))).expect_err("missing");
-        assert!(matches!(missing, ConfigError::Read { .. }), "{missing:?}");
+    fn database_url_errors_never_contain_the_url() {
+        let err = from(&[("STRATA_DATABASE__APP_URL", "mysql://app:hunter2@db/strata")])
+            .expect_err("not postgres");
+        assert!(!err.to_string().contains("hunter2"), "{err}");
     }
 }
