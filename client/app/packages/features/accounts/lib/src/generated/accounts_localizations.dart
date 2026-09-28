@@ -515,12 +515,6 @@ abstract class AccountsLocalizations {
   /// **'Username or password is incorrect'**
   String get errorInvalidCredentials;
 
-  /// Core error offline.
-  ///
-  /// In en, this message translates to:
-  /// **'Can\'t reach the server. Check your connection.'**
-  String get errorOffline;
-
   /// Core error account_pending.
   ///
   /// In en, this message translates to:

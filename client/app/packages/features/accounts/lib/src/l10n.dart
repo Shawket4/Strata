@@ -18,7 +18,8 @@ extension AccountsLabels on AccountsLocalizations {
   /// (`CoreFailure.code`, PLAN §12.1 "typed errors").
   String failure(Object error) => switch (error) {
     CoreFailure(code: 'invalid_credentials') => errorInvalidCredentials,
-    CoreFailure(code: 'offline') => errorOffline,
+    // Offline and unreachable (reason tls, dns, connect, timeout, network).
+    CoreFailure(code: 'offline') => errorUnreachable,
     CoreFailure(code: 'account_pending') => errorAccountPending,
     CoreFailure(code: 'account_rejected') => errorAccountRejected,
     CoreFailure(code: 'account_disabled') => errorAccountDisabled,

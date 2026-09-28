@@ -272,9 +272,6 @@ class AccountsLocalizationsEn extends AccountsLocalizations {
   String get errorInvalidCredentials => 'Username or password is incorrect';
 
   @override
-  String get errorOffline => 'Can\'t reach the server. Check your connection.';
-
-  @override
   String get errorAccountPending => 'This account is waiting for approval.';
 
   @override

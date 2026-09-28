@@ -69,7 +69,6 @@
   "passwordChangeBody": "مسؤول أعاد تعيين كلمة المرور. اختار واحدة جديدة علشان تكمل.",
   "changePassword": "تغيير كلمة المرور",
   "errorInvalidCredentials": "اسم المستخدم أو كلمة المرور غلط",
-  "errorOffline": "مش قادر أوصل للخادم. اتأكد من الاتصال.",
   "errorAccountPending": "الحساب ده في انتظار الموافقة.",
   "errorAccountRejected": "طلب الحساب ده ماتقبلش.",
   "errorAccountDisabled": "الحساب ده اتوقف من مسؤول.",

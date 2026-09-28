@@ -282,9 +282,6 @@ class AccountsLocalizationsAr extends AccountsLocalizations {
   String get errorInvalidCredentials => 'اسم المستخدم أو كلمة المرور غلط';
 
   @override
-  String get errorOffline => 'مش قادر أوصل للخادم. اتأكد من الاتصال.';
-
-  @override
   String get errorAccountPending => 'الحساب ده في انتظار الموافقة.';
 
   @override

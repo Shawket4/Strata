@@ -185,7 +185,9 @@ void main() {
       await _open(tester, v, fake: fake);
       await _signOut(tester);
       expect(
-        find.text("Can't reach the server. Check your connection."),
+        find.text(
+          "Couldn't reach the server. Check your connection and try again.",
+        ),
         findsOneWidget,
       );
     });

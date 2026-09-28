@@ -327,10 +327,6 @@
   "@errorInvalidCredentials": {
     "description": "Core error invalid_credentials."
   },
-  "errorOffline": "Can't reach the server. Check your connection.",
-  "@errorOffline": {
-    "description": "Core error offline."
-  },
   "errorAccountPending": "This account is waiting for approval.",
   "@errorAccountPending": {
     "description": "Core error account_pending."
