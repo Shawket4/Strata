@@ -75,11 +75,7 @@ fn every_value_changed() -> Config {
     c.thresholds.custody = 1.0;
     for (i, t) in c.thresholds.dedupe.values_mut().enumerate() {
         t.near = 0.1 + f64::from(u8::try_from(i).expect("few kinds")) / 100.0;
-        t.semantic = if t.semantic.is_some() {
-            None
-        } else {
-            Some(0.95)
-        };
+        t.semantic = Some(0.95);
     }
     c.budgets.timezone = Some("Europe/Berlin".into());
     c.budgets.per_user_daily_tokens = 1;
@@ -110,12 +106,12 @@ fn every_value_changed() -> Config {
         parallelism: 2,
     };
     let limit = |max, window_secs| RateLimit { max, window_secs };
-    auth.rate_limits.login_per_ip = limit(1, 2);
-    auth.rate_limits.login_per_username = limit(3, 4);
-    auth.rate_limits.signup_per_ip = limit(5, 6);
-    auth.rate_limits.signup_global = limit(7, 8);
-    auth.rate_limits.capture_per_user = limit(9, 10);
-    auth.rate_limits.ask_per_user = limit(11, 12);
+    auth.rate_limits.login_per_ip = limit(101, 102);
+    auth.rate_limits.login_per_username = limit(103, 104);
+    auth.rate_limits.signup_per_ip = limit(105, 106);
+    auth.rate_limits.signup_global = limit(107, 108);
+    auth.rate_limits.capture_per_user = limit(109, 110);
+    auth.rate_limits.ask_per_user = limit(111, 112);
     let jobs = &mut c.jobs;
     jobs.max_concurrency = 1;
     jobs.poll_interval_secs = 2;
