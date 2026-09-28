@@ -1624,6 +1624,12 @@ pub enum Event {
         ///Status now.
         status: SuggestionStatus,
     },
+    ///A note's AI follow-up thread changed (a question and its answer were added): pull it.
+    #[serde(rename = "thread.updated")]
+    ThreadUpdated {
+        ///The note.
+        note_id: ::ulid::Ulid,
+    },
     /**An interactive job started (filing a capture, answering a reply to a suggestion,
     applying a correction); `job.completed` or `job.failed` follows.*/
     #[serde(rename = "job.started")]
@@ -3714,6 +3720,8 @@ pub enum SyncEntityType {
     DeviceSetting,
     #[serde(rename = "keep_both")]
     KeepBoth,
+    #[serde(rename = "thread")]
+    Thread,
 }
 impl ::std::fmt::Display for SyncEntityType {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
@@ -3727,6 +3735,7 @@ impl ::std::fmt::Display for SyncEntityType {
             Self::Setting => f.write_str("setting"),
             Self::DeviceSetting => f.write_str("device_setting"),
             Self::KeepBoth => f.write_str("keep_both"),
+            Self::Thread => f.write_str("thread"),
         }
     }
 }
@@ -3743,6 +3752,7 @@ impl ::std::str::FromStr for SyncEntityType {
             "setting" => Ok(Self::Setting),
             "device_setting" => Ok(Self::DeviceSetting),
             "keep_both" => Ok(Self::KeepBoth),
+            "thread" => Ok(Self::Thread),
             _ => Err("invalid value".into()),
         }
     }
@@ -4207,6 +4217,9 @@ pub enum SyncRecord {
     ///Keep-both pair.
     #[serde(rename = "keep_both")]
     KeepBoth(SyncKeepBoth),
+    ///A note's AI follow-up thread.
+    #[serde(rename = "thread")]
+    Thread(SyncThreadRecord),
 }
 impl ::std::convert::From<SyncNoteRecord> for SyncRecord {
     fn from(value: SyncNoteRecord) -> Self {
@@ -4251,6 +4264,11 @@ impl ::std::convert::From<SyncDeviceSettingRecord> for SyncRecord {
 impl ::std::convert::From<SyncKeepBoth> for SyncRecord {
     fn from(value: SyncKeepBoth) -> Self {
         Self::KeepBoth(value)
+    }
+}
+impl ::std::convert::From<SyncThreadRecord> for SyncRecord {
+    fn from(value: SyncThreadRecord) -> Self {
+        Self::Thread(value)
     }
 }
 ///A rejected edge.
@@ -4553,6 +4571,94 @@ pub struct SyncTaskUpdate {
     ///New description.
     #[serde(skip_serializing_if = "::std::option::Option::is_none")]
     pub text: ::std::option::Option<::std::string::String>,
+}
+///A source a thread answer cites.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct SyncThreadCitation {
+    ///The cited block, when a block is cited.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub block_id: ::std::option::Option<::std::string::String>,
+    ///The cited note.
+    pub note_id: ::ulid::Ulid,
+    ///The wikilink target (`Link#^block` or `Link`).
+    pub target: ::std::string::String,
+}
+///One message of a note thread.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct SyncThreadMessage {
+    ///Sources an answer cites.
+    #[serde(default, skip_serializing_if = "::std::vec::Vec::is_empty")]
+    pub citations: ::std::vec::Vec<SyncThreadCitation>,
+    ///When it was written (RFC 3339 with offset).
+    pub created: ::std::string::String,
+    ///Message ID.
+    pub id: ::ulid::Ulid,
+    ///`provider/model` of an answer.
+    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+    pub model: ::std::option::Option<::std::string::String>,
+    ///Who wrote it.
+    pub role: SyncThreadRole,
+    ///Text (answers keep their `[[…]]` citations).
+    pub text: ::std::string::String,
+}
+///A note's AI follow-up thread (owner decision 2026-09-28).
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct SyncThreadRecord {
+    ///Messages, oldest first.
+    pub messages: ::std::vec::Vec<SyncThreadMessage>,
+    ///The note.
+    pub note_id: ::ulid::Ulid,
+}
+///Who wrote a thread message.
+#[derive(
+    ::serde::Deserialize,
+    ::serde::Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    PartialEq,
+    PartialOrd,
+)]
+pub enum SyncThreadRole {
+    #[serde(rename = "user")]
+    User,
+    #[serde(rename = "assistant")]
+    Assistant,
+}
+impl ::std::fmt::Display for SyncThreadRole {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        match *self {
+            Self::User => f.write_str("user"),
+            Self::Assistant => f.write_str("assistant"),
+        }
+    }
+}
+impl ::std::str::FromStr for SyncThreadRole {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        match value {
+            "user" => Ok(Self::User),
+            "assistant" => Ok(Self::Assistant),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl ::std::convert::TryFrom<&str> for SyncThreadRole {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl ::std::convert::TryFrom<::std::string::String> for SyncThreadRole {
+    type Error = self::error::ConversionError;
+    fn try_from(
+        value: ::std::string::String,
+    ) -> ::std::result::Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
 }
 ///A task.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
@@ -4861,6 +4967,12 @@ impl ::std::convert::TryFrom<::std::string::String> for TaskViewKind {
     ) -> ::std::result::Result<Self, self::error::ConversionError> {
         value.parse()
     }
+}
+///`POST /notes/{id}/thread`.
+#[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]
+pub struct ThreadAskRequest {
+    ///The follow-up question about the note (Arabic, English or mixed).
+    pub question: ::std::string::String,
 }
 ///The vault tree (hidden folders excluded), sorted by path.
 #[derive(::serde::Deserialize, ::serde::Serialize, Clone, Debug, PartialEq)]

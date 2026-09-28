@@ -811,6 +811,59 @@ pub struct SyncKeepBoth {
     pub b_id: String,
 }
 
+/// Who wrote a thread message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SyncThreadRole {
+    /// The user's question.
+    User,
+    /// The AI's answer.
+    Assistant,
+}
+
+/// A source a thread answer cites.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct SyncThreadCitation {
+    /// The cited note.
+    #[schema(value_type = String, format = "ulid")]
+    pub note_id: Ulid,
+    /// The wikilink target (`Link#^block` or `Link`).
+    pub target: String,
+    /// The cited block, when a block is cited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub block_id: Option<String>,
+}
+
+/// One message of a note thread.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct SyncThreadMessage {
+    /// Message ID.
+    #[schema(value_type = String, format = "ulid")]
+    pub id: Ulid,
+    /// Who wrote it.
+    pub role: SyncThreadRole,
+    /// Text (answers keep their `[[…]]` citations).
+    pub text: String,
+    /// Sources an answer cites.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub citations: Vec<SyncThreadCitation>,
+    /// `provider/model` of an answer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// When it was written (RFC 3339 with offset).
+    pub created: String,
+}
+
+/// A note's AI follow-up thread (owner decision 2026-09-28).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct SyncThreadRecord {
+    /// The note.
+    #[schema(value_type = String, format = "ulid")]
+    pub note_id: Ulid,
+    /// Messages, oldest first.
+    pub messages: Vec<SyncThreadMessage>,
+}
+
 /// A full record: `{type, data}`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
@@ -833,6 +886,8 @@ pub enum SyncRecord {
     DeviceSetting(SyncDeviceSettingRecord),
     /// Keep-both pair.
     KeepBoth(SyncKeepBoth),
+    /// A note's AI follow-up thread.
+    Thread(SyncThreadRecord),
 }
 
 /// Upsert or tombstone, tagged by `op`.
@@ -870,6 +925,8 @@ pub enum SyncEntityType {
     DeviceSetting,
     /// Keep-both pair.
     KeepBoth,
+    /// A note's AI follow-up thread.
+    Thread,
 }
 
 /// One change-log entry with its payload.

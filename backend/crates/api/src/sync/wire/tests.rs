@@ -294,6 +294,7 @@ fn every_result_encodes_like_the_mirror() {
     same_bytes::<PushResponse, SyncPushResponse>(&response);
 }
 
+#[allow(clippy::too_many_lines)] // one entry per record type
 fn every_record() -> Vec<Record> {
     let at = Utc
         .timestamp_opt(1_790_000_000, 0)
@@ -373,6 +374,33 @@ fn every_record() -> Vec<Record> {
             value: "false".into(),
         }),
         Record::KeepBoth(KeepBoth::new(DedupeKind::Task, "t-1", "t-2")),
+        Record::Thread(sync_model::changes::NoteThreadRecord {
+            note_id: u(1),
+            messages: vec![
+                vault_format::thread::ThreadMessage {
+                    id: u(8),
+                    role: vault_format::thread::ThreadRole::User,
+                    text: "Why?".into(),
+                    citations: Vec::new(),
+                    model: None,
+                    created: chrono::DateTime::parse_from_rfc3339("2026-09-28T19:00:00+03:00")
+                        .expect("time"),
+                },
+                vault_format::thread::ThreadMessage {
+                    id: u(9),
+                    role: vault_format::thread::ThreadRole::Assistant,
+                    text: "Because [[Pricing#^cap]].".into(),
+                    citations: vec![vault_format::thread::ThreadCitation {
+                        note_id: u(2),
+                        target: "Pricing#^cap".into(),
+                        block_id: Some("cap".into()),
+                    }],
+                    model: Some("claude_cli/sonnet".into()),
+                    created: chrono::DateTime::parse_from_rfc3339("2026-09-28T16:00:05Z")
+                        .expect("time"),
+                },
+            ],
+        }),
     ]
 }
 

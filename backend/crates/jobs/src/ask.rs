@@ -37,6 +37,7 @@ use strata_vault::ops::ai::{CiteOutcome, CiteRequest};
 use text_normalize::normalize_for_search;
 use vault_format::Document;
 use vault_format::body::{self, BlockKind};
+use vault_format::thread::{ThreadMessage, ThreadRole};
 
 use crate::chunk::{self, content_range};
 use crate::retrieval::{RetrievalError, Retriever};
@@ -85,6 +86,9 @@ pub enum AskError {
         /// When it ends, if known.
         until: Option<DateTime<Utc>>,
     },
+    /// The note a follow-up question is about is not live.
+    #[error("the note does not exist")]
+    NoteNotFound,
     /// Anything else (logged; content-free).
     #[error("internal: {0}")]
     Internal(String),
@@ -194,6 +198,30 @@ struct Input<'a> {
     question: QuestionInput<'a>,
     sources: Vec<SourceInput<'a>>,
 }
+
+#[derive(Debug, Serialize)]
+struct NoteInput<'a> {
+    title: &'a str,
+}
+
+#[derive(Debug, Serialize)]
+struct HistoryInput<'a> {
+    role: ThreadRole,
+    text: &'a str,
+}
+
+/// The `note_thread` prompt's input: the note, the thread so far, the question, the sources
+/// (the note's own excerpts first).
+#[derive(Debug, Serialize)]
+struct ThreadInput<'a> {
+    note: NoteInput<'a>,
+    history: Vec<HistoryInput<'a>>,
+    question: QuestionInput<'a>,
+    sources: Vec<SourceInput<'a>>,
+}
+
+/// Messages of the thread so far given to the model with a follow-up question.
+pub const THREAD_HISTORY: usize = 10;
 
 /// Ask for one deployment.
 #[derive(Debug, Clone)]
@@ -627,6 +655,143 @@ impl AskEngine {
             sources,
             stream,
         })
+    }
+}
+
+impl AskEngine {
+    /// Starts a follow-up question about `note` (owner decision 2026-09-28): the sources are
+    /// the note's own excerpts (in order, up to `top_k`) and then the best excerpts of other
+    /// notes for the question; the model also gets the last [`THREAD_HISTORY`] messages of
+    /// `history` (the thread so far). Streams like [`Self::start`]; the caller stores the
+    /// exchange in the thread when the answer is done.
+    pub async fn start_thread(
+        &self,
+        scope: UserScope,
+        username: String,
+        note: NoteId,
+        question: &str,
+        history: &[ThreadMessage],
+    ) -> Result<AskRun, AskError> {
+        let question = question.trim();
+        if question.is_empty() {
+            return Err(AskError::EmptyQuestion);
+        }
+        let caller = AiCaller { scope, username };
+        self.ai.router().route(&caller.username)?;
+        self.ai.budget().check(&caller).await?;
+        let row = {
+            let mut tx = self
+                .db
+                .begin(&scope)
+                .await
+                .map_err(|e| AskError::Internal(e.to_string()))?;
+            let row = notes::get_note(&mut tx, note)
+                .await
+                .map_err(|e| AskError::Internal(e.to_string()))?;
+            tx.commit()
+                .await
+                .map_err(|e| AskError::Internal(e.to_string()))?;
+            row
+        };
+        let Some(row) = row.filter(|n| !n.trashed) else {
+            return Err(AskError::NoteNotFound);
+        };
+        let view = self
+            .vault
+            .note(&scope, note)
+            .await
+            .map_err(|_| AskError::NoteNotFound)?;
+        let own: Vec<(Note, crate::chunk::ChunkDraft, String)> =
+            chunk::chunk_body(Document::parse(&view.content).body())
+                .into_iter()
+                .take(self.config.top_k)
+                .map(|c| (row.clone(), c, view.version.clone()))
+                .collect();
+        let related = self.related_chunks(&scope, note, question).await?;
+        let sources = self
+            .sources(&scope, own.into_iter().chain(related).collect())
+            .await;
+        let tz = self.user_tz(&scope).await;
+        let now = self.clock.now();
+        let asked_at = tz.from_utc_datetime(&now.naive_utc()).to_rfc3339();
+        let history = &history[history.len().saturating_sub(THREAD_HISTORY)..];
+        let input = ThreadInput {
+            note: NoteInput { title: &view.title },
+            history: history
+                .iter()
+                .map(|m| HistoryInput {
+                    role: m.role,
+                    text: &m.text,
+                })
+                .collect(),
+            question: QuestionInput {
+                text: question,
+                asked_at,
+            },
+            sources: sources
+                .iter()
+                .map(|s| SourceInput {
+                    reference: &s.reference,
+                    note_title: &s.title,
+                    created: s.created.with_timezone(&tz).to_rfc3339(),
+                    text: &s.text,
+                })
+                .collect(),
+        };
+        let prompt = prompts::latest(ids::NOTE_THREAD)
+            .ok_or_else(|| AskError::Internal("note_thread prompt missing".into()))?;
+        let req = prompt
+            .chat_request(caller, &input, self.config.max_tokens)
+            .map_err(|e| AskError::Internal(e.to_string()))?;
+        let stream = self.ai.stream(req).await?;
+        Ok(AskRun {
+            engine: self.clone(),
+            scope,
+            sources,
+            stream,
+        })
+    }
+
+    /// The best excerpts of notes other than `note` for `question` (hybrid retrieval, or
+    /// keyword retrieval without embeddings), at most `top_k`.
+    async fn related_chunks(
+        &self,
+        scope: &UserScope,
+        note: NoteId,
+        question: &str,
+    ) -> Result<Vec<(Note, crate::chunk::ChunkDraft, String)>, AskError> {
+        let related = match &self.retriever {
+            Some(r) => match r.ask_chunks(scope, question, self.config.top_k, None).await {
+                Ok(ranked) => ranked
+                    .into_iter()
+                    .filter(|rc| rc.note.id != note)
+                    .map(|rc| {
+                        let c = rc.chunk;
+                        let draft = crate::chunk::ChunkDraft {
+                            ord: usize::try_from(c.ord).unwrap_or(0),
+                            heading_path: c.heading_path,
+                            start: usize::try_from(c.start_offset).unwrap_or(0),
+                            end: usize::try_from(c.end_offset).unwrap_or(0),
+                            anchor_len: usize::try_from(c.anchor_len).unwrap_or(0),
+                            block_id: c.block_id,
+                            token_count: 0,
+                            text: c.text,
+                        };
+                        (rc.note, draft, c.content_hash)
+                    })
+                    .collect(),
+                Err(e) => {
+                    tracing::warn!(error = %e, "note follow-up: embeddings unavailable, keyword retrieval only");
+                    self.keyword_chunks(scope, question, None).await?
+                }
+            },
+            None => self.keyword_chunks(scope, question, None).await?,
+        };
+        Ok(related
+            .into_iter()
+            .filter(|(n, _, _)| n.id != note)
+            .take(self.config.top_k)
+            .collect())
     }
 }
 

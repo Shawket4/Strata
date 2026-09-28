@@ -157,6 +157,13 @@ pub enum Event {
         /// Status now.
         status: SuggestionStatus,
     },
+    /// A note's AI follow-up thread changed (a question and its answer were added): pull it.
+    #[serde(rename = "thread.updated")]
+    ThreadUpdated {
+        /// The note.
+        #[schema(value_type = String, format = "ulid")]
+        note_id: Ulid,
+    },
     /// An interactive job started (filing a capture, answering a reply to a suggestion,
     /// applying a correction); `job.completed` or `job.failed` follows.
     #[serde(rename = "job.started")]

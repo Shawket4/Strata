@@ -1372,6 +1372,33 @@ pub async fn revert_note(
     let request = request.body(body)?;
     client.send(request).await
 }
+/** Ask a follow-up question about one note (owner decision 2026-09-28): answered from the
+note first, then related notes, with the note's thread so far as context. Stream the
+answer from `GET /ask/{id}` as for Ask; once it is done, the question and the answer are
+appended to the note's thread (`.meta/threads/<id>.json`, one `ai: thread` commit) and
+`thread.updated` follows on `/events`, so every device receives the thread in sync.*/
+///
+/// `POST /api/v1/notes/{id}/thread`
+pub async fn ask_about_note(
+    client: &crate::Client,
+    id: ::ulid::Ulid,
+    body: &types::ThreadAskRequest,
+) -> ::std::result::Result<types::AskStarted, crate::Error> {
+    let request = crate::Request::new(
+        crate::Method::POST,
+        ::std::format!(
+            "/api/v1/notes/{}/thread",
+            crate::encode_path_segment(&{
+                let value = &id;
+                value.to_string()
+            })?
+        ),
+        "ask_about_note",
+    );
+    let request = request.authenticated();
+    let request = request.body(body)?;
+    client.send(request).await
+}
 /// Places.
 ///
 /// `GET /api/v1/places`

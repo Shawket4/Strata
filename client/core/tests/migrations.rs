@@ -34,8 +34,8 @@ fn columns(conn: &Connection, table: &str) -> Vec<String> {
 #[test]
 fn fresh_account_database_has_the_full_schema() {
     let conn = Connection::open_in_memory().expect("db");
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("migrates"), 4);
-    assert_eq!(migrations::version(&conn).expect("version"), 4);
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("migrates"), 5);
+    assert_eq!(migrations::version(&conn).expect("version"), 5);
     assert_eq!(
         tables(&conn),
         [
@@ -56,6 +56,7 @@ fn fresh_account_database_has_the_full_schema() {
             "inbox",
             "keep_both",
             "links",
+            "note_threads",
             "notes",
             "notes_fts",
             "outbox",
@@ -274,14 +275,14 @@ fn migrating_twice_is_a_no_op_and_newer_databases_are_refused() {
     let conn = Connection::open_in_memory().expect("db");
     migrations::migrate(&conn, ACCOUNT).expect("first");
     let before = tables(&conn);
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("second"), 4);
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("second"), 5);
     assert_eq!(tables(&conn), before);
 
     conn.pragma_update(None, "user_version", 9).expect("bump");
     assert_eq!(
         migrations::migrate(&conn, ACCOUNT),
         Err(CoreError::Storage(
-            "database schema v9 is newer than this app (v4)".into()
+            "database schema v9 is newer than this app (v5)".into()
         ))
     );
 }
@@ -295,7 +296,7 @@ fn v3_to_v4_keeps_custody_rows_and_adds_the_note() {
            VALUES ('d1', 0, 'handed-to', '2026-09-21', x'90');",
     )
     .expect("fixture");
-    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("v4"), 4);
+    assert_eq!(migrations::migrate_to(&conn, ACCOUNT, 4).expect("v4"), 4);
     let row: (String, String, Option<String>) = conn
         .query_row(
             "SELECT type, at, note FROM custody_events WHERE document_id = 'd1'",
@@ -308,6 +309,19 @@ fn v3_to_v4_keeps_custody_rows_and_adds_the_note() {
         columns(&conn, "custody_events").last().map(String::as_str),
         Some("note")
     );
+}
+
+#[test]
+fn v4_to_v5_adds_note_threads_and_keeps_notes() {
+    let conn = Connection::open_in_memory().expect("db");
+    assert_eq!(migrations::migrate_to(&conn, ACCOUNT, 4).expect("v4"), 4);
+    let before = tables(&conn);
+    assert!(!before.iter().any(|t| t == "note_threads"));
+    assert_eq!(migrations::migrate(&conn, ACCOUNT).expect("v5"), 5);
+    let mut after = tables(&conn);
+    after.retain(|t| t != "note_threads");
+    assert_eq!(after, before, "only the new table");
+    assert_eq!(columns(&conn, "note_threads"), ["note_id", "messages"]);
 }
 
 #[test]

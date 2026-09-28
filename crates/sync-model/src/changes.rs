@@ -55,6 +55,8 @@ entity_types! {
     DeviceSetting => "device_setting",
     /// A keep-both pair (§9.7).
     KeepBoth => "keep_both",
+    /// A note's AI follow-up thread (owner decision 2026-09-28).
+    Thread => "thread",
 }
 
 /// A note with its full content.
@@ -241,6 +243,19 @@ pub enum Record {
     DeviceSetting(DeviceSettingRecord),
     /// Keep-both pair.
     KeepBoth(KeepBoth),
+    /// A note's AI follow-up thread.
+    Thread(NoteThreadRecord),
+}
+
+/// A note's AI follow-up thread (`.meta/threads/<note-id>.json`): the questions asked about
+/// the note and the AI's answers, oldest first. Goes with its note: a device drops it when
+/// the note's tombstone arrives.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NoteThreadRecord {
+    /// The note.
+    pub note_id: Ulid,
+    /// Messages, oldest first.
+    pub messages: Vec<vault_format::thread::ThreadMessage>,
 }
 
 impl Record {
@@ -256,6 +271,7 @@ impl Record {
             Self::Setting(_) => EntityType::Setting,
             Self::DeviceSetting(_) => EntityType::DeviceSetting,
             Self::KeepBoth(_) => EntityType::KeepBoth,
+            Self::Thread(_) => EntityType::Thread,
         }
     }
 
@@ -271,6 +287,7 @@ impl Record {
             Self::Setting(r) => r.key.clone(),
             Self::DeviceSetting(r) => format!("{}:{}", r.device_id, r.key),
             Self::KeepBoth(r) => format!("{}:{}:{}", r.kind, r.a_id, r.b_id),
+            Self::Thread(r) => r.note_id.to_string(),
         }
     }
 

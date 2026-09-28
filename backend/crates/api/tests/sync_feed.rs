@@ -475,3 +475,51 @@ async fn feeds_never_include_another_users_data() {
     );
     h.finish().await;
 }
+
+#[tokio::test]
+async fn a_note_thread_arrives_in_changes_and_bootstrap() {
+    use vault_format::thread::{ThreadMessage, ThreadRole};
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    push_ok(
+        &h,
+        &alice,
+        vec![op(1, None, create(1, "notes/A.md", "a\n"))],
+    )
+    .await;
+    let mut device = h.bootstrap(&alice, None).await;
+    let at = chrono::DateTime::parse_from_rfc3339("2026-09-28T19:00:00+03:00").expect("time");
+    let msg = |n: u128, role, text: &str| ThreadMessage {
+        id: ulid::Ulid::from_parts(1_790_000_000_000, n),
+        role,
+        text: text.into(),
+        citations: Vec::new(),
+        model: None,
+        created: at,
+    };
+    let (q, a) = (
+        msg(1, ThreadRole::User, "Why?"),
+        msg(2, ThreadRole::Assistant, "Because."),
+    );
+    h.vault
+        .append_thread(
+            &h.db.scope(alice.id),
+            strata_common::NoteId::from_ulid(id(1)),
+            q.clone(),
+            a.clone(),
+        )
+        .await
+        .expect("append");
+    let expected = Record::Thread(sync_model::changes::NoteThreadRecord {
+        note_id: id(1),
+        messages: vec![q, a],
+    });
+    let key = (EntityType::Thread, id(1).to_string());
+    h.pull(&alice, &mut device).await;
+    assert_eq!(device.records.get(&key), Some(&expected));
+    // A fresh device gets it in its bootstrap (one record per page still ends the section).
+    let fresh = h.bootstrap(&alice, Some(1)).await;
+    assert_eq!(fresh.records.get(&key), Some(&expected));
+    h.assert_conformant();
+    h.finish().await;
+}

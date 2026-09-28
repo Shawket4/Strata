@@ -17,9 +17,11 @@ use strata_vault::VaultService;
 use strata_vault::ops::notes::CreateNote;
 use ulid::Ulid;
 use utoipa::ToSchema;
+use vault_format::thread::{ThreadCitation, ThreadMessage, ThreadRole};
 
 use crate::ai::{AiApi, AskEnd};
 use crate::auth::{AuthState, Authenticated};
+use crate::events::{Event, EventBus};
 use crate::openapi::StreamOperation;
 use crate::routes::notes::Note;
 use crate::vault::OrProblem;
@@ -45,6 +47,13 @@ pub struct AskRequest {
     /// Only use notes under this folder (vault path prefix, e.g. `notes/clients`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
+}
+
+/// `POST /notes/{id}/thread`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct ThreadAskRequest {
+    /// The follow-up question about the note (Arabic, English or mixed).
+    pub question: String,
 }
 
 /// An Ask that started.
@@ -256,6 +265,7 @@ pub fn ask_problem(e: &AskError) -> Problem {
         AskError::Unavailable(_) => {
             unavailable_problem("AI is disabled or not available for this account")
         }
+        AskError::NoteNotFound => Problem::new(ProblemType::NotFound),
         AskError::Internal(_) => Problem::new(ProblemType::Internal),
     }
 }
@@ -333,6 +343,105 @@ pub async fn ask(
         tracing::warn!(error = %e, "queueing a correction from Ask failed");
     }
     Ok(MsgPack(AskStarted { id }))
+}
+
+/// Ask a follow-up question about one note (owner decision 2026-09-28): answered from the
+/// note first, then related notes, with the note's thread so far as context. Stream the
+/// answer from `GET /ask/{id}` as for Ask; once it is done, the question and the answer are
+/// appended to the note's thread (`.meta/threads/<id>.json`, one `ai: thread` commit) and
+/// `thread.updated` follows on `/events`, so every device receives the thread in sync.
+#[utoipa::path(
+    post, path = "/notes/{id}/thread", tag = "ai", operation_id = "ask_about_note",
+    params(("id" = Ulid, Path, description = "Note ID.")),
+    request_body = ThreadAskRequest,
+    responses(
+        (status = 200, description = "Started; stream the answer from `GET /ask/{id}`.", body = AskStarted),
+        (status = 404, description = "`not_found`: no such live note.", body = Problem),
+        (status = 422, description = "`invalid_body`: the question is empty.", body = Problem),
+        (status = 429, description = "`rate_limited`: too many questions from this user (`auth.rate_limits.ask_per_user`). See `Retry-After`.", body = Problem),
+        (status = 503, description = "`ai_unavailable` or `ai_paused`, as for `POST /ask`.", body = Problem),
+    ),
+)]
+#[allow(clippy::too_many_arguments)] // actix extractors
+pub async fn ask_about_note(
+    auth: Authenticated,
+    state: web::Data<AuthState>,
+    api: Option<web::Data<AiApi>>,
+    vault: web::Data<VaultService>,
+    bus: Option<web::Data<EventBus>>,
+    id: web::Path<Ulid>,
+    body: MsgPack<ThreadAskRequest>,
+) -> Result<MsgPack<AskStarted>, actix_web::Error> {
+    let api = ai_api(api.as_ref())?;
+    state.check_ask_limit(auth.user_id())?;
+    let note = NoteId::from_ulid(*id);
+    let question = body.into_inner().question.trim().to_owned();
+    let name = username(api, &auth).await?;
+    let history = vault
+        .note_thread(auth.scope(), note)
+        .await
+        .or_problem()?
+        .map(|t| t.messages)
+        .unwrap_or_default();
+    let run = api
+        .ask
+        .start_thread(*auth.scope(), name, note, &question, &history)
+        .await
+        .map_err(|e| ask_problem(&e))?;
+    let answer_id = api.ids.next_ulid();
+    let asked = api.clock.now();
+    let entry = api.asks.insert(answer_id, auth.user_id(), &question, asked);
+    let clock = api.clock.clone();
+    let pushed = entry.clone();
+    tokio::spawn(async move {
+        run.run(move |event| pushed.push(event, clock.now())).await;
+    });
+    // Once the answer is done: the exchange goes into the note's thread.
+    let (scope, user, vault) = (*auth.scope(), auth.user_id(), vault.into_inner());
+    let (ids, clock) = (api.ids.clone(), api.clock.clone());
+    let bus = bus.map(web::Data::into_inner);
+    tokio::spawn(async move {
+        let AskEnd::Done { answer, citations } = entry.finished().await else {
+            return;
+        };
+        let q = ThreadMessage {
+            id: ids.next_ulid(),
+            role: ThreadRole::User,
+            text: question,
+            citations: Vec::new(),
+            model: None,
+            created: asked.fixed_offset(),
+        };
+        let a = ThreadMessage {
+            id: answer_id,
+            role: ThreadRole::Assistant,
+            text: answer,
+            citations: citations
+                .iter()
+                .map(|c| ThreadCitation {
+                    note_id: c.note_id.as_ulid(),
+                    target: c.target.clone(),
+                    block_id: c.block_id.clone(),
+                })
+                .collect(),
+            model: None,
+            created: clock.now().fixed_offset(),
+        };
+        match vault.append_thread(&scope, note, q, a).await {
+            Ok(_) => {
+                if let Some(bus) = bus {
+                    bus.publish(
+                        user,
+                        [Event::ThreadUpdated {
+                            note_id: note.as_ulid(),
+                        }],
+                    );
+                }
+            }
+            Err(e) => tracing::warn!(error = %e, "storing a note follow-up failed"),
+        }
+    });
+    Ok(MsgPack(AskStarted { id: answer_id }))
 }
 
 /// Streams an Ask answer (WebSocket, D24).
@@ -528,6 +637,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.route("/ask", web::post().to(ask));
     cfg.route("/ask/{id}", web::get().to(ask_stream));
     cfg.route("/ask/{id}/save", web::post().to(save_ask));
+    cfg.route("/notes/{id}/thread", web::post().to(ask_about_note));
     cfg.route("/ai/status", web::get().to(ai_status));
     cfg.route("/ai/jobs/retry", web::post().to(retry_failed_jobs));
 }
@@ -535,7 +645,7 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
 /// The AI part of the contract (merged into the production document).
 #[derive(Debug, utoipa::OpenApi)]
 #[openapi(
-    paths(ask, save_ask, ai_status, retry_failed_jobs),
+    paths(ask, ask_about_note, save_ask, ai_status, retry_failed_jobs),
     components(schemas(AskFrame)),
     tags((name = "ai", description = "Ask (RAG with citations) and AI status (PLAN §7.5 AI, §9.5)."))
 )]

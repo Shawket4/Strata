@@ -2563,6 +2563,27 @@
             "type": "object"
           },
           {
+            "description": "A note's AI follow-up thread changed (a question and its answer were added): pull it.",
+            "properties": {
+              "note_id": {
+                "description": "The note.",
+                "format": "ulid",
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "thread.updated"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "note_id",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
             "description": "An interactive job started (filing a capture, answering a reply to a suggestion,\napplying a correction); `job.completed` or `job.failed` follows.",
             "properties": {
               "id": {
@@ -6084,7 +6105,8 @@
           "cluster_name",
           "setting",
           "device_setting",
-          "keep_both"
+          "keep_both",
+          "thread"
         ],
         "type": "string"
       },
@@ -7252,6 +7274,26 @@
               "type"
             ],
             "type": "object"
+          },
+          {
+            "description": "A note's AI follow-up thread.",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SyncThreadRecord",
+                "description": "A note's AI follow-up thread."
+              },
+              "type": {
+                "enum": [
+                  "thread"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "data",
+              "type"
+            ],
+            "type": "object"
           }
         ]
       },
@@ -7879,6 +7921,105 @@
         ],
         "type": "object"
       },
+      "SyncThreadCitation": {
+        "description": "A source a thread answer cites.",
+        "properties": {
+          "block_id": {
+            "description": "The cited block, when a block is cited.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "note_id": {
+            "description": "The cited note.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "target": {
+            "description": "The wikilink target (`Link#^block` or `Link`).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note_id",
+          "target"
+        ],
+        "type": "object"
+      },
+      "SyncThreadMessage": {
+        "description": "One message of a note thread.",
+        "properties": {
+          "citations": {
+            "description": "Sources an answer cites.",
+            "items": {
+              "$ref": "#/components/schemas/SyncThreadCitation"
+            },
+            "type": "array"
+          },
+          "created": {
+            "description": "When it was written (RFC 3339 with offset).",
+            "type": "string"
+          },
+          "id": {
+            "description": "Message ID.",
+            "format": "ulid",
+            "type": "string"
+          },
+          "model": {
+            "description": "`provider/model` of an answer.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/SyncThreadRole",
+            "description": "Who wrote it."
+          },
+          "text": {
+            "description": "Text (answers keep their `[[…]]` citations).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "text",
+          "created"
+        ],
+        "type": "object"
+      },
+      "SyncThreadRecord": {
+        "description": "A note's AI follow-up thread (owner decision 2026-09-28).",
+        "properties": {
+          "messages": {
+            "description": "Messages, oldest first.",
+            "items": {
+              "$ref": "#/components/schemas/SyncThreadMessage"
+            },
+            "type": "array"
+          },
+          "note_id": {
+            "description": "The note.",
+            "format": "ulid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note_id",
+          "messages"
+        ],
+        "type": "object"
+      },
+      "SyncThreadRole": {
+        "description": "Who wrote a thread message.",
+        "enum": [
+          "user",
+          "assistant"
+        ],
+        "type": "string"
+      },
       "Task": {
         "description": "A task.",
         "properties": {
@@ -8077,6 +8218,19 @@
           "all"
         ],
         "type": "string"
+      },
+      "ThreadAskRequest": {
+        "description": "`POST /notes/{id}/thread`.",
+        "properties": {
+          "question": {
+            "description": "The follow-up question about the note (Arabic, English or mixed).",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "type": "object"
       },
       "Tree": {
         "description": "The vault tree (hidden folders excluded), sorted by path.",
@@ -12475,6 +12629,107 @@
         "summary": "Restore a note's content from a commit in its history (a new `user: revert` commit).",
         "tags": [
           "notes"
+        ]
+      }
+    },
+    "/api/v1/notes/{id}/thread": {
+      "post": {
+        "operationId": "ask_about_note",
+        "parameters": [
+          {
+            "description": "Note ID.",
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "ulid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/vnd.msgpack": {
+              "schema": {
+                "$ref": "#/components/schemas/ThreadAskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/vnd.msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/AskStarted"
+                }
+              }
+            },
+            "description": "Started; stream the answer from `GET /ask/{id}`."
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Restricted"
+          },
+          "404": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`not_found`: no such live note."
+          },
+          "406": {
+            "$ref": "#/components/responses/NotAcceptable"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "422": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`invalid_body`: the question is empty."
+          },
+          "429": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`rate_limited`: too many questions from this user (`auth.rate_limits.ask_per_user`). See `Retry-After`."
+          },
+          "500": {
+            "$ref": "#/components/responses/Internal"
+          },
+          "503": {
+            "content": {
+              "application/problem+msgpack": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "`ai_unavailable` or `ai_paused`, as for `POST /ask`."
+          }
+        },
+        "summary": "Ask a follow-up question about one note (owner decision 2026-09-28): answered from the\nnote first, then related notes, with the note's thread so far as context. Stream the\nanswer from `GET /ask/{id}` as for Ask; once it is done, the question and the answer are\nappended to the note's thread (`.meta/threads/<id>.json`, one `ai: thread` commit) and\n`thread.updated` follows on `/events`, so every device receives the thread in sync.",
+        "tags": [
+          "ai"
         ]
       }
     },

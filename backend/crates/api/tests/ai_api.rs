@@ -766,3 +766,134 @@ async fn failed_jobs_show_in_the_status_and_retry_queues_only_the_callers() {
     );
     h.finish().await;
 }
+
+/// Waits (at most 10 s) until `done`; the thread is stored after the answer stream ends.
+async fn eventually(what: &str, mut done: impl FnMut() -> bool) {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while !done() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("timed out: {what}"));
+}
+
+#[tokio::test]
+async fn a_follow_up_about_a_note_answers_from_it_and_is_kept_in_its_thread() {
+    let h = H::new().await;
+    let alice = h.user("alice").await;
+    let c = &alice.client;
+    // Blocks already carry IDs, so the model input is the same on every call.
+    let call = create(
+        &alice,
+        "notes/Call.md",
+        "Acme wants delivery by Friday. ^fri\n\nThey pay on receipt. ^pay\n",
+    )
+    .await;
+    create(
+        &alice,
+        "notes/Pricing.md",
+        "Discounts are capped at 5%. ^cap\n",
+    )
+    .await;
+    h.embed_all().await;
+    let ask = |q: &str| {
+        let q = q.to_owned();
+        async move { ops::ask_about_note(c, call.id, &types::ThreadAskRequest { question: q }).await }
+    };
+
+    // A note that does not exist.
+    let missing = ops::ask_about_note(
+        c,
+        Ulid::from_parts(1_790_000_000_000, 7),
+        &types::ThreadAskRequest {
+            question: "Why?".into(),
+        },
+    )
+    .await
+    .expect_err("missing");
+    assert_eq!(problem(&missing).status, 404);
+
+    // Without a fixture: 503, and the model input is recorded — the note's own excerpts
+    // first, no history yet.
+    let err = ask("When is delivery?").await.expect_err("no fixture");
+    assert_eq!(problem(&err).status, 503);
+    let recorded = h.llm.calls().last().cloned().expect("call");
+    let input: serde_json::Value = serde_json::from_str(&recorded.user).expect("json");
+    assert_eq!(input["note"], serde_json::json!({"title": "Call"}));
+    assert_eq!(input["history"], serde_json::json!([]));
+    assert_eq!(input["question"]["text"], "When is delivery?");
+    let refs: Vec<&str> = input["sources"]
+        .as_array()
+        .expect("sources")
+        .iter()
+        .filter_map(|s| s["ref"].as_str())
+        .collect();
+    assert_eq!(refs[0], "Call#^fri", "the note's own excerpt comes first");
+    assert_eq!(recorded.prompt.id, "note_thread");
+
+    let system = prompts::latest(ids::NOTE_THREAD).expect("prompt").text;
+    h.llm.push(
+        &recorded.prompt,
+        &input_hash(system, &recorded.user),
+        Fixture::stream(&["By Friday ", "[[Call#^fri]]."]),
+    );
+    let started = ask("When is delivery?").await.expect("ask");
+    let frames = raw_frames(&h, &alice.token, started.id, None).await;
+    let decoded: Vec<Frame<F>> = frames
+        .iter()
+        .map(|b| Frame::decode(b, &strata_api::wire::DecodeLimits::default()).expect("frame"))
+        .collect();
+    assert_eq!(
+        decoded.last(),
+        Some(&Frame::End { seq: 3 }),
+        "tokens, one citation, done"
+    );
+
+    // The exchange is kept in the note's thread (one `ai: thread` commit).
+    let path = format!(".meta/threads/{}.json", call.id);
+    // The file is written before its commit: wait for the commit.
+    let committed = format!("ai: thread {path}");
+    eventually("the thread is committed", || {
+        h.log(alice.id).first() == Some(&committed)
+    })
+    .await;
+    let thread =
+        vault_format::thread::NoteThread::from_json(&h.read(alice.id, &path)).expect("thread");
+    let texts: Vec<(&str, &str)> = thread
+        .messages
+        .iter()
+        .map(|m| {
+            (
+                match m.role {
+                    vault_format::thread::ThreadRole::User => "user",
+                    vault_format::thread::ThreadRole::Assistant => "assistant",
+                },
+                m.text.as_str(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        texts,
+        [
+            ("user", "When is delivery?"),
+            ("assistant", "By Friday [[Call#^fri]].")
+        ]
+    );
+    assert_eq!(thread.messages[1].id, started.id);
+    assert_eq!(thread.messages[1].citations.len(), 1);
+
+    // The next question carries the thread so far.
+    let _ = ask("And payment?").await;
+    let next: serde_json::Value =
+        serde_json::from_str(&h.llm.calls().last().expect("call").user).expect("json");
+    assert_eq!(
+        next["history"],
+        serde_json::json!([
+            {"role": "user", "text": "When is delivery?"},
+            {"role": "assistant", "text": "By Friday [[Call#^fri]]."}
+        ])
+    );
+    h.assert_conformant();
+    h.finish().await;
+}

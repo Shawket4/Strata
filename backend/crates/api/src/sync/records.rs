@@ -5,7 +5,7 @@
 //! frontmatter relations, entity fields and tasks are derived from the content with
 //! `vault-format` on the device exactly as the server's indexer does), plus the state that is
 //! not in note text: relations with provenance, rejected edges, suggestions, cluster
-//! assignments and names, user settings, device settings and keep-both pairs.
+//! assignments and names, user settings, device settings, keep-both pairs and note threads.
 //!
 //! **Bootstrap paging** reads the current state section by section with keyset paging
 //! (`after` the last key of the previous page), so an item that exists for the whole bootstrap
@@ -31,8 +31,9 @@ use strata_index::types::{By, ReplyAuthor as IReplyAuthor, SuggestionStatus as I
 use strata_index::{AppDb, IndexError, ScopedTx, UserScope};
 use strata_vault::{VaultError, VaultService, fsio};
 use sync_model::changes::{
-    ClusterAssignmentRecord, ClusterNameRecord, DeviceSettingRecord, NoteRecord, RejectedRecord,
-    RelationRecord, ReplyAuthor, SuggestionRecord, SuggestionReplyRecord, SuggestionStatus,
+    ClusterAssignmentRecord, ClusterNameRecord, DeviceSettingRecord, NoteRecord, NoteThreadRecord,
+    RejectedRecord, RelationRecord, ReplyAuthor, SuggestionRecord, SuggestionReplyRecord,
+    SuggestionStatus,
 };
 use sync_model::settings::{self, SettingValue};
 use sync_model::{BootstrapPage, ChangeRecord, ChangesPage, EntityType, Record, Version};
@@ -46,7 +47,7 @@ use crate::vault::problem;
 use crate::wire::Problem;
 
 /// Bootstrap sections, in order.
-const SECTIONS: u8 = 9;
+const SECTIONS: u8 = 10;
 
 fn index_problem(e: IndexError) -> Problem {
     problem(&VaultError::Index(e))
@@ -243,6 +244,15 @@ fn keep_both_record(kind: &str, a: String, b: String) -> Option<Record> {
         kind: kind.parse::<DedupeKind>().ok()?,
         a_id: a,
         b_id: b,
+    }))
+}
+
+/// The record of a thread file's JSON (`None` when it does not parse).
+fn thread_record(json: &str) -> Option<Record> {
+    let t = vault_format::thread::NoteThread::from_json(json).ok()?;
+    Some(Record::Thread(NoteThreadRecord {
+        note_id: t.note_id,
+        messages: t.messages,
     }))
 }
 
@@ -444,7 +454,7 @@ async fn fetch(
                 items.push(Item::Ready(device_record(id, reminders)));
             }
         }
-        _ => {
+        8 => {
             let a: Option<Vec<String>> =
                 after.map(|a| a.splitn(3, ':').map(str::to_owned).collect());
             let a = a.filter(|v| v.len() == 3);
@@ -464,6 +474,21 @@ async fn fetch(
                 count += 1;
                 last = Some(format!("{kind}:{x}:{y}"));
                 if let Some(rec) = keep_both_record(&kind, x, y) {
+                    items.push(Item::Ready(rec));
+                }
+            }
+        }
+        _ => {
+            let after: Option<NoteId> = after
+                .and_then(|a| Ulid::from_string(a).ok())
+                .map(NoteId::from_ulid);
+            let rows = strata_index::repo::threads::page(tx, after, n)
+                .await
+                .map_err(index_problem)?;
+            for row in rows {
+                count += 1;
+                last = Some(row.note_id.to_string());
+                if let Some(rec) = thread_record(&row.thread) {
                     items.push(Item::Ready(rec));
                 }
             }
@@ -699,6 +724,15 @@ async fn current(tx: &mut ScopedTx, ty: EntityType, id: &str) -> Result<Option<R
                     cluster_id: c.to_string(),
                 })
             })
+        }
+        EntityType::Thread => {
+            let Ok(note) = Ulid::from_string(id) else {
+                return Ok(None);
+            };
+            strata_index::repo::threads::get(tx, NoteId::from_ulid(note))
+                .await
+                .map_err(index_problem)?
+                .and_then(|row| thread_record(&row.thread))
         }
         EntityType::ClusterName => {
             let Ok(cluster) = id.parse::<i64>() else {

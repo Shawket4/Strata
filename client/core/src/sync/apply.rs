@@ -183,6 +183,17 @@ pub fn apply_record(
                 params![k.kind.as_str(), k.a_id, k.b_id],
             )?;
         }
+        Record::Thread(t) => {
+            conn.execute(
+                "INSERT INTO note_threads (note_id, messages) VALUES (?1, ?2)
+                 ON CONFLICT (note_id) DO UPDATE SET messages = excluded.messages",
+                params![
+                    t.note_id.to_string(),
+                    crate::store::to_msgpack(&t.messages)?
+                ],
+            )?;
+            re.topics(Topics::NOTES | Topics::ASK);
+        }
     }
     Ok(())
 }
@@ -209,6 +220,12 @@ pub fn apply_delete(
                 notes::set_base(conn, entity_id, None, now)?;
                 write::rebuild_note(conn, entity_id, now, re)?;
             }
+            // The thread goes with its note (the server's row cascades).
+            conn.execute("DELETE FROM note_threads WHERE note_id = ?1", [entity_id])?;
+        }
+        EntityType::Thread => {
+            conn.execute("DELETE FROM note_threads WHERE note_id = ?1", [entity_id])?;
+            re.topics(Topics::NOTES | Topics::ASK);
         }
         EntityType::Suggestion => {
             conn.execute("DELETE FROM suggestions WHERE id = ?1", [entity_id])?;
@@ -286,7 +303,7 @@ pub fn begin_bootstrap(conn: &Connection) -> CoreResult<()> {
     conn.execute_batch(
         "DELETE FROM bootstrap_seen; DELETE FROM relation_meta; DELETE FROM rejected;
          DELETE FROM clusters; DELETE FROM cluster_names; DELETE FROM user_settings;
-         DELETE FROM keep_both;",
+         DELETE FROM keep_both; DELETE FROM note_threads;",
     )?;
     Ok(())
 }
