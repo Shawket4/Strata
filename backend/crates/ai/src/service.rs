@@ -10,7 +10,7 @@ use futures::{Stream, StreamExt};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-use crate::budget::BudgetGuard;
+use crate::budget::{BudgetGuard, BudgetLimits};
 use crate::embed::Embedder;
 use crate::error::{AiError, ProviderError};
 use crate::prompts::PromptDef;
@@ -236,7 +236,11 @@ impl AiService {
                 user: budget.user,
                 global: budget.global,
             },
-            limits: self.budget.limits(),
+            limits: if budget.exempt {
+                BudgetLimits::default()
+            } else {
+                self.budget.limits()
+            },
             embeddings: self.embedder.as_ref().map(|e| EmbeddingsStatus {
                 model_id: e.model_id().to_owned(),
                 dims: e.dims(),

@@ -579,3 +579,42 @@ async fn testkit_reexports_the_fake_provider() {
         valid_summary()
     );
 }
+
+#[tokio::test]
+async fn admins_are_exempt_from_every_cap_and_their_usage_still_counts() {
+    // The per-user cap is spent by the admin's first call and the global cap by the second;
+    // the admin keeps working while everyone else is paused on the global cap.
+    let w = world(caps(100, 300), chrono_tz::UTC);
+    w.store.exempt(alice().scope.user_id());
+    let a = summary_request(alice());
+    for _ in 0..3 {
+        w.cli.push(
+            &a.prompt,
+            &a.input_hash(),
+            Fixture::json(valid_summary()).with_usage(usage(150, 50)),
+        );
+    }
+    for n in 1..=3 {
+        w.service
+            .complete_json(a.clone())
+            .await
+            .unwrap_or_else(|e| panic!("admin call {n}: {e:?}"));
+    }
+    assert_eq!(
+        w.service.complete_json(summary_request(bob())).await,
+        Err(AiError::Paused {
+            reason: PauseReason::GlobalBudget,
+            until: Some("2026-09-28T00:00:00Z".parse().expect("rfc3339")),
+        })
+    );
+    let status = w.service.status(&alice()).await.expect("status");
+    assert_eq!(
+        (status.paused, status.limits, status.usage.user.tokens()),
+        (None, BudgetLimits::default(), 600),
+        "no pause and no limit shown to the admin; the usage is recorded"
+    );
+    assert_eq!(
+        w.service.status(&bob()).await.expect("status").limits,
+        caps(100, 300)
+    );
+}

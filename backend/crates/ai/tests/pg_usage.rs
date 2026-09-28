@@ -141,3 +141,22 @@ async fn usage_is_recorded_per_user_under_rls_and_summed_globally() {
     );
     db.cleanup().await.expect("cleanup");
 }
+
+#[tokio::test]
+async fn admins_are_exempt_and_members_are_not() {
+    let db = TestDb::new().await.expect("db");
+    let admin = TestUser::new("owner")
+        .admin()
+        .create(&db)
+        .await
+        .expect("admin");
+    let member = TestUser::new("mona").create(&db).await.expect("member");
+    let store = PgUsageStore::new(db.app_db.clone());
+    assert_eq!(
+        (
+            store.is_exempt(&db.scope(admin.id)).await.expect("admin"),
+            store.is_exempt(&db.scope(member.id)).await.expect("member"),
+        ),
+        (true, false)
+    );
+}

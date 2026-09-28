@@ -99,6 +99,15 @@ pub async fn add_ai_usage(tx: &mut ScopedTx, delta: &AiUsage) -> Result<AiUsage>
     .await?)
 }
 
+/// Whether the scoped user is an admin (`users` is global; `strata_app` may read `role`).
+pub async fn current_user_is_admin(tx: &mut ScopedTx) -> Result<bool> {
+    let role: Option<String> =
+        sqlx::query_scalar("SELECT role FROM users WHERE id = strata_current_user()")
+            .fetch_optional(tx.conn())
+            .await?;
+    Ok(role.as_deref() == Some("admin"))
+}
+
 /// The scoped user's usage rows for `day`, by provider and model.
 pub async fn ai_usage_for_day(tx: &mut ScopedTx, day: NaiveDate) -> Result<Vec<AiUsage>> {
     Ok(sqlx::query_as(

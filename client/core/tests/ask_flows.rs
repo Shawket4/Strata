@@ -514,8 +514,8 @@ async fn the_ai_status_panel_reads_the_cached_status() {
     assert_eq!(v.availability, Availability::NotAllowed);
     assert_eq!(
         v.ai_status
-            .map(|a| (a.budget_used_percent, a.embedding_percent)),
-        Some((0, Some(100)))
+            .map(|a| (a.budget_used_percent, a.budget_label, a.embedding_percent)),
+        Some((0, "No daily limit".to_owned(), Some(100)))
     );
     // Offline: Ask is unavailable and refuses questions.
     h.server.set_offline(true);

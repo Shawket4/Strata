@@ -3966,9 +3966,11 @@ fn ai_status_view(ctx: &ViewCtx, s: &crate::net::AiStatusInfo) -> AiStatusView {
         queue_depth: u32::try_from(s.queue_depth).unwrap_or(u32::MAX),
         failed_jobs: u32::try_from(s.failed_jobs).unwrap_or(u32::MAX),
         budget_used_percent: percent,
-        budget_label: match ctx.lang {
-            Lang::En => format!("{percent}% used"),
-            Lang::Ar => format!("استُخدم {percent}%"),
+        budget_label: match (ctx.lang, s.tokens_limit) {
+            (Lang::En, 0) => "No daily limit".to_owned(),
+            (Lang::Ar, 0) => "مفيش حد يومي".to_owned(),
+            (Lang::En, _) => format!("{percent}% used"),
+            (Lang::Ar, _) => format!("استُخدم {percent}%"),
         },
         embedding_percent: s.embedded.map(|(done, total)| {
             if total == 0 {

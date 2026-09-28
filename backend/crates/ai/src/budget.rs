@@ -1,4 +1,5 @@
-//! Budget guard (PLAN §9.1): per-user daily token/cost caps and a global cap. Usage is recorded
+//! Budget guard (PLAN §9.1): per-user daily token/cost caps and a global cap; admins are
+//! exempt from both (owner decision 2026-09-28), their usage still recorded. Usage is recorded
 //! in `ai_usage` (per user, RLS-scoped) and `ai_usage_global` (per day, all users). When a cap
 //! is reached, work is paused until the next day boundary (it waits, it never fails).
 //!
@@ -92,15 +93,27 @@ pub trait UsageStore: Send + Sync + fmt::Debug {
 
     /// Totals for `day` across all users (read inside the caller's scope).
     async fn global_day(&self, scope: &UserScope, day: NaiveDate) -> Result<UsageTotals, AiError>;
+
+    /// Whether no cap applies to the user (admins).
+    async fn is_exempt(&self, scope: &UserScope) -> Result<bool, AiError>;
 }
 
 /// In-memory store (tests, and a process without a database).
 #[derive(Debug, Default)]
 pub struct MemoryUsageStore {
     rows: Mutex<BTreeMap<(UserId, NaiveDate, String, String), UsageTotals>>,
+    exempt: Mutex<std::collections::BTreeSet<UserId>>,
 }
 
 impl MemoryUsageStore {
+    /// Makes `user` exempt from every cap (an admin).
+    pub fn exempt(&self, user: UserId) {
+        self.exempt
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(user);
+    }
+
     /// Every row, as `ai_usage` would hold it.
     pub fn rows(&self) -> BTreeMap<(UserId, NaiveDate, String, String), UsageTotals> {
         self.rows
@@ -135,6 +148,14 @@ impl UsageStore for MemoryUsageStore {
 
     async fn global_day(&self, _scope: &UserScope, day: NaiveDate) -> Result<UsageTotals, AiError> {
         Ok(self.sum(|_, d| d == day))
+    }
+
+    async fn is_exempt(&self, scope: &UserScope) -> Result<bool, AiError> {
+        Ok(self
+            .exempt
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains(&scope.user_id()))
     }
 }
 
@@ -212,6 +233,13 @@ impl UsageStore for PgUsageStore {
         Ok(())
     }
 
+    async fn is_exempt(&self, scope: &UserScope) -> Result<bool, AiError> {
+        let mut tx = self.db.begin(scope).await?;
+        let admin = settings::current_user_is_admin(&mut tx).await?;
+        tx.commit().await?;
+        Ok(admin)
+    }
+
     async fn user_day(&self, scope: &UserScope, day: NaiveDate) -> Result<UsageTotals, AiError> {
         let mut tx = self.db.begin(scope).await?;
         let rows = settings::ai_usage_for_day(&mut tx, day).await?;
@@ -258,6 +286,8 @@ pub struct BudgetSnapshot {
     pub global: UsageTotals,
     /// The budget pause in effect for this user, if any.
     pub paused: Option<PauseInfo>,
+    /// No cap applies to this user (an admin).
+    pub exempt: bool,
 }
 
 impl BudgetGuard {
@@ -330,11 +360,17 @@ impl BudgetGuard {
         let day = self.day();
         let user = self.store.user_day(&caller.scope, day).await?;
         let global = self.store.global_day(&caller.scope, day).await?;
+        let exempt = self.store.is_exempt(&caller.scope).await?;
         Ok(BudgetSnapshot {
             day,
-            paused: self.pause_for(&user, &global),
+            paused: if exempt {
+                None
+            } else {
+                self.pause_for(&user, &global)
+            },
             user,
             global,
+            exempt,
         })
     }
 
