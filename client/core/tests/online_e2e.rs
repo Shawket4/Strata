@@ -13,6 +13,7 @@ mod world;
 
 use pretty_assertions::assert_eq;
 use strata_core::CoreError;
+use strata_core::session::ask::AskEntry;
 use strata_core::store::notes;
 use strata_core::sync::engine::Trigger;
 use strata_core::view::build;
@@ -23,10 +24,6 @@ use strata_core::view::model::{
 };
 use strata_index::types::UserRole;
 use world::World;
-
-fn dbg_print<T: std::fmt::Debug>(label: &str, v: &T) {
-    println!("=== {label}\n{v:#?}");
-}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn devices_are_listed_renamed_muted_and_revoked() {
@@ -523,7 +520,32 @@ async fn admins_manage_accounts_from_the_users_screen() {
         .await
         .expect("sign up");
     let view = admin.admin_users("").await.expect("users");
-    dbg_print("users", &view);
+    assert_eq!(view.availability, Availability::Available);
+    assert_eq!(
+        view.pending.iter().map(row).collect::<Vec<_>>(),
+        [
+            ("carol".into(), "member".into(), "pending".into(), false, None, false),
+            ("dave".into(), "member".into(), "pending".into(), false, None, false),
+        ]
+    );
+    assert_eq!(
+        view.pending
+            .iter()
+            .map(|u| (u.display_name.as_str(), u.initials.as_str(), u.created_label.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            ("Carol", "C", "Requested just now"),
+            ("Dave", "D", "Requested just now")
+        ]
+    );
+    assert_eq!(
+        view.users.iter().map(row).collect::<Vec<_>>(),
+        [
+            ("alice".into(), "member".into(), "active".into(), false, None, false),
+            ("root".into(), "admin".into(), "active".into(), true, None, false),
+        ]
+    );
+    assert_eq!(view.users[0].created_label, "Joined 27 Sep 2026");
     let carol_id = view.pending.iter().find(|u| u.username == "carol").expect("carol").id.clone();
     let dave_id = view.pending.iter().find(|u| u.username == "dave").expect("dave").id.clone();
     let filtered = admin.admin_users("ALI").await.expect("filtered");
@@ -559,7 +581,7 @@ async fn admins_manage_accounts_from_the_users_screen() {
     let enabled = admin.set_user_enabled(&carol_id, true).await.expect("enable");
     assert_eq!(enabled.status, "active");
     let temporary = admin.reset_password(&carol_id).await.expect("reset");
-    dbg_print("temporary", &temporary);
+    assert_eq!(temporary.chars().count(), 16, "{temporary}");
 
     // New accounts.
     assert_eq!(
@@ -608,7 +630,13 @@ async fn admins_manage_accounts_from_the_users_screen() {
             role: "member".into(),
         })
         .await;
-    dbg_print("taken", &taken);
+    assert_eq!(
+        taken,
+        Err(CoreError::Server {
+            status: 409,
+            problem_type: "username_taken".into()
+        })
+    );
 
     // Scheduled deletion: the member's session becomes export-only, and "Delete now" wipes
     // the device's copy once the server confirmed.
@@ -620,18 +648,81 @@ async fn admins_manage_accounts_from_the_users_screen() {
         })
     );
     let scheduled = admin.schedule_deletion(&alice_id).await.expect("schedule");
-    dbg_print("scheduled", &scheduled);
+    assert_eq!(
+        row(&scheduled),
+        (
+            "alice".into(),
+            "member".into(),
+            "deletion_pending".into(),
+            false,
+            Some("Deleted on 11 Oct 2026".into()),
+            false
+        )
+    );
     let cancelled = admin.cancel_deletion(&alice_id).await.expect("cancel");
     assert_eq!(row(&cancelled), ("alice".into(), "member".into(), "active".into(), false, None, false));
     admin.schedule_deletion(&alice_id).await.expect("schedule again");
-    let state = alice_device.core.refresh_account().await;
-    dbg_print("alice refresh", &state);
-    dbg_print("alice state", &alice_device.core.state());
-    let after = alice_device.core.delete_account_now(true).await;
-    dbg_print("delete now", &after);
+    // Scheduling revokes the member's sessions.
+    assert_eq!(
+        alice_device.core.refresh_account().await,
+        Err(CoreError::SessionExpired)
+    );
+    assert_eq!(
+        alice_device.core.state().expect("state").kind,
+        SessionKind::SignedOut
+    );
+    assert_eq!(
+        alice_device.core.delete_account_now(true).await,
+        Err(CoreError::NotSignedIn)
+    );
+    // Signing in again opens the export-only session; "Delete now" confirms and wipes.
+    alice_device
+        .sign_in_with("alice", &world::password("alice"))
+        .await;
+    let pending = alice_device.core.state().expect("state");
+    assert_eq!(
+        (pending.kind, pending.deletion_label.as_deref()),
+        (SessionKind::DeletionPending, Some("Deleted on 11 Oct 2026"))
+    );
+    let export = alice_device.dir.path().join("alice.zip");
+    let summary = alice_device
+        .core
+        .download_export(export.to_str().expect("utf-8"))
+        .await
+        .expect("export-only session downloads");
+    assert_eq!(summary.note_count, 0);
+    let after = alice_device.core.delete_account_now(false).await.expect("deleted");
+    assert_eq!(
+        (after.kind, after.known_accounts.len()),
+        (SessionKind::SignedOut, 0)
+    );
+
+    // Carol must change the temporary password at her first sign-in.
+    let carol = carol_device.sign_in_with("carol", &temporary).await;
+    assert_eq!(
+        carol_device.core.state().expect("state").kind,
+        SessionKind::PasswordChangeRequired
+    );
+    drop(carol);
 
     let everyone = admin.admin_users("").await.expect("users");
-    dbg_print("everyone", &everyone.users.iter().map(row).collect::<Vec<_>>());
+    assert_eq!(
+        everyone.users.iter().map(row).collect::<Vec<_>>(),
+        [
+            (
+                "alice".into(),
+                "member".into(),
+                "deleted".into(),
+                false,
+                None,
+                false
+            ),
+            ("carol".into(), "admin".into(), "active".into(), false, None, true),
+            ("dave".into(), "member".into(), "rejected".into(), false, None, false),
+            ("erin".into(), "member".into(), "active".into(), false, None, false),
+            ("root".into(), "admin".into(), "active".into(), true, None, false),
+        ]
+    );
     w.finish().await;
 }
 
@@ -653,10 +744,16 @@ async fn ai_activity_similarity_and_saved_layouts() {
     s.refresh_ai_activity().await.expect("activity");
     s.refresh_similarity().await.expect("similarity");
     let unknown = "01M3HBS0G0000000000000ZZZZ";
-    let e = s.reject_ai_decision(unknown).await;
-    dbg_print("reject unknown", &e);
-    let e = s.repoint_ai_decision(unknown, &a, Some("the client".into())).await;
-    dbg_print("repoint unknown", &e);
+    let not_found = Err(CoreError::Server {
+        status: 404,
+        problem_type: "not_found".into(),
+    });
+    assert_eq!(s.reject_ai_decision(unknown).await, not_found);
+    assert_eq!(
+        s.repoint_ai_decision(unknown, &a, Some("the client".into()))
+            .await,
+        not_found
+    );
     assert_eq!(
         s.retype_ai_decision(unknown, "likes").await,
         Err(CoreError::InvalidInput {
@@ -664,10 +761,12 @@ async fn ai_activity_similarity_and_saved_layouts() {
             reason: "unknown_relation".into()
         })
     );
-    let e = s.retype_ai_decision(unknown, "related").await;
-    dbg_print("retype unknown", &e);
-    let e = s.reject_ai_decision("not-an-id").await;
-    dbg_print("reject bad id", &e);
+    assert_eq!(s.retype_ai_decision(unknown, "related").await, not_found);
+    // IDs come from the server's list; a malformed one is a client bug, not a request.
+    assert_eq!(
+        s.reject_ai_decision("not-an-id").await,
+        Err(CoreError::Internal("decision id: invalid length".into()))
+    );
 
     assert_eq!(
         s.save_layout(&a, "   ", &[]).await,
@@ -722,11 +821,42 @@ async fn ask_streams_an_answer_into_the_conversation_and_saves_it() {
     // Without a recorded answer the provider fails before streaming: the answer shows the
     // server's error.
     let failed = s.ask("What does Acme prefer?", None, "All notes").await;
-    dbg_print("failed ask", &failed);
-    dbg_print("entries after failure", &s.ask_entries());
+    assert_eq!(
+        failed,
+        Err(CoreError::Server {
+            status: 503,
+            problem_type: "ai_unavailable".into()
+        })
+    );
+    let at: chrono::DateTime<chrono::Utc> = "2026-09-27T12:00:00Z".parse().expect("time");
+    let entry = |id: &str, role: &str, text: &str, error_key: Option<&str>| AskEntry {
+        id: id.into(),
+        role: role.into(),
+        text: text.into(),
+        created: at,
+        citations: Vec::new(),
+        streaming: false,
+        scope_label: "All notes".into(),
+        error_key: error_key.map(str::to_owned),
+        saved_note_id: None,
+    };
+    assert_eq!(
+        s.ask_entries(),
+        [
+            entry("local-1-q", "user", "What does Acme prefer?", None),
+            entry("local-1", "assistant", "", Some("error.server")),
+        ]
+    );
 
     let call = w.llm.calls().last().cloned().expect("recorded call");
-    dbg_print("user", &call.user);
+    // Without an embedding model the question goes out without sources.
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&call.user).expect("json"),
+        serde_json::json!({
+            "question": {"text": "What does Acme prefer?", "asked_at": "2026-09-27T12:00:00+00:00"},
+            "sources": []
+        })
+    );
     w.llm.push(
         &call.prompt,
         &call.input_hash,
@@ -737,12 +867,43 @@ async fn ask_streams_an_answer_into_the_conversation_and_saves_it() {
         .ask("What does Acme prefer?", None, "All notes")
         .await
         .expect("ask");
-    dbg_print("entries", &s.ask_entries());
+    // An uncited link is flattened to text.
+    assert_eq!(
+        s.ask_entries(),
+        [
+            entry("local-2-q", "user", "What does Acme prefer?", None),
+            entry(&id, "assistant", "Weekly invoicing Call#^inv.", None),
+        ]
+    );
     let entries = s.ask_entries();
     let view = s.read(|c, ctx| build::ask(c, ctx, &entries)).expect("view");
-    dbg_print("view", &view);
+    assert_eq!(
+        view.messages
+            .iter()
+            .map(|m| (m.role.as_str(), m.text.as_str(), m.scope_label.as_str(), m.created_label.as_str()))
+            .collect::<Vec<_>>(),
+        [
+            ("user", "What does Acme prefer?", "Scope: All notes", "12:00"),
+            ("assistant", "Weekly invoicing Call#^inv.", "Scope: All notes", "12:00"),
+        ]
+    );
+    assert!(!view.streaming);
     let note = s.save_answer_as_note(&id).await.expect("save");
-    dbg_print("saved", &note);
+    assert_eq!(
+        s.ask_entries()[1].saved_note_id.as_deref(),
+        Some(note.as_str())
+    );
+    s.sync(Trigger::Manual).await.expect("pull");
+    let saved = s
+        .read(|c, _| notes::current(c, &note))
+        .expect("read")
+        .expect("saved note arrives by pull");
+    assert_eq!(saved.path, "notes/What does Acme prefer.md");
+    assert!(
+        saved.content.contains("Weekly invoicing Call#^inv."),
+        "{}",
+        saved.content
+    );
     assert_eq!(
         s.save_answer_as_note("local-9").await,
         Err(CoreError::NotFound {
